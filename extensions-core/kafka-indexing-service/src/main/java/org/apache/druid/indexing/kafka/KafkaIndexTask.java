@@ -141,7 +141,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         && ((boolean) context.get(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED))) {
       return new IncrementalPublishingKafkaIndexTaskRunner(
           this,
-          newTaskRecordSupplier(),
           parser,
           authorizerMapper,
           chatHandlerProvider,
@@ -151,7 +150,6 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     } else {
       return new LegacyKafkaIndexTaskRunner(
           this,
-          newTaskRecordSupplier(),
           parser,
           authorizerMapper,
           chatHandlerProvider,
@@ -161,7 +159,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     }
   }
 
-  @VisibleForTesting
+  @Override
   protected KafkaRecordSupplier newTaskRecordSupplier()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();

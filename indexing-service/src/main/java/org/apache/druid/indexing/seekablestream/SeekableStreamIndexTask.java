@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -280,6 +281,10 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
 
   protected abstract SeekableStreamIndexTaskRunner<PartitionType, SequenceType> createTaskRunner()
       throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException;
+
+  protected abstract RecordSupplier<PartitionType, SequenceType> newTaskRecordSupplier() throws ClassNotFoundException,
+                                                                                                NoSuchMethodException,
+                                                                                                IllegalAccessException;
 
   @VisibleForTesting
   public Appenderator getAppenderator()

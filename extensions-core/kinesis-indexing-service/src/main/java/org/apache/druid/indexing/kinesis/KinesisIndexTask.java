@@ -22,7 +22,6 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -65,11 +64,9 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
   @Override
   protected SeekableStreamIndexTaskRunner<String, String> createTaskRunner()
-      throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     return new KinesisIndexTaskRunner(
         this,
-        newTaskRecordSupplier(),
         parser,
         authorizerMapper,
         chatHandlerProvider,
@@ -78,7 +75,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     );
   }
 
-  @VisibleForTesting
+  @Override
   protected KinesisRecordSupplier newTaskRecordSupplier()
       throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException
   {

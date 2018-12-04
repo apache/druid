@@ -181,7 +181,6 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
 
   LegacyKafkaIndexTaskRunner(
       KafkaIndexTask task,
-      RecordSupplier recordSupplier,
       InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
@@ -191,7 +190,6 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   {
     super(
         task,
-        recordSupplier,
         parser,
         authorizerMapper,
         chatHandlerProvider,

@@ -65,7 +65,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
 
   public IncrementalPublishingKafkaIndexTaskRunner(
       KafkaIndexTask task,
-      KafkaRecordSupplier recordSupplier,
       InputRowParser<ByteBuffer> parser,
       AuthorizerMapper authorizerMapper,
       Optional<ChatHandlerProvider> chatHandlerProvider,
@@ -75,7 +74,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   {
     super(
         task,
-        recordSupplier,
         parser,
         authorizerMapper,
         chatHandlerProvider,

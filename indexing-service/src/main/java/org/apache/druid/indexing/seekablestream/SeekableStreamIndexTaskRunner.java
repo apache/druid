@@ -191,7 +191,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
   protected final Condition isAwaitingRetry = pollRetryLock.newCondition();
 
   private final SeekableStreamIndexTask<PartitionType, SequenceType> task;
-  private final RecordSupplier<PartitionType, SequenceType> recordSupplier;
   private final SeekableStreamIOConfig<PartitionType, SequenceType> ioConfig;
   private final SeekableStreamTuningConfig tuningConfig;
   private final InputRowParser<ByteBuffer> parser;
@@ -223,7 +222,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
 
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionType, SequenceType> task,
-      final RecordSupplier<PartitionType, SequenceType> recordSupplier,
       final InputRowParser<ByteBuffer> parser,
       final AuthorizerMapper authorizerMapper,
       final Optional<ChatHandlerProvider> chatHandlerProvider,
@@ -233,7 +231,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
   {
     Preconditions.checkNotNull(task);
     this.task = task;
-    this.recordSupplier = recordSupplier;
     this.ioConfig = task.getIOConfig();
     this.tuningConfig = task.getTuningConfig();
     this.parser = parser;
@@ -350,7 +347,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
     );
 
     Throwable caughtExceptionOuter = null;
-    try {
+    try (final RecordSupplier<PartitionType, SequenceType> recordSupplier = task.newTaskRecordSupplier()) {
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 
@@ -500,7 +497,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
 
           // calling getRecord() ensures that exceptions specific to kafka/kinesis like OffsetOutOfRangeException
           // are handled in the subclasses
-          List<OrderedPartitionableRecord<PartitionType, SequenceType>> records = getRecords(recordSupplier, toolbox);
+          List<OrderedPartitionableRecord<PartitionType, SequenceType>> records = getRecords(
+              recordSupplier,
+              toolbox
+          );
 
           stillReading = !assignment.isEmpty();
 
@@ -758,7 +758,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionType, SequenceType>
       }
 
       appenderator.close();
-      recordSupplier.close();
     }
     catch (InterruptedException | RejectedExecutionException e) {
       // (2) catch InterruptedException and RejectedExecutionException thrown for the whole ingestion steps including
