@@ -21,6 +21,7 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.validation.constraints.Min;
 
@@ -34,7 +35,8 @@ public class BaseHttpEmittingConfig
   public static final int DEFAULT_BATCH_QUEUE_SIZE_LIMIT;
 
   static {
-    Pair<Integer, Integer> batchConfigPair = getDefaultBatchSizeAndLimit(Runtime.getRuntime().maxMemory());
+    Pair<Integer, Integer> batchConfigPair =
+        getDefaultBatchSizeAndLimit(JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes());
     DEFAULT_MAX_BATCH_SIZE = batchConfigPair.lhs;
     DEFAULT_BATCH_QUEUE_SIZE_LIMIT = batchConfigPair.rhs;
   }

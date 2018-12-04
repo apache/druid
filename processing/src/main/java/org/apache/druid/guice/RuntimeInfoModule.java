@@ -17,25 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.common.utils;
+package org.apache.druid.guice;
 
-import org.junit.Assert;
-import org.junit.Test;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.utils.RuntimeInfo;
 
-public class VMUtilsTest
+public class RuntimeInfoModule implements Module
 {
-  @Test
-  public void testgetMaxDirectMemory()
+  @Override
+  public void configure(Binder binder)
   {
-    try {
-      long maxMemory = VMUtils.getMaxDirectMemory();
-      Assert.assertTrue((maxMemory > 0));
-    }
-    catch (UnsupportedOperationException expected) {
-      Assert.assertTrue(true);
-    }
-    catch (RuntimeException expected) {
-      Assert.assertTrue(true);
-    }
+    binder.requestStaticInjection(RuntimeInfo.class);
   }
 }

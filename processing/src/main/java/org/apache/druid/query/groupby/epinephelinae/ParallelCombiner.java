@@ -261,9 +261,10 @@ public class ParallelCombiner<KeyType>
     throw new ISE(
         "Cannot find a proper leaf combine degree for the combining tree. "
         + "Each node of the combining tree requires a buffer of [%d] bytes. "
-        + "Try increasing druid.processing.buffer.sizeBytes for larger buffer or "
+        + "Try increasing druid.processing.buffer.sizeBytes (currently [%d] bytes) for larger buffer or "
         + "druid.query.groupBy.intermediateCombineDegree for a smaller tree",
-        requiredMinimumBufferCapacity
+        requiredMinimumBufferCapacity,
+        combineBuffer.capacity()
     );
   }
 
