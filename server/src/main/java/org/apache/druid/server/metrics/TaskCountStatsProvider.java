@@ -17,46 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.server.metrics;
 
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import java.util.Map;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class StubServiceEmitter extends ServiceEmitter
+public interface TaskCountStatsProvider
 {
-  private List<Event> events = new ArrayList<>();
+  /**
+   * Return the number of successful tasks for each datasource during emission period.
+   */
+  Map<String, Long> getSuccessfulTaskCount();
 
-  public StubServiceEmitter(String service, String host)
-  {
-    super(service, host, null);
-  }
+  /**
+   * Return the number of failed tasks for each datasource during emission period.
+   */
+  Map<String, Long> getFailedTaskCount();
 
-  @Override
-  public void emit(Event event)
-  {
-    events.add(event);
-  }
+  /**
+   * Return the number of current running tasks for each datasource.
+   */
+  Map<String, Long> getRunningTaskCount();
 
-  public List<Event> getEvents()
-  {
-    return events;
-  }
+  /**
+   * Return the number of current pending tasks for each datasource.
+   */
+  Map<String, Long> getPendingTaskCount();
 
-  @Override
-  public void start()
-  {
-  }
-
-  @Override
-  public void flush()
-  {
-  }
-
-  @Override
-  public void close()
-  {
-  }
+  /**
+   * Return the number of current waiting tasks for each datasource.
+   */
+  Map<String, Long> getWaitingTaskCount();
 }
