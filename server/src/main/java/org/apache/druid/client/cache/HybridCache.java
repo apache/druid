@@ -130,8 +130,26 @@ public class HybridCache implements Cache
   @Override
   public void close(String namespace)
   {
-    level1.close(namespace);
-    level2.close(namespace);
+    Throwable t = null;
+    try {
+      level1.close(namespace);
+    }
+    catch (Throwable t1) {
+      t = t1;
+      throw t1;
+    }
+    finally {
+      if (t != null) {
+        try {
+          level2.close(namespace);
+        }
+        catch (Throwable t2) {
+          t.addSuppressed(t2);
+        }
+      } else {
+        level2.close(namespace);
+      }
+    }
   }
 
   @Override
