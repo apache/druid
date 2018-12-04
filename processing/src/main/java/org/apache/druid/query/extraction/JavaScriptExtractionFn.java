@@ -119,7 +119,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    checkAndCompileScript();
+    fn = getCompiledScript();
     return NullHandling.emptyToNullIfNeeded(fn.apply(value));
   }
 
@@ -128,7 +128,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
    * script compilation.
    */
   @EnsuresNonNull("fn")
-  private void checkAndCompileScript()
+  private Function<Object, String> getCompiledScript()
   {
     // JavaScript configuration should be checked when it's actually used because someone might still want Druid
     // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
@@ -144,6 +144,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
         }
       }
     }
+    return syncedFn;
   }
 
   @Override

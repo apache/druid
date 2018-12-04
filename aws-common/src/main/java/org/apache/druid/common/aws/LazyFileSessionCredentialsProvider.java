@@ -22,8 +22,7 @@ package org.apache.druid.common.aws;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
-
-import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvider
 {
@@ -33,8 +32,11 @@ public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvide
    * The field is declared volatile in order to ensure safe publication of the object
    * in {@link #getUnderlyingProvider()} without worrying about final modifiers
    * on the fields of the created object
+   *
+   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
    */
-  @Nullable
+  @MonotonicNonNull
   private volatile FileSessionCredentialsProvider provider;
 
   public LazyFileSessionCredentialsProvider(AWSCredentialsConfig config)

@@ -114,7 +114,7 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    checkAndCreatePredicateFactory();
+    predicateFactory = getPredicateFactory();
     return new JavaScriptFilter(dimension, predicateFactory);
   }
 
@@ -123,7 +123,7 @@ public class JavaScriptDimFilter implements DimFilter
    * script compilation.
    */
   @EnsuresNonNull("predicateFactory")
-  private void checkAndCreatePredicateFactory()
+  private JavaScriptPredicateFactory getPredicateFactory()
   {
     // JavaScript configuration should be checked when it's actually used because someone might still want Druid
     // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
@@ -139,6 +139,7 @@ public class JavaScriptDimFilter implements DimFilter
         }
       }
     }
+    return syncedFnPredicateFactory;
   }
 
   @Override

@@ -93,6 +93,9 @@ public class JavaScriptPostAggregator implements PostAggregator
    * The field is declared volatile in order to ensure safe publication of the object
    * in {@link #compile(String)} without worrying about final modifiers
    * on the fields of the created object
+   *
+   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
    */
   @MonotonicNonNull
   private volatile Function fn;
@@ -130,7 +133,7 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    checkAndCompileScript();
+    fn = getCompiledScript();
     final Object[] args = new Object[fieldNames.size()];
     int i = 0;
     for (String field : fieldNames) {
@@ -144,7 +147,7 @@ public class JavaScriptPostAggregator implements PostAggregator
    * script compilation.
    */
   @EnsuresNonNull("fn")
-  private void checkAndCompileScript()
+  private Function getCompiledScript()
   {
     // JavaScript configuration should be checked when it's actually used because someone might still want Druid
     // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
@@ -160,6 +163,7 @@ public class JavaScriptPostAggregator implements PostAggregator
         }
       }
     }
+    return syncedFn;
   }
 
   @Override

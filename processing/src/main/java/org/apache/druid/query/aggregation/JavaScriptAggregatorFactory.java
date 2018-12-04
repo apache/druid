@@ -64,6 +64,9 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
    * The field is declared volatile in order to ensure safe publication of the object
    * in {@link #compileScript(String, String, String)} without worrying about final modifiers
    * on the fields of the created object
+   *
+   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
    */
   private volatile JavaScriptAggregator.@MonotonicNonNull ScriptAggregator compiledScript;
 
@@ -95,7 +98,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    getCompiledScript();
+    compiledScript = getCompiledScript();
     return new JavaScriptAggregator(
         fieldNames.stream().map(columnFactory::makeColumnValueSelector).collect(Collectors.toList()),
         compiledScript
@@ -105,7 +108,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    getCompiledScript();
+    compiledScript = getCompiledScript();
     return new JavaScriptBufferAggregator(
         fieldNames.stream().map(columnSelectorFactory::makeColumnValueSelector).collect(Collectors.toList()),
         compiledScript
@@ -121,7 +124,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    getCompiledScript();
+    compiledScript = getCompiledScript();
     return compiledScript.combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
@@ -141,7 +144,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        getCompiledScript();
+        compiledScript = getCompiledScript();
         combined = compiledScript.combine(combined, selector.getDouble());
       }
 
