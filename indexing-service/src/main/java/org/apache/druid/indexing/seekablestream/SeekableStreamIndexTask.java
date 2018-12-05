@@ -279,8 +279,7 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
     return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 
-  protected abstract SeekableStreamIndexTaskRunner<PartitionType, SequenceType> createTaskRunner()
-      throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException;
+  protected abstract SeekableStreamIndexTaskRunner<PartitionType, SequenceType> createTaskRunner();
 
   protected abstract RecordSupplier<PartitionType, SequenceType> newTaskRecordSupplier() throws ClassNotFoundException,
                                                                                                 NoSuchMethodException,
