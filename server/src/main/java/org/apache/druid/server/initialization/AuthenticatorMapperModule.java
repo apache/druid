@@ -102,6 +102,11 @@ public class AuthenticatorMapperModule implements DruidModule
       }
 
       for (String authenticatorName : authenticators) {
+        if (AuthConfig.ALLOW_ALL_NAME.equals(authenticatorName)) {
+          authenticatorMap.put(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthenticator());
+          continue;
+        }
+
         final String authenticatorPropertyBase = StringUtils.format(AUTHENTICATOR_PROPERTIES_FORMAT_STRING, authenticatorName);
         final JsonConfigProvider<Authenticator> authenticatorProvider = new JsonConfigProvider<>(
             authenticatorPropertyBase,

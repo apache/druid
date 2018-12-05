@@ -114,6 +114,12 @@ public class AuthorizerMapperModule implements DruidModule
       }
 
       for (String authorizerName : authorizers) {
+        if (AuthConfig.ALLOW_ALL_NAME.equals(authorizerName)) {
+          AllowAllAuthorizer allowAllAuthorizer = new AllowAllAuthorizer();
+          authorizerMap.put(AuthConfig.ALLOW_ALL_NAME, allowAllAuthorizer);
+          continue;
+        }
+
         final String authorizerPropertyBase = StringUtils.format(AUTHORIZER_PROPERTIES_FORMAT_STRING, authorizerName);
         final JsonConfigProvider<Authorizer> authorizerProvider = new JsonConfigProvider<>(
             authorizerPropertyBase,
