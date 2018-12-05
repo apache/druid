@@ -21,6 +21,7 @@ package org.apache.druid.server.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.query.DruidMetrics;
@@ -115,9 +116,11 @@ public class MonitorsConfig
     }
     try {
       for (String monitorName : monitorNames) {
-        String effectiveMonitorName = monitorName
-            .replace(METAMX_PACKAGE, APACHE_DRUID_PACKAGE_NAME)
-            .replace(IO_DRUID_PACKAGE, APACHE_DRUID_PACKAGE_NAME);
+        final String effectiveMonitorName = StringUtils.replace(
+            StringUtils.replace(monitorName, METAMX_PACKAGE, APACHE_DRUID_PACKAGE_NAME),
+            IO_DRUID_PACKAGE,
+            APACHE_DRUID_PACKAGE_NAME
+        );
         if (!effectiveMonitorName.equals(monitorName)) {
           log.warn(
               "Deprecated Monitor class name[%s] found, please use name[%s] instead.",

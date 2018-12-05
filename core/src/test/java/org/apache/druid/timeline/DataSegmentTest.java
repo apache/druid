@@ -51,7 +51,7 @@ import java.util.TreeSet;
 public class DataSegmentTest
 {
   private static final ObjectMapper mapper = new TestObjectMapper();
-  private static final int TEST_VERSION = 0x7;
+  private static final int TEST_VERSION = 0x9;
 
   private static ShardSpec getShardSpec(final int partitionNum)
   {

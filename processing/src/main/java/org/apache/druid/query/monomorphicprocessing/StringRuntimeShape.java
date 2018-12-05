@@ -119,7 +119,7 @@ public final class StringRuntimeShape
     private void appendByteBufferShape(ByteBuffer byteBuffer)
     {
       sb.append(" {order: ");
-      sb.append(byteBuffer.order().toString());
+      sb.append(byteBuffer.order());
       sb.append('}');
     }
 

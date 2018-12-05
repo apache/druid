@@ -22,7 +22,10 @@ package org.apache.druid.data.input.protobuf;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.github.os72.protobuf.dynamic.DynamicSchema;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -51,9 +54,9 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
   private final ParseSpec parseSpec;
   private final String descriptorFilePath;
   private final String protoMessageType;
-  private final Descriptor descriptor;
+  private Descriptor descriptor;
   private Parser<String, Object> parser;
-
+  private final List<String> dimensions;
 
   @JsonCreator
   public ProtobufInputRowParser(
@@ -65,7 +68,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     this.parseSpec = parseSpec;
     this.descriptorFilePath = descriptorFilePath;
     this.protoMessageType = protoMessageType;
-    this.descriptor = getDescriptor(descriptorFilePath);
+    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
   }
 
   @Override
@@ -80,6 +83,14 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     return new ProtobufInputRowParser(parseSpec, descriptorFilePath, protoMessageType);
   }
 
+  @VisibleForTesting
+  void initDescriptor()
+  {
+    if (this.descriptor == null) {
+      this.descriptor = getDescriptor(descriptorFilePath);
+    }
+  }
+
   @Override
   public List<InputRow> parseBatch(ByteBuffer input)
   {
@@ -87,6 +98,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
       // parser should be created when it is really used to avoid unnecessary initialization of the underlying
       // parseSpec.
       parser = parseSpec.makeParser();
+      initDescriptor();
     }
     String json;
     try {
@@ -98,9 +110,17 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
     }
 
     Map<String, Object> record = parser.parseToMap(json);
+    final List<String> dimensions;
+    if (!this.dimensions.isEmpty()) {
+      dimensions = this.dimensions;
+    } else {
+      dimensions = Lists.newArrayList(
+          Sets.difference(record.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
+      );
+    }
     return ImmutableList.of(new MapBasedInputRow(
         parseSpec.getTimestampSpec().extractTimestamp(record),
-        parseSpec.getDimensionsSpec().getDimensionNames(),
+        dimensions,
         record
     ));
   }
@@ -122,7 +142,7 @@ public class ProtobufInputRowParser implements ByteBufferInputRowParser
         fin = url.openConnection().getInputStream();
       }
       catch (IOException e) {
-        throw new ParseException(e, "Cannot read descriptor file: " + url.toString());
+        throw new ParseException(e, "Cannot read descriptor file: " + url);
       }
     }
 

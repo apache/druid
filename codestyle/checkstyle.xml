@@ -29,17 +29,15 @@
     <property name="fileExtensions" value="java"/>
   </module>
 
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
-    <property name="onCommentFormat" value="CHECKSTYLE.ON\: ([\w\|]+)"/>
-    <property name="checkFormat" value="$1"/>
-  </module>
-
   <module name="NewlineAtEndOfFile"/>
   <module name="FileTabCharacter"/>
 
   <module name="TreeWalker">
-    <module name="FileContentsHolder"/>
+    <module name="SuppressionCommentFilter">
+      <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
+      <property name="onCommentFormat" value="CHECKSTYLE.ON\: ([\w\|]+)"/>
+      <property name="checkFormat" value="$1"/>
+    </module>
 
     <module name="RedundantModifier">
       <property name="tokens" value="INTERFACE_DEF,ENUM_DEF,METHOD_DEF"/>
@@ -95,6 +93,12 @@
       <property name="allowLineBreaks" value="false"/>
     </module>
     <module name="GenericWhitespace"/>
+
+    <module name="EmptyLineSeparator">
+      <property name="tokens" value="PACKAGE_DEF,IMPORT,STATIC_IMPORT,INTERFACE_DEF,STATIC_INIT,INSTANCE_INIT,CTOR_DEF,VARIABLE_DEF"/>
+      <property name="allowNoEmptyLineBetweenFields" value="true"/>
+      <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>
+    </module>
 
     <module name="Indentation">
       <property name="basicOffset" value="2"/>
@@ -199,6 +203,16 @@
     </module>
     <module name="PackageDeclaration"/>
 
+    <!-- See https://github.com/checkstyle/checkstyle/issues/5510 and the ImportOrder suppression in
+         checkstyle-suppressions.xml -->
+    <module name="ImportOrder">
+      <property name="groups" value="*,javax,java"/>
+      <property name="ordered" value="true"/>
+      <property name="separated" value="true"/>
+      <property name="option" value="bottom"/>
+      <property name="sortStaticImportsAlphabetically" value="true"/>
+    </module>
+
     <module name="Regexp">
       <property name="format" value="instanceof\s+(ObjectColumnSelector|LongColumnSelector|FloatColumnSelector|DoubleColumnSelector)"/>
       <property name="illegalPattern" value="true"/>
@@ -207,6 +221,7 @@
     </module>
 
     <module name="Regexp">
+      <property name="id" value="argumentLineBreaking"/>
       <property
           name="format"
           value='(?&lt;!ImmutableMap.of|Types.mapOf|orderedMap|makeSelectResults|makeListOfPairs)\(\s*\n +([^,\n\(\{"&lt;/]+|[^,\n\(\{" /]+&gt; [a-zA-Z0-9_]+)\, ++[^,\n/]+'
@@ -262,6 +277,13 @@ that the code is formatted correctly. Fix it anyway.&#10;
 If you encouter a map-like or a pair-accepting method that is reported by this&#10;
 checkstyle rule, you should add it as an exception in the corresponding rule in&#10;
 codestyle/checkstyle.xml.&#10;"/>
+    </module>
+
+    <module name="Regexp">
+      <property name="id" value="duplicateLine"/>
+      <property name="format" value="^(.*;)(\r?\n\1)+$"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Duplicate line"/>
     </module>
   </module>
 </module>

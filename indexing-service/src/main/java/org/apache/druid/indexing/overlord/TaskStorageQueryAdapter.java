@@ -58,13 +58,13 @@ public class TaskStorageQueryAdapter
     return storage.getActiveTaskInfo(dataSource);
   }
 
-  public List<TaskInfo<Task, TaskStatus>> getRecentlyCompletedTaskInfo(
+  public List<TaskInfo<Task, TaskStatus>> getCompletedTaskInfoByCreatedTimeDuration(
       @Nullable Integer maxTaskStatuses,
       @Nullable Duration duration,
       @Nullable String dataSource
   )
   {
-    return storage.getRecentlyFinishedTaskInfo(maxTaskStatuses, duration, dataSource);
+    return storage.getRecentlyCreatedAlreadyFinishedTaskInfo(maxTaskStatuses, duration, dataSource);
   }
 
   public Optional<Task> getTask(final String taskid)

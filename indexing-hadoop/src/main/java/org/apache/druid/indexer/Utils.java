@@ -58,7 +58,7 @@ public class Utils
     if (FileOutputFormat.getCompressOutput(job)) {
       codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
       codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
-      outputPath = new Path(outputPath.toString() + codec.getDefaultExtension());
+      outputPath = new Path(outputPath + codec.getDefaultExtension());
     }
 
     if (fs.exists(outputPath)) {
@@ -89,7 +89,7 @@ public class Utils
     } else {
       Class<? extends CompressionCodec> codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
       CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
-      return fs.exists(new Path(inputPath.toString() + codec.getDefaultExtension()));
+      return fs.exists(new Path(inputPath + codec.getDefaultExtension()));
     }
   }
 
@@ -101,7 +101,7 @@ public class Utils
     } else {
       Class<? extends CompressionCodec> codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
       CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
-      inputPath = new Path(inputPath.toString() + codec.getDefaultExtension());
+      inputPath = new Path(inputPath + codec.getDefaultExtension());
 
       return codec.createInputStream(fileSystem.open(inputPath));
     }

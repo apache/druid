@@ -45,13 +45,11 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.List;
 
@@ -107,50 +105,45 @@ public class SqlResource
       try {
         return Response
             .ok(
-                new StreamingOutput()
-                {
-                  @Override
-                  public void write(final OutputStream outputStream) throws IOException, WebApplicationException
-                  {
-                    Yielder<Object[]> yielder = yielder0;
+                (StreamingOutput) outputStream -> {
+                  Yielder<Object[]> yielder = yielder0;
 
-                    try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
-                                                                    .createFormatter(outputStream, jsonMapper)) {
-                      writer.writeResponseStart();
+                  try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
+                                                                  .createFormatter(outputStream, jsonMapper)) {
+                    writer.writeResponseStart();
 
-                      if (sqlQuery.includeHeader()) {
-                        writer.writeHeader(Arrays.asList(columnNames));
-                      }
+                    if (sqlQuery.includeHeader()) {
+                      writer.writeHeader(Arrays.asList(columnNames));
+                    }
 
-                      while (!yielder.isDone()) {
-                        final Object[] row = yielder.get();
-                        writer.writeRowStart();
-                        for (int i = 0; i < fieldList.size(); i++) {
-                          final Object value;
+                    while (!yielder.isDone()) {
+                      final Object[] row = yielder.get();
+                      writer.writeRowStart();
+                      for (int i = 0; i < fieldList.size(); i++) {
+                        final Object value;
 
-                          if (timeColumns[i]) {
-                            value = ISODateTimeFormat.dateTime().print(
-                                Calcites.calciteTimestampToJoda((long) row[i], timeZone)
-                            );
-                          } else if (dateColumns[i]) {
-                            value = ISODateTimeFormat.dateTime().print(
-                                Calcites.calciteDateToJoda((int) row[i], timeZone)
-                            );
-                          } else {
-                            value = row[i];
-                          }
-
-                          writer.writeRowField(fieldList.get(i).getName(), value);
+                        if (timeColumns[i]) {
+                          value = ISODateTimeFormat.dateTime().print(
+                              Calcites.calciteTimestampToJoda((long) row[i], timeZone)
+                          );
+                        } else if (dateColumns[i]) {
+                          value = ISODateTimeFormat.dateTime().print(
+                              Calcites.calciteDateToJoda((int) row[i], timeZone)
+                          );
+                        } else {
+                          value = row[i];
                         }
-                        writer.writeRowEnd();
-                        yielder = yielder.next(null);
-                      }
 
-                      writer.writeResponseEnd();
+                        writer.writeRowField(fieldList.get(i).getName(), value);
+                      }
+                      writer.writeRowEnd();
+                      yielder = yielder.next(null);
                     }
-                    finally {
-                      yielder.close();
-                    }
+
+                    writer.writeResponseEnd();
+                  }
+                  finally {
+                    yielder.close();
                   }
                 }
             )

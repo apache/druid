@@ -34,8 +34,8 @@ import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
-import java.util.Arrays;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CeilOperatorConversion implements SqlOperatorConversion
 {
@@ -80,14 +80,17 @@ public class CeilOperatorConversion implements SqlOperatorConversion
       // So there is no simple extraction for this operator.
       return DruidExpression.fromFunctionCall(
           "timestamp_ceil",
-          Arrays.asList(
-              druidExpression.getExpression(),
-              DruidExpression.stringLiteral(granularity.getPeriod().toString()),
-              DruidExpression.numberLiteral(
-                  granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
-              ),
-              DruidExpression.stringLiteral(granularity.getTimeZone().toString())
-          ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
+          Stream
+              .of(
+                  druidExpression.getExpression(),
+                  DruidExpression.stringLiteral(granularity.getPeriod().toString()),
+                  DruidExpression.numberLiteral(
+                      granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
+                  ),
+                  DruidExpression.stringLiteral(granularity.getTimeZone().toString())
+              )
+              .map(DruidExpression::fromExpression)
+              .collect(Collectors.toList())
       );
     } else {
       // WTF? CEIL with 3 arguments?

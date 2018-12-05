@@ -343,50 +343,49 @@ public class DumpSegment extends GuiceRunnable
           @Override
           public Object apply(final OutputStream out)
           {
-            try {
-              final JsonGenerator jg = objectMapper.getFactory().createGenerator(out);
-
+            try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
               jg.writeStartObject();
-              jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
-              jg.writeFieldName("bitmaps");
-              jg.writeStartObject();
+              {
+                jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
+                jg.writeFieldName("bitmaps");
+                jg.writeStartObject();
+                {
+                  for (final String columnName : columnNames) {
+                    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                    final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
 
-              for (final String columnName : columnNames) {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-                final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-
-                if (bitmapIndex == null) {
-                  jg.writeNullField(columnName);
-                } else {
-                  jg.writeFieldName(columnName);
-                  jg.writeStartObject();
-                  for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                    String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
-                    if (val != null) {
-                      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-                      if (decompressBitmaps) {
-                        jg.writeStartArray();
-                        final IntIterator iterator = bitmap.iterator();
-                        while (iterator.hasNext()) {
-                          final int rowNum = iterator.next();
-                          jg.writeNumber(rowNum);
-                        }
-                        jg.writeEndArray();
-                      } else {
-                        byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
-                        if (bytes != null) {
-                          jg.writeBinary(bytes);
+                    if (bitmapIndex == null) {
+                      jg.writeNullField(columnName);
+                    } else {
+                      jg.writeFieldName(columnName);
+                      jg.writeStartObject();
+                      for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
+                        String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
+                        if (val != null) {
+                          final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                          if (decompressBitmaps) {
+                            jg.writeStartArray();
+                            final IntIterator iterator = bitmap.iterator();
+                            while (iterator.hasNext()) {
+                              final int rowNum = iterator.next();
+                              jg.writeNumber(rowNum);
+                            }
+                            jg.writeEndArray();
+                          } else {
+                            byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                            if (bytes != null) {
+                              jg.writeBinary(bytes);
+                            }
+                          }
                         }
                       }
+                      jg.writeEndObject();
                     }
                   }
-                  jg.writeEndObject();
                 }
+                jg.writeEndObject();
               }
-
               jg.writeEndObject();
-              jg.writeEndObject();
-              jg.close();
             }
             catch (IOException e) {
               throw Throwables.propagate(e);

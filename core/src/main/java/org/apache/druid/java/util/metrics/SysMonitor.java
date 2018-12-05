@@ -148,7 +148,8 @@ public class SysMonitor extends FeedDefiningMonitor
    */
   private class SwapStats implements Stats
   {
-    private long prevPageIn = 0, prevPageOut = 0;
+    private long prevPageIn = 0;
+    private long prevPageOut = 0;
 
     private SwapStats()
     {

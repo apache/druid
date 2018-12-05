@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input.influx;
 
 import com.google.common.collect.ImmutableList;
@@ -31,11 +32,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class InfluxParser implements Parser<String, Object>
 {
   public static final String TIMESTAMP_KEY = "__ts";
   private static final String MEASUREMENT_KEY = "measurement";
+
+  private static final Pattern BACKSLASH_PATTERN = Pattern.compile("\\\\\"");
+  private static final Pattern IDENTIFIER_PATTERN = Pattern.compile("\\\\([,= ])");
+
   private final Set<String> measurementWhitelist;
 
   public InfluxParser(Set<String> measurementWhitelist)
@@ -112,7 +118,7 @@ public class InfluxParser implements Parser<String, Object>
 
   private Object parseQuotedString(String text)
   {
-    return text.substring(1, text.length() - 1).replaceAll("\\\\\"", "\"");
+    return BACKSLASH_PATTERN.matcher(text.substring(1, text.length() - 1)).replaceAll("\"");
   }
 
   private Object parseNumber(String raw)
@@ -140,7 +146,7 @@ public class InfluxParser implements Parser<String, Object>
       return ctx.getText();
     }
 
-    return ctx.IDENTIFIER_STRING().getText().replaceAll("\\\\([,= ])", "$1");
+    return IDENTIFIER_PATTERN.matcher(ctx.IDENTIFIER_STRING().getText()).replaceAll("$1");
   }
 
   private boolean checkWhitelist(String m)

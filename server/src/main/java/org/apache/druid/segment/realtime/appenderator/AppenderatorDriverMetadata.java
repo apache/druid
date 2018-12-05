@@ -61,33 +61,25 @@ public class AppenderatorDriverMetadata
       final Map<String, List<SegmentWithState>> newMetadata = new HashMap<>();
       final Set<String> activeSegmentsAlreadySeen = new HashSet<>(); // temp data structure
 
-      activeSegments.entrySet()
-                    .forEach(sequenceSegments -> newMetadata.put(
-                        sequenceSegments.getKey(),
-                        sequenceSegments.getValue()
-                                        .stream()
-                                        .map(segmentIdentifier -> {
-                                          activeSegmentsAlreadySeen.add(segmentIdentifier.toString());
-                                          return SegmentWithState.newSegment(segmentIdentifier);
-                                        })
-                                        .collect(Collectors.toList())
-                    ));
+      activeSegments.forEach((String sequence, List<SegmentIdentifier> sequenceSegments) -> newMetadata.put(
+          sequence,
+          sequenceSegments
+              .stream()
+              .map(segmentIdentifier -> {
+                activeSegmentsAlreadySeen.add(segmentIdentifier.toString());
+                return SegmentWithState.newSegment(segmentIdentifier);
+              })
+              .collect(Collectors.toList())
+      ));
       // publishPendingSegments is a superset of activeSegments
-      publishPendingSegments.entrySet()
-                            .forEach(sequenceSegments -> newMetadata.computeIfAbsent(
-                                sequenceSegments.getKey(),
-                                k -> new ArrayList<>()
-                            ).addAll(
-                                sequenceSegments.getValue()
-                                                .stream()
-                                                .filter(segmentIdentifier -> !activeSegmentsAlreadySeen.contains(
-                                                    segmentIdentifier.toString()))
-                                                .map(segmentIdentifier -> SegmentWithState.newSegment(
-                                                    segmentIdentifier,
-                                                    SegmentState.APPEND_FINISHED
-                                                ))
-                                                .collect(Collectors.toList())
-                            ));
+      publishPendingSegments.forEach((sequence, sequenceSegments) -> {
+        List<SegmentWithState> segmentWithStates = newMetadata.computeIfAbsent(sequence, seq -> new ArrayList<>());
+        sequenceSegments
+            .stream()
+            .filter(segmentIdentifier -> !activeSegmentsAlreadySeen.contains(segmentIdentifier.toString()))
+            .map(segmentIdentifier -> SegmentWithState.newSegment(segmentIdentifier, SegmentState.APPEND_FINISHED))
+            .forEach(segmentWithStates::add);
+      });
       this.segments = newMetadata;
     } else {
       this.segments = segments;

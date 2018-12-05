@@ -17,25 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.common.utils;
+package org.apache.druid.server.metrics;
 
-import org.junit.Assert;
-import org.junit.Test;
+import java.util.Map;
 
-public class VMUtilsTest
+public interface TaskCountStatsProvider
 {
-  @Test
-  public void testgetMaxDirectMemory()
-  {
-    try {
-      long maxMemory = VMUtils.getMaxDirectMemory();
-      Assert.assertTrue((maxMemory > 0));
-    }
-    catch (UnsupportedOperationException expected) {
-      Assert.assertTrue(true);
-    }
-    catch (RuntimeException expected) {
-      Assert.assertTrue(true);
-    }
-  }
+  /**
+   * Return the number of successful tasks for each datasource during emission period.
+   */
+  Map<String, Long> getSuccessfulTaskCount();
+
+  /**
+   * Return the number of failed tasks for each datasource during emission period.
+   */
+  Map<String, Long> getFailedTaskCount();
+
+  /**
+   * Return the number of current running tasks for each datasource.
+   */
+  Map<String, Long> getRunningTaskCount();
+
+  /**
+   * Return the number of current pending tasks for each datasource.
+   */
+  Map<String, Long> getPendingTaskCount();
+
+  /**
+   * Return the number of current waiting tasks for each datasource.
+   */
+  Map<String, Long> getWaitingTaskCount();
 }

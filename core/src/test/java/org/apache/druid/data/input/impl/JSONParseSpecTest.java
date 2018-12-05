@@ -91,6 +91,7 @@ public class JSONParseSpecTest
             true,
             ImmutableList.of(
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "foo", "$.[?(@.maybe_object)].maybe_object.foo.test"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "baz", "$.maybe_object_2.foo.test"),
                 new JSONPathFieldSpec(JSONPathFieldType.PATH, "bar", "$.[?(@.something_else)].something_else.foo")
             )
         ),
@@ -99,6 +100,7 @@ public class JSONParseSpecTest
 
     final Map<String, Object> expected = new HashMap<>();
     expected.put("foo", new ArrayList());
+    expected.put("baz", null);
     expected.put("bar", Collections.singletonList("test"));
 
     final Parser<String, Object> parser = parseSpec.makeParser();

@@ -83,7 +83,7 @@ public class BySegmentSearchResultValue extends SearchResultValue
     return "BySegmentSearchResultValue{" +
            "results=" + results +
            ", segmentId='" + segmentId + '\'' +
-           ", interval='" + interval.toString() + '\'' +
+           ", interval='" + interval + '\'' +
            '}';
   }
 }

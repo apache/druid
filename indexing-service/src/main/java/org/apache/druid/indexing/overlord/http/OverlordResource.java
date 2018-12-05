@@ -59,6 +59,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -330,7 +331,7 @@ public class OverlordResource
           @Override
           public Response apply(TaskQueue taskQueue)
           {
-            taskQueue.shutdown(taskid);
+            taskQueue.shutdown(taskid, "Shutdown request from user");
             return Response.ok(ImmutableMap.of("task", taskid)).build();
           }
         }
@@ -338,8 +339,9 @@ public class OverlordResource
   }
 
   @POST
-  @Path("/task/{dataSource}/shutdownAllTasks")
+  @Path("/datasources/{dataSource}/shutdownAllTasks")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response shutdownTasksForDataSource(@PathParam("dataSource") final String dataSource)
   {
     return asLeaderWith(
@@ -351,7 +353,7 @@ public class OverlordResource
           {
             final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
             for (final TaskInfo<Task, TaskStatus> task : tasks) {
-              taskQueue.shutdown(task.getId());
+              taskQueue.shutdown(task.getId(), "Shutdown request from user");
             }
             return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
           }
@@ -627,7 +629,7 @@ public class OverlordResource
   public Response getTasks(
       @QueryParam("state") final String state,
       @QueryParam("datasource") final String dataSource,
-      @QueryParam("interval") final String interval,
+      @QueryParam("createdTimeInterval") final String createdTimeInterval,
       @QueryParam("max") final Integer maxCompletedTasks,
       @QueryParam("type") final String type,
       @Context final HttpServletRequest req
@@ -692,13 +694,13 @@ public class OverlordResource
 
     //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
     if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
-      Duration duration = null;
-      if (interval != null) {
-        final Interval theInterval = Intervals.of(interval.replace("_", "/"));
-        duration = theInterval.toDuration();
+      Duration createdTimeDuration = null;
+      if (createdTimeInterval != null) {
+        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
+        createdTimeDuration = theInterval.toDuration();
       }
       final List<TaskInfo<Task, TaskStatus>> taskInfoList =
-          taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(maxCompletedTasks, duration, dataSource);
+          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
       final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
                                                               .map(completeTaskTransformFunc::apply)
                                                               .collect(Collectors.toList());
@@ -998,26 +1000,6 @@ public class OverlordResource
       log.warn(e, "Failed to stream task reports for task %s", taskid);
       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
     }
-  }
-
-  @GET
-  @Path("/dataSources/{dataSource}")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getRunningTasksByDataSource(@PathParam("dataSource") String dataSource,
-      @Context HttpServletRequest request)
-  {
-    Optional<TaskRunner> ts = taskMaster.getTaskRunner();
-    if (!ts.isPresent()) {
-      return Response.status(Response.Status.NOT_FOUND).entity("No tasks are running").build();
-    }
-    Collection<? extends TaskRunnerWorkItem> runningTasks = ts.get().getRunningTasks();
-    if (runningTasks == null || runningTasks.isEmpty()) {
-      return Response.status(Response.Status.NOT_FOUND)
-          .entity("No running tasks found for the datasource : " + dataSource).build();
-    }
-    List<TaskRunnerWorkItem> taskRunnerWorkItemList = runningTasks.stream()
-        .filter(task -> dataSource.equals(task.getDataSource())).collect(Collectors.toList());
-    return Response.ok(taskRunnerWorkItemList).build();
   }
 
   private <T> Response asLeaderWith(Optional<T> x, Function<T, Response> f)

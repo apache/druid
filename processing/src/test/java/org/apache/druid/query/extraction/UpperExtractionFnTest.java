@@ -28,6 +28,7 @@ import java.util.Arrays;
 public class UpperExtractionFnTest
 {
   ExtractionFn extractionFn = new UpperExtractionFn(null);
+
   @Test
   public void testApply()
   {

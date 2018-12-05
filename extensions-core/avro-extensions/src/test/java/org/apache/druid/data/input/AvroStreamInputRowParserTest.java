@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -64,6 +65,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 
@@ -149,6 +151,8 @@ public class AvroStreamInputRowParserTest
   );
   public static final String SOME_UNION_VALUE = "string as union";
   public static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
+
+  private static final Pattern BRACES_AND_SPACE = Pattern.compile("[{} ]");
 
   private final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -267,7 +271,7 @@ public class AvroStreamInputRowParserTest
     assertEquals(1543698L, inputRow.getTimestampFromEpoch());
 
     // test dimensions
-    assertEquals(Collections.singletonList(String.valueOf(EVENT_TYPE_VALUE)), inputRow.getDimension(EVENT_TYPE));
+    assertEquals(Collections.singletonList(EVENT_TYPE_VALUE), inputRow.getDimension(EVENT_TYPE));
     assertEquals(Collections.singletonList(String.valueOf(ID_VALUE)), inputRow.getDimension(ID));
     assertEquals(Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)), inputRow.getDimension(SOME_OTHER_ID));
     assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
@@ -285,9 +289,10 @@ public class AvroStreamInputRowParserTest
         SOME_INT_VALUE_MAP_VALUE,
         new HashMap<CharSequence, Integer>(
             Maps.transformValues(
-                Splitter.on(",")
-                        .withKeyValueSeparator("=")
-                        .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", "")),
+                Splitter
+                    .on(",")
+                    .withKeyValueSeparator("=")
+                    .split(BRACES_AND_SPACE.matcher(inputRow.getDimension("someIntValueMap").get(0)).replaceAll("")),
                 new Function<String, Integer>()
                 {
                   @Nullable
@@ -303,9 +308,10 @@ public class AvroStreamInputRowParserTest
     assertEquals(
         SOME_STRING_VALUE_MAP_VALUE,
         new HashMap<CharSequence, CharSequence>(
-            Splitter.on(",")
-                    .withKeyValueSeparator("=")
-                    .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", ""))
+            Splitter
+                .on(",")
+                .withKeyValueSeparator("=")
+                .split(BRACES_AND_SPACE.matcher(inputRow.getDimension("someIntValueMap").get(0)).replaceAll(""))
         )
     );
     assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));

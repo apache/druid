@@ -21,6 +21,7 @@ package org.apache.druid.guice.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -43,7 +44,7 @@ public class DruidHttpClientConfig
 
   @JsonProperty
   @Min(1)
-  private int numMaxThreads = Math.max(10, (Runtime.getRuntime().availableProcessors() * 17) / 16 + 2) + 30;
+  private int numMaxThreads = Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
 
   @JsonProperty
   @Min(1)

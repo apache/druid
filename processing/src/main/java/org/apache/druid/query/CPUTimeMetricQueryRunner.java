@@ -20,12 +20,12 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.common.utils.VMUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.utils.JvmUtils;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -46,7 +46,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
       boolean report
   )
   {
-    if (!VMUtils.isThreadCpuTimeEnabled()) {
+    if (!JvmUtils.isThreadCpuTimeEnabled()) {
       throw new ISE("Cpu time must enabled");
     }
     this.delegate = delegate;
@@ -69,12 +69,12 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
           @Override
           public <RetType> RetType wrap(Supplier<RetType> sequenceProcessing)
           {
-            final long start = VMUtils.getCurrentThreadCpuTime();
+            final long start = JvmUtils.getCurrentThreadCpuTime();
             try {
               return sequenceProcessing.get();
             }
             finally {
-              cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
+              cpuTimeAccumulator.addAndGet(JvmUtils.getCurrentThreadCpuTime() - start);
             }
           }
 
@@ -100,7 +100,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
       boolean report
   )
   {
-    if (!VMUtils.isThreadCpuTimeEnabled()) {
+    if (!JvmUtils.isThreadCpuTimeEnabled()) {
       return delegate;
     } else {
       return new CPUTimeMetricQueryRunner<>(delegate, queryToolChest, emitter, accumulator, report);

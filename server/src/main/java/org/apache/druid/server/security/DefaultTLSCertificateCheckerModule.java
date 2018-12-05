@@ -21,7 +21,6 @@ package org.apache.druid.server.security;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
-
 import com.google.inject.name.Names;
 
 public class DefaultTLSCertificateCheckerModule implements Module
