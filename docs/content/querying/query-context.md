@@ -42,7 +42,7 @@ The query context is used for various query configuration parameters. The follow
 |maxQueuedBytes       | `druid.broker.http.maxQueuedBytes`        | Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled.|
 |serializeDateTimeAsLong| `false`       | If true, DateTime is serialized as long in the result returned by broker and the data transportation between broker and compute node|
 |serializeDateTimeAsLongInner| `false`  | If true, DateTime is serialized as long in the data transportation between broker and compute node|
-|numBrokerParallelCombineThreads|`0`|Number of threads participating in the parallel combine for this query. To turn on parallel combine, set this to a positive number or -1. If it's -1, the broker uses all current available processing threads.|
+|numBrokerParallelCombineThreads|`0`|Number of threads participating in the parallel combine for this query. To turn on parallel combine, set this to a positive number or -1. If it's -1, the broker uses all current available processing threads. This is disabled by default because parallel combine may not be good if the size of intermediate aggregates is not large enough.|
 |brokerParallelCombineQueueSize|`10240`|Queue size to temporarily keep prefetched and aggregated values in the parallel combine. Note that each thread needs a separate queue|
 
 In addition, some query types offer context parameters specific to that query type.
