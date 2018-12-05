@@ -30,7 +30,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.server.log.EmittingRequestLogger;
+import org.apache.druid.server.log.RequestLogEvent;
 
 import java.util.Collections;
 import java.util.List;
@@ -44,7 +44,7 @@ public class KafkaEmitterModule implements DruidModule
   {
     return Collections.singletonList(
       new SimpleModule("KafkaEmitter")
-        .setMixInAnnotation(EmittingRequestLogger.RequestLogEvent.class, ClusterNameMixin.class)
+        .setMixInAnnotation(RequestLogEvent.class, ClusterNameMixin.class)
     );
   }
 

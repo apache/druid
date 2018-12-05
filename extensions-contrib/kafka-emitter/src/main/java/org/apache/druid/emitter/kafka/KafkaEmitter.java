@@ -32,7 +32,7 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.server.log.EmittingRequestLogger;
+import org.apache.druid.server.log.RequestLogEvent;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -141,13 +141,11 @@ public class KafkaEmitter implements Emitter
 
   private void sendMetricToKafka()
   {
-
     sendToKafka(config.getMetricTopic(), metricQueue);
   }
 
   private void sendAlertToKafka()
   {
-
     sendToKafka(config.getAlertTopic(), alertQueue);
   }
 
@@ -196,7 +194,7 @@ public class KafkaEmitter implements Emitter
           if (!alertQueue.offer(objectContainer)) {
             alertLost.incrementAndGet();
           }
-        } else if (event instanceof EmittingRequestLogger.RequestLogEvent) {
+        } else if (event instanceof RequestLogEvent) {
           if (!requestQueue.offer(objectContainer)) {
             requestLost.incrementAndGet();
           }
