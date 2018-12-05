@@ -20,12 +20,12 @@
 package org.apache.druid.segment.realtime.appenderator;
 
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class TestUsedSegmentChecker implements UsedSegmentChecker
@@ -49,7 +49,7 @@ public class TestUsedSegmentChecker implements UsedSegmentChecker
       );
     }
 
-    final Set<DataSegment> retVal = Sets.newHashSet();
+    final Set<DataSegment> retVal = new HashSet<>();
     for (SegmentIdentifier identifier : identifiers) {
       for (TimelineObjectHolder<String, DataSegment> holder : timeline.lookup(identifier.getInterval())) {
         for (PartitionChunk<DataSegment> chunk : holder.getObject()) {

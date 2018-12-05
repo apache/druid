@@ -22,6 +22,7 @@ package org.apache.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.validation.constraints.Min;
 import java.util.Objects;
@@ -38,7 +39,7 @@ public class LookupConfig
 
   @Min(1)
   @JsonProperty("numLookupLoadingThreads")
-  private int numLookupLoadingThreads = Math.max(1, Runtime.getRuntime().availableProcessors() / 2);
+  private int numLookupLoadingThreads = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
 
   @Min(1)
   @JsonProperty("coordinatorFetchRetries")

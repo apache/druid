@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -64,6 +63,7 @@ import org.joda.time.DateTime;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -145,7 +145,7 @@ public class QueryMaker
 
     // SQL row column index -> Scan query column index
     final int[] columnMapping = new int[outputRowSignature.getRowOrder().size()];
-    final Map<String, Integer> scanColumnOrder = Maps.newHashMap();
+    final Map<String, Integer> scanColumnOrder = new HashMap<>();
 
     for (int i = 0; i < query.getColumns().size(); i++) {
       scanColumnOrder.put(query.getColumns().get(i), i);

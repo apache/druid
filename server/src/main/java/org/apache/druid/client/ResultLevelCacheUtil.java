@@ -31,13 +31,9 @@ public class ResultLevelCacheUtil
 {
   private static final Logger log = new Logger(ResultLevelCacheUtil.class);
 
-  public static Cache.NamedKey computeResultLevelCacheKey(
-      String resultLevelCacheIdentifier
-  )
+  public static Cache.NamedKey computeResultLevelCacheKey(String resultLevelCacheIdentifier)
   {
-    return new Cache.NamedKey(
-        resultLevelCacheIdentifier, StringUtils.toUtf8(resultLevelCacheIdentifier)
-    );
+    return new Cache.NamedKey(resultLevelCacheIdentifier, StringUtils.toUtf8(resultLevelCacheIdentifier));
   }
 
   public static void populate(

@@ -41,14 +41,16 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.metrics.TaskCountStatsProvider;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMaster
+public class TaskMaster implements TaskCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -263,6 +265,61 @@ public class TaskMaster
       return Optional.of(supervisorManager);
     } else {
       return Optional.absent();
+    }
+  }
+
+  @Override
+  public Map<String, Long> getSuccessfulTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getSuccessfulTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getFailedTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getFailedTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getRunningTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getRunningTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getPendingTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getPendingTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getWaitingTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getWaitingTaskCount();
+    } else {
+      return null;
     }
   }
 }

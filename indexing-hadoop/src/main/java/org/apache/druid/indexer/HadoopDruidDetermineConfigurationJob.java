@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -31,6 +30,7 @@ import org.joda.time.Interval;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  */
@@ -58,7 +58,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
       return JobHelper.runSingleJob(job, config);
     } else {
       int shardsPerInterval = config.getPartitionsSpec().getNumShards();
-      Map<Long, List<HadoopyShardSpec>> shardSpecs = Maps.newTreeMap();
+      Map<Long, List<HadoopyShardSpec>> shardSpecs = new TreeMap<>();
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();

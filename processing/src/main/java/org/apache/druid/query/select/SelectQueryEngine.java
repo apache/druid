@@ -56,6 +56,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +70,8 @@ public class SelectQueryEngine
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities, ColumnValueSelector selector
+        ColumnCapabilities capabilities,
+        ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();
@@ -249,7 +251,7 @@ public class SelectQueryEngine
               builder.addDimension(dimSpec.getOutputName());
             }
 
-            final Map<String, BaseObjectColumnValueSelector<?>> metSelectors = Maps.newHashMap();
+            final Map<String, BaseObjectColumnValueSelector<?>> metSelectors = new HashMap<>();
             for (String metric : metrics) {
               final BaseObjectColumnValueSelector<?> metricSelector =
                   cursor.getColumnSelectorFactory().makeColumnValueSelector(metric);

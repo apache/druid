@@ -35,9 +35,7 @@ public abstract class BroadcastDistributionRule implements Rule
   private static final EmittingLogger log = new EmittingLogger(BroadcastDistributionRule.class);
 
   @Override
-  public CoordinatorStats run(
-      DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment
-  )
+  public CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment)
   {
     // Find servers which holds the segments of co-located data source
     final Set<ServerHolder> loadServerHolders = new HashSet<>();

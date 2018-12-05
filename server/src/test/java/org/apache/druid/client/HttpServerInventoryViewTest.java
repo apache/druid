@@ -201,18 +201,14 @@ public class HttpServerInventoryViewTest
         new ServerView.SegmentCallback()
         {
           @Override
-          public ServerView.CallbackAction segmentAdded(
-              DruidServerMetadata server, DataSegment segment
-          )
+          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
             segmentAddLathces.get(segment.getIdentifier()).countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
 
           @Override
-          public ServerView.CallbackAction segmentRemoved(
-              DruidServerMetadata server, DataSegment segment
-          )
+          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
             segmentDropLatches.get(segment.getIdentifier()).countDown();
             return ServerView.CallbackAction.CONTINUE;
@@ -285,6 +281,7 @@ public class HttpServerInventoryViewTest
     public void registerListener(Listener listener)
     {
       listener.nodesAdded(ImmutableList.of());
+      listener.nodeViewInitialized();
       this.listener = listener;
     }
   }
@@ -302,7 +299,8 @@ public class HttpServerInventoryViewTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler
     )
     {
       throw new UnsupportedOperationException("Not Implemented.");
@@ -310,7 +308,9 @@ public class HttpServerInventoryViewTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler, Duration duration
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+        Duration duration
     )
     {
       if (requestNum.getAndIncrement() == 0) {

@@ -48,18 +48,13 @@ public class SortableBytesTest
 
     Assert.assertEquals(
         -1,
-        WritableComparator.compareBytes(
-            thingie1Bytes, 0, thingie1Bytes.length,
-            thingie2Bytes, 0, thingie2Bytes.length
-        )
+        WritableComparator.compareBytes(thingie1Bytes, 0, thingie1Bytes.length, thingie2Bytes, 0, thingie2Bytes.length)
     );
 
     Assert.assertEquals(
         0,
-        new SortableBytes.SortableBytesGroupingComparator().compare(
-            thingie1Bytes, 0, thingie1Bytes.length,
-            thingie2Bytes, 0, thingie2Bytes.length
-        )
+        new SortableBytes.SortableBytesGroupingComparator()
+            .compare(thingie1Bytes, 0, thingie1Bytes.length, thingie2Bytes, 0, thingie2Bytes.length)
     );
 
     SortableBytes reconThingie1 = SortableBytes.fromBytes(thingie1Bytes, 4, thingie1Bytes.length - 4);

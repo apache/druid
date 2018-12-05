@@ -19,8 +19,7 @@
 
 package org.apache.druid.server.security;
 
-import com.google.common.collect.Maps;
-
+import java.util.HashMap;
 import java.util.Map;
 
 public class AuthTestUtils
@@ -29,7 +28,7 @@ public class AuthTestUtils
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER;
 
   static {
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    final Map<String, Authenticator> defaultMap = new HashMap<>();
     defaultMap.put(AuthConfig.ALLOW_ALL_NAME, new AllowAllAuthenticator());
     TEST_AUTHENTICATOR_MAPPER = new AuthenticatorMapper(defaultMap);
 

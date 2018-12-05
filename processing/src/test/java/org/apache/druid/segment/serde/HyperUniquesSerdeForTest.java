@@ -91,9 +91,7 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(
-      ByteBuffer byteBuffer, ColumnBuilder columnBuilder
-  )
+  public void deserializeColumn(ByteBuffer byteBuffer, ColumnBuilder columnBuilder)
   {
     final GenericIndexed column;
     if (columnBuilder.getFileMapper() == null) {

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
@@ -32,6 +31,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -58,13 +58,13 @@ public class TaskStorageQueryAdapter
     return storage.getActiveTaskInfo(dataSource);
   }
 
-  public List<TaskInfo<Task, TaskStatus>> getRecentlyCompletedTaskInfo(
+  public List<TaskInfo<Task, TaskStatus>> getCompletedTaskInfoByCreatedTimeDuration(
       @Nullable Integer maxTaskStatuses,
       @Nullable Duration duration,
       @Nullable String dataSource
   )
   {
-    return storage.getRecentlyFinishedTaskInfo(maxTaskStatuses, duration, dataSource);
+    return storage.getRecentlyCreatedAlreadyFinishedTaskInfo(maxTaskStatuses, duration, dataSource);
   }
 
   public Optional<Task> getTask(final String taskid)
@@ -96,7 +96,7 @@ public class TaskStorageQueryAdapter
   @Deprecated
   public Set<DataSegment> getInsertedSegments(final String taskid)
   {
-    final Set<DataSegment> segments = Sets.newHashSet();
+    final Set<DataSegment> segments = new HashSet<>();
     for (final TaskAction action : storage.getAuditLogs(taskid)) {
       if (action instanceof SegmentInsertAction) {
         segments.addAll(((SegmentInsertAction) action).getSegments());

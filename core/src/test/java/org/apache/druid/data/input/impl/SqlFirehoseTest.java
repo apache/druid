@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.prefetch.JsonIterator;
@@ -105,7 +104,7 @@ public class SqlFirehoseTest
                                                      .collect(Collectors.toList());
 
     try (final SqlFirehose firehose = new SqlFirehose(lineIterators.iterator(), parser, closeable)) {
-      final List<Object> results = Lists.newArrayList();
+      final List<Object> results = new ArrayList<>();
 
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();

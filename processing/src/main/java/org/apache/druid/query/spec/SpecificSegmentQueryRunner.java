@@ -20,7 +20,6 @@
 package org.apache.druid.query.spec;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -37,6 +36,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.SegmentMissingException;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -67,14 +67,10 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
     final String newName = StringUtils.format("%s_%s_%s", query.getType(), query.getDataSource(), query.getIntervals());
 
     final Sequence<T> baseSequence = doNamed(
-        currThread, currThreadName, newName, new Supplier<Sequence<T>>()
-        {
-          @Override
-          public Sequence<T> get()
-          {
-            return base.run(queryPlus, responseContext);
-          }
-        }
+        currThread,
+        currThreadName,
+        newName,
+        () -> base.run(queryPlus, responseContext)
     );
 
     Sequence<T> segmentMissingCatchingSequence = new Sequence<T>()
@@ -159,7 +155,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
   {
     List<SegmentDescriptor> missingSegments = (List<SegmentDescriptor>) responseContext.get(Result.MISSING_SEGMENTS_KEY);
     if (missingSegments == null) {
-      missingSegments = Lists.newArrayList();
+      missingSegments = new ArrayList<>();
       responseContext.put(Result.MISSING_SEGMENTS_KEY, missingSegments);
     }
     missingSegments.add(specificSpec.getDescriptor());

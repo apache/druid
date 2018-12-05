@@ -50,8 +50,10 @@ public class PvaluefromZscorePostAggregatorTest
   public void testSerde() throws Exception
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    PvaluefromZscorePostAggregator postAggregator1 = mapper.readValue(mapper.writeValueAsString(
-        pvaluefromZscorePostAggregator), PvaluefromZscorePostAggregator.class);
+    PvaluefromZscorePostAggregator postAggregator1 = mapper.readValue(
+        mapper.writeValueAsString(pvaluefromZscorePostAggregator),
+        PvaluefromZscorePostAggregator.class
+    );
 
     Assert.assertEquals(pvaluefromZscorePostAggregator, postAggregator1);
   }

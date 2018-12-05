@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -153,23 +152,23 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               private final AtomicBoolean initialized = new AtomicBoolean(false);
 
               @Override
-              public void nodesAdded(List<DiscoveryDruidNode> nodes)
+              public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
               {
-                nodes.forEach(
-                    node -> serverAdded(toDruidServer(node))
-                );
-
-                if (!initialized.getAndSet(true)) {
-                  executor.execute(HttpServerInventoryView.this::serverInventoryInitialized);
-                }
+                nodes.forEach(node -> serverAdded(toDruidServer(node)));
               }
 
               @Override
-              public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+              public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
               {
-                nodes.forEach(
-                    node -> serverRemoved(toDruidServer(node))
-                );
+                nodes.forEach(node -> serverRemoved(toDruidServer(node)));
+              }
+
+              @Override
+              public void nodeViewInitialized()
+              {
+                if (!initialized.getAndSet(true)) {
+                  executor.execute(HttpServerInventoryView.this::serverInventoryInitialized);
+                }
               }
 
               private DruidServer toDruidServer(DiscoveryDruidNode node)
@@ -226,7 +225,9 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
   @Override
   public void registerSegmentCallback(
-      Executor exec, SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter
+      Executor exec,
+      SegmentCallback callback,
+      Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
     if (lifecycleLock.isStarted()) {
@@ -552,7 +553,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         @Override
         public void fullSync(List<DataSegmentChangeRequest> changes)
         {
-          Map<String, DataSegment> toRemove = Maps.newHashMap(druidServer.getSegments());
+          Map<String, DataSegment> toRemove = new HashMap<>(druidServer.getSegments());
 
           for (DataSegmentChangeRequest request : changes) {
             if (request instanceof SegmentChangeRequestLoad) {

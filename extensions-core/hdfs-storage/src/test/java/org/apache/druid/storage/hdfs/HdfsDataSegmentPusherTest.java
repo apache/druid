@@ -32,8 +32,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.Bucket;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -67,12 +65,24 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.regex.Pattern;
 
 /**
  */
 public class HdfsDataSegmentPusherTest
 {
+  static TestObjectMapper objectMapper;
+
+  static {
+    objectMapper = new TestObjectMapper();
+    InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ObjectMapper.class, objectMapper);
+    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
+    objectMapper.setInjectableValues(injectableValues);
+  }
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -80,22 +90,14 @@ public class HdfsDataSegmentPusherTest
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
 
-  static TestObjectMapper objectMapper = new TestObjectMapper();
-
   private HdfsDataSegmentPusher hdfsDataSegmentPusher;
+
   @Before
-  public void setUp() throws IOException
+  public void setUp()
   {
     HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConf = new HdfsDataSegmentPusherConfig();
     hdfsDataSegmentPusherConf.setStorageDirectory("path/to/");
     hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true), objectMapper);
-  }
-  static {
-    objectMapper = new TestObjectMapper();
-    InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(ObjectMapper.class, objectMapper);
-    injectableValues.addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT);
-    objectMapper.setInjectableValues(injectableValues);
   }
 
   @Test
@@ -150,9 +152,9 @@ public class HdfsDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         size
@@ -160,10 +162,11 @@ public class HdfsDataSegmentPusherTest
 
     DataSegment segment = pusher.push(segmentDir, segmentToPush, true);
 
-    String matcher = ".*/foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0_[A-Za-z0-9-]{36}_index\\.zip";
+    Pattern pattern =
+        Pattern.compile(".*/foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0_[A-Za-z0-9-]{36}_index\\.zip");
     Assert.assertTrue(
         segment.getLoadSpec().get("path").toString(),
-        segment.getLoadSpec().get("path").toString().matches(matcher)
+        pattern.matcher(segment.getLoadSpec().get("path").toString()).matches()
     );
   }
 
@@ -195,9 +198,9 @@ public class HdfsDataSegmentPusherTest
           "foo",
           Intervals.of("2015/2016"),
           "0",
-          Maps.newHashMap(),
-          Lists.newArrayList(),
-          Lists.newArrayList(),
+          new HashMap<>(),
+          new ArrayList<>(),
+          new ArrayList<>(),
           new NumberedShardSpec(i, i),
           0,
           size
@@ -301,9 +304,9 @@ public class HdfsDataSegmentPusherTest
         "foo",
         Intervals.of("2015/2016"),
         "0",
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         size
@@ -378,7 +381,8 @@ public class HdfsDataSegmentPusherTest
         addSerializer(Interval.class, ToStringSerializer.instance);
         addSerializer(NumberedShardSpec.class, ToStringSerializer.instance);
         addDeserializer(
-            Interval.class, new StdDeserializer<Interval>(Interval.class)
+            Interval.class,
+            new StdDeserializer<Interval>(Interval.class)
             {
               @Override
               public Interval deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)

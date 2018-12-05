@@ -31,6 +31,7 @@ import net.jpountz.lz4.LZ4FastDecompressor;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.utils.JvmUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -68,7 +69,7 @@ public class CaffeineCache implements org.apache.druid.client.cache.Cache
     if (config.getSizeInBytes() >= 0) {
       builder.maximumWeight(config.getSizeInBytes());
     } else {
-      builder.maximumWeight(Math.min(MAX_DEFAULT_BYTES, Runtime.getRuntime().maxMemory() / 10));
+      builder.maximumWeight(Math.min(MAX_DEFAULT_BYTES, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 10));
     }
     builder
         .weigher((NamedKey key, byte[] value) -> value.length

@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -198,7 +199,8 @@ public class CachingClusteredClientFunctionalityTest
 
               @Override
               public QueryableDruidServer pick(
-                  Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers, DataSegment segment
+                  Int2ObjectRBTreeMap<Set<QueryableDruidServer>> prioritizedServers,
+                  DataSegment segment
               )
               {
                 return new QueryableDruidServer(

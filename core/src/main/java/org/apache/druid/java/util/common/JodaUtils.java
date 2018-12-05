@@ -19,8 +19,6 @@
 
 package org.apache.druid.java.util.common;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -28,6 +26,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  */
@@ -39,21 +38,21 @@ public class JodaUtils
 
   public static ArrayList<Interval> condenseIntervals(Iterable<Interval> intervals)
   {
-    ArrayList<Interval> retVal = Lists.newArrayList();
+    ArrayList<Interval> retVal = new ArrayList<>();
 
     final SortedSet<Interval> sortedIntervals;
 
     if (intervals instanceof SortedSet) {
       sortedIntervals = (SortedSet<Interval>) intervals;
     } else {
-      sortedIntervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
+      sortedIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
       for (Interval interval : intervals) {
         sortedIntervals.add(interval);
       }
     }
 
     if (sortedIntervals.isEmpty()) {
-      return Lists.newArrayList();
+      return new ArrayList<>();
     }
 
     Iterator<Interval> intervalsIter = sortedIntervals.iterator();
@@ -82,8 +81,8 @@ public class JodaUtils
 
   public static Interval umbrellaInterval(Iterable<Interval> intervals)
   {
-    ArrayList<DateTime> startDates = Lists.newArrayList();
-    ArrayList<DateTime> endDates = Lists.newArrayList();
+    ArrayList<DateTime> startDates = new ArrayList<>();
+    ArrayList<DateTime> endDates = new ArrayList<>();
 
     for (Interval interval : intervals) {
       startDates.add(interval.getStart());

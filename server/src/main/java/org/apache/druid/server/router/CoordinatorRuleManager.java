@@ -22,7 +22,6 @@ package org.apache.druid.server.router;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
@@ -39,6 +38,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -165,7 +165,7 @@ public class CoordinatorRuleManager
 
   public List<Rule> getRulesWithDefault(final String dataSource)
   {
-    List<Rule> retVal = Lists.newArrayList();
+    List<Rule> retVal = new ArrayList<>();
     Map<String, List<Rule>> theRules = rules.get();
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));

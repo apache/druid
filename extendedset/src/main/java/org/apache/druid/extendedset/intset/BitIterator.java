@@ -29,7 +29,7 @@ public final class BitIterator implements IntSet.IntIterator
   private boolean literalAndZeroFill;
   private int nextIndex = 0;
   private int nextOffset = 0;
-  private int next = -1;
+  private int next;
 
   BitIterator(ImmutableConciseSet immutableConciseSet)
   {

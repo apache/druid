@@ -55,11 +55,17 @@ public class LocalDataStorageDruidModule implements DruidModule
     bindDeepStorageLocal(binder);
 
     PolyBind.createChoice(
-        binder, "druid.storage.type", Key.get(DataSegmentPusher.class), Key.get(LocalDataSegmentPusher.class)
+        binder,
+        "druid.storage.type",
+        Key.get(DataSegmentPusher.class),
+        Key.get(LocalDataSegmentPusher.class)
     );
 
     PolyBind.createChoice(
-        binder, "druid.storage.type", Key.get(DataSegmentKiller.class), Key.get(LocalDataSegmentKiller.class)
+        binder,
+        "druid.storage.type",
+        Key.get(DataSegmentKiller.class),
+        Key.get(LocalDataSegmentKiller.class)
     );
 
     PolyBind.createChoice(binder, "druid.storage.type", Key.get(DataSegmentFinder.class), null);

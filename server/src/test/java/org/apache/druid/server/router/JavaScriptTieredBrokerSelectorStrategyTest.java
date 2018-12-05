@@ -94,7 +94,6 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
   public void testGetBrokerServiceName()
   {
     final LinkedHashMap<String, String> tierBrokerMap = new LinkedHashMap<>();
-    tierBrokerMap.put("fast", "druid/fastBroker");
     tierBrokerMap.put("fast", "druid/broker");
     tierBrokerMap.put("slow", "druid/slowBroker");
 

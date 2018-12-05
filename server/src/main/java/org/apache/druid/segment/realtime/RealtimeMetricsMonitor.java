@@ -20,7 +20,6 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -29,6 +28,7 @@ import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.java.util.metrics.MonitorUtils;
 import org.apache.druid.query.DruidMetrics;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -55,7 +55,7 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
   public RealtimeMetricsMonitor(List<FireDepartment> fireDepartments, Map<String, String[]> dimensions)
   {
     this.fireDepartments = fireDepartments;
-    this.previousValues = Maps.newHashMap();
+    this.previousValues = new HashMap<>();
     this.dimensions = ImmutableMap.copyOf(dimensions);
   }
 

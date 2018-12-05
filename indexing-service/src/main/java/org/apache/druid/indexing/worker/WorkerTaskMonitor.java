@@ -72,7 +72,11 @@ public class WorkerTaskMonitor extends WorkerTaskManager
 
     this.jsonMapper = jsonMapper;
     this.pathChildrenCache = new PathChildrenCache(
-        cf, workerCuratorCoordinator.getTaskPathForWorker(), false, true, Execs.makeThreadFactory("TaskMonitorCache-%s")
+        cf,
+        workerCuratorCoordinator.getTaskPathForWorker(),
+        false,
+        true,
+        Execs.makeThreadFactory("TaskMonitorCache-%s")
     );
     this.cf = cf;
     this.workerCuratorCoordinator = workerCuratorCoordinator;

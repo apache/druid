@@ -43,7 +43,9 @@ public class CacheMonitorTest
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, false, null, null, true, false)
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                new DruidNode("test-inject", null, false, null, null, true, false)
             );
           }
         }
@@ -62,7 +64,9 @@ public class CacheMonitorTest
           public void configure(Binder binder)
           {
             JsonConfigProvider.bindInstance(
-                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, false, null, null, true, false)
+                binder,
+                Key.get(DruidNode.class, Self.class),
+                new DruidNode("test-inject", null, false, null, null, true, false)
             );
             binder.bind(Cache.class).toInstance(MapCache.create(0));
           }

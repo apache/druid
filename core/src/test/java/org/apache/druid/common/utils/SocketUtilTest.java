@@ -27,6 +27,7 @@ import org.junit.Test;
 public class SocketUtilTest
 {
   private final int MAX_PORT = 0xffff;
+
   @Test
   public void testSocketUtil()
   {

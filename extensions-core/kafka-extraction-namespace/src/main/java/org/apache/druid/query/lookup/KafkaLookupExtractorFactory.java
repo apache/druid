@@ -117,7 +117,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.cacheManager = cacheManager;
     this.connectTimeout = connectTimeout;
     this.injective = injective;
-    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID().toString();
+    this.factoryId = "kafka-factory-" + kafkaTopic + UUID.randomUUID();
   }
 
   public KafkaLookupExtractorFactory(
@@ -242,7 +242,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
           }
       );
       Futures.addCallback(
-          future, new FutureCallback<Object>()
+          future,
+          new FutureCallback<Object>()
           {
             @Override
             public void onSuccess(Object result)

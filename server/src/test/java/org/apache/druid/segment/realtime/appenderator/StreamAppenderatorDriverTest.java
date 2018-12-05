@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -55,6 +54,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -408,7 +408,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     private final String dataSource;
     private final Granularity granularity;
-    private final Map<Long, AtomicInteger> counters = Maps.newHashMap();
+    private final Map<Long, AtomicInteger> counters = new HashMap<>();
 
     public TestSegmentAllocator(String dataSource, Granularity granularity)
     {

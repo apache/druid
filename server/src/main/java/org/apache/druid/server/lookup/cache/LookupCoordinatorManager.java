@@ -386,7 +386,8 @@ public class LookupCoordinatorManager
             TimeUnit.MILLISECONDS
         );
         Futures.addCallback(
-            backgroundManagerFuture, new FutureCallback<Object>()
+            backgroundManagerFuture,
+            new FutureCallback<Object>()
             {
               @Override
               public void onSuccess(@Nullable Object result)

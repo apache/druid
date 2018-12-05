@@ -122,12 +122,8 @@ public class EvalTest
     Assert.assertFalse(evalLong("!9223372036854775807", bindings) > 0);
 
     Assert.assertEquals(3037000499L, evalLong("cast(sqrt(9223372036854775807), 'long')", bindings));
-    Assert.assertEquals(
-        1L, evalLong("if(x == 9223372036854775807, 1, 0)", bindings)
-    );
-    Assert.assertEquals(
-        0L, evalLong("if(x - 1 == 9223372036854775807, 1, 0)", bindings)
-    );
+    Assert.assertEquals(1L, evalLong("if(x == 9223372036854775807, 1, 0)", bindings));
+    Assert.assertEquals(0L, evalLong("if(x - 1 == 9223372036854775807, 1, 0)", bindings));
 
     Assert.assertEquals(1271030400000L, evalLong("timestamp('2010-04-12')", bindings));
     Assert.assertEquals(1270998000000L, evalLong("timestamp('2010-04-12T+09:00')", bindings));

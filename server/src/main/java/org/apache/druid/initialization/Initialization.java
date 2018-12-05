@@ -22,9 +22,6 @@ package org.apache.druid.initialization;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -70,6 +67,7 @@ import org.apache.druid.server.initialization.AuthenticatorMapperModule;
 import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
 import org.apache.druid.server.metrics.MetricsModule;
+import org.apache.druid.server.security.TLSCertificateCheckerModule;
 import org.eclipse.aether.artifact.DefaultArtifact;
 
 import java.io.File;
@@ -81,6 +79,7 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -97,7 +96,7 @@ public class Initialization
   private static final Logger log = new Logger(Initialization.class);
   private static final ConcurrentMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
 
-  private static final Map<Class, Collection> extensionsMap = Maps.newHashMap();
+  private static final Map<Class, Collection> extensionsMap = new HashMap<>();
 
   /**
    * @param clazz service class
@@ -110,7 +109,7 @@ public class Initialization
     @SuppressWarnings("unchecked")
     Collection<T> retVal = extensionsMap.get(clazz);
     if (retVal == null) {
-      return Sets.newHashSet();
+      return new HashSet<>();
     }
     return retVal;
   }
@@ -369,6 +368,7 @@ public class Initialization
         new Log4jShutterDownerModule(),
         new DruidAuthModule(),
         new LifecycleModule(),
+        TLSCertificateCheckerModule.class,
         EmitterModule.class,
         HttpClientModule.global(),
         HttpClientModule.escalatedGlobal(),
@@ -433,7 +433,7 @@ public class Initialization
       this.modulesConfig = baseInjector.getInstance(ModulesConfig.class);
       this.jsonMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Json.class));
       this.smileMapper = baseInjector.getInstance(Key.get(ObjectMapper.class, Smile.class));
-      this.modules = Lists.newArrayList();
+      this.modules = new ArrayList<>();
     }
 
     private List<Module> getModules()

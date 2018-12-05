@@ -482,7 +482,7 @@ public class LookupCoordinatorResource
   )
   {
     try {
-      Collection<String> tiers = null;
+      Collection<String> tiers;
       if (discover) {
         tiers = lookupCoordinatorManager.discoverTiers();
       } else {

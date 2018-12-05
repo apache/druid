@@ -177,7 +177,10 @@ public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, 
 
   @Override
   public void fillBitmapsFromUnsortedEncodedKeyComponent(
-      Double key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
+      Double key,
+      int rowNum,
+      MutableBitmap[] bitmapIndexes,
+      BitmapFactory factory
   )
   {
     throw new UnsupportedOperationException("Numeric columns do not support bitmaps.");

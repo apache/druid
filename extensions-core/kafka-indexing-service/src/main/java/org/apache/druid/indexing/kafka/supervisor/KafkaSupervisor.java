@@ -34,8 +34,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -44,6 +42,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
@@ -130,7 +129,6 @@ public class KafkaSupervisor implements Supervisor
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
   private static final long INITIAL_EMIT_LAG_METRIC_DELAY_MILLIS = 25000;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
-  private static final CopyOnWriteArrayList EMPTY_LIST = Lists.newCopyOnWriteArrayList();
 
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
 
@@ -338,7 +336,7 @@ public class KafkaSupervisor implements Supervisor
     this.futureTimeoutInSeconds = Math.max(
         MINIMUM_FUTURE_TIMEOUT_IN_SECONDS,
         tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
-                                         + KafkaIndexTaskClient.MAX_RETRY_WAIT_SECONDS)
+                                         + IndexTaskClient.MAX_RETRY_WAIT_SECONDS)
     );
 
     int chatThreads = (this.tuningConfig.getChatThreads() != null
@@ -467,6 +465,12 @@ public class KafkaSupervisor implements Supervisor
            .emit();
       }
     }
+  }
+
+  private boolean someTaskGroupsPendingCompletion(Integer groupId)
+  {
+    CopyOnWriteArrayList<TaskGroup> taskGroups = pendingCompletionTaskGroups.get(groupId);
+    return taskGroups != null && taskGroups.size() > 0;
   }
 
   @Override
@@ -665,18 +669,21 @@ public class KafkaSupervisor implements Supervisor
             })
             .findAny()
             .map(Entry::getKey);
-        taskGroupId = maybeGroupId.orElse(
-            pendingCompletionTaskGroups
-                .entrySet()
-                .stream()
-                .filter(entry -> {
-                  final List<TaskGroup> taskGroups = entry.getValue();
-                  return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
-                })
-                .findAny()
-                .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
-                .getKey()
-        );
+
+        if (maybeGroupId.isPresent()) {
+          taskGroupId = maybeGroupId.get();
+        } else {
+          taskGroupId = pendingCompletionTaskGroups
+              .entrySet()
+              .stream()
+              .filter(entry -> {
+                final List<TaskGroup> taskGroups = entry.getValue();
+                return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
+              })
+              .findAny()
+              .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
+              .getKey();
+        }
       } else {
         taskGroupId = nullableTaskGroupId;
       }
@@ -743,7 +750,7 @@ public class KafkaSupervisor implements Supervisor
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
       log.info("Reset dataSource[%s] - dataSource metadata entry deleted? [%s]", dataSource, result);
-      taskGroups.values().forEach(this::killTasksInGroup);
+      taskGroups.values().forEach(group -> killTasksInGroup(group, "DataSourceMetadata is not found while reset"));
       taskGroups.clear();
       partitionGroups.clear();
     } else if (!(dataSourceMetadata instanceof KafkaDataSourceMetadata)) {
@@ -767,8 +774,8 @@ public class KafkaSupervisor implements Supervisor
         // as well as the case where the metadata store do not have an entry for the reset partitions
         boolean doReset = false;
         for (Entry<Integer, Long> resetPartitionOffset : resetKafkaMetadata.getKafkaPartitions()
-                                                                               .getPartitionOffsetMap()
-                                                                               .entrySet()) {
+                                                                           .getPartitionOffsetMap()
+                                                                           .entrySet()) {
           final Long partitionOffsetInMetadataStore = currentMetadata == null
                                                       ? null
                                                       : currentMetadata.getKafkaPartitions()
@@ -807,7 +814,7 @@ public class KafkaSupervisor implements Supervisor
         if (metadataUpdateSuccess) {
           resetKafkaMetadata.getKafkaPartitions().getPartitionOffsetMap().keySet().forEach(partition -> {
             final int groupId = getTaskGroupIdForPartition(partition);
-            killTaskGroupForPartitions(ImmutableSet.of(partition));
+            killTaskGroupForPartitions(ImmutableSet.of(partition), "DataSourceMetadata is updated while reset");
             taskGroups.remove(groupId);
             partitionGroups.get(groupId).replaceAll((partitionId, offset) -> NOT_SET);
           });
@@ -824,19 +831,18 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private void killTaskGroupForPartitions(Set<Integer> partitions)
+  private void killTaskGroupForPartitions(Set<Integer> partitions, String reasonFormat, Object... args)
   {
     for (Integer partition : partitions) {
-      killTasksInGroup(taskGroups.get(getTaskGroupIdForPartition(partition)));
+      killTasksInGroup(taskGroups.get(getTaskGroupIdForPartition(partition)), reasonFormat, args);
     }
   }
 
-  private void killTasksInGroup(TaskGroup taskGroup)
+  private void killTasksInGroup(TaskGroup taskGroup, String reasonFormat, Object... args)
   {
     if (taskGroup != null) {
       for (String taskId : taskGroup.tasks.keySet()) {
-        log.info("Killing task [%s] in the task group", taskId);
-        killTask(taskId);
+        killTask(taskId, reasonFormat, args);
       }
     }
   }
@@ -851,7 +857,7 @@ public class KafkaSupervisor implements Supervisor
     for (TaskGroup taskGroup : taskGroups.values()) {
       for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
         if (taskInfoProvider.getTaskLocation(entry.getKey()).equals(TaskLocation.unknown())) {
-          killTask(entry.getKey());
+          killTask(entry.getKey(), "Killing task for graceful shutdown");
         } else {
           entry.getValue().startTime = DateTimes.EPOCH;
         }
@@ -1034,13 +1040,13 @@ public class KafkaSupervisor implements Supervisor
 
   private void updatePartitionDataFromKafka()
   {
-    Map<String, List<PartitionInfo>> topics;
+    List<PartitionInfo> partitions;
     try {
       synchronized (consumerLock) {
-        topics = consumer.listTopics(); // updates the consumer's list of partitions from the brokers
+        partitions = consumer.partitionsFor(ioConfig.getTopic());
       }
     }
-    catch (Exception e) { // calls to the consumer throw NPEs when the broker doesn't respond
+    catch (Exception e) {
       log.warn(
           e,
           "Unable to get partition data from Kafka for brokers [%s], are the brokers up?",
@@ -1049,10 +1055,6 @@ public class KafkaSupervisor implements Supervisor
       return;
     }
 
-    List<PartitionInfo> partitions = topics.get(ioConfig.getTopic());
-    if (partitions == null) {
-      log.warn("No such topic [%s] found, list of discovered topics [%s]", ioConfig.getTopic(), topics.keySet());
-    }
     int numPartitions = (partitions != null ? partitions.size() : 0);
 
     log.debug("Found [%d] Kafka partitions for topic [%s]", numPartitions, ioConfig.getTopic());
@@ -1088,8 +1090,8 @@ public class KafkaSupervisor implements Supervisor
   private void discoverTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
     int taskCount = 0;
-    List<String> futureTaskIds = Lists.newArrayList();
-    List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
+    List<String> futureTaskIds = new ArrayList<>();
+    List<ListenableFuture<Boolean>> futures = new ArrayList<>();
     List<Task> tasks = taskStorage.getActiveTasks();
     final Map<Integer, TaskGroup> taskGroupsToVerify = new HashMap<>();
 
@@ -1101,7 +1103,7 @@ public class KafkaSupervisor implements Supervisor
       taskCount++;
       final KafkaIndexTask kafkaTask = (KafkaIndexTask) task;
       final String taskId = task.getId();
-      
+
       // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
       // later determine that this task is actively reading, we will make sure that it matches our current partition
       // allocation (getTaskGroupIdForPartition(partition) should return the same value for every partition being read
@@ -1236,8 +1238,7 @@ public class KafkaSupervisor implements Supervisor
     for (int i = 0; i < results.size(); i++) {
       if (results.get(i) == null) {
         String taskId = futureTaskIds.get(i);
-        log.warn("Task [%s] failed to return status, killing task", taskId);
-        killTask(taskId);
+        killTask(taskId, "Task [%s] failed to return status, killing task", taskId);
       }
     }
     log.debug("Found [%d] Kafka indexing tasks for dataSource [%s]", taskCount, dataSource);
@@ -1297,7 +1298,7 @@ public class KafkaSupervisor implements Supervisor
           }
           catch (Exception e) {
             log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
-            killTask(taskId);
+            killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
             taskGroup.tasks.remove(taskId);
           }
         } else if (checkpoints.isEmpty()) {
@@ -1346,7 +1347,7 @@ public class KafkaSupervisor implements Supervisor
                     partitionOffset.getValue() :
                     latestOffsetsFromDb.getOrDefault(partitionOffset.getKey(), partitionOffset.getValue())
                 ) == 0) && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
-                pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() > 0
+                someTaskGroupsPendingCompletion(groupId)
                 && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))) {
           final SortedMap<Integer, Map<Integer, Long>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
@@ -1383,7 +1384,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     if ((tasksToKill.size() > 0 && tasksToKill.size() == taskGroup.tasks.size()) ||
-        (taskGroup.tasks.size() == 0 && pendingCompletionTaskGroups.getOrDefault(groupId, EMPTY_LIST).size() == 0)) {
+        (taskGroup.tasks.size() == 0 && !someTaskGroupsPendingCompletion(groupId))) {
       // killing all tasks or no task left in the group ?
       // clear state about the taskgroup so that get latest offset information is fetched from metadata store
       log.warn("Clearing task group [%d] information as no valid tasks left the group", groupId);
@@ -1393,7 +1394,8 @@ public class KafkaSupervisor implements Supervisor
 
     taskSequences.stream().filter(taskIdSequences -> tasksToKill.contains(taskIdSequences.lhs)).forEach(
         sequenceCheckpoint -> {
-          log.warn(
+          killTask(
+              sequenceCheckpoint.lhs,
               "Killing task [%s], as its checkpoints [%s] are not consistent with group checkpoints[%s] or latest "
               + "persisted offsets in metadata store [%s]",
               sequenceCheckpoint.lhs,
@@ -1401,7 +1403,6 @@ public class KafkaSupervisor implements Supervisor
               taskGroup.sequenceOffsets,
               latestOffsetsFromDb
           );
-          killTask(sequenceCheckpoint.lhs);
           taskGroup.tasks.remove(sequenceCheckpoint.lhs);
         }
     );
@@ -1445,8 +1446,8 @@ public class KafkaSupervisor implements Supervisor
 
   private void updateTaskStatus() throws ExecutionException, InterruptedException, TimeoutException
   {
-    final List<ListenableFuture<Boolean>> futures = Lists.newArrayList();
-    final List<String> futureTaskIds = Lists.newArrayList();
+    final List<ListenableFuture<Boolean>> futures = new ArrayList<>();
+    final List<String> futureTaskIds = new ArrayList<>();
 
     // update status (and startTime if unknown) of current tasks in taskGroups
     for (TaskGroup group : taskGroups.values()) {
@@ -1505,16 +1506,15 @@ public class KafkaSupervisor implements Supervisor
       // request threw an exception so kill the task
       if (results.get(i) == null) {
         String taskId = futureTaskIds.get(i);
-        log.warn("Task [%s] failed to return start time, killing task", taskId);
-        killTask(taskId);
+        killTask(taskId, "Task [%s] failed to return start time, killing task", taskId);
       }
     }
   }
 
   private void checkTaskDuration() throws InterruptedException, ExecutionException, TimeoutException
   {
-    final List<ListenableFuture<Map<Integer, Long>>> futures = Lists.newArrayList();
-    final List<Integer> futureGroupIds = Lists.newArrayList();
+    final List<ListenableFuture<Map<Integer, Long>>> futures = new ArrayList<>();
+    final List<Integer> futureGroupIds = new ArrayList<>();
 
     for (Entry<Integer, TaskGroup> entry : taskGroups.entrySet()) {
       Integer groupId = entry.getKey();
@@ -1553,13 +1553,12 @@ public class KafkaSupervisor implements Supervisor
           partitionGroups.get(groupId).put(entry.getKey(), entry.getValue());
         }
       } else {
-        log.warn(
-            "All tasks in group [%s] failed to transition to publishing state, killing tasks [%s]",
-            groupId,
-            group.taskIds()
-        );
         for (String id : group.taskIds()) {
-          killTask(id);
+          killTask(
+              id,
+              "All tasks in group [%s] failed to transition to publishing state",
+              groupId
+          );
         }
         // clear partitionGroups, so that latest offsets from db is used as start offsets not the stale ones
         // if tasks did some successful incremental handoffs
@@ -1589,7 +1588,7 @@ public class KafkaSupervisor implements Supervisor
             // metadata store (which will have advanced if we succeeded in publishing and will remain the same if
             // publishing failed and we need to re-ingest)
             return Futures.transform(
-                stopTasksInGroup(taskGroup),
+                stopTasksInGroup(taskGroup, "task[%s] succeeded in the taskGroup", task.status.getId()),
                 new Function<Object, Map<Integer, Long>>()
                 {
                   @Nullable
@@ -1604,8 +1603,7 @@ public class KafkaSupervisor implements Supervisor
 
           if (task.status.isRunnable()) {
             if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
-              log.info("Killing task [%s] which hasn't been assigned to a worker", taskId);
-              killTask(taskId);
+              killTask(taskId, "Killing task [%s] which hasn't been assigned to a worker", taskId);
               i.remove();
             }
           }
@@ -1614,7 +1612,7 @@ public class KafkaSupervisor implements Supervisor
     }
 
     // 2) Pause running tasks
-    final List<ListenableFuture<Map<Integer, Long>>> pauseFutures = Lists.newArrayList();
+    final List<ListenableFuture<Map<Integer, Long>>> pauseFutures = new ArrayList<>();
     final List<String> pauseTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
     for (final String taskId : pauseTaskIds) {
       pauseFutures.add(taskClient.pauseAsync(taskId));
@@ -1634,8 +1632,7 @@ public class KafkaSupervisor implements Supervisor
 
               if (result == null || result.isEmpty()) { // kill tasks that didn't return a value
                 String taskId = pauseTaskIds.get(i);
-                log.warn("Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
-                killTask(taskId);
+                killTask(taskId, "Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
                 taskGroup.tasks.remove(taskId);
 
               } else { // otherwise build a map of the highest offsets seen
@@ -1650,7 +1647,7 @@ public class KafkaSupervisor implements Supervisor
 
             // 4) Set the end offsets for each task to the values from step 3 and resume the tasks. All the tasks should
             //    finish reading and start publishing within a short period, depending on how in sync the tasks were.
-            final List<ListenableFuture<Boolean>> setEndOffsetFutures = Lists.newArrayList();
+            final List<ListenableFuture<Boolean>> setEndOffsetFutures = new ArrayList<>();
             final List<String> setEndOffsetTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
 
             if (setEndOffsetTaskIds.isEmpty()) {
@@ -1683,8 +1680,11 @@ public class KafkaSupervisor implements Supervisor
               for (int i = 0; i < results.size(); i++) {
                 if (results.get(i) == null || !results.get(i)) {
                   String taskId = setEndOffsetTaskIds.get(i);
-                  log.warn("Task [%s] failed to respond to [set end offsets] in a timely manner, killing task", taskId);
-                  killTask(taskId);
+                  killTask(
+                      taskId,
+                      "Task [%s] failed to respond to [set end offsets] in a timely manner, killing task",
+                      taskId
+                  );
                   taskGroup.tasks.remove(taskId);
                 }
               }
@@ -1715,14 +1715,14 @@ public class KafkaSupervisor implements Supervisor
    */
   private void checkPendingCompletionTasks() throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<?>> futures = Lists.newArrayList();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
 
     for (Entry<Integer, CopyOnWriteArrayList<TaskGroup>> pendingGroupList : pendingCompletionTaskGroups.entrySet()) {
 
       boolean stopTasksInTaskGroup = false;
       Integer groupId = pendingGroupList.getKey();
       CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingGroupList.getValue();
-      List<TaskGroup> toRemove = Lists.newArrayList();
+      List<TaskGroup> toRemove = new ArrayList<>();
 
       for (TaskGroup group : taskGroupList) {
         boolean foundSuccess = false, entireTaskGroupFailed = false;
@@ -1730,7 +1730,12 @@ public class KafkaSupervisor implements Supervisor
         if (stopTasksInTaskGroup) {
           // One of the earlier groups that was handling the same partition set timed out before the segments were
           // published so stop any additional groups handling the same partition set that are pending completion.
-          futures.add(stopTasksInGroup(group));
+          futures.add(
+              stopTasksInGroup(
+                  group,
+                  "one of earlier groups that was handling the same partition set timed out before publishing segments"
+              )
+          );
           toRemove.add(group);
           continue;
         }
@@ -1755,8 +1760,9 @@ public class KafkaSupervisor implements Supervisor
           if (taskData.status.isSuccess()) {
             // If one of the pending completion tasks was successful, stop the rest of the tasks in the group as
             // we no longer need them to publish their segment.
-            log.info("Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds());
-            futures.add(stopTasksInGroup(group));
+            futures.add(
+                stopTasksInGroup(group, "Task [%s] completed successfully, stopping tasks %s", taskId, group.taskIds())
+            );
             foundSuccess = true;
             toRemove.add(group); // remove the TaskGroup from the list of pending completion task groups
             break; // skip iterating the rest of the tasks in this group as they've all been stopped now
@@ -1778,12 +1784,20 @@ public class KafkaSupervisor implements Supervisor
           // reset partitions offsets for this task group so that they will be re-read from metadata storage
           partitionGroups.get(groupId).replaceAll((partition, offset) -> NOT_SET);
           // kill all the tasks in this pending completion group
-          killTasksInGroup(group);
+          killTasksInGroup(
+              group,
+              "No task in pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              groupId
+          );
           // set a flag so the other pending completion groups for this set of partitions will also stop
           stopTasksInTaskGroup = true;
 
           // kill all the tasks in the currently reading task group and remove the bad task group
-          killTasksInGroup(taskGroups.remove(groupId));
+          killTasksInGroup(
+              taskGroups.remove(groupId),
+              "No task in the corresponding pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              groupId
+          );
           toRemove.add(group);
         }
       }
@@ -1797,7 +1811,7 @@ public class KafkaSupervisor implements Supervisor
 
   private void checkCurrentTaskState() throws ExecutionException, InterruptedException, TimeoutException
   {
-    List<ListenableFuture<?>> futures = Lists.newArrayList();
+    List<ListenableFuture<?>> futures = new ArrayList<>();
     Iterator<Entry<Integer, TaskGroup>> iTaskGroups = taskGroups.entrySet().iterator();
     while (iTaskGroups.hasNext()) {
       Entry<Integer, TaskGroup> taskGroupEntry = iTaskGroups.next();
@@ -1837,7 +1851,7 @@ public class KafkaSupervisor implements Supervisor
         // check for successful tasks, and if we find one, stop all tasks in the group and remove the group so it can
         // be recreated with the next set of offsets
         if (taskData.status.isSuccess()) {
-          futures.add(stopTasksInGroup(taskGroup));
+          futures.add(stopTasksInGroup(taskGroup, "task[%s] succeeded in the same taskGroup", taskData.status.getId()));
           iTaskGroups.remove();
           break;
         }
@@ -1918,7 +1932,7 @@ public class KafkaSupervisor implements Supervisor
     }
     TaskGroup group = taskGroups.get(groupId);
 
-    Map<String, Object> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
+    Map<String, Object> consumerProperties = new HashMap<>(ioConfig.getConsumerProperties());
     DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
     DateTime maximumMessageTime = taskGroups.get(groupId).maximumMessageTime.orNull();
 
@@ -2099,18 +2113,24 @@ public class KafkaSupervisor implements Supervisor
     }
   }
 
-  private ListenableFuture<?> stopTasksInGroup(@Nullable TaskGroup taskGroup)
+  private ListenableFuture<?> stopTasksInGroup(@Nullable TaskGroup taskGroup, String stopReasonFormat, Object... args)
   {
     if (taskGroup == null) {
       return Futures.immediateFuture(null);
     }
 
-    final List<ListenableFuture<Void>> futures = Lists.newArrayList();
+    log.info(
+        "Stopping all tasks in taskGroup[%s] because: [%s]",
+        taskGroup.groupId,
+        StringUtils.format(stopReasonFormat, args)
+    );
+
+    final List<ListenableFuture<Void>> futures = new ArrayList<>();
     for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
       final String taskId = entry.getKey();
       final TaskData taskData = entry.getValue();
       if (taskData.status == null) {
-        killTask(taskId);
+        killTask(taskId, "Killing task since task status is not known to supervisor");
       } else if (!taskData.status.isComplete()) {
         futures.add(stopTask(taskId, false));
       }
@@ -2129,8 +2149,7 @@ public class KafkaSupervisor implements Supervisor
           public Void apply(@Nullable Boolean result)
           {
             if (result == null || !result) {
-              log.info("Task [%s] failed to stop in a timely manner, killing task", id);
-              killTask(id);
+              killTask(id, "Task [%s] failed to stop in a timely manner, killing task", id);
             }
             return null;
           }
@@ -2138,11 +2157,11 @@ public class KafkaSupervisor implements Supervisor
     );
   }
 
-  private void killTask(final String id)
+  private void killTask(final String id, String reasonFormat, Object... args)
   {
     Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
-      taskQueue.get().shutdown(id);
+      taskQueue.get().shutdown(id, reasonFormat, args);
     } else {
       log.error("Failed to get task queue because I'm not the leader!");
     }
@@ -2188,7 +2207,7 @@ public class KafkaSupervisor implements Supervisor
         payload
     );
 
-    List<TaskReportData> taskReports = Lists.newArrayList();
+    List<TaskReportData> taskReports = new ArrayList<>();
 
     try {
       for (TaskGroup taskGroup : taskGroups.values()) {
@@ -2199,9 +2218,9 @@ public class KafkaSupervisor implements Supervisor
           Map<Integer, Long> currentOffsets = entry.getValue().currentOffsets;
           Long remainingSeconds = null;
           if (startTime != null) {
-            remainingSeconds = Math.max(
-                0, ioConfig.getTaskDuration().getMillis() - (System.currentTimeMillis() - startTime.getMillis())
-            ) / 1000;
+            long elapsedMillis = System.currentTimeMillis() - startTime.getMillis();
+            long remainingMillis = Math.max(0, ioConfig.getTaskDuration().getMillis() - elapsedMillis);
+            remainingSeconds = TimeUnit.MILLISECONDS.toSeconds(remainingMillis);
           }
 
           taskReports.add(
@@ -2263,22 +2282,25 @@ public class KafkaSupervisor implements Supervisor
   private void updateLatestOffsetsFromKafka()
   {
     synchronized (consumerLock) {
-      final Map<String, List<PartitionInfo>> topics = consumer.listTopics();
+      final List<PartitionInfo> partitionInfoList = consumer.partitionsFor(ioConfig.getTopic());
 
-      if (topics == null || !topics.containsKey(ioConfig.getTopic())) {
+      if (partitionInfoList == null || partitionInfoList.size() == 0) {
         throw new ISE("Could not retrieve partitions for topic [%s]", ioConfig.getTopic());
       }
 
-      final Set<TopicPartition> topicPartitions = topics.get(ioConfig.getTopic())
-                                                        .stream()
-                                                        .map(x -> new TopicPartition(x.topic(), x.partition()))
-                                                        .collect(Collectors.toSet());
-      consumer.assign(topicPartitions);
-      consumer.seekToEnd(topicPartitions);
-
-      latestOffsetsFromKafka = topicPartitions
+      final Set<TopicPartition> topicPartitions = partitionInfoList
           .stream()
-          .collect(Collectors.toMap(TopicPartition::partition, consumer::position));
+          .map(x -> new TopicPartition(x.topic(), x.partition()))
+          .collect(Collectors.toSet());
+
+      consumer.assign(topicPartitions);
+
+      final Map<TopicPartition, Long> endOffsets = consumer.endOffsets(topicPartitions);
+
+      latestOffsetsFromKafka = endOffsets
+          .entrySet()
+          .stream()
+          .collect(Collectors.toMap(e -> e.getKey().partition(), Map.Entry::getValue));
     }
   }
 
@@ -2327,14 +2349,24 @@ public class KafkaSupervisor implements Supervisor
           );
         }
 
-        long lag = getLagPerPartition(highestCurrentOffsets)
-            .values()
-            .stream()
-            .mapToLong(x -> Math.max(x, 0))
-            .sum();
+        Map<Integer, Long> partitionLags = getLagPerPartition(highestCurrentOffsets);
+        long maxLag = 0, totalLag = 0, avgLag;
+        for (long lag : partitionLags.values()) {
+          if (lag > maxLag) {
+            maxLag = lag;
+          }
+          totalLag += lag;
+        }
+        avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
 
         emitter.emit(
-            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", lag)
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", totalLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/maxLag", maxLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/avgLag", avgLag)
         );
       }
       catch (Exception e) {
@@ -2395,7 +2427,7 @@ public class KafkaSupervisor implements Supervisor
   private Map<String, Map<String, Object>> getCurrentTotalStats()
       throws InterruptedException, ExecutionException, TimeoutException
   {
-    Map<String, Map<String, Object>> allStats = Maps.newHashMap();
+    Map<String, Map<String, Object>> allStats = new HashMap<>();
     final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
     final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
 
@@ -2419,21 +2451,21 @@ public class KafkaSupervisor implements Supervisor
     }
 
     for (int groupId : pendingCompletionTaskGroups.keySet()) {
-      TaskGroup group = taskGroups.get(groupId);
-      for (String taskId : group.taskIds()) {
-        futures.add(
-            Futures.transform(
-                taskClient.getMovingAveragesAsync(taskId),
-                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> {
-                  return new StatsFromTaskResult(
+      List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
+      for (TaskGroup pendingGroup : pendingGroups) {
+        for (String taskId : pendingGroup.taskIds()) {
+          futures.add(
+              Futures.transform(
+                  taskClient.getMovingAveragesAsync(taskId),
+                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                       groupId,
                       taskId,
                       currentStats
-                  );
-                }
-            )
-        );
-        groupAndTaskIds.add(new Pair<>(groupId, taskId));
+                  )
+              )
+          );
+          groupAndTaskIds.add(new Pair<>(groupId, taskId));
+        }
       }
     }
 
@@ -2441,7 +2473,7 @@ public class KafkaSupervisor implements Supervisor
     for (int i = 0; i < results.size(); i++) {
       StatsFromTaskResult result = results.get(i);
       if (result != null) {
-        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> Maps.newHashMap());
+        Map<String, Object> groupMap = allStats.computeIfAbsent(result.getGroupId(), k -> new HashMap<>());
         groupMap.put(result.getTaskId(), result.getStats());
       } else {
         Pair<Integer, String> groupAndTaskId = groupAndTaskIds.get(i);
@@ -2450,6 +2482,50 @@ public class KafkaSupervisor implements Supervisor
     }
 
     return allStats;
+  }
+
+  @VisibleForTesting
+  void addTaskGroupToActivelyReadingTaskGroup(
+      int taskGroupId,
+      ImmutableMap<Integer, Long> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks
+  )
+  {
+    TaskGroup group = new TaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime
+    );
+    group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    if (taskGroups.putIfAbsent(taskGroupId, group) != null) {
+      throw new ISE(
+          "trying to add taskGroup with ID [%s] to actively reading task groups, but group already exists.",
+          taskGroupId
+      );
+    }
+  }
+
+  @VisibleForTesting
+  void addTaskGroupToPendingCompletionTaskGroup(
+      int taskGroupId,
+      ImmutableMap<Integer, Long> partitionOffsets,
+      Optional<DateTime> minMsgTime,
+      Optional<DateTime> maxMsgTime,
+      Set<String> tasks
+  )
+  {
+    TaskGroup group = new TaskGroup(
+        taskGroupId,
+        partitionOffsets,
+        minMsgTime,
+        maxMsgTime
+    );
+    group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
+    pendingCompletionTaskGroups.computeIfAbsent(taskGroupId, x -> new CopyOnWriteArrayList<>())
+                               .add(group);
   }
 
   @VisibleForTesting

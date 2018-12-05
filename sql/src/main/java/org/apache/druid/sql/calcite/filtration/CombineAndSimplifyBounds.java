@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite.filtration;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.java.util.common.ISE;
@@ -32,6 +31,7 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -128,7 +128,7 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
     final List<DimFilter> newChildren = Lists.newArrayList(children);
 
     // Group Bound filters by dimension, extractionFn, and comparator and compute a RangeSet for each one.
-    final Map<BoundRefKey, List<BoundDimFilter>> bounds = Maps.newHashMap();
+    final Map<BoundRefKey, List<BoundDimFilter>> bounds = new HashMap<>();
 
     final Iterator<DimFilter> iterator = newChildren.iterator();
     while (iterator.hasNext()) {
@@ -157,7 +157,7 @@ public class CombineAndSimplifyBounds extends BottomUpTransform
         final BoundRefKey boundRefKey = BoundRefKey.from(bound);
         List<BoundDimFilter> filterList = bounds.get(boundRefKey);
         if (filterList == null) {
-          filterList = Lists.newArrayList();
+          filterList = new ArrayList<>();
           bounds.put(boundRefKey, filterList);
         }
         filterList.add(bound);

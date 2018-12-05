@@ -53,7 +53,6 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +70,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   };
 
   private final TopNQueryConfig config;
+  @Deprecated
   private final IntervalChunkingQueryRunnerDecorator intervalChunkingQueryRunnerDecorator;
   private final TopNQueryMetricsFactory queryMetricsFactory;
 
@@ -97,17 +97,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
   protected static String[] extractFactoryName(final List<AggregatorFactory> aggregatorFactories)
   {
-    return Lists.transform(
-        aggregatorFactories, new Function<AggregatorFactory, String>()
-        {
-          @Nullable
-          @Override
-          public String apply(@Nullable AggregatorFactory input)
-          {
-            return input.getName();
-          }
-        }
-    ).toArray(new String[0]);
+    return aggregatorFactories.stream().map(AggregatorFactory::getName).toArray(String[]::new);
   }
 
   private static List<PostAggregator> prunePostAggregators(TopNQuery query)
@@ -161,7 +151,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
   @Override
   public Function<Result<TopNResultValue>, Result<TopNResultValue>> makePreComputeManipulatorFn(
-      final TopNQuery query, final MetricManipulationFn fn
+      final TopNQuery query,
+      final MetricManipulationFn fn
   )
   {
     return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
@@ -221,7 +212,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
   @Override
   public Function<Result<TopNResultValue>, Result<TopNResultValue>> makePostComputeManipulatorFn(
-      final TopNQuery query, final MetricManipulationFn fn
+      final TopNQuery query,
+      final MetricManipulationFn fn
   )
   {
     return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
@@ -434,7 +426,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         {
           @Override
           public Sequence<Result<TopNResultValue>> run(
-              QueryPlus<Result<TopNResultValue>> queryPlus, Map<String, Object> responseContext
+              QueryPlus<Result<TopNResultValue>> queryPlus,
+              Map<String, Object> responseContext
           )
           {
             TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
@@ -484,7 +477,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           return resultSequence;
         } else {
           return Sequences.map(
-              resultSequence, new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+              resultSequence,
+              new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
               {
                 @Override
                 public Result<TopNResultValue> apply(Result<TopNResultValue> input)

@@ -67,7 +67,11 @@ public class KafkaIndexTaskClient extends IndexTaskClient
 
     try {
       final FullResponseHolder response = submitRequestWithEmptyContent(
-          id, HttpMethod.POST, "stop", publish ? "publish=true" : null, true
+          id,
+          HttpMethod.POST,
+          "stop",
+          publish ? "publish=true" : null,
+          true
       );
       return isSuccess(response);
     }

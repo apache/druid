@@ -29,8 +29,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.ProvisionException;
 import com.google.inject.spi.Message;
@@ -43,6 +41,7 @@ import javax.validation.Path;
 import javax.validation.Validator;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -76,7 +75,7 @@ public class JsonConfigurator
     // Make it end with a period so we only include properties with sub-object thingies.
     final String propertyBase = propertyPrefix.endsWith(".") ? propertyPrefix : propertyPrefix + ".";
 
-    Map<String, Object> jsonMap = Maps.newHashMap();
+    Map<String, Object> jsonMap = new HashMap<>();
     for (String prop : props.stringPropertyNames()) {
       if (prop.startsWith(propertyBase)) {
         final String propValue = props.getProperty(prop);
@@ -109,7 +108,7 @@ public class JsonConfigurator
 
     final Set<ConstraintViolation<T>> violations = validator.validate(config);
     if (!violations.isEmpty()) {
-      List<String> messages = Lists.newArrayList();
+      List<String> messages = new ArrayList<>();
 
       for (ConstraintViolation<T> violation : violations) {
         StringBuilder path = new StringBuilder();

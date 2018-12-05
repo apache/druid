@@ -21,7 +21,6 @@ package org.apache.druid.data.input.impl.prefetch;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.Lists;
 import com.google.common.io.CountingOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -74,8 +73,8 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           ),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-              Lists.newArrayList(),
-              Lists.newArrayList()
+              new ArrayList<>(),
+              new ArrayList<>()
           ),
           ",",
           Arrays.asList("timestamp", "a", "b"),
