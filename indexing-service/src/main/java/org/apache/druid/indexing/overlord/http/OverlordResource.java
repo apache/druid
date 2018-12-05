@@ -949,7 +949,7 @@ public class OverlordResource
 
   @GET
   @Path("/task/{taskid}/log")
-  @Produces("text/plain")
+  @Produces("text/plain; charset=UTF-8")
   @ResourceFilters(TaskResourceFilter.class)
   public Response doGetLog(
       @PathParam("taskid") final String taskid,

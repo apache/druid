@@ -179,7 +179,7 @@ public class WorkerResource
 
   @GET
   @Path("/task/{taskid}/log")
-  @Produces("text/plain")
+  @Produces("text/plain; charset=UTF-8")
   @ResourceFilters(StateResourceFilter.class)
   public Response doGetLog(
       @PathParam("taskid") String taskid,
