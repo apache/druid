@@ -159,7 +159,6 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
             @Override
             public boolean apply(DruidServerMetadata input)
             {
-              boolean xx = input.segmentReplicatable();
               return input.segmentReplicatable();
             }
           }
