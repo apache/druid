@@ -205,7 +205,7 @@
                         -Ddruid.indexing.doubleStorage=double
                     </argLine>
                     <!-- our tests are very verbose, let's keep the volume down -->
-                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <redirectTestOutputToFile>false</redirectTestOutputToFile>
                     <excludedGroups>org.apache.druid.collections.test.annotation.Benchmark</excludedGroups>
                 </configuration>
             </plugin>
