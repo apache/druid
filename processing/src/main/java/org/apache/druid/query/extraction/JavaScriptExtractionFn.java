@@ -122,7 +122,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Nullable
   public String apply(@Nullable Object value)
   {
-    fn = getCompiledScript();
+    Function<Object, String> fn = getCompiledScript();
     return NullHandling.emptyToNullIfNeeded(fn.apply(value));
   }
 

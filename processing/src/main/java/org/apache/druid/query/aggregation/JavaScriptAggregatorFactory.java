@@ -108,7 +108,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    compiledScript = getCompiledScript();
+    JavaScriptAggregator.ScriptAggregator compiledScript = getCompiledScript();
     return new JavaScriptBufferAggregator(
         fieldNames.stream().map(columnSelectorFactory::makeColumnValueSelector).collect(Collectors.toList()),
         compiledScript
@@ -124,7 +124,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    compiledScript = getCompiledScript();
+    JavaScriptAggregator.ScriptAggregator compiledScript = getCompiledScript();
     return compiledScript.combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
@@ -144,7 +144,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        compiledScript = getCompiledScript();
+        JavaScriptAggregator.ScriptAggregator compiledScript = getCompiledScript();
         combined = compiledScript.combine(combined, selector.getDouble());
       }
 
