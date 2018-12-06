@@ -159,7 +159,7 @@ public class BufferHashGrouperTest
           },
           2,
           2,
-          TimeUnit.SECONDS
+          TimeUnit.MINUTES
       );
 
       final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
