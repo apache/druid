@@ -55,16 +55,6 @@ matrix:
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
 
-    - env:
-        - NAME="BufferHashGrouper test"
-      install: MAVEN_OPTS='-Xmx4000m' mvn install -q -ff -DskipTests -B 
-      before_script: unset _JAVA_OPTIONS
-      script:
-        # Set MAVEN_OPTS for Surefire launcher
-        - MAVEN_OPTS='-Xmx512m' mvn test -B -pl processing -Dtest=org.apache.druid.query.groupby.epinephelinae.BufferHashGrouperTest 
-        - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
-        - free -m
-
       # processing module tests with SQL Compatibility enabled
     - env:
         - NAME="processing module test with SQL Compatibility"
