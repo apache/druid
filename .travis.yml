@@ -47,7 +47,7 @@ matrix:
       # processing module test
     - env:
         - NAME="processing module test"
-      install: MAVEN_OPTS='-Xmx3000m' mvn install -q -ff -DskipTests -B
+      install: MAVEN_OPTS='-Xmx4000m' mvn install -q -ff -DskipTests -B
       before_script: unset _JAVA_OPTIONS
       script:
         # Set MAVEN_OPTS for Surefire launcher
