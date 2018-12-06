@@ -140,8 +140,8 @@ public class BufferHashGrouperTest
   public void testGrowing2()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 1_000_000_000, 2);
-    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 20494256 : 19570612;
+    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 250_000_000, 2);
+    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 5123564 : 4892653;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
@@ -154,8 +154,8 @@ public class BufferHashGrouperTest
   public void testGrowing3()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, Integer.MAX_VALUE / 2, 2);
-    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 22469486 : 21477728;
+    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, Integer.MAX_VALUE, 2);
+    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 44938972 : 42955456;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < expectedMaxSize; i++) {
