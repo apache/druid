@@ -133,7 +133,7 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    fn = getCompiledScript();
+    Function fn = getCompiledScript();
     final Object[] args = new Object[fieldNames.size()];
     int i = 0;
     for (String field : fieldNames) {

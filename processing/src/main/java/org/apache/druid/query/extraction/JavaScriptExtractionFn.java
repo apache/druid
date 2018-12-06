@@ -75,6 +75,9 @@ public class JavaScriptExtractionFn implements ExtractionFn
    * The field is declared volatile in order to ensure safe publication of the object
    * in {@link #compile(String)} without worrying about final modifiers
    * on the fields of the created object
+   *
+   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
    */
   @MonotonicNonNull
   private volatile Function<Object, String> fn;

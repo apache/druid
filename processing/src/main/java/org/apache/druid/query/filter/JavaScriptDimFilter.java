@@ -50,6 +50,9 @@ public class JavaScriptDimFilter implements DimFilter
    * The field is declared volatile in order to ensure safe publication of the object
    * in {@link JavaScriptPredicateFactory(String, ExtractionFn)} without worrying about final modifiers
    * on the fields of the created object
+   *
+   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
    */
   @MonotonicNonNull
   private volatile JavaScriptPredicateFactory predicateFactory;
@@ -114,7 +117,7 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    predicateFactory = getPredicateFactory();
+    JavaScriptPredicateFactory predicateFactory = getPredicateFactory();
     return new JavaScriptFilter(dimension, predicateFactory);
   }
 

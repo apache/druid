@@ -98,7 +98,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    compiledScript = getCompiledScript();
+    JavaScriptAggregator.ScriptAggregator compiledScript = getCompiledScript();
     return new JavaScriptAggregator(
         fieldNames.stream().map(columnFactory::makeColumnValueSelector).collect(Collectors.toList()),
         compiledScript
