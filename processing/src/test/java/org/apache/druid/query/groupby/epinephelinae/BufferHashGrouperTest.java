@@ -31,6 +31,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -54,6 +55,8 @@ import java.util.concurrent.TimeUnit;
 
 public class BufferHashGrouperTest
 {
+  private static final Logger log = new Logger(BufferHashGrouperTest.class);
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -151,7 +154,7 @@ public class BufferHashGrouperTest
       service.scheduleAtFixedRate(
           () -> {
             for (StackTraceElement ste : currentThread.getStackTrace()) {
-              System.out.println(ste);
+              log.error(ste.toString());
             }
           },
           2,
