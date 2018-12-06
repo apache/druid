@@ -271,8 +271,8 @@ greater than, less than, greater than or equal to, less than or equal to, and "b
 |dimension|String|The dimension to filter on|yes|
 |lower|String|The lower bound for the filter|no|
 |upper|String|The upper bound for the filter|no|
-|lowerStrict|Boolean|Perform strict comparison on the lower bound ("<" instead of "<=")|no, default: false|
-|upperStrict|Boolean|Perform strict comparison on the upper bound (">" instead of ">=")|no, default: false|
+|lowerStrict|Boolean|Perform strict comparison on the lower bound (">" instead of ">=")|no, default: false|
+|upperStrict|Boolean|Perform strict comparison on the upper bound ("<" instead of "<=")|no, default: false|
 |ordering|String|Specifies the sorting order to use when comparing values against the bound. Can be one of the following values: "lexicographic", "alphanumeric", "numeric", "strlen". See [Sorting Orders](./sorting-orders.html) for more details.|no, default: "lexicographic"|
 |extractionFn|[Extraction function](#filtering-with-extraction-functions)| Extraction function to apply to the dimension|no|
   
