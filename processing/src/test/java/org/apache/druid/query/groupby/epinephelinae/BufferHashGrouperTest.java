@@ -30,6 +30,7 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.ByteBufferUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -48,6 +49,8 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class BufferHashGrouperTest
 {
@@ -142,6 +145,20 @@ public class BufferHashGrouperTest
     // This test checks the bug reported in https://github.com/apache/incubator-druid/pull/4333 only when
     // NullHandling.replaceWithDefault() is true
     if (NullHandling.replaceWithDefault()) {
+      final ScheduledExecutorService service = Execs.scheduledSingleThreaded("test");
+      final Thread currentThread = Thread.currentThread();
+
+      service.scheduleAtFixedRate(
+          () -> {
+            for (StackTraceElement ste : currentThread.getStackTrace()) {
+              System.out.println(ste);
+            }
+          },
+          2,
+          2,
+          TimeUnit.SECONDS
+      );
+
       final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
       // the buffer size below is chosen to test integer overflow in ByteBufferHashTable.adjustTableWhenFull().
       final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 1_900_000_000, 2, 0.3f);
@@ -152,6 +169,8 @@ public class BufferHashGrouperTest
         Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
       }
       Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
+
+      service.shutdownNow();
     }
   }
 
