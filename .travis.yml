@@ -54,7 +54,7 @@ matrix:
         - MAVEN_OPTS='-Xmx512m' mvn test -B -pl processing
         - sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
         - free -m
-      after_failure:
+      after_script:
         - cat processing/target/surefire-reports/org.apache.druid.query.groupby.epinephelinae.BufferHashGrouperTest-output.txt
 
       # processing module tests with SQL Compatibility enabled
