@@ -20,16 +20,13 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -41,12 +38,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -212,19 +204,7 @@ public class BufferHashGrouperTest
       float maxLoadFactor
   )
   {
-    final MappedByteBuffer buffer;
-
-    try {
-      final File file = temporaryFolder.newFile();
-      try (final FileChannel channel = new FileOutputStream(file).getChannel()) {
-        channel.truncate(bufferSize);
-      }
-      buffer = Files.map(file, FileChannel.MapMode.READ_WRITE, bufferSize);
-      closerRule.closeLater(() -> ByteBufferUtils.unmap(buffer));
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
+    final ByteBuffer buffer = ByteBuffer.allocateDirect(bufferSize);
 
     final BufferHashGrouper<Integer> grouper = new BufferHashGrouper<>(
         Suppliers.ofInstance(buffer),
