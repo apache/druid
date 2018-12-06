@@ -112,7 +112,7 @@ public class BufferHashGrouperTest
   public void testGrowing()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10000, 2);
+    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10000, 2, 0.75f);
     final int expectedMaxSize = NullHandling.replaceWithDefault() ? 219 : 210;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
@@ -137,38 +137,29 @@ public class BufferHashGrouperTest
   }
 
   @Test
-  public void testGrowing2()
+  public void testGrowingOverflowingInteger()
   {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 250_000_000, 2);
-    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 5123564 : 4892653;
+    // This test checks the bug reported in https://github.com/apache/incubator-druid/pull/4333 only when
+    // NullHandling.replaceWithDefault() is true
+    if (NullHandling.replaceWithDefault()) {
+      final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+      // the buffer size below is chosen to test integer overflow in ByteBufferHashTable.adjustTableWhenFull().
+      final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 1_900_000_000, 2, 0.3f);
+      final int expectedMaxSize = 15323979;
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
-    for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
+      columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+      for (int i = 0; i < expectedMaxSize; i++) {
+        Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
+      }
+      Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
     }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
-  }
-
-  @Test
-  public void testGrowing3()
-  {
-    final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, Integer.MAX_VALUE, 2);
-    final int expectedMaxSize = NullHandling.replaceWithDefault() ? 44938972 : 42955456;
-
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
-    for (int i = 0; i < expectedMaxSize; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(i).isOk());
-    }
-    Assert.assertFalse(grouper.aggregate(expectedMaxSize).isOk());
   }
 
   @Test
   public void testNoGrowing()
   {
     final TestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10000, Integer.MAX_VALUE);
+    final Grouper<Integer> grouper = makeGrouper(columnSelectorFactory, 10000, Integer.MAX_VALUE, 0.75f);
     final int expectedMaxSize = NullHandling.replaceWithDefault() ? 267 : 258;
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
@@ -195,7 +186,8 @@ public class BufferHashGrouperTest
   private BufferHashGrouper<Integer> makeGrouper(
       TestColumnSelectorFactory columnSelectorFactory,
       int bufferSize,
-      int initialBuckets
+      int initialBuckets,
+      float maxLoadFactor
   )
   {
     final MappedByteBuffer buffer;
@@ -221,7 +213,7 @@ public class BufferHashGrouperTest
             new CountAggregatorFactory("count")
         },
         Integer.MAX_VALUE,
-        0.75f,
+        maxLoadFactor,
         initialBuckets,
         true
     );
