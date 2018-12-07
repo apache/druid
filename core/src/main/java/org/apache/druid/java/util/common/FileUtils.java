@@ -210,9 +210,10 @@ public class FileUtils
       ) {
         // Pass f an uncloseable stream so we can fsync before closing.
         retVal = f.apply(uncloseable(out));
-        out.flush();
 
         // fsync to avoid write-then-rename-then-crash causing empty files on some filesystems.
+        // Must do this before "out" or "fileChannel" is closed. No need to flush "out" first, since
+        // Channels.newOutputStream is unbuffered.
         // See also https://github.com/apache/incubator-druid/pull/5187#pullrequestreview-85188984
         fileChannel.force(true);
       }
