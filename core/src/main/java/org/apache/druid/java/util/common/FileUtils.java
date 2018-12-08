@@ -24,16 +24,19 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
+import org.apache.druid.java.util.common.logger.Logger;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.MappedByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,6 +44,8 @@ import java.util.UUID;
 
 public class FileUtils
 {
+  private static final Logger log = new Logger(FileUtils.class);
+
   /**
    * Useful for retry functionality that doesn't want to stop Throwables, but does want to retry on Exceptions
    */
@@ -182,22 +187,35 @@ public class FileUtils
    *
    * This method is not just thread-safe, but is also safe to use from multiple processes on the same machine.
    */
-  public static void writeAtomically(final File file, OutputStreamConsumer f) throws IOException
+  public static <T> T writeAtomically(final File file, OutputStreamConsumer<T> f) throws IOException
   {
-    writeAtomically(file, file.getParentFile(), f);
+    return writeAtomically(file, file.getParentFile(), f);
   }
 
-  private static void writeAtomically(final File file, final File tmpDir, OutputStreamConsumer f) throws IOException
+  private static <T> T writeAtomically(final File file, final File tmpDir, OutputStreamConsumer<T> f) throws IOException
   {
     final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
-    try {
-      try (final FileOutputStream out = new FileOutputStream(tmpFile)) {
+    //noinspection unused
+    try (final Closeable deleter = () -> java.nio.file.Files.deleteIfExists(tmpFile.toPath())) {
+      final T retVal;
+
+      try (
+          final FileChannel fileChannel = FileChannel.open(
+              tmpFile.toPath(),
+              StandardOpenOption.WRITE,
+              StandardOpenOption.CREATE_NEW
+          );
+          final OutputStream out = Channels.newOutputStream(fileChannel)
+      ) {
         // Pass f an uncloseable stream so we can fsync before closing.
-        f.accept(uncloseable(out));
+        retVal = f.apply(uncloseable(out));
 
         // fsync to avoid write-then-rename-then-crash causing empty files on some filesystems.
-        out.getChannel().force(true);
+        // Must do this before "out" or "fileChannel" is closed. No need to flush "out" first, since
+        // Channels.newOutputStream is unbuffered.
+        // See also https://github.com/apache/incubator-druid/pull/5187#pullrequestreview-85188984
+        fileChannel.force(true);
       }
 
       // No exception thrown; do the move.
@@ -207,9 +225,13 @@ public class FileUtils
           StandardCopyOption.ATOMIC_MOVE,
           StandardCopyOption.REPLACE_EXISTING
       );
-    }
-    finally {
-      tmpFile.delete();
+
+      // fsync the directory entry to ensure the new file will be visible after a crash.
+      try (final FileChannel directory = FileChannel.open(file.getParentFile().toPath(), StandardOpenOption.READ)) {
+        directory.force(true);
+      }
+
+      return retVal;
     }
   }
 
@@ -225,8 +247,8 @@ public class FileUtils
     };
   }
 
-  public interface OutputStreamConsumer
+  public interface OutputStreamConsumer<T>
   {
-    void accept(OutputStream outputStream) throws IOException;
+    T apply(OutputStream outputStream) throws IOException;
   }
 }

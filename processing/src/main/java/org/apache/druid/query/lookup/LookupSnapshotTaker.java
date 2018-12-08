@@ -88,7 +88,13 @@ public class LookupSnapshotTaker
     final File persistFile = getPersistFile(tier);
 
     try {
-      FileUtils.writeAtomically(persistFile, out -> objectMapper.writeValue(out, lookups));
+      FileUtils.writeAtomically(
+          persistFile,
+          out -> {
+            objectMapper.writeValue(out, lookups);
+            return null;
+          }
+      );
     }
     catch (IOException e) {
       throw new ISE(e, "Exception during serialization of lookups using file [%s]", persistFile.getAbsolutePath());
