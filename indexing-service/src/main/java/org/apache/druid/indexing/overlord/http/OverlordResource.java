@@ -352,10 +352,14 @@ public class OverlordResource
           public Response apply(TaskQueue taskQueue)
           {
             final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
-            for (final TaskInfo<Task, TaskStatus> task : tasks) {
-              taskQueue.shutdown(task.getId(), "Shutdown request from user");
+            if (tasks.isEmpty()) {
+              return Response.status(Status.NOT_FOUND).build();
+            } else {
+              for (final TaskInfo<Task, TaskStatus> task : tasks) {
+                taskQueue.shutdown(task.getId(), "Shutdown request from user");
+              }
+              return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
             }
-            return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
           }
         }
     );
