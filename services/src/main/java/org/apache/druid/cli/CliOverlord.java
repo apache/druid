@@ -87,7 +87,6 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import org.apache.druid.indexing.overlord.http.OverlordRedirectInfo;
 import org.apache.druid.indexing.overlord.http.OverlordResource;
-import org.apache.druid.indexing.overlord.http.RemoteWorkerProxyResource;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
@@ -229,7 +228,6 @@ public class CliOverlord extends ServerRunnable
             }
 
             Jerseys.addResource(binder, OverlordResource.class);
-            Jerseys.addResource(binder, RemoteWorkerProxyResource.class);
             Jerseys.addResource(binder, SupervisorResource.class);
             Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
 

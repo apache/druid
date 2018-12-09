@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -40,11 +41,19 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -53,6 +62,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
@@ -70,6 +80,7 @@ public class RemoteTaskRunnerTest
   private RemoteTaskRunnerTestUtils rtrTestUtils = new RemoteTaskRunnerTestUtils();
   private ObjectMapper jsonMapper;
   private CuratorFramework cf;
+  private HttpClient httpClient;
 
   private Task task;
   private Worker worker;
@@ -83,6 +94,7 @@ public class RemoteTaskRunnerTest
     rtrTestUtils.setUp();
     jsonMapper = rtrTestUtils.getObjectMapper();
     cf = rtrTestUtils.getCuratorFramework();
+    httpClient = rtrTestUtils.getHttpClient();
 
     task = TestTasks.unending("task id with spaces");
   }
@@ -924,5 +936,123 @@ public class RemoteTaskRunnerTest
     mockWorkerCompleteSuccessfulTask(task2);
     Assert.assertTrue(taskFuture2.get().isSuccess());
     Assert.assertEquals(0, remoteTaskRunner.getBlackListedWorkers().size());
+  }
+
+  @Test
+  public void testDisableWorker() throws Exception
+  {
+    doSetup();
+    final URL url = new URL("http://" + workerHost + "/druid/worker/v1/disable");
+    String workerResponse = "{\"" + workerHost + "\":\"disabled\"}";
+
+    Capture<Request> capturedRequest = getRequestCapture(HttpResponseStatus.OK, workerResponse);
+
+    remoteTaskRunner.disableWorker(workerHost);
+
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testDisableWorkerWhenWorkerRaisesError() throws Exception
+  {
+    doSetup();
+    final URL url = new URL("http://" + workerHost + "/druid/worker/v1/disable");
+
+    Capture<Request> capturedRequest = getRequestCapture(HttpResponseStatus.INTERNAL_SERVER_ERROR, "");
+
+    try {
+      remoteTaskRunner.disableWorker(workerHost);
+      Assert.fail("Should raise RE exception!");
+    }
+    catch (RE re) {
+    }
+
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test(expected = RE.class)
+  public void testDisableWorkerWhenWorkerNotExists() throws Exception
+  {
+    doSetup();
+
+    remoteTaskRunner.disableWorker("not-existing-worker");
+
+    EasyMock.replay(httpClient);
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testEnableWorker() throws Exception
+  {
+    doSetup();
+    final URL url = new URL("http://" + workerHost + "/druid/worker/v1/enable");
+    String workerResponse = "{\"" + workerHost + "\":\"enabled\"}";
+
+    Capture<Request> capturedRequest = getRequestCapture(HttpResponseStatus.OK, workerResponse);
+
+    remoteTaskRunner.enableWorker(workerHost);
+
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testEnableWorkerWhenWorkerRaisesError() throws Exception
+  {
+    doSetup();
+    final URL url = new URL("http://" + workerHost + "/druid/worker/v1/enable");
+
+    Capture<Request> capturedRequest = getRequestCapture(HttpResponseStatus.INTERNAL_SERVER_ERROR, "");
+
+    try {
+      remoteTaskRunner.enableWorker(workerHost);
+      Assert.fail("Should raise RE exception!");
+    }
+    catch (RE re) {
+    }
+
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test(expected = RE.class)
+  public void testEnableWorkerWhenWorkerNotExists() throws Exception
+  {
+    doSetup();
+
+    remoteTaskRunner.enableWorker("not-existing-worker");
+
+    EasyMock.replay(httpClient);
+    EasyMock.verify(httpClient);
+  }
+
+  private Capture<Request> getRequestCapture(HttpResponseStatus httpStatus, String responseContent)
+  {
+    SettableFuture<StatusResponseHolder> futureResult = SettableFuture.create();
+    futureResult.set(
+        new StatusResponseHolder(httpStatus, new StringBuilder(responseContent))
+    );
+    Capture<Request> capturedRequest = EasyMock.newCapture();
+    EasyMock.expect(
+        httpClient.go(
+            EasyMock.capture(capturedRequest),
+            EasyMock.<HttpResponseHandler>anyObject()
+        )
+    )
+            .andReturn(futureResult)
+            .times(1);
+
+    EasyMock.replay(httpClient);
+    return capturedRequest;
   }
 }

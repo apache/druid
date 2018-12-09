@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -49,17 +50,26 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.util.ConcurrentHashSet;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -73,9 +83,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
  */
 public class HttpRemoteTaskRunnerTest
 {
+  private HttpClient httpClient;
+
+  @Before
+  public void setUp()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+  }
+
   /*
   Simulates startup of Overlord and Workers being discovered with no previously known tasks. Fresh tasks are given
   and expected to be completed.
@@ -91,7 +110,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public int getPendingTasksRunnerNumThreads()
           {
@@ -105,7 +125,8 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -184,7 +205,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public int getPendingTasksRunnerNumThreads()
           {
@@ -198,7 +220,8 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -284,7 +307,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public int getPendingTasksRunnerNumThreads()
           {
@@ -298,7 +322,8 @@ public class HttpRemoteTaskRunnerTest
         taskStorageMock,
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -316,7 +341,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker);
+              worker
+          );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
         }
@@ -420,7 +446,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public int getPendingTasksRunnerNumThreads()
           {
@@ -434,7 +461,8 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -452,7 +480,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker);
+              worker
+          );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
         }
@@ -593,7 +622,8 @@ public class HttpRemoteTaskRunnerTest
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
-        new HttpRemoteTaskRunnerConfig() {
+        new HttpRemoteTaskRunnerConfig()
+        {
           @Override
           public Period getTaskCleanupTimeout()
           {
@@ -607,7 +637,8 @@ public class HttpRemoteTaskRunnerTest
         EasyMock.createNiceMock(TaskStorage.class),
         EasyMock.createNiceMock(CuratorFramework.class),
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
-    ) {
+    )
+    {
       @Override
       protected WorkerHolder createWorkerHolder(
           ObjectMapper smileMapper,
@@ -625,7 +656,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker);
+              worker
+          );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
         }
@@ -801,7 +833,8 @@ public class HttpRemoteTaskRunnerTest
               config,
               workersSyncExec,
               listener,
-              worker);
+              worker
+          );
         } else {
           throw new ISE("No WorkerHolder for [%s].", worker.getHost());
         }
@@ -914,9 +947,10 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertEquals(task1.getId(), Iterables.getOnlyElement(taskRunner.getRunningTasks()).getTaskId());
     Assert.assertEquals(task2.getId(), Iterables.getOnlyElement(taskRunner.getPendingTasks()).getTaskId());
 
-    Assert.assertEquals("host3:8080",
-                        Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), Integer.MAX_VALUE))
-                                 .getHost()
+    Assert.assertEquals(
+        "host3:8080",
+        Iterables.getOnlyElement(taskRunner.markWorkersLazy(Predicates.alwaysTrue(), Integer.MAX_VALUE))
+                 .getHost()
     );
   }
 
@@ -969,7 +1003,9 @@ public class HttpRemoteTaskRunnerTest
 
     // Another "rogue-worker" reports running it, and gets asked to shutdown the task
     WorkerHolder rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(rogueWorkerHolder.getWorker()).andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1")).anyTimes();
+    EasyMock.expect(rogueWorkerHolder.getWorker())
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .anyTimes();
     rogueWorkerHolder.shutdownTask(task.getId());
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -982,7 +1018,9 @@ public class HttpRemoteTaskRunnerTest
 
     // "rogue-worker" reports FAILURE for the task, ignored
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(rogueWorkerHolder.getWorker()).andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1")).anyTimes();
+    EasyMock.expect(rogueWorkerHolder.getWorker())
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .anyTimes();
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
         task,
@@ -1003,7 +1041,9 @@ public class HttpRemoteTaskRunnerTest
 
     // "rogue-worker" reports running it, and gets asked to shutdown the task
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(rogueWorkerHolder.getWorker()).andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1")).anyTimes();
+    EasyMock.expect(rogueWorkerHolder.getWorker())
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .anyTimes();
     rogueWorkerHolder.shutdownTask(task.getId());
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
@@ -1016,7 +1056,9 @@ public class HttpRemoteTaskRunnerTest
 
     // "rogue-worker" reports FAILURE for the tasks, ignored
     rogueWorkerHolder = EasyMock.createMock(WorkerHolder.class);
-    EasyMock.expect(rogueWorkerHolder.getWorker()).andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1")).anyTimes();
+    EasyMock.expect(rogueWorkerHolder.getWorker())
+            .andReturn(new Worker("http", "rogue-worker", "127.0.0.1", 5, "v1"))
+            .anyTimes();
     EasyMock.replay(rogueWorkerHolder);
     taskRunner.taskAddedOrUpdated(TaskAnnouncement.create(
         task,
@@ -1172,6 +1214,208 @@ public class HttpRemoteTaskRunnerTest
             ImmutableList.of(task2.getId(), TaskStatus.success(task2.getId()))
         )
     );
+  }
+
+  @Test
+  public void testDisableWorker() throws Exception
+  {
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForEnableDisableWorkerTests();
+
+    final URL url = new URL("http://host:1234/druid/worker/v1/disable");
+    String workerResponse = "{\"host:1234\":\"disabled\"}";
+
+    Capture<Request> capturedRequest = getHttpClientRequestCapture(HttpResponseStatus.OK, workerResponse);
+
+    taskRunner.disableWorker("host:1234");
+
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testDisableWorkerWhenWorkerRaisesError() throws Exception
+  {
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForEnableDisableWorkerTests();
+    final URL url = new URL("http://host:1234/druid/worker/v1/disable");
+
+    Capture<Request> capturedRequest = getHttpClientRequestCapture(HttpResponseStatus.INTERNAL_SERVER_ERROR, "");
+
+    try {
+      taskRunner.disableWorker("host:1234");
+      Assert.fail("Should raise RE exception!");
+    }
+    catch (RE re) {
+    }
+
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test(expected = RE.class)
+  public void testDisableWorkerWhenWorkerNotExists()
+  {
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForEnableDisableWorkerTests();
+
+    taskRunner.disableWorker("unkown-host:1234");
+
+    EasyMock.replay(httpClient);
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testEnableWorker() throws Exception
+  {
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForEnableDisableWorkerTests();
+
+    final URL url = new URL("http://host:1234/druid/worker/v1/enable");
+    String workerResponse = "{\"host:1234\":\"enabled\"}";
+
+    Capture<Request> capturedRequest = getHttpClientRequestCapture(HttpResponseStatus.OK, workerResponse);
+
+    taskRunner.enableWorker("host:1234");
+
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testEnableWorkerWhenWorkerRaisesError() throws Exception
+  {
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForEnableDisableWorkerTests();
+    final URL url = new URL("http://host:1234/druid/worker/v1/enable");
+
+    Capture<Request> capturedRequest = getHttpClientRequestCapture(HttpResponseStatus.INTERNAL_SERVER_ERROR, "");
+
+    try {
+      taskRunner.enableWorker("host:1234");
+      Assert.fail("Should raise RE exception!");
+    }
+    catch (RE re) {
+    }
+
+    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assert.assertEquals(url, capturedRequest.getValue().getUrl());
+
+    EasyMock.verify(httpClient);
+  }
+
+  @Test(expected = RE.class)
+  public void testEnableWorkerWhenWorkerNotExists()
+  {
+    HttpRemoteTaskRunner taskRunner = createTaskRunnerForEnableDisableWorkerTests();
+
+    taskRunner.enableWorker("unkown-host:1234");
+
+    EasyMock.replay(httpClient);
+    EasyMock.verify(httpClient);
+  }
+
+  private HttpRemoteTaskRunner createTaskRunnerForEnableDisableWorkerTests()
+  {
+    TestDruidNodeDiscovery druidNodeDiscovery = new TestDruidNodeDiscovery();
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER))
+            .andReturn(druidNodeDiscovery);
+    EasyMock.replay(druidNodeDiscoveryProvider);
+
+    Map<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
+
+    HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
+        TestHelper.makeJsonMapper(),
+        new HttpRemoteTaskRunnerConfig()
+        {
+          @Override
+          public int getPendingTasksRunnerNumThreads()
+          {
+            return 1;
+          }
+        },
+        httpClient,
+        DSuppliers.of(new AtomicReference<>(DefaultWorkerBehaviorConfig.defaultConfig())),
+        new NoopProvisioningStrategy<>(),
+        druidNodeDiscoveryProvider,
+        EasyMock.createStrictMock(TaskStorage.class),
+        EasyMock.createNiceMock(CuratorFramework.class),
+        new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null)
+    )
+    {
+      @Override
+      protected WorkerHolder createWorkerHolder(
+          ObjectMapper smileMapper,
+          HttpClient httpClient,
+          HttpRemoteTaskRunnerConfig config,
+          ScheduledExecutorService workersSyncExec,
+          WorkerHolder.Listener listener,
+          Worker worker
+      )
+      {
+        if (workerHolders.containsKey(worker.getHost())) {
+          return workerHolders.get(worker.getHost()).apply(
+              smileMapper,
+              httpClient,
+              config,
+              workersSyncExec,
+              listener,
+              worker
+          );
+        } else {
+          throw new ISE("No WorkerHolder for [%s].", worker.getHost());
+        }
+      }
+    };
+
+    taskRunner.start();
+
+    DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
+        new DruidNode("service", "host", false, 1234, null, true, false),
+        NodeType.MIDDLE_MANAGER,
+        ImmutableMap.of(WorkerNodeService.DISCOVERY_SERVICE_KEY, new WorkerNodeService("host", 1, "0"))
+    );
+
+    workerHolders.put(
+        "host:1234",
+        (mapper, httpClient, config, exec, listener, worker) -> createWorkerHolder(
+            mapper,
+            httpClient,
+            config,
+            exec,
+            listener,
+            worker,
+            ImmutableList.of(),
+            ImmutableMap.of(),
+            new AtomicInteger(),
+            new HashSet<>()
+        )
+    );
+
+    druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode));
+    return taskRunner;
+  }
+
+  private Capture<Request> getHttpClientRequestCapture(HttpResponseStatus httpStatus, String responseContent)
+  {
+    SettableFuture<StatusResponseHolder> futureResult = SettableFuture.create();
+    futureResult.set(
+        new StatusResponseHolder(httpStatus, new StringBuilder(responseContent))
+    );
+    Capture<Request> capturedRequest = EasyMock.newCapture();
+    EasyMock.expect(
+        httpClient.go(
+            EasyMock.capture(capturedRequest),
+            EasyMock.<HttpResponseHandler>anyObject()
+        )
+    )
+            .andReturn(futureResult)
+            .once();
+
+    EasyMock.replay(httpClient);
+    return capturedRequest;
   }
 
   private HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(

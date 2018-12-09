@@ -48,4 +48,7 @@ public interface WorkerTaskRunner extends TaskRunner
 
   Collection<Task> getPendingTaskPayloads();
 
+  void enableWorker(String host);
+
+  void disableWorker(String host);
 }

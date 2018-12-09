@@ -42,6 +42,7 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.handler.timeout.TimeoutException;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -451,6 +452,64 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     // return a snapshot of current pending task payloads.
     return ImmutableList.copyOf(pendingTaskPayloads.values());
+  }
+
+  @Override
+  public void enableWorker(String host)
+  {
+    sendRequestToWorker(host, "enable");
+  }
+
+  @Override
+  public void disableWorker(String host)
+  {
+    sendRequestToWorker(host, "disable");
+  }
+
+  private void sendRequestToWorker(String workerHost, String action)
+  {
+    ZkWorker workerHolder = zkWorkers.get(workerHost);
+
+    if (workerHolder == null) {
+      throw new RE(
+          "Worker on host %s does not exists",
+          workerHost
+      );
+    }
+
+    final URL workerUrl = TaskRunnerUtils.makeWorkerURL(
+        workerHolder.getWorker(),
+        "/druid/worker/v1/%s",
+        action
+    );
+
+    try {
+      final StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, workerUrl),
+          new StatusResponseHandler(StandardCharsets.UTF_8)
+      ).get();
+
+      log.info(
+          "Sent %s action request to worker: %s, status: %s, response: %s",
+          action,
+          workerHost,
+          response.getStatus(),
+          response.getContent()
+      );
+
+      if (!HttpResponseStatus.OK.equals(response.getStatus())) {
+        throw new RE(
+            "Action [%s] failed for worker [%s] with status %s(%s)",
+            action,
+            workerHost,
+            response.getStatus().getCode(),
+            response.getStatus().getReasonPhrase()
+        );
+      }
+    }
+    catch (ExecutionException | InterruptedException | TimeoutException e) {
+      Throwables.propagate(e);
+    }
   }
 
   @Override

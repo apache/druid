@@ -104,6 +104,7 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @Path("/druid/indexer/v1")
 public class OverlordResource
@@ -930,6 +931,67 @@ public class OverlordResource
     );
   }
 
+  @POST
+  @Path("/worker/{host}/enable")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response enableWorker(@PathParam("host") final String host)
+  {
+    return changeWorkerStatus(host, "enable");
+  }
+
+  @POST
+  @Path("/worker/{host}/disable")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response disableWorker(@PathParam("host") final String host)
+  {
+    return changeWorkerStatus(host, "disable");
+  }
+
+  private Response changeWorkerStatus(String host, String action)
+  {
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        taskRunner -> {
+          if (taskRunner instanceof WorkerTaskRunner) {
+            try {
+              if ("disable".equals(action)) {
+                ((WorkerTaskRunner) taskRunner).disableWorker(host);
+                return Response.ok(ImmutableMap.of(host, "disabled")).build();
+              } else if ("enable".equals(action)) {
+                ((WorkerTaskRunner) taskRunner).enableWorker(host);
+                return Response.ok(ImmutableMap.of(host, "enabled")).build();
+              } else {
+                return Response.serverError()
+                               .entity(ImmutableMap.of("error", "Worker does not support " + action + " action!"))
+                               .build();
+              }
+            }
+            catch (Exception e) {
+              log.error(e, "Error in posting [%s] action to [%s]", action, host);
+              return Response.serverError()
+                             .entity(ImmutableMap.of("error", e.getMessage()))
+                             .build();
+            }
+          } else {
+            log.debug(
+                "Task runner [%s] of type [%s] does not support worker %s action",
+                taskRunner,
+                taskRunner.getClass().getCanonicalName(),
+                action
+            );
+            return Response.serverError()
+                           .entity(ImmutableMap.of(
+                               "error",
+                               "Task Runner does not support worker " + action + " action"
+                           ))
+                           .build();
+          }
+        }
+    );
+  }
+
   @GET
   @Path("/scaling")
   @Produces(MediaType.APPLICATION_JSON)
@@ -1003,8 +1065,10 @@ public class OverlordResource
   @GET
   @Path("/dataSources/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getRunningTasksByDataSource(@PathParam("dataSource") String dataSource,
-      @Context HttpServletRequest request)
+  public Response getRunningTasksByDataSource(
+      @PathParam("dataSource") String dataSource,
+      @Context HttpServletRequest request
+  )
   {
     Optional<TaskRunner> ts = taskMaster.getTaskRunner();
     if (!ts.isPresent()) {
@@ -1013,10 +1077,11 @@ public class OverlordResource
     Collection<? extends TaskRunnerWorkItem> runningTasks = ts.get().getRunningTasks();
     if (runningTasks == null || runningTasks.isEmpty()) {
       return Response.status(Response.Status.NOT_FOUND)
-          .entity("No running tasks found for the datasource : " + dataSource).build();
+                     .entity("No running tasks found for the datasource : " + dataSource).build();
     }
     List<TaskRunnerWorkItem> taskRunnerWorkItemList = runningTasks.stream()
-        .filter(task -> dataSource.equals(task.getDataSource())).collect(Collectors.toList());
+                                                                  .filter(task -> dataSource.equals(task.getDataSource()))
+                                                                  .collect(Collectors.toList());
     return Response.ok(taskRunnerWorkItemList).build();
   }
 

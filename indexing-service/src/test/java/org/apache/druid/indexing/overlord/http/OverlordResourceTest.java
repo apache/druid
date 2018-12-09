@@ -36,10 +36,11 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
-import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
+import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -50,6 +51,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -75,7 +77,7 @@ public class OverlordResourceTest
   private TaskStorageQueryAdapter taskStorageQueryAdapter;
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
   private HttpServletRequest req;
-  private TaskRunner taskRunner;
+  private WorkerTaskRunner taskRunner;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -83,7 +85,7 @@ public class OverlordResourceTest
   @Before
   public void setUp()
   {
-    taskRunner = EasyMock.createMock(TaskRunner.class);
+    taskRunner = EasyMock.createMock(WorkerTaskRunner.class);
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
     taskStorageQueryAdapter = EasyMock.createStrictMock(TaskStorageQueryAdapter.class);
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
@@ -956,6 +958,70 @@ public class OverlordResourceTest
         .getEntity();
 
     Assert.assertEquals(0, responseObjects.size());
+  }
+
+  @Test
+  public void testEnableWorker()
+  {
+    String host = "worker-host";
+
+    taskRunner.enableWorker(host);
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+
+    final Response response = overlordResource.enableWorker(host);
+
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(ImmutableMap.of(host, "enabled"), response.getEntity());
+  }
+
+  @Test
+  public void testDisableWorker()
+  {
+    String host = "worker-host";
+
+    taskRunner.disableWorker(host);
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+
+    final Response response = overlordResource.disableWorker(host);
+
+    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assert.assertEquals(ImmutableMap.of(host, "disabled"), response.getEntity());
+  }
+
+  @Test
+  public void testEnableWorkerWhenWorkerAPIRaisesError()
+  {
+    String host = "worker-host";
+
+    taskRunner.enableWorker(host);
+    EasyMock.expectLastCall().andThrow(new RE("Worker API returns error!")).once();
+
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+
+    final Response response = overlordResource.enableWorker(host);
+
+    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
+  }
+
+  @Test
+  public void testDisableWorkerWhenWorkerAPIRaisesError()
+  {
+    String host = "worker-host";
+
+    taskRunner.disableWorker(host);
+    EasyMock.expectLastCall().andThrow(new RE("Worker API returns error!")).once();
+
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+
+    final Response response = overlordResource.disableWorker(host);
+
+    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
   }
 
   @After

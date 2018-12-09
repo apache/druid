@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.netty.handler.timeout.TimeoutException;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -66,6 +67,7 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -74,16 +76,20 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
+import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -831,6 +837,64 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                   .filter(item -> item.getState() == HttpRemoteTaskRunnerWorkItem.State.PENDING)
                   .map(item -> item.getTask())
                   .collect(Collectors.toList());
+    }
+  }
+
+  @Override
+  public void enableWorker(String host)
+  {
+    sendRequestToWorker(host, "enable");
+  }
+
+  @Override
+  public void disableWorker(String host)
+  {
+    sendRequestToWorker(host, "disable");
+  }
+
+  private void sendRequestToWorker(String workerHost, String action)
+  {
+    WorkerHolder workerHolder = workers.get(workerHost);
+
+    if (workerHolder == null) {
+      throw new RE(
+          "Worker on host %s does not exists",
+          workerHost
+      );
+    }
+
+    final URL workerUrl = TaskRunnerUtils.makeWorkerURL(
+        workerHolder.getWorker(),
+        "/druid/worker/v1/%s",
+        action
+    );
+
+    try {
+      final StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, workerUrl),
+          new StatusResponseHandler(StandardCharsets.UTF_8)
+      ).get();
+
+      log.info(
+          "Sent %s action request to worker: %s, status: %s, response: %s",
+          action,
+          workerHost,
+          response.getStatus(),
+          response.getContent()
+      );
+
+      if (!HttpResponseStatus.OK.equals(response.getStatus())) {
+        throw new RE(
+            "Action [%s] failed for worker [%s] with status %s(%s)",
+            action,
+            workerHost,
+            response.getStatus().getCode(),
+            response.getStatus().getReasonPhrase()
+        );
+      }
+    }
+    catch (ExecutionException | InterruptedException | TimeoutException e) {
+      Throwables.propagate(e);
     }
   }
 
