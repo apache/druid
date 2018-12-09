@@ -945,7 +945,7 @@ public class RemoteTaskRunnerTest
     final URL url = new URL("http://" + workerHost + "/druid/worker/v1/disable");
     String workerResponse = "{\"" + workerHost + "\":\"disabled\"}";
 
-    Capture<Request> capturedRequest = getRequestCapture(HttpResponseStatus.OK, workerResponse);
+    Capture<Request> capturedRequest = getHttpClientRequestCapture(HttpResponseStatus.OK, workerResponse);
 
     remoteTaskRunner.disableWorker(workerHost);
 
@@ -961,7 +961,7 @@ public class RemoteTaskRunnerTest
     doSetup();
     final URL url = new URL("http://" + workerHost + "/druid/worker/v1/disable");
 
-    Capture<Request> capturedRequest = getRequestCapture(HttpResponseStatus.INTERNAL_SERVER_ERROR, "");
+    Capture<Request> capturedRequest = getHttpClientRequestCapture(HttpResponseStatus.INTERNAL_SERVER_ERROR, "");
 
     try {
       remoteTaskRunner.disableWorker(workerHost);
@@ -994,7 +994,7 @@ public class RemoteTaskRunnerTest
     final URL url = new URL("http://" + workerHost + "/druid/worker/v1/enable");
     String workerResponse = "{\"" + workerHost + "\":\"enabled\"}";
 
-    Capture<Request> capturedRequest = getRequestCapture(HttpResponseStatus.OK, workerResponse);
+    Capture<Request> capturedRequest = getHttpClientRequestCapture(HttpResponseStatus.OK, workerResponse);
 
     remoteTaskRunner.enableWorker(workerHost);
 
@@ -1010,7 +1010,7 @@ public class RemoteTaskRunnerTest
     doSetup();
     final URL url = new URL("http://" + workerHost + "/druid/worker/v1/enable");
 
-    Capture<Request> capturedRequest = getRequestCapture(HttpResponseStatus.INTERNAL_SERVER_ERROR, "");
+    Capture<Request> capturedRequest = getHttpClientRequestCapture(HttpResponseStatus.INTERNAL_SERVER_ERROR, "");
 
     try {
       remoteTaskRunner.enableWorker(workerHost);
@@ -1036,7 +1036,7 @@ public class RemoteTaskRunnerTest
     EasyMock.verify(httpClient);
   }
 
-  private Capture<Request> getRequestCapture(HttpResponseStatus httpStatus, String responseContent)
+  private Capture<Request> getHttpClientRequestCapture(HttpResponseStatus httpStatus, String responseContent)
   {
     SettableFuture<StatusResponseHolder> futureResult = SettableFuture.create();
     futureResult.set(
