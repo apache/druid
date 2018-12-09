@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Predicate;

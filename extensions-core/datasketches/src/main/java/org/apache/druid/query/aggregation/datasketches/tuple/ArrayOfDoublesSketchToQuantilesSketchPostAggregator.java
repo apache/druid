@@ -74,7 +74,7 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregator extends ArrayOf
   public DoublesSketch compute(final Map<String, Object> combinedAggregators)
   {
     final ArrayOfDoublesSketch sketch = (ArrayOfDoublesSketch) getField().compute(combinedAggregators);
-    final UpdateDoublesSketch qs = UpdateDoublesSketch.builder().setK(k).build();
+    final UpdateDoublesSketch qs = DoublesSketch.builder().setK(k).build();
     final ArrayOfDoublesSketchIterator it = sketch.iterator();
     while (it.next()) {
       qs.update(it.getValues()[column - 1]); // convert 1-based column number to zero-based index

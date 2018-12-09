@@ -19,7 +19,6 @@
 
 package org.apache.druid.security.basic;
 
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.java.util.common.StringUtils;
@@ -33,15 +32,9 @@ import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
-import java.util.List;
 
 public class BasicSecurityResourceFilter extends AbstractResourceFilter
 {
-  private static final List<String> APPLICABLE_PATHS = ImmutableList.of(
-      "/druid-ext/basic-security/authentication",
-      "/druid-ext/basic-security/authorization"
-  );
-
   private static final String SECURITY_RESOURCE_NAME = "security";
 
   @Inject
@@ -75,16 +68,5 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
     }
 
     return request;
-  }
-
-  @Override
-  public boolean isApplicable(String requestPath)
-  {
-    for (String path : APPLICABLE_PATHS) {
-      if (requestPath.startsWith(path) && !requestPath.equals(path)) {
-        return true;
-      }
-    }
-    return false;
   }
 }

@@ -19,21 +19,20 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import com.google.common.util.concurrent.Striped;
+import com.yahoo.memory.WritableMemory;
+import com.yahoo.sketches.hll.HllSketch;
+import com.yahoo.sketches.hll.TgtHllType;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.segment.ColumnValueSelector;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
-
-import com.google.common.util.concurrent.Striped;
-import com.yahoo.memory.WritableMemory;
-import com.yahoo.sketches.hll.HllSketch;
-import com.yahoo.sketches.hll.TgtHllType;
-
-import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.segment.ColumnValueSelector;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 /**
  * This aggregator builds sketches from raw data.

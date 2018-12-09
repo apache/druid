@@ -132,7 +132,7 @@ public class LongCompressionBenchmarkFileGenerator
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
       for (CompressionStrategy compression : compressions) {
         for (CompressionFactory.LongEncodingStrategy encoding : encodings) {
-          String name = entry.getKey() + "-" + compression.toString() + "-" + encoding.toString();
+          String name = entry.getKey() + "-" + compression + "-" + encoding;
           log.info("%s: ", name);
           File compFile = new File(dir, name);
           compFile.delete();

@@ -96,7 +96,7 @@ public class CloudFilesStorageDruidModule implements DruidModule
   {
     log.info("Building Cloud Files Api...");
 
-    Iterable<com.google.inject.Module> modules = null;
+    Iterable<com.google.inject.Module> modules;
     if (config.getUseServiceNet()) {
       log.info("Configuring Cloud Files Api to use the internal service network...");
       modules = ImmutableSet.of(new SLF4JLoggingModule(), new InternalUrlModule());

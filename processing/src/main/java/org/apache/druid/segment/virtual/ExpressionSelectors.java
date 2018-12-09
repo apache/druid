@@ -37,9 +37,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.NilColumnValueSelector;
-import org.apache.druid.segment.NullDimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
@@ -139,12 +137,12 @@ public class ExpressionSelectors
       final String column = Iterables.getOnlyElement(columns);
       final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(column);
 
-      if (column.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-        // Optimization for expressions that hit the __time column and nothing else.
-        // May be worth applying this optimization to all long columns?
+      if (capabilities != null && capabilities.getType() == ValueType.LONG) {
+        // Optimization for expressions that hit one long column and nothing else.
         return new SingleLongInputCachingExpressionColumnValueSelector(
-            columnSelectorFactory.makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-            expression
+            columnSelectorFactory.makeColumnValueSelector(column),
+            expression,
+            !ColumnHolder.TIME_COLUMN_NAME.equals(column) // __time doesn't need an LRU cache since it is sorted.
         );
       } else if (capabilities != null
                  && capabilities.getType() == ValueType.STRING
@@ -195,10 +193,10 @@ public class ExpressionSelectors
 
     if (baseSelector instanceof ConstantExprEvalSelector) {
       // Optimization for dimension selectors on constants.
-      return DimensionSelectorUtils.constantSelector(baseSelector.getObject().asString(), extractionFn);
+      return DimensionSelector.constant(baseSelector.getObject().asString(), extractionFn);
     } else if (baseSelector instanceof NilColumnValueSelector) {
       // Optimization for null dimension selector.
-      return NullDimensionSelector.instance();
+      return DimensionSelector.constant(null);
     } else if (extractionFn == null) {
       class DefaultExpressionDimensionSelector extends BaseSingleValueDimensionSelector
       {
@@ -238,7 +236,8 @@ public class ExpressionSelectors
   private static Expr.ObjectBinding createBindings(Expr expression, ColumnSelectorFactory columnSelectorFactory)
   {
     final Map<String, Supplier<Object>> suppliers = new HashMap<>();
-    for (String columnName : Parser.findRequiredBindings(expression)) {
+    final List<String> columns = Parser.findRequiredBindings(expression);
+    for (String columnName : columns) {
       final ColumnCapabilities columnCapabilities = columnSelectorFactory
           .getColumnCapabilities(columnName);
       final ValueType nativeType = columnCapabilities != null ? columnCapabilities.getType() : null;
@@ -276,8 +275,9 @@ public class ExpressionSelectors
 
     if (suppliers.isEmpty()) {
       return ExprUtils.nilBindings();
-    } else if (suppliers.size() == 1) {
-      // If there's only one supplier, we can skip the Map and just use that supplier when asked for something.
+    } else if (suppliers.size() == 1 && columns.size() == 1) {
+      // If there's only one column (and it has a supplier), we can skip the Map and just use that supplier when
+      // asked for something.
       final String column = Iterables.getOnlyElement(suppliers.keySet());
       final Supplier<Object> supplier = Iterables.getOnlyElement(suppliers.values());
 

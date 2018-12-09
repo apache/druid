@@ -20,11 +20,17 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.ZeroIndexedInts;
+import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -194,6 +200,140 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, HotLoopC
         strings[i] = lookupName(row.get(i));
       }
       return Arrays.asList(strings);
+    }
+  }
+
+  static DimensionSelector constant(@Nullable final String value)
+  {
+    if (NullHandling.isNullOrEquivalent(value)) {
+      return NullDimensionSelectorHolder.NULL_DIMENSION_SELECTOR;
+    } else {
+      return new ConstantDimensionSelector(value);
+    }
+  }
+
+  static DimensionSelector constant(@Nullable final String value, @Nullable final ExtractionFn extractionFn)
+  {
+    if (extractionFn == null) {
+      return constant(value);
+    } else {
+      return constant(extractionFn.apply(value));
+    }
+  }
+
+  /**
+   * Checks if the given selector constantly returns null. This method could be used in the beginning of execution of
+   * some queries and making some aggregations for heuristic shortcuts.
+   */
+  static boolean isNilSelector(final DimensionSelector selector)
+  {
+    return selector.nameLookupPossibleInAdvance()
+           && selector.getValueCardinality() == 1
+           && selector.lookupName(0) == null;
+  }
+
+  /**
+   * This class not a public API. It is needed solely to make NULL_DIMENSION_SELECTOR and NullDimensionSelector private
+   * and inaccessible even from classes in the same package. It could be removed, when Druid is updated to at least Java
+   * 9, that supports private members in interfaces.
+   */
+  class NullDimensionSelectorHolder
+  {
+    private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
+
+    /**
+     * This class is specially made a nested member of {@link DimensionSelector} interface, and accessible only through
+     * calling DimensionSelector.constant(null), so that it's impossible to mistakely use NullDimensionSelector in
+     * instanceof statements. {@link #isNilSelector} method should be used instead.
+     */
+    private static class NullDimensionSelector implements SingleValueHistoricalDimensionSelector, IdLookup
+    {
+      private NullDimensionSelector()
+      {
+        // Singleton.
+      }
+
+      @Override
+      public IndexedInts getRow()
+      {
+        return ZeroIndexedInts.instance();
+      }
+
+      @Override
+      public int getRowValue(int offset)
+      {
+        return 0;
+      }
+
+      @Override
+      public IndexedInts getRow(int offset)
+      {
+        return getRow();
+      }
+
+      @Override
+      public ValueMatcher makeValueMatcher(@Nullable String value)
+      {
+        return BooleanValueMatcher.of(value == null);
+      }
+
+      @Override
+      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      {
+        return BooleanValueMatcher.of(predicate.apply(null));
+      }
+
+      @Override
+      public int getValueCardinality()
+      {
+        return 1;
+      }
+
+      @Override
+      @Nullable
+      public String lookupName(int id)
+      {
+        assert id == 0 : "id = " + id;
+        return null;
+      }
+
+      @Override
+      public boolean nameLookupPossibleInAdvance()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public IdLookup idLookup()
+      {
+        return this;
+      }
+
+      @Override
+      public int lookupId(@Nullable String name)
+      {
+        return NullHandling.isNullOrEquivalent(name) ? 0 : -1;
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        return null;
+      }
+
+      @Override
+      public Class classOfObject()
+      {
+        return Object.class;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        // nothing to inspect
+      }
     }
   }
 }

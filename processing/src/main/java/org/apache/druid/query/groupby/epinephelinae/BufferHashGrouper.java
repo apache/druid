@@ -173,6 +173,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
     }
 
     if (sorted) {
+      @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
       final List<Integer> wrappedOffsets = new AbstractList<Integer>()
       {
         @Override

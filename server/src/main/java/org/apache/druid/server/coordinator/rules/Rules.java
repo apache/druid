@@ -30,10 +30,14 @@ public class Rules
     return src.overlaps(target);
   }
 
-  public static boolean eligibleForLoad(Period period, Interval interval, DateTime referenceTimestamp)
+  public static boolean eligibleForLoad(Period period, Interval interval, DateTime referenceTimestamp, boolean includeFuture)
   {
     final Interval currInterval = new Interval(period, referenceTimestamp);
-    return eligibleForLoad(currInterval, interval);
+    if (includeFuture) {
+      return currInterval.getStartMillis() < interval.getEndMillis();
+    } else {
+      return eligibleForLoad(currInterval, interval);
+    }
   }
 
   private Rules() {}

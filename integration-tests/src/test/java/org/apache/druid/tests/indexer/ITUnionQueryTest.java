@@ -157,17 +157,17 @@ public class ITUnionQueryTest extends AbstractIndexerTest
 
   private String setShutOffTime(String taskAsString, DateTime time)
   {
-    return taskAsString.replace("#SHUTOFFTIME", time.toString());
+    return StringUtils.replace(taskAsString, "#SHUTOFFTIME", time.toString());
   }
 
   private String withDataSource(String taskAsString, String dataSource)
   {
-    return taskAsString.replace(UNION_DATASOURCE, dataSource);
+    return StringUtils.replace(taskAsString, UNION_DATASOURCE, dataSource);
   }
 
   private String withServiceName(String taskAsString, String serviceName)
   {
-    return taskAsString.replace(EVENT_RECEIVER_SERVICE_PREFIX, serviceName);
+    return StringUtils.replace(taskAsString, EVENT_RECEIVER_SERVICE_PREFIX, serviceName);
   }
 
   public void postEvents(int id) throws Exception

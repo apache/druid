@@ -16,9 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexer;
+
 /**
- * This includes the state of a task in the task runner not covered by {@link TaskState}, this state is not stored in database
+ * This includes the state of a task in the task runner not covered by {@link TaskState}, this state is not stored
+ * in database
  */
 public enum RunnerTaskState
 {

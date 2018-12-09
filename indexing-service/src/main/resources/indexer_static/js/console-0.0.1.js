@@ -24,7 +24,7 @@ var killTask = function(taskId) {
   if(confirm('Do you really want to kill: '+taskId)) {
     $.ajax({
       type:'POST',
-      url: '/druid/indexer/v1/task/'+ taskId +'/terminate',
+      url: '/druid/indexer/v1/task/'+ taskId +'/shutdown',
       data: ''
     }).done(function(data) {
       setTimeout(function() { location.reload(true) }, 750);

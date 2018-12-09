@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.hll;
 
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
@@ -47,6 +48,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
 {
   private final HyperLogLogCollector collector;
   private final long NUM_HASHES;
+
   public HyperLogLogSerdeBenchmarkTest(final HyperLogLogCollector collector, Long num_hashes)
   {
     this.collector = collector;

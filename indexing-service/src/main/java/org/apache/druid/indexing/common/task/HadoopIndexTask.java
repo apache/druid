@@ -280,7 +280,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         toolbox.getSegmentPusher().getPathForHadoop()
     };
 
-    HadoopIngestionSpec indexerSchema = null;
+    HadoopIngestionSpec indexerSchema;
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
     Class<?> determinePartitionsRunnerClass = determinePartitionsInnerProcessingRunner.getClass();
     Method determinePartitionsInnerProcessingRunTask = determinePartitionsRunnerClass.getMethod(

@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -430,6 +431,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner implements KafkaIndexTask
           // if stop is requested or task's end offset is set by call to setEndOffsets method with finish set to true
           if (stopRequested.get() || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
+          }
+
+          if (stopRequested.get()) {
             break;
           }
 

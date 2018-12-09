@@ -172,8 +172,8 @@ public class HybridCacheTest
       Assert.assertEquals(Sets.newHashSet(key3), res.keySet());
       Assert.assertArrayEquals(value3, res.get(key3));
 
-      Assert.assertEquals(++hits, cache.getStats().getNumHits());
-      Assert.assertEquals(++misses, cache.getStats().getNumMisses());
+      Assert.assertEquals(hits + 1, cache.getStats().getNumHits());
+      Assert.assertEquals(misses + 1, cache.getStats().getNumMisses());
     }
   }
 }

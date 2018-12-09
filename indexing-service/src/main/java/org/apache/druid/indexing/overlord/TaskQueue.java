@@ -53,12 +53,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 /**
  * Interface between task producers and the task runner.
@@ -99,6 +102,11 @@ public class TaskQueue
   private volatile boolean active = false;
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
+
+  private final Map<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
+  private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
+  private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 
   @Inject
   public TaskQueue(
@@ -252,7 +260,7 @@ public class TaskQueue
               }
               catch (Exception e) {
                 log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
-                notifyStatus(task, TaskStatus.failure(task.getId()));
+                notifyStatus(task, TaskStatus.failure(task.getId()), "failed because of exception[%s]", e.getClass());
                 continue;
               }
               if (taskIsReady) {
@@ -286,7 +294,11 @@ public class TaskQueue
           log.info("Asking taskRunner to clean up %,d tasks.", tasksToKill.size());
           for (final String taskId : tasksToKill) {
             try {
-              taskRunner.shutdown(taskId);
+              taskRunner.shutdown(
+                  taskId,
+                  "task is not in runnerTaskFutures[%s]",
+                  runnerTaskFutures.keySet()
+              );
             }
             catch (Exception e) {
               log.warn(e, "TaskRunner failed to clean up task: %s", taskId);
@@ -356,7 +368,7 @@ public class TaskQueue
    *
    * @param taskId task to kill
    */
-  public void shutdown(final String taskId)
+  public void shutdown(final String taskId, String reasonFormat, Object... args)
   {
     giant.lock();
 
@@ -364,7 +376,7 @@ public class TaskQueue
       Preconditions.checkNotNull(taskId, "taskId");
       for (final Task task : tasks) {
         if (task.getId().equals(taskId)) {
-          notifyStatus(task, TaskStatus.failure(taskId));
+          notifyStatus(task, TaskStatus.failure(taskId), reasonFormat, args);
           break;
         }
       }
@@ -386,7 +398,7 @@ public class TaskQueue
    * @throws IllegalArgumentException if the task ID does not match the status ID
    * @throws IllegalStateException    if this queue is currently shut down
    */
-  private void notifyStatus(final Task task, final TaskStatus taskStatus)
+  private void notifyStatus(final Task task, final TaskStatus taskStatus, String reasonFormat, Object... args)
   {
     giant.lock();
 
@@ -402,7 +414,7 @@ public class TaskQueue
       );
       // Inform taskRunner that this task can be shut down
       try {
-        taskRunner.shutdown(task.getId());
+        taskRunner.shutdown(task.getId(), reasonFormat, args);
       }
       catch (Exception e) {
         log.warn(e, "TaskRunner failed to cleanup task after completion: %s", task.getId());
@@ -493,7 +505,7 @@ public class TaskQueue
                 return;
               }
 
-              notifyStatus(task, status);
+              notifyStatus(task, status, "notified status change from task");
 
               // Emit event and log, if the task is done
               if (status.isComplete()) {
@@ -506,6 +518,14 @@ public class TaskQueue
                     task,
                     status.getDuration()
                 );
+
+                if (status.isSuccess()) {
+                  totalSuccessfulTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong())
+                                          .incrementAndGet();
+                } else {
+                  totalFailedTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong())
+                                      .incrementAndGet();
+                }
               }
             }
             catch (Exception e) {
@@ -582,4 +602,70 @@ public class TaskQueue
     return rv;
   }
 
+  private Map<String, Long> getDeltaValues(Map<String, Long> total, Map<String, Long> prev)
+  {
+    return total.entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue() - prev.getOrDefault(e.getKey(), 0L)));
+  }
+
+  public Map<String, Long> getSuccessfulTaskCount()
+  {
+    Map<String, Long> total = totalSuccessfulTaskCount.entrySet()
+                                                      .stream()
+                                                      .collect(Collectors.toMap(
+                                                          Map.Entry::getKey,
+                                                          e -> e.getValue().get()
+                                                      ));
+    Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
+    prevTotalSuccessfulTaskCount = total;
+    return delta;
+  }
+
+  public Map<String, Long> getFailedTaskCount()
+  {
+    Map<String, Long> total = totalFailedTaskCount.entrySet()
+                                                  .stream()
+                                                  .collect(Collectors.toMap(
+                                                      Map.Entry::getKey,
+                                                      e -> e.getValue().get()
+                                                  ));
+    Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
+    prevTotalFailedTaskCount = total;
+    return delta;
+  }
+
+  public Map<String, Long> getRunningTaskCount()
+  {
+    Map<String, String> taskDatasources = tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
+    return taskRunner.getRunningTasks()
+                     .stream()
+                     .collect(Collectors.toMap(
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> 1L,
+                         Long::sum
+                     ));
+  }
+
+  public Map<String, Long> getPendingTaskCount()
+  {
+    Map<String, String> taskDatasources = tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
+    return taskRunner.getPendingTasks()
+                     .stream()
+                     .collect(Collectors.toMap(
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> 1L,
+                         Long::sum
+                     ));
+  }
+
+  public Map<String, Long> getWaitingTaskCount()
+  {
+    Set<String> runnerKnownTaskIds = taskRunner.getKnownTasks()
+                                               .stream()
+                                               .map(TaskRunnerWorkItem::getTaskId)
+                                               .collect(Collectors.toSet());
+    return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
+                .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+  }
 }
