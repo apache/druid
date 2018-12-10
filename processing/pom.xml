@@ -116,6 +116,11 @@
             <artifactId>checker</artifactId>
             <version>${checkerframework.version}</version>
         </dependency>
+        <dependency>
+            <groupId>edu.stanford.ppl</groupId>
+            <artifactId>snaptree</artifactId>
+            <version>0.1</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

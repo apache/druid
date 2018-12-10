@@ -29,6 +29,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import edu.stanford.ppl.concurrent.SnapTreeMap;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
@@ -91,7 +92,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -1251,7 +1251,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       this.sortFacts = sortFacts;
       if (sortFacts) {
-        this.facts = new ConcurrentSkipListMap<>(incrementalIndexRowComparator);
+        this.facts = new SnapTreeMap<>(incrementalIndexRowComparator);
       } else {
         this.facts = new ConcurrentHashMap<>();
       }
@@ -1348,7 +1348,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       this.sortFacts = sortFacts;
       if (sortFacts) {
-        this.facts = new ConcurrentSkipListMap<>();
+        this.facts = new SnapTreeMap<>();
       } else {
         this.facts = new ConcurrentHashMap<>();
       }
