@@ -194,11 +194,10 @@
       <property name="message" value="Use org.apache.druid.common.config.NullHandling.nullToEmptyIfNeeded instead"/>
     </module>
 
-
     <module name="Regexp">
       <property name="format" value="@Produces\(&quot;text/plain&quot;\)"/>
       <property name="illegalPattern" value="true"/>
-      <property name="message" value="Don't forget the charset"/>
+      <property name="message" value="Use org.apache.druid.server.http.HttpMediaType#TEXT_PLAIN_UTF8 instead would be better."/>
     </module>
 
     <module name="PackageName">
