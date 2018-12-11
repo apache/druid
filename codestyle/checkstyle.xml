@@ -195,9 +195,9 @@
     </module>
 
     <module name="Regexp">
-      <property name="format" value="@Produces\(&quot;text/plain&quot;\)"/>
+      <property name="format" value='@Produces\(\"text/plain\"\)'/>
       <property name="illegalPattern" value="true"/>
-      <property name="message" value="Use org.apache.druid.server.http.HttpMediaType#TEXT_PLAIN_UTF8 instead would be better."/>
+      <property name="message" value="Use org.apache.druid.server.http.HttpMediaType#TEXT_PLAIN_UTF8 instead"/>
     </module>
 
     <module name="PackageName">
