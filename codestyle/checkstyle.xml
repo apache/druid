@@ -194,6 +194,13 @@
       <property name="message" value="Use org.apache.druid.common.config.NullHandling.nullToEmptyIfNeeded instead"/>
     </module>
 
+
+    <module name="Regexp">
+      <property name="format" value="@Produces\(&quot;text/plain&quot;\)"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Don't forget the charset"/>
+    </module>
+
     <module name="PackageName">
       <property name="format" value="^org.apache.druid.*$"/>
     </module>
