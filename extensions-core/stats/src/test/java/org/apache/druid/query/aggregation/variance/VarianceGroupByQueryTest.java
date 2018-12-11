@@ -114,7 +114,7 @@ public class VarianceGroupByQueryTest
         .build();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, results, "variance");
   }
 
   @Test
@@ -160,7 +160,7 @@ public class VarianceGroupByQueryTest
         .build();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
   @Test
@@ -198,7 +198,7 @@ public class VarianceGroupByQueryTest
         .build();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, results, "havingSpec");
 
     query = query.withLimitSpec(
         new DefaultLimitSpec(
@@ -216,6 +216,6 @@ public class VarianceGroupByQueryTest
         .build();
 
     results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, results, "limitSpec");
   }
 }
