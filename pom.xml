@@ -881,7 +881,9 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.0.0</version>
                 <configuration>
-                    <sourceDirectories>${project.build.sourceDirectory}</sourceDirectories>
+                    <sourceDirectories>
+                        <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+                    </sourceDirectories>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <configLocation>codestyle/checkstyle.xml</configLocation>
                     <suppressionsLocation>codestyle/checkstyle-suppressions.xml</suppressionsLocation>

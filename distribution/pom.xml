@@ -279,9 +279,17 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-google-extensions</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:graphite-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-influx-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-kafka-eight-simple-consumer</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:graphite-emitter</argument>
+                                        <argument>org.apache.druid.extensions.contrib:kafka-emitter</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:materialized-view-maintenance</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:materialized-view-selection</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-opentsdb-emitter</argument>
                                         <argument>-c</argument>
@@ -300,10 +308,6 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:materialized-view-maintenance</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:materialized-view-selection</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
