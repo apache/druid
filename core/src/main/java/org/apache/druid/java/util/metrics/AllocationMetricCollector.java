@@ -19,12 +19,12 @@
 
 package org.apache.druid.java.util.metrics;
 
+import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import org.apache.druid.java.util.common.logger.Logger;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -32,28 +32,32 @@ import java.util.stream.Collectors;
 class AllocationMetricCollector
 {
   private static final Logger log = new Logger(AllocationMetricCollector.class);
-  private Method getThreadAllocatedBytes;
-  private ThreadMXBean threadMXBean;
+  private static Method getThreadAllocatedBytes;
+  private static ThreadMXBean threadMXBean;
+
   private Map<Long, Long> previousResults;
-  private boolean initialized = false;
+  private static boolean initialized = false;
+
+  static {
+    try {
+      // classes in the sun.* packages are not part of the public/supported Java API and should not be used directly.
+      threadMXBean = ManagementFactory.getThreadMXBean();
+      getThreadAllocatedBytes = threadMXBean.getClass().getMethod("getThreadAllocatedBytes", long[].class);
+      getThreadAllocatedBytes.setAccessible(true);
+      getThreadAllocatedBytes.invoke(threadMXBean, (Object) threadMXBean.getAllThreadIds());
+      initialized = true;
+    }
+    catch (Exception e) {
+      log.warn(e, "Cannot initialize %s", AllocationMetricCollector.class.getName());
+    }
+  }
 
   AllocationMetricCollector()
   {
     try {
-      // no Java official public API is present for the following method, so using reflection
-      threadMXBean = ManagementFactory.getThreadMXBean();
-      getThreadAllocatedBytes = threadMXBean.getClass().getMethod("getThreadAllocatedBytes", long[].class);
-      getThreadAllocatedBytes.setAccessible(true);
-      long[] allThreadIds = threadMXBean.getAllThreadIds();
-      long[] bytes = (long[]) getThreadAllocatedBytes.invoke(threadMXBean, (Object) allThreadIds);
-
-      previousResults = new HashMap<>(allThreadIds.length);
-      for (int i = 0; i < allThreadIds.length; i++) {
-        long threadId = allThreadIds[i];
-        previousResults.put(threadId, bytes[i]);
-
+      if (initialized) {
+        previousResults = new Long2LongOpenHashMap();
       }
-      initialized = true;
     }
     catch (Exception e) {
       log.warn(e, "Cannot initialize %s", AllocationMetricCollector.class.getName());
@@ -67,6 +71,7 @@ class AllocationMetricCollector
     }
     try {
       long[] allThreadIds = threadMXBean.getAllThreadIds();
+      // the call time depends on number of threads, for 500 threads the estimated time is 4 ms
       long[] bytes = (long[]) getThreadAllocatedBytes.invoke(threadMXBean, (Object) allThreadIds);
       long sum = 0;
       for (int i = 0; i < allThreadIds.length; i++) {
@@ -84,7 +89,7 @@ class AllocationMetricCollector
         this.previousResults.put(threadId, current);
       }
       // remove terminated thread ids
-      previousResults.keySet().retainAll(Arrays.stream(allThreadIds).boxed().collect(Collectors.toList()));
+      previousResults.keySet().retainAll(Arrays.stream(allThreadIds).boxed().collect(Collectors.toSet()));
       return Optional.of(sum);
     }
     catch (ReflectiveOperationException e) {
