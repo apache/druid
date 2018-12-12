@@ -108,7 +108,7 @@ layout: toc
     * [Indexing Service](/docs/VERSION/design/indexing-service.html)
       * [Overlord](/docs/VERSION/design/overlord.html)
       * [MiddleManager](/docs/VERSION/design/middlemanager.html)
-      * [Peons](/docs/VERSION/design/peon.html)
+      * [Peons](/docs/VERSION/design/peons.html)
     * [Realtime (Deprecated)](/docs/VERSION/design/realtime.html)
   * Dependencies
     * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)
