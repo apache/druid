@@ -198,6 +198,12 @@
       <property name="message" value="Use org.apache.druid.common.config.NullHandling.nullToEmptyIfNeeded instead"/>
     </module>
 
+    <module name="Regexp">
+      <property name="format" value='@Produces\(\"text/plain\"\)'/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use org.apache.druid.server.http.HttpMediaType#TEXT_PLAIN_UTF8 instead"/>
+    </module>
+
     <module name="PackageName">
       <property name="format" value="^org.apache.druid.*$"/>
     </module>
