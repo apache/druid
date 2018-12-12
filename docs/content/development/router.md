@@ -90,8 +90,6 @@ The router module uses several of the default modules in [Configuration](../conf
 |`druid.router.defaultBrokerServiceName`|Any string.|The default broker to connect to in case service discovery fails.|druid/broker|
 |`druid.router.tierToBrokerMap`|An ordered JSON map of tiers to broker names. The priority of brokers is based on the ordering.|Queries for a certain tier of data are routed to their appropriate broker.|{"_default_tier": "<defaultBrokerServiceName>"}|
 |`druid.router.defaultRule`|Any string.|The default rule for all datasources.|"_default"|
-|`druid.router.rulesEndpoint`|Any string.|The coordinator endpoint to extract rules from.|"/druid/coordinator/v1/rules"|
-|`druid.router.coordinatorServiceName`|Any string.|The service discovery name of the coordinator.|druid/coordinator|
 |`druid.router.pollPeriod`|Any ISO8601 duration.|How often to poll for new rules.|PT1M|
 |`druid.router.strategies`|An ordered JSON array of objects.|All custom strategies to use for routing.|[{"type":"timeBoundary"},{"type":"priority"}]|
 |`druid.router.avatica.balancer.type`|String representing an AvaticaConnectionBalancer name|Class to use for balancing Avatica queries across brokers|rendezvousHash|
