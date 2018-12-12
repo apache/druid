@@ -70,17 +70,10 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     return maxSize;
   }
 
-  @Override
+  @VisibleForTesting
   public int available()
   {
-    final ReentrantLock lock = this.lock;
-    lock.lock();
-    try {
-      return objects.size();
-    }
-    finally {
-      lock.unlock();
-    }
+    return objects.size();
   }
 
   @Override
@@ -184,13 +177,14 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
-  public List<ReferenceCountingResourceHolder<T>> takeBatch(final int elementNum, final long timeoutMs)
+  public TakeBatchResult<T> takeBatch(final int elementNum, final long timeoutMs)
   {
+    Preconditions.checkArgument(elementNum > 0, "elementNum should be positive");
     Preconditions.checkArgument(timeoutMs >= 0, "timeoutMs must be a non-negative value, but was [%s]", timeoutMs);
     checkInitialized();
     try {
       final List<T> objects = timeoutMs > 0 ? pollObjects(elementNum, timeoutMs) : pollObjects(elementNum);
-      return objects.stream().map(this::wrapObject).collect(Collectors.toList());
+      return new TakeBatchResult<>(objects.stream().map(this::wrapObject).collect(Collectors.toList()), objects.size());
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);
@@ -198,11 +192,15 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
-  public List<ReferenceCountingResourceHolder<T>> takeBatch(final int elementNum)
+  public TakeBatchResult<T> takeBatch(final int elementNum)
   {
+    Preconditions.checkArgument(elementNum > 0, "elementNum should be positive");
     checkInitialized();
     try {
-      return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
+      return new TakeBatchResult<>(
+          takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList()),
+          objects.size()
+      );
     }
     catch (InterruptedException e) {
       throw new RuntimeException(e);

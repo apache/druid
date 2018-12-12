@@ -30,11 +30,6 @@ public interface BlockingPool<T>
   int maxSize();
 
   /**
-   * Returns the number of current available resources.
-   */
-  int available();
-
-  /**
    * Poll all available resources from the pool. If there's no available resource, it returns an empty list.
    */
   List<ReferenceCountingResourceHolder<T>> pollAll();
@@ -64,16 +59,45 @@ public interface BlockingPool<T>
    * @param elementNum number of resources to take
    * @param timeoutMs  maximum time to wait for resources, in milliseconds.
    *
-   * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
+   * @return {@link TakeBatchResult} containing a list of resource holders if it succeeds. An empty list should be
+   *         returned if there aren't enough available resources. The result also contains the number of remaining
+   *         resources after this call no matter it succeeded or not.
    */
-  List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum, long timeoutMs);
+  TakeBatchResult<T> takeBatch(int elementNum, long timeoutMs);
 
   /**
    * Take resources from the pool, waiting if necessary until the elements of the given number become available.
    *
    * @param elementNum number of resources to take
    *
-   * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
+   * @return {@link TakeBatchResult} containing a list of resource holders and the number of remaining resources.
    */
-  List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum);
+  TakeBatchResult<T> takeBatch(int elementNum);
+
+  class TakeBatchResult<T>
+  {
+    private final List<ReferenceCountingResourceHolder<T>> elements;
+    private final int numAvailableElements;
+
+    public TakeBatchResult(List<ReferenceCountingResourceHolder<T>> elements, int numAvailableElements)
+    {
+      this.elements = elements;
+      this.numAvailableElements = numAvailableElements;
+    }
+
+    public boolean isOk()
+    {
+      return elements.size() > 0;
+    }
+
+    public List<ReferenceCountingResourceHolder<T>> getElements()
+    {
+      return elements;
+    }
+
+    public int getNumAvailableElements()
+    {
+      return numAvailableElements;
+    }
+  }
 }

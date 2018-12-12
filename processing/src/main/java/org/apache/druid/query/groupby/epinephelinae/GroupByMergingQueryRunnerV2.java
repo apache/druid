@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.collections.BlockingPool.TakeBatchResult;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.Releaser;
 import org.apache.druid.data.input.Row;
@@ -334,11 +335,14 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
         if (timeout <= 0) {
           throw new TimeoutException();
         }
-        if ((mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers, timeout)).isEmpty()) {
+        final TakeBatchResult<ByteBuffer> result = mergeBufferPool.takeBatch(numBuffers, timeout);
+        if (!result.isOk()) {
           throw new TimeoutException("Cannot acquire enough merge buffers");
+        } else {
+          mergeBufferHolder = result.getElements();
         }
       } else {
-        mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers);
+        mergeBufferHolder = mergeBufferPool.takeBatch(numBuffers).getElements();
       }
       return mergeBufferHolder;
     }

@@ -30,8 +30,8 @@ import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.collections.BlockingPool.TakeBatchResult;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.annotations.Global;
@@ -152,16 +152,16 @@ public class GroupByStrategyV2 implements GroupByStrategy
       } else if (requiredMergeBufferNum == 0) {
         return new GroupByQueryResource();
       } else {
-        final List<ReferenceCountingResourceHolder<ByteBuffer>> mergeBufferHolders;
+        final TakeBatchResult<ByteBuffer> takeBatchResult;
         if (QueryContexts.hasTimeout(query)) {
-          mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
+          takeBatchResult = mergeBufferPool.takeBatch(requiredMergeBufferNum, QueryContexts.getTimeout(query));
         } else {
-          mergeBufferHolders = mergeBufferPool.takeBatch(requiredMergeBufferNum);
+          takeBatchResult = mergeBufferPool.takeBatch(requiredMergeBufferNum);
         }
-        if (mergeBufferHolders.isEmpty()) {
+        if (!takeBatchResult.isOk()) {
           throw new InsufficientResourcesException("Cannot acquire enough merge buffers");
         } else {
-          return new GroupByQueryResource(mergeBufferHolders);
+          return new GroupByQueryResource(takeBatchResult.getElements());
         }
       }
     } else {

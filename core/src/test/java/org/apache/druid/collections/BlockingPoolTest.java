@@ -94,7 +94,7 @@ public class BlockingPoolTest
   @Test(timeout = 60_000L)
   public void testTakeTimeout()
   {
-    final List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 100L);
+    final List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 100L).getElements();
     final ReferenceCountingResourceHolder<Integer> holder = pool.take(100);
     assertNull(holder);
     batchHolder.forEach(ReferenceCountingResourceHolder::close);
@@ -103,7 +103,7 @@ public class BlockingPoolTest
   @Test(timeout = 60_000L)
   public void testTakeBatch()
   {
-    final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(6, 100L);
+    final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(6, 100L).getElements();
     assertNotNull(holder);
     assertEquals(6, holder.size());
     assertEquals(4, pool.available());
@@ -114,13 +114,13 @@ public class BlockingPoolTest
   @Test(timeout = 60_000L)
   public void testWaitAndTakeBatch() throws InterruptedException, ExecutionException
   {
-    List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 10);
+    List<ReferenceCountingResourceHolder<Integer>> batchHolder = pool.takeBatch(10, 10).getElements();
     assertNotNull(batchHolder);
     assertEquals(10, batchHolder.size());
     assertEquals(0, pool.available());
 
     final Future<List<ReferenceCountingResourceHolder<Integer>>> future = service.submit(
-        () -> pool.takeBatch(8, 100)
+        () -> pool.takeBatch(8, 100).getElements()
     );
     Thread.sleep(20);
     batchHolder.forEach(ReferenceCountingResourceHolder::close);
@@ -137,7 +137,7 @@ public class BlockingPoolTest
   @Test(timeout = 60_000L)
   public void testTakeBatchTooManyObjects()
   {
-    final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(100, 100L);
+    final List<ReferenceCountingResourceHolder<Integer>> holder = pool.takeBatch(100, 100L).getElements();
     assertTrue(holder.isEmpty());
   }
 
@@ -231,10 +231,10 @@ public class BlockingPoolTest
   public void testConcurrentTakeBatch() throws ExecutionException, InterruptedException
   {
     final int batch1 = pool.maxSize() / 2;
-    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c1 = () -> pool.takeBatch(batch1, 10);
+    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c1 = () -> pool.takeBatch(batch1, 10).getElements();
 
     final int batch2 = pool.maxSize() - batch1 + 1;
-    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c2 = () -> pool.takeBatch(batch2, 10);
+    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c2 = () -> pool.takeBatch(batch2, 10).getElements();
 
     final Future<List<ReferenceCountingResourceHolder<Integer>>> f1 = service.submit(c1);
     final Future<List<ReferenceCountingResourceHolder<Integer>>> f2 = service.submit(c2);
@@ -261,10 +261,10 @@ public class BlockingPoolTest
   public void testConcurrentBatchClose() throws ExecutionException, InterruptedException
   {
     final int batch1 = pool.maxSize() / 2;
-    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c1 = () -> pool.takeBatch(batch1, 10);
+    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c1 = () -> pool.takeBatch(batch1, 10).getElements();
 
     final int batch2 = pool.maxSize() - batch1;
-    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c2 = () -> pool.takeBatch(batch2, 10);
+    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c2 = () -> pool.takeBatch(batch2, 10).getElements();
 
     final Future<List<ReferenceCountingResourceHolder<Integer>>> f1 = service.submit(c1);
     final Future<List<ReferenceCountingResourceHolder<Integer>>> f2 = service.submit(c2);
@@ -304,9 +304,9 @@ public class BlockingPoolTest
   @Test(timeout = 60_000L)
   public void testConcurrentTakeBatchClose() throws ExecutionException, InterruptedException
   {
-    final List<ReferenceCountingResourceHolder<Integer>> r1 = pool.takeBatch(1, 10);
+    final List<ReferenceCountingResourceHolder<Integer>> r1 = pool.takeBatch(1, 10).getElements();
 
-    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c2 = () -> pool.takeBatch(10, 100);
+    final Callable<List<ReferenceCountingResourceHolder<Integer>>> c2 = () -> pool.takeBatch(10, 100).getElements();
 
     final Future<List<ReferenceCountingResourceHolder<Integer>>> f2 = service.submit(c2);
     final Future f1 = service.submit(new Runnable()

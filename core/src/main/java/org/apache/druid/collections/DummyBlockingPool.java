@@ -45,12 +45,6 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
-  public int available()
-  {
-    return 0;
-  }
-
-  @Override
   public List<ReferenceCountingResourceHolder<T>> pollAll()
   {
     throw new UnsupportedOperationException();
@@ -69,13 +63,13 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
-  public List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum, long timeoutMs)
+  public TakeBatchResult<T> takeBatch(int elementNum, long timeoutMs)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum)
+  public TakeBatchResult<T> takeBatch(int elementNum)
   {
     throw new UnsupportedOperationException();
   }

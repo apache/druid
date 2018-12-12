@@ -83,14 +83,14 @@ public class GroupByQueryMergeBufferTest
     }
 
     @Override
-    public List<ReferenceCountingResourceHolder<ByteBuffer>> takeBatch(final int maxElements, final long timeout)
+    public TakeBatchResult<ByteBuffer> takeBatch(final int maxElements, final long timeout)
     {
-      final List<ReferenceCountingResourceHolder<ByteBuffer>> holder = super.takeBatch(maxElements, timeout);
+      final TakeBatchResult<ByteBuffer> result = super.takeBatch(maxElements, timeout);
       final int poolSize = available();
       if (minRemainBufferNum > poolSize) {
         minRemainBufferNum = poolSize;
       }
-      return holder;
+      return result;
     }
 
     public void resetMinRemainBufferNum()

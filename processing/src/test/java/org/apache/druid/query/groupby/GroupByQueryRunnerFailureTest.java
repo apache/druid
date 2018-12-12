@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.collections.BlockingPool.TakeBatchResult;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
@@ -275,14 +276,14 @@ public class GroupByQueryRunnerFailureTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
         .build();
 
-    List<ReferenceCountingResourceHolder<ByteBuffer>> holder = null;
+    TakeBatchResult<ByteBuffer> result = null;
     try {
-      holder = mergeBufferPool.takeBatch(1, 10);
+      result = mergeBufferPool.takeBatch(1, 10);
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     }
     finally {
-      if (holder != null) {
-        holder.forEach(ReferenceCountingResourceHolder::close);
+      if (result != null && result.isOk()) {
+        result.getElements().forEach(ReferenceCountingResourceHolder::close);
       }
     }
   }

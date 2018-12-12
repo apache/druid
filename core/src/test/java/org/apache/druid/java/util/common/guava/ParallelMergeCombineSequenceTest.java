@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Ordering;
-import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -43,7 +42,7 @@ public class ParallelMergeCombineSequenceTest
 {
   private Random random = new Random(System.currentTimeMillis());
   private ExecutorService service;
-  private BlockingPool<ThreadResource> resourcePool;
+  private DefaultBlockingPool<ThreadResource> resourcePool;
 
   @Before
   public void setup()
@@ -133,7 +132,7 @@ public class ParallelMergeCombineSequenceTest
         sequences,
         ordering,
         mergeFn,
-        resourcePool.takeBatch(2),
+        resourcePool.takeBatch(2).getElements(),
         10240,
         true,
         1000,

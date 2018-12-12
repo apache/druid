@@ -20,6 +20,7 @@
 package org.apache.druid.client;
 
 import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.collections.BlockingPool.TakeBatchResult;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.query.Query;
@@ -51,9 +52,12 @@ class ProcessingThreadResourcePool
       final List<ReferenceCountingResourceHolder<ThreadResource>> availableResources = resourcePool.pollAll();
       return new ReserveResult(availableResources, availableResources.size());
     } else {
+      final TakeBatchResult<ThreadResource> result = hasTimeout
+                                                     ? resourcePool.takeBatch(n, timeout)
+                                                     : resourcePool.takeBatch(n);
       return new ReserveResult(
-          hasTimeout ? resourcePool.takeBatch(n, timeout) : resourcePool.takeBatch(n),
-          resourcePool.available()
+          result.getElements(),
+          result.getNumAvailableElements()
       );
     }
   }
