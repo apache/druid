@@ -1,3 +1,7 @@
+---
+layout: doc_page
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +21,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Joins
 
 Druid has limited support for joins through [query-time lookups](../querying/lookups.html). The common use case of 
