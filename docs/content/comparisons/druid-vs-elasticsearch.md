@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Druid vs Elasticsearch"
 ---
-
-Druid vs Elasticsearch
-======================
+# Druid vs Elasticsearch
 
 We are not experts on search systems, if anything is incorrect about our portrayal, please let us know on the mailing list or via some other means.
 

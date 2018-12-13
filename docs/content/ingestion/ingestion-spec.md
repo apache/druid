@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Ingestion Spec"
 ---
-
 # Ingestion Spec
 
 A Druid ingestion spec consists of 3 components:

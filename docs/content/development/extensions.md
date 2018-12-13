@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Druid extensions"
 ---
-
 # Druid extensions
 
 Druid implements an extension system that allows for adding functionality at runtime. Extensions

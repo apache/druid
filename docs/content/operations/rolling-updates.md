@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Rolling Updates"
 ---
-
-Rolling Updates
-===============
+# Rolling Updates
 
 For rolling Druid cluster updates with no downtime, we recommend updating Druid nodes in the
 following order:

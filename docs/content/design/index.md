@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "Design"
 ---
 
 # What is Druid?<a id="what-is-druid"></a>
@@ -159,7 +160,7 @@ queries:
     - Bitmap compression for bitmap indexes
     - Type-aware compression for all columns
 
-Periodically, segments are committed and published. At this point, they are written to [deep storage](#deep-storage), 
+Periodically, segments are committed and published. At this point, they are written to [deep storage](#deep-storage),
 become immutable, and move from MiddleManagers to the Historical processes (see [Architecture](#architecture) above
 for details). An entry about the segment is also written to the [metadata store](#metadata-storage). This entry is a
 self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its

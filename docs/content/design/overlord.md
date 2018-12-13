@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Overlord Node"
 ---
-
-Overlord Node
--------------
+# Overlord Node
 
 ### Configuration
 

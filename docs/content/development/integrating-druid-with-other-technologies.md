@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "Integrating Druid With Other Technologies"
 ---
 # Integrating Druid With Other Technologies
 

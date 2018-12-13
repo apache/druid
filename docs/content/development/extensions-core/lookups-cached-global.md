@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Globally Cached Lookups"
 ---
-
 # Globally Cached Lookups
 
 <div class="note caution">

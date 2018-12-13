@@ -19,8 +19,10 @@
 
 ---
 layout: doc_page
+title: "Geographic Queries"
 ---
 # Geographic Queries
+
 Druid supports filtering specially spatially indexed columns based on an origin and a bound.
 
 # Spatial Indexing

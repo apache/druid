@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Papers"
 ---
-
 # Papers
 
 * [Druid: A Real-time Analytical Data Store](http://static.druid.io/docs/druid.pdf) - Discusses the Druid architecture in detail.

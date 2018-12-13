@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Query Context"
 ---
-
-Query Context
-=============
+# Query Context
 
 The query context is used for various query configuration parameters. The following parameters apply to all queries.
 

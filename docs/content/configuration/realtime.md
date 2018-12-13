@@ -19,10 +19,10 @@
 
 ---
 layout: doc_page
+title: "Realtime Node Configuration"
 ---
+# Realtime Node Configuration
 
-Realtime Node Configuration
-==============================
 For general Realtime Node information, see [here](../design/realtime.html).
 
 Runtime Configuration

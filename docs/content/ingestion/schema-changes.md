@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "Schema Changes"
 ---
 # Schema Changes
 

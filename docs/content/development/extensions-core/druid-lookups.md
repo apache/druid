@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "Cached Lookup Module"
 ---
 # Cached Lookup Module
 

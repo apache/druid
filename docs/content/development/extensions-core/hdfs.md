@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "HDFS"
 ---
-
 # HDFS
 
 Make sure to [include](../../operations/including-extensions.html) `druid-hdfs-storage` as an extension.

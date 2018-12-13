@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Virtual Columns"
 ---
-
 # Virtual Columns
 
 Virtual columns are queryable column "views" created from a set of columns during a query. 
