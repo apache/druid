@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "PostgreSQL Metadata Store"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "PostgreSQL Metadata Store"
----
 # PostgreSQL Metadata Store
 
 Make sure to [include](../../operations/including-extensions.html) `postgresql-metadata-storage` as an extension.

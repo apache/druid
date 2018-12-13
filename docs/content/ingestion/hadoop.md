@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Hadoop-based Batch Ingestion"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Hadoop-based Batch Ingestion"
----
 # Hadoop-based Batch Ingestion
 
 Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running

@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Segment size optimization"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Segment size optimization"
----
 # Segment size optimization
 
 In Druid, it's important to optimize the segment size because

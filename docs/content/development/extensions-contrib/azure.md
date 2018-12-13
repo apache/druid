@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Microsoft Azure"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Microsoft Azure"
----
 # Microsoft Azure
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-azure-extensions` extension.

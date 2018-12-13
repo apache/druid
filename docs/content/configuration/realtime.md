@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Realtime Node Configuration"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Realtime Node Configuration"
----
 # Realtime Node Configuration
 
 For general Realtime Node information, see [here](../design/realtime.html).

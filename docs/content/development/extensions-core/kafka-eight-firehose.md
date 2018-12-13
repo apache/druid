@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Kafka Eight Firehose"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Kafka Eight Firehose"
----
 # Kafka Eight Firehose
 
 Make sure to [include](../../operations/including-extensions.html) `druid-kafka-eight` as an extension.

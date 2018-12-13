@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Extending Druid With Custom Modules"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Extending Druid With Custom Modules"
----
 # Extending Druid With Custom Modules
 
 Druid uses a module system that allows for the addition of extensions at runtime.

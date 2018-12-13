@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Kerberos"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Kerberos"
----
 # Kerberos
 
 Druid Extension to enable Authentication for Druid Nodes using Kerberos.

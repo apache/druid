@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Load batch data using Hadoop"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Tutorial: Load batch data using Hadoop"
----
 # Tutorial: Load batch data using Hadoop
 
 This tutorial shows you how to load data files into Druid using a remote Hadoop cluster.

@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Compacting segments"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Tutorial: Compacting segments"
----
 # Tutorial: Compacting segments
 
 This tutorial demonstrates how to compact existing segments into fewer but larger segments.

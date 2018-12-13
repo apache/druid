@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Druid vs Redshift"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Druid vs Redshift"
----
 # Druid vs Redshift
 
 ### How does Druid compare to Redshift?

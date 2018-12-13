@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Druid Parquet Extension"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
   
----
-layout: doc_page
-title: "Druid Parquet Extension"
----
 # Druid Parquet Extension
 
 This module extends [Druid Hadoop based indexing](../../ingestion/hadoop.html) to ingest data directly from offline 

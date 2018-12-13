@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Filter groupBy Query Results"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Filter groupBy Query Results"
----
 # Filter groupBy Query Results
 
 A having clause is a JSON object identifying which rows from a groupBy query should be returned, by specifying conditions on aggregated values.
