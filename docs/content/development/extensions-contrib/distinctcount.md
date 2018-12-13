@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
-title: "DistinctCount aggregator"
+title: "DistinctCount Aggregator"
 ---
-# DistinctCount aggregator
+# DistinctCount Aggregator
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) the `druid-distinctcount` extension.
 
