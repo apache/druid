@@ -23,6 +23,7 @@ import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.data.IndexedInts;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
@@ -58,7 +59,9 @@ public class UniqueBufferAggregator implements BufferAggregator
     }
     if (value instanceof Long || value instanceof Integer) {
       // POC 验证，直接使用int测试
-      mutableRoaringBitmap.add((int) selector.getLong());
+      mutableRoaringBitmap.add((int) value);
+    } else if (value instanceof IndexedInts) {
+      ((IndexedInts) value).forEach(mutableRoaringBitmap::add);
     } else if (value instanceof ImmutableRoaringBitmap) {
       mutableRoaringBitmap.or((ImmutableRoaringBitmap) value);
     } else {

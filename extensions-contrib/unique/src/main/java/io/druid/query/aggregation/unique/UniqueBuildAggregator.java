@@ -22,10 +22,9 @@ package io.druid.query.aggregation.unique;
 import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.ColumnValueSelector;
+import io.druid.segment.data.IndexedInts;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
-
-import javax.annotation.Nullable;
 
 public class UniqueBuildAggregator implements Aggregator
 {
@@ -47,7 +46,9 @@ public class UniqueBuildAggregator implements Aggregator
     }
     if (value instanceof Long || value instanceof Integer) {
       // POC 验证，直接使用int测试
-      bitmap.add((int) selector.getLong());
+      bitmap.add((int) value);
+    } else if (value instanceof IndexedInts) {
+      ((IndexedInts) value).forEach(bitmap::add);
     } else if (value instanceof ImmutableRoaringBitmap) {
       bitmap.or((ImmutableRoaringBitmap) value);
     } else {
@@ -56,7 +57,6 @@ public class UniqueBuildAggregator implements Aggregator
   }
 
   @Override
-  @Nullable
   public ImmutableRoaringBitmap get()
   {
     return bitmap;

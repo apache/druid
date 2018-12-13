@@ -30,6 +30,8 @@ import java.nio.ByteBuffer;
 
 public class ImmutableRoaringBitmapObjectStrategy implements ObjectStrategy<ImmutableRoaringBitmap>
 {
+  private static final byte[] EMPTY_BYTES = new byte[]{};
+
   static ImmutableRoaringBitmapObjectStrategy STRATEGY = new ImmutableRoaringBitmapObjectStrategy();
 
   @Override
@@ -49,7 +51,7 @@ public class ImmutableRoaringBitmapObjectStrategy implements ObjectStrategy<Immu
   public byte[] toBytes(ImmutableRoaringBitmap val)
   {
     if (val == null || val.isEmpty()) {
-      return new byte[]{};
+      return EMPTY_BYTES;
     } else {
       try {
         if (val instanceof MutableRoaringBitmap) {

@@ -79,7 +79,7 @@ public class UniqAggregatorTest
             "    \"format\": \"tsv\",",
             "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMdd\"},",
             "    \"dimensionsSpec\": {",
-            "      \"dimensions\": [\"dim\"],",
+            "      \"dimensions\": [\"dim\",\"id\"],",
             "      \"dimensionExclusions\": [],",
             "      \"spatialDimensions\": []",
             "    },",
@@ -95,7 +95,7 @@ public class UniqAggregatorTest
         ),
         0, // minTimestamp
         Granularities.NONE,
-        200, // maxRowCount
+        100, // maxRowCount
         String.join(
             "\n",
             "{",
