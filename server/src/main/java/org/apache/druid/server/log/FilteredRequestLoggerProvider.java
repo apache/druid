@@ -21,6 +21,8 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.RequestLogLine;
 
@@ -59,6 +61,20 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     {
       this.logger = logger;
       this.queryTimeThresholdMs = queryTimeThresholdMs;
+    }
+
+    @LifecycleStart
+    @Override
+    public void start() throws Exception
+    {
+      logger.start();
+    }
+
+    @LifecycleStop
+    @Override
+    public void stop()
+    {
+      logger.stop();
     }
 
     @Override
