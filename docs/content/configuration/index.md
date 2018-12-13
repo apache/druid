@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Configuration Reference"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Configuration Reference"
----
 # Configuration Reference
 
 This page documents all of the configuration properties for each Druid service type.

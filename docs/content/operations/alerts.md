@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Druid Alerts"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Druid Alerts"
----
 # Druid Alerts
 
 Druid generates alerts on getting into unexpected situations.

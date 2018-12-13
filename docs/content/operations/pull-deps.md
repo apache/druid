@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "pull-deps Tool"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "pull-deps Tool"
----
 # pull-deps Tool
 
 `pull-deps` is a tool that can pull down dependencies to the local repository and lay dependencies out into the extension directory as needed.

@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Data Source Metadata Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Data Source Metadata Queries"
----
 # Data Source Metadata Queries
 
 Data Source Metadata queries return metadata information for a dataSource.  These queries return information about:

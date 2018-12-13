@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "DataSketches Tuple Sketch module"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "DataSketches Tuple Sketch module"
----
 # DataSketches Tuple Sketch module
 
 This module provides Druid aggregators based on Tuple sketch from [datasketches](http://datasketches.github.io/) library. ArrayOfDoublesSketch sketches extend the functionality of the count-distinct Theta sketches by adding arrays of double values associated with unique keys.

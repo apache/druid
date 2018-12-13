@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Test Stats Aggregators"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Test Stats Aggregators"
----
 # Test Stats Aggregators
 
 Incorporates test statistics related aggregators, including z-score and p-value. Please refer to [https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/](https://www.paypal-engineering.com/2017/06/29/democratizing-experimentation-data-for-product-innovations/) for math background and details.

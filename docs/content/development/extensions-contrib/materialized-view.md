@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Materialized View"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Materialized View"
----
 # Materialized View
 
 To use this feature, make sure to only load materialized-view-selection on broker and load materialized-view-maintenance on overlord. In addtion, this feature currently requires a hadoop cluster.

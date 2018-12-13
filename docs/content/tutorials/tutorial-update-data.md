@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Updating existing data"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Tutorial: Updating existing data"
----
 # Tutorial: Updating existing data
 
 This tutorial demonstrates how to update existing data, showing both overwrites and appends.

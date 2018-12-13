@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Metadata Storage"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Metadata Storage"
----
 # Metadata Storage
 
 The Metadata Storage is an external dependency of Druid. Druid uses it to store

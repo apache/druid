@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Papers"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Papers"
----
 # Papers
 
 * [Druid: A Real-time Analytical Data Store](http://static.druid.io/docs/druid.pdf) - Discusses the Druid architecture in detail.
