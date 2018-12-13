@@ -29,6 +29,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import io.druid.indexer.HadoopDruidBuildDictJob;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
@@ -44,6 +45,7 @@ import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
 import io.druid.java.util.common.DateTimes;
+import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.JodaUtils;
 import io.druid.java.util.common.StringUtils;
 import io.druid.java.util.common.logger.Logger;
@@ -235,6 +237,17 @@ public class HadoopIndexTask extends HadoopTask
 
     log.info("Setting version to: %s", version);
 
+    final String buildResult = invokeForeignLoader(
+        "io.druid.indexing.common.task.HadoopIndexTask$HadoopBuildDictInnerProcessing",
+        new String[]{
+            toolbox.getObjectMapper().writeValueAsString(indexerSchema)
+        },
+        loader
+    );
+    if (buildResult == null) {
+      throw new ISE("Build Dict failed");
+    }
+
     final String segments = invokeForeignLoader(
         "io.druid.indexing.common.task.HadoopIndexTask$HadoopIndexGeneratorInnerProcessing",
         new String[]{
@@ -324,6 +337,34 @@ public class HadoopIndexTask extends HadoopTask
       log.info("Starting a hadoop determine configuration job...");
       if (job.run()) {
         return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(config.getSchema());
+      }
+
+      return null;
+    }
+  }
+
+  /** Called indirectly in {@link HadoopIndexTask#run(TaskToolbox)}. */
+  @SuppressWarnings("unused")
+  public static class HadoopBuildDictInnerProcessing
+  {
+    public static String runTask(String[] args) throws Exception
+    {
+      final String schema = args[0];
+
+      final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.JSON_MAPPER
+          .readValue(
+              schema,
+              HadoopIngestionSpec.class
+          );
+      final HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(
+          theSchema
+      );
+
+      Jobby job = new HadoopDruidBuildDictJob(config);
+
+      log.info("Starting a hadoop build dict job...");
+      if (job.run()) {
+        return "succ";
       }
 
       return null;

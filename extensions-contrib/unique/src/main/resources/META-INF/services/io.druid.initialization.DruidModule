@@ -1,1 +1,1 @@
-io.druid.query.aggregation.distinctcount.UniqDruidModule
+io.druid.query.aggregation.unique.DruidUniqueModule
