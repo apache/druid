@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Segment size optimization"
 ---
-
 # Segment size optimization
 
 In Druid, it's important to optimize the segment size because

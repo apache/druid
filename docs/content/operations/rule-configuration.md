@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "Retaining or Automatically Dropping Data"
 ---
 # Retaining or Automatically Dropping Data
 

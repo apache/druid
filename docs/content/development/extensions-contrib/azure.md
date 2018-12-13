@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Microsoft Azure"
 ---
-
 # Microsoft Azure
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-azure-extensions` extension.

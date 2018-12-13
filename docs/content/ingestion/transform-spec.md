@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Transform Specs"
 ---
-
 # Transform Specs
 
 Transform specs allow Druid to filter and transform input data during ingestion. 

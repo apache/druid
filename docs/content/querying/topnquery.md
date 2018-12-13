@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "TopN queries"
 ---
-TopN queries
-==================
+# TopN queries
 
 TopN queries return a sorted set of results for the values in a given dimension according to some criteria. Conceptually, they can be thought of as an approximate [GroupByQuery](../querying/groupbyquery.html) over a single dimension with an [Ordering](../querying/limitspec.html) spec. TopNs are much faster and resource efficient than GroupBys for this use case. These types of queries take a topN query object and return an array of JSON objects where each object represents a value asked for by the topN query.
 

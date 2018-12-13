@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "API Reference"
 ---
-
 # API Reference
 
 This page documents all of the API endpoints for each Druid service type.

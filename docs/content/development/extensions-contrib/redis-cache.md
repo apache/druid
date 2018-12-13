@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Druid Redis Cache"
 ---
-
-Druid Redis Cache
---------------------
+# Druid Redis Cache
 
 A cache implementation for Druid based on [Redis](https://github.com/antirez/redis).
 

@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Metadata Storage"
 ---
-
 # Metadata Storage
 
 The Metadata Storage is an external dependency of Druid. Druid uses it to store

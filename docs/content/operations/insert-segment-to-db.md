@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "insert-segment-to-db Tool"
 ---
 # insert-segment-to-db Tool
 

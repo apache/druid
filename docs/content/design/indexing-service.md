@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Indexing Service"
 ---
-Indexing Service
-================
+# Indexing Service
 
 The indexing service is a highly-available, distributed service that runs indexing related tasks. 
 

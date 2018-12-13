@@ -19,8 +19,8 @@
   
 ---
 layout: doc_page
+title: "Druid Parquet Extension"
 ---
-
 # Druid Parquet Extension
 
 This module extends [Druid Hadoop based indexing](../../ingestion/hadoop.html) to ingest data directly from offline 

@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Apache Cassandra"
 ---
-
 # Apache Cassandra
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-cassandra-storage` extension.

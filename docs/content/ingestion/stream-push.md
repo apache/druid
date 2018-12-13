@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Stream Push"
 ---
-
-## Stream Push
+# Stream Push
 
 Druid can connect to any streaming data source through
 [Tranquility](https://github.com/druid-io/tranquility/blob/master/README.md), a package for pushing

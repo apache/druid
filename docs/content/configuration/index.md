@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Configuration Reference"
 ---
-
 # Configuration Reference
 
 This page documents all of the configuration properties for each Druid service type.

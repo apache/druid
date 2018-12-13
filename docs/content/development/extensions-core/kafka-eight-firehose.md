@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Kafka Eight Firehose"
 ---
-
 # Kafka Eight Firehose
 
 Make sure to [include](../../operations/including-extensions.html) `druid-kafka-eight` as an extension.

@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "TopNMetricSpec"
 ---
-TopNMetricSpec
-==================
+# TopNMetricSpec
 
 The topN metric spec specifies how topN values should be sorted.
 

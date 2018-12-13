@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "TLS Support"
 ---
-
-TLS Support
-===============
+# TLS Support
 
 # General Configuration
 

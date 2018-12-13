@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Deleting Data"
 ---
-
 # Deleting Data
 
 Permanent deletion of a Druid segment has two steps:

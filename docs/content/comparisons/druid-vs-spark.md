@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Druid vs Spark"
 ---
-
-Druid vs Spark
-==============
+# Druid vs Spark
 
 Druid and Spark are complementary solutions as Druid can be used to accelerate OLAP queries in Spark.
 

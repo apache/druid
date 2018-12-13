@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Historical Node"
 ---
-Historical Node
-===============
+# Historical Node
 
 ### Configuration
 

@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Rackspace Cloud Files"
 ---
-
 # Rackspace Cloud Files
 
 ## Deep Storage

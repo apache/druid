@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "InfluxDB Line Protocol Parser"
 ---
-
 # InfluxDB Line Protocol Parser
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-influx-extensions`.

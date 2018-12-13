@@ -19,8 +19,10 @@
 
 ---
 layout: doc_page
+title: "Sorting Orders"
 ---
 # Sorting Orders
+
 These sorting orders are used by the [TopNMetricSpec](./topnmetricspec.html), [SearchQuery](./searchquery.html), GroupByQuery's [LimitSpec](./limitspec.html), and [BoundFilter](./filters.html#bound-filter).
 
 ## Lexicographic

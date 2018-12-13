@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "JSON Flatten Spec"
 ---
-
 # JSON Flatten Spec
 
 | Field | Type | Description | Required |

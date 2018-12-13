@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Logging"
 ---
-Logging
-==========================
+# Logging
 
 Druid nodes will emit logs that are useful for debugging to the console. Druid nodes also emit periodic metrics about their state. For more about metrics, see [Configuration](../configuration/index.html#enabling-metrics). Metric logs are printed to the console by default, and can be disabled with `-Ddruid.emitter.logging.logLevel=debug`.
 

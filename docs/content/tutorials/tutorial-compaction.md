@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Compacting segments"
 ---
-
 # Tutorial: Compacting segments
 
 This tutorial demonstrates how to compact existing segments into fewer but larger segments.

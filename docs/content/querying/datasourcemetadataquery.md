@@ -19,8 +19,10 @@
 
 ---
 layout: doc_page
+title: "Data Source Metadata Queries"
 ---
 # Data Source Metadata Queries
+
 Data Source Metadata queries return metadata information for a dataSource.  These queries return information about:
 
 * The timestamp of latest ingested event for the dataSource. This is the ingested event without any consideration of rollup.

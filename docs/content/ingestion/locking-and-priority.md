@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Task Locking & Priority"
 ---
-
 # Task Locking & Priority
 
 ## Locking

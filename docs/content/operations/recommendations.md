@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Recommendations"
 ---
-
-Recommendations
-===============
+# Recommendations
 
 # Some General guidelines
 

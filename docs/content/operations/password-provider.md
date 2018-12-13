@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Password Provider"
 ---
-
 # Password Provider
 
 Druid needs some passwords for accessing various secured systems like metadata store, Key Store containing server certificates etc.

@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Graphite Emitter"
 ---
-
 # Graphite Emitter
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `graphite-emitter` extension.
