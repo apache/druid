@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Command Line Hadoop Indexer"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Command Line Hadoop Indexer"
----
 # Command Line Hadoop Indexer
 
 To run:

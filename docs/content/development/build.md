@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Build from Source"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Build from Source"
----
 # Build from Source
 
 You can build Druid directly from source. Please note that these instructions are for building the latest stable version of Druid.

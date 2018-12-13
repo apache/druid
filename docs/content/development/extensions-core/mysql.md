@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "MySQL Metadata Store"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "MySQL Metadata Store"
----
 # MySQL Metadata Store
 
 Make sure to [include](../../operations/including-extensions.html) `mysql-metadata-storage` as an extension.

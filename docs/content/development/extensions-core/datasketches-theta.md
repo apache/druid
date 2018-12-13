@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "DataSketches Theta Sketch module"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "DataSketches Theta Sketch module"
----
 # DataSketches Theta Sketch module
 
 This module provides Druid aggregators based on Theta sketch from [datasketches](http://datasketches.github.io/) library. Note that sketch algorithms are approximate; see details in the "Accuracy" section of the datasketches doc. 

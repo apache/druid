@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Ingestion Spec"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Ingestion Spec"
----
 # Ingestion Spec
 
 A Druid ingestion spec consists of 3 components:

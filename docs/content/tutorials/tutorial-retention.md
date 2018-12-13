@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Configuring data retention"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Tutorial: Configuring data retention"
----
 # Tutorial: Configuring data retention
 
 This tutorial demonstrates how to configure retention rules on a datasource to set the time intervals of data that will be retained or dropped.

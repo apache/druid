@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Virtual Columns"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Virtual Columns"
----
 # Virtual Columns
 
 Virtual columns are queryable column "views" created from a set of columns during a query. 
