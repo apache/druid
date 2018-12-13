@@ -71,6 +71,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+/**
+ * This class implements a local buffer for storing fetched Kinesis records. Fetching is done
+ * in background threads.
+ */
 public class KinesisRecordSupplier implements RecordSupplier<String, String>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisRecordSupplier.class);
@@ -307,6 +311,11 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
 
+    /**
+     * the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
+     * The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
+     * docs page for more information on how to use deaggregation
+     */
     if (deaggregate) {
       try {
         Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");

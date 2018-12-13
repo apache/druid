@@ -122,8 +122,8 @@ import java.util.stream.Stream;
  * stream sequences.
  * <p>
  *
- * @param <PartitionType> partition id type
- * @param <SequenceType>  sequence number type
+ * @param <PartitionType> the type of the partition id, for example, partitions in Kafka are int type while partitions in Kinesis are String type
+ * @param <SequenceType>  the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
  */
 public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     implements Supervisor
