@@ -44,6 +44,7 @@ import org.apache.zookeeper.data.ACL;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  */
@@ -81,10 +82,24 @@ public class CuratorModule implements Module
           StringUtils.format("%s:%s", config.getZkUser(), config.getZkPwd()).getBytes(StandardCharsets.UTF_8)
       );
     }
+
+    final Function<Void, Void> exitFunction = new Function<Void, Void>()
+    {
+      @Override
+      public Void apply(Void someVoid)
+      {
+        log.error("Zookeeper can't be reached, forcefully stopping lifecycle...");
+        lifecycle.stop();
+        log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
+        System.exit(1);
+        return null;
+      }
+    };
+
     final CuratorFramework framework = builder
         .ensembleProvider(ensembleProvider)
         .sessionTimeoutMs(config.getZkSessionTimeoutMs())
-        .retryPolicy(new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES))
+        .retryPolicy(config.getQuitOnConnectFail() ? new BoundedExponentialBackoffRetryWithQuit(exitFunction, BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES) : new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES))
         .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
         .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
         .build();
@@ -129,6 +144,17 @@ public class CuratorModule implements Module
       return new FixedEnsembleProvider(config.getZkHosts());
     }
 
+    final Function<Void, Void> exitFunction = new Function<Void, Void>()
+    {
+      @Override
+      public Void apply(Void aVoid)
+      {
+        log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
+        System.exit(1);
+        return null;
+      }
+    };
+
     return new ExhibitorEnsembleProvider(
         new Exhibitors(
             exConfig.getHosts(),
@@ -138,7 +164,7 @@ public class CuratorModule implements Module
         new DefaultExhibitorRestClient(exConfig.getUseSsl()),
         exConfig.getRestUriPath(),
         exConfig.getPollingMs(),
-        new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES)
+        config.getQuitOnConnectFail() ? new BoundedExponentialBackoffRetryWithQuit(exitFunction, BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES) : new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES)
     )
     {
       @Override

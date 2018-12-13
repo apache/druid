@@ -52,6 +52,10 @@ public class CuratorConfig
   @JsonProperty("authScheme")
   private String authScheme = "digest";
 
+  @JsonProperty("quitOnConnectFail")
+  private boolean quitOnConnectFail = false;
+
+
   public String getZkHosts()
   {
     return zkHosts;
@@ -107,6 +111,16 @@ public class CuratorConfig
   public String getAuthScheme()
   {
     return authScheme;
+  }
+
+  public boolean getQuitOnConnectFail()
+  {
+    return quitOnConnectFail;
+  }
+
+  public void setQuitOnConnectFail(Boolean quitOnConnectFail)
+  {
+    this.quitOnConnectFail = quitOnConnectFail == null ? false : quitOnConnectFail;
   }
 
 }
