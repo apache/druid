@@ -112,7 +112,7 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new UniqueAggregatorFactory(name, fieldName, maxCardinality);
+    return new UniqueAggregatorFactory(name, name, maxCardinality);
   }
 
   @Override

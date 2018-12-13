@@ -38,13 +38,17 @@ import org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
+import org.apache.kylin.dict.AppendTrieDictionary;
 import org.apache.kylin.dict.global.AppendTrieDictionaryBuilder;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -185,7 +189,7 @@ public class BuildDictJob implements Jobby
           Method method = aggFactory.getClass().getMethod("getFieldName");
           String fieldName = (String) method.invoke(aggFactory);
           if (fieldName == null || fieldName.isEmpty()) {
-            continue;
+            throw new RuntimeException("fieldName is null or empty");
           }
 
           Object raw = inputRow.getRaw(fieldName);
@@ -198,6 +202,7 @@ public class BuildDictJob implements Jobby
         }
         catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
           log.warn("broken unique agg:%s", aggFactory);
+          throw new RuntimeException(e);
         }
 
       }
@@ -287,6 +292,10 @@ public class BuildDictJob implements Jobby
         Method method = uniqAggregator.getClass().getMethod("getFieldName");
         fieldName = (String) method.invoke(uniqAggregator);
 
+        if (fieldName == null || fieldName.isEmpty()) {
+          throw new RuntimeException("fieldName is null or empty");
+        }
+
         log.info("column name: " + fieldName);
 
       }
@@ -325,7 +334,15 @@ public class BuildDictJob implements Jobby
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException
     {
-      builder.build(0);
+      AppendTrieDictionary<String> dict = builder.build(0);
+
+      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      try (PrintStream ps = new PrintStream(baos, true, "UTF-8")) {
+        dict.dump(ps);
+      }
+      String dictInfo = new String(baos.toByteArray(), StandardCharsets.UTF_8);
+
+      log.info("dict info:%s,min:%s,max:%s", dictInfo, dict.getMinId(), dict.getMaxId());
     }
 
 

@@ -69,6 +69,7 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.apache.kylin.common.util.Dictionary;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -127,7 +128,87 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       final boolean deserializeComplexMetrics
   )
   {
+    return makeColumnSelectorFactory(virtualColumns, agg, in, deserializeComplexMetrics, null);
+  }
+  /**
+   * Column selector used at ingestion time for inputs to aggregators.
+   *
+   * @param agg                       the aggregator
+   * @param in                        ingestion-time input row supplier
+   * @param deserializeComplexMetrics whether complex objects should be deserialized by a {@link ComplexMetricExtractor}
+   *
+   * @return column selector factory
+   */
+  public static ColumnSelectorFactory makeColumnSelectorFactory(
+      final VirtualColumns virtualColumns,
+      final AggregatorFactory agg,
+      final Supplier<InputRow> in,
+      final boolean deserializeComplexMetrics,
+      Dictionary<String> dict
+  )
+  {
     final RowBasedColumnSelectorFactory baseSelectorFactory = RowBasedColumnSelectorFactory.create(in, null);
+
+    class InputRowDictWrap implements InputRow
+    {
+      private final InputRow inputRow;
+      private Dictionary dict;
+      public InputRowDictWrap(InputRow inputRow, Dictionary<String> dict)
+      {
+        this.inputRow = inputRow;
+        this.dict = dict;
+      }
+      @Override
+      public long getTimestampFromEpoch()
+      {
+        return inputRow.getTimestampFromEpoch();
+      }
+
+      @Override
+      public DateTime getTimestamp()
+      {
+        return inputRow.getTimestamp();
+      }
+
+      @Override
+      public List<String> getDimension(String dimension)
+      {
+        List<String> dimValues = inputRow.getDimension(dimension);
+        if (dimValues != null && dict != null) {
+          List<String> convertDimensions = new ArrayList<>();
+          for (String dimValue: dimValues) {
+            convertDimensions.add(String.valueOf(dict.getIdFromValue(dimValue)));
+          }
+          return convertDimensions;
+        }
+        return dimValues;
+      }
+
+      @Override
+      public Object getRaw(String dimension)
+      {
+        return inputRow.getRaw(dimension);
+      }
+
+      @Override
+      public Number getMetric(String metric)
+      {
+        return inputRow.getMetric(metric);
+      }
+
+      @Override
+      public List<String> getDimensions()
+      {
+        return inputRow.getDimensions();
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return inputRow.compareTo(o);
+      }
+
+    };
 
     class IncrementalIndexInputRowColumnSelectorFactory implements ColumnSelectorFactory
     {
@@ -176,7 +257,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             @Override
             public Object getObject()
             {
-              return extractor.extractValue(in.get(), column);
+              InputRow convertInputRow = in.get();
+              if (dict != null) {
+                convertInputRow = new InputRowDictWrap(convertInputRow, dict);
+              }
+              return extractor.extractValue(convertInputRow, column);
             }
 
             @Override

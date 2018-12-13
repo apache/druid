@@ -44,6 +44,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.kylin.common.util.Dictionary;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -216,6 +217,17 @@ public class InputRowSerde
       boolean reportParseExceptions
   )
   {
+    return toBytes(typeHelperMap, row, aggs, reportParseExceptions, null);
+  }
+
+  public static final byte[] toBytes(
+      final Map<String, IndexSerdeTypeHelper> typeHelperMap,
+      final InputRow row,
+      AggregatorFactory[] aggs,
+      boolean reportParseExceptions,
+      Map<String, Dictionary<String>> dictMap
+  )
+  {
     try {
       ByteArrayDataOutput out = ByteStreams.newDataOutput();
 
@@ -249,6 +261,11 @@ public class InputRowSerde
       WritableUtils.writeVInt(out, aggs.length);
       for (AggregatorFactory aggFactory : aggs) {
         String k = aggFactory.getName();
+        Dictionary<String> dict = null;
+        if (dictMap != null) {
+          dict = dictMap.get(k);
+        }
+
         writeString(k, out);
 
         try (Aggregator agg = aggFactory.factorize(
@@ -256,7 +273,8 @@ public class InputRowSerde
                 VirtualColumns.EMPTY,
                 aggFactory,
                 supplier,
-                true
+                true,
+                dict
             )
         )) {
           try {
