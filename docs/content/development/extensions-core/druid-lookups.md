@@ -1,3 +1,7 @@
+---
+layout: doc_page
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +21,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Cached Lookup Module
 
 <div class="note info">Please note that this is an experimental module and the development/testing still at early stage. Feel free to try it and give us your feedback.</div>
