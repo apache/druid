@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Updating existing data"
 ---
-
 # Tutorial: Updating existing data
 
 This tutorial demonstrates how to update existing data, showing both overwrites and appends.

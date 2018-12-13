@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Extending Druid With Custom Modules"
 ---
-
 # Extending Druid With Custom Modules
 
 Druid uses a module system that allows for the addition of extensions at runtime.

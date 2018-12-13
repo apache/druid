@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Loading a file"
 ---
-
 # Tutorial: Loading a file
 
 ## Getting started

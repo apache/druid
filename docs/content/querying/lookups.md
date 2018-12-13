@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Lookups"
 ---
-
 # Lookups
 
 <div class="note caution">

@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Druid Basic Security"
 ---
-
 # Druid Basic Security
 
 This extension adds:

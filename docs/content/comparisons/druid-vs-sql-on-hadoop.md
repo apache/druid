@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Druid vs SQL-on-Hadoop (Impala/Drill/Spark SQL/Presto)"
 ---
-
-Druid vs SQL-on-Hadoop (Impala/Drill/Spark SQL/Presto)
-===========================================================
+# Druid vs SQL-on-Hadoop (Impala/Drill/Spark SQL/Presto)
 
 SQL-on-Hadoop engines provide an 
 execution engine for various data formats and data stores, and 

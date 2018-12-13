@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "Working with different versions of Hadoop"
 ---
 # Working with different versions of Hadoop
 

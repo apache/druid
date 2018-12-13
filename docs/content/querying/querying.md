@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Querying"
 ---
-
 # Querying
 
 Queries are made using an HTTP REST style request to queryable nodes ([Broker](../design/broker.html),

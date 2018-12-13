@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Druid-Kerberos"
 ---
-
 # Druid-Kerberos
 
 Druid Extension to enable Authentication for Druid Nodes using Kerberos.

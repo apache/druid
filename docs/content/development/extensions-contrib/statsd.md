@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "StatsD Emitter"
 ---
-
 # StatsD Emitter
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `statsd-emitter` extension.

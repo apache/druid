@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Batch Data Ingestion"
 ---
-
 # Batch Data Ingestion
 
 Druid can load data from static files through a variety of methods described here.

@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Developing on Druid"
 ---
-
 # Developing on Druid
 
 Druid's codebase consists of several major components. For developers interested in learning the code, this document provides 

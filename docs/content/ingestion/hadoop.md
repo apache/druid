@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Hadoop-based Batch Ingestion"
 ---
-
 # Hadoop-based Batch Ingestion
 
 Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running

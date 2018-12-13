@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Deleting data"
 ---
-
 # Tutorial: Deleting data
 
 This tutorial demonstrates how to delete existing data.

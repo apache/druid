@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Druid Firehoses"
 ---
-
 # Druid Firehoses
 
 Firehoses are used in [native batch ingestion tasks](../ingestion/native_tasks.html), stream push tasks automatically created by [Tranquility](../ingestion/stream-push.html), and the [stream-pull (deprecated)](../ingestion/stream-pull.html) ingestion model.

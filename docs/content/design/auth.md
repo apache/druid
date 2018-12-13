@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Authentication and Authorization"
 ---
-
 # Authentication and Authorization
 
 |Property|Type|Description|Default|Required|

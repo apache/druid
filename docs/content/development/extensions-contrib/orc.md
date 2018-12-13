@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Orc"
 ---
-
 # Orc
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-orc-extensions`.

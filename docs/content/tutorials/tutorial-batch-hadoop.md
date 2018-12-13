@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Load batch data using Hadoop"
 ---
-
 # Tutorial: Load batch data using Hadoop
 
 This tutorial shows you how to load data files into Druid using a remote Hadoop cluster.

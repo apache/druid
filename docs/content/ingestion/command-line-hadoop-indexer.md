@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Command Line Hadoop Indexer"
 ---
-
 # Command Line Hadoop Indexer
 
 To run:

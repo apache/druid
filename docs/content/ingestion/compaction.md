@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Compaction Task"
 ---
-
 # Compaction Task
 
 Compaction tasks merge all segments of the given interval. The syntax is:

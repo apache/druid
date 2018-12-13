@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Writing an ingestion spec"
 ---
-
 # Tutorial: Writing an ingestion spec
 
 This tutorial will guide the reader through the process of defining an ingestion spec, pointing out key considerations and guidelines.

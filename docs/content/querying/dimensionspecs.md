@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Transforming Dimension Values"
 ---
-
 # Transforming Dimension Values
 
 The following JSON fields can be used in a query to operate on dimension values.

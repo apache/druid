@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Kafka Lookups"
 ---
-
 # Kafka Lookups
 
 <div class="note caution">

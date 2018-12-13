@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Load streaming data with HTTP push"
 ---
-
 # Tutorial: Load streaming data with HTTP push
 
 ## Getting started

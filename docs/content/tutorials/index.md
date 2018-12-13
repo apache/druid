@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Druid Quickstart"
 ---
-
 # Druid Quickstart
 
 In this quickstart, we will download Druid and set it up on a single machine. The cluster will be ready to load data

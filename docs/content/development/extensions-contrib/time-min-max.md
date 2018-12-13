@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Timestamp Min/Max aggregators"
 ---
-
 # Timestamp Min/Max aggregators
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-time-min-max`.

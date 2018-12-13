@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "JavaScript Programming Guide"
 ---
 # JavaScript Programming Guide
 

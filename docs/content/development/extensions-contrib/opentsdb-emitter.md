@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Opentsdb Emitter"
 ---
-
 # Opentsdb Emitter
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `opentsdb-emitter` extension.

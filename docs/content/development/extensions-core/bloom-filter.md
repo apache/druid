@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Druid Bloom Filter"
 ---
-
 # Druid Bloom Filter
 
 Make sure to [include](../../operations/including-extensions.html) `druid-bloom-filter` as an extension.

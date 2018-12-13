@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Broker"
 ---
-Broker
-======
+# Broker
 
 ### Configuration
 

@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Approximate Histogram aggregator"
 ---
-
 # Approximate Histogram aggregator
 
 Make sure to [include](../../operations/including-extensions.html) `druid-histogram` as an extension.

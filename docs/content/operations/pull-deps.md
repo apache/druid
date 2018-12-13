@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "pull-deps Tool"
 ---
-
 # pull-deps Tool
 
 `pull-deps` is a tool that can pull down dependencies to the local repository and lay dependencies out into the extension directory as needed.

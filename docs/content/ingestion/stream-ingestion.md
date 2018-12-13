@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Loading streams"
 ---
-
 # Loading streams
 
 Streams can be ingested in Druid using either [Tranquility](https://github.com/druid-io/tranquility) (a Druid-aware 

@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Timeseries queries"
 ---
-Timeseries queries
-==================
+# Timeseries queries
 
 These types of queries take a timeseries query object and return an array of JSON objects where each object represents a value asked for by the timeseries query.
 

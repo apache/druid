@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Stats aggregator"
 ---
-
 # Stats aggregator
 
 Includes stat-related aggregators, including variance and standard deviations, etc. Make sure to [include](../../operations/including-extensions.html) `druid-stats` as an extension.

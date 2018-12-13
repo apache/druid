@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Peons"
 ---
-
-Peons
------
+# Peons
 
 ### Configuration
 

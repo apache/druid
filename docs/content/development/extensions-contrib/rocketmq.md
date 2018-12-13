@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "RocketMQ"
 ---
-
 # RocketMQ
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-rocketmq` extension.

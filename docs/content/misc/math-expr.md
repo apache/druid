@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Druid Expressions"
 ---
-
 # Druid Expressions
 
 <div class="note info">

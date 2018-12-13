@@ -19,9 +19,10 @@
 
 ---
 layout: doc_page
+title: "Scan query"
 ---
-
 # Scan query
+
 Scan query returns raw Druid rows in streaming mode.
 
 ```json

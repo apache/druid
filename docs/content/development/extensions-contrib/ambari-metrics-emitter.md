@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Ambari Metrics Emitter"
 ---
-
 # Ambari Metrics Emitter
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `ambari-metrics-emitter` extension.
