@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Schema Design"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Schema Design"
----
 # Schema Design
 
 This page is meant to assist users in designing a schema for data to be ingested in Druid. Druid intakes denormalized data 

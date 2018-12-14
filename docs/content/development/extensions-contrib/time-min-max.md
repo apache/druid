@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Timestamp Min/Max aggregators"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Timestamp Min/Max aggregators"
----
 # Timestamp Min/Max aggregators
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-time-min-max`.

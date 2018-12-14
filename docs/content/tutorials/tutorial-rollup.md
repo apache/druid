@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Roll-up"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Tutorial: Roll-up"
----
 # Tutorial: Roll-up
 
 Druid can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored segments.

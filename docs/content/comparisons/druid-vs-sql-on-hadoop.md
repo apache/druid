@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Druid vs SQL-on-Hadoop"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Druid vs SQL-on-Hadoop"
----
 # Druid vs SQL-on-Hadoop (Impala/Drill/Spark SQL/Presto)
 
 SQL-on-Hadoop engines provide an

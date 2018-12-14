@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "ResetCluster tool"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "ResetCluster tool"
----
 # ResetCluster tool
 
 ResetCluster tool can be used to completely wipe out Druid cluster state stored on Metadata and Deep storage. This is

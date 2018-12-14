@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Batch Data Ingestion"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Batch Data Ingestion"
----
 # Batch Data Ingestion
 
 Druid can load data from static files through a variety of methods described here.

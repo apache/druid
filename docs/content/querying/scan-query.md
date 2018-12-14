@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Scan query"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
-title: "Scan query"
----
 # Scan query
 
 Scan query returns raw Druid rows in streaming mode.
