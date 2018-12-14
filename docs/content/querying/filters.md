@@ -1,7 +1,3 @@
----
-layout: doc_page
----
-
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -21,6 +17,9 @@ layout: doc_page
   ~ under the License.
   -->
 
+---
+layout: doc_page
+---
 # Query Filters
 A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL. Druid supports the following types of filters.
 

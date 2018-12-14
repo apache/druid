@@ -1,7 +1,3 @@
----
-layout: doc_page
----
-
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -21,6 +17,9 @@ layout: doc_page
   ~ under the License.
   -->
 
+---
+layout: doc_page
+---
 # Integrating Druid With Other Technologies
 
 This page discusses how we can integrate Druid with other technologies. 

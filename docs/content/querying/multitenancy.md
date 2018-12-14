@@ -1,7 +1,3 @@
----
-layout: doc_page
----
-
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -21,6 +17,9 @@ layout: doc_page
   ~ under the License.
   -->
 
+---
+layout: doc_page
+---
 # Multitenancy Considerations
 
 Druid is often used to power user-facing data applications, where multitenancy is an important requirement. This

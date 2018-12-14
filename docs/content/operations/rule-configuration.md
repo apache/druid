@@ -1,7 +1,3 @@
----
-layout: doc_page
----
-
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -21,6 +17,9 @@ layout: doc_page
   ~ under the License.
   -->
 
+---
+layout: doc_page
+---
 # Retaining or Automatically Dropping Data
 
 Coordinator nodes use rules to determine what data should be loaded to or dropped from the cluster. Rules are used for data retention and query execution, and are set on the coordinator console (http://coordinator_ip:port).
