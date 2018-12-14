@@ -22,7 +22,7 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-public class KinesisTuningConfig extends SeekableStreamTuningConfig
+public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningConfig
 {
 
   private static final int DEFAULT_RECORD_BUFFER_SIZE = 10000;
@@ -49,7 +49,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
   private final int maxRecordsPerPoll;
 
   @JsonCreator
-  public KinesisTuningConfig(
+  public KinesisIndexTaskTuningConfig(
       @JsonProperty("maxRowsInMemory") Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") Integer maxRowsPerSegment,
@@ -83,7 +83,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
         maxTotalRows,
         intermediatePersistPeriod,
         basePersistDirectory,
-        maxPendingPersists,
+        0,
         indexSpec,
         true,
         reportParseExceptions,
@@ -109,37 +109,6 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
     Preconditions.checkArgument(
         !(super.isResetOffsetAutomatically() && super.isSkipSequenceNumberAvailabilityCheck()),
         "resetOffsetAutomatically cannot be used if skipSequenceNumberAvailabilityCheck=true"
-    );
-  }
-
-  @Override
-  public KinesisTuningConfig copyOf()
-  {
-    return new KinesisTuningConfig(
-        getMaxRowsInMemory(),
-        getMaxBytesInMemory(),
-        getMaxRowsPerSegment(),
-        getMaxTotalRows(),
-        getIntermediatePersistPeriod(),
-        getBasePersistDirectory(),
-        0,
-        getIndexSpec(),
-        true,
-        isReportParseExceptions(),
-        getHandoffConditionTimeout(),
-        isResetOffsetAutomatically(),
-        isSkipSequenceNumberAvailabilityCheck(),
-        getRecordBufferSize(),
-        getRecordBufferOfferTimeout(),
-        getRecordBufferFullWait(),
-        getFetchSequenceNumberTimeout(),
-        getFetchThreads(),
-        getSegmentWriteOutMediumFactory(),
-        isLogParseExceptions(),
-        getMaxParseExceptions(),
-        getMaxSavedParseExceptions(),
-        getMaxRecordsPerPoll(),
-        getIntermediateHandoffPeriod()
     );
   }
 
@@ -180,9 +149,9 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
   }
 
   @Override
-  public KinesisTuningConfig withBasePersistDirectory(File dir)
+  public KinesisIndexTaskTuningConfig withBasePersistDirectory(File dir)
   {
-    return new KinesisTuningConfig(
+    return new KinesisIndexTaskTuningConfig(
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),
@@ -219,7 +188,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    KinesisTuningConfig that = (KinesisTuningConfig) o;
+    KinesisIndexTaskTuningConfig that = (KinesisIndexTaskTuningConfig) o;
     return getMaxRowsInMemory() == that.getMaxRowsInMemory() &&
            getMaxBytesInMemory() == that.getMaxBytesInMemory() &&
            getMaxRowsPerSegment() == that.getMaxRowsPerSegment() &&
@@ -274,7 +243,7 @@ public class KinesisTuningConfig extends SeekableStreamTuningConfig
   @Override
   public String toString()
   {
-    return "KinesisTuningConfig{" +
+    return "KinesisIndexTaskTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +

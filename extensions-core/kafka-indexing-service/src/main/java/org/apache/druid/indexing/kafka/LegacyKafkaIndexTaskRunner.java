@@ -160,8 +160,8 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   private final Condition isAwaitingRetry = pollRetryLock.newCondition();
 
   private final KafkaIndexTask task;
-  private final KafkaIOConfig ioConfig;
-  private final KafkaTuningConfig tuningConfig;
+  private final KafkaIndexTaskIOConfig ioConfig;
+  private final KafkaIndexTaskTuningConfig tuningConfig;
   private final InputRowParser<ByteBuffer> parser;
   private final AuthorizerMapper authorizerMapper;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
@@ -697,9 +697,9 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   }
 
   @Override
-  protected SeekableStreamPartitions<Integer, Long> createSeekableStreamPartitions(
+  protected SeekableStreamPartitions<Integer, Long> deserializeSeekableStreamPartitionsFromMetadata(
       ObjectMapper mapper,
-      Object obeject
+      Object object
   )
   {
     throw new UnsupportedOperationException();
@@ -780,16 +780,6 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   private void requestPause()
   {
     pauseRequested = true;
-  }
-
-  @Nullable
-  @Override
-  protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(
-      TaskToolbox toolbox,
-      SeekableStreamIndexTask<Integer, Long> task
-  )
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -1221,6 +1211,16 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   {
     authorizationCheck(req, Action.WRITE);
     return startTime;
+  }
+
+  @Nullable
+  @Override
+  protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(
+      TaskToolbox toolbox,
+      String checkpointsString
+  )
+  {
+    throw new UnsupportedOperationException();
   }
 
 }

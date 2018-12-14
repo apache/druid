@@ -25,6 +25,7 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.utils.RandomId;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
@@ -198,7 +199,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     final Properties props = new Properties();
 
     props.setProperty("metadata.max.age.ms", "10000");
-    props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", getRandomId()));
+    props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", RandomId.getRandomId()));
 
     addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
 
@@ -214,12 +215,4 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     }
   }
 
-  private static String getRandomId()
-  {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((RANDOM.nextInt() >>> (i * 4)) & 0x0F)));
-    }
-    return suffix.toString();
-  }
 }

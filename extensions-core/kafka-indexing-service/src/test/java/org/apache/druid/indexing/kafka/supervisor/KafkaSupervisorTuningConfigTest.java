@@ -117,4 +117,5 @@ public class KafkaSupervisorTuningConfigTest
     Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
     Assert.assertEquals(Duration.standardSeconds(20), config.getOffsetFetchPeriod());
   }
+
 }

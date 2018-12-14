@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-public abstract class SeekableStreamTuningConfig implements TuningConfig, AppenderatorConfig
+public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
@@ -61,7 +61,7 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
   private final int maxSavedParseExceptions;
 
   @JsonCreator
-  public SeekableStreamTuningConfig(
+  public SeekableStreamIndexTaskTuningConfig(
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
@@ -130,8 +130,6 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
                               ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
   }
-
-  public abstract SeekableStreamTuningConfig copyOf();
 
   @Override
   @JsonProperty
@@ -258,7 +256,7 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
     return skipSequenceNumberAvailabilityCheck;
   }
 
-  public abstract SeekableStreamTuningConfig withBasePersistDirectory(File dir);
+  public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
   public boolean equals(Object o)
@@ -269,22 +267,24 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SeekableStreamTuningConfig that = (SeekableStreamTuningConfig) o;
+    SeekableStreamIndexTaskTuningConfig that = (SeekableStreamIndexTaskTuningConfig) o;
     return maxRowsInMemory == that.maxRowsInMemory &&
-           maxRowsPerSegment == that.maxRowsPerSegment &&
            maxBytesInMemory == that.maxBytesInMemory &&
+           maxRowsPerSegment == that.maxRowsPerSegment &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
            resetOffsetAutomatically == that.resetOffsetAutomatically &&
+           skipSequenceNumberAvailabilityCheck == that.skipSequenceNumberAvailabilityCheck &&
+           logParseExceptions == that.logParseExceptions &&
+           maxParseExceptions == that.maxParseExceptions &&
+           maxSavedParseExceptions == that.maxSavedParseExceptions &&
+           Objects.equals(maxTotalRows, that.maxTotalRows) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod) &&
-           logParseExceptions == that.logParseExceptions &&
-           maxParseExceptions == that.maxParseExceptions &&
-           maxSavedParseExceptions == that.maxSavedParseExceptions;
+           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod);
   }
 
   @Override
@@ -292,8 +292,9 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
   {
     return Objects.hash(
         maxRowsInMemory,
-        maxRowsPerSegment,
         maxBytesInMemory,
+        maxRowsPerSegment,
+        maxTotalRows,
         intermediatePersistPeriod,
         basePersistDirectory,
         maxPendingPersists,
@@ -303,6 +304,7 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
         resetOffsetAutomatically,
         segmentWriteOutMediumFactory,
         intermediateHandoffPeriod,
+        skipSequenceNumberAvailabilityCheck,
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions
@@ -311,5 +313,4 @@ public abstract class SeekableStreamTuningConfig implements TuningConfig, Append
 
   @Override
   public abstract String toString();
-
 }

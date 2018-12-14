@@ -24,14 +24,14 @@ package org.apache.druid.indexing.seekablestream.common;
  * mostly used by {@link RecordSupplier} and
  * {@link org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor}
  *
- * @param <PartitionType> partition id type
+ * @param <PartitionIdType> partition id type
  */
-public class StreamPartition<PartitionType>
+public class StreamPartition<PartitionIdType>
 {
   private final String stream;
-  private final PartitionType partitionId;
+  private final PartitionIdType partitionId;
 
-  public StreamPartition(String stream, PartitionType partitionId)
+  public StreamPartition(String stream, PartitionIdType partitionId)
   {
     this.stream = stream;
     this.partitionId = partitionId;
@@ -47,7 +47,7 @@ public class StreamPartition<PartitionType>
     return stream;
   }
 
-  public PartitionType getPartitionId()
+  public PartitionIdType getPartitionId()
   {
     return partitionId;
   }

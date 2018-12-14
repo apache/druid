@@ -275,7 +275,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
    * There might be a race between {@link #run(Task)} and this method, but it shouldn't happen in real applications
    * because this method is called only in unit tests. See TaskLifecycleTest.
    *
-   * @param taskid task ID to clean up resources for
+   * @param taskid task RandomId to clean up resources for
    */
   @Override
   public void shutdown(final String taskid, String reason)

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,7 +42,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
-public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType> extends IndexTaskClient
+public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> extends IndexTaskClient
 {
   private final EmittingLogger log = new EmittingLogger(this.getClass());
 
@@ -102,7 +101,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
   }
 
 
-  public Map<PartitionType, SequenceType> pause(final String id)
+  public Map<PartitionIdType, SequenceOffsetType> pause(final String id)
   {
     log.debug("Pause task[%s]", id);
 
@@ -117,7 +116,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
 
       if (response.getStatus().equals(HttpResponseStatus.OK)) {
         log.info("Task [%s] paused successfully", id);
-        return deserialize(response.getContent(), constructPartitionOffsetMapType(Map.class));
+        return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
       }
 
       while (true) {
@@ -212,7 +211,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
     }
   }
 
-  public Map<PartitionType, SequenceType> getCurrentOffsets(final String id, final boolean retry)
+  public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets(final String id, final boolean retry)
   {
     log.debug("GetCurrentOffsets task[%s] retry[%s]", id, retry);
 
@@ -224,7 +223,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
           null,
           retry
       );
-      return deserialize(response.getContent(), constructPartitionOffsetMapType(Map.class));
+      return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -234,14 +233,18 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
     }
   }
 
-  public TreeMap<Integer, Map<PartitionType, SequenceType>> getCheckpoints(final String id, final boolean retry)
+  public TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> getCheckpoints(final String id, final boolean retry)
   {
     log.debug("GetCheckpoints task[%s] retry[%s]", id, retry);
     try {
       final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "checkpoints", null, retry);
-      return deserialize(
+      return deserializeNestedValueMap(
           response.getContent(),
-          constructCheckpointMapType()
+          TreeMap.class,
+          Integer.class,
+          Map.class,
+          getPartitionType(),
+          getSequenceType()
       );
     }
     catch (NoTaskLocationException e) {
@@ -252,7 +255,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
     }
   }
 
-  public ListenableFuture<TreeMap<Integer, Map<PartitionType, SequenceType>>> getCheckpointsAsync(
+  public ListenableFuture<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> getCheckpointsAsync(
       final String id,
       final boolean retry
   )
@@ -260,13 +263,13 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
     return doAsync(() -> getCheckpoints(id, retry));
   }
 
-  public Map<PartitionType, SequenceType> getEndOffsets(final String id)
+  public Map<PartitionIdType, SequenceOffsetType> getEndOffsets(final String id)
   {
     log.debug("GetEndOffsets task[%s]", id);
 
     try {
       final FullResponseHolder response = submitRequestWithEmptyContent(id, HttpMethod.GET, "offsets/end", null, true);
-      return deserialize(response.getContent(), constructPartitionOffsetMapType(Map.class));
+      return deserializeMap(response.getContent(), Map.class, getPartitionType(), getSequenceType());
     }
     catch (NoTaskLocationException e) {
       return ImmutableMap.of();
@@ -278,7 +281,7 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
 
   public boolean setEndOffsets(
       final String id,
-      final Map<PartitionType, SequenceType> endOffsets,
+      final Map<PartitionIdType, SequenceOffsetType> endOffsets,
       final boolean finalize
   ) throws IOException
   {
@@ -318,26 +321,29 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
   }
 
 
-  public ListenableFuture<Map<PartitionType, SequenceType>> pauseAsync(final String id)
+  public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> pauseAsync(final String id)
   {
     return doAsync(() -> pause(id));
   }
 
   public ListenableFuture<Boolean> setEndOffsetsAsync(
       final String id,
-      final Map<PartitionType, SequenceType> endOffsets,
+      final Map<PartitionIdType, SequenceOffsetType> endOffsets,
       final boolean finalize
   )
   {
     return doAsync(() -> setEndOffsets(id, endOffsets, finalize));
   }
 
-  public ListenableFuture<Map<PartitionType, SequenceType>> getCurrentOffsetsAsync(final String id, final boolean retry)
+  public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getCurrentOffsetsAsync(
+      final String id,
+      final boolean retry
+  )
   {
     return doAsync(() -> getCurrentOffsets(id, retry));
   }
 
-  public ListenableFuture<Map<PartitionType, SequenceType>> getEndOffsetsAsync(final String id)
+  public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> getEndOffsetsAsync(final String id)
   {
     return doAsync(() -> getEndOffsets(id));
   }
@@ -354,17 +360,9 @@ public abstract class SeekableStreamIndexTaskClient<PartitionType, SequenceType>
     return doAsync(() -> getStatus(id));
   }
 
-  private JavaType constructCheckpointMapType()
-  {
-    ObjectMapper mapper = new ObjectMapper();
-    return mapper.getTypeFactory()
-                 .constructMapType(
-                     TreeMap.class,
-                     mapper.getTypeFactory().constructType(Integer.class),
-                     constructPartitionOffsetMapType(TreeMap.class)
-                 );
-  }
+  protected abstract Class<PartitionIdType> getPartitionType();
 
-  protected abstract JavaType constructPartitionOffsetMapType(Class<? extends Map> mapType);
+  protected abstract Class<SequenceOffsetType> getSequenceType();
 }
+
 

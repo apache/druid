@@ -40,9 +40,9 @@ public class TaskResource
   }
 
   /**
-   * Returns availability group ID of this task. Tasks the same availability group cannot be assigned to the same
-   * worker. If tasks do not have this restriction, a common convention is to set the availability group ID to the
-   * task ID.
+   * Returns availability group RandomId of this task. Tasks the same availability group cannot be assigned to the same
+   * worker. If tasks do not have this restriction, a common convention is to set the availability group RandomId to the
+   * task RandomId.
    *
    * @return task availability group
    */

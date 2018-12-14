@@ -17,25 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common;
+package org.apache.druid.indexing.seekablestream.utils;
 
-import com.google.common.base.Optional;
-import org.apache.druid.indexer.TaskLocation;
-import org.apache.druid.indexer.TaskStatus;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
-public interface TaskInfoProvider
+public class RandomId
 {
-  /**
-   * @param id the task RandomId
-   *
-   * @return a TaskLocation associated with the task or TaskLocation.unknown() if no associated entry could be found
-   */
-  TaskLocation getTaskLocation(String id);
+  private static final Random RANDOM = ThreadLocalRandom.current();
 
-  /**
-   * @param id the task RandomId
-   *
-   * @return an Optional.of() with the current status of the task or Optional.absent() if the task could not be found
-   */
-  Optional<TaskStatus> getTaskStatus(String id);
+  public static String getRandomId()
+  {
+    final StringBuilder suffix = new StringBuilder(8);
+    for (int i = 0; i < Integer.BYTES * 2; ++i) {
+      suffix.append((char) ('a' + ((RANDOM.nextInt() >>> (i * 4)) & 0x0F)));
+    }
+    return suffix.toString();
+  }
 }

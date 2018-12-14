@@ -20,7 +20,8 @@
 package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexing.kafka.KafkaTuningConfig;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfigs;
@@ -31,7 +32,8 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.File;
 
-public class KafkaSupervisorTuningConfig extends KafkaTuningConfig implements SeekableStreamSupervisorTuningConfig
+public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
+    implements SeekableStreamSupervisorTuningConfig
 {
   private static final String DEFAULT_OFFSET_FETCH_PERIOD = "PT30S";
 
@@ -172,5 +174,27 @@ public class KafkaSupervisorTuningConfig extends KafkaTuningConfig implements Se
            '}';
   }
 
-
+  @Override
+  public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  {
+    return new KafkaIndexTaskTuningConfig(
+        getMaxRowsInMemory(),
+        getMaxBytesInMemory(),
+        getMaxRowsPerSegment(),
+        getMaxTotalRows(),
+        getIntermediatePersistPeriod(),
+        getBasePersistDirectory(),
+        0,
+        getIndexSpec(),
+        true,
+        isReportParseExceptions(),
+        getHandoffConditionTimeout(),
+        isResetOffsetAutomatically(),
+        getSegmentWriteOutMediumFactory(),
+        getIntermediateHandoffPeriod(),
+        isLogParseExceptions(),
+        getMaxParseExceptions(),
+        getMaxSavedParseExceptions()
+    );
+  }
 }

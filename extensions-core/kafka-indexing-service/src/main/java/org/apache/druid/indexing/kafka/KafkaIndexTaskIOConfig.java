@@ -22,19 +22,19 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
+public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Integer, Long>
 {
   private final Map<String, Object> consumerProperties;
 
   @JsonCreator
-  public KafkaIOConfig(
+  public KafkaIndexTaskIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
       @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") SeekableStreamPartitions<Integer, Long> startPartitions,
@@ -80,7 +80,7 @@ public class KafkaIOConfig extends SeekableStreamIOConfig<Integer, Long>
   @Override
   public String toString()
   {
-    return "KafkaIOConfig{" +
+    return "KafkaIndexTaskIOConfig{" +
            "taskGroupId=" + getTaskGroupId() +
            ", baseSequenceName='" + getBaseSequenceName() + '\'' +
            ", startPartitions=" + getStartPartitions() +

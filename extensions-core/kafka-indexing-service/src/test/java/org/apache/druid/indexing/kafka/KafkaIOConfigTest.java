@@ -59,7 +59,7 @@ public class KafkaIOConfigTest
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"}\n"
                      + "}";
 
-    KafkaIOConfig config = (KafkaIOConfig) mapper.readValue(
+    KafkaIndexTaskIOConfig config = (KafkaIndexTaskIOConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -97,7 +97,7 @@ public class KafkaIOConfigTest
                      + "  \"skipOffsetGaps\": true\n"
                      + "}";
 
-    KafkaIOConfig config = (KafkaIOConfig) mapper.readValue(
+    KafkaIndexTaskIOConfig config = (KafkaIndexTaskIOConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,

@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * class that encapsulates a map of partitionId -> sequenceNumber.
+ * class that encapsulates a partitionIdToSequenceNumberMap of partitionId -> sequenceNumber.
  * To be backward compatible with both Kafka and Kinesis datasource metadata when
  * deserializing json. Redundant constructor fields stream, topic and
  * partitionSequenceNumberMap and partitionOffsetMap are created. Only one of topic, stream
@@ -40,40 +40,41 @@ import java.util.Objects;
  * are used for proper Jackson serialization/deserialization when processing terminologies
  * used by Kafka and kinesis (i.e. topic vs. stream)
  *
- * @param <PartitionType> partition id type
- * @param <SequenceType>  sequence number type
+ * @param <PartitionIdType>    partition id type
+ * @param <SequenceOffsetType> sequence number type
  */
-public class SeekableStreamPartitions<PartitionType, SequenceType>
+public class SeekableStreamPartitions<PartitionIdType, SequenceOffsetType>
 {
   public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
 
   // stream/topic
   private final String stream;
   // partitionId -> sequence number
-  private final Map<PartitionType, SequenceType> map;
+  private final Map<PartitionIdType, SequenceOffsetType> partitionIdToSequenceNumberMap;
 
   @JsonCreator
   public SeekableStreamPartitions(
       @JsonProperty("stream") final String stream,
       // kept for backward compatibility
       @JsonProperty("topic") final String topic,
-      @JsonProperty("partitionSequenceNumberMap") final Map<PartitionType, SequenceType> partitionSequenceNumberMap,
+      @JsonProperty("partitionSequenceNumberMap")
+      final Map<PartitionIdType, SequenceOffsetType> partitionSequenceNumberMap,
       // kept for backward compatibility
-      @JsonProperty("partitionOffsetMap") final Map<PartitionType, SequenceType> partitionOffsetMap
+      @JsonProperty("partitionOffsetMap") final Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap
   )
   {
     this.stream = stream == null ? topic : stream;
-    this.map = ImmutableMap.copyOf(partitionOffsetMap == null
-                                   ? partitionSequenceNumberMap
-                                   : partitionOffsetMap);
+    this.partitionIdToSequenceNumberMap = ImmutableMap.copyOf(partitionOffsetMap == null
+                                                              ? partitionSequenceNumberMap
+                                                              : partitionOffsetMap);
     Preconditions.checkArgument(this.stream != null);
-    Preconditions.checkArgument(map != null);
+    Preconditions.checkArgument(partitionIdToSequenceNumberMap != null);
   }
 
   // constructor for backward compatibility
   public SeekableStreamPartitions(
       @NotNull final String stream,
-      final Map<PartitionType, SequenceType> partitionOffsetMap
+      final Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap
   )
   {
     this(stream, null, partitionOffsetMap, null);
@@ -86,9 +87,9 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
   }
 
   @JsonProperty
-  public Map<PartitionType, SequenceType> getPartitionSequenceNumberMap()
+  public Map<PartitionIdType, SequenceOffsetType> getPartitionSequenceNumberMap()
   {
-    return map;
+    return partitionIdToSequenceNumberMap;
   }
 
   @Override
@@ -102,13 +103,13 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
     }
     SeekableStreamPartitions that = (SeekableStreamPartitions) o;
     return Objects.equals(stream, that.stream) &&
-           Objects.equals(map, that.map);
+           Objects.equals(partitionIdToSequenceNumberMap, that.partitionIdToSequenceNumberMap);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(stream, map);
+    return Objects.hash(stream, partitionIdToSequenceNumberMap);
   }
 
   @Override
@@ -116,7 +117,7 @@ public class SeekableStreamPartitions<PartitionType, SequenceType>
   {
     return "SeekableStreamPartitions{" +
            "stream/topic='" + stream + '\'' +
-           ", partitionSequenceNumberMap/partitionOffsetMap=" + map +
+           ", partitionSequenceNumberMap/partitionOffsetMap=" + partitionIdToSequenceNumberMap +
            '}';
   }
 }

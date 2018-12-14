@@ -62,18 +62,18 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 
-public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> extends AbstractTask
+public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> extends AbstractTask
     implements ChatHandler
 {
   public static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
   private static final Random RANDOM = ThreadLocalRandom.current();
 
   private final EmittingLogger log = new EmittingLogger(this.getClass());
-  private final SeekableStreamIndexTaskRunner<PartitionType, SequenceType> runner;
+  private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
   protected final DataSchema dataSchema;
   protected final InputRowParser<ByteBuffer> parser;
-  protected final SeekableStreamTuningConfig tuningConfig;
-  protected final SeekableStreamIOConfig<PartitionType, SequenceType> ioConfig;
+  protected final SeekableStreamIndexTaskTuningConfig tuningConfig;
+  protected final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   protected final Optional<ChatHandlerProvider> chatHandlerProvider;
   protected final String type;
   protected final Map<String, Object> context;
@@ -86,14 +86,14 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") SeekableStreamTuningConfig tuningConfig,
-      @JsonProperty("ioConfig") SeekableStreamIOConfig ioConfig,
+      @JsonProperty("tuningConfig") SeekableStreamIndexTaskTuningConfig tuningConfig,
+      @JsonProperty("ioConfig") SeekableStreamIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
       String type
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     super(
         id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt(), type) : id,
@@ -155,13 +155,13 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
   }
 
   @JsonProperty
-  public SeekableStreamTuningConfig getTuningConfig()
+  public SeekableStreamIndexTaskTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
 
   @JsonProperty("ioConfig")
-  public SeekableStreamIOConfig<PartitionType, SequenceType> getIOConfig()
+  public SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> getIOConfig()
   {
     return ioConfig;
   }
@@ -279,11 +279,12 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
     return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 
-  protected abstract SeekableStreamIndexTaskRunner<PartitionType, SequenceType> createTaskRunner();
+  protected abstract SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> createTaskRunner();
 
-  protected abstract RecordSupplier<PartitionType, SequenceType> newTaskRecordSupplier() throws ClassNotFoundException,
-                                                                                                NoSuchMethodException,
-                                                                                                IllegalAccessException;
+  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> newTaskRecordSupplier()
+      throws ClassNotFoundException,
+             NoSuchMethodException,
+             IllegalAccessException;
 
   @VisibleForTesting
   public Appenderator getAppenderator()
@@ -292,7 +293,7 @@ public abstract class SeekableStreamIndexTask<PartitionType, SequenceType> exten
   }
 
   @VisibleForTesting
-  public SeekableStreamIndexTaskRunner<PartitionType, SequenceType> getRunner()
+  public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> getRunner()
   {
     return runner;
   }

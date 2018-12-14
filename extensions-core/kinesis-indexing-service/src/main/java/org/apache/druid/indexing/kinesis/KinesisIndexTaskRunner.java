@@ -26,7 +26,6 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -86,12 +85,12 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected SeekableStreamPartitions<String, String> createSeekableStreamPartitions(
+  protected SeekableStreamPartitions<String, String> deserializeSeekableStreamPartitionsFromMetadata(
       ObjectMapper mapper,
-      Object obeject
+      Object object
   )
   {
-    return mapper.convertValue(obeject, mapper.getTypeFactory().constructParametrizedType(
+    return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
         SeekableStreamPartitions.class,
         SeekableStreamPartitions.class,
         String.class,
@@ -123,10 +122,9 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   @Override
   protected TreeMap<Integer, Map<String, String>> getCheckPointsFromContext(
       TaskToolbox toolbox,
-      SeekableStreamIndexTask<String, String> task
+      String checkpointsString
   ) throws IOException
   {
-    final String checkpointsString = task.getContextValue("checkpoints");
     if (checkpointsString != null) {
       log.info("Checkpoints [%s]", checkpointsString);
       return toolbox.getObjectMapper().readValue(

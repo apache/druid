@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -55,5 +55,5 @@ public interface SeekableStreamSupervisorTuningConfig
   @Override
   String toString();
 
-  SeekableStreamTuningConfig copyOf();
+  SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig();
 }

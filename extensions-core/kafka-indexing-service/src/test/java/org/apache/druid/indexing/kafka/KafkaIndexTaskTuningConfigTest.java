@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -30,11 +31,11 @@ import org.junit.Test;
 
 import java.io.File;
 
-public class KafkaTuningConfigTest
+public class KafkaIndexTaskTuningConfigTest
 {
   private final ObjectMapper mapper;
 
-  public KafkaTuningConfigTest()
+  public KafkaIndexTaskTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
     mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
@@ -45,7 +46,7 @@ public class KafkaTuningConfigTest
   {
     String jsonStr = "{\"type\": \"kafka\"}";
 
-    KafkaTuningConfig config = (KafkaTuningConfig) mapper.readValue(
+    KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -81,7 +82,7 @@ public class KafkaTuningConfigTest
                      + "  \"handoffConditionTimeout\": 100\n"
                      + "}";
 
-    KafkaTuningConfig config = (KafkaTuningConfig) mapper.readValue(
+    KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -103,9 +104,9 @@ public class KafkaTuningConfigTest
   }
 
   @Test
-  public void testCopyOf()
+  public void testConvert()
   {
-    KafkaTuningConfig original = new KafkaTuningConfig(
+    KafkaSupervisorTuningConfig original = new KafkaSupervisorTuningConfig(
         1,
         null,
         2,
@@ -122,9 +123,15 @@ public class KafkaTuningConfigTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         null
     );
-    KafkaTuningConfig copy = original.copyOf();
+    KafkaIndexTaskTuningConfig copy = (KafkaIndexTaskTuningConfig) original.convertToTaskTuningConfig();
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
     Assert.assertEquals(2, copy.getMaxRowsPerSegment());
@@ -136,5 +143,28 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
     Assert.assertEquals(true, copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
+  }
+
+  private static KafkaIndexTaskTuningConfig copy(KafkaIndexTaskTuningConfig config)
+  {
+    return new KafkaIndexTaskTuningConfig(
+        config.getMaxRowsInMemory(),
+        config.getMaxBytesInMemory(),
+        config.getMaxRowsPerSegment(),
+        config.getMaxTotalRows(),
+        config.getIntermediatePersistPeriod(),
+        config.getBasePersistDirectory(),
+        0,
+        config.getIndexSpec(),
+        true,
+        config.isReportParseExceptions(),
+        config.getHandoffConditionTimeout(),
+        config.isResetOffsetAutomatically(),
+        config.getSegmentWriteOutMediumFactory(),
+        config.getIntermediateHandoffPeriod(),
+        config.isLogParseExceptions(),
+        config.getMaxParseExceptions(),
+        config.getMaxSavedParseExceptions()
+    );
   }
 }

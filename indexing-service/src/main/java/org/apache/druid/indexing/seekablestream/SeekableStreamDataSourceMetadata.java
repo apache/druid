@@ -28,20 +28,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceType> implements DataSourceMetadata
+public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>
+    implements DataSourceMetadata
 {
-  private final SeekableStreamPartitions<partitionType, sequenceType> seekableStreamPartitions;
+  private final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> seekableStreamPartitions;
 
   @JsonCreator
   public SeekableStreamDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamPartitions<partitionType, sequenceType> seekableStreamPartitions
+      @JsonProperty("partitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> seekableStreamPartitions
   )
   {
     this.seekableStreamPartitions = seekableStreamPartitions;
   }
 
   @JsonProperty("partitions")
-  public SeekableStreamPartitions<partitionType, sequenceType> getSeekableStreamPartitions()
+  public SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> getSeekableStreamPartitions()
   {
     return seekableStreamPartitions;
   }
@@ -75,17 +76,20 @@ public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceTy
     }
 
     @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<partitionType, sequenceType> that = (SeekableStreamDataSourceMetadata<partitionType, sequenceType>) other;
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
 
     if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
       // Same stream, merge sequences.
-      final Map<partitionType, sequenceType> newMap = new HashMap<>();
+      final Map<PartitionIdType, SequenceOffsetType> newMap = new HashMap<>();
 
-      for (Map.Entry<partitionType, sequenceType> entry : seekableStreamPartitions.getPartitionSequenceNumberMap().entrySet()) {
+      for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : seekableStreamPartitions.getPartitionSequenceNumberMap()
+                                                                                          .entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
       }
 
-      for (Map.Entry<partitionType, sequenceType> entry : that.getSeekableStreamPartitions().getPartitionSequenceNumberMap().entrySet()) {
+      for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : that.getSeekableStreamPartitions()
+                                                                      .getPartitionSequenceNumberMap()
+                                                                      .entrySet()) {
         newMap.put(entry.getKey(), entry.getValue());
       }
 
@@ -109,13 +113,14 @@ public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceTy
     }
 
     @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<partitionType, sequenceType> that = (SeekableStreamDataSourceMetadata<partitionType, sequenceType>) other;
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> that = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) other;
 
     if (that.getSeekableStreamPartitions().getStream().equals(seekableStreamPartitions.getStream())) {
       // Same stream, remove partitions present in "that" from "this"
-      final Map<partitionType, sequenceType> newMap = new HashMap<>();
+      final Map<PartitionIdType, SequenceOffsetType> newMap = new HashMap<>();
 
-      for (Map.Entry<partitionType, sequenceType> entry : seekableStreamPartitions.getPartitionSequenceNumberMap().entrySet()) {
+      for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : seekableStreamPartitions.getPartitionSequenceNumberMap()
+                                                                                          .entrySet()) {
         if (!that.getSeekableStreamPartitions().getPartitionSequenceNumberMap().containsKey(entry.getKey())) {
           newMap.put(entry.getKey(), entry.getValue());
         }
@@ -155,8 +160,8 @@ public abstract class SeekableStreamDataSourceMetadata<partitionType, sequenceTy
            '}';
   }
 
-  protected abstract SeekableStreamDataSourceMetadata<partitionType, sequenceType> createConcreteDataSourceMetaData(
+  protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createConcreteDataSourceMetaData(
       String streamId,
-      Map<partitionType, sequenceType> newMap
+      Map<PartitionIdType, SequenceOffsetType> newMap
   );
 }

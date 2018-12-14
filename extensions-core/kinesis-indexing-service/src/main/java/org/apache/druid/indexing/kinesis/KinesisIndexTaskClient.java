@@ -19,20 +19,17 @@
 
 package org.apache.druid.indexing.kinesis;
 
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-import java.util.Map;
-
 public class KinesisIndexTaskClient extends SeekableStreamIndexTaskClient<String, String>
 {
   private static ObjectMapper mapper = new ObjectMapper();
 
-  public KinesisIndexTaskClient(
+  KinesisIndexTaskClient(
       HttpClient httpClient,
       ObjectMapper jsonMapper,
       TaskInfoProvider taskInfoProvider,
@@ -54,9 +51,16 @@ public class KinesisIndexTaskClient extends SeekableStreamIndexTaskClient<String
   }
 
   @Override
-  protected JavaType constructPartitionOffsetMapType(Class<? extends Map> mapType)
+  protected Class<String> getPartitionType()
   {
-    return mapper.getTypeFactory().constructMapType(mapType, String.class, String.class);
+    return String.class;
   }
+
+  @Override
+  protected Class<String> getSequenceType()
+  {
+    return String.class;
+  }
+
 }
 

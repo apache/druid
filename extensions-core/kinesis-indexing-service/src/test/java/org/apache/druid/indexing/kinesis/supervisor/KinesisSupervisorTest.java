@@ -43,10 +43,10 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
-import org.apache.druid.indexing.kinesis.KinesisIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisIndexTask;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClient;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
+import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisRecordSupplier;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -272,9 +272,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTask task = captured.getValue();
     Assert.assertEquals(dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.copyOf(), task.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
 
-    KinesisIOConfig taskConfig = task.getIOConfig();
+    KinesisIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
@@ -577,7 +577,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     KinesisIndexTask task = captured.getValue();
-    KinesisIOConfig taskConfig = task.getIOConfig();
+    KinesisIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertEquals(
         "2",
@@ -1407,9 +1407,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     for (Task task : captured.getValues()) {
       KinesisIndexTask KinesisIndexTask = (KinesisIndexTask) task;
       Assert.assertEquals(dataSchema, KinesisIndexTask.getDataSchema());
-      Assert.assertEquals(tuningConfig.copyOf(), KinesisIndexTask.getTuningConfig());
+      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), KinesisIndexTask.getTuningConfig());
 
-      KinesisIOConfig taskConfig = KinesisIndexTask.getIOConfig();
+      KinesisIndexTaskIOConfig taskConfig = KinesisIndexTask.getIOConfig();
       Assert.assertEquals("sequenceName-1", taskConfig.getBaseSequenceName());
       Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
 
@@ -1547,9 +1547,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.copyOf(), capturedTask.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
-    KinesisIOConfig capturedTaskConfig = capturedTask.getIOConfig();
+    KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(cloud.localstack.TestUtils.TEST_ACCESS_KEY, capturedTaskConfig.getAwsAccessKeyId());
     Assert.assertEquals(cloud.localstack.TestUtils.TEST_SECRET_KEY, capturedTaskConfig.getAwsSecretAccessKey());
     Assert.assertEquals(LocalstackTestRunner.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
@@ -1688,9 +1688,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.copyOf(), capturedTask.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
-    KinesisIOConfig capturedTaskConfig = capturedTask.getIOConfig();
+    KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(cloud.localstack.TestUtils.TEST_ACCESS_KEY, capturedTaskConfig.getAwsAccessKeyId());
     Assert.assertEquals(cloud.localstack.TestUtils.TEST_SECRET_KEY, capturedTaskConfig.getAwsSecretAccessKey());
     Assert.assertEquals(LocalstackTestRunner.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
@@ -2063,7 +2063,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     for (Task task : captured.getValues()) {
-      KinesisIOConfig taskConfig = ((KinesisIndexTask) task).getIOConfig();
+      KinesisIndexTaskIOConfig taskConfig = ((KinesisIndexTask) task).getIOConfig();
       Assert.assertEquals(
           "0",
           taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId1)
@@ -2184,7 +2184,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     for (Task task : captured.getValues()) {
-      KinesisIOConfig taskConfig = ((KinesisIndexTask) task).getIOConfig();
+      KinesisIndexTaskIOConfig taskConfig = ((KinesisIndexTask) task).getIOConfig();
       Assert.assertEquals(
           "0",
           taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId1)
@@ -2966,7 +2966,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointForUnknownTaskGroup()
-      throws InterruptedException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+      throws InterruptedException
   {
     supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
 
@@ -3633,14 +3633,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
       SeekableStreamPartitions<String, String> endPartitions,
       DateTime minimumMessageTime,
       DateTime maximumMessageTime
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     return new KinesisIndexTask(
         id,
         null,
         getDataSchema(dataSource),
         tuningConfig,
-        new KinesisIOConfig(
+        new KinesisIndexTaskIOConfig(
             null,
             "sequenceName-" + taskGroupId,
             startPartitions,

@@ -23,25 +23,25 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Represents a generic record with a PartitionType (partition id) and SequenceType (sequence number) and data
+ * Represents a generic record with a PartitionIdType (partition id) and SequenceOffsetType (sequence number) and data
  * from a Kafka/Kinesis stream
  *
- * @param <PartitionType> partition id
- * @param <SequenceType>  sequence number
+ * @param <PartitionIdType> partition id
+ * @param <SequenceOffsetType>  sequence number
  */
-public class OrderedPartitionableRecord<PartitionType, SequenceType>
+public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
 {
   public static final String END_OF_SHARD_MARKER = "EOS";
 
   private final String stream;
-  private final PartitionType partitionId;
-  private final SequenceType sequenceNumber;
+  private final PartitionIdType partitionId;
+  private final SequenceOffsetType sequenceNumber;
   private final List<byte[]> data;
 
   public OrderedPartitionableRecord(
       String stream,
-      PartitionType partitionId,
-      SequenceType sequenceNumber,
+      PartitionIdType partitionId,
+      SequenceOffsetType sequenceNumber,
       List<byte[]> data
   )
   {
@@ -56,12 +56,12 @@ public class OrderedPartitionableRecord<PartitionType, SequenceType>
     return stream;
   }
 
-  public PartitionType getPartitionId()
+  public PartitionIdType getPartitionId()
   {
     return partitionId;
   }
 
-  public SequenceType getSequenceNumber()
+  public SequenceOffsetType getSequenceNumber()
   {
     return sequenceNumber;
   }
@@ -71,7 +71,7 @@ public class OrderedPartitionableRecord<PartitionType, SequenceType>
     return data;
   }
 
-  public StreamPartition<PartitionType> getStreamPartition()
+  public StreamPartition<PartitionIdType> getStreamPartition()
   {
     return StreamPartition.of(stream, partitionId);
   }

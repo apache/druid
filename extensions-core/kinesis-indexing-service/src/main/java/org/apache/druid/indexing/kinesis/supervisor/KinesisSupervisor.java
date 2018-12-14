@@ -22,35 +22,34 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
-import org.apache.druid.indexing.kinesis.KinesisIOConfig;
 import org.apache.druid.indexing.kinesis.KinesisIndexTask;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
+import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
+import org.apache.druid.indexing.kinesis.KinesisIndexTaskTuningConfig;
 import org.apache.druid.indexing.kinesis.KinesisRecordSupplier;
 import org.apache.druid.indexing.kinesis.KinesisSequenceNumber;
-import org.apache.druid.indexing.kinesis.KinesisTuningConfig;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
+import org.apache.druid.indexing.seekablestream.utils.RandomId;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 
@@ -59,9 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Supervisor responsible for managing the KinesisIndexTask for a single dataSource. At a high level, the class accepts a
@@ -104,7 +101,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected SeekableStreamIOConfig createIoConfig(
+  protected SeekableStreamIndexTaskIOConfig createIoConfig(
       int groupId,
       Map<String, String> startPartitions,
       Map<String, String> endPartitions,
@@ -116,7 +113,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   )
   {
     KinesisSupervisorIOConfig ioConfig = (KinesisSupervisorIOConfig) ioConfigg;
-    return new KinesisIOConfig(
+    return new KinesisIndexTaskIOConfig(
         groupId,
         baseSequenceName,
         new SeekableStreamPartitions<>(ioConfig.getStream(), startPartitions),
@@ -143,10 +140,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       String baseSequenceName,
       ObjectMapper sortingMapper,
       TreeMap<Integer, Map<String, String>> sequenceOffsets,
-      SeekableStreamIOConfig taskIoConfig,
-      SeekableStreamTuningConfig taskTuningConfig,
+      SeekableStreamIndexTaskIOConfig taskIoConfig,
+      SeekableStreamIndexTaskTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
-  ) throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  ) throws JsonProcessingException
   {
     final String checkpoints = sortingMapper.writerFor(new TypeReference<TreeMap<Integer, Map<String, String>>>()
     {
@@ -164,13 +161,13 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
                                             .build();
     List<SeekableStreamIndexTask<String, String>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
-      String taskId = Joiner.on("_").join(baseSequenceName, getRandomId());
+      String taskId = Joiner.on("_").join(baseSequenceName, RandomId.getRandomId());
       taskList.add(new KinesisIndexTask(
           taskId,
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
-          (KinesisTuningConfig) taskTuningConfig,
-          (KinesisIOConfig) taskIoConfig,
+          (KinesisIndexTaskTuningConfig) taskTuningConfig,
+          (KinesisIndexTaskIOConfig) taskIoConfig,
           context,
           null,
           null,
@@ -183,10 +180,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 
   @Override
   protected RecordSupplier<String, String> setupRecordSupplier()
-      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+      throws RuntimeException
   {
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
-    KinesisTuningConfig taskTuningConfig = spec.getTuningConfig();
+    KinesisIndexTaskTuningConfig taskTuningConfig = spec.getTuningConfig();
 
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
@@ -213,15 +210,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected void scheduleReporting(ScheduledExecutorService reportingExec)
   {
-    // Implement this for Kinesis which uses approximate time from latest instead of offset lag
-/*
-        reportingExec.scheduleAtFixedRate(
-            computeAndEmitLag(taskClient),
-            ioConfig.getStartDelay().getMillis() + 10000, // wait for tasks to start up
-            Math.max(monitorSchedulerConfig.getEmitterPeriod().getMillis(), 60 * 1000),
-            TimeUnit.MILLISECONDS
-        );
-*/
+    // not yet implemented, see issue #6739
   }
 
   @Override
@@ -290,23 +279,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return KinesisSequenceNumber.of(seq, isExclusive);
   }
 
-  // the following are for unit testing purposes only
-  @Override
-  @VisibleForTesting
-  protected void runInternal()
-      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException, NoSuchMethodException,
-             IllegalAccessException, ClassNotFoundException
-  {
-    super.runInternal();
-  }
-
-  @Override
-  @VisibleForTesting
-  protected Runnable updateCurrentAndLatestOffsets()
-  {
-    return super.updateCurrentAndLatestOffsets();
-  }
-
   @Override
   protected void updateLatestSequenceFromStream(
       RecordSupplier<String, String> recordSupplier, Set<StreamPartition<String>> streamPartitions
@@ -316,37 +288,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  @VisibleForTesting
-  protected void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
-  {
-    super.gracefulShutdownInternal();
-  }
-
-  @Override
-  @VisibleForTesting
-  protected void resetInternal(DataSourceMetadata dataSourceMetadata)
-  {
-    super.resetInternal(dataSourceMetadata);
-  }
-
-  @Override
   protected String baseTaskName()
   {
     return "index_kinesis";
-  }
-
-  @Override
-  @VisibleForTesting
-  protected void moveTaskGroupToPendingCompletion(int taskGroupId)
-  {
-    super.moveTaskGroupToPendingCompletion(taskGroupId);
-  }
-
-  @Override
-  @VisibleForTesting
-  protected int getNoticesQueueSize()
-  {
-    return super.getNoticesQueueSize();
   }
 
   @Override
@@ -360,148 +304,4 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   {
     return SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER;
   }
-
-  @Override
-  @VisibleForTesting
-  protected void addTaskGroupToActivelyReadingTaskGroup(
-      int taskGroupId,
-      ImmutableMap<String, String> partitionOffsets,
-      Optional<DateTime> minMsgTime,
-      Optional<DateTime> maxMsgTime,
-      Set<String> tasks,
-      Set<String> exclusiveStartingSequencePartitions
-  )
-  {
-    super.addTaskGroupToActivelyReadingTaskGroup(
-        taskGroupId,
-        partitionOffsets,
-        minMsgTime,
-        maxMsgTime,
-        tasks,
-        exclusiveStartingSequencePartitions
-    );
-  }
-
-  @Override
-  @VisibleForTesting
-  protected void addTaskGroupToPendingCompletionTaskGroup(
-      int taskGroupId,
-      ImmutableMap<String, String> partitionOffsets,
-      Optional<DateTime> minMsgTime,
-      Optional<DateTime> maxMsgTime,
-      Set<String> tasks,
-      Set<String> exclusiveStartingSequencePartitions
-  )
-  {
-    super.addTaskGroupToPendingCompletionTaskGroup(
-        taskGroupId,
-        partitionOffsets,
-        minMsgTime,
-        maxMsgTime,
-        tasks,
-        exclusiveStartingSequencePartitions
-    );
-  }
-
-// Implement this for Kinesis which uses approximate time from latest instead of offset lag
-/*
-  private Runnable computeAndEmitLag(final KinesisIndexTaskClient taskClient)
-  {
-    return new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        try {
-          final Map<String, List<PartitionInfo>> topics = lagComputingConsumer.listTopics();
-          final List<PartitionInfo> partitionInfoList = topics.get(ioConfig.getStream());
-          lagComputingConsumer.assign(
-              Lists.transform(partitionInfoList, new Function<PartitionInfo, TopicPartition>()
-              {
-                @Override
-                public TopicPartition apply(PartitionInfo input)
-                {
-                  return new TopicPartition(ioConfig.getStream(), input.partition());
-                }
-              })
-          );
-          final Map<Integer, Long> offsetsResponse = new ConcurrentHashMap<>();
-          final List<ListenableFuture<Void>> futures = new ArrayList<>();
-          for (TaskGroup taskGroup : taskGroups.values()) {
-            for (String taskId : taskGroup.taskIds()) {
-              futures.add(Futures.transform(
-                  taskClient.getCurrentOffsetsAsync(taskId, false),
-                  new Function<Map<Integer, Long>, Void>()
-                  {
-                    @Override
-                    public Void apply(Map<Integer, Long> taskResponse)
-                    {
-                      if (taskResponse != null) {
-                        for (final Map.Entry<Integer, Long> partitionOffsets : taskResponse.entrySet()) {
-                          offsetsResponse.compute(partitionOffsets.getKey(), new BiFunction<Integer, Long, Long>()
-                          {
-                            @Override
-                            public Long apply(Integer key, Long existingOffsetInMap)
-                            {
-                              // If existing value is null use the offset returned by task
-                              // otherwise use the max (makes sure max offset is taken from replicas)
-                              return existingOffsetInMap == null
-                                     ? partitionOffsets.getValue()
-                                     : Math.max(partitionOffsets.getValue(), existingOffsetInMap);
-                            }
-                          });
-                        }
-                      }
-                      return null;
-                    }
-                  }
-                          )
-              );
-            }
-          }
-          // not using futureTimeoutInSeconds as its min value is 120 seconds
-          // and minimum emission period for this metric is 60 seconds
-          Futures.successfulAsList(futures).get(30, TimeUnit.SECONDS);
-
-          // for each partition, seek to end to get the highest offset
-          // check the offsetsResponse map for the latest consumed offset
-          // if partition info not present in offsetsResponse then use lastCurrentOffsets map
-          // if not present there as well, fail the compute
-
-          long lag = 0;
-          for (PartitionInfo partitionInfo : partitionInfoList) {
-            long diff;
-            final TopicPartition topicPartition = new TopicPartition(ioConfig.getStream(), partitionInfo.partition());
-            lagComputingConsumer.seekToEnd(ImmutableList.of(topicPartition));
-            if (offsetsResponse.get(topicPartition.partition()) != null) {
-              diff = lagComputingConsumer.position(topicPartition) - offsetsResponse.get(topicPartition.partition());
-              lastCurrentOffsets.put(topicPartition.partition(), offsetsResponse.get(topicPartition.partition()));
-            } else if (lastCurrentOffsets.get(topicPartition.partition()) != null) {
-              diff = lagComputingConsumer.position(topicPartition) - lastCurrentOffsets.get(topicPartition.partition());
-            } else {
-              throw new ISE("Could not find latest consumed offset for partition [%d]", topicPartition.partition());
-            }
-            lag += diff;
-            log.debug(
-                "Topic - [%s] Partition - [%d] : Partition lag [%,d], Total lag so far [%,d]",
-                topicPartition.topic(),
-                topicPartition.partition(),
-                diff,
-                lag
-            );
-          }
-          emitter.emit(
-              ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kinesis/lag", lag)
-          );
-        }
-        catch (InterruptedException e) {
-          // do nothing, probably we are shutting down
-        }
-        catch (Exception e) {
-          log.warn(e, "Unable to compute Kinesis lag");
-        }
-      }
-    };
-  }
-  */
 }

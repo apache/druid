@@ -38,7 +38,7 @@ public interface TaskStorage
    *
    * @param task task to add
    * @param status task status
-   * @throws EntryExistsException if the task ID already exists
+   * @throws EntryExistsException if the task RandomId already exists
    */
   void insert(Task task, TaskStatus status) throws EntryExistsException;
 
@@ -52,7 +52,7 @@ public interface TaskStorage
 
   /**
    * Persists lock state in the storage facility.
-   * @param taskid task ID
+   * @param taskid task RandomId
    * @param taskLock lock state
    */
   void addLock(String taskid, TaskLock taskLock);
@@ -70,7 +70,7 @@ public interface TaskStorage
    * Removes lock state from the storage facility. It is harmless to keep old locks in the storage facility, but
    * this method can help reclaim wasted space.
    *
-   * @param taskid task ID
+   * @param taskid task RandomId
    * @param taskLock lock state
    */
   void removeLock(String taskid, TaskLock taskLock);
@@ -83,21 +83,21 @@ public interface TaskStorage
   void removeTasksOlderThan(long timestamp);
 
   /**
-   * Returns task as stored in the storage facility. If the task ID does not exist, this will return an
+   * Returns task as stored in the storage facility. If the task RandomId does not exist, this will return an
    * absentee Optional.
    *
    * NOTE: This method really feels like it should be combined with {@link #getStatus}.  Expect that in the future.
    *
-   * @param taskid task ID
+   * @param taskid task RandomId
    * @return optional task
    */
   Optional<Task> getTask(String taskid);
 
   /**
-   * Returns task status as stored in the storage facility. If the task ID does not exist, this will return
+   * Returns task status as stored in the storage facility. If the task RandomId does not exist, this will return
    * an absentee Optional.
    *
-   * @param taskid task ID
+   * @param taskid task RandomId
    * @return task status
    */
   Optional<TaskStatus> getStatus(String taskid);
@@ -119,7 +119,7 @@ public interface TaskStorage
   /**
    * Returns all actions taken by a task.
    *
-   * @param taskid task ID
+   * @param taskid task RandomId
    * @return list of task actions
    */
   @Deprecated
@@ -162,7 +162,7 @@ public interface TaskStorage
   /**
    * Returns a list of locks for a particular task.
    *
-   * @param taskid task ID
+   * @param taskid task RandomId
    * @return list of TaskLocks for the given task
    */
   List<TaskLock> getLocks(String taskid);

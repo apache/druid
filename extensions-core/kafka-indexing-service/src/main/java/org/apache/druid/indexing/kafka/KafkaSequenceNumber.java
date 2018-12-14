@@ -25,14 +25,14 @@ import javax.validation.constraints.NotNull;
 
 public class KafkaSequenceNumber extends OrderedSequenceNumber<Long>
 {
-  private KafkaSequenceNumber(Long sequenceNumber, boolean isExclusive)
+  private KafkaSequenceNumber(Long sequenceNumber)
   {
     super(sequenceNumber, false);
   }
 
   public static KafkaSequenceNumber of(Long sequenceNumber)
   {
-    return new KafkaSequenceNumber(sequenceNumber, false);
+    return new KafkaSequenceNumber(sequenceNumber);
   }
 
   @Override
@@ -42,21 +42,5 @@ public class KafkaSequenceNumber extends OrderedSequenceNumber<Long>
   {
     return this.get().compareTo(o.get());
   }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (!(o instanceof KafkaSequenceNumber)) {
-      return false;
-    }
-    return this.compareTo((KafkaSequenceNumber) o) == 0;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return super.hashCode();
-  }
-
 
 }

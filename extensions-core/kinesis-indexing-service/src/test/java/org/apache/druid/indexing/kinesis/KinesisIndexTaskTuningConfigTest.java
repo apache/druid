@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -34,11 +35,11 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 
-public class KinesisTuningConfigTest
+public class KinesisIndexTaskTuningConfigTest
 {
   private final ObjectMapper mapper;
 
-  public KinesisTuningConfigTest()
+  public KinesisIndexTaskTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
     mapper.registerModules((Iterable<Module>) new KinesisIndexingServiceModule().getJacksonModules());
@@ -52,7 +53,7 @@ public class KinesisTuningConfigTest
   {
     String jsonStr = "{\"type\": \"kinesis\"}";
 
-    KinesisTuningConfig config = (KinesisTuningConfig) mapper.readValue(
+    KinesisIndexTaskTuningConfig config = (KinesisIndexTaskTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -102,7 +103,7 @@ public class KinesisTuningConfigTest
                      + "  \"fetchThreads\": 2\n"
                      + "}";
 
-    KinesisTuningConfig config = (KinesisTuningConfig) mapper.readValue(
+    KinesisIndexTaskTuningConfig config = (KinesisIndexTaskTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -159,9 +160,9 @@ public class KinesisTuningConfigTest
   }
 
   @Test
-  public void testCopyOf()
+  public void testConvert()
   {
-    KinesisTuningConfig original = new KinesisTuningConfig(
+    KinesisSupervisorTuningConfig original = new KinesisSupervisorTuningConfig(
         1,
         (long) 3,
         2,
@@ -175,6 +176,12 @@ public class KinesisTuningConfigTest
         5L,
         true,
         false,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         1000,
         500,
         500,
@@ -184,10 +191,9 @@ public class KinesisTuningConfigTest
         null,
         null,
         null,
-        null,
         null
     );
-    KinesisTuningConfig copy = original.copyOf();
+    KinesisIndexTaskTuningConfig copy = (KinesisIndexTaskTuningConfig) original.convertToTaskTuningConfig();
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
     Assert.assertEquals(3, copy.getMaxBytesInMemory());

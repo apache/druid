@@ -23,11 +23,11 @@ layout: doc_page
 
 # Kinesis Indexing Service
 
-Similar to the [Kafka indexing service](./kafka-ingestion.html), The Kinesis indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
+Similar to the [Kafka indexing service](./kafka-ingestion.html), the Kinesis indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
 Kinesis by managing the creation and lifetime of Kinesis indexing tasks. These indexing tasks read events using Kinesis's own
 Shards and Sequence Number mechanism and are therefore able to provide guarantees of exactly-once ingestion. They are also
 able to read non-recent events from Kinesis and are not subject to the window period considerations imposed on other
-ingestion mechanisms. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
+ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
 The Kinesis indexing service is provided as the `druid-kinesis-indexing-service` core extension (see
@@ -118,8 +118,8 @@ A sample supervisor spec is shown below:
 |--------|-----------|---------|
 |`type`|The supervisor type, this should always be `kinesis`.|yes|
 |`dataSchema`|The schema that will be used by the Kinesis indexing task during ingestion, see [Ingestion Spec DataSchema](../../ingestion/ingestion-spec.html#dataschema).|yes|
-|`tuningConfig`|A KinesisSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
 |`ioConfig`|A KinesisSupervisorIOConfig to configure the supervisor and indexing tasks, see below.|yes|
+|`tuningConfig`|A KinesisSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
 
 ### KinesisSupervisorTuningConfig
 
@@ -350,8 +350,17 @@ Details on how to optimize the segment size can be found on [Segment size optimi
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
 Hadoop (see [here](https://github.com/apache/incubator-druid/pull/5102)).
 
-
 ### Determining Fetch Settings
+Internally, the Kinesis Indexing Service uses the Kinesis Record Supplier abstraction for fetching Kinesis data records and storing the records
+locally. The way the Kinesis Record Supplier fetches records is to have a separate thread run the fetching operation per each Kinesis Shard, the
+max number of threads is determined by `fetchThreads`. For example, a Kinesis stream with 3 shards will have 3 threads, each fetching from a shard separately.
+There is a delay between each fetching operation, which is controlled by `fetchDelayMillis`. The maximum number of records to be fetched per thread per
+operation is controlled by `recordsPerFetch`. Note that this is not the same as `maxRecordsPerPoll`.
+
+The records fetched by each thread will be pushed to a queue in the order that they are fetched. The records are stored in this queue until `poll()` is called
+by either the supervisor or the indexing task. `poll()` will attempt to drain the internal buffer queue up to a limit of `max(maxRecordsPerPoll, q.size())`.
+Here `maxRecordsPerPoll` controls the theoretical maximum records to drain out of the buffer queue, so setting this parameter to a reasonable value is essential
+in preventing the queue from overflowing or memory exceeding heap size.
 
 Kinesis places the following restrictions on calls to fetch records:
 
@@ -368,7 +377,7 @@ If the above limits are violated, AWS will throw ProvisionedThroughputExceededEx
 read data. When this happens, the Kinesis indexing service will pause by `fetchDelayMillis` and then attempt the call
 again.
 
-Internally, each indexing task maintains a buffer that stores the fetched but not yet processed recordd. `recordsPerFetch` and `fetchDelayMillis`
+Internally, each indexing task maintains a buffer that stores the fetched but not yet processed record. `recordsPerFetch` and `fetchDelayMillis`
 control this behavior. The number of records that the indexing task fetch from the buffer is controlled by `maxRecordsPerPoll`, which
 determines the number of records to be processed per each ingestion loop in the task.
 

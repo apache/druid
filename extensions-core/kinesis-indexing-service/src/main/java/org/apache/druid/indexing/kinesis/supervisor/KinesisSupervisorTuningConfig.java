@@ -20,7 +20,8 @@
 package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexing.kinesis.KinesisTuningConfig;
+import org.apache.druid.indexing.kinesis.KinesisIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -30,7 +31,8 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.File;
 
-public class KinesisSupervisorTuningConfig extends KinesisTuningConfig implements SeekableStreamSupervisorTuningConfig
+public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
+    implements SeekableStreamSupervisorTuningConfig
 {
   private final Integer workerThreads;
   private final Integer chatThreads;
@@ -169,6 +171,37 @@ public class KinesisSupervisorTuningConfig extends KinesisTuningConfig implement
            ", fetchThreads=" + getFetchThreads() +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
            '}';
+  }
+
+  @Override
+  public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
+  {
+    return new KinesisIndexTaskTuningConfig(
+        getMaxRowsInMemory(),
+        getMaxBytesInMemory(),
+        getMaxRowsPerSegment(),
+        getMaxTotalRows(),
+        getIntermediatePersistPeriod(),
+        getBasePersistDirectory(),
+        0,
+        getIndexSpec(),
+        true,
+        isReportParseExceptions(),
+        getHandoffConditionTimeout(),
+        isResetOffsetAutomatically(),
+        isSkipSequenceNumberAvailabilityCheck(),
+        getRecordBufferSize(),
+        getRecordBufferOfferTimeout(),
+        getRecordBufferFullWait(),
+        getFetchSequenceNumberTimeout(),
+        getFetchThreads(),
+        getSegmentWriteOutMediumFactory(),
+        isLogParseExceptions(),
+        getMaxParseExceptions(),
+        getMaxSavedParseExceptions(),
+        getMaxRecordsPerPoll(),
+        getIntermediateHandoffPeriod()
+    );
   }
 
 }

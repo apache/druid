@@ -20,8 +20,6 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 
-import java.util.Objects;
-
 /**
  * Represents a Kafka/Kinesis stream sequence number. Mainly used to do
  * comparison and indicate whether the sequence number is exclusive.
@@ -30,20 +28,21 @@ import java.util.Objects;
  * sequence of some Kinesis partition and should be discarded because some
  * previous task has already read this sequence number
  *
- * @param <T> type of sequence number
+ * @param <SequenceOffsetType> type of sequence number
  */
-public abstract class OrderedSequenceNumber<T> implements Comparable<OrderedSequenceNumber<T>>
+public abstract class OrderedSequenceNumber<SequenceOffsetType>
+    implements Comparable<OrderedSequenceNumber<SequenceOffsetType>>
 {
-  private final T sequenceNumber;
+  private final SequenceOffsetType sequenceNumber;
   private final boolean isExclusive;
 
-  protected OrderedSequenceNumber(T sequenceNumber, boolean isExclusive)
+  protected OrderedSequenceNumber(SequenceOffsetType sequenceNumber, boolean isExclusive)
   {
     this.sequenceNumber = sequenceNumber;
     this.isExclusive = isExclusive;
   }
 
-  public T get()
+  public SequenceOffsetType get()
   {
     return sequenceNumber;
   }
@@ -51,25 +50,5 @@ public abstract class OrderedSequenceNumber<T> implements Comparable<OrderedSequ
   public boolean isExclusive()
   {
     return isExclusive;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(sequenceNumber, isExclusive);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    OrderedSequenceNumber<?> that = (OrderedSequenceNumber<?>) o;
-    return isExclusive == that.isExclusive &&
-           Objects.equals(sequenceNumber, that.sequenceNumber);
   }
 }

@@ -55,13 +55,13 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -89,7 +89,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -100,7 +99,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -122,14 +120,14 @@ import java.util.stream.Stream;
  * stream sequences.
  * <p>
  *
- * @param <PartitionType> the type of the partition id, for example, partitions in Kafka are int type while partitions in Kinesis are String type
- * @param <SequenceType>  the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
+ * @param <PartitionIdType>    the type of the partition id, for example, partitions in Kafka are int type while partitions in Kinesis are String type
+ * @param <SequenceOffsetType> the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
  */
-public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
+public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType>
     implements Supervisor
 {
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
-  private static final Random RANDOM = ThreadLocalRandom.current();
+
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
@@ -156,22 +154,22 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     // this task group has completed successfully, at which point this will be destroyed and a new task group will be
     // created with new starting sequences. This allows us to create replacement tasks for failed tasks that process the
     // same sequences, even if the values in [partitionGroups] has been changed.
-    final ImmutableMap<PartitionType, SequenceType> startingSequences;
+    final ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences;
 
     final ConcurrentHashMap<String, TaskData> tasks = new ConcurrentHashMap<>();
     final Optional<DateTime> minimumMessageTime;
     final Optional<DateTime> maximumMessageTime;
-    final Set<PartitionType> exclusiveStartSequenceNumberPartitions;
-    final TreeMap<Integer, Map<PartitionType, SequenceType>> checkpointSequences = new TreeMap<>();
+    final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
+    final TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> checkpointSequences = new TreeMap<>();
     final String baseSequenceName;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
     TaskGroup(
         int groupId,
-        ImmutableMap<PartitionType, SequenceType> startingSequences,
+        ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences,
         Optional<DateTime> minimumMessageTime,
         Optional<DateTime> maximumMessageTime,
-        Set<PartitionType> exclusiveStartSequenceNumberPartitions
+        Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
     )
     {
       this.groupId = groupId;
@@ -185,7 +183,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       this.baseSequenceName = generateSequenceName(startingSequences, minimumMessageTime, maximumMessageTime);
     }
 
-    int addNewCheckpoint(Map<PartitionType, SequenceType> checkpoint)
+    int addNewCheckpoint(Map<PartitionIdType, SequenceOffsetType> checkpoint)
     {
       checkpointSequences.put(checkpointSequences.lastKey() + 1, checkpoint);
       return checkpointSequences.lastKey();
@@ -202,7 +200,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   {
     volatile TaskStatus status;
     volatile DateTime startTime;
-    volatile Map<PartitionType, SequenceType> currentSequences = new HashMap<>();
+    volatile Map<PartitionIdType, SequenceOffsetType> currentSequences = new HashMap<>();
 
     @Override
     public String toString()
@@ -320,14 +318,14 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     private final Integer nullableTaskGroupId;
     @Deprecated
     private final String baseSequenceName;
-    private final SeekableStreamDataSourceMetadata<PartitionType, SequenceType> previousCheckpoint;
-    private final SeekableStreamDataSourceMetadata<PartitionType, SequenceType> currentCheckpoint;
+    private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint;
+    private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentCheckpoint;
 
     public CheckpointNotice(
         @Nullable Integer nullableTaskGroupId,
         @Deprecated String baseSequenceName,
-        SeekableStreamDataSourceMetadata<PartitionType, SequenceType> previousCheckpoint,
-        SeekableStreamDataSourceMetadata<PartitionType, SequenceType> currentCheckpoint
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint,
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentCheckpoint
     )
     {
       this.baseSequenceName = baseSequenceName;
@@ -377,12 +375,12 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       final TaskGroup taskGroup = activelyReadingTaskGroups.get(taskGroupId);
 
       if (isValidTaskGroup(taskGroupId, taskGroup)) {
-        final TreeMap<Integer, Map<PartitionType, SequenceType>> checkpoints = taskGroup.checkpointSequences;
+        final TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> checkpoints = taskGroup.checkpointSequences;
 
         // check validity of previousCheckpoint
         int index = checkpoints.size();
         for (int sequenceId : checkpoints.descendingKeySet()) {
-          Map<PartitionType, SequenceType> checkpoint = checkpoints.get(sequenceId);
+          Map<PartitionIdType, SequenceOffsetType> checkpoint = checkpoints.get(sequenceId);
           // We have already verified the stream of the current checkpoint is same with that in ioConfig.
           // See checkpoint().
           if (checkpoint.equals(previousCheckpoint.getSeekableStreamPartitions()
@@ -400,7 +398,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
           log.info("Already checkpointed with sequences [%s]", checkpoints.lastEntry().getValue());
           return;
         }
-        final Map<PartitionType, SequenceType> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
+        final Map<PartitionIdType, SequenceOffsetType> newCheckpoint = checkpointTaskGroup(taskGroup, false).get();
         taskGroup.addNewCheckpoint(newCheckpoint);
         log.info("Handled checkpoint notice, new checkpoint is [%s] for taskGroup [%s]", newCheckpoint, taskGroupId);
       }
@@ -432,13 +430,13 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
 
-  // Map<{group ID}, {actively reading task group}>; see documentation for TaskGroup class
+  // Map<{group RandomId}, {actively reading task group}>; see documentation for TaskGroup class
   private final ConcurrentHashMap<Integer, TaskGroup> activelyReadingTaskGroups = new ConcurrentHashMap<>();
 
   // After telling a taskGroup to stop reading and begin publishing a segment, it is moved from [activelyReadingTaskGroups] to here so
   // we can monitor its status while we queue new tasks to read the next range of sequences. This is a list since we could
   // have multiple sets of tasks publishing at once if time-to-publish > taskDuration.
-  // Map<{group ID}, List<{pending completion task groups}>>
+  // Map<{group RandomId}, List<{pending completion task groups}>>
   private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
 
   // The starting sequence for a new partition in [partitionGroups] is initially set to getNotSetMarker(). When a new task group
@@ -450,24 +448,24 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   // cause successive tasks to again grab their starting sequence from metadata store. This mechanism allows us to
   // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
   // failures during publishing.
-  // Map<{group ID}, Map<{partition ID}, {startingOffset}>>
-  private final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionType, SequenceType>> partitionGroups = new ConcurrentHashMap<>();
+  // Map<{group RandomId}, Map<{partition RandomId}, {startingOffset}>>
+  private final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> partitionGroups = new ConcurrentHashMap<>();
 
   protected final ObjectMapper sortingMapper;
-  protected final List<PartitionType> partitionIds = new CopyOnWriteArrayList<>();
+  protected final List<PartitionIdType> partitionIds = new CopyOnWriteArrayList<>();
   protected volatile DateTime sequenceLastUpdated;
 
 
-  private final Set<PartitionType> subsequentlyDiscoveredPartitions = new HashSet<>();
+  private final Set<PartitionIdType> subsequentlyDiscoveredPartitions = new HashSet<>();
   private final TaskStorage taskStorage;
   private final TaskMaster taskMaster;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-  private final SeekableStreamIndexTaskClient<PartitionType, SequenceType> taskClient;
+  private final SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> taskClient;
   private final SeekableStreamSupervisorSpec spec;
   private final String dataSource;
   private final SeekableStreamSupervisorIOConfig ioConfig;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
-  private final SeekableStreamTuningConfig taskTuningConfig;
+  private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
   private final String supervisorId;
   private final TaskInfoProvider taskInfoProvider;
   private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
@@ -486,7 +484,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private long lastRunTime;
   private int initRetryCounter = 0;
   private volatile DateTime firstRunTime;
-  private volatile RecordSupplier<PartitionType, SequenceType> recordSupplier;
+  private volatile RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
@@ -497,7 +495,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       final TaskStorage taskStorage,
       final TaskMaster taskMaster,
       final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      final SeekableStreamIndexTaskClientFactory<? extends SeekableStreamIndexTaskClient<PartitionType, SequenceType>> taskClientFactory,
+      final SeekableStreamIndexTaskClientFactory<? extends SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType>> taskClientFactory,
       final ObjectMapper mapper,
       final SeekableStreamSupervisorSpec spec,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
@@ -515,7 +513,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
     this.tuningConfig = spec.getTuningConfig();
-    this.taskTuningConfig = this.tuningConfig.copyOf();
+    this.taskTuningConfig = this.tuningConfig.convertToTaskTuningConfig();
     this.supervisorId = supervisorId;
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
@@ -582,16 +580,6 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         this.tuningConfig.getChatRetries()
     );
   }
-
-  protected static String getRandomId()
-  {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((RANDOM.nextInt() >>> (i * 4)) & 0x0F)));
-    }
-    return suffix.toString();
-  }
-
 
   @Override
   public void start()
@@ -761,8 +749,6 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
             TimeUnit.MILLISECONDS
         );
 
-        // different in kafka and kinesis as emitLag and checkpointing
-        // are not yet implemented in Kinesis
         scheduleReporting(reportingExec);
 
         started = true;
@@ -797,24 +783,24 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     return generateReport(true);
   }
 
-  private SupervisorReport<? extends SeekableStreamSupervisorReportPayload<PartitionType, SequenceType>> generateReport(
+  private SupervisorReport<? extends SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType>> generateReport(
       boolean includeOffsets
   )
   {
     int numPartitions = partitionGroups.values().stream().mapToInt(Map::size).sum();
 
-    final SeekableStreamSupervisorReportPayload<PartitionType, SequenceType> payload = createReportPayload(
+    final SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> payload = createReportPayload(
         numPartitions,
         includeOffsets
     );
 
-    SupervisorReport<SeekableStreamSupervisorReportPayload<PartitionType, SequenceType>> report = new SupervisorReport<>(
+    SupervisorReport<SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType>> report = new SupervisorReport<>(
         dataSource,
         DateTimes.nowUtc(),
         payload
     );
 
-    List<TaskReportData<PartitionType, SequenceType>> taskReports = new ArrayList<>();
+    List<TaskReportData<PartitionIdType, SequenceOffsetType>> taskReports = new ArrayList<>();
 
     try {
       for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
@@ -822,7 +808,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
           String taskId = entry.getKey();
           @Nullable
           DateTime startTime = entry.getValue().startTime;
-          Map<PartitionType, SequenceType> currentOffsets = entry.getValue().currentSequences;
+          Map<PartitionIdType, SequenceOffsetType> currentOffsets = entry.getValue().currentSequences;
           Long remainingSeconds = null;
           if (startTime != null) {
             long elapsedMillis = System.currentTimeMillis() - startTime.getMillis();
@@ -850,7 +836,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
             String taskId = entry.getKey();
             @Nullable
             DateTime startTime = entry.getValue().startTime;
-            Map<PartitionType, SequenceType> currentOffsets = entry.getValue().currentSequences;
+            Map<PartitionIdType, SequenceOffsetType> currentOffsets = entry.getValue().currentSequences;
             Long remainingSeconds = null;
             if (taskGroup.completionTimeout != null) {
               remainingSeconds = Math.max(0, taskGroup.completionTimeout.getMillis() - System.currentTimeMillis())
@@ -968,13 +954,13 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
 
   @VisibleForTesting
-  protected void addTaskGroupToActivelyReadingTaskGroup(
+  public void addTaskGroupToActivelyReadingTaskGroup(
       int taskGroupId,
-      ImmutableMap<PartitionType, SequenceType> partitionOffsets,
+      ImmutableMap<PartitionIdType, SequenceOffsetType> partitionOffsets,
       Optional<DateTime> minMsgTime,
       Optional<DateTime> maxMsgTime,
       Set<String> tasks,
-      Set<PartitionType> exclusiveStartingSequencePartitions
+      Set<PartitionIdType> exclusiveStartingSequencePartitions
   )
   {
     TaskGroup group = new TaskGroup(
@@ -987,20 +973,20 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
     if (activelyReadingTaskGroups.putIfAbsent(taskGroupId, group) != null) {
       throw new ISE(
-          "trying to add taskGroup with ID [%s] to actively reading task groups, but group already exists.",
+          "trying to add taskGroup with RandomId [%s] to actively reading task groups, but group already exists.",
           taskGroupId
       );
     }
   }
 
   @VisibleForTesting
-  protected void addTaskGroupToPendingCompletionTaskGroup(
+  public void addTaskGroupToPendingCompletionTaskGroup(
       int taskGroupId,
-      ImmutableMap<PartitionType, SequenceType> partitionOffsets,
+      ImmutableMap<PartitionIdType, SequenceOffsetType> partitionOffsets,
       Optional<DateTime> minMsgTime,
       Optional<DateTime> maxMsgTime,
       Set<String> tasks,
-      Set<PartitionType> exclusiveStartingSequencePartitions
+      Set<PartitionIdType> exclusiveStartingSequencePartitions
   )
   {
     TaskGroup group = new TaskGroup(
@@ -1016,7 +1002,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
   @VisibleForTesting
-  protected void runInternal()
+  public void runInternal()
       throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException, NoSuchMethodException,
              IllegalAccessException, ClassNotFoundException
   {
@@ -1079,7 +1065,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
   @VisibleForTesting
-  protected void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
+  public void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
   {
     for (TaskGroup taskGroup : activelyReadingTaskGroups.values()) {
       for (Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
@@ -1095,7 +1081,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
   @VisibleForTesting
-  protected void resetInternal(DataSourceMetadata dataSourceMetadata)
+  public void resetInternal(DataSourceMetadata dataSourceMetadata)
   {
     if (dataSourceMetadata == null) {
       // Reset everything
@@ -1118,7 +1104,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       }
       // Reset only the partitions in dataSourceMetadata if it has not been reset yet
       @SuppressWarnings("unchecked")
-      final SeekableStreamDataSourceMetadata<PartitionType, SequenceType> resetMetadata = (SeekableStreamDataSourceMetadata<PartitionType, SequenceType>) dataSourceMetadata;
+      final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
 
       if (resetMetadata.getSeekableStreamPartitions().getStream().equals(ioConfig.getStream())) {
         // metadata can be null
@@ -1131,19 +1117,19 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         }
 
         @SuppressWarnings("unchecked")
-        final SeekableStreamDataSourceMetadata<PartitionType, SequenceType> currentMetadata = (SeekableStreamDataSourceMetadata<PartitionType, SequenceType>) metadata;
+        final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentMetadata = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) metadata;
 
         // defend against consecutive reset requests from replicas
         // as well as the case where the metadata store do not have an entry for the reset partitions
         boolean doReset = false;
-        for (Entry<PartitionType, SequenceType> resetPartitionOffset : resetMetadata.getSeekableStreamPartitions()
-                                                                                    .getPartitionSequenceNumberMap()
-                                                                                    .entrySet()) {
-          final SequenceType partitionOffsetInMetadataStore = currentMetadata == null
-                                                              ? null
-                                                              : currentMetadata.getSeekableStreamPartitions()
-                                                                               .getPartitionSequenceNumberMap()
-                                                                               .get(resetPartitionOffset.getKey());
+        for (Entry<PartitionIdType, SequenceOffsetType> resetPartitionOffset : resetMetadata.getSeekableStreamPartitions()
+                                                                                            .getPartitionSequenceNumberMap()
+                                                                                            .entrySet()) {
+          final SequenceOffsetType partitionOffsetInMetadataStore = currentMetadata == null
+                                                                    ? null
+                                                                    : currentMetadata.getSeekableStreamPartitions()
+                                                                                     .getPartitionSequenceNumberMap()
+                                                                                     .get(resetPartitionOffset.getKey());
           final TaskGroup partitionTaskGroup = activelyReadingTaskGroups.get(
               getTaskGroupIdForPartition(resetPartitionOffset.getKey())
           );
@@ -1215,9 +1201,9 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
   }
 
-  private void killTaskGroupForPartitions(Set<PartitionType> partitions, String reasonFormat, Object... args)
+  private void killTaskGroupForPartitions(Set<PartitionIdType> partitions, String reasonFormat, Object... args)
   {
-    for (PartitionType partition : partitions) {
+    for (PartitionIdType partition : partitions) {
       int taskGroupId = getTaskGroupIdForPartition(partition);
       killTasksInGroup(activelyReadingTaskGroups.get(taskGroupId), reasonFormat, args);
       partitionGroups.remove(taskGroupId);
@@ -1252,7 +1238,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
       taskCount++;
       @SuppressWarnings("unchecked")
-      final SeekableStreamIndexTask<PartitionType, SequenceType> seekableStreamIndexTask = (SeekableStreamIndexTask<PartitionType, SequenceType>) task;
+      final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> seekableStreamIndexTask = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>) task;
       final String taskId = task.getId();
 
       // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
@@ -1262,11 +1248,11 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       // state, we will permit it to complete even if it doesn't match our current partition allocation to support
       // seamless schema migration.
 
-      Iterator<PartitionType> it = seekableStreamIndexTask.getIOConfig()
-                                                          .getStartPartitions()
-                                                          .getPartitionSequenceNumberMap()
-                                                          .keySet()
-                                                          .iterator();
+      Iterator<PartitionIdType> it = seekableStreamIndexTask.getIOConfig()
+                                                            .getStartPartitions()
+                                                            .getPartitionSequenceNumberMap()
+                                                            .keySet()
+                                                            .iterator();
       final Integer taskGroupId = (it.hasNext() ? getTaskGroupIdForPartition(it.next()) : null);
 
       if (taskGroupId != null) {
@@ -1301,19 +1287,20 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
                           // update partitionGroups with the publishing task's sequences (if they are greater than what is
                           // existing) so that the next tasks will start reading from where this task left off
-                          Map<PartitionType, SequenceType> publishingTaskEndOffsets = taskClient.getEndOffsets(taskId);
+                          Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = taskClient.getEndOffsets(
+                              taskId);
 
-                          for (Entry<PartitionType, SequenceType> entry : publishingTaskEndOffsets.entrySet()) {
-                            PartitionType partition = entry.getKey();
-                            SequenceType sequence = entry.getValue();
-                            ConcurrentHashMap<PartitionType, SequenceType> partitionOffsets = partitionGroups.get(
+                          for (Entry<PartitionIdType, SequenceOffsetType> entry : publishingTaskEndOffsets.entrySet()) {
+                            PartitionIdType partition = entry.getKey();
+                            SequenceOffsetType sequence = entry.getValue();
+                            ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionOffsets = partitionGroups.get(
                                 getTaskGroupIdForPartition(partition)
                             );
 
                             boolean succeeded;
                             do {
                               succeeded = true;
-                              SequenceType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
+                              SequenceOffsetType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
                               if (previousOffset != null
                                   && (makeSequenceNumber(previousOffset).compareTo(makeSequenceNumber(sequence))) < 0) {
                                 succeeded = partitionOffsets.replace(partition, previousOffset, sequence);
@@ -1321,10 +1308,10 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
                             } while (!succeeded);
                           }
                         } else {
-                          for (PartitionType partition : seekableStreamIndexTask.getIOConfig()
-                                                                                .getStartPartitions()
-                                                                                .getPartitionSequenceNumberMap()
-                                                                                .keySet()) {
+                          for (PartitionIdType partition : seekableStreamIndexTask.getIOConfig()
+                                                                                  .getStartPartitions()
+                                                                                  .getPartitionSequenceNumberMap()
+                                                                                  .keySet()) {
                             if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
                               log.warn(
                                   "Stopping task [%s] which does not match the expected partition allocation",
@@ -1437,12 +1424,12 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private void verifyAndMergeCheckpoints(final TaskGroup taskGroup)
   {
     final int groupId = taskGroup.groupId;
-    final List<Pair<String, TreeMap<Integer, Map<PartitionType, SequenceType>>>> taskSequences = new ArrayList<>();
-    final List<ListenableFuture<TreeMap<Integer, Map<PartitionType, SequenceType>>>> futures = new ArrayList<>();
+    final List<Pair<String, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>>> taskSequences = new ArrayList<>();
+    final List<ListenableFuture<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>>> futures = new ArrayList<>();
     final List<String> taskIds = new ArrayList<>();
 
     for (String taskId : taskGroup.taskIds()) {
-      final ListenableFuture<TreeMap<Integer, Map<PartitionType, SequenceType>>> checkpointsFuture = taskClient.getCheckpointsAsync(
+      final ListenableFuture<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> checkpointsFuture = taskClient.getCheckpointsAsync(
           taskId,
           true
       );
@@ -1451,10 +1438,10 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
 
     try {
-      List<TreeMap<Integer, Map<PartitionType, SequenceType>>> futuresResult =
+      List<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> futuresResult =
           Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
       for (int i = 0; i < futuresResult.size(); i++) {
-        final TreeMap<Integer, Map<PartitionType, SequenceType>> checkpoints = futuresResult.get(i);
+        final TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> checkpoints = futuresResult.get(i);
         final String taskId = taskIds.get(i);
         if (checkpoints == null) {
           try {
@@ -1487,14 +1474,14 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
 
     @SuppressWarnings("unchecked")
-    final SeekableStreamDataSourceMetadata<PartitionType, SequenceType> latestDataSourceMetadata = (SeekableStreamDataSourceMetadata<PartitionType, SequenceType>) rawDataSourceMetadata;
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> latestDataSourceMetadata = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) rawDataSourceMetadata;
 
     final boolean hasValidOffsetsFromDb = latestDataSourceMetadata != null &&
                                           latestDataSourceMetadata.getSeekableStreamPartitions() != null &&
                                           ioConfig.getStream().equals(
                                               latestDataSourceMetadata.getSeekableStreamPartitions().getStream()
                                           );
-    final Map<PartitionType, SequenceType> latestOffsetsFromDb;
+    final Map<PartitionIdType, SequenceOffsetType> latestOffsetsFromDb;
     if (hasValidOffsetsFromDb) {
       latestOffsetsFromDb = latestDataSourceMetadata.getSeekableStreamPartitions().getPartitionSequenceNumberMap();
     } else {
@@ -1509,7 +1496,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     int taskIndex = 0;
 
     while (taskIndex < taskSequences.size()) {
-      TreeMap<Integer, Map<PartitionType, SequenceType>> taskCheckpoints = taskSequences.get(taskIndex).rhs;
+      TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> taskCheckpoints = taskSequences.get(taskIndex).rhs;
       String taskId = taskSequences.get(taskIndex).lhs;
       if (earliestConsistentSequenceId.get() == -1) {
         // find the first replica task with earliest sequenceId consistent with datasource metadata in the metadata
@@ -1517,8 +1504,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         if (taskCheckpoints.entrySet().stream().anyMatch(
             sequenceCheckpoint -> sequenceCheckpoint.getValue().entrySet().stream().allMatch(
                 partitionOffset -> {
-                  OrderedSequenceNumber<SequenceType> sequence = makeSequenceNumber(partitionOffset.getValue());
-                  OrderedSequenceNumber<SequenceType> latestOffset = makeSequenceNumber(
+                  OrderedSequenceNumber<SequenceOffsetType> sequence = makeSequenceNumber(partitionOffset.getValue());
+                  OrderedSequenceNumber<SequenceOffsetType> latestOffset = makeSequenceNumber(
                       latestOffsetsFromDb == null ? partitionOffset.getValue() :
                       latestOffsetsFromDb.getOrDefault(
                           partitionOffset
@@ -1528,12 +1515,12 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
                       )
                   );
 
-                  return sequence.equals(latestOffset);
+                  return sequence.compareTo(latestOffset) == 0;
                 }
             ) && earliestConsistentSequenceId.compareAndSet(-1, sequenceCheckpoint.getKey())) || (
                 pendingCompletionTaskGroups.getOrDefault(groupId, new CopyOnWriteArrayList<>()).size() > 0
                 && earliestConsistentSequenceId.compareAndSet(-1, taskCheckpoints.firstKey()))) {
-          final SortedMap<Integer, Map<PartitionType, SequenceType>> latestCheckpoints = new TreeMap<>(
+          final SortedMap<Integer, Map<PartitionIdType, SequenceOffsetType>> latestCheckpoints = new TreeMap<>(
               taskCheckpoints.tailMap(earliestConsistentSequenceId.get())
           );
           log.info("Setting taskGroup sequences to [%s] for group [%d]", latestCheckpoints, groupId);
@@ -1596,7 +1583,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   private void addDiscoveredTaskToPendingCompletionTaskGroups(
       int groupId,
       String taskId,
-      Map<PartitionType, SequenceType> startingPartitions
+      Map<PartitionIdType, SequenceOffsetType> startingPartitions
   )
   {
     final CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingCompletionTaskGroups.computeIfAbsent(
@@ -1657,7 +1644,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
 
     @SuppressWarnings("unchecked")
-    SeekableStreamIndexTask<PartitionType, SequenceType> task = (SeekableStreamIndexTask<PartitionType, SequenceType>) taskOptional
+    SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>) taskOptional
         .get();
 
     String taskSequenceName = task.getIOConfig().getBaseSequenceName();
@@ -1679,14 +1666,14 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   @VisibleForTesting
   protected String generateSequenceName(
-      Map<PartitionType, SequenceType> startPartitions,
+      Map<PartitionIdType, SequenceOffsetType> startPartitions,
       Optional<DateTime> minimumMessageTime,
       Optional<DateTime> maximumMessageTime
   )
   {
     StringBuilder sb = new StringBuilder();
 
-    for (Entry<PartitionType, SequenceType> entry : startPartitions.entrySet()) {
+    for (Entry<PartitionIdType, SequenceOffsetType> entry : startPartitions.entrySet()) {
       sb.append(StringUtils.format("+%s(%s)", entry.getKey().toString(), entry.getValue().toString()));
     }
     String partitionOffsetStr = sb.toString().substring(1);
@@ -1717,7 +1704,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   private void updatePartitionDataFromStream()
   {
-    Set<PartitionType> partitionIds;
+    Set<PartitionIdType> partitionIds;
     try {
       synchronized (recordSupplierLock) {
         partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
@@ -1736,7 +1723,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
     log.debug("Found [%d] partitions for stream [%s]", partitionIds.size(), ioConfig.getStream());
 
-    Set<PartitionType> closedPartitions = getOffsetsFromMetadataStorage()
+    Set<PartitionIdType> closedPartitions = getOffsetsFromMetadataStorage()
         .entrySet()
         .stream()
         .filter(x -> OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(x.getValue()))
@@ -1744,7 +1731,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         .collect(Collectors.toSet());
 
     boolean initialPartitionDiscovery = this.partitionIds.isEmpty();
-    for (PartitionType partitionId : partitionIds) {
+    for (PartitionIdType partitionId : partitionIds) {
       if (closedPartitions.contains(partitionId)) {
         log.info("partition [%s] is closed and has no more data, skipping.", partitionId);
         continue;
@@ -1757,7 +1744,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
       int taskGroupId = getTaskGroupIdForPartition(partitionId);
 
-      ConcurrentHashMap<PartitionType, SequenceType> partitionMap = partitionGroups.computeIfAbsent(
+      ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionMap = partitionGroups.computeIfAbsent(
           taskGroupId,
           k -> new ConcurrentHashMap<>()
       );
@@ -1842,7 +1829,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
   private void checkTaskDuration() throws ExecutionException, InterruptedException, TimeoutException
   {
-    final List<ListenableFuture<Map<PartitionType, SequenceType>>> futures = new ArrayList<>();
+    final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> futures = new ArrayList<>();
     final List<Integer> futureGroupIds = new ArrayList<>();
 
     for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
@@ -1874,12 +1861,12 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       }
     }
 
-    List<Map<PartitionType, SequenceType>> results = Futures.successfulAsList(futures)
-                                                            .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+    List<Map<PartitionIdType, SequenceOffsetType>> results = Futures.successfulAsList(futures)
+                                                                    .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
     for (int j = 0; j < results.size(); j++) {
       Integer groupId = futureGroupIds.get(j);
       TaskGroup group = activelyReadingTaskGroups.get(groupId);
-      Map<PartitionType, SequenceType> endOffsets = results.get(j);
+      Map<PartitionIdType, SequenceOffsetType> endOffsets = results.get(j);
 
       if (endOffsets != null) {
         // set a timeout and put this group in pendingCompletionTaskGroups so that it can be monitored for completion
@@ -1887,7 +1874,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         pendingCompletionTaskGroups.computeIfAbsent(groupId, k -> new CopyOnWriteArrayList<>()).add(group);
 
         // set endOffsets as the next startOffsets
-        for (Entry<PartitionType, SequenceType> entry : endOffsets.entrySet()) {
+        for (Entry<PartitionIdType, SequenceOffsetType> entry : endOffsets.entrySet()) {
           partitionGroups.get(groupId).put(entry.getKey(), entry.getValue());
         }
       } else {
@@ -1908,7 +1895,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
   }
 
-  private ListenableFuture<Map<PartitionType, SequenceType>> checkpointTaskGroup(
+  private ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> checkpointTaskGroup(
       final TaskGroup taskGroup,
       final boolean finalize
   )
@@ -1929,11 +1916,11 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
             // publishing failed and we need to re-ingest)
             return Futures.transform(
                 stopTasksInGroup(taskGroup, "task[%s] succeeded in the taskGroup", task.status.getId()),
-                new Function<Object, Map<PartitionType, SequenceType>>()
+                new Function<Object, Map<PartitionIdType, SequenceOffsetType>>()
                 {
                   @Nullable
                   @Override
-                  public Map<PartitionType, SequenceType> apply(@Nullable Object input)
+                  public Map<PartitionIdType, SequenceOffsetType> apply(@Nullable Object input)
                   {
                     return null;
                   }
@@ -1952,7 +1939,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
 
     // 2) Pause running tasks
-    final List<ListenableFuture<Map<PartitionType, SequenceType>>> pauseFutures = new ArrayList<>();
+    final List<ListenableFuture<Map<PartitionIdType, SequenceOffsetType>>> pauseFutures = new ArrayList<>();
     final List<String> pauseTaskIds = ImmutableList.copyOf(taskGroup.taskIds());
     for (final String taskId : pauseTaskIds) {
       pauseFutures.add(taskClient.pauseAsync(taskId));
@@ -1960,16 +1947,16 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
 
     return Futures.transform(
         Futures.successfulAsList(pauseFutures),
-        new Function<List<Map<PartitionType, SequenceType>>, Map<PartitionType, SequenceType>>()
+        new Function<List<Map<PartitionIdType, SequenceOffsetType>>, Map<PartitionIdType, SequenceOffsetType>>()
         {
           @Nullable
           @Override
-          public Map<PartitionType, SequenceType> apply(List<Map<PartitionType, SequenceType>> input)
+          public Map<PartitionIdType, SequenceOffsetType> apply(List<Map<PartitionIdType, SequenceOffsetType>> input)
           {
             // 3) Build a map of the highest sequence read by any task in the group for each partition
-            final Map<PartitionType, SequenceType> endOffsets = new HashMap<>();
+            final Map<PartitionIdType, SequenceOffsetType> endOffsets = new HashMap<>();
             for (int i = 0; i < input.size(); i++) {
-              Map<PartitionType, SequenceType> result = input.get(i);
+              Map<PartitionIdType, SequenceOffsetType> result = input.get(i);
 
               if (result == null || result.isEmpty()) { // kill tasks that didn't return a value
                 String taskId = pauseTaskIds.get(i);
@@ -1977,7 +1964,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
                 taskGroup.tasks.remove(taskId);
 
               } else { // otherwise build a map of the highest sequences seen
-                for (Entry<PartitionType, SequenceType> sequence : result.entrySet()) {
+                for (Entry<PartitionIdType, SequenceOffsetType> sequence : result.entrySet()) {
                   if (!endOffsets.containsKey(sequence.getKey())
                       || makeSequenceNumber(endOffsets.get(sequence.getKey())).compareTo(
                       makeSequenceNumber(sequence.getValue())) < 0) {
@@ -2251,10 +2238,10 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         ) : Optional.absent());
 
 
-        Map<PartitionType, OrderedSequenceNumber<SequenceType>> startingOffsets = generateStartingSequencesForPartitionGroup(
+        Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets = generateStartingSequencesForPartitionGroup(
             groupId);
 
-        ImmutableMap<PartitionType, SequenceType> simpleStartingOffsets = startingOffsets
+        ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
             .entrySet()
             .stream()
             .filter(x -> x.getValue().get() != null)
@@ -2263,15 +2250,15 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
                 ImmutableMap::copyOf
             ));
 
-        Set<PartitionType> exclusiveStartSequenceNumberPartitions = !useExclusiveStartingSequence
-                                                                    ? Collections.emptySet()
-                                                                    : startingOffsets
-                                                                        .entrySet()
-                                                                        .stream()
-                                                                        .filter(x -> x.getValue().get() != null
-                                                                                     && x.getValue().isExclusive())
-                                                                        .map(Entry::getKey)
-                                                                        .collect(Collectors.toSet());
+        Set<PartitionIdType> exclusiveStartSequenceNumberPartitions = !useExclusiveStartingSequence
+                                                                      ? Collections.emptySet()
+                                                                      : startingOffsets
+                                                                          .entrySet()
+                                                                          .stream()
+                                                                          .filter(x -> x.getValue().get() != null
+                                                                                       && x.getValue().isExclusive())
+                                                                          .map(Entry::getKey)
+                                                                          .collect(Collectors.toSet());
 
         activelyReadingTaskGroups.put(
             groupId,
@@ -2323,7 +2310,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
   @VisibleForTesting
-  protected void moveTaskGroupToPendingCompletion(int taskGroupId)
+  public void moveTaskGroupToPendingCompletion(int taskGroupId)
   {
     final TaskGroup taskGroup = activelyReadingTaskGroups.remove(taskGroupId);
     if (taskGroup != null) {
@@ -2332,19 +2319,19 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
   @VisibleForTesting
-  protected int getNoticesQueueSize()
+  public int getNoticesQueueSize()
   {
     return notices.size();
   }
 
-  private ImmutableMap<PartitionType, OrderedSequenceNumber<SequenceType>> generateStartingSequencesForPartitionGroup(
+  private ImmutableMap<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> generateStartingSequencesForPartitionGroup(
       int groupId
   )
   {
-    ImmutableMap.Builder<PartitionType, OrderedSequenceNumber<SequenceType>> builder = ImmutableMap.builder();
-    for (Entry<PartitionType, SequenceType> entry : partitionGroups.get(groupId).entrySet()) {
-      PartitionType partition = entry.getKey();
-      SequenceType sequence = entry.getValue();
+    ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
+    for (Entry<PartitionIdType, SequenceOffsetType> entry : partitionGroups.get(groupId).entrySet()) {
+      PartitionIdType partition = entry.getKey();
+      SequenceOffsetType sequence = entry.getValue();
 
       if (!getNotSetMarker().equals(sequence)) {
         // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
@@ -2354,7 +2341,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
         // get the sequence from metadata storage (if available) or Kafka/Kinesis (otherwise)
-        OrderedSequenceNumber<SequenceType> offsetFromStorage = getOffsetFromStorageForPartition(partition);
+        OrderedSequenceNumber<SequenceOffsetType> offsetFromStorage = getOffsetFromStorageForPartition(partition);
 
         if (offsetFromStorage != null) {
           builder.put(partition, offsetFromStorage);
@@ -2368,10 +2355,10 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    * Queries the dataSource metadata table to see if there is a previous ending sequence for this partition. If it doesn't
    * find any data, it will retrieve the latest or earliest Kafka/Kinesis sequence depending on the useEarliestOffset config.
    */
-  private OrderedSequenceNumber<SequenceType> getOffsetFromStorageForPartition(PartitionType partition)
+  private OrderedSequenceNumber<SequenceOffsetType> getOffsetFromStorageForPartition(PartitionIdType partition)
   {
-    final Map<PartitionType, SequenceType> metadataOffsets = getOffsetsFromMetadataStorage();
-    SequenceType sequence = metadataOffsets.get(partition);
+    final Map<PartitionIdType, SequenceOffsetType> metadataOffsets = getOffsetsFromMetadataStorage();
+    SequenceOffsetType sequence = metadataOffsets.get(partition);
     if (sequence != null) {
       log.debug("Getting sequence [%s] from metadata storage for partition [%s]", sequence, partition);
       if (!taskTuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
@@ -2415,13 +2402,13 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     }
   }
 
-  private Map<PartitionType, SequenceType> getOffsetsFromMetadataStorage()
+  private Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorage()
   {
     final DataSourceMetadata dataSourceMetadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
         && checkSourceMetadataMatch(dataSourceMetadata)) {
       @SuppressWarnings("unchecked")
-      SeekableStreamPartitions<PartitionType, SequenceType> partitions = ((SeekableStreamDataSourceMetadata) dataSourceMetadata)
+      SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> partitions = ((SeekableStreamDataSourceMetadata) dataSourceMetadata)
           .getSeekableStreamPartitions();
       if (partitions != null) {
         if (!ioConfig.getStream().equals(partitions.getStream())) {
@@ -2441,10 +2428,10 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
   @Nullable
-  private SequenceType getOffsetFromStreamForPartition(PartitionType partition, boolean useEarliestOffset)
+  private SequenceOffsetType getOffsetFromStreamForPartition(PartitionIdType partition, boolean useEarliestOffset)
   {
     synchronized (recordSupplierLock) {
-      StreamPartition<PartitionType> topicPartition = new StreamPartition<>(ioConfig.getStream(), partition);
+      StreamPartition<PartitionIdType> topicPartition = new StreamPartition<>(ioConfig.getStream(), partition);
       if (!recordSupplier.getAssignment().contains(topicPartition)) {
         recordSupplier.assign(Collections.singleton(topicPartition));
       }
@@ -2459,17 +2446,17 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
       throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     TaskGroup group = activelyReadingTaskGroups.get(groupId);
-    Map<PartitionType, SequenceType> startPartitions = group.startingSequences;
-    Map<PartitionType, SequenceType> endPartitions = new HashMap<>();
-    for (PartitionType partition : startPartitions.keySet()) {
+    Map<PartitionIdType, SequenceOffsetType> startPartitions = group.startingSequences;
+    Map<PartitionIdType, SequenceOffsetType> endPartitions = new HashMap<>();
+    for (PartitionIdType partition : startPartitions.keySet()) {
       endPartitions.put(partition, getEndOfPartitionMarker());
     }
-    Set<PartitionType> exclusiveStartSequenceNumberPartitions = activelyReadingTaskGroups.get(groupId).exclusiveStartSequenceNumberPartitions;
+    Set<PartitionIdType> exclusiveStartSequenceNumberPartitions = activelyReadingTaskGroups.get(groupId).exclusiveStartSequenceNumberPartitions;
 
     DateTime minimumMessageTime = activelyReadingTaskGroups.get(groupId).minimumMessageTime.orNull();
     DateTime maximumMessageTime = activelyReadingTaskGroups.get(groupId).maximumMessageTime.orNull();
 
-    SeekableStreamIOConfig newIoConfig = createIoConfig(
+    SeekableStreamIndexTaskIOConfig newIoConfig = createIoConfig(
         groupId,
         startPartitions,
         endPartitions,
@@ -2481,7 +2468,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     );
 
 
-    List<SeekableStreamIndexTask<PartitionType, SequenceType>> taskList = createIndexTasks(
+    List<SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>> taskList = createIndexTasks(
         replicas,
         group.baseSequenceName,
         sortingMapper,
@@ -2507,7 +2494,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
   @VisibleForTesting
-  protected Runnable updateCurrentAndLatestOffsets()
+  public Runnable updateCurrentAndLatestOffsets()
   {
     return () -> {
       try {
@@ -2532,7 +2519,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
     ).map(
         task -> Futures.transform(
             taskClient.getCurrentOffsetsAsync(task.getKey(), false),
-            (Function<Map<PartitionType, SequenceType>, Void>) (currentSequences) -> {
+            (Function<Map<PartitionIdType, SequenceOffsetType>, Void>) (currentSequences) -> {
 
               if (currentSequences != null && !currentSequences.isEmpty()) {
                 task.getValue().currentSequences = currentSequences;
@@ -2549,7 +2536,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   protected void updateLatestOffsetsFromStream()
   {
     synchronized (recordSupplierLock) {
-      Set<PartitionType> partitionIds = null;
+      Set<PartitionIdType> partitionIds = null;
       try {
         partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
       }
@@ -2558,7 +2545,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         Throwables.propagate(e);
       }
 
-      Set<StreamPartition<PartitionType>> partitions = partitionIds
+      Set<StreamPartition<PartitionIdType>> partitions = partitionIds
           .stream()
           .map(e -> new StreamPartition<>(ioConfig.getStream(), e))
           .collect(Collectors.toSet());
@@ -2572,11 +2559,11 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
   protected abstract void updateLatestSequenceFromStream(
-      RecordSupplier<PartitionType, SequenceType> recordSupplier,
-      Set<StreamPartition<PartitionType>> partitions
+      RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
+      Set<StreamPartition<PartitionIdType>> partitions
   );
 
-  protected Map<PartitionType, SequenceType> getHighestCurrentOffsets()
+  protected Map<PartitionIdType, SequenceOffsetType> getHighestCurrentOffsets()
   {
     return activelyReadingTaskGroups
         .values()
@@ -2590,7 +2577,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         ));
   }
 
-  private OrderedSequenceNumber<SequenceType> makeSequenceNumber(SequenceType seq)
+  private OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(SequenceOffsetType seq)
   {
     return makeSequenceNumber(seq, false);
   }
@@ -2649,8 +2636,8 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
         new CheckpointNotice(
             taskGroupId,
             baseSequenceName,
-            (SeekableStreamDataSourceMetadata<PartitionType, SequenceType>) previousCheckPoint,
-            (SeekableStreamDataSourceMetadata<PartitionType, SequenceType>) currentCheckPoint
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) previousCheckPoint,
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) currentCheckPoint
         )
     );
   }
@@ -2660,14 +2647,14 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    *
    * @return specific instance of Kafka/Kinesis IOConfig
    */
-  protected abstract SeekableStreamIOConfig createIoConfig(
+  protected abstract SeekableStreamIndexTaskIOConfig createIoConfig(
       int groupId,
-      Map<PartitionType, SequenceType> startPartitions,
-      Map<PartitionType, SequenceType> endPartitions,
+      Map<PartitionIdType, SequenceOffsetType> startPartitions,
+      Map<PartitionIdType, SequenceOffsetType> endPartitions,
       String baseSequenceName,
       DateTime minimumMessageTime,
       DateTime maximumMessageTime,
-      Set<PartitionType> exclusiveStartSequenceNumberPartitions,
+      Set<PartitionIdType> exclusiveStartSequenceNumberPartitions,
       SeekableStreamSupervisorIOConfig ioConfig
   );
 
@@ -2679,13 +2666,13 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    *
    * @throws JsonProcessingException
    */
-  protected abstract List<SeekableStreamIndexTask<PartitionType, SequenceType>> createIndexTasks(
+  protected abstract List<SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>> createIndexTasks(
       int replicas,
       String baseSequenceName,
       ObjectMapper sortingMapper,
-      TreeMap<Integer, Map<PartitionType, SequenceType>> sequenceOffsets,
-      SeekableStreamIOConfig taskIoConfig,
-      SeekableStreamTuningConfig taskTuningConfig,
+      TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>> sequenceOffsets,
+      SeekableStreamIndexTaskIOConfig taskIoConfig,
+      SeekableStreamIndexTaskTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
   ) throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException;
 
@@ -2697,7 +2684,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    *
    * @return taskgroup id
    */
-  protected abstract int getTaskGroupIdForPartition(PartitionType partition);
+  protected abstract int getTaskGroupIdForPartition(PartitionIdType partition);
 
   /**
    * checks if the passed in DataSourceMetadata is a specific instance
@@ -2727,19 +2714,19 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    *
    * @return specific instance of datasource metadata
    */
-  protected abstract SeekableStreamDataSourceMetadata<PartitionType, SequenceType> createDataSourceMetaData(
+  protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaData(
       String
-          stream, Map<PartitionType, SequenceType> map
+          stream, Map<PartitionIdType, SequenceOffsetType> map
   );
 
   /**
-   * wraps the passed in SequenceType sequence number into a {@link OrderedSequenceNumber} object
+   * wraps the passed in SequenceOffsetType sequence number into a {@link OrderedSequenceNumber} object
    * to facilitate comparison and accomodate exclusive starting sequennce in kinesis
    *
    * @return specific instance of [Kafka/Kinesis]OrderedSequenceNumber
    */
-  protected abstract OrderedSequenceNumber<SequenceType> makeSequenceNumber(
-      SequenceType seq,
+  protected abstract OrderedSequenceNumber<SequenceOffsetType> makeSequenceNumber(
+      SequenceOffsetType seq,
       boolean isExclusive
   );
 
@@ -2755,14 +2742,14 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    *
    * @return map of partition id -> lag
    */
-  protected abstract Map<PartitionType, SequenceType> getLagPerPartition(Map<PartitionType, SequenceType> currentOffsets);
+  protected abstract Map<PartitionIdType, SequenceOffsetType> getLagPerPartition(Map<PartitionIdType, SequenceOffsetType> currentOffsets);
 
   /**
    * returns an instance of a specific Kinesis/Kafka recordSupplier
    *
    * @return specific instance of Kafka/Kinesis RecordSupplier
    */
-  protected abstract RecordSupplier<PartitionType, SequenceType> setupRecordSupplier()
+  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> setupRecordSupplier()
       throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException;
 
   /**
@@ -2770,7 +2757,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    *
    * @return specific instance of Kafka/Kinesis Supervisor Report Payload
    */
-  protected abstract SeekableStreamSupervisorReportPayload<PartitionType, SequenceType> createReportPayload(
+  protected abstract SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> createReportPayload(
       int numPartitions,
       boolean includeOffsets
   );
@@ -2781,12 +2768,12 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
    * @return true if still valid else false
    */
   private boolean checkSequenceAvailability(
-      @NotNull PartitionType partition,
-      @NotNull SequenceType sequenceFromMetadata
+      @NotNull PartitionIdType partition,
+      @NotNull SequenceOffsetType sequenceFromMetadata
   )
   {
-    SequenceType earliestSequence = getOffsetFromStreamForPartition(partition, true);
-    SequenceType latestSequence = getOffsetFromStreamForPartition(partition, false);
+    SequenceOffsetType earliestSequence = getOffsetFromStreamForPartition(partition, true);
+    SequenceOffsetType latestSequence = getOffsetFromStreamForPartition(partition, false);
     return (earliestSequence == null
             || makeSequenceNumber(earliestSequence).compareTo(makeSequenceNumber(sequenceFromMetadata)) <= 0)
            && (latestSequence == null
@@ -2794,7 +2781,7 @@ public abstract class SeekableStreamSupervisor<PartitionType, SequenceType>
   }
 
 
-  protected abstract SequenceType getNotSetMarker();
+  protected abstract SequenceOffsetType getNotSetMarker();
 
-  protected abstract SequenceType getEndOfPartitionMarker();
+  protected abstract SequenceOffsetType getEndOfPartitionMarker();
 }

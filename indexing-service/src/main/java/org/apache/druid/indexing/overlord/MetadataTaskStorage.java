@@ -125,7 +125,7 @@ public class MetadataTaskStorage implements TaskStorage
     Preconditions.checkNotNull(status, "status");
     Preconditions.checkArgument(
         task.getId().equals(status.getId()),
-        "Task/Status ID mismatch[%s/%s]",
+        "Task/Status RandomId mismatch[%s/%s]",
         task.getId(),
         status.getId()
     );

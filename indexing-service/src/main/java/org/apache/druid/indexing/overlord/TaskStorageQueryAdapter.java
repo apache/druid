@@ -90,7 +90,7 @@ public class TaskStorageQueryAdapter
    * with the result set perhaps growing boundlessly and we do not do anything to protect against that.  Use at your
    * own risk and know that at some point, we might adjust this to actually enforce some sort of limits.
    *
-   * @param taskid task ID
+   * @param taskid task RandomId
    * @return set of segments created by the specified task
    */
   @Deprecated

@@ -24,32 +24,32 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
-import org.apache.druid.indexing.kafka.KafkaIOConfig;
 import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskIOConfig;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.indexing.kafka.KafkaSequenceNumber;
-import org.apache.druid.indexing.kafka.KafkaTuningConfig;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
+import org.apache.druid.indexing.seekablestream.utils.RandomId;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -64,10 +64,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 /**
@@ -193,7 +191,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
 
   @Override
-  protected SeekableStreamIOConfig createIoConfig(
+  protected SeekableStreamIndexTaskIOConfig createIoConfig(
       int groupId,
       Map<Integer, Long> startPartitions,
       Map<Integer, Long> endPartitions,
@@ -205,7 +203,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   )
   {
     KafkaSupervisorIOConfig kafkaIoConfig = (KafkaSupervisorIOConfig) ioConfig;
-    return new KafkaIOConfig(
+    return new KafkaIndexTaskIOConfig(
         groupId,
         baseSequenceName,
         new SeekableStreamPartitions<>(kafkaIoConfig.getTopic(), startPartitions),
@@ -224,10 +222,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
       String baseSequenceName,
       ObjectMapper sortingMapper,
       TreeMap<Integer, Map<Integer, Long>> sequenceOffsets,
-      SeekableStreamIOConfig taskIoConfig,
-      SeekableStreamTuningConfig taskTuningConfig,
+      SeekableStreamIndexTaskIOConfig taskIoConfig,
+      SeekableStreamIndexTaskTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
-  ) throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  ) throws JsonProcessingException
   {
     final String checkpoints = sortingMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
     {
@@ -246,13 +244,13 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
     List<SeekableStreamIndexTask<Integer, Long>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
-      String taskId = Joiner.on("_").join(baseSequenceName, getRandomId());
+      String taskId = Joiner.on("_").join(baseSequenceName, RandomId.getRandomId());
       taskList.add(new KafkaIndexTask(
           taskId,
           new TaskResource(baseSequenceName, 1),
           spec.getDataSchema(),
-          (KafkaTuningConfig) taskTuningConfig,
-          (KafkaIOConfig) taskIoConfig,
+          (KafkaIndexTaskTuningConfig) taskTuningConfig,
+          (KafkaIndexTaskIOConfig) taskIoConfig,
           context,
           null,
           null,
@@ -357,23 +355,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     return END_OF_PARTITION;
   }
 
-  // the following are for unit testing purposes only
-  @Override
-  @VisibleForTesting
-  protected void runInternal()
-      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException, NoSuchMethodException,
-             IllegalAccessException, ClassNotFoundException
-  {
-    super.runInternal();
-  }
-
-  @Override
-  @VisibleForTesting
-  protected Runnable updateCurrentAndLatestOffsets()
-  {
-    return super.updateCurrentAndLatestOffsets();
-  }
-
   @Override
   protected void updateLatestSequenceFromStream(
       RecordSupplier<Integer, Long> recordSupplier,
@@ -388,39 +369,10 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
-  @VisibleForTesting
-  protected void gracefulShutdownInternal() throws ExecutionException, InterruptedException, TimeoutException
-  {
-    super.gracefulShutdownInternal();
-  }
-
-  @Override
-  @VisibleForTesting
-  protected void resetInternal(DataSourceMetadata dataSourceMetadata)
-  {
-    super.resetInternal(dataSourceMetadata);
-  }
-
-  @Override
   protected String baseTaskName()
   {
     return "index_kafka";
   }
-
-  @Override
-  @VisibleForTesting
-  protected void moveTaskGroupToPendingCompletion(int taskGroupId)
-  {
-    super.moveTaskGroupToPendingCompletion(taskGroupId);
-  }
-
-  @Override
-  @VisibleForTesting
-  protected int getNoticesQueueSize()
-  {
-    return super.getNoticesQueueSize();
-  }
-
 
   @Override
   @VisibleForTesting
@@ -434,47 +386,5 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   protected void tryInit()
   {
     super.tryInit();
-  }
-
-  @Override
-  @VisibleForTesting
-  protected void addTaskGroupToActivelyReadingTaskGroup(
-      int taskGroupId,
-      ImmutableMap<Integer, Long> partitionOffsets,
-      Optional<DateTime> minMsgTime,
-      Optional<DateTime> maxMsgTime,
-      Set<String> tasks,
-      Set<Integer> exclusiveStartingSequencePartitions
-  )
-  {
-    super.addTaskGroupToActivelyReadingTaskGroup(
-        taskGroupId,
-        partitionOffsets,
-        minMsgTime,
-        maxMsgTime,
-        tasks,
-        exclusiveStartingSequencePartitions
-    );
-  }
-
-  @Override
-  @VisibleForTesting
-  protected void addTaskGroupToPendingCompletionTaskGroup(
-      int taskGroupId,
-      ImmutableMap<Integer, Long> partitionOffsets,
-      Optional<DateTime> minMsgTime,
-      Optional<DateTime> maxMsgTime,
-      Set<String> tasks,
-      Set<Integer> exclusiveStartingSequencePartitions
-  )
-  {
-    super.addTaskGroupToPendingCompletionTaskGroup(
-        taskGroupId,
-        partitionOffsets,
-        minMsgTime,
-        maxMsgTime,
-        tasks,
-        exclusiveStartingSequencePartitions
-    );
   }
 }

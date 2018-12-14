@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
@@ -56,6 +57,7 @@ import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
@@ -157,6 +159,33 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected <T> T deserialize(String content, Class<T> typeReference) throws IOException
   {
     return objectMapper.readValue(content, typeReference);
+  }
+
+  protected <T> T deserializeMap(String content, Class<? extends Map> mapClass, Class<?> keyClass, Class<?> valueClass)
+      throws IOException
+  {
+    return deserialize(content, objectMapper.getTypeFactory().constructMapType(mapClass, keyClass, valueClass));
+  }
+
+  protected <T> T deserializeNestedValueMap(
+      String content,
+      Class<? extends Map> mapClass,
+      Class<?> keyClass,
+      Class<? extends Map> valueMapClass,
+      Class<?> valueMapClassKey,
+      Class<?> valueMapClassValue
+  )
+      throws IOException
+  {
+    TypeFactory factory = objectMapper.getTypeFactory();
+    return deserialize(
+        content,
+        factory.constructMapType(
+            mapClass,
+            factory.constructType(keyClass),
+            factory.constructMapType(valueMapClass, valueMapClassKey, valueMapClassValue)
+        )
+    );
   }
 
   protected byte[] serialize(Object value) throws JsonProcessingException
@@ -334,7 +363,7 @@ public abstract class IndexTaskClient implements AutoCloseable
         // Since workers are free to move tasks around to different ports, there is a chance that a task may have been
         // moved but our view of its location has not been updated yet from ZK. To detect this case, we send a header
         // identifying our expected recipient in the request; if this doesn't correspond to the worker we messaged, the
-        // worker will return an HTTP 404 with its ID in the response header. If we get a mismatching task ID, then
+        // worker will return an HTTP 404 with its RandomId in the response header. If we get a mismatching task RandomId, then
         // we will wait for a short period then retry the request indefinitely, expecting the task's location to
         // eventually be updated.
 
@@ -406,14 +435,14 @@ public abstract class IndexTaskClient implements AutoCloseable
 
   /**
    * Throws if it's possible to throw the given Throwable.
-   *
+   * <p>
    * - The input throwable shouldn't be null.
    * - If Throwable is an {@link ExecutionException}, this calls itself recursively with the cause of ExecutionException.
    * - If Throwable is an {@link IOException} or a {@link ChannelException}, this simply throws it.
    * - If Throwable is an {@link InterruptedException}, this interrupts the current thread and throws a RuntimeException
-   *   wrapping the InterruptedException
+   * wrapping the InterruptedException
    * - Otherwise, this simply returns the given Throwable.
-   *
+   * <p>
    * Note that if the given Throable is an ExecutionException, this can return the cause of ExecutionException.
    */
   private RuntimeException throwIfPossible(Throwable t) throws IOException, ChannelException

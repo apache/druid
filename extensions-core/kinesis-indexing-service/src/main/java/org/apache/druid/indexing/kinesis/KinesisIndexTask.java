@@ -39,13 +39,13 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") KinesisTuningConfig tuningConfig,
-      @JsonProperty("ioConfig") KinesisIOConfig ioConfig,
+      @JsonProperty("tuningConfig") KinesisIndexTaskTuningConfig tuningConfig,
+      @JsonProperty("ioConfig") KinesisIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     super(
         id,
@@ -77,10 +77,10 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
   @Override
   protected KinesisRecordSupplier newTaskRecordSupplier()
-      throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException
+      throws RuntimeException
   {
-    KinesisIOConfig ioConfig = ((KinesisIOConfig) super.ioConfig);
-    KinesisTuningConfig tuningConfig = ((KinesisTuningConfig) super.tuningConfig);
+    KinesisIndexTaskIOConfig ioConfig = ((KinesisIndexTaskIOConfig) super.ioConfig);
+    KinesisIndexTaskTuningConfig tuningConfig = ((KinesisIndexTaskTuningConfig) super.tuningConfig);
     int fetchThreads = tuningConfig.getFetchThreads() != null
                        ? tuningConfig.getFetchThreads()
                        : Math.max(1, ioConfig.getStartPartitions().getPartitionSequenceNumberMap().size());
@@ -107,8 +107,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 
   @Override
   @JsonProperty("ioConfig")
-  public KinesisIOConfig getIOConfig()
+  public KinesisIndexTaskIOConfig getIOConfig()
   {
-    return (KinesisIOConfig) super.getIOConfig();
+    return (KinesisIndexTaskIOConfig) super.getIOConfig();
   }
 }

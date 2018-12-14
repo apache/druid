@@ -51,7 +51,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   private static final EmittingLogger log = new EmittingLogger(KafkaIndexTask.class);
   static final long POLL_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(100);
 
-  private final KafkaIOConfig ioConfig;
+  private final KafkaIndexTaskIOConfig ioConfig;
   private final ObjectMapper configMapper;
 
   // This value can be tuned in some tests
@@ -62,14 +62,14 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       @JsonProperty("id") String id,
       @JsonProperty("resource") TaskResource taskResource,
       @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") KafkaTuningConfig tuningConfig,
-      @JsonProperty("ioConfig") KafkaIOConfig ioConfig,
+      @JsonProperty("tuningConfig") KafkaIndexTaskTuningConfig tuningConfig,
+      @JsonProperty("ioConfig") KafkaIndexTaskIOConfig ioConfig,
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
       @JacksonInject ObjectMapper configMapper
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     super(
         id,
@@ -105,7 +105,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       KafkaRecordSupplier.addConsumerPropertiesFromConfig(
           props,
           configMapper,
-          ((KafkaIOConfig) ioConfig).getConsumerProperties()
+          ((KafkaIndexTaskIOConfig) ioConfig).getConsumerProperties()
       );
 
       props.setProperty("enable.auto.commit", "false");
@@ -166,7 +166,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-      final Map<String, Object> props = new HashMap<>(((KafkaIOConfig) super.ioConfig).getConsumerProperties());
+      final Map<String, Object> props = new HashMap<>(((KafkaIndexTaskIOConfig) super.ioConfig).getConsumerProperties());
 
       props.put("auto.offset.reset", "none");
       props.put("key.deserializer", ByteArrayDeserializer.class.getName());
@@ -181,9 +181,9 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 
   @Override
   @JsonProperty
-  public KafkaTuningConfig getTuningConfig()
+  public KafkaIndexTaskTuningConfig getTuningConfig()
   {
-    return (KafkaTuningConfig) super.getTuningConfig();
+    return (KafkaIndexTaskTuningConfig) super.getTuningConfig();
   }
 
   @VisibleForTesting
@@ -194,8 +194,8 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 
   @Override
   @JsonProperty("ioConfig")
-  public KafkaIOConfig getIOConfig()
+  public KafkaIndexTaskIOConfig getIOConfig()
   {
-    return (KafkaIOConfig) super.getIOConfig();
+    return (KafkaIndexTaskIOConfig) super.getIOConfig();
   }
 }

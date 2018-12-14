@@ -26,7 +26,6 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
@@ -60,7 +59,7 @@ import java.util.stream.Collectors;
 public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long>
 {
   private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingKafkaIndexTaskRunner.class);
-  private final KafkaTuningConfig tuningConfig;
+  private final KafkaIndexTaskTuningConfig tuningConfig;
   private final KafkaIndexTask task;
 
   public IncrementalPublishingKafkaIndexTaskRunner(
@@ -97,7 +96,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       TaskToolbox toolbox
   ) throws Exception
   {
-    // The retrying business is because the KafkaConsumer throws OffsetOutOfRangeException if the seeked-to
+    // Handles OffsetOutOfRangeException, which is thrown if the seeked-to
     // offset is not present in the topic-partition. This can happen if we're asking a task to read from data
     // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
     List<OrderedPartitionableRecord<Integer, Long>> records = new ArrayList<>();
@@ -113,7 +112,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected SeekableStreamPartitions<Integer, Long> createSeekableStreamPartitions(
+  protected SeekableStreamPartitions<Integer, Long> deserializeSeekableStreamPartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
@@ -208,10 +207,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   @Override
   protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(
       TaskToolbox toolbox,
-      SeekableStreamIndexTask<Integer, Long> task
+      String checkpointsString
   ) throws IOException
   {
-    final String checkpointsString = task.getContextValue("checkpoints");
     if (checkpointsString != null) {
       log.info("Checkpoints [%s]", checkpointsString);
       return toolbox.getObjectMapper().readValue(

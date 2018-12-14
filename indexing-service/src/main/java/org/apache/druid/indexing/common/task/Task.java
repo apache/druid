@@ -35,7 +35,7 @@ import java.util.Map;
  * Represents a task that can run on a worker. The general contracts surrounding Tasks are:
  * <ul>
  * <li>Tasks must operate on a single datasource.</li>
- * <li>Tasks should be immutable, since the task ID is used as a proxy for the task in many locations.</li>
+ * <li>Tasks should be immutable, since the task RandomId is used as a proxy for the task in many locations.</li>
  * <li>Task IDs must be unique. This can be done by naming them using UUIDs or the current timestamp.</li>
  * <li>Tasks are each part of a "task group", which is a set of tasks that can share interval locks. These are
  * useful for producing sharded segments.</li>
@@ -64,17 +64,17 @@ import java.util.Map;
 public interface Task
 {
   /**
-   * Returns ID of this task. Must be unique across all tasks ever created.
+   * Returns RandomId of this task. Must be unique across all tasks ever created.
    *
-   * @return task ID
+   * @return task RandomId
    */
   String getId();
 
   /**
-   * Returns group ID of this task. Tasks with the same group ID can share locks. If tasks do not need to share locks,
-   * a common convention is to set group ID equal to task ID.
+   * Returns group RandomId of this task. Tasks with the same group RandomId can share locks. If tasks do not need to share locks,
+   * a common convention is to set group RandomId equal to task RandomId.
    *
-   * @return task group ID
+   * @return task group RandomId
    */
   String getGroupId();
 

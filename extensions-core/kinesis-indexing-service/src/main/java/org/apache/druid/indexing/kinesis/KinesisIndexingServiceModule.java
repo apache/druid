@@ -40,7 +40,7 @@ public class KinesisIndexingServiceModule implements DruidModule
             .registerSubtypes(
                 new NamedType(KinesisIndexTask.class, "index_kinesis"),
                 new NamedType(KinesisDataSourceMetadata.class, "kinesis"),
-                new NamedType(KinesisIOConfig.class, "kinesis"),
+                new NamedType(KinesisIndexTaskIOConfig.class, "kinesis"),
                 new NamedType(KinesisSupervisorTuningConfig.class, "kinesis"),
                 new NamedType(KinesisSupervisorSpec.class, "kinesis")
             )

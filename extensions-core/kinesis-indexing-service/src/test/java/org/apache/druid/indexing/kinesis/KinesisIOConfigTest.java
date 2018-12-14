@@ -59,7 +59,7 @@ public class KinesisIOConfigTest
                      + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
-    KinesisIOConfig config = (KinesisIOConfig) mapper.readValue(
+    KinesisIndexTaskIOConfig config = (KinesisIndexTaskIOConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -119,7 +119,7 @@ public class KinesisIOConfigTest
                      + "  \"deaggregate\": true\n"
                      + "}";
 
-    KinesisIOConfig config = (KinesisIOConfig) mapper.readValue(
+    KinesisIndexTaskIOConfig config = (KinesisIndexTaskIOConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,

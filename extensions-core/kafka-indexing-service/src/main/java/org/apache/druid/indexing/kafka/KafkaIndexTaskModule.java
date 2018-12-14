@@ -43,7 +43,7 @@ public class KafkaIndexTaskModule implements DruidModule
             .registerSubtypes(
                 new NamedType(KafkaIndexTask.class, "index_kafka"),
                 new NamedType(KafkaDataSourceMetadata.class, "kafka"),
-                new NamedType(KafkaIOConfig.class, "kafka"),
+                new NamedType(KafkaIndexTaskIOConfig.class, "kafka"),
                 new NamedType(KafkaSupervisorTuningConfig.class, "kafka"),
                 new NamedType(KafkaSupervisorSpec.class, "kafka")
             )

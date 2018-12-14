@@ -79,19 +79,19 @@ public interface ParallelIndexTaskRunner<T extends Task>
   List<SubTaskSpec<T>> getCompleteSubTaskSpecs();
 
   /**
-   * Returns the {@link SubTaskSpec} of the given ID or null if it's not found.
+   * Returns the {@link SubTaskSpec} of the given RandomId or null if it's not found.
    */
   @Nullable
   SubTaskSpec<T> getSubTaskSpec(String subTaskSpecId);
 
   /**
-   * Returns {@link SubTaskSpecStatus} of the given ID or null if it's not found.
+   * Returns {@link SubTaskSpecStatus} of the given RandomId or null if it's not found.
    */
   @Nullable
   SubTaskSpecStatus getSubTaskState(String subTaskSpecId);
 
   /**
-   * Returns {@link TaskHistory} of the given ID or null if it's not found.
+   * Returns {@link TaskHistory} of the given RandomId or null if it's not found.
    */
   @Nullable
   TaskHistory<T> getCompleteSubTaskSpecAttemptHistory(String subTaskSpecId);

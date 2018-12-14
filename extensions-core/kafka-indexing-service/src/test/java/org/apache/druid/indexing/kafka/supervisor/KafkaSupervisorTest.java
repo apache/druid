@@ -45,10 +45,10 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
-import org.apache.druid.indexing.kafka.KafkaIOConfig;
 import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClient;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskIOConfig;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -280,9 +280,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask task = captured.getValue();
     Assert.assertEquals(dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.copyOf(), task.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
 
-    KafkaIOConfig taskConfig = task.getIOConfig();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals(kafkaHost, taskConfig.getConsumerProperties().get("bootstrap.servers"));
     Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
@@ -326,7 +326,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
 
     KafkaIndexTask task = captured.getValue();
-    KafkaIOConfig taskConfig = task.getIOConfig();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
 
     Assert.assertTrue("skipOffsetGaps", taskConfig.isSkipOffsetGaps());
   }
@@ -550,7 +550,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
 
     KafkaIndexTask task = captured.getValue();
-    KafkaIOConfig taskConfig = task.getIOConfig();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertEquals(10L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
     Assert.assertEquals(20L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(1));
@@ -1160,9 +1160,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     for (Task task : captured.getValues()) {
       KafkaIndexTask kafkaIndexTask = (KafkaIndexTask) task;
       Assert.assertEquals(dataSchema, kafkaIndexTask.getDataSchema());
-      Assert.assertEquals(tuningConfig.copyOf(), kafkaIndexTask.getTuningConfig());
+      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), kafkaIndexTask.getTuningConfig());
 
-      KafkaIOConfig taskConfig = kafkaIndexTask.getIOConfig();
+      KafkaIndexTaskIOConfig taskConfig = kafkaIndexTask.getIOConfig();
       Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
       Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
 
@@ -1250,9 +1250,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.copyOf(), capturedTask.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
-    KafkaIOConfig capturedTaskConfig = capturedTask.getIOConfig();
+    KafkaIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(kafkaHost, capturedTaskConfig.getConsumerProperties().get("bootstrap.servers"));
     Assert.assertEquals("myCustomValue", capturedTaskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
@@ -1347,9 +1347,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask capturedTask = captured.getValue();
     Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.copyOf(), capturedTask.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
-    KafkaIOConfig capturedTaskConfig = capturedTask.getIOConfig();
+    KafkaIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
     Assert.assertEquals(kafkaHost, capturedTaskConfig.getConsumerProperties().get("bootstrap.servers"));
     Assert.assertEquals("myCustomValue", capturedTaskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
@@ -1623,7 +1623,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
 
     for (Task task : captured.getValues()) {
-      KafkaIOConfig taskConfig = ((KafkaIndexTask) task).getIOConfig();
+      KafkaIndexTaskIOConfig taskConfig = ((KafkaIndexTask) task).getIOConfig();
       Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
       Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(2));
     }
@@ -1716,7 +1716,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
 
     for (Task task : captured.getValues()) {
-      KafkaIOConfig taskConfig = ((KafkaIndexTask) task).getIOConfig();
+      KafkaIndexTaskIOConfig taskConfig = ((KafkaIndexTask) task).getIOConfig();
       Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
       Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(2));
     }
@@ -2662,9 +2662,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     KafkaIndexTask task = captured.getValue();
     Assert.assertEquals(dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.copyOf(), task.getTuningConfig());
+    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
 
-    KafkaIOConfig taskConfig = task.getIOConfig();
+    KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals(kafkaHost, taskConfig.getConsumerProperties().get("bootstrap.servers"));
     Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
@@ -2892,14 +2892,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
       SeekableStreamPartitions<Integer, Long> endPartitions,
       DateTime minimumMessageTime,
       DateTime maximumMessageTime
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     return new KafkaIndexTask(
         id,
         null,
         getDataSchema(dataSource),
         tuningConfig,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             taskGroupId,
             "sequenceName-" + taskGroupId,
             startPartitions,
@@ -2986,4 +2986,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
       return StringUtils.format("sequenceName-%d", groupId);
     }
   }
+
+
 }

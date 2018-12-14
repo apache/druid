@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Set;
 
-public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implements IOConfig
+public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
   private static final boolean DEFAULT_SKIP_OFFSET_GAPS = false;
@@ -38,25 +38,25 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
   @Nullable
   private final Integer taskGroupId;
   private final String baseSequenceName;
-  private final SeekableStreamPartitions<PartitionType, SequenceType> startPartitions;
-  private final SeekableStreamPartitions<PartitionType, SequenceType> endPartitions;
+  private final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> startPartitions;
+  private final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> endPartitions;
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
   private final boolean skipOffsetGaps;
-  private final Set<PartitionType> exclusiveStartSequenceNumberPartitions;
+  private final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
 
   @JsonCreator
-  public SeekableStreamIOConfig(
+  public SeekableStreamIndexTaskIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
       @JsonProperty("baseSequenceName") String baseSequenceName,
-      @JsonProperty("startPartitions") SeekableStreamPartitions<PartitionType, SequenceType> startPartitions,
-      @JsonProperty("endPartitions") SeekableStreamPartitions<PartitionType, SequenceType> endPartitions,
+      @JsonProperty("startPartitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> startPartitions,
+      @JsonProperty("endPartitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> endPartitions,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps,
-      @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<PartitionType> exclusiveStartSequenceNumberPartitions
+      @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
   )
   {
     this.taskGroupId = taskGroupId;
@@ -88,7 +88,7 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
   // sequence number for certain partitions are discarded because they've already been
   // read by a previous task
   @JsonProperty
-  public Set<PartitionType> getExclusiveStartSequenceNumberPartitions()
+  public Set<PartitionIdType> getExclusiveStartSequenceNumberPartitions()
   {
     return exclusiveStartSequenceNumberPartitions;
   }
@@ -107,13 +107,13 @@ public abstract class SeekableStreamIOConfig<PartitionType, SequenceType> implem
   }
 
   @JsonProperty
-  public SeekableStreamPartitions<PartitionType, SequenceType> getStartPartitions()
+  public SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> getStartPartitions()
   {
     return startPartitions;
   }
 
   @JsonProperty
-  public SeekableStreamPartitions<PartitionType, SequenceType> getEndPartitions()
+  public SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> getEndPartitions()
   {
     return endPartitions;
   }

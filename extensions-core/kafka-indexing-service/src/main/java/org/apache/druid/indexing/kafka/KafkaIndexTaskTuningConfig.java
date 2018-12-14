@@ -21,7 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexing.seekablestream.SeekableStreamTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
@@ -29,14 +29,14 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.File;
 
-public class KafkaTuningConfig extends SeekableStreamTuningConfig
+public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningConfig
 {
   @JsonCreator
-  public KafkaTuningConfig(
+  public KafkaIndexTaskTuningConfig(
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
-      @JsonProperty("maxTotalRows") Long maxTotalRows,
+      @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("intermediatePersistPeriod") @Nullable Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") @Nullable File basePersistDirectory,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
@@ -60,7 +60,7 @@ public class KafkaTuningConfig extends SeekableStreamTuningConfig
         maxTotalRows,
         intermediatePersistPeriod,
         basePersistDirectory,
-        maxPendingPersists,
+        0,
         indexSpec,
         true,
         reportParseExceptions,
@@ -76,33 +76,9 @@ public class KafkaTuningConfig extends SeekableStreamTuningConfig
   }
 
   @Override
-  public KafkaTuningConfig copyOf()
+  public KafkaIndexTaskTuningConfig withBasePersistDirectory(File dir)
   {
-    return new KafkaTuningConfig(
-        getMaxRowsInMemory(),
-        getMaxBytesInMemory(),
-        getMaxRowsPerSegment(),
-        getMaxTotalRows(),
-        getIntermediatePersistPeriod(),
-        getBasePersistDirectory(),
-        0,
-        getIndexSpec(),
-        true,
-        isReportParseExceptions(),
-        getHandoffConditionTimeout(),
-        isResetOffsetAutomatically(),
-        getSegmentWriteOutMediumFactory(),
-        getIntermediateHandoffPeriod(),
-        isLogParseExceptions(),
-        getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
-    );
-  }
-
-  @Override
-  public KafkaTuningConfig withBasePersistDirectory(File dir)
-  {
-    return new KafkaTuningConfig(
+    return new KafkaIndexTaskTuningConfig(
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),
@@ -127,7 +103,7 @@ public class KafkaTuningConfig extends SeekableStreamTuningConfig
   @Override
   public String toString()
   {
-    return "KafkaTuningConfig{" +
+    return "KafkaIndexTaskTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +

@@ -22,7 +22,7 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIOConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.joda.time.DateTime;
@@ -30,7 +30,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Set;
 
-public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
+public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>
 {
   private static final boolean DEFAULT_PAUSE_AFTER_READ = true;
   public static final int DEFAULT_RECORDS_PER_FETCH = 4000;
@@ -48,7 +48,7 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
   private final boolean deaggregate;
 
   @JsonCreator
-  public KinesisIOConfig(
+  public KinesisIndexTaskIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId,
       @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") SeekableStreamPartitions<String, String> startPartitions,
@@ -152,7 +152,7 @@ public class KinesisIOConfig extends SeekableStreamIOConfig<String, String>
   @Override
   public String toString()
   {
-    return "KinesisIOConfig{" +
+    return "KinesisIndexTaskIOConfig{" +
            "baseSequenceName='" + getBaseSequenceName() + '\'' +
            ", startPartitions=" + getStartPartitions() +
            ", endPartitions=" + getEndPartitions() +

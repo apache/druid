@@ -27,7 +27,7 @@ import java.util.Objects;
 
 public class TaskPayloadResponse
 {
-  private final String task; // Task ID, named "task" in the JSONification of this class.
+  private final String task; // Task RandomId, named "task" in the JSONification of this class.
   private final Task payload;
 
   @JsonCreator

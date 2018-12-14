@@ -380,7 +380,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -423,7 +423,7 @@ public class KafkaIndexTaskTest
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -531,7 +531,7 @@ public class KafkaIndexTaskTest
     );
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             baseSequenceName,
             startPartitions,
@@ -658,7 +658,7 @@ public class KafkaIndexTaskTest
       );
       final KafkaIndexTask task = createTask(
           null,
-          new KafkaIOConfig(
+          new KafkaIndexTaskIOConfig(
               0,
               baseSequenceName,
               startPartitions,
@@ -798,7 +798,7 @@ public class KafkaIndexTaskTest
     );
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             baseSequenceName,
             startPartitions,
@@ -900,7 +900,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             baseSequenceName,
             startPartitions,
@@ -936,7 +936,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
@@ -990,7 +990,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
@@ -1054,7 +1054,7 @@ public class KafkaIndexTaskTest
                 )
             )
         ),
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
@@ -1114,7 +1114,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1155,7 +1155,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1207,7 +1207,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1262,7 +1262,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1306,7 +1306,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1388,7 +1388,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1448,7 +1448,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task1 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1462,7 +1462,7 @@ public class KafkaIndexTaskTest
     );
     final KafkaIndexTask task2 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1516,7 +1516,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task1 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1530,7 +1530,7 @@ public class KafkaIndexTaskTest
     );
     final KafkaIndexTask task2 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             1,
             "sequence1",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 3L)),
@@ -1585,7 +1585,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task1 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1599,7 +1599,7 @@ public class KafkaIndexTaskTest
     );
     final KafkaIndexTask task2 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             1,
             "sequence1",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 3L)),
@@ -1659,7 +1659,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L, 1, 0L)),
@@ -1724,7 +1724,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task1 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1738,7 +1738,7 @@ public class KafkaIndexTaskTest
     );
     final KafkaIndexTask task2 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             1,
             "sequence1",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(1, 0L)),
@@ -1794,7 +1794,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task1 = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1831,7 +1831,7 @@ public class KafkaIndexTaskTest
     // Start a new task
     final KafkaIndexTask task2 = createTask(
         task1.getId(),
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1883,7 +1883,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -1967,7 +1967,7 @@ public class KafkaIndexTaskTest
   {
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
@@ -2006,7 +2006,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 200L)),
@@ -2059,7 +2059,7 @@ public class KafkaIndexTaskTest
 
     final KafkaIndexTask task = createTask(
         null,
-        new KafkaIOConfig(
+        new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
             // task should ignore these and use sequence info sent in the context
@@ -2145,7 +2145,7 @@ public class KafkaIndexTaskTest
 
   private KafkaIndexTask createTask(
       final String taskId,
-      final KafkaIOConfig ioConfig
+      final KafkaIndexTaskIOConfig ioConfig
   ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
     return createTask(taskId, DATA_SCHEMA, ioConfig);
@@ -2153,7 +2153,7 @@ public class KafkaIndexTaskTest
 
   private KafkaIndexTask createTask(
       final String taskId,
-      final KafkaIOConfig ioConfig,
+      final KafkaIndexTaskIOConfig ioConfig,
       final Map<String, Object> context
   ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
@@ -2163,10 +2163,10 @@ public class KafkaIndexTaskTest
   private KafkaIndexTask createTask(
       final String taskId,
       final DataSchema dataSchema,
-      final KafkaIOConfig ioConfig
+      final KafkaIndexTaskIOConfig ioConfig
   ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
-    final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
+    final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
         1000,
         null,
         maxRowsPerSegment,
@@ -2211,11 +2211,11 @@ public class KafkaIndexTaskTest
   private KafkaIndexTask createTask(
       final String taskId,
       final DataSchema dataSchema,
-      final KafkaIOConfig ioConfig,
+      final KafkaIndexTaskIOConfig ioConfig,
       final Map<String, Object> context
   ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
   {
-    final KafkaTuningConfig tuningConfig = new KafkaTuningConfig(
+    final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
         1000,
         null,
         maxRowsPerSegment,

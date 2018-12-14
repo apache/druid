@@ -297,7 +297,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       int recordBufferFullWait,
       int fetchSequenceNumberTimeout,
       int maxRecordsPerPoll
-  ) throws ClassNotFoundException, IllegalAccessException, NoSuchMethodException
+  ) throws RuntimeException
   {
     Preconditions.checkNotNull(amazonKinesis);
     this.kinesis = amazonKinesis;
@@ -331,7 +331,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         log.error(
             "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
             + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
-        throw e;
+        throw new RuntimeException(e);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
       }
     } else {
       deaggregateHandle = null;
