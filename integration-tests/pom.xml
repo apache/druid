@@ -231,6 +231,7 @@
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
                                 -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
+                                -Ddruid.test.config.extraDatasourceNameSuffix=\ Россия\ 한국\ 中国!?
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
                                 -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
                                 -Ddruid.client.https.trustStorePassword=druid123

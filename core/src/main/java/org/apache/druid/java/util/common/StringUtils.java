@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -156,7 +157,19 @@ public class StringUtils
   public static String urlEncode(String s)
   {
     try {
-      return URLEncoder.encode(s, "UTF-8");
+      // application/x-www-form-urlencoded encodes spaces as "+", but we use this to encode non-form
+      // data as well, so replace "+" with "%20".
+      return StringUtils.replace(URLEncoder.encode(s, "UTF-8"), "+", "%20");
+    }
+    catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static String urlDecode(String s)
+  {
+    try {
+      return URLDecoder.decode(s, "UTF-8");
     }
     catch (UnsupportedEncodingException e) {
       throw new RuntimeException(e);

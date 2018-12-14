@@ -42,7 +42,6 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -121,7 +120,7 @@ public class OverlordResourceTestClient
           StringUtils.format(
               "%stask/%s/status",
               getIndexerURL(),
-              URLEncoder.encode(taskID, "UTF-8")
+              StringUtils.urlEncode(taskID)
           )
       );
 
@@ -234,7 +233,7 @@ public class OverlordResourceTestClient
   {
     try {
       StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(StringUtils.format("%ssupervisor/%s/shutdown", getIndexerURL(), id))),
+          new Request(HttpMethod.POST, new URL(StringUtils.format("%ssupervisor/%s/shutdown", getIndexerURL(), StringUtils.urlEncode(id)))),
           responseHandler
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {

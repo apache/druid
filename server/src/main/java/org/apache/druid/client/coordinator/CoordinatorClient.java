@@ -57,7 +57,7 @@ public class CoordinatorClient
           druidLeaderClient.makeRequest(HttpMethod.GET,
                                         StringUtils.format(
                                            "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
-                                           dataSource,
+                                           StringUtils.urlEncode(dataSource),
                                            interval.toString().replace('/', '_'),
                                            incompleteOk
                                        ))

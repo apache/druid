@@ -45,6 +45,7 @@ public class TestQueryHelper
   private final String brokerTLS;
   private final String router;
   private final String routerTLS;
+  private final IntegrationTestingConfig config;
 
   @Inject
   TestQueryHelper(
@@ -59,6 +60,7 @@ public class TestQueryHelper
     this.brokerTLS = config.getBrokerTLSUrl();
     this.router = config.getRouterUrl();
     this.routerTLS = config.getRouterTLSUrl();
+    this.config = config;
   }
 
   public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
