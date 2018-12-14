@@ -38,8 +38,8 @@ This extension provides two ways to parse Parquet files:
  module to parse the avro data
 
 Selection of conversion method is controlled by parser type, and the correct hadoop input format must also be set in 
-the `ioConfig`,  `org.apache.druid.data.input.parquet.simple.DruidParquetInputFormat` for `parquet` and 
-`org.apache.druid.data.input.parquet.avro.DruidParquetAvroInputFormat` for `parquet-avro`.
+the `ioConfig`,  `org.apache.druid.data.input.parquet.DruidParquetInputFormat` for `parquet` and 
+`org.apache.druid.data.input.parquet.DruidParquetAvroInputFormat` for `parquet-avro`.
  
 
 Both parse options support auto field discovery and flattening if provided with a 
@@ -75,7 +75,7 @@ When the time dimension is a [DateType column](https://github.com/apache/parquet
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "org.apache.druid.data.input.parquet.simple.DruidParquetInputFormat",
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetInputFormat",
         "paths": "path/to/file.parquet"
       },
       ...
@@ -129,7 +129,7 @@ When the time dimension is a [DateType column](https://github.com/apache/parquet
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "org.apache.druid.data.input.parquet.simple.DruidParquetInputFormat",
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetInputFormat",
         "paths": "path/to/file.parquet"
       },
       ...
@@ -172,7 +172,7 @@ When the time dimension is a [DateType column](https://github.com/apache/parquet
       "type": "hadoop",
       "inputSpec": {
         "type": "static",
-        "inputFormat": "org.apache.druid.data.input.parquet.avro.DruidParquetAvroInputFormat",
+        "inputFormat": "org.apache.druid.data.input.parquet.DruidParquetAvroInputFormat",
         "paths": "path/to/file.parquet"
       },
       ...

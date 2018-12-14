@@ -17,8 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.parquet.simple;
+package org.apache.druid.data.input.parquet;
 
+import org.apache.druid.data.input.parquet.simple.DruidParquetReadSupport;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.hadoop.ParquetInputFormat;
 
