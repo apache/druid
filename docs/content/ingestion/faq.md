@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "My Data isn't being loaded"
 ---
-
-## My Data isn't being loaded
+# My Data isn't being loaded
 
 ### Realtime Ingestion
 

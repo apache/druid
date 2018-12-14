@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Extension Examples"
 ---
-
-# Druid examples
+# Extension Examples
 
 ## TwitterSpritzerFirehose
 

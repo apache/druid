@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Querying data"
 ---
-
 # Tutorial: Querying data
 
 This tutorial will demonstrate how to query data in Druid, with examples for Druid's native query format and Druid SQL.

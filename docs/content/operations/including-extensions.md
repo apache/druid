@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Loading extensions"
 ---
-
 # Loading extensions
 
 ## Loading core extensions

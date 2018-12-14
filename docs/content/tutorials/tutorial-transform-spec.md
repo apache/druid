@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Transforming input data"
 ---
-
 # Tutorial: Transforming input data
 
 This tutorial will demonstrate how to use transform specs to filter and transform input data during ingestion.

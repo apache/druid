@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "Multitenancy Considerations"
 ---
 # Multitenancy Considerations
 

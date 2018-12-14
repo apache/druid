@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Materialized View"
 ---
-
 # Materialized View
 
 To use this feature, make sure to only load materialized-view-selection on broker and load materialized-view-maintenance on overlord. In addtion, this feature currently requires a hadoop cluster.

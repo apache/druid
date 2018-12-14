@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "groupBy Queries"
 ---
 # groupBy Queries
 

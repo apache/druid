@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Ingestion"
 ---
-
 # Ingestion
 
 ## Overview

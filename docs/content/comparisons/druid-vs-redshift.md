@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "Druid vs Redshift"
 ---
-Druid vs Redshift
-=================
-
+# Druid vs Redshift
 
 ### How does Druid compare to Redshift?
 

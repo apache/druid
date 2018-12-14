@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Miscellaneous Tasks"
 ---
-
 # Miscellaneous Tasks
 
 ## Noop Task

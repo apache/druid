@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "MySQL Metadata Store"
 ---
-
 # MySQL Metadata Store
 
 Make sure to [include](../../operations/including-extensions.html) `mysql-metadata-storage` as an extension.

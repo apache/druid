@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Schema Design"
 ---
-
 # Schema Design
 
 This page is meant to assist users in designing a schema for data to be ingested in Druid. Druid intakes denormalized data 

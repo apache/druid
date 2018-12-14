@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Performance FAQ"
 ---
-
 # Performance FAQ
 
 ## I can't match your benchmarked results

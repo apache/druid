@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Tutorial: Load streaming data from Kafka"
 ---
-
 # Tutorial: Load streaming data from Kafka
 
 ## Getting started

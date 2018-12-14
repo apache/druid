@@ -19,10 +19,9 @@
 
 ---
 layout: doc_page
+title: "MiddleManager Node"
 ---
-
-Middle Manager Node
-------------------
+# MiddleManager Node
 
 ### Configuration
 

@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Segments"
 ---
-Segments
-========
+# Segments
 
 Druid stores its index in *segment files*, which are partitioned by
 time. In a basic setup, one segment file is created for each time

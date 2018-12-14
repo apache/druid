@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Kafka Emitter"
 ---
-
 # Kafka Emitter
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `kafka-emitter` extension.

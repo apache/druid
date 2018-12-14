@@ -19,10 +19,10 @@
 
 ---
 layout: doc_page
+title: "Content for build.sbt"
 ---
+# Content for build.sbt
 
-Content for build.sbt
----------------------
 ```scala
 libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk" % "1.9.23" exclude("common-logging", "common-logging"),

@@ -19,6 +19,7 @@
 
 ---
 layout: doc_page
+title: "Multi-value dimensions"
 ---
 # Multi-value dimensions
 

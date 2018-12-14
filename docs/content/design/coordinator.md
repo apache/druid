@@ -19,9 +19,9 @@
 
 ---
 layout: doc_page
+title: "Coordinator Node"
 ---
-Coordinator Node
-================
+# Coordinator Node
 
 ### Configuration
 

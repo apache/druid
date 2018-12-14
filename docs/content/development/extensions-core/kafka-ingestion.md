@@ -19,8 +19,8 @@
 
 ---
 layout: doc_page
+title: "Kafka Indexing Service"
 ---
-
 # Kafka Indexing Service
 
 The Kafka indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
