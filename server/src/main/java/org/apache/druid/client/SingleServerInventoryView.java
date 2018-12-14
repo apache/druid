@@ -74,9 +74,7 @@ public class SingleServerInventoryView extends AbstractCuratorServerInventoryVie
   }
 
   @Override
-  protected DruidServer addInnerInventory(
-      DruidServer container, String inventoryKey, DataSegment inventory
-  )
+  protected DruidServer addInnerInventory(DruidServer container, String inventoryKey, DataSegment inventory)
   {
     Predicate<Pair<DruidServerMetadata, DataSegment>> predicate = Predicates.or(
         defaultFilter,
@@ -89,9 +87,7 @@ public class SingleServerInventoryView extends AbstractCuratorServerInventoryVie
   }
 
   @Override
-  protected DruidServer updateInnerInventory(
-      DruidServer container, String inventoryKey, DataSegment inventory
-  )
+  protected DruidServer updateInnerInventory(DruidServer container, String inventoryKey, DataSegment inventory)
   {
     return addInnerInventory(container, inventoryKey, inventory);
   }

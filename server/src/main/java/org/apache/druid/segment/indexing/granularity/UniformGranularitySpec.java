@@ -24,12 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
 
@@ -57,7 +57,7 @@ public class UniformGranularitySpec implements GranularitySpec
     this.segmentGranularity = segmentGranularity == null ? DEFAULT_SEGMENT_GRANULARITY : segmentGranularity;
 
     if (inputIntervals != null) {
-      List<Interval> granularIntervals = Lists.newArrayList();
+      List<Interval> granularIntervals = new ArrayList<>();
       for (Interval inputInterval : inputIntervals) {
         Iterables.addAll(granularIntervals, this.segmentGranularity.getIterable(inputInterval));
       }

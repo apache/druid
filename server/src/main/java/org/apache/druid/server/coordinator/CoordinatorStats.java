@@ -137,7 +137,8 @@ public class CoordinatorStats
         (final String statName, final Object2LongOpenHashMap<String> urStat) -> {
 
           final Object2LongOpenHashMap<String> myStat = perTierStats.computeIfAbsent(
-              statName, ignored -> new Object2LongOpenHashMap<>()
+              statName,
+              name -> new Object2LongOpenHashMap<>()
           );
 
           for (final Object2LongMap.Entry<String> entry : urStat.object2LongEntrySet()) {

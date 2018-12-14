@@ -29,6 +29,8 @@ public class GroupByQueryConfig
   public static final String CTX_KEY_STRATEGY = "groupByStrategy";
   public static final String CTX_KEY_FORCE_LIMIT_PUSH_DOWN = "forceLimitPushDown";
   public static final String CTX_KEY_APPLY_LIMIT_PUSH_DOWN = "applyLimitPushDown";
+  public static final String CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY = "forcePushDownNestedQuery";
+  public static final String CTX_KEY_EXECUTING_NESTED_QUERY = "executingNestedQuery";
   private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
@@ -73,6 +75,9 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private boolean forcePushDownLimit = false;
+
+  @JsonProperty
+  private boolean forcePushDownNestedQuery = false;
 
   @JsonProperty
   private boolean forceHashAggregation = false;
@@ -163,6 +168,11 @@ public class GroupByQueryConfig
     return numParallelCombineThreads;
   }
 
+  public boolean isForcePushDownNestedQuery()
+  {
+    return forcePushDownNestedQuery;
+  }
+
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
@@ -198,6 +208,7 @@ public class GroupByQueryConfig
     );
     newConfig.forcePushDownLimit = query.getContextBoolean(CTX_KEY_FORCE_LIMIT_PUSH_DOWN, isForcePushDownLimit());
     newConfig.forceHashAggregation = query.getContextBoolean(CTX_KEY_FORCE_HASH_AGGREGATION, isForceHashAggregation());
+    newConfig.forcePushDownNestedQuery = query.getContextBoolean(CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, isForcePushDownNestedQuery());
     newConfig.intermediateCombineDegree = query.getContextValue(
         CTX_KEY_INTERMEDIATE_COMBINE_DEGREE,
         getIntermediateCombineDegree()
@@ -226,6 +237,7 @@ public class GroupByQueryConfig
            ", forceHashAggregation=" + forceHashAggregation +
            ", intermediateCombineDegree=" + intermediateCombineDegree +
            ", numParallelCombineThreads=" + numParallelCombineThreads +
+           ", forcePushDownNestedQuery=" + forcePushDownNestedQuery +
            '}';
   }
 }

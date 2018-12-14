@@ -23,7 +23,6 @@ package org.apache.druid.query.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.CacheStrategy;
@@ -44,6 +43,7 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -113,7 +113,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -127,7 +127,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -163,7 +163,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         null,
@@ -174,7 +174,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -202,7 +202,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         null,
@@ -213,7 +213,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         null,
@@ -232,7 +232,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -246,7 +246,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         ImmutableMap.of(
@@ -259,7 +259,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         null
     );
 
-    final Map<String, AggregatorFactory> expectedLenient = Maps.newHashMap();
+    final Map<String, AggregatorFactory> expectedLenient = new HashMap<>();
     expectedLenient.put("foo", new LongSumAggregatorFactory("foo", "foo"));
     expectedLenient.put("bar", null);
     expectedLenient.put("baz", new LongMaxAggregatorFactory("baz", "baz"));
@@ -314,7 +314,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         null,
@@ -325,7 +325,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         null,
@@ -336,7 +336,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis3 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         null,
@@ -347,7 +347,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis4 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         null,
@@ -358,7 +358,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis5 = new SegmentAnalysis(
         "id",
         null,
-        Maps.newHashMap(),
+        new HashMap<>(),
         0,
         0,
         null,

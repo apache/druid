@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Maps;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -38,6 +37,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -58,7 +58,7 @@ public class Utils
     if (FileOutputFormat.getCompressOutput(job)) {
       codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
       codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
-      outputPath = new Path(outputPath.toString() + codec.getDefaultExtension());
+      outputPath = new Path(outputPath + codec.getDefaultExtension());
     }
 
     if (fs.exists(outputPath)) {
@@ -89,7 +89,7 @@ public class Utils
     } else {
       Class<? extends CompressionCodec> codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
       CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
-      return fs.exists(new Path(inputPath.toString() + codec.getDefaultExtension()));
+      return fs.exists(new Path(inputPath + codec.getDefaultExtension()));
     }
   }
 
@@ -101,7 +101,7 @@ public class Utils
     } else {
       Class<? extends CompressionCodec> codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
       CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
-      inputPath = new Path(inputPath.toString() + codec.getDefaultExtension());
+      inputPath = new Path(inputPath + codec.getDefaultExtension());
 
       return codec.createInputStream(fileSystem.open(inputPath));
     }
@@ -118,20 +118,15 @@ public class Utils
     );
   }
 
-  public static void storeStats(
-      JobContext job, Path path, Map<String, Object> stats
-  ) throws IOException
+  public static void storeStats(JobContext job, Path path, Map<String, Object> stats) throws IOException
   {
-    jsonMapper.writeValue(
-        makePathAndOutputStream(job, path, true),
-        stats
-    );
+    jsonMapper.writeValue(makePathAndOutputStream(job, path, true), stats);
   }
 
   public static String getFailureMessage(Job failedJob, ObjectMapper jsonMapper)
   {
     try {
-      Map<String, String> taskDiagsMap = Maps.newHashMap();
+      Map<String, String> taskDiagsMap = new HashMap<>();
       TaskCompletionEvent[] completionEvents = failedJob.getTaskCompletionEvents(0, 100);
       for (TaskCompletionEvent tce : completionEvents) {
         String[] taskDiags = failedJob.getTaskDiagnostics(tce.getTaskAttemptId());

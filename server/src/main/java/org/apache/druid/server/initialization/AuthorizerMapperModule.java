@@ -21,7 +21,6 @@ package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -41,6 +40,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -88,7 +88,7 @@ public class AuthorizerMapperModule implements DruidModule
     @Override
     public AuthorizerMapper get()
     {
-      Map<String, Authorizer> authorizerMap = Maps.newHashMap();
+      Map<String, Authorizer> authorizerMap = new HashMap<>();
       List<String> authorizers = authConfig.getAuthorizers();
 
       validateAuthorizers(authorizers);

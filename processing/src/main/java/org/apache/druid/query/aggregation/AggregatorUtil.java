@@ -154,7 +154,7 @@ public class AggregatorUtil
       dependencySet.addAll(postAggregator.getDependentFields());
     }
 
-    List<AggregatorFactory> condensedAggs = Lists.newArrayList();
+    List<AggregatorFactory> condensedAggs = new ArrayList<>();
     for (AggregatorFactory aggregatorSpec : aggList) {
       if (dependencySet.contains(aggregatorSpec.getName())) {
         condensedAggs.add(aggregatorSpec);

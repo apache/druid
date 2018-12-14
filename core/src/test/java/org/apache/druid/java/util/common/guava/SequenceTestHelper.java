@@ -134,7 +134,7 @@ public class SequenceTestHelper
             @Override
             public Integer accumulate(Integer accumulated, Integer in)
             {
-              return ++accumulated;
+              return accumulated + 1;
             }
           }
       );
@@ -156,7 +156,7 @@ public class SequenceTestHelper
             @Override
             public Integer accumulate(Integer accumulated, Integer in)
             {
-              return ++accumulated;
+              return accumulated + 1;
             }
           }
       );

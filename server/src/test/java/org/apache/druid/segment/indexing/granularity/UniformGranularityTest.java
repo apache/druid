@@ -164,7 +164,8 @@ public class UniformGranularityTest
     );
 
     equalsCheck(
-        spec, new UniformGranularitySpec(
+        spec,
+        new UniformGranularitySpec(
             Granularities.DAY,
             null,
             Lists.newArrayList(
@@ -198,7 +199,8 @@ public class UniformGranularityTest
     );
 
     notEqualsCheck(
-        spec, new UniformGranularitySpec(
+        spec,
+        new UniformGranularitySpec(
             Granularities.YEAR,
             null,
             Lists.newArrayList(
@@ -210,7 +212,8 @@ public class UniformGranularityTest
         )
     );
     notEqualsCheck(
-        spec, new UniformGranularitySpec(
+        spec,
+        new UniformGranularitySpec(
             Granularities.DAY,
             null,
             Lists.newArrayList(
@@ -222,7 +225,8 @@ public class UniformGranularityTest
         )
     );
     notEqualsCheck(
-        spec, new UniformGranularitySpec(
+        spec,
+        new UniformGranularitySpec(
             Granularities.DAY,
             Granularities.ALL,
             Lists.newArrayList(
@@ -239,15 +243,15 @@ public class UniformGranularityTest
   public void testPeriodSegmentGranularity()
   {
     final GranularitySpec spec = new UniformGranularitySpec(
-            new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles")),
-            null,
-            Lists.newArrayList(
-                    Intervals.of("2012-01-08T00-08:00/2012-01-11T00-08:00"),
-                    Intervals.of("2012-01-07T00-08:00/2012-01-08T00-08:00"),
-                    Intervals.of("2012-01-03T00-08:00/2012-01-04T00-08:00"),
-                    Intervals.of("2012-01-01T00-08:00/2012-01-03T00-08:00"),
-                    Intervals.of("2012-09-01T00-07:00/2012-09-03T00-07:00")
-            )
+        new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzfromString("America/Los_Angeles")),
+        null,
+        Lists.newArrayList(
+            Intervals.of("2012-01-08T00-08:00/2012-01-11T00-08:00"),
+            Intervals.of("2012-01-07T00-08:00/2012-01-08T00-08:00"),
+            Intervals.of("2012-01-03T00-08:00/2012-01-04T00-08:00"),
+            Intervals.of("2012-01-01T00-08:00/2012-01-03T00-08:00"),
+            Intervals.of("2012-09-01T00-07:00/2012-09-03T00-07:00")
+        )
     );
 
     Assert.assertTrue(spec.bucketIntervals().isPresent());
@@ -262,15 +266,15 @@ public class UniformGranularityTest
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzfromString("America/Los_Angeles"));
 
     final ArrayList<Long> expectedIntervals = Lists.newArrayList(
-            new Interval("2012-01-01/2012-01-02", chrono).toDurationMillis(),
-            new Interval("2012-01-02/2012-01-03", chrono).toDurationMillis(),
-            new Interval("2012-01-03/2012-01-04", chrono).toDurationMillis(),
-            new Interval("2012-01-07/2012-01-08", chrono).toDurationMillis(),
-            new Interval("2012-01-08/2012-01-09", chrono).toDurationMillis(),
-            new Interval("2012-01-09/2012-01-10", chrono).toDurationMillis(),
-            new Interval("2012-01-10/2012-01-11", chrono).toDurationMillis(),
-            new Interval("2012-09-01/2012-09-02", chrono).toDurationMillis(),
-            new Interval("2012-09-02/2012-09-03", chrono).toDurationMillis()
+        new Interval("2012-01-01/2012-01-02", chrono).toDurationMillis(),
+        new Interval("2012-01-02/2012-01-03", chrono).toDurationMillis(),
+        new Interval("2012-01-03/2012-01-04", chrono).toDurationMillis(),
+        new Interval("2012-01-07/2012-01-08", chrono).toDurationMillis(),
+        new Interval("2012-01-08/2012-01-09", chrono).toDurationMillis(),
+        new Interval("2012-01-09/2012-01-10", chrono).toDurationMillis(),
+        new Interval("2012-01-10/2012-01-11", chrono).toDurationMillis(),
+        new Interval("2012-09-01/2012-09-02", chrono).toDurationMillis(),
+        new Interval("2012-09-02/2012-09-03", chrono).toDurationMillis()
     );
 
     Assert.assertEquals(expectedIntervals, actualIntervals);

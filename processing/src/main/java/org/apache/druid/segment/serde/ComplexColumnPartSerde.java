@@ -34,6 +34,7 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   private final String typeName;
   private final ComplexMetricSerde serde;
   private final Serializer serializer;
+
   private ComplexColumnPartSerde(String typeName, Serializer serializer)
   {
     this.typeName = typeName;

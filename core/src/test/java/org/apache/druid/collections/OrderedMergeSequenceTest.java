@@ -174,7 +174,7 @@ public class OrderedMergeSequenceTest
   {
     final boolean[] done = new boolean[]{false, false};
 
-    final ArrayList<Sequence<Integer>> sequences = Lists.newArrayList();
+    final ArrayList<Sequence<Integer>> sequences = new ArrayList<>();
     sequences.add(
         new BaseSequence<Integer, Iterator<Integer>>(
             new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()

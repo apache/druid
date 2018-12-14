@@ -114,7 +114,8 @@ public class DataSourceQueryQueryToolChest
 
   @Override
   public Function<Result<DataSourceMetadataResultValue>, Result<DataSourceMetadataResultValue>> makePreComputeManipulatorFn(
-      DataSourceMetadataQuery query, MetricManipulationFn fn
+      DataSourceMetadataQuery query,
+      MetricManipulationFn fn
   )
   {
     return Functions.identity();

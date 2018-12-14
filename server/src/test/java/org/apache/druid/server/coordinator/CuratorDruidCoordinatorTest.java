@@ -62,6 +62,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -70,7 +71,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * This tests zookeeper specific coordinator/load queue/historical interactions, such as moving segments by the balancer
@@ -305,15 +305,14 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     DataSegment segmentToMove = sourceSegments.get(2);
 
-    List<String> sourceSegKeys = Lists.newArrayList();
-    List<String> destSegKeys = Lists.newArrayList();
+    List<String> sourceSegKeys = new ArrayList<>();
 
     for (DataSegment segment : sourceSegments) {
       sourceSegKeys.add(announceBatchSegmentsForServer(source, ImmutableSet.of(segment), zkPathsConfig, jsonMapper));
     }
 
     for (DataSegment segment : destinationSegments) {
-      destSegKeys.add(announceBatchSegmentsForServer(dest, ImmutableSet.of(segment), zkPathsConfig, jsonMapper));
+      announceBatchSegmentsForServer(dest, ImmutableSet.of(segment), zkPathsConfig, jsonMapper);
     }
 
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
@@ -383,7 +382,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     // clean up drop from load queue
     curator.delete().guaranteed().forPath(ZKPaths.makePath(SOURCE_LOAD_PATH, segmentToMove.getIdentifier()));
 
-    List<DruidServer> servers = serverView.getInventory().stream().collect(Collectors.toList());
+    List<DruidServer> servers = new ArrayList<>(serverView.getInventory());
 
     Assert.assertEquals(2, servers.get(0).getSegments().size());
     Assert.assertEquals(2, servers.get(1).getSegments().size());

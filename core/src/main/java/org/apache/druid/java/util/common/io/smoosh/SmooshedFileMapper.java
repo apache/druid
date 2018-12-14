@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common.io.smoosh;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.ByteBufferUtils;
@@ -35,9 +34,11 @@ import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Class that works in conjunction with FileSmoosher.  This class knows how to map in a set of files smooshed
@@ -72,7 +73,7 @@ public class SmooshedFileMapper implements Closeable
         outFiles.add(FileSmoosher.makeChunkFile(baseDir, i));
       }
 
-      Map<String, Metadata> internalFiles = Maps.newTreeMap();
+      Map<String, Metadata> internalFiles = new TreeMap<>();
       while ((line = in.readLine()) != null) {
         splits = line.split(",");
 
@@ -94,7 +95,7 @@ public class SmooshedFileMapper implements Closeable
 
   private final List<File> outFiles;
   private final Map<String, Metadata> internalFiles;
-  private final List<MappedByteBuffer> buffersList = Lists.newArrayList();
+  private final List<MappedByteBuffer> buffersList = new ArrayList<>();
 
   private SmooshedFileMapper(
       List<File> outFiles,

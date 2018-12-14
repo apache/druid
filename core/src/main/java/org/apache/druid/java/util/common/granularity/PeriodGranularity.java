@@ -22,7 +22,6 @@ package org.apache.druid.java.util.common.granularity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializable;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.jsontype.TypeSerializer;
@@ -140,8 +139,7 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
   @Override
   public byte[] getCacheKey()
   {
-    return StringUtils.toUtf8(getPeriod().toString() + ":" +
-                              getTimeZone().toString() + ":" + getOrigin());
+    return StringUtils.toUtf8(getPeriod() + ":" + getTimeZone() + ":" + getOrigin());
   }
 
   @Override
@@ -421,16 +419,14 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
       return t - offset;
     } else {
       throw new UnsupportedOperationException(
-          "Period cannot be converted to milliseconds as some fields mays vary in length with chronology "
-          + chronology.toString()
+          "Period cannot be converted to milliseconds as some fields mays vary in length with chronology " + chronology
       );
     }
   }
 
   @Override
-  public void serialize(
-      JsonGenerator jsonGenerator, SerializerProvider serializerProvider
-  ) throws IOException, JsonProcessingException
+  public void serialize(JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
+      throws IOException
   {
     // Retain the same behavior as before #3850.
     // i.e. when Granularity class was an enum.
@@ -448,8 +444,10 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
 
   @Override
   public void serializeWithType(
-      JsonGenerator jsonGenerator, SerializerProvider serializerProvider, TypeSerializer typeSerializer
-  ) throws IOException, JsonProcessingException
+      JsonGenerator jsonGenerator,
+      SerializerProvider serializerProvider,
+      TypeSerializer typeSerializer
+  ) throws IOException
   {
     serialize(jsonGenerator, serializerProvider);
   }

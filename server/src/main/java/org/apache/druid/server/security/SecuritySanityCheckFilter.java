@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.server.DruidNode;
-import org.eclipse.jetty.server.Response;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -67,9 +66,8 @@ public class SecuritySanityCheckFilter implements Filter
   }
 
   @Override
-  public void doFilter(
-      ServletRequest request, ServletResponse response, FilterChain chain
-  ) throws IOException, ServletException
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+      throws IOException, ServletException
   {
     HttpServletResponse httpResponse = (HttpServletResponse) response;
     OutputStream out = httpResponse.getOutputStream();
@@ -80,7 +78,7 @@ public class SecuritySanityCheckFilter implements Filter
 
     AuthenticationResult result = (AuthenticationResult) request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT);
     if (authInfoChecked != null || result != null || allowUnsecured != null) {
-      sendJsonError(httpResponse, Response.SC_FORBIDDEN, unauthorizedMessage, out);
+      sendJsonError(httpResponse, HttpServletResponse.SC_FORBIDDEN, unauthorizedMessage, out);
       out.close();
       return;
     }

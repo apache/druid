@@ -82,9 +82,7 @@ public class LikeFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(
-      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
-  )
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
@@ -176,7 +174,7 @@ public class LikeFilter implements Filter
         return new IntIterator()
         {
           int currIndex = startIndex;
-          int found = -1;
+          int found;
 
           {
             found = findNext();

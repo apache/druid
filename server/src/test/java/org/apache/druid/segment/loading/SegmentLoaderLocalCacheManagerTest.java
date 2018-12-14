@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -44,6 +43,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -87,7 +87,7 @@ public class SegmentLoaderLocalCacheManagerTest
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     localSegmentCacheFolder = tmpFolder.newFolder("segment_cache_folder");
 
-    final List<StorageLocationConfig> locations = Lists.newArrayList();
+    final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig = new StorageLocationConfig();
     locationConfig.setPath(localSegmentCacheFolder);
     locationConfig.setMaxSize(10000000000L);
@@ -156,7 +156,7 @@ public class SegmentLoaderLocalCacheManagerTest
   {
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
 
-    final List<StorageLocationConfig> locations = Lists.newArrayList();
+    final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig = new StorageLocationConfig();
     locationConfig.setPath(localStorageFolder);
     locationConfig.setMaxSize(10000000000L);
@@ -206,7 +206,7 @@ public class SegmentLoaderLocalCacheManagerTest
   @Test
   public void testRetrySuccessAtSecondLocation() throws Exception
   {
-    final List<StorageLocationConfig> locations = Lists.newArrayList();
+    final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig = new StorageLocationConfig();
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
     // mock can't write in first location
@@ -259,7 +259,7 @@ public class SegmentLoaderLocalCacheManagerTest
   @Test
   public void testRetryAllFail() throws Exception
   {
-    final List<StorageLocationConfig> locations = Lists.newArrayList();
+    final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig = new StorageLocationConfig();
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
     // mock can't write in first location
@@ -315,7 +315,7 @@ public class SegmentLoaderLocalCacheManagerTest
   @Test
   public void testEmptyToFullOrder() throws Exception
   {
-    final List<StorageLocationConfig> locations = Lists.newArrayList();
+    final List<StorageLocationConfig> locations = new ArrayList<>();
     final StorageLocationConfig locationConfig = new StorageLocationConfig();
     final File localStorageFolder = tmpFolder.newFolder("local_storage_folder");
     localStorageFolder.setWritable(true);

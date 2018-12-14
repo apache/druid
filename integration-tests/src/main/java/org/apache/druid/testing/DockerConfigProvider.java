@@ -103,6 +103,18 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getCustomCertCheckRouterUrl()
+      {
+        return "http://" + dockerIp + ":8891";
+      }
+
+      @Override
+      public String getCustomCertCheckRouterTLSUrl()
+      {
+        return "https://" + dockerIp + ":9091";
+      }
+
+      @Override
       public String getBrokerUrl()
       {
         return "http://" + dockerIp + ":8082";

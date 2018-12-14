@@ -71,9 +71,7 @@ public class CuratorModule implements Module
 
   @Provides
   @LazySingleton
-  public CuratorFramework makeCurator(
-      CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle
-  )
+  public CuratorFramework makeCurator(CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle)
   {
     final Builder builder = CuratorFrameworkFactory.builder();
     if (!Strings.isNullOrEmpty(config.getZkUser()) && !Strings.isNullOrEmpty(config.getZkPwd())) {

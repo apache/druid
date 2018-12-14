@@ -28,9 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Queues;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -199,7 +197,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       }
     }
 
-    List<DataSegment> cachedSegments = Lists.newArrayList();
+    List<DataSegment> cachedSegments = new ArrayList<>();
     File[] segmentsToLoad = baseDir.listFiles();
     int ignored = 0;
     for (int i = 0; i < segmentsToLoad.length; i++) {
@@ -274,7 +272,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         catch (IOException e) {
           removeSegment(segment, callback, false);
           throw new SegmentLoadingException(
-              e, "Failed to write to disk segment info cache file[%s]", segmentInfoCacheFile
+              e,
+              "Failed to write to disk segment info cache file[%s]",
+              segmentInfoCacheFile
           );
         }
       }
@@ -594,7 +594,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       this.announcer = announcer;
       this.exec = exec;
       this.intervalMillis = intervalMillis;
-      this.queue = Queues.newLinkedBlockingQueue();
+      this.queue = new LinkedBlockingQueue<>();
       this.doneAnnouncing = SettableFuture.create();
     }
 

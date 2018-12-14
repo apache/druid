@@ -41,6 +41,7 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 {
   private final HashFunction fn = Hashing.murmur3_128();
 
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection") // TODO understand if this field should be used or not
   private final List<HyperLogLogCollector> collectors = new ArrayList<>();
 
   @Param({"true"}) boolean targetIsDirect;

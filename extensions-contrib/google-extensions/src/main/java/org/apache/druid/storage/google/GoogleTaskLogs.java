@@ -131,12 +131,12 @@ public class GoogleTaskLogs implements TaskLogs
 
   private String getTaskLogKey(String taskid)
   {
-    return config.getPrefix() + "/" + taskid.replaceAll(":", "_");
+    return config.getPrefix() + "/" + taskid.replace(':', '_');
   }
 
   private String getTaskReportKey(String taskid)
   {
-    return config.getPrefix() + "/" + taskid.replaceAll(":", "_") + ".report.json";
+    return config.getPrefix() + "/" + taskid.replace(':', '_') + ".report.json";
   }
 
   @Override

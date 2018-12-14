@@ -138,7 +138,7 @@ public class ConcatSequenceTest
               public Integer accumulate(Integer accumulated, Integer in)
               {
                 Assert.assertEquals(accumulated, in);
-                return ++accumulated;
+                return accumulated + 1;
               }
             }
         ).intValue()
@@ -154,7 +154,7 @@ public class ConcatSequenceTest
           public Integer accumulate(Integer accumulated, Integer in)
           {
             Assert.assertEquals(accumulated, in);
-            return ++accumulated;
+            return accumulated + 1;
           }
         }
     );

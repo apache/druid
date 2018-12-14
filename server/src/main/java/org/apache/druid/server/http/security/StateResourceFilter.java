@@ -74,19 +74,4 @@ public class StateResourceFilter extends AbstractResourceFilter
 
     return request;
   }
-
-  @Override
-  public boolean isApplicable(String requestPath)
-  {
-    return requestPath.startsWith("druid/broker/v1") ||
-           requestPath.startsWith("druid/coordinator/v1") ||
-           requestPath.startsWith("druid/historical/v1") ||
-           requestPath.startsWith("druid/indexer/v1") ||
-           requestPath.startsWith("druid/coordinator/v1/rules") ||
-           requestPath.startsWith("druid/coordinator/v1/tiers") ||
-           requestPath.startsWith("druid/worker/v1") ||
-           requestPath.startsWith("druid/coordinator/v1/servers") ||
-           requestPath.startsWith("druid/v2") ||
-           requestPath.startsWith("status");
-  }
 }

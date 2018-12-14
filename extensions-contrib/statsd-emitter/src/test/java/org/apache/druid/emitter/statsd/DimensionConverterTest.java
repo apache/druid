@@ -20,7 +20,7 @@
 package org.apache.druid.emitter.statsd;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.Test;
@@ -49,7 +49,7 @@ public class DimensionConverterTest
         .build(DateTimes.nowUtc(), "query/time", 10)
         .build("broker", "brokerHost1");
 
-    ImmutableList.Builder<String> actual = new ImmutableList.Builder<>();
+    ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();
     StatsDMetric statsDMetric = dimensionConverter.addFilteredUserDims(
         event.getService(),
         event.getMetric(),
@@ -57,9 +57,9 @@ public class DimensionConverterTest
         actual
     );
     assertEquals("correct StatsDMetric.Type", StatsDMetric.Type.timer, statsDMetric.type);
-    ImmutableList.Builder<String> expected = new ImmutableList.Builder<>();
-    expected.add("data-source");
-    expected.add("groupBy");
+    ImmutableMap.Builder<String, String> expected = new ImmutableMap.Builder<>();
+    expected.put("dataSource", "data-source");
+    expected.put("type", "groupBy");
     assertEquals("correct Dimensions", expected.build(), actual.build());
   }
 }

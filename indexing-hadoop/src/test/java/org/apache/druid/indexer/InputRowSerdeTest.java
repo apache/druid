@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -46,6 +45,7 @@ import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -68,7 +68,7 @@ public class InputRowSerdeTest
   {
     this.timestamp = System.currentTimeMillis();
     this.dims = ImmutableList.of("dim_non_existing", "d1", "d2", "d3", "d4", "d5");
-    this.event = Maps.newHashMap();
+    this.event = new HashMap<>();
     event.put("d1", "d1v");
     event.put("d2", ImmutableList.of("d2v1", "d2v2"));
     event.put("d3", 200L);

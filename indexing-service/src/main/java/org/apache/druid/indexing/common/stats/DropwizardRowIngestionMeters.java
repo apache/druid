@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.stats;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.Maps;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class DropwizardRowIngestionMeters implements RowIngestionMeters
@@ -108,21 +108,21 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   @Override
   public Map<String, Object> getMovingAverages()
   {
-    Map<String, Object> movingAverages = Maps.newHashMap();
+    Map<String, Object> movingAverages = new HashMap<>();
 
-    Map<String, Object> oneMinute = Maps.newHashMap();
+    Map<String, Object> oneMinute = new HashMap<>();
     oneMinute.put(PROCESSED, processed.getOneMinuteRate());
     oneMinute.put(PROCESSED_WITH_ERROR, processedWithError.getOneMinuteRate());
     oneMinute.put(UNPARSEABLE, unparseable.getOneMinuteRate());
     oneMinute.put(THROWN_AWAY, thrownAway.getOneMinuteRate());
 
-    Map<String, Object> fiveMinute = Maps.newHashMap();
+    Map<String, Object> fiveMinute = new HashMap<>();
     fiveMinute.put(PROCESSED, processed.getFiveMinuteRate());
     fiveMinute.put(PROCESSED_WITH_ERROR, processedWithError.getFiveMinuteRate());
     fiveMinute.put(UNPARSEABLE, unparseable.getFiveMinuteRate());
     fiveMinute.put(THROWN_AWAY, thrownAway.getFiveMinuteRate());
 
-    Map<String, Object> fifteenMinute = Maps.newHashMap();
+    Map<String, Object> fifteenMinute = new HashMap<>();
     fifteenMinute.put(PROCESSED, processed.getFifteenMinuteRate());
     fifteenMinute.put(PROCESSED_WITH_ERROR, processedWithError.getFifteenMinuteRate());
     fifteenMinute.put(UNPARSEABLE, unparseable.getFifteenMinuteRate());

@@ -1,9 +1,28 @@
 ---
 layout: doc_page
+title: "TLS Support"
 ---
 
-TLS Support
-===============
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+# TLS Support
 
 # General Configuration
 
@@ -71,3 +90,16 @@ to create your own extension.
 When Druid Coordinator/Overlord have both HTTP and HTTPS enabled and Client sends request to non-leader node, then Client is always redirected to the HTTPS endpoint on leader node.
 So, Clients should be first upgraded to be able to handle redirect to HTTPS. Then Druid Overlord/Coordinator should be upgraded and configured to run both HTTP and HTTPS ports. Then Client configuration should be changed to refer to Druid Coordinator/Overlord via the HTTPS endpoint and then HTTP port on Druid Coordinator/Overlord should be disabled.
 
+# Custom TLS certificate checks
+
+Druid supports custom certificate check extensions. Please refer to the `org.apache.druid.server.security.TLSCertificateChecker` interface for details on the methods to be implemented.
+
+To use a custom TLS certificate checker, specify the following property:
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|--------|
+|`druid.tls.certificateChecker`|Type name of custom TLS certificate checker, provided by extensions. Please refer to extension documentation for the type name that should be specified.|"default"|no|
+
+The default checker delegates to the standard trust manager and performs no additional actions or checks.
+
+If using a non-default certificate checker, please refer to the extension documentation for additional configuration properties needed.

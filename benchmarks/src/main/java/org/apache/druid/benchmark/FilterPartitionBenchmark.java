@@ -539,14 +539,11 @@ public class FilterPartitionBenchmark
 
   private static class NoBitmapSelectorDimFilter extends SelectorDimFilter
   {
-    public NoBitmapSelectorDimFilter(
-        String dimension,
-        String value,
-        ExtractionFn extractionFn
-    )
+    NoBitmapSelectorDimFilter(String dimension, String value, ExtractionFn extractionFn)
     {
       super(dimension, value, extractionFn);
     }
+
     @Override
     public Filter toFilter()
     {

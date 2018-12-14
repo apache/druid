@@ -62,7 +62,7 @@ public class ServiceAnnouncerTest extends CuratorTestBase
               public boolean apply(String input)
               {
                 try {
-                  return serviceDiscovery.queryForInstances(input.replaceAll("/", ":")).size() == 1;
+                  return serviceDiscovery.queryForInstances(input.replace('/', ':')).size() == 1;
                 }
                 catch (Exception e) {
                   throw new ISE(

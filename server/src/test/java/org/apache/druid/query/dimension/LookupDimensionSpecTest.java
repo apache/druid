@@ -47,24 +47,20 @@ import java.util.Map;
 public class LookupDimensionSpecTest
 {
   private static final Map<String, String> STRING_MAP = ImmutableMap.of("key", "value", "key2", "value2");
-  private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(
-      STRING_MAP, true);
+  private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(STRING_MAP, true);
 
   private static final LookupReferencesManager LOOKUP_REF_MANAGER = EasyMock.createMock(LookupReferencesManager.class);
 
   static {
-    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(
-        new LookupExtractorFactoryContainer(
-            "v0",
-            new MapLookupExtractorFactory(STRING_MAP, false)
-        )
-    ).anyTimes();
+    EasyMock
+        .expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName")))
+        .andReturn(new LookupExtractorFactoryContainer("v0", new MapLookupExtractorFactory(STRING_MAP, false)))
+        .anyTimes();
     EasyMock.replay(LOOKUP_REF_MANAGER);
   }
 
-  private final DimensionSpec lookupDimSpec = new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null,
-                                                                      true
-  );
+  private final DimensionSpec lookupDimSpec =
+      new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true);
 
 
   @Parameters

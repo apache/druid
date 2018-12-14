@@ -129,6 +129,18 @@
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-client</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-math3</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+              </exclusion>
             </exclusions>
         </dependency>
         <dependency>

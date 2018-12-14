@@ -20,8 +20,6 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -35,8 +33,10 @@ import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -90,7 +90,7 @@ public class RetryQueryRunnerTest
   public void testRunWithMissingSegments()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -135,7 +135,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -157,7 +157,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.newHashMap()
+                              new HashMap<>()
                           )
                       )
                   )
@@ -183,7 +183,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -205,7 +205,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.newHashMap()
+                              new HashMap<>()
                           )
                       )
                   )
@@ -230,7 +230,7 @@ public class RetryQueryRunnerTest
   public void testException()
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -263,7 +263,7 @@ public class RetryQueryRunnerTest
   {
     Map<String, Object> context = new ConcurrentHashMap<>();
     context.put("count", 0);
-    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
         new QueryRunner<Result<TimeseriesResultValue>>()
         {
@@ -288,7 +288,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.newHashMap()
+                              new HashMap<>()
                           )
                       )
                   )
@@ -306,7 +306,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.newHashMap()
+                              new HashMap<>()
                           )
                       )
                   )
@@ -321,7 +321,7 @@ public class RetryQueryRunnerTest
                       new Result<>(
                           DateTimes.nowUtc(),
                           new TimeseriesResultValue(
-                              Maps.newHashMap()
+                              new HashMap<>()
                           )
                       )
                   )

@@ -79,7 +79,7 @@ public class DimensionPredicateFilterBenchmark
               if (input == null) {
                 return false;
               }
-              return Integer.parseInt(input.toString()) % 2 == 0;
+              return Integer.parseInt(input) % 2 == 0;
             }
           };
         }

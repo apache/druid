@@ -21,6 +21,7 @@ package org.apache.druid.indexing.worker.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -39,7 +40,7 @@ public class WorkerConfig
 
   @JsonProperty
   @Min(1)
-  private int capacity = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+  private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
 
   public String getIp()
   {

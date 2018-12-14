@@ -35,6 +35,7 @@ public class QueryContexts
   public static final String MAX_SCATTER_GATHER_BYTES_KEY = "maxScatterGatherBytes";
   public static final String MAX_QUEUED_BYTES_KEY = "maxQueuedBytes";
   public static final String DEFAULT_TIMEOUT_KEY = "defaultTimeout";
+  @Deprecated
   public static final String CHUNK_PERIOD_KEY = "chunkPeriod";
 
   public static final boolean DEFAULT_BY_SEGMENT = false;
@@ -132,6 +133,7 @@ public class QueryContexts
     return parseInt(query, PRIORITY_KEY, defaultValue);
   }
 
+  @Deprecated
   public static <T> String getChunkPeriod(Query<T> query)
   {
     return query.getContextValue(CHUNK_PERIOD_KEY, "P0D");

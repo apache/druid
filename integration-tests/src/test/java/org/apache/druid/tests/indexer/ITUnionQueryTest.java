@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.indexer;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
@@ -46,6 +45,7 @@ import org.testng.annotations.Test;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -84,7 +84,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
           getTaskAsString(UNION_TASK_RESOURCE),
           DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
-      List<String> taskIDs = Lists.newArrayList();
+      List<String> taskIDs = new ArrayList<>();
       for (int i = 0; i < numTasks; i++) {
         taskIDs.add(
             indexer.submitTask(
@@ -157,17 +157,17 @@ public class ITUnionQueryTest extends AbstractIndexerTest
 
   private String setShutOffTime(String taskAsString, DateTime time)
   {
-    return taskAsString.replace("#SHUTOFFTIME", time.toString());
+    return StringUtils.replace(taskAsString, "#SHUTOFFTIME", time.toString());
   }
 
   private String withDataSource(String taskAsString, String dataSource)
   {
-    return taskAsString.replace(UNION_DATASOURCE, dataSource);
+    return StringUtils.replace(taskAsString, UNION_DATASOURCE, dataSource);
   }
 
   private String withServiceName(String taskAsString, String serviceName)
   {
-    return taskAsString.replace(EVENT_RECEIVER_SERVICE_PREFIX, serviceName);
+    return StringUtils.replace(taskAsString, EVENT_RECEIVER_SERVICE_PREFIX, serviceName);
   }
 
   public void postEvents(int id) throws Exception

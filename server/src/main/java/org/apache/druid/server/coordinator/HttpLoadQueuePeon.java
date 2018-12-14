@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -207,9 +206,8 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                   log.debug("Received NO CONTENT reseponse from [%s]", serverId);
                 } else if (HttpServletResponse.SC_OK == responseHandler.getStatus()) {
                   try {
-                    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = jsonMapper.readValue(
-                        result, RESPONSE_ENTITY_TYPE_REF
-                    );
+                    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses =
+                        jsonMapper.readValue(result, RESPONSE_ENTITY_TYPE_REF);
                     log.debug("Server[%s] returned status response [%s].", serverId, statuses);
                     synchronized (lock) {
                       if (stopped) {
@@ -471,7 +469,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   {
     private final DataSegment segment;
     private final DataSegmentChangeRequest changeRequest;
-    private final List<LoadPeonCallback> callbacks = Lists.newArrayList();
+    private final List<LoadPeonCallback> callbacks = new ArrayList<>();
 
     // Time when this request was sent to target server the first time.
     private volatile long scheduleTime = -1;

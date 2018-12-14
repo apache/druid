@@ -64,12 +64,11 @@ public class SelectQueryRunnerFactory
 
   @Override
   public QueryRunner<Result<SelectResultValue>> mergeRunners(
-      ExecutorService queryExecutor, Iterable<QueryRunner<Result<SelectResultValue>>> queryRunners
+      ExecutorService queryExecutor,
+      Iterable<QueryRunner<Result<SelectResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<Result<SelectResultValue>>(
-        queryExecutor, queryWatcher, queryRunners
-    );
+    return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
   }
 
   @Override

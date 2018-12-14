@@ -20,7 +20,6 @@
 package org.apache.druid.discovery;
 
 import java.util.Collection;
-import java.util.List;
 
 /**
  * Interface for discovering Druid Nodes announced by DruidNodeAnnouncer.
@@ -39,14 +38,16 @@ public interface DruidNodeDiscovery
    */
   interface Listener
   {
-    /**
-     * List of nodes added.
-     * First call to this method is also a signal that underlying cache in the DruidNodeDiscovery implementation
-     * has been initialized.
-     * @param nodes
-     */
-    void nodesAdded(List<DiscoveryDruidNode> nodes);
+    void nodesAdded(Collection<DiscoveryDruidNode> nodes);
 
-    void nodesRemoved(List<DiscoveryDruidNode> nodes);
+    void nodesRemoved(Collection<DiscoveryDruidNode> nodes);
+
+    /**
+     * Called once when the underlying cache in the DruidNodeDiscovery implementation has been initialized.
+     */
+    default void nodeViewInitialized()
+    {
+      // do nothing
+    }
   }
 }

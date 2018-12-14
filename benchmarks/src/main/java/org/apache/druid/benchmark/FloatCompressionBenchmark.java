@@ -20,7 +20,8 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.base.Supplier;
-import com.google.common.io.Files;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.segment.data.ColumnarFloats;
 import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -33,6 +34,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
@@ -64,13 +66,22 @@ public class FloatCompressionBenchmark
 
   private Supplier<ColumnarFloats> supplier;
 
+  private MappedByteBufferHandler bufferHandler;
+
   @Setup
   public void setup() throws Exception
   {
     File dir = new File(dirPath);
     File compFile = new File(dir, file + "-" + strategy);
-    ByteBuffer buffer = Files.map(compFile);
+    bufferHandler = FileUtils.map(compFile);
+    ByteBuffer buffer = bufferHandler.get();
     supplier = CompressedColumnarFloatsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+  }
+
+  @TearDown
+  public void tearDown()
+  {
+    bufferHandler.close();
   }
 
   @Benchmark

@@ -27,7 +27,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
@@ -74,7 +73,6 @@ import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfigs;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.plumber.Plumber;
-import org.apache.druid.segment.realtime.plumber.PlumberSchool;
 import org.apache.druid.segment.realtime.plumber.Sink;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -93,6 +91,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -178,30 +177,12 @@ public class RealtimeManagerTest
             return new TestFirehose(rows.iterator());
           }
         },
-        new PlumberSchool()
-        {
-          @Override
-          public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-          )
-          {
-            return plumber;
-          }
-        },
+        (schema, config, metrics) -> plumber,
         null
     );
     RealtimeIOConfig ioConfig2 = new RealtimeIOConfig(
         null,
-        new PlumberSchool()
-        {
-          @Override
-          public Plumber findPlumber(
-              DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-          )
-          {
-            return plumber2;
-          }
-        },
+        (schema, config, metrics) -> plumber2,
         new FirehoseFactoryV2()
         {
           @Override
@@ -516,7 +497,7 @@ public class RealtimeManagerTest
           query
       );
 
-      TestHelper.assertExpectedObjects(expectedResults, results, "");
+      TestHelper.assertExpectedObjects(expectedResults, results, "interval");
     }
 
   }
@@ -593,7 +574,7 @@ public class RealtimeManagerTest
           ),
           query
       );
-      TestHelper.assertExpectedObjects(expectedResults, results, "");
+      TestHelper.assertExpectedObjects(expectedResults, results, "segmentSpec");
 
       results = GroupByQueryRunnerTestHelper.runQuery(
           factory,
@@ -608,7 +589,7 @@ public class RealtimeManagerTest
           ),
           query
       );
-      TestHelper.assertExpectedObjects(expectedResults, results, "");
+      TestHelper.assertExpectedObjects(expectedResults, results, "segmentSpec");
     }
 
   }
@@ -707,7 +688,7 @@ public class RealtimeManagerTest
         query.getQuerySegmentSpec().lookup(query, realtimeManager3),
         query
     );
-    TestHelper.assertExpectedObjects(expectedResults_both_partitions, results, "");
+    TestHelper.assertExpectedObjects(expectedResults_both_partitions, results, "multi-segmentSpec");
 
     results = GroupByQueryRunnerTestHelper.runQuery(
         factory,
@@ -718,7 +699,7 @@ public class RealtimeManagerTest
         ),
         query
     );
-    TestHelper.assertExpectedObjects(expectedResults_single_partition_26_28, results, "");
+    TestHelper.assertExpectedObjects(expectedResults_single_partition_26_28, results, "multi-segmentSpec");
 
     results = GroupByQueryRunnerTestHelper.runQuery(
         factory,
@@ -729,7 +710,7 @@ public class RealtimeManagerTest
         ),
         query
     );
-    TestHelper.assertExpectedObjects(expectedResults_single_partition_28_29, results, "");
+    TestHelper.assertExpectedObjects(expectedResults_single_partition_28_29, results, "multi-segmentSpec");
 
     results = GroupByQueryRunnerTestHelper.runQuery(
         factory,
@@ -740,7 +721,7 @@ public class RealtimeManagerTest
         ),
         query
     );
-    TestHelper.assertExpectedObjects(expectedResults_single_partition_26_28, results, "");
+    TestHelper.assertExpectedObjects(expectedResults_single_partition_26_28, results, "multi-segmentSpec");
 
     results = GroupByQueryRunnerTestHelper.runQuery(
         factory,
@@ -751,7 +732,7 @@ public class RealtimeManagerTest
         ),
         query
     );
-    TestHelper.assertExpectedObjects(expectedResults_single_partition_28_29, results, "");
+    TestHelper.assertExpectedObjects(expectedResults_single_partition_28_29, results, "multi-segmentSpec");
 
   }
 
@@ -812,7 +793,7 @@ public class RealtimeManagerTest
         @Override
         public List<String> getDimension(String dimension)
         {
-          return Lists.newArrayList();
+          return new ArrayList<>();
         }
 
         @Override

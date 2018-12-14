@@ -167,7 +167,8 @@ public class ChangeRequestHttpSyncerTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler
     )
     {
       throw new UnsupportedOperationException("Not Implemented.");
@@ -175,7 +176,9 @@ public class ChangeRequestHttpSyncerTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler, Duration duration
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+        Duration duration
     )
     {
       if (requestNum.getAndIncrement() == 0) {

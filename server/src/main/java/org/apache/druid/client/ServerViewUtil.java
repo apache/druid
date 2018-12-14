@@ -19,7 +19,6 @@
 
 package org.apache.druid.client;
 
-import com.google.common.collect.Lists;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.LocatedSegmentDescriptor;
@@ -31,6 +30,7 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -59,7 +59,7 @@ public class ServerViewUtil
     if (timeline == null) {
       return Collections.emptyList();
     }
-    List<LocatedSegmentDescriptor> located = Lists.newArrayList();
+    List<LocatedSegmentDescriptor> located = new ArrayList<>();
     for (Interval interval : intervals) {
       for (TimelineObjectHolder<String, ServerSelector> holder : timeline.lookup(interval)) {
         for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {

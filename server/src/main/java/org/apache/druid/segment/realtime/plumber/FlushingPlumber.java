@@ -20,7 +20,6 @@
 package org.apache.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -42,6 +41,7 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -180,7 +180,7 @@ public class FlushingPlumber extends RealtimePlumber
                 getRejectionPolicy().getCurrMaxTime().minus(windowMillis)
             ).getMillis();
 
-            List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
+            List<Map.Entry<Long, Sink>> sinksToPush = new ArrayList<>();
             for (Map.Entry<Long, Sink> entry : getSinks().entrySet()) {
               final Long intervalStart = entry.getKey();
               if (intervalStart < minTimestamp) {

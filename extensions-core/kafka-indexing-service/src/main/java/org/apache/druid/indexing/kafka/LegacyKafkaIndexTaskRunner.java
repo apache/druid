@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -25,8 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -87,6 +86,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -307,7 +307,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       }
 
       // Set up sequenceNames.
-      final Map<Integer, String> sequenceNames = Maps.newHashMap();
+      final Map<Integer, String> sequenceNames = new HashMap<>();
       for (Integer partitionNum : nextOffsets.keySet()) {
         sequenceNames.put(partitionNum, StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), partitionNum));
       }
@@ -455,9 +455,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
                 if (isPersistRequired) {
                   driver.persist(committerSupplier.get());
                 }
-                segmentsToMoveOut.entrySet().forEach(sequenceSegments -> driver.moveSegmentOut(
-                    sequenceSegments.getKey(),
-                    sequenceSegments.getValue().stream().collect(Collectors.toList())
+                segmentsToMoveOut.forEach((String sequence, Set<SegmentIdentifier> segments) -> driver.moveSegmentOut(
+                    sequence,
+                    new ArrayList<SegmentIdentifier>(segments)
                 ));
               }
               catch (ParseException e) {
@@ -599,7 +599,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private Set<Integer> assignPartitionsAndSeekToNext(KafkaConsumer consumer, String topic)
   {
     // Initialize consumer assignment.
-    final Set<Integer> assignment = Sets.newHashSet();
+    final Set<Integer> assignment = new HashSet<>();
     for (Map.Entry<Integer, Long> entry : nextOffsets.entrySet()) {
       final long endOffset = endOffsets.get(entry.getKey());
       if (entry.getValue() < endOffset) {
@@ -667,7 +667,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       TaskToolbox taskToolbox
   ) throws InterruptedException, IOException
   {
-    final Map<TopicPartition, Long> resetPartitions = Maps.newHashMap();
+    final Map<TopicPartition, Long> resetPartitions = new HashMap<>();
     boolean doReset = false;
     if (tuningConfig.isResetOffsetAutomatically()) {
       for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
@@ -708,7 +708,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
       throws IOException
   {
-    Map<Integer, Long> partitionOffsetMap = Maps.newHashMap();
+    Map<Integer, Long> partitionOffsetMap = new HashMap<>();
     for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
       partitionOffsetMap.put(outOfRangePartition.getKey().partition(), outOfRangePartition.getValue());
     }
@@ -783,7 +783,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
 
   private Map<String, Object> getTaskCompletionUnparseableEvents()
   {
-    Map<String, Object> unparseableEventsMap = Maps.newHashMap();
+    Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<String> buildSegmentsParseExceptionMessages = IndexTaskUtils.getMessagesFromSavedParseExceptions(
         savedParseExceptions
     );
@@ -795,7 +795,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
 
   private Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metrics = Maps.newHashMap();
+    Map<String, Object> metrics = new HashMap<>();
     metrics.put(
         RowIngestionMeters.BUILD_SEGMENTS,
         rowIngestionMeters.getTotals()
@@ -942,9 +942,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   )
   {
     authorizationCheck(req, Action.READ);
-    Map<String, Object> returnMap = Maps.newHashMap();
-    Map<String, Object> totalsMap = Maps.newHashMap();
-    Map<String, Object> averagesMap = Maps.newHashMap();
+    Map<String, Object> returnMap = new HashMap<>();
+    Map<String, Object> totalsMap = new HashMap<>();
+    Map<String, Object> averagesMap = new HashMap<>();
 
     totalsMap.put(
         RowIngestionMeters.BUILD_SEGMENTS,

@@ -24,7 +24,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
@@ -46,6 +45,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -121,7 +121,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   public void testCreateDeleteUser()
   {
     updater.createUser(AUTHORIZER_NAME, "druid");
-    Map<String, BasicAuthorizerUser> expectedUserMap = Maps.newHashMap(BASE_USER_MAP);
+    Map<String, BasicAuthorizerUser> expectedUserMap = new HashMap<>(BASE_USER_MAP);
     expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of()));
     Map<String, BasicAuthorizerUser> actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
         objectMapper,
@@ -160,7 +160,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
   public void testCreateDeleteRole()
   {
     updater.createRole(AUTHORIZER_NAME, "druid");
-    Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
+    Map<String, BasicAuthorizerRole> expectedRoleMap = new HashMap<>(BASE_ROLE_MAP);
     expectedRoleMap.put("druid", new BasicAuthorizerRole("druid", ImmutableList.of()));
     Map<String, BasicAuthorizerRole> actualRoleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
         objectMapper,
@@ -202,10 +202,10 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     updater.createRole(AUTHORIZER_NAME, "druidRole");
     updater.assignRole(AUTHORIZER_NAME, "druid", "druidRole");
 
-    Map<String, BasicAuthorizerUser> expectedUserMap = Maps.newHashMap(BASE_USER_MAP);
+    Map<String, BasicAuthorizerUser> expectedUserMap = new HashMap<>(BASE_USER_MAP);
     expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of("druidRole")));
 
-    Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
+    Map<String, BasicAuthorizerRole> expectedRoleMap = new HashMap<>(BASE_ROLE_MAP);
     expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", ImmutableList.of()));
 
     Map<String, BasicAuthorizerUser> actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
@@ -270,10 +270,10 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
     updater.createUser(AUTHORIZER_NAME, "druid");
     updater.createRole(AUTHORIZER_NAME, "druidRole");
 
-    Map<String, BasicAuthorizerUser> expectedUserMap = Maps.newHashMap(BASE_USER_MAP);
+    Map<String, BasicAuthorizerUser> expectedUserMap = new HashMap<>(BASE_USER_MAP);
     expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of()));
 
-    Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
+    Map<String, BasicAuthorizerRole> expectedRoleMap = new HashMap<>(BASE_ROLE_MAP);
     expectedRoleMap.put("druidRole", new BasicAuthorizerRole("druidRole", ImmutableList.of()));
 
     Map<String, BasicAuthorizerUser> actualUserMap = BasicAuthUtils.deserializeAuthorizerUserMap(
@@ -309,10 +309,10 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdaterTest
 
     updater.setPermissions(AUTHORIZER_NAME, "druidRole", permsToAdd);
 
-    Map<String, BasicAuthorizerUser> expectedUserMap = Maps.newHashMap(BASE_USER_MAP);
+    Map<String, BasicAuthorizerUser> expectedUserMap = new HashMap<>(BASE_USER_MAP);
     expectedUserMap.put("druid", new BasicAuthorizerUser("druid", ImmutableSet.of("druidRole")));
 
-    Map<String, BasicAuthorizerRole> expectedRoleMap = Maps.newHashMap(BASE_ROLE_MAP);
+    Map<String, BasicAuthorizerRole> expectedRoleMap = new HashMap<>(BASE_ROLE_MAP);
     expectedRoleMap.put(
         "druidRole",
         new BasicAuthorizerRole("druidRole", BasicAuthorizerPermission.makePermissionList(permsToAdd))

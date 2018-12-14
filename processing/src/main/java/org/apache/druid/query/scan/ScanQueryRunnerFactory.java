@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.scan;
 
 import com.google.common.base.Function;
@@ -113,9 +114,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     }
 
     @Override
-    public Sequence<ScanResultValue> run(
-        QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext
-    )
+    public Sequence<ScanResultValue> run(QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext)
     {
       Query<ScanResultValue> query = queryPlus.getQuery();
       if (!(query instanceof ScanQuery)) {

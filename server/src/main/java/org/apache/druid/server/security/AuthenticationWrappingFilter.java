@@ -49,9 +49,8 @@ public class AuthenticationWrappingFilter implements Filter
   }
 
   @Override
-  public void doFilter(
-      ServletRequest request, ServletResponse response, FilterChain chain
-  ) throws IOException, ServletException
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+      throws IOException, ServletException
   {
     // If there's already an auth result, then we have authenticated already, skip this.
     if (request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT) != null) {
