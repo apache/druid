@@ -450,7 +450,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       maybePersistAndPublishSequences(committerSupplier);
 
       Set<StreamPartition<PartitionIdType>> assignment = assignPartitions(recordSupplier);
-      possiblyResetDataSourceMetadata(recordSupplier, assignment);
+      possiblyResetDataSourceMetadata(toolbox, recordSupplier, assignment, currOffsets);
       seekToStartingSequence(recordSupplier, assignment);
 
       ingestionState = IngestionState.BUILD_SEGMENTS;
@@ -470,7 +470,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             // The partition assignments may have changed while paused by a call to setEndOffsets() so reassign
             // partitions upon resuming. This is safe even if the end sequences have not been modified.
             assignment = assignPartitions(recordSupplier);
-            possiblyResetDataSourceMetadata(recordSupplier, assignment);
+            possiblyResetDataSourceMetadata(toolbox, recordSupplier, assignment, currOffsets);
             seekToStartingSequence(recordSupplier, assignment);
 
             if (assignment.isEmpty()) {
@@ -1126,42 +1126,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return false;
   }
 
-  private void possiblyResetDataSourceMetadata(
+  protected abstract void possiblyResetDataSourceMetadata(
+      TaskToolbox toolbox,
       RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
-      Set<StreamPartition<PartitionIdType>> assignment
-  )
-  {
-    for (final StreamPartition<PartitionIdType> streamPartition : assignment) {
-      SequenceOffsetType sequence = currOffsets.get(streamPartition.getPartitionId());
-      if (!tuningConfig.isSkipSequenceNumberAvailabilityCheck()) {
-        SequenceOffsetType earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
-        if (earliestSequenceNumber == null
-            || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
-          if (tuningConfig.isResetOffsetAutomatically()) {
-            log.info("Attempting to reset sequences automatically for all partitions");
-            try {
-              sendResetRequestAndWait(
-                  assignment.stream()
-                            .collect(Collectors.toMap(x -> x, x -> currOffsets.get(x.getPartitionId()))),
-                  toolbox
-              );
-            }
-            catch (IOException e) {
-              throw new ISE(e, "Exception while attempting to automatically reset sequences");
-            }
-          } else {
-            throw new ISE(
-                "Starting sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) and resetOffsetAutomatically is not enabled",
-                sequence,
-                streamPartition.getPartitionId(),
-                earliestSequenceNumber
-            );
-          }
-        }
-      }
-    }
-  }
-
+      Set<StreamPartition<PartitionIdType>> assignment,
+      Map<PartitionIdType, SequenceOffsetType> currOffsets
+  );
 
   private void handleParseException(ParseException pe, OrderedPartitionableRecord record)
   {

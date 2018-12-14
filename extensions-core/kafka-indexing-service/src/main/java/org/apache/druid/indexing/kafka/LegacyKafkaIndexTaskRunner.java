@@ -52,6 +52,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -695,6 +696,18 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
 
     return false;
   }
+
+  @Override
+  protected void possiblyResetDataSourceMetadata(
+      TaskToolbox toolbox,
+      RecordSupplier<Integer, Long> recordSupplier,
+      Set<StreamPartition<Integer>> assignment,
+      Map<Integer, Long> currOffsets
+  )
+  {
+    throw new UnsupportedOperationException();
+  }
+
 
   @Override
   protected SeekableStreamPartitions<Integer, Long> deserializeSeekableStreamPartitionsFromMetadata(

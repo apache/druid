@@ -2146,7 +2146,7 @@ public class KafkaIndexTaskTest
   private KafkaIndexTask createTask(
       final String taskId,
       final KafkaIndexTaskIOConfig ioConfig
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     return createTask(taskId, DATA_SCHEMA, ioConfig);
   }
@@ -2155,7 +2155,7 @@ public class KafkaIndexTaskTest
       final String taskId,
       final KafkaIndexTaskIOConfig ioConfig,
       final Map<String, Object> context
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     return createTask(taskId, DATA_SCHEMA, ioConfig, context);
   }
@@ -2164,7 +2164,7 @@ public class KafkaIndexTaskTest
       final String taskId,
       final DataSchema dataSchema,
       final KafkaIndexTaskIOConfig ioConfig
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
         1000,
@@ -2213,7 +2213,7 @@ public class KafkaIndexTaskTest
       final DataSchema dataSchema,
       final KafkaIndexTaskIOConfig ioConfig,
       final Map<String, Object> context
-  ) throws NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+  )
   {
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
         1000,

@@ -49,6 +49,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -59,7 +60,6 @@ import java.util.stream.Collectors;
 public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long>
 {
   private static final EmittingLogger log = new EmittingLogger(IncrementalPublishingKafkaIndexTaskRunner.class);
-  private final KafkaIndexTaskTuningConfig tuningConfig;
   private final KafkaIndexTask task;
 
   public IncrementalPublishingKafkaIndexTaskRunner(
@@ -80,7 +80,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         rowIngestionMetersFactory
     );
     this.task = task;
-    this.tuningConfig = task.getTuningConfig();
   }
 
   @Override
@@ -133,7 +132,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   {
     final Map<TopicPartition, Long> resetPartitions = new HashMap<>();
     boolean doReset = false;
-    if (tuningConfig.isResetOffsetAutomatically()) {
+    if (task.getTuningConfig().isResetOffsetAutomatically()) {
       for (Map.Entry<TopicPartition, Long> outOfRangePartition : outOfRangePartitions.entrySet()) {
         final TopicPartition topicPartition = outOfRangePartition.getKey();
         final long nextOffset = outOfRangePartition.getValue();
@@ -201,6 +200,43 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   protected Type getRunnerType()
   {
     return Type.KAFKA;
+  }
+
+  @Override
+  protected void possiblyResetDataSourceMetadata(
+      TaskToolbox toolbox,
+      RecordSupplier<Integer, Long> recordSupplier,
+      Set<StreamPartition<Integer>> assignment,
+      Map<Integer, Long> currOffsets
+  )
+  {
+    for (final StreamPartition<Integer> streamPartition : assignment) {
+      Long sequence = currOffsets.get(streamPartition.getPartitionId());
+      Long earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
+      if (earliestSequenceNumber == null
+          || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
+        if (task.getTuningConfig().isResetOffsetAutomatically()) {
+          log.info("Attempting to reset sequences automatically for all partitions");
+          try {
+            sendResetRequestAndWait(
+                assignment.stream()
+                          .collect(Collectors.toMap(x -> x, x -> currOffsets.get(x.getPartitionId()))),
+                toolbox
+            );
+          }
+          catch (IOException e) {
+            throw new ISE(e, "Exception while attempting to automatically reset sequences");
+          }
+        } else {
+          throw new ISE(
+              "Starting sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) and resetOffsetAutomatically is not enabled",
+              sequence,
+              streamPartition.getPartitionId(),
+              earliestSequenceNumber
+          );
+        }
+      }
+    }
   }
 
   @Nullable

@@ -31,6 +31,8 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -42,12 +44,16 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisIndexTaskRunner.class);
   private static final long POLL_TIMEOUT = 100;
+
+  private final KinesisIndexTask task;
 
   KinesisIndexTaskRunner(
       KinesisIndexTask task,
@@ -66,6 +72,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
         savedParseExceptions,
         rowIngestionMetersFactory
     );
+    this.task = task;
   }
 
 
@@ -116,6 +123,43 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   protected Type getRunnerType()
   {
     return Type.KINESIS;
+  }
+
+  @Override
+  protected void possiblyResetDataSourceMetadata(
+      TaskToolbox toolbox,
+      RecordSupplier<String, String> recordSupplier,
+      Set<StreamPartition<String>> assignment,
+      Map<String, String> currOffsets
+  )
+  {
+    for (final StreamPartition<String> streamPartition : assignment) {
+      String sequence = currOffsets.get(streamPartition.getPartitionId());
+      String earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
+      if (earliestSequenceNumber == null
+          || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
+        if (task.getTuningConfig().isResetOffsetAutomatically()) {
+          log.info("Attempting to reset sequences automatically for all partitions");
+          try {
+            sendResetRequestAndWait(
+                assignment.stream()
+                          .collect(Collectors.toMap(x -> x, x -> currOffsets.get(x.getPartitionId()))),
+                toolbox
+            );
+          }
+          catch (IOException e) {
+            throw new ISE(e, "Exception while attempting to automatically reset sequences");
+          }
+        } else {
+          throw new ISE(
+              "Starting sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) and resetOffsetAutomatically is not enabled",
+              sequence,
+              streamPartition.getPartitionId(),
+              earliestSequenceNumber
+          );
+        }
+      }
+    }
   }
 
   @Nullable
