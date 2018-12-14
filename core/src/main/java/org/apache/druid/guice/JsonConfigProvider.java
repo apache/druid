@@ -140,7 +140,6 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
     );
   }
 
-  @SuppressWarnings("unchecked")
   public static <T> void bind(
       Binder binder,
       String propertyBase,
@@ -153,7 +152,6 @@ public class JsonConfigProvider<T> implements Provider<Supplier<T>>
     binder.bind(instanceKey).toProvider(new SupplierProvider<>(supplierKey));
   }
 
-  @SuppressWarnings("unchecked")
   public static <T> void bind(
       Binder binder,
       String propertyBase,
