@@ -26,7 +26,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -103,7 +102,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -113,10 +111,9 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
@@ -153,20 +150,15 @@ public class CalciteTests
     @Override
     public Authorizer getAuthorizer(String name)
     {
-      return new Authorizer()
-      {
-        @Override
-        public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
-        {
-          if (authenticationResult.getIdentity().equals(TEST_SUPERUSER_NAME)) {
-            return Access.OK;
-          }
+      return (authenticationResult, resource, action) -> {
+        if (authenticationResult.getIdentity().equals(TEST_SUPERUSER_NAME)) {
+          return Access.OK;
+        }
 
-          if (resource.getType() == ResourceType.DATASOURCE && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
-            return new Access(false);
-          } else {
-            return Access.OK;
-          }
+        if (resource.getType() == ResourceType.DATASOURCE && resource.getName().equals(FORBIDDEN_DATASOURCE)) {
+          return new Access(false);
+        } else {
+          return Access.OK;
         }
       };
     }
@@ -221,25 +213,20 @@ public class CalciteTests
   );
 
   private static final Injector INJECTOR = Guice.createInjector(
-      new Module()
-      {
-        @Override
-        public void configure(final Binder binder)
-        {
-          binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
+      (Module) binder -> {
+        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
 
-          // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
+        // This Module is just to get a LookupReferencesManager with a usable "lookyloo" lookup.
 
-          binder.bind(LookupReferencesManager.class).toInstance(
-              LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
-                  ImmutableMap.of(
-                      "a", "xa",
-                      "abc", "xabc"
-                  )
-              )
-          );
+        binder.bind(LookupReferencesManager.class).toInstance(
+            LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
+                ImmutableMap.of(
+                    "a", "xa",
+                    "abc", "xabc"
+                )
+            )
+        );
 
-        }
       }
   );
 
@@ -349,14 +336,7 @@ public class CalciteTests
     final Closer resourceCloser = Closer.create();
     final CloseableStupidPool<ByteBuffer> stupidPool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocate(10 * 1024 * 1024);
-          }
-        }
+        () -> ByteBuffer.allocate(10 * 1024 * 1024)
     );
     resourceCloser.register(stupidPool);
     final Pair<GroupByQueryRunnerFactory, Closer> factoryCloserPair = GroupByQueryRunnerTest
@@ -554,7 +534,7 @@ public class CalciteTests
   {
     try {
       final Set<SqlOperatorConversion> extractionOperators = new HashSet<>();
-      extractionOperators.add(INJECTOR.getInstance(LookupOperatorConversion.class));
+      extractionOperators.add(INJECTOR.getInstance(QueryLookupOperatorConversion.class));
       return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
     }
     catch (Exception e) {

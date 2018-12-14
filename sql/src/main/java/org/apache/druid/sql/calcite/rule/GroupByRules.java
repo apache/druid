@@ -92,8 +92,8 @@ public class GroupByRules
     final List<Aggregation> existingAggregationsWithSameFilter = new ArrayList<>();
     for (Aggregation existingAggregation : existingAggregations) {
       if (filter == null) {
-        final boolean doesMatch = existingAggregation.getAggregatorFactories().stream().allMatch(
-            factory -> !(factory instanceof FilteredAggregatorFactory)
+        final boolean doesMatch = existingAggregation.getAggregatorFactories().stream().noneMatch(
+            factory -> factory instanceof FilteredAggregatorFactory
         );
 
         if (doesMatch) {
@@ -160,6 +160,6 @@ public class GroupByRules
         .map(AggregatorFactory::getName)
         .collect(Collectors.toSet());
 
-    return aggregation.getPostAggregator().getDependentFields().stream().allMatch(existingAggregationNames::contains);
+    return existingAggregationNames.containsAll(aggregation.getPostAggregator().getDependentFields());
   }
 }

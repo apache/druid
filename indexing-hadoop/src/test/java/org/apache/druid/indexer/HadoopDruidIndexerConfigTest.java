@@ -46,11 +46,11 @@ import java.util.List;
 public class HadoopDruidIndexerConfigTest
 {
   private static final ObjectMapper jsonMapper;
+
   static {
     jsonMapper = new DefaultObjectMapper();
     jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
   }
-
 
   @Test
   public void testHashedBucketSelection()

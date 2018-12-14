@@ -46,6 +46,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.StupidResourceHolder;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -594,6 +595,13 @@ public class MemcachedCache implements Cache
   public void close(String namespace)
   {
     // no resources to cleanup
+  }
+
+  @Override
+  @LifecycleStop
+  public void close() throws IOException
+  {
+    monitor.stop();
   }
 
   public static final int MAX_PREFIX_LENGTH =

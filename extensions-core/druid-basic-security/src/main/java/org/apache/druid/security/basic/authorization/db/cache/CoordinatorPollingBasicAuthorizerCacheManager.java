@@ -212,7 +212,13 @@ public class CoordinatorPollingBasicAuthorizerCacheManager implements BasicAutho
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
     cacheDir.mkdirs();
     File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserRoleMapFilename(prefix));
-    FileUtils.writeAtomically(userMapFile, out -> out.write(userMapBytes));
+    FileUtils.writeAtomically(
+        userMapFile,
+        out -> {
+          out.write(userMapBytes);
+          return null;
+        }
+    );
   }
 
   @Nullable

@@ -20,7 +20,6 @@
 package org.apache.druid.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
@@ -71,7 +70,7 @@ class JodaStuff
 
     @Override
     public Interval deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-        throws IOException, JsonProcessingException
+        throws IOException
     {
       return Intervals.of(jsonParser.getText());
     }
@@ -94,8 +93,7 @@ class JodaStuff
     }
 
     @Override
-    public DateTime deserialize(JsonParser jp, DeserializationContext ctxt)
-        throws IOException, JsonProcessingException
+    public DateTime deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException
     {
       JsonToken t = jp.getCurrentToken();
       if (t == JsonToken.VALUE_NUMBER_INT) {

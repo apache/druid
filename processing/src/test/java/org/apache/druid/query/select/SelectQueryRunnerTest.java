@@ -113,9 +113,11 @@ public class SelectQueryRunnerTest
 
   private static final boolean DEFAULT_FROM_NEXT = true;
   private static final SelectQueryConfig config = new SelectQueryConfig(true);
-  {
+
+  static {
     config.setEnableFromNextDefault(DEFAULT_FROM_NEXT);
   }
+
   private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(config);
 
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(

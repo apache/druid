@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Druid vs Spark"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,12 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-Druid vs Spark
-==============
+# Druid vs Spark
 
 Druid and Spark are complementary solutions as Druid can be used to accelerate OLAP queries in Spark.
 

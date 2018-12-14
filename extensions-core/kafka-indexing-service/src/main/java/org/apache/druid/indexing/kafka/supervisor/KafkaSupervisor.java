@@ -669,18 +669,21 @@ public class KafkaSupervisor implements Supervisor
             })
             .findAny()
             .map(Entry::getKey);
-        taskGroupId = maybeGroupId.orElse(
-            pendingCompletionTaskGroups
-                .entrySet()
-                .stream()
-                .filter(entry -> {
-                  final List<TaskGroup> taskGroups = entry.getValue();
-                  return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
-                })
-                .findAny()
-                .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
-                .getKey()
-        );
+
+        if (maybeGroupId.isPresent()) {
+          taskGroupId = maybeGroupId.get();
+        } else {
+          taskGroupId = pendingCompletionTaskGroups
+              .entrySet()
+              .stream()
+              .filter(entry -> {
+                final List<TaskGroup> taskGroups = entry.getValue();
+                return taskGroups.stream().anyMatch(group -> group.baseSequenceName.equals(baseSequenceName));
+              })
+              .findAny()
+              .orElseThrow(() -> new ISE("Cannot find taskGroup for baseSequenceName[%s]", baseSequenceName))
+              .getKey();
+        }
       } else {
         taskGroupId = nullableTaskGroupId;
       }
@@ -2346,14 +2349,24 @@ public class KafkaSupervisor implements Supervisor
           );
         }
 
-        long lag = getLagPerPartition(highestCurrentOffsets)
-            .values()
-            .stream()
-            .mapToLong(x -> Math.max(x, 0))
-            .sum();
+        Map<Integer, Long> partitionLags = getLagPerPartition(highestCurrentOffsets);
+        long maxLag = 0, totalLag = 0, avgLag;
+        for (long lag : partitionLags.values()) {
+          if (lag > maxLag) {
+            maxLag = lag;
+          }
+          totalLag += lag;
+        }
+        avgLag = partitionLags.size() == 0 ? 0 : totalLag / partitionLags.size();
 
         emitter.emit(
-            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", lag)
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/lag", totalLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/maxLag", maxLag)
+        );
+        emitter.emit(
+            ServiceMetricEvent.builder().setDimension("dataSource", dataSource).build("ingest/kafka/avgLag", avgLag)
         );
       }
       catch (Exception e) {

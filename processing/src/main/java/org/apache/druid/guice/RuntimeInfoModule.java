@@ -17,15 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.parquet.simple;
+package org.apache.druid.guice;
 
-import org.apache.parquet.example.data.Group;
-import org.apache.parquet.hadoop.ParquetInputFormat;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.utils.RuntimeInfo;
 
-public class DruidParquetInputFormat extends ParquetInputFormat<Group>
+public class RuntimeInfoModule implements Module
 {
-  public DruidParquetInputFormat()
+  @Override
+  public void configure(Binder binder)
   {
-    super(DruidParquetReadSupport.class);
+    binder.requestStaticInjection(RuntimeInfo.class);
   }
 }

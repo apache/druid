@@ -23,8 +23,6 @@ import avro.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.directory.api.util.Strings;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.parquet.avro.DruidParquetAvroInputFormat;
-import org.apache.druid.data.input.parquet.simple.DruidParquetInputFormat;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.path.StaticPathSpec;
 import org.apache.druid.java.util.common.StringUtils;
@@ -58,9 +56,9 @@ class BaseParquetInputTest
 
   private static Map<String, String> inputFormatType = ImmutableMap.of(
       ParquetExtensionsModule.PARQUET_AVRO_INPUT_PARSER_TYPE,
-      "org.apache.druid.data.input.parquet.avro.DruidParquetAvroInputFormat",
+      "org.apache.druid.data.input.parquet.DruidParquetAvroInputFormat",
       ParquetExtensionsModule.PARQUET_SIMPLE_INPUT_PARSER_TYPE,
-      "org.apache.druid.data.input.parquet.simple.DruidParquetInputFormat"
+      "org.apache.druid.data.input.parquet.DruidParquetInputFormat"
   );
 
   private static Map<String, Class<? extends InputFormat>> inputFormatClass = ImmutableMap.of(

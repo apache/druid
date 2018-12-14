@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
-
 import org.eclipse.jetty.util.ssl.AliasedX509ExtendedKeyManager;
 
 import javax.annotation.Nullable;

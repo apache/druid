@@ -40,6 +40,7 @@ public class GuiceInjectors
         new DruidGuiceExtensions(),
         new JacksonModule(),
         new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
+        new RuntimeInfoModule(),
         new ConfigModule(),
         new NullHandlingModule(),
         binder -> {

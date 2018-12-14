@@ -16,16 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.data.input.parquet.avro;
 
-import org.apache.avro.generic.GenericRecord;
-import org.apache.parquet.avro.DruidParquetAvroReadSupport;
-import org.apache.parquet.hadoop.ParquetInputFormat;
+package org.apache.druid.server.http;
 
-public class DruidParquetAvroInputFormat extends ParquetInputFormat<GenericRecord>
+import javax.ws.rs.core.MediaType;
+
+public class HttpMediaType
 {
-  public DruidParquetAvroInputFormat()
-  {
-    super(DruidParquetAvroReadSupport.class);
-  }
+  public static final String TEXT_PLAIN_UTF8 = MediaType.TEXT_PLAIN + "; charset=UTF-8";
 }

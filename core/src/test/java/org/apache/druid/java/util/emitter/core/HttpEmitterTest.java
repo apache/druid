@@ -24,6 +24,7 @@ import com.google.common.primitives.Ints;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,21 +66,26 @@ public class HttpEmitterTest
   @Test
   public void timeoutEmptyQueue() throws IOException, InterruptedException
   {
+    float timeoutAllowanceFactor = 2.0f;
     final HttpEmitterConfig config = new HttpEmitterConfig.Builder("http://foo.bar")
         .setBatchingStrategy(BatchingStrategy.ONLY_EVENTS)
-        .setHttpTimeoutAllowanceFactor(2.0f)
+        .setHttpTimeoutAllowanceFactor(timeoutAllowanceFactor)
         .build();
     final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, objectMapper);
 
+    long startMs = System.currentTimeMillis();
     emitter.start();
     emitter.emitAndReturnBatch(new IntEvent());
     emitter.flush();
-    Assert.assertTrue(timeoutUsed.get() < 5);
+    long fillTimeMs = System.currentTimeMillis() - startMs;
+    Assert.assertThat((double) timeoutUsed.get(), Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5)));
 
+    startMs = System.currentTimeMillis();
     final Batch batch = emitter.emitAndReturnBatch(new IntEvent());
     Thread.sleep(1000);
     batch.seal();
     emitter.flush();
-    Assert.assertTrue(timeoutUsed.get() >= 2000 && timeoutUsed.get() < 3000);
+    fillTimeMs = System.currentTimeMillis() - startMs;
+    Assert.assertThat((double) timeoutUsed.get(), Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5)));
   }
 }

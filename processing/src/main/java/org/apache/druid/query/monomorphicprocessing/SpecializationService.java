@@ -67,6 +67,7 @@ public final class SpecializationService
   private static final Logger LOG = new Logger(SpecializationService.class);
 
   private static final Unsafe UNSAFE;
+
   static {
     try {
       Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");

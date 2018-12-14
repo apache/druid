@@ -33,13 +33,11 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.worker.http.WorkerResource;
-import org.apache.druid.server.http.security.AbstractResourceFilter;
 import org.apache.druid.server.http.security.ResourceFilterTestHelper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.easymock.EasyMock;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -171,7 +169,6 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
     EasyMock.expect(request.getMethod()).andReturn(requestMethod).anyTimes();
     EasyMock.replay(req, request, authorizerMapper);
     resourceFilter.getRequestFilter().filter(request);
-    Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
   }
 
   @Test(expected = ForbiddenException.class)
@@ -180,7 +177,6 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
     setUpMockExpectations(requestPath, false, requestMethod);
     EasyMock.expect(request.getEntity(Task.class)).andReturn(noopTask).anyTimes();
     EasyMock.replay(req, request, authorizerMapper);
-    Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
       resourceFilter.getRequestFilter().filter(request);
     }
@@ -195,7 +191,6 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
     final String badRequestPath = WORD.matcher(requestPath).replaceAll("droid");
     EasyMock.expect(request.getPath()).andReturn(badRequestPath).anyTimes();
     EasyMock.replay(req, request, authorizerMapper);
-    Assert.assertFalse(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(badRequestPath));
   }
 
   @After
