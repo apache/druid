@@ -77,7 +77,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       Preconditions.checkNotNull(status, "status");
       Preconditions.checkArgument(
           task.getId().equals(status.getId()),
-          "Task/Status RandomId mismatch[%s/%s]",
+          "Task/Status ID mismatch[%s/%s]",
           task.getId(),
           status.getId()
       );
@@ -121,7 +121,7 @@ public class HeapMemoryTaskStorage implements TaskStorage
       Preconditions.checkNotNull(status, "status");
 
       final String taskid = status.getId();
-      Preconditions.checkState(tasks.containsKey(taskid), "Task RandomId must already be present: %s", taskid);
+      Preconditions.checkState(tasks.containsKey(taskid), "Task ID must already be present: %s", taskid);
       Preconditions.checkState(tasks.get(taskid).getStatus().isRunnable(), "Task status must be runnable: %s", taskid);
       log.info("Updating task %s to status: %s", taskid, status);
       tasks.put(taskid, tasks.get(taskid).withStatus(status));

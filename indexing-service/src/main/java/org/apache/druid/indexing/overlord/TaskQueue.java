@@ -387,7 +387,7 @@ public class TaskQueue
    * @param taskStatus new task status
    *
    * @throws NullPointerException     if task or status is null
-   * @throws IllegalArgumentException if the task RandomId does not match the status RandomId
+   * @throws IllegalArgumentException if the task ID does not match the status ID
    * @throws IllegalStateException    if this queue is currently shut down
    */
   private void notifyStatus(final Task task, final TaskStatus taskStatus, String reasonFormat, Object... args)

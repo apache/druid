@@ -26,14 +26,14 @@ import org.apache.druid.indexer.TaskStatus;
 public interface TaskInfoProvider
 {
   /**
-   * @param id the task RandomId
+   * @param id the task ID
    *
    * @return a TaskLocation associated with the task or TaskLocation.unknown() if no associated entry could be found
    */
   TaskLocation getTaskLocation(String id);
 
   /**
-   * @param id the task RandomId
+   * @param id the task ID
    *
    * @return an Optional.of() with the current status of the task or Optional.absent() if the task could not be found
    */

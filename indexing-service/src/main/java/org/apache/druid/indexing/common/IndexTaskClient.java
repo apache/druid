@@ -363,7 +363,7 @@ public abstract class IndexTaskClient implements AutoCloseable
         // Since workers are free to move tasks around to different ports, there is a chance that a task may have been
         // moved but our view of its location has not been updated yet from ZK. To detect this case, we send a header
         // identifying our expected recipient in the request; if this doesn't correspond to the worker we messaged, the
-        // worker will return an HTTP 404 with its RandomId in the response header. If we get a mismatching task RandomId, then
+        // worker will return an HTTP 404 with its ID in the response header. If we get a mismatching task ID, then
         // we will wait for a short period then retry the request indefinitely, expecting the task's location to
         // eventually be updated.
 
