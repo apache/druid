@@ -404,7 +404,7 @@ public interface IndexMerger
         Indexed<String> indexed = dimValueLookups[i];
         if (useDirect) {
           int allocationSize = indexed.size() * Integer.BYTES;
-          log.info("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
+          log.debug("Allocating dictionary merging direct buffer with size[%,d]", allocationSize);
           final ByteBuffer conversionDirectBuffer = ByteBuffer.allocateDirect(allocationSize);
           conversions[i] = conversionDirectBuffer.asIntBuffer();
           directBufferAllocations.add(new Pair<>(conversionDirectBuffer, allocationSize));
@@ -483,7 +483,7 @@ public interface IndexMerger
     public void close()
     {
       for (Pair<ByteBuffer, Integer> bufferAllocation : directBufferAllocations) {
-        log.info("Freeing dictionary merging direct buffer with size[%,d]", bufferAllocation.rhs);
+        log.debug("Freeing dictionary merging direct buffer with size[%,d]", bufferAllocation.rhs);
         ByteBufferUtils.free(bufferAllocation.lhs);
       }
     }
