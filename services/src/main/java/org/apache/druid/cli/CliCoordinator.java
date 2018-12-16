@@ -217,12 +217,11 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorCleanupPendingSegments.class
             );
 
-            binder
-                .bind(DiscoverySideEffectsProvider.Child.class)
-                .annotatedWith(Coordinator.class)
-                .toProvider(new DiscoverySideEffectsProvider(NodeType.COORDINATOR, ImmutableList.of()))
-                .in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, Coordinator.class));
+            bindAnnouncer(
+                binder,
+                Coordinator.class,
+                DiscoverySideEffectsProvider.builder(NodeType.COORDINATOR).build()
+            );
           }
 
           @Provides

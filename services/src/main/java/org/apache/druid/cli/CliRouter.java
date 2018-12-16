@@ -21,7 +21,6 @@ package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
@@ -121,11 +120,10 @@ public class CliRouter extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
 
-            binder
-                .bind(DiscoverySideEffectsProvider.Child.class)
-                .toProvider(new DiscoverySideEffectsProvider(NodeType.ROUTER, ImmutableList.of()))
-                .in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+            bindAnnouncer(
+                binder,
+                DiscoverySideEffectsProvider.builder(NodeType.ROUTER).build()
+            );
           }
 
           @Provides
