@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
@@ -83,7 +84,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   public String toString()
   {
     return "SegmentInsertAction{" +
-           "segments=" + segments +
+           "segments=" + segments.stream().map(DataSegment::getIdentifier).collect(Collectors.joining(",")) +
            '}';
   }
 }

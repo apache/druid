@@ -156,7 +156,7 @@ public class CoordinatorRuleManager
           )
       );
 
-      log.info("Got [%,d] rules", newRules.size());
+      log.debug("Got [%,d] rules", newRules.size());
 
       rules.set(newRules);
     }

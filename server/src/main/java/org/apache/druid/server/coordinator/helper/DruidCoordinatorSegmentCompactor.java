@@ -160,7 +160,11 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             config.getTuningConfig(),
             config.getTaskContext()
         );
-        LOG.info("Submitted a compactTask[%s] for segments[%s]", taskId, segmentsToCompact);
+        LOG.info(
+            "Submitted a compactTask[%s] for segments[%s]",
+            taskId,
+            segmentsToCompact.stream().map(DataSegment::getIdentifier).collect(Collectors.joining(","))
+        );
       } else if (segmentsToCompact.size() == 1) {
         throw new ISE("Found one segments[%s] to compact", segmentsToCompact);
       } else {

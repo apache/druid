@@ -116,7 +116,7 @@ public class SegmentNukeAction implements TaskAction<Void>
   public String toString()
   {
     return "SegmentNukeAction{" +
-           "segments=" + segments +
+           "segments=" + segments.stream().map(DataSegment::getIdentifier).collect(Collectors.joining(",")) +
            '}';
   }
 }
