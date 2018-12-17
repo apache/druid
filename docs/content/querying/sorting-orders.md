@@ -47,3 +47,6 @@ When comparing two unparseable values (e.g., "hello" and "world"), this ordering
 
 ## Strlen
 Sorts values by the their string lengths. When there is a tie, this comparator falls back to using the String compareTo method.
+
+## Version
+Sorts values as versions, e.g.: "10.0 sorts after 9.0"
