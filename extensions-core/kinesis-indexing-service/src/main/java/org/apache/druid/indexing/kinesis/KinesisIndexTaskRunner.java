@@ -133,30 +133,32 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       Map<String, String> currOffsets
   )
   {
-    for (final StreamPartition<String> streamPartition : assignment) {
-      String sequence = currOffsets.get(streamPartition.getPartitionId());
-      String earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
-      if (earliestSequenceNumber == null
-          || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
-        if (task.getTuningConfig().isResetOffsetAutomatically()) {
-          log.info("Attempting to reset sequences automatically for all partitions");
-          try {
-            sendResetRequestAndWait(
-                assignment.stream()
-                          .collect(Collectors.toMap(x -> x, x -> currOffsets.get(x.getPartitionId()))),
-                toolbox
+    if (!task.getTuningConfig().isSkipSequenceNumberAvailabilityCheck()) {
+      for (final StreamPartition<String> streamPartition : assignment) {
+        String sequence = currOffsets.get(streamPartition.getPartitionId());
+        String earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
+        if (earliestSequenceNumber == null
+            || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
+          if (task.getTuningConfig().isResetOffsetAutomatically()) {
+            log.info("Attempting to reset sequences automatically for all partitions");
+            try {
+              sendResetRequestAndWait(
+                  assignment.stream()
+                            .collect(Collectors.toMap(x -> x, x -> currOffsets.get(x.getPartitionId()))),
+                  toolbox
+              );
+            }
+            catch (IOException e) {
+              throw new ISE(e, "Exception while attempting to automatically reset sequences");
+            }
+          } else {
+            throw new ISE(
+                "Starting sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) and resetOffsetAutomatically is not enabled",
+                sequence,
+                streamPartition.getPartitionId(),
+                earliestSequenceNumber
             );
           }
-          catch (IOException e) {
-            throw new ISE(e, "Exception while attempting to automatically reset sequences");
-          }
-        } else {
-          throw new ISE(
-              "Starting sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) and resetOffsetAutomatically is not enabled",
-              sequence,
-              streamPartition.getPartitionId(),
-              earliestSequenceNumber
-          );
         }
       }
     }

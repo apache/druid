@@ -83,7 +83,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         maxTotalRows,
         intermediatePersistPeriod,
         basePersistDirectory,
-        0,
+        maxPendingPersists,
         indexSpec,
         true,
         reportParseExceptions,
@@ -158,7 +158,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
         dir,
-        0,
+        getMaxPendingPersists(),
         getIndexSpec(),
         true,
         isReportParseExceptions(),
@@ -221,7 +221,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxRowsPerSegment(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
-        0,
+        getMaxPendingPersists(),
         getIndexSpec(),
         true,
         isReportParseExceptions(),
@@ -249,7 +249,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
-           ", maxPendingPersists=" + 0 +
+           ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +

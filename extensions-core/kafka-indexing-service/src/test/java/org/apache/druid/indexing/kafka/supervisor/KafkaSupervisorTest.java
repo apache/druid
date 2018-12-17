@@ -2161,8 +2161,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointForInactiveTaskGroup()
-      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException, NoSuchMethodException,
-             IllegalAccessException, ClassNotFoundException
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
@@ -2265,7 +2264,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointForUnknownTaskGroup()
-      throws InterruptedException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+      throws InterruptedException
   {
     supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
@@ -2344,8 +2343,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointWithNullTaskGroupId()
-      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException, NoSuchMethodException,
-             IllegalAccessException, ClassNotFoundException
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getSupervisor(1, 3, true, "PT1S", null, null, false);
     //not adding any events

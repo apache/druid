@@ -27,8 +27,6 @@ import org.joda.time.Duration;
 
 public class KinesisIndexTaskClient extends SeekableStreamIndexTaskClient<String, String>
 {
-  private static ObjectMapper mapper = new ObjectMapper();
-
   KinesisIndexTaskClient(
       HttpClient httpClient,
       ObjectMapper jsonMapper,

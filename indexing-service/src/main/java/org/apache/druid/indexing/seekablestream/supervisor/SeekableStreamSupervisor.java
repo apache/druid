@@ -218,8 +218,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   private interface Notice
   {
-    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException,
-                         NoSuchMethodException, IllegalAccessException, ClassNotFoundException;
+    void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException;
   }
 
   private static class StatsFromTaskResult
@@ -259,8 +258,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private class RunNotice implements Notice
   {
     @Override
-    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException,
-                                NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+    public void handle() throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
     {
       long nowTime = System.currentTimeMillis();
       if (nowTime - lastRunTime < MAX_RUN_FREQUENCY_MILLIS) {
@@ -700,7 +698,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
 
   @VisibleForTesting
-  protected void tryInit()
+  public void tryInit()
   {
     synchronized (stateChangeLock) {
       if (started) {
@@ -1003,8 +1001,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   @VisibleForTesting
   public void runInternal()
-      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException, NoSuchMethodException,
-             IllegalAccessException, ClassNotFoundException
+      throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
   {
     possiblyRegisterListener();
     updatePartitionDataFromStream();
@@ -2214,7 +2211,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   private void createNewTasks()
-      throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+      throws JsonProcessingException
   {
     // update the checkpoints in the taskGroup to latest ones so that new tasks do not read what is already published
     verifyAndMergeCheckpoints(
@@ -2443,7 +2440,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   private void createTasksForGroup(int groupId, int replicas)
-      throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException
+      throws JsonProcessingException
   {
     TaskGroup group = activelyReadingTaskGroups.get(groupId);
     Map<PartitionIdType, SequenceOffsetType> startPartitions = group.startingSequences;
@@ -2674,7 +2671,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       SeekableStreamIndexTaskIOConfig taskIoConfig,
       SeekableStreamIndexTaskTuningConfig taskTuningConfig,
       RowIngestionMetersFactory rowIngestionMetersFactory
-  ) throws JsonProcessingException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException;
+  ) throws JsonProcessingException;
 
   /**
    * calculates the taskgroup id that the given partition belongs to.
@@ -2749,8 +2746,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @return specific instance of Kafka/Kinesis RecordSupplier
    */
-  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> setupRecordSupplier()
-      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException;
+  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> setupRecordSupplier();
 
   /**
    * creates a specific instance of Kafka/Kinesis Supervisor Report Payload
@@ -2781,7 +2777,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
 
+  /**
+   * a special sequence number that is used to indicate that the sequence offset
+   * for a particular partition has not yet been calculated by the supervisor. When
+   * the not_set marker is read by the supervisor, it will first attempt to restore it
+   * from metadata storage, if that fails, from the Kafka/Kinesis
+   *
+   * @return sequence offset that represets NOT_SET
+   */
   protected abstract SequenceOffsetType getNotSetMarker();
 
+  /**
+   * returns the logical maximum number for a Kafka partition or Kinesis shard. This is
+   * used to set the initial endoffsets when creating a new task, since we don't know
+   * what sequence offsets to read to initially
+   *
+   * @return end of partition sequence offset
+   */
   protected abstract SequenceOffsetType getEndOfPartitionMarker();
 }

@@ -1126,12 +1126,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return false;
   }
 
-  protected abstract void possiblyResetDataSourceMetadata(
-      TaskToolbox toolbox,
-      RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
-      Set<StreamPartition<PartitionIdType>> assignment,
-      Map<PartitionIdType, SequenceOffsetType> currOffsets
-  );
 
   private void handleParseException(ParseException pe, OrderedPartitionableRecord record)
   {
@@ -2021,4 +2015,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * @return Type
    */
   protected abstract Type getRunnerType();
+
+  /**
+   * check if the sequence offsets stored in currOffsets are still valid sequence offsets compared to
+   * earliest sequence offsets fetched from stream
+   *
+   * @param toolbox
+   * @param recordSupplier
+   * @param assignment
+   * @param currOffsets
+   */
+  protected abstract void possiblyResetDataSourceMetadata(
+      TaskToolbox toolbox,
+      RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
+      Set<StreamPartition<PartitionIdType>> assignment,
+      Map<PartitionIdType, SequenceOffsetType> currOffsets
+  );
 }

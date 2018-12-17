@@ -380,11 +380,4 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   {
     return spec.getIoConfig();
   }
-
-  @Override
-  @VisibleForTesting
-  protected void tryInit()
-  {
-    super.tryInit();
-  }
 }

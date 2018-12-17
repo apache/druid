@@ -297,7 +297,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       int recordBufferFullWait,
       int fetchSequenceNumberTimeout,
       int maxRecordsPerPoll
-  ) throws RuntimeException
+  )
   {
     Preconditions.checkNotNull(amazonKinesis);
     this.kinesis = amazonKinesis;

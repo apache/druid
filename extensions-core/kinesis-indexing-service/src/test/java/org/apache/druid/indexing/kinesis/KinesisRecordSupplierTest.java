@@ -163,7 +163,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
   @Test
   public void testSupplierSetup()
-      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     Capture<String> captured = Capture.newInstance();
     expect(kinesis.describeStream(capture(captured))).andReturn(describeStreamResult).once();
@@ -219,8 +218,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test
-  public void testPoll()
-      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException, InterruptedException
+  public void testPoll() throws InterruptedException
   {
     recordsPerFetch = 100;
 
@@ -291,7 +289,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
   @Test
   public void testSeek()
-      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+      throws InterruptedException
   {
     recordsPerFetch = 100;
 
@@ -366,7 +364,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
   @Test
   public void testSeekToLatest()
-      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+      throws InterruptedException
   {
     recordsPerFetch = 100;
 
@@ -425,7 +423,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
   @Test(expected = ISE.class)
   public void testSeekUnassigned()
-      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException
   {
     StreamPartition<String> shard0 = StreamPartition.of(stream, shardId0);
     StreamPartition<String> shard1 = StreamPartition.of(stream, shardId1);
@@ -453,7 +450,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
   @Test
   public void testPollAfterSeek()
-      throws InterruptedException, IllegalAccessException, NoSuchMethodException, ClassNotFoundException
+      throws InterruptedException
   {
     // tests that after doing a seek, the now invalid records in buffer is cleaned up properly
     recordsPerFetch = 100;
@@ -529,8 +526,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
 
   @Test
-  public void testPollDeaggregate()
-      throws IllegalAccessException, NoSuchMethodException, ClassNotFoundException, InterruptedException
+  public void testPollDeaggregate() throws InterruptedException
   {
     recordsPerFetch = 100;
 

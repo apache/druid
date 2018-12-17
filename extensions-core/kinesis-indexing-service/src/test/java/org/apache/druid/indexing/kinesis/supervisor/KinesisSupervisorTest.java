@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.kinesis.supervisor;
 
-import cloud.localstack.LocalstackTestRunner;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
@@ -173,12 +172,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @BeforeClass
   public static void setupClass()
   {
-    cloud.localstack.TestUtils.setEnv("AWS_CBOR_DISABLE", "1");
-    /* Disable SSL certificate checks for local testing */
-    if (LocalstackTestRunner.useSSL()) {
-      cloud.localstack.TestUtils.disableSslCertChecking();
-    }
-
     dataSchema = getDataSchema(DATASOURCE);
   }
 
@@ -1550,9 +1543,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
     KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
-    Assert.assertEquals(cloud.localstack.TestUtils.TEST_ACCESS_KEY, capturedTaskConfig.getAwsAccessKeyId());
-    Assert.assertEquals(cloud.localstack.TestUtils.TEST_SECRET_KEY, capturedTaskConfig.getAwsSecretAccessKey());
-    Assert.assertEquals(LocalstackTestRunner.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
+    Assert.assertEquals("awsKey", capturedTaskConfig.getAwsAccessKeyId());
+    Assert.assertEquals("awsSecret", capturedTaskConfig.getAwsSecretAccessKey());
+    Assert.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
 
@@ -1691,9 +1684,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
     KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
-    Assert.assertEquals(cloud.localstack.TestUtils.TEST_ACCESS_KEY, capturedTaskConfig.getAwsAccessKeyId());
-    Assert.assertEquals(cloud.localstack.TestUtils.TEST_SECRET_KEY, capturedTaskConfig.getAwsSecretAccessKey());
-    Assert.assertEquals(LocalstackTestRunner.getEndpointKinesis(), capturedTaskConfig.getEndpoint());
+    Assert.assertEquals("awsKey", capturedTaskConfig.getAwsAccessKeyId());
+    Assert.assertEquals("awsSecret", capturedTaskConfig.getAwsSecretAccessKey());
+    Assert.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
 
@@ -2812,8 +2805,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointForInactiveTaskGroup()
-      throws InterruptedException, NoSuchMethodException, IllegalAccessException, ClassNotFoundException,
-             ExecutionException, TimeoutException, JsonProcessingException
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
@@ -3091,8 +3083,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test(timeout = 60_000L)
   public void testCheckpointWithNullTaskGroupId()
-      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException, NoSuchMethodException,
-             IllegalAccessException, ClassNotFoundException
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
     supervisor = getSupervisor(1, 3, true, "PT1S", null, null, false);
     //not adding any events
@@ -3498,7 +3489,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
-        LocalstackTestRunner.getEndpointKinesis(),
+        "awsEndpoint",
         null,
         replicas,
         taskCount,
@@ -3511,8 +3502,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         recordsPerFetch,
         fetchDelayMillis,
-        cloud.localstack.TestUtils.TEST_ACCESS_KEY,
-        cloud.localstack.TestUtils.TEST_SECRET_KEY,
+        "awsKey",
+        "awsSecret",
         null,
         null,
         false
@@ -3649,11 +3640,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             minimumMessageTime,
             maximumMessageTime,
-            LocalstackTestRunner.getEndpointKinesis(),
+            "awsEndpoint",
             null,
             null,
-            cloud.localstack.TestUtils.TEST_ACCESS_KEY,
-            cloud.localstack.TestUtils.TEST_SECRET_KEY,
+            "awsKey",
+            "awsSecret",
             null,
             null,
             null,
@@ -3678,7 +3669,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
         stream,
-        LocalstackTestRunner.getEndpointKinesis(),
+        "awsEndpoint",
         null,
         replicas,
         taskCount,
@@ -3691,8 +3682,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
-        cloud.localstack.TestUtils.TEST_ACCESS_KEY,
-        cloud.localstack.TestUtils.TEST_SECRET_KEY,
+        "awsKey",
+        "awsSecret",
         null,
         null,
         false

@@ -26,7 +26,6 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
 import javax.validation.constraints.NotNull;
 import java.math.BigInteger;
-import java.util.Objects;
 
 public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
 {
@@ -61,16 +60,6 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   }
 
   @Override
-  public boolean equals(Object o)
-  {
-    if (!(o instanceof KinesisSequenceNumber)) {
-      return false;
-    }
-    return this.compareTo((KinesisSequenceNumber) o) == 0;
-  }
-
-
-  @Override
   public int compareTo(@NotNull OrderedSequenceNumber<String> o)
   {
     KinesisSequenceNumber num = (KinesisSequenceNumber) o;
@@ -85,9 +74,4 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
     }
   }
 
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(super.hashCode(), intSequence);
-  }
 }

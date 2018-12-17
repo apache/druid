@@ -281,10 +281,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   protected abstract SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> createTaskRunner();
 
-  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> newTaskRecordSupplier()
-      throws ClassNotFoundException,
-             NoSuchMethodException,
-             IllegalAccessException;
+  protected abstract RecordSupplier<PartitionIdType, SequenceOffsetType> newTaskRecordSupplier();
 
   @VisibleForTesting
   public Appenderator getAppenderator()

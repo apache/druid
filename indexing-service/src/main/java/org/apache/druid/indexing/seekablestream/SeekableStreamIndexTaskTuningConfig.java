@@ -96,7 +96,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
     this.basePersistDirectory = defaults.getBasePersistDirectory();
-    this.maxPendingPersists = 0;
+    this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
     this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaults.isReportParseExceptions()
