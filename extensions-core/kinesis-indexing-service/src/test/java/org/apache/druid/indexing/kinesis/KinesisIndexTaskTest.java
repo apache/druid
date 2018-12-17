@@ -2922,7 +2922,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         Predicates.alwaysFalse(),
         false
     );
-    IndexIO indexIO = new org.apache.druid.indexing.common.TestUtils().getTestIndexIO();
+    IndexIO indexIO = new TestUtils().getTestIndexIO();
     QueryableIndex index = indexIO.loadIndex(outputLocation);
     DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) index.getColumnHolder(column)
                                                                                        .getColumn();
