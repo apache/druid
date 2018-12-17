@@ -69,10 +69,22 @@ public class BuildDictJob implements Jobby
   {
     try {
       final long startTime = System.currentTimeMillis();
+
+      String skipDict = config.getSchema().getTuningConfig().getJobProperties().getOrDefault("druid.dict.skip", "false");
+      if (skipDict != null && skipDict.equals("true")) {
+        log.info("skipDict set true, no need to build dict");
+        return true;
+      }
+
       Job job = Job.getInstance(
           new Configuration(),
           StringUtils.format("%s-build-dict-%s", config.getDataSource(), config.getIntervals())
       );
+
+      //8G memory is enough for all global dict, because the input is sequential and we handle global dict slice by slice
+      //can be override by jobproperty
+      job.getConfiguration().set("mapreduce.reduce.memory.mb", "8500");
+      job.getConfiguration().set("mapred.reduce.child.java.opts", "-Xmx8g");
 
       JobHelper.injectSystemProperties(job);
       config.addJobProperties(job);
@@ -113,9 +125,7 @@ public class BuildDictJob implements Jobby
 
       job.getConfiguration().set("mapred.output.compress", "false"); //TODO use hadoop constant instead
 
-      //8G memory is enough for all global dict, because the input is sequential and we handle global dict slice by slice
-      job.getConfiguration().set("mapreduce.reduce.memory.mb", "8500");
-      job.getConfiguration().set("mapred.reduce.child.java.opts", "-Xmx8g");
+
       //Copying global dict to working dir in GlobalDictHDFSStore maybe elapsed a long time (Maybe we could improve it)
       //Waiting the global dict lock maybe also take a long time.
       //So we set 8 hours here
