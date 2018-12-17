@@ -362,7 +362,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final DateTime lookupEnd = last.getInterval().getEnd().minus(skipOffset);
     if (lookupStart.isBefore(lookupEnd)) {
       final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(
-          new Interval(first.getInterval().getStart(), last.getInterval().getEnd().minus(skipOffset))
+          new Interval(lookupStart, lookupEnd)
       );
 
       final List<DataSegment> segments = holders
