@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexing.common.IndexTaskClient;
 import org.apache.druid.indexing.common.TaskInfoProvider;
+import org.apache.druid.indexing.kafka.KafkaIndexTask.Status;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -120,26 +121,40 @@ public class KafkaIndexTaskClient extends IndexTaskClient
         return deserialize(response.getContent(), new TypeReference<Map<Integer, Long>>()
         {
         });
-      }
+      } else if (response.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+        // The task received the pause request, but its status hasn't been changed yet.
+        while (true) {
+          final Status status = getStatus(id);
+          if (status == KafkaIndexTask.Status.PAUSED) {
+            return getCurrentOffsets(id, true);
+          }
 
-      while (true) {
-        if (getStatus(id) == KafkaIndexTask.Status.PAUSED) {
-          return getCurrentOffsets(id, true);
+          final Duration delay = newRetryPolicy().getAndIncrementRetryDelay();
+          if (delay == null) {
+            throw new ISE(
+                "Task [%s] failed to change its status from [%s] to [%s], aborting",
+                id,
+                status,
+                Status.PAUSED
+            );
+          } else {
+            final long sleepTime = delay.getMillis();
+            log.info(
+                "Still waiting for task [%s] to change its status to [%s]; will try again in [%s]",
+                id,
+                Status.PAUSED,
+                new Duration(sleepTime).toString()
+            );
+            Thread.sleep(sleepTime);
+          }
         }
-
-        final Duration delay = newRetryPolicy().getAndIncrementRetryDelay();
-        if (delay == null) {
-          log.error("Task [%s] failed to pause, aborting", id);
-          throw new ISE("Task [%s] failed to pause, aborting", id);
-        } else {
-          final long sleepTime = delay.getMillis();
-          log.info(
-              "Still waiting for task [%s] to pause; will try again in [%s]",
-              id,
-              new Duration(sleepTime).toString()
-          );
-          Thread.sleep(sleepTime);
-        }
+      } else {
+        throw new ISE(
+            "Pause request for task [%s] failed with response [%s] : [%s]",
+            id,
+            response.getStatus(),
+            response.getContent()
+        );
       }
     }
     catch (NoTaskLocationException e) {
