@@ -6794,7 +6794,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .filters(
                     AND(
-                        NOT(SELECTOR("dim1", null, null)),
+                        NOT(SELECTOR("dim1", NullHandling.defaultStringValue(), null)),
                         SELECTOR("dim2", "abc", null)
                     )
                 )
