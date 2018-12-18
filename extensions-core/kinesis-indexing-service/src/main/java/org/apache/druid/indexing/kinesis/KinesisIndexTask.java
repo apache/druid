@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
@@ -34,6 +35,8 @@ import java.util.Map;
 
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 {
+  private final AWSCredentialsConfig awsCredentialsConfig;
+
   @JsonCreator
   public KinesisIndexTask(
       @JsonProperty("id") String id,
@@ -44,7 +47,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject AWSCredentialsConfig awsCredentialsConfig
   )
   {
     super(
@@ -59,6 +63,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         rowIngestionMetersFactory,
         "index_kinesis"
     );
+    this.awsCredentialsConfig = awsCredentialsConfig;
   }
 
 
@@ -88,8 +93,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
             ioConfig.getEndpoint(),
-            ioConfig.getAwsAccessKeyId(),
-            ioConfig.getAwsSecretAccessKey(),
+            awsCredentialsConfig.getAccessKey().getPassword(),
+            awsCredentialsConfig.getSecretKey().getPassword(),
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),

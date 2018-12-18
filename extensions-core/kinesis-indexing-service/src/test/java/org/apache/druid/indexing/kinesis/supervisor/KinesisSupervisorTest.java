@@ -1543,8 +1543,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
     KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
-    Assert.assertEquals("awsKey", capturedTaskConfig.getAwsAccessKeyId());
-    Assert.assertEquals("awsSecret", capturedTaskConfig.getAwsSecretAccessKey());
     Assert.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
@@ -1684,8 +1682,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
     KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
-    Assert.assertEquals("awsKey", capturedTaskConfig.getAwsAccessKeyId());
-    Assert.assertEquals("awsSecret", capturedTaskConfig.getAwsSecretAccessKey());
     Assert.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
     Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
@@ -3502,8 +3498,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         recordsPerFetch,
         fetchDelayMillis,
-        "awsKey",
-        "awsSecret",
         null,
         null,
         false
@@ -3549,7 +3543,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            null
         ),
         rowIngestionMetersFactory
     );
@@ -3643,8 +3638,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -3653,7 +3646,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         Collections.emptyMap(),
         null,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
   }
 
@@ -3682,8 +3676,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
         earlyMessageRejectionPeriod,
         null,
         null,
-        "awsKey",
-        "awsSecret",
         null,
         null,
         false
@@ -3729,7 +3721,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            null
         ),
         rowIngestionMetersFactory
     );
@@ -3790,7 +3783,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
           taskClientFactory,
           mapper,
           spec,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          null
       );
       this.spec = spec;
     }

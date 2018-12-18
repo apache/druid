@@ -625,6 +625,12 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   }
 
   @Override
+  protected boolean isEndOfShard(Long seqNum)
+  {
+    return false;
+  }
+
+  @Override
   protected List<OrderedPartitionableRecord<Integer, Long>> getRecords(
       RecordSupplier<Integer, Long> recordSupplier, TaskToolbox toolbox
   )

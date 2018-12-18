@@ -86,8 +86,6 @@ public class KinesisIOConfigTest
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
     Assert.assertEquals(config.getRecordsPerFetch(), 4000);
     Assert.assertEquals(config.getFetchDelayMillis(), 0);
-    Assert.assertNull(config.getAwsAccessKeyId());
-    Assert.assertNull(config.getAwsSecretAccessKey());
     Assert.assertEquals(Collections.emptySet(), config.getExclusiveStartSequenceNumberPartitions());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
@@ -111,8 +109,6 @@ public class KinesisIOConfigTest
                      + "  \"endpoint\": \"kinesis.us-east-2.amazonaws.com\",\n"
                      + "  \"recordsPerFetch\": 1000,\n"
                      + "  \"fetchDelayMillis\": 1000,\n"
-                     + "  \"awsAccessKeyId\": \"awsid\",\n"
-                     + "  \"awsSecretAccessKey\": \"awskey\",\n"
                      + "  \"exclusiveStartSequenceNumberPartitions\": [\"0\"],\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
                      + "  \"awsExternalId\": \"awsexternalid\",\n"
@@ -150,8 +146,6 @@ public class KinesisIOConfigTest
     Assert.assertEquals(config.getExclusiveStartSequenceNumberPartitions(), ImmutableSet.of("0"));
     Assert.assertEquals(1000, config.getRecordsPerFetch());
     Assert.assertEquals(1000, config.getFetchDelayMillis());
-    Assert.assertEquals("awsid", config.getAwsAccessKeyId());
-    Assert.assertEquals("awskey", config.getAwsSecretAccessKey());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
     Assert.assertEquals("awsexternalid", config.getAwsExternalId());
     Assert.assertTrue(config.isDeaggregate());

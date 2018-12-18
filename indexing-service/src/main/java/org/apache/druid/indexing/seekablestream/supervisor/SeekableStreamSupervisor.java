@@ -62,7 +62,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -1723,7 +1722,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Set<PartitionIdType> closedPartitions = getOffsetsFromMetadataStorage()
         .entrySet()
         .stream()
-        .filter(x -> OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(x.getValue()))
+        .filter(x -> isEndOfShard(x.getValue()))
         .map(Entry::getKey)
         .collect(Collectors.toSet());
 
@@ -2278,7 +2277,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Integer groupId = entry.getKey();
 
       if (taskGroup.startingSequences == null || taskGroup.startingSequences
-          .values().stream().allMatch(x -> x == null || OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(x))) {
+          .values().stream().allMatch(x -> x == null || isEndOfShard(x))) {
         log.debug("Nothing to read in any partition for taskGroup [%d], skipping task creation", groupId);
         continue;
       }
@@ -2332,7 +2331,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       if (!getNotSetMarker().equals(sequence)) {
         // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
-        if (!OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(sequence)) {
+        if (!isEndOfShard(sequence)) {
           builder.put(partition, makeSequenceNumber(sequence, false));
         }
       } else {
@@ -2795,4 +2794,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @return end of partition sequence offset
    */
   protected abstract SequenceOffsetType getEndOfPartitionMarker();
+
+  /**
+   * checks if seqNum marks the end of a Kinesis shard. Used by Kinesis only.
+   */
+  protected abstract boolean isEndOfShard(SequenceOffsetType seqNum);
 }

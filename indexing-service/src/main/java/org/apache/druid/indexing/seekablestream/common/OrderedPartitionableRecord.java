@@ -31,14 +31,6 @@ import java.util.Objects;
  */
 public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
 {
-  /**
-   * In Kinesis, when a shard is closed due to shard splitting, a null ShardIterator is returned.
-   * The EOS marker is placed at the end of the Kinesis Record Supplier buffer, such that when
-   * an indexing task pulls the record 'EOS', it knows the shard has been closed and should stop
-   * reading and start publishing
-   */
-  public static final String END_OF_SHARD_MARKER = "EOS";
-
   private final String stream;
   private final PartitionIdType partitionId;
   private final SequenceOffsetType sequenceNumber;

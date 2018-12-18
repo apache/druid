@@ -356,6 +356,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
+  protected boolean isEndOfShard(Long seqNum)
+  {
+    return false;
+  }
+
+  @Override
   protected void updateLatestSequenceFromStream(
       RecordSupplier<Integer, Long> recordSupplier,
       Set<StreamPartition<Integer>> partitions

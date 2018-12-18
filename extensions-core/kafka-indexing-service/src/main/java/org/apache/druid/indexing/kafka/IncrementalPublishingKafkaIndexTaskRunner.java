@@ -239,6 +239,12 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     }
   }
 
+  @Override
+  protected boolean isEndOfShard(Long seqNum)
+  {
+    return false;
+  }
+
   @Nullable
   @Override
   protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(

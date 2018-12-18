@@ -201,7 +201,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(100L, (long) copy.getMaxTotalRows());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
-    Assert.assertEquals(0, copy.getMaxPendingPersists());
+    Assert.assertEquals(4, copy.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
     Assert.assertTrue(copy.getBuildV9Directly());
     Assert.assertTrue(copy.isReportParseExceptions());

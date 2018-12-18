@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
@@ -41,6 +42,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
+import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -386,8 +388,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -470,8 +470,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -582,8 +580,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -724,8 +720,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -847,8 +841,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -933,8 +925,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1029,8 +1019,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1112,8 +1100,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1178,8 +1164,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1258,8 +1242,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1338,8 +1320,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1407,8 +1387,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1520,8 +1498,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1612,8 +1588,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1640,8 +1614,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1729,8 +1701,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1757,8 +1727,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1846,8 +1814,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1874,8 +1840,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -1964,8 +1928,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -2057,8 +2019,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -2085,8 +2045,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -2177,8 +2135,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -2239,8 +2195,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             ImmutableSet.of(shardId1),
             null,
             null,
@@ -2326,8 +2280,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -2467,8 +2419,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            "awsKey",
-            "awsSecret",
             null,
             null,
             null,
@@ -2608,7 +2558,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         context,
         null,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     return task;
@@ -2659,7 +2610,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         context,
         null,
         null,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        null
     );
 
     return task;
@@ -2714,6 +2666,10 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     final TestUtils testUtils = new TestUtils();
     rowIngestionMetersFactory = testUtils.getRowIngestionMetersFactory();
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
+    objectMapper.setInjectableValues(((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(
+        AWSCredentialsConfig.class,
+        new AWSCredentialsConfig()
+    ));
     for (Module module : new KinesisIndexingServiceModule().getJacksonModules()) {
       objectMapper.registerModule(module);
     }
@@ -3012,7 +2968,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         @JsonProperty("context") Map<String, Object> context,
         @JacksonInject ChatHandlerProvider chatHandlerProvider,
         @JacksonInject AuthorizerMapper authorizerMapper,
-        @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+        @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+        @JacksonInject AWSCredentialsConfig awsCredentialsConfig
     )
     {
       super(
@@ -3024,7 +2981,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
           context,
           chatHandlerProvider,
           authorizerMapper,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          awsCredentialsConfig
       );
     }
 

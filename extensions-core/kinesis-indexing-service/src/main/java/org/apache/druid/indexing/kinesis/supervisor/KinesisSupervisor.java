@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -74,6 +75,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
   private static final String NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;
+  private final AWSCredentialsConfig awsCredentialsConfig;
 
   public KinesisSupervisor(
       final TaskStorage taskStorage,
@@ -82,7 +84,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       final KinesisIndexTaskClientFactory taskClientFactory,
       final ObjectMapper mapper,
       final KinesisSupervisorSpec spec,
-      final RowIngestionMetersFactory rowIngestionMetersFactory
+      final RowIngestionMetersFactory rowIngestionMetersFactory,
+      final AWSCredentialsConfig awsCredentialsConfig
   )
   {
     super(
@@ -98,6 +101,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     );
 
     this.spec = spec;
+    this.awsCredentialsConfig = awsCredentialsConfig;
   }
 
   @Override
@@ -125,8 +129,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         ioConfig.getEndpoint(),
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
-        ioConfig.getAwsAccessKeyId(),
-        ioConfig.getAwsSecretAccessKey(),
         exclusiveStartSequenceNumberPartitions,
         ioConfig.getAwsAssumedRoleArn(),
         ioConfig.getAwsExternalId(),
@@ -171,7 +173,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
           context,
           null,
           null,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          awsCredentialsConfig
       ));
     }
     return taskList;
@@ -188,8 +191,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
             ioConfig.getEndpoint(),
-            ioConfig.getAwsAccessKeyId(),
-            ioConfig.getAwsSecretAccessKey(),
+            awsCredentialsConfig.getAccessKey().getPassword(),
+            awsCredentialsConfig.getSecretKey().getPassword(),
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),
@@ -303,5 +306,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   protected String getEndOfPartitionMarker()
   {
     return SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER;
+  }
+
+  @Override
+  protected boolean isEndOfShard(String seqNum)
+  {
+    return KinesisSequenceNumber.END_OF_SHARD_MARKER.equals(seqNum);
   }
 }

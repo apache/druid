@@ -59,7 +59,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
   @Override
   public String toString()
   {
-    return "{" +
+    return "KafkaSupervisorReportPayload{" +
            "dataSource='" + getDataSource() + '\'' +
            ", topic='" + getStream() + '\'' +
            ", partitions=" + getPartitions() +

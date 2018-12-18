@@ -41,15 +41,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 {
-  private static final Random RANDOM = ThreadLocalRandom.current();
-
   private final KafkaConsumer<byte[], byte[]> consumer;
   private final Map<String, Object> consumerProperties;
   private final ObjectMapper sortingMapper;

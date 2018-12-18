@@ -152,7 +152,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
-           ", maxPendingPersists=" + 0 +
+           ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
            ", buildV9Directly=" + true +
            ", reportParseExceptions=" + isReportParseExceptions() +
@@ -183,7 +183,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
-        0,
+        getMaxPendingPersists(),
         getIndexSpec(),
         true,
         isReportParseExceptions(),

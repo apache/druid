@@ -26,9 +26,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
@@ -54,7 +54,7 @@ public class KafkaIndexTaskModule implements DruidModule
   public void configure(Binder binder)
   {
     binder.bind(
-        new TypeLiteral<IndexTaskClientFactory<KafkaIndexTaskClient>>()
+        new TypeLiteral<SeekableStreamIndexTaskClientFactory<KafkaIndexTaskClient>>()
         {
         }
     ).to(KafkaIndexTaskClientFactory.class).in(LazySingleton.class);

@@ -150,7 +150,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             OrderedPartitionableRecord<String, String> endOfShardRecord = new OrderedPartitionableRecord<>(
                 streamPartition.getStream(),
                 streamPartition.getPartitionId(),
-                OrderedPartitionableRecord.END_OF_SHARD_MARKER,
+                KinesisSequenceNumber.END_OF_SHARD_MARKER,
                 null
             );
 
@@ -658,7 +658,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     if (shardIterator == null) {
       log.info("Partition[%s] returned a null shard iterator, is the shard closed?", partition.getPartitionId());
-      return OrderedPartitionableRecord.END_OF_SHARD_MARKER;
+      return KinesisSequenceNumber.END_OF_SHARD_MARKER;
     }
 
 

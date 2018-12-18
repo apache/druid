@@ -21,7 +21,6 @@ package org.apache.druid.indexing.kinesis;
 
 
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
 import javax.validation.constraints.NotNull;
@@ -30,6 +29,13 @@ import java.math.BigInteger;
 public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
 {
 
+  /**
+   * In Kinesis, when a shard is closed due to shard splitting, a null ShardIterator is returned.
+   * The EOS marker is placed at the end of the Kinesis Record Supplier buffer, such that when
+   * an indexing task pulls the record 'EOS', it knows the shard has been closed and should stop
+   * reading and start publishing
+   */
+  public static final String END_OF_SHARD_MARKER = "EOS";
   // this flag is used to indicate either END_OF_SHARD_MARKER
   // or NO_END_SEQUENCE_NUMBER so that they can be properly compared
   // with other sequence numbers
@@ -39,7 +45,7 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   private KinesisSequenceNumber(@NotNull String sequenceNumber, boolean isExclusive)
   {
     super(sequenceNumber, isExclusive);
-    if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(sequenceNumber)
+    if (END_OF_SHARD_MARKER.equals(sequenceNumber)
         || SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
       isMaxSequenceNumber = true;
       this.intSequence = null;

@@ -71,8 +71,6 @@ public class KinesisSupervisorIOConfigTest
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
     Assert.assertEquals((Integer) 4000, config.getRecordsPerFetch());
     Assert.assertEquals((Integer) 0, config.getFetchDelayMillis());
-    Assert.assertNull(config.getAwsAccessKeyId());
-    Assert.assertNull(config.getAwsSecretAccessKey());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
     Assert.assertFalse(config.isDeaggregate());
@@ -97,8 +95,6 @@ public class KinesisSupervisorIOConfigTest
                      + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
                      + "  \"recordsPerFetch\": 4000,\n"
                      + "  \"fetchDelayMillis\": 1000,\n"
-                     + "  \"awsAccessKeyId\": \"awsid\",\n"
-                     + "  \"awsSecretAccessKey\": \"awskey\",\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
                      + "  \"awsExternalId\": \"awsexternalid\",\n"
                      + "  \"deaggregate\": true\n"
@@ -122,8 +118,6 @@ public class KinesisSupervisorIOConfigTest
     Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
     Assert.assertEquals((Integer) 4000, config.getRecordsPerFetch());
     Assert.assertEquals((Integer) 1000, config.getFetchDelayMillis());
-    Assert.assertEquals("awsid", config.getAwsAccessKeyId());
-    Assert.assertEquals("awskey", config.getAwsSecretAccessKey());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
     Assert.assertEquals("awsexternalid", config.getAwsExternalId());
     Assert.assertTrue(config.isDeaggregate());

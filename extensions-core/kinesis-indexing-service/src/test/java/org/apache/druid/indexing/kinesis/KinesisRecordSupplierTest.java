@@ -213,7 +213,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   {
     return records.stream()
                   .filter(x -> !x.getSequenceNumber()
-                                 .equals(OrderedPartitionableRecord.END_OF_SHARD_MARKER))
+                                 .equals(KinesisSequenceNumber.END_OF_SHARD_MARKER))
                   .collect(Collectors.toList());
   }
 

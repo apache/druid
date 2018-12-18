@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -40,8 +39,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   private final String endpoint;
   private final Integer recordsPerFetch;
   private final Integer fetchDelayMillis;
-  private final String awsAccessKeyId;
-  private final String awsSecretAccessKey;
 
   private final String awsAssumedRoleArn;
   private final String awsExternalId;
@@ -60,8 +57,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("endpoint") String endpoint,
       @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
-      @JsonProperty("awsAccessKeyId") String awsAccessKeyId,
-      @JsonProperty("awsSecretAccessKey") String awsSecretAccessKey,
       @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<String> exclusiveStartSequenceNumberPartitions,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
@@ -82,14 +77,12 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     Preconditions.checkArgument(endPartitions.getPartitionSequenceNumberMap()
                                              .values()
                                              .stream()
-                                             .noneMatch(x -> x.equals(OrderedPartitionableRecord.END_OF_SHARD_MARKER)));
+                                             .noneMatch(x -> x.equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)));
 
     this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
     this.endpoint = Preconditions.checkNotNull(endpoint, "endpoint");
     this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : DEFAULT_RECORDS_PER_FETCH;
     this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : DEFAULT_FETCH_DELAY_MILLIS;
-    this.awsAccessKeyId = awsAccessKeyId;
-    this.awsSecretAccessKey = awsSecretAccessKey;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
@@ -117,18 +110,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   public int getFetchDelayMillis()
   {
     return fetchDelayMillis;
-  }
-
-  @JsonProperty
-  public String getAwsAccessKeyId()
-  {
-    return awsAccessKeyId;
-  }
-
-  @JsonProperty
-  public String getAwsSecretAccessKey()
-  {
-    return awsSecretAccessKey;
   }
 
   @JsonProperty
@@ -163,8 +144,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
            ", endpoint='" + endpoint + '\'' +
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
-           ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
-           ", awsSecretAccessKey=" + "************************" +
            ", exclusiveStartSequenceNumberPartitions=" + getExclusiveStartSequenceNumberPartitions() +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +

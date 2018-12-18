@@ -44,8 +44,6 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final Integer recordsPerFetch;
   private final Integer fetchDelayMillis;
 
-  private final String awsAccessKeyId;
-  private final String awsSecretAccessKey;
   private final String awsAssumedRoleArn;
   private final String awsExternalId;
   private final boolean deaggregate;
@@ -66,8 +64,6 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
       @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
-      @JsonProperty("awsAccessKeyId") String awsAccessKeyId,
-      @JsonProperty("awsSecretAccessKey") String awsSecretAccessKey,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
       @JsonProperty("deaggregate") boolean deaggregate
@@ -88,10 +84,12 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.endpoint = endpoint != null
                     ? endpoint
                     : (region != null ? region.getEndpoint() : KinesisRegion.US_EAST_1.getEndpoint());
-    this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : KinesisIndexTaskIOConfig.DEFAULT_RECORDS_PER_FETCH;
-    this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : KinesisIndexTaskIOConfig.DEFAULT_FETCH_DELAY_MILLIS;
-    this.awsAccessKeyId = awsAccessKeyId;
-    this.awsSecretAccessKey = awsSecretAccessKey;
+    this.recordsPerFetch = recordsPerFetch != null
+                           ? recordsPerFetch
+                           : KinesisIndexTaskIOConfig.DEFAULT_RECORDS_PER_FETCH;
+    this.fetchDelayMillis = fetchDelayMillis != null
+                            ? fetchDelayMillis
+                            : KinesisIndexTaskIOConfig.DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
@@ -113,18 +111,6 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public Integer getFetchDelayMillis()
   {
     return fetchDelayMillis;
-  }
-
-  @JsonProperty
-  public String getAwsAccessKeyId()
-  {
-    return awsAccessKeyId;
-  }
-
-  @JsonProperty
-  public String getAwsSecretAccessKey()
-  {
-    return awsSecretAccessKey;
   }
 
   @JsonProperty
@@ -162,8 +148,6 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
-           ", awsAccessKeyId='" + awsAccessKeyId + '\'' +
-           ", awsSecretAccessKey=" + "************************" +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +

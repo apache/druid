@@ -412,7 +412,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // Filter out partitions with END_OF_SHARD markers since these partitions have already been fully read. This
       // should have been done by the supervisor already so this is defensive.
       int numPreFilterPartitions = currOffsets.size();
-      if (currOffsets.entrySet().removeIf(x -> OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(x.getValue()))) {
+      if (currOffsets.entrySet().removeIf(x -> isEndOfShard(x.getValue()))) {
         log.info(
             "Removed [%d] partitions from assignment which have already been closed",
             numPreFilterPartitions - currOffsets.size()
@@ -531,8 +531,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               );
             }
 
-            if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(record.getSequenceNumber())) {
-              // shard is closed
+            if (isEndOfShard(record.getSequenceNumber())) {
+              // shard is closed, applies to Kinesis only
               currOffsets.put(record.getPartitionId(), record.getSequenceNumber());
             } else if (createSequenceNumber(record.getSequenceNumber()).compareTo(
                 createSequenceNumber(endOffsets.get(record.getPartitionId()))) <= 0) {
@@ -643,7 +643,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
 
             if ((currOffsets.get(record.getPartitionId()).equals(endOffsets.get(record.getPartitionId()))
-                 || currOffsets.get(record.getPartitionId()).equals(OrderedPartitionableRecord.END_OF_SHARD_MARKER))
+                 || isEndOfShard(currOffsets.get(record.getPartitionId())))
                 && assignment.remove(record.getStreamPartition())) {
               log.info("Finished reading stream[%s], partition[%s].", record.getStream(), record.getPartitionId());
               recordSupplier.assign(assignment);
@@ -831,6 +831,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     toolbox.getTaskReportFileWriter().write(getTaskCompletionReports(null));
     return TaskStatus.success(task.getId());
   }
+
+  /**
+   * checks if the input seqNum marks end of shard. Used by Kinesis only
+   */
+  protected abstract boolean isEndOfShard(SequenceOffsetType seqNum);
 
   private void checkPublishAndHandoffFailure() throws ExecutionException, InterruptedException
   {
@@ -1051,7 +1056,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     final Set<StreamPartition<PartitionIdType>> assignment = new HashSet<>();
     for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : currOffsets.entrySet()) {
       final SequenceOffsetType endOffset = endOffsets.get(entry.getKey());
-      if (OrderedPartitionableRecord.END_OF_SHARD_MARKER.equals(endOffset)
+      if (isEndOfShard(endOffset)
           || SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset)
           || createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(endOffset)) < 0) {
         assignment.add(StreamPartition.of(stream, entry.getKey()));

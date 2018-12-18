@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
@@ -39,6 +40,8 @@ import java.util.Map;
 
 public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
 {
+  private final AWSCredentialsConfig awsCredentialsConfig;
+
   @JsonCreator
   public KinesisSupervisorSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
@@ -53,7 +56,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject AWSCredentialsConfig awsCredentialsConfig
   )
   {
     super(
@@ -103,6 +107,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         monitorSchedulerConfig,
         rowIngestionMetersFactory
     );
+    this.awsCredentialsConfig = awsCredentialsConfig;
   }
 
 
@@ -116,7 +121,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         (KinesisIndexTaskClientFactory) indexTaskClientFactory,
         mapper,
         this,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        awsCredentialsConfig
     );
   }
 
@@ -161,7 +167,8 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         mapper,
         emitter,
         monitorSchedulerConfig,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        awsCredentialsConfig
     );
   }
 }

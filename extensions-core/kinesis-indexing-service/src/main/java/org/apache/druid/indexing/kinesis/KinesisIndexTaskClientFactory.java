@@ -31,7 +31,10 @@ import org.joda.time.Duration;
 public class KinesisIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<KinesisIndexTaskClient>
 {
   @Inject
-  public KinesisIndexTaskClientFactory(@EscalatedGlobal HttpClient httpClient, @Json ObjectMapper mapper)
+  public KinesisIndexTaskClientFactory(
+      @EscalatedGlobal HttpClient httpClient,
+      @Json ObjectMapper mapper
+  )
   {
     super(
         httpClient,

@@ -155,7 +155,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
            ", maxBytesInMemory=" + TuningConfigs.getMaxBytesInMemoryOrDefault(getMaxBytesInMemory()) +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
-           ", maxPendingPersists=" + 0 +
+           ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
@@ -184,7 +184,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
         getMaxTotalRows(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
-        0,
+        getMaxPendingPersists(),
         getIndexSpec(),
         true,
         isReportParseExceptions(),

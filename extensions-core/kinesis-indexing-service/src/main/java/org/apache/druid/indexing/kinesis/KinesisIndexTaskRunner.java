@@ -164,6 +164,12 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
     }
   }
 
+  @Override
+  protected boolean isEndOfShard(String seqNum)
+  {
+    return KinesisSequenceNumber.END_OF_SHARD_MARKER.equals(seqNum);
+  }
+
   @Nullable
   @Override
   protected TreeMap<Integer, Map<String, String>> getCheckPointsFromContext(
