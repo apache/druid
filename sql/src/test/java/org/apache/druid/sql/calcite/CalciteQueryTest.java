@@ -6820,7 +6820,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setDimFilter(NOT(SELECTOR("dim1", "", null)))
+                        .setDimFilter(NOT(SELECTOR("dim1", NullHandling.defaultStringValue(), null)))
                         .setDimensions(
                             DIMS(new ExtractionDimensionSpec("dim1", "d0", new SubstringDimExtractionFn(0, 1)))
                         )
