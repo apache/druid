@@ -2529,7 +2529,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Futures.successfulAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
   }
 
-  protected void updateLatestOffsetsFromStream()
+  private void updateLatestOffsetsFromStream() throws InterruptedException
   {
     synchronized (recordSupplierLock) {
       Set<PartitionIdType> partitionIds = null;

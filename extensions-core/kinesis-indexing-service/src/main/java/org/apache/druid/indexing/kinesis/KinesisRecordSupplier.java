@@ -84,8 +84,15 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private class PartitionResource
   {
     private final StreamPartition<String> streamPartition;
+
+    // lock for cooradinating startBackground fetch, guards started
     private final Object startLock = new Object();
 
+    // shardIterator points to the record that will be polled next by recordRunnable
+    // can be null when shard is closed due to the user shard splitting or changing the number
+    // of shards in the stream, in which case a 'EOS' marker is used by the KinesisRecordSupplier
+    // to indicate that this shard has no more records to read
+    @Nullable
     private volatile String shardIterator;
     private volatile boolean started;
     private volatile boolean stopRequested;
@@ -97,7 +104,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       this.streamPartition = streamPartition;
     }
 
-    void start()
+    void startBackgroundFetch()
     {
       synchronized (startLock) {
         if (started) {
@@ -117,7 +124,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       }
     }
 
-    public void stop()
+    void stopBackgroundFetch()
     {
       log.info(
           "Stopping scheduled fetch runnable for stream[%s] partition[%s]",
@@ -196,16 +203,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             );
 
 
-            if (log.isTraceEnabled()) {
-              log.trace(
-                  "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
-                  record.getStream(),
-                  record.getPartitionId(),
-                  record.getSequenceNumber(),
-                  records.remainingCapacity(),
-                  record.getData().stream().map(StringUtils::fromUtf8).collect(Collectors.toList())
-              );
-            }
+            log.trace(
+                "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
+                record.getStream(),
+                record.getPartitionId(),
+                record.getSequenceNumber(),
+                records.remainingCapacity(),
+                record.getData().stream().map(StringUtils::fromUtf8).collect(Collectors.toList())
+            );
 
             // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
             // from this message and back off for a bit to let the buffer drain before retrying.
@@ -328,10 +333,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         getDataHandle = lookup.unreflect(getDataMethod);
       }
       catch (ClassNotFoundException e) {
-        log.error(
-            "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
-            + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
-        throw new RuntimeException(e);
+        throw new ISE(e, "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
+                         + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -401,7 +404,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     checkIfClosed();
     if (checkPartitionsStarted) {
-      partitionResources.values().forEach(PartitionResource::start);
+      partitionResources.values().forEach(PartitionResource::startBackgroundFetch);
       checkPartitionsStarted = false;
     }
   }
@@ -423,14 +426,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       Map.Entry<StreamPartition<String>, PartitionResource> entry = i.next();
       if (!collection.contains(entry.getKey())) {
         i.remove();
-        entry.getValue().stop();
+        entry.getValue().stopBackgroundFetch();
       }
     }
 
   }
 
   @Override
-  public void seek(StreamPartition<String> partition, String sequenceNumber)
+  public void seek(StreamPartition<String> partition, String sequenceNumber) throws InterruptedException
   {
     checkIfClosed();
     filterBufferAndResetFetchRunnable(ImmutableSet.of(partition));
@@ -438,7 +441,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   }
 
   @Override
-  public void seekToEarliest(Set<StreamPartition<String>> partitions)
+  public void seekToEarliest(Set<StreamPartition<String>> partitions) throws InterruptedException
   {
     checkIfClosed();
     filterBufferAndResetFetchRunnable(partitions);
@@ -446,7 +449,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   }
 
   @Override
-  public void seekToLatest(Set<StreamPartition<String>> partitions)
+  public void seekToLatest(Set<StreamPartition<String>> partitions) throws InterruptedException
   {
     checkIfClosed();
     filterBufferAndResetFetchRunnable(partitions);
@@ -465,16 +468,19 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     checkIfClosed();
     if (checkPartitionsStarted) {
-      partitionResources.values().forEach(PartitionResource::start);
+      partitionResources.values().forEach(PartitionResource::startBackgroundFetch);
       checkPartitionsStarted = false;
     }
 
     try {
-      List<OrderedPartitionableRecord<String, String>> polledRecords = new ArrayList<>();
+      int expectedSize = Math.min(Math.max(records.size(), 1), maxRecordsPerPoll);
+
+      List<OrderedPartitionableRecord<String, String>> polledRecords = new ArrayList<>(expectedSize);
+
       Queues.drain(
           records,
           polledRecords,
-          Math.min(Math.max(records.size(), 1), maxRecordsPerPoll),
+          expectedSize,
           timeout,
           TimeUnit.MILLISECONDS
       );
@@ -492,6 +498,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   }
 
+  @Nullable
   @Override
   public String getLatestSequenceNumber(StreamPartition<String> partition)
   {
@@ -499,6 +506,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     return getSequenceNumberInternal(partition, ShardIteratorType.LATEST);
   }
 
+  @Nullable
   @Override
   public String getEarliestSequenceNumber(StreamPartition<String> partition)
   {
@@ -541,7 +549,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       }
     }
     catch (InterruptedException e) {
-      log.info(e, "InterruptedException while shutting down");
+      log.warn(e, "InterruptedException while shutting down");
     }
 
     this.closed = true;
@@ -570,7 +578,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     checkPartitionsStarted = true;
   }
 
-  private void filterBufferAndResetFetchRunnable(Set<StreamPartition<String>> partitions)
+  private void filterBufferAndResetFetchRunnable(Set<StreamPartition<String>> partitions) throws InterruptedException
   {
     scheduledExec.shutdown();
 
@@ -580,7 +588,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       }
     }
     catch (InterruptedException e) {
-      log.info(e, "InterruptedException while shutting down");
+      log.warn(e, "InterruptedException while shutting down");
+      throw e;
     }
 
     scheduledExec = Executors.newScheduledThreadPool(
@@ -602,6 +611,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     checkPartitionsStarted = true;
   }
 
+  @Nullable
   private String getSequenceNumberInternal(StreamPartition<String> partition, ShardIteratorType iteratorEnum)
   {
 
@@ -614,12 +624,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       ).getShardIterator();
     }
     catch (ResourceNotFoundException e) {
-      log.warn("Caught ResourceNotFoundException: %s", e.getMessage());
+      log.warn("Caught ResourceNotFoundException: [%s]", e);
     }
 
     return getSequenceNumberInternal(partition, shardIterator);
   }
 
+  @Nullable
   private String getSequenceNumberInternal(StreamPartition<String> partition, String shardIterator)
   {
     long timeoutMillis = System.currentTimeMillis() + fetchSequenceNumberTimeout;

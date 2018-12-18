@@ -347,7 +347,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     recordSupplier.seek(shard0Partition, shard0Records.get(1).getSequenceNumber());
     recordSupplier.start();
 
-    while (recordSupplier.bufferSize() < 9) {
+    for (int i = 0; i < 10 && recordSupplier.bufferSize() < 9; i++) {
       Thread.sleep(100);
     }
 
@@ -413,7 +413,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     recordSupplier.seekToLatest(partitions);
     recordSupplier.start();
 
-    while (recordSupplier.bufferSize() < 2) {
+    for (int i = 0; i < 10 && recordSupplier.bufferSize() < 2; i++) {
       Thread.sleep(100);
     }
     Assert.assertEquals(Collections.emptyList(), cleanRecords(recordSupplier.poll(poll_timeout_millis)));
@@ -422,7 +422,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   }
 
   @Test(expected = ISE.class)
-  public void testSeekUnassigned()
+  public void testSeekUnassigned() throws InterruptedException
   {
     StreamPartition<String> shard0 = StreamPartition.of(stream, shardId0);
     StreamPartition<String> shard1 = StreamPartition.of(stream, shardId1);
@@ -500,7 +500,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     recordSupplier.seek(StreamPartition.of(stream, shardId1), "5");
     recordSupplier.start();
 
-    while (recordSupplier.bufferSize() < 6) {
+    for (int i = 0; i < 10 && recordSupplier.bufferSize() < 6; i++) {
       Thread.sleep(100);
     }
 
@@ -582,7 +582,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     recordSupplier.seekToEarliest(partitions);
     recordSupplier.start();
 
-    while (recordSupplier.bufferSize() < 12) {
+    for (int i = 0; i < 10 && recordSupplier.bufferSize() < 12; i++) {
       Thread.sleep(100);
     }
 

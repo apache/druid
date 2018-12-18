@@ -175,7 +175,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final Condition hasPaused = pauseLock.newCondition();
   private final Condition shouldResume = pauseLock.newCondition();
 
-  public final AtomicBoolean stopRequested = new AtomicBoolean(false);
+  protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
   private final AtomicBoolean publishOnStop = new AtomicBoolean(false);
 
   // [statusLock] is used to synchronize the Jetty thread calling stopGracefully() with the main run thread. It prevents
@@ -1080,7 +1080,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private void seekToStartingSequence(
       RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
       Set<StreamPartition<PartitionIdType>> partitions
-  )
+  ) throws InterruptedException
   {
     for (final StreamPartition<PartitionIdType> partition : partitions) {
       final SequenceOffsetType sequence = currOffsets.get(partition.getPartitionId());

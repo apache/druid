@@ -57,7 +57,7 @@ public enum KinesisRegion
                   .stream()
                   .filter(x -> x.toString().equals(value))
                   .findFirst()
-                  .orElseThrow(() -> new IAE("Region must be one of: %s", getNames()));
+                  .orElseThrow(() -> new IAE("Invalid region %s, region must be one of: %s", value, getNames()));
   }
 
   private static List<String> getNames()
@@ -70,8 +70,8 @@ public enum KinesisRegion
     return StringUtils.format("kinesis.%s.amazonaws.com%s", toString(), toString().startsWith("cn-") ? ".cn" : "");
   }
 
-  @Override
   @JsonValue
+  @Override
   public String toString()
   {
     return StringUtils.toLowerCase(name()).replace('_', '-');

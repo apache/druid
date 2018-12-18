@@ -53,21 +53,21 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType> extends Clo
    * @param partition      partition to seek
    * @param sequenceNumber sequence number to seek to
    */
-  void seek(StreamPartition<PartitionIdType> partition, SequenceOffsetType sequenceNumber);
+  void seek(StreamPartition<PartitionIdType> partition, SequenceOffsetType sequenceNumber) throws InterruptedException;
 
   /**
    * seek a set of partitions to the earliest record position available in the stream
    *
    * @param partitions partitions to seek
    */
-  void seekToEarliest(Set<StreamPartition<PartitionIdType>> partitions);
+  void seekToEarliest(Set<StreamPartition<PartitionIdType>> partitions) throws InterruptedException;
 
   /**
    * seek a set of partitions to the latest/newest record position available in the stream
    *
    * @param partitions partitions to seek
    */
-  void seekToLatest(Set<StreamPartition<PartitionIdType>> partitions);
+  void seekToLatest(Set<StreamPartition<PartitionIdType>> partitions) throws InterruptedException;
 
   /**
    * get the current assignment

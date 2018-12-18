@@ -19,6 +19,11 @@
 
 package org.apache.druid.indexing.seekablestream.common;
 
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+
+import javax.validation.constraints.NotNull;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,10 +48,13 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
       List<byte[]> data
   )
   {
+    Preconditions.checkNotNull(stream, "stream");
+    Preconditions.checkNotNull(partitionId, "partitionId");
+    Preconditions.checkNotNull(sequenceNumber, "sequenceNumber");
     this.stream = stream;
     this.partitionId = partitionId;
     this.sequenceNumber = sequenceNumber;
-    this.data = data;
+    this.data = data == null ? ImmutableList.of() : data;
   }
 
   public String getStream()
@@ -64,6 +72,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
     return sequenceNumber;
   }
 
+  @NotNull
   public List<byte[]> getData()
   {
     return data;
@@ -73,6 +82,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
   {
     return StreamPartition.of(stream, partitionId);
   }
+
 
   @Override
   public boolean equals(Object o)
@@ -86,13 +96,14 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
     OrderedPartitionableRecord<?, ?> that = (OrderedPartitionableRecord<?, ?>) o;
     return Objects.equals(stream, that.stream) &&
            Objects.equals(partitionId, that.partitionId) &&
-           Objects.equals(sequenceNumber, that.sequenceNumber);
-
+           Objects.equals(sequenceNumber, that.sequenceNumber) &&
+           data.size() == that.data.size() &&
+           data.stream().allMatch(d -> that.data.stream().anyMatch(d2 -> Arrays.equals(d, d2)));
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(stream, partitionId, sequenceNumber);
+    return Objects.hash(stream, partitionId, sequenceNumber, data);
   }
 }

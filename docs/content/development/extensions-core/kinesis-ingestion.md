@@ -203,8 +203,6 @@ For Roaring bitmaps:
 |`earlyMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps later than this period after the task reached its taskDuration; for example if this is set to `PT1H`, the taskDuration is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps later than *2016-01-01T14:00Z* will be dropped. **Note:** Tasks sometimes run past their task duration, for example, in cases of supervisor failover. Setting earlyMessageRejectionPeriod too low may cause messages to be dropped unexpectedly whenever a task runs past its originally configured task duration.|no (default == none)|
 |`recordsPerFetch`|Integer|The number of records to request per GetRecords call to Kinesis. See 'Determining Fetch Settings' below.|no (default == 2000)|
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent GetRecords calls to Kinesis. See 'Determining Fetch Settings' below.|no (default == 1000)|
-|`awsAccessKeyId`|String|The AWS access key ID to use for Kinesis API requests. If this is not provided, the service will look for credentials set in the environment variables, system properties, in the default profile configuration file, and from the EC2 instance profile provider (in this order).|no|
-|`awsSecretAccessKey`|String|The AWS secret access key to use for Kinesis API requests. Only used if `awsAccessKeyId` is also provided.|no|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
 |`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
@@ -213,6 +211,14 @@ For Roaring bitmaps:
 
 This section gives descriptions of how some supervisor APIs work specifically in Kinesis Indexing Service.
 For all supervisor APIs, please check [Supervisor APIs](../../operations/api-reference.html#supervisors).
+
+### AWS Authentication
+To authenticate with AWS, you must provide your AWS access key and AWS secret key via environment properties, for example:
+```
+-Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
+```
+- The AWS access key ID is used for Kinesis API requests. If this is not provided, the service will look for credentials set in system properties, in the default profile configuration file, and from the EC2 instance profile provider (in this order).
+- The AWS secret access key is used for Kinesis API requests.
 
 ### Getting Supervisor Status Report
 

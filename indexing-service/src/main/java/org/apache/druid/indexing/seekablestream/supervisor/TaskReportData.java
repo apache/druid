@@ -33,7 +33,7 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
-  private Map<PartitionIdType, SequenceOffsetType> currentOffsets;
+  private final Map<PartitionIdType, SequenceOffsetType> currentOffsets;
   private final Map<PartitionIdType, SequenceOffsetType> lag;
 
   public TaskReportData(
@@ -98,11 +98,6 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
   public Map<PartitionIdType, SequenceOffsetType> getLag()
   {
     return lag;
-  }
-
-  public void setCurrentSequenceNumbers(Map<PartitionIdType, SequenceOffsetType> currentOffsets)
-  {
-    this.currentOffsets = currentOffsets;
   }
 
   @Override

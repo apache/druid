@@ -39,6 +39,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -83,6 +84,52 @@ public class KafkaRecordSupplierTest
     );
   }
 
+//  private static List<OrderedPartitionableRecord<Integer, Long>> generateOrderedPartitionableRecords(String topic)
+//  {
+//    return ImmutableList.of(
+//        new OrderedPartitionableRecord<>(
+//            topic,
+//            0,
+//            0L,
+//            ImmutableList.of(JB("2008", "a", "y", "10", "20.0", "1.0"))
+//        ),
+//        new OrderedPartitionableRecord<>(topic, 0, 1L, ImmutableList.of(JB("2009", "b", "y", "10", "20.0", "1.0"))),
+//        new OrderedPartitionableRecord<>(topic, 0, 2L, ImmutableList.of(JB("2010", "c", "y", "10", "20.0", "1.0"))),
+//        new OrderedPartitionableRecord<>(topic, 0, 3L, ImmutableList.of(JB("2011", "d", "y", "10", "20.0", "1.0"))),
+//        new OrderedPartitionableRecord<>(topic, 0, 4L, ImmutableList.of(JB("2011", "e", "y", "10", "20.0", "1.0"))),
+//        new OrderedPartitionableRecord<>(
+//            topic,
+//            0,
+//            5L,
+//            ImmutableList.of(JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))
+//        ),
+//        new OrderedPartitionableRecord<>(topic, 0, 6L, ImmutableList.of(StringUtils.toUtf8("unparseable"))),
+//        new OrderedPartitionableRecord<>(topic, 0, 7L, ImmutableList.of(StringUtils.toUtf8("unparseable2"))),
+//        new OrderedPartitionableRecord<>(topic, 0, 8L, ImmutableList.of()),
+//        new OrderedPartitionableRecord<>(topic, 0, 9L, ImmutableList.of(JB("2013", "f", "y", "10", "20.0", "1.0"))),
+//        new OrderedPartitionableRecord<>(
+//            topic,
+//            0,
+//            10L,
+//            ImmutableList.of(JB("2049", "f", "y", "notanumber", "20.0", "1.0"))
+//        ),
+//        new OrderedPartitionableRecord<>(
+//            topic,
+//            1,
+//            0L,
+//            ImmutableList.of(JB("2049", "f", "y", "10", "notanumber", "1.0"))
+//        ),
+//        new OrderedPartitionableRecord<>(
+//            topic,
+//            1,
+//            1L,
+//            ImmutableList.of(JB("2049", "f", "y", "10", "20.0", "notanumber"))
+//        ),
+//        new OrderedPartitionableRecord<>(topic, 1, 2L, ImmutableList.of(JB("2012", "g", "y", "10", "20.0", "1.0"))),
+//        new OrderedPartitionableRecord<>(topic, 1, 3L, ImmutableList.of(JB("2011", "h", "y", "10", "20.0", "1.0")))
+//    );
+//  }
+
   private static byte[] JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
     try {
@@ -107,7 +154,7 @@ public class KafkaRecordSupplierTest
     return "topic-" + topicPosFix++;
   }
 
-  private Set<OrderedPartitionableRecord<Integer, Long>> createOrderedPartitionableRecords()
+  private List<OrderedPartitionableRecord<Integer, Long>> createOrderedPartitionableRecords()
   {
     Map<Integer, Long> partitionToOffset = new HashMap<>();
     return records.stream().map(r -> {
@@ -122,9 +169,9 @@ public class KafkaRecordSupplierTest
           topic,
           r.partition(),
           offset,
-          r.value() == null ? null : ImmutableList.of(r.value())
+          r.value() == null ? null : Collections.singletonList(r.value())
       );
-    }).collect(Collectors.toSet());
+    }).collect(Collectors.toList());
   }
 
   @BeforeClass
@@ -211,14 +258,13 @@ public class KafkaRecordSupplierTest
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
-    Set<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
+    List<OrderedPartitionableRecord<Integer, Long>> initialRecords = new ArrayList<>(createOrderedPartitionableRecords());
 
     List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
     for (int i = 0; polledRecords.size() != initialRecords.size() && i < pollRetry; i++) {
       polledRecords.addAll(recordSupplier.poll(poll_timeout_millis));
       Thread.sleep(200);
     }
-
 
     Assert.assertEquals(partitions, recordSupplier.getAssignment());
     Assert.assertEquals(initialRecords.size(), polledRecords.size());
@@ -267,7 +313,7 @@ public class KafkaRecordSupplierTest
       Thread.sleep(200);
     }
 
-    Set<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
+    List<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
 
     Assert.assertEquals(records.size(), polledRecords.size());
     Assert.assertTrue(initialRecords.containsAll(polledRecords));
@@ -305,7 +351,7 @@ public class KafkaRecordSupplierTest
     recordSupplier.seek(partition0, 2L);
     recordSupplier.seek(partition1, 2L);
 
-    Set<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
+    List<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
 
     List<OrderedPartitionableRecord<Integer, Long>> polledRecords = recordSupplier.poll(poll_timeout_millis);
     for (int i = 0; polledRecords.size() != 11 && i < pollRetry; i++) {
