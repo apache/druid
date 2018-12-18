@@ -286,4 +286,5 @@ public class StringUtils
   {
     return fromUtf8(Base64.getEncoder().encode(toUtf8(input)));
   }
+
 }
