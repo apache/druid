@@ -457,9 +457,10 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
     Capture<Request> captured = Capture.newInstance();
     Capture<Request> captured2 = Capture.newInstance();
     Capture<Request> captured3 = Capture.newInstance();
+    // one time in IndexTaskClient.submitRequest() and another in KafkaIndexTaskClient.pause()
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.ACCEPTED).times(2)
-                                      .andReturn(HttpResponseStatus.OK).times(2);
-    expect(responseHolder.getContent()).andReturn("\"PAUSED\"")
+                                      .andReturn(HttpResponseStatus.OK).anyTimes();
+    expect(responseHolder.getContent()).andReturn("\"PAUSED\"").times(2)
                                        .andReturn("{\"0\":1, \"1\":10}").anyTimes();
     expect(httpClient.go(capture(captured), anyObject(FullResponseHandler.class), eq(TEST_HTTP_TIMEOUT))).andReturn(
         Futures.immediateFuture(responseHolder)

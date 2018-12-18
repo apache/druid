@@ -116,12 +116,15 @@ public class KafkaIndexTaskClient extends IndexTaskClient
           true
       );
 
-      if (response.getStatus().equals(HttpResponseStatus.OK)) {
+      final HttpResponseStatus responseStatus = response.getStatus();
+      final String responseContent = response.getContent();
+
+      if (responseStatus.equals(HttpResponseStatus.OK)) {
         log.info("Task [%s] paused successfully", id);
-        return deserialize(response.getContent(), new TypeReference<Map<Integer, Long>>()
+        return deserialize(responseContent, new TypeReference<Map<Integer, Long>>()
         {
         });
-      } else if (response.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+      } else if (responseStatus.equals(HttpResponseStatus.ACCEPTED)) {
         // The task received the pause request, but its status hasn't been changed yet.
         while (true) {
           final Status status = getStatus(id);
@@ -152,8 +155,8 @@ public class KafkaIndexTaskClient extends IndexTaskClient
         throw new ISE(
             "Pause request for task [%s] failed with response [%s] : [%s]",
             id,
-            response.getStatus(),
-            response.getContent()
+            responseStatus,
+            responseContent
         );
       }
     }
