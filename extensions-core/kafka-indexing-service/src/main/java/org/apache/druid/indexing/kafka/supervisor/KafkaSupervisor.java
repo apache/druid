@@ -1652,7 +1652,7 @@ public class KafkaSupervisor implements Supervisor
 
                 killTask(
                     taskId,
-                    "An exception occured while waiting for task [%s] to pause: %s",
+                    "An exception occured while waiting for task [%s] to pause: [%s]",
                     taskId,
                     pauseException
                 );
