@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.segment.IndexSpec;
@@ -31,15 +32,14 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
+@JsonTypeName("KinesisTuningConfig")
 public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningConfig
 {
-
   private static final int DEFAULT_RECORD_BUFFER_SIZE = 10000;
   private static final int DEFAULT_RECORD_BUFFER_OFFER_TIMEOUT = 5000;
   private static final int DEFAULT_RECORD_BUFFER_FULL_WAIT = 5000;
   private static final int DEFAULT_FETCH_SEQUENCE_NUMBER_TIMEOUT = 20000;
   private static final int DEFAULT_MAX_RECORDS_PER_POLL = 100;
-
 
   private final int recordBufferSize;
   private final int recordBufferOfferTimeout;

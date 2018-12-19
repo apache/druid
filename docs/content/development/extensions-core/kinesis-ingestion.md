@@ -194,7 +194,7 @@ For Roaring bitmaps:
 |`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints [here](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region).|no (default == kinesis.us-east-1.amazonaws.com)|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKinesisshards}`.|no (default == 1)|
-|`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment. Note that segments are only pushed to deep storage and loadable by historical nodes when the indexing task completes.|no (default == PT1H)|
+|`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
 |`startDelay`|ISO8601 Period|The period to wait before the supervisor starts managing tasks.|no (default == PT5S)|
 |`period`|ISO8601 Period|How often the supervisor will execute its management logic. Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.|no (default == PT30S)|
 |`useEarliestSequenceNumber`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting sequence numbers from Kinesis. This flag determines whether it retrieves the earliest or latest sequence numbers in Kinesis. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
@@ -213,23 +213,16 @@ This section gives descriptions of how some supervisor APIs work specifically in
 For all supervisor APIs, please check [Supervisor APIs](../../operations/api-reference.html#supervisors).
 
 ### AWS Authentication
-To authenticate with AWS, you must provide your AWS access key and AWS secret key via environment properties, for example:
+To authenticate with AWS, you must provide your AWS access key and AWS secret key via runtime.properties, for example:
 ```
 -Ddruid.kinesis.accessKey=123 -Ddruid.kinesis.secretKey=456
 ```
-- The AWS access key ID is used for Kinesis API requests. If this is not provided, the service will look for credentials set in system properties, in the default profile configuration file, and from the EC2 instance profile provider (in this order).
-- The AWS secret access key is used for Kinesis API requests.
+The AWS access key ID ad secret access key are used for Kinesis API requests. If this is not provided, the service will look for credentials set in environment variables, in the default profile configuration file, and from the EC2 instance profile provider (in this order).
 
 ### Getting Supervisor Status Report
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/status` returns a snapshot report of the current state of the tasks managed by the given supervisor. This includes the latest
 sequence numbers as reported by Kinesis. Unlike the Kafka Indexing Service, stats about lag is not yet supported.
-
-### Getting Supervisor Ingestion Stats Report
-
-`GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
-
-See [Task Reports: Row Stats](../../ingestion/reports.html#row-stats) for more information.
 
 ### Updating Existing Supervisors
 
@@ -261,7 +254,7 @@ generated segments to be accepted. If the messages at the expected starting sequ
 refuse to start and in-flight tasks will fail.
 
 This endpoint can be used to clear the stored sequence numbers which will cause the supervisor to start reading from
-either the earliest or latest sequence numbers in Kinesis (depending on the value of `useEarliestOffset`). The supervisor must be
+either the earliest or latest sequence numbers in Kinesis (depending on the value of `useEarliestSequenceNumber`). The supervisor must be
 running for this endpoint to be available. After the stored sequence numbers are cleared, the supervisor will automatically kill
 and re-create any active tasks so that tasks begin reading from valid sequence numbers.
 
@@ -321,7 +314,7 @@ compatible because they have a different ingestion spec or shard allocation, the
 supervisor will create a new set of tasks. In this way, the supervisors are persistent across overlord restarts and
 fail-overs.
 
-A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown` endpoint. This places a
+A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` endpoint. This places a
 tombstone marker in the database (to prevent the supervisor from being reloaded on a restart) and then gracefully
 shuts down the currently running supervisor. When a supervisor is shut down in this way, it will instruct its
 managed tasks to stop reading and begin publishing their segments immediately. The call to the shutdown endpoint will

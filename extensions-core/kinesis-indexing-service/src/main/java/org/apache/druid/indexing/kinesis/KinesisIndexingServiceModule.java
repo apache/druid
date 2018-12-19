@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
+import com.google.inject.name.Names;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -61,6 +62,6 @@ public class KinesisIndexingServiceModule implements DruidModule
         }
     ).to(KinesisIndexTaskClientFactory.class).in(LazySingleton.class);
 
-    JsonConfigProvider.bind(binder, "druid.kinesis", AWSCredentialsConfig.class);
+    JsonConfigProvider.bind(binder, "druid.kinesis", AWSCredentialsConfig.class, Names.named("kinesis"));
   }
 }
