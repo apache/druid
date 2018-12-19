@@ -113,6 +113,12 @@ public class TaskReportData<PartitionIdType, SequenceOffsetType>
            '}';
   }
 
+  /**
+   * Used by the Supervisor to report status of tasks
+   * ACTIVE - task is waiting to be started, started, or reading
+   * PUBLISHING - task is publishing or registering handoff
+   * UNNKNOWN - unknown
+   */
   public enum TaskType
   {
     ACTIVE, PUBLISHING, UNKNOWN

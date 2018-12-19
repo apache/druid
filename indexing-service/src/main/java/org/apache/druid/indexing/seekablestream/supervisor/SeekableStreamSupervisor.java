@@ -2737,7 +2737,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @return specific instance of datasource metadata
    */
   protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaData(
-      String stream, Map<PartitionIdType, SequenceOffsetType> map
+      String stream,
+      Map<PartitionIdType, SequenceOffsetType> map
   );
 
   /**
