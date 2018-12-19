@@ -34,6 +34,7 @@ import io.druid.query.aggregation.ObjectAggregateCombiner;
 import io.druid.query.cache.CacheKeyBuilder;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ColumnValueSelector;
+import me.lemire.integercompression.differential.IntegratedIntCompressor;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
@@ -124,7 +125,7 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   @Override
   public ImmutableRoaringBitmap deserialize(Object object)
   {
-    final ByteBuffer buffer;
+    ByteBuffer buffer;
 
     if (object instanceof byte[]) {
       buffer = ByteBuffer.wrap((byte[]) object);
@@ -134,6 +135,14 @@ public class UniqueAggregatorFactory extends AggregatorFactory
       buffer = ByteBuffer.wrap(Base64.getDecoder().decode(StringUtils.toUtf8((String) object)));
     } else if (object instanceof ImmutableRoaringBitmap) {
       return (ImmutableRoaringBitmap) object;
+    } else if (object instanceof int[]) {
+      IntegratedIntCompressor iic = new IntegratedIntCompressor();
+      int[] uncompress = iic.uncompress((int[]) object);
+      return MutableRoaringBitmap.bitmapOf(uncompress);
+    } else if (object instanceof List<?>) {
+      List<Integer> integers = (List<Integer>) object;
+      IntegratedIntCompressor iic = new IntegratedIntCompressor();
+      return MutableRoaringBitmap.bitmapOf(iic.uncompress(integers.stream().mapToInt(i -> i).toArray()));
     } else {
       throw new IAE("Object is not of a type that can be deserialized to an ImmutableRoaringBitmap:"
                     + object.getClass().getName());
