@@ -20,6 +20,7 @@
 package org.apache.druid.cli;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -101,18 +102,12 @@ public abstract class ServerRunnable extends GuiceRunnable
     public static class Builder
     {
       private NodeType nodeType;
-      private List<Class<? extends DruidService>> serviceClasses;
+      private List<Class<? extends DruidService>> serviceClasses = ImmutableList.of();
       private boolean useLegacyAnnouncer;
 
       public Builder(final NodeType nodeType)
       {
         this.nodeType = nodeType;
-      }
-
-      public Builder nodeType(final NodeType nodeType)
-      {
-        this.nodeType = nodeType;
-        return this;
       }
 
       public Builder serviceClasses(final List<Class<? extends DruidService>> serviceClasses)
