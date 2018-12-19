@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Native Index Tasks"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Native Index Tasks
 
 Druid currently has two types of native batch indexing tasks, `index_parallel` which runs tasks

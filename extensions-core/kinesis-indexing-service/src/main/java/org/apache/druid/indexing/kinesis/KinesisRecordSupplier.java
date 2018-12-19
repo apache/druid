@@ -316,7 +316,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
 
-
     // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
     // The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
     // docs page for more information on how to use deaggregation

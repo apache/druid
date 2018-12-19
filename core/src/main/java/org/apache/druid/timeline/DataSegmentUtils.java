@@ -28,7 +28,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Collection;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @PublicApi
 public class DataSegmentUtils
@@ -106,6 +108,16 @@ public class DataSegmentUtils
       return identifier;
     }
     return segmentDesc.withInterval(newInterval).toString();
+  }
+
+  /**
+   * Creates a comma delimited list of segment identifiers
+   * @param segments
+   * @return
+   */
+  public static String getIdentifiersString(Collection<DataSegment> segments)
+  {
+    return segments.stream().map(DataSegment::getIdentifier).collect(Collectors.joining(", "));
   }
 
   public static class SegmentIdentifierParts

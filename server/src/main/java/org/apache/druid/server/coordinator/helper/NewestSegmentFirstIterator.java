@@ -30,6 +30,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -80,7 +81,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
       if (config != null && !timeline.isEmpty()) {
         final Interval searchInterval = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest());
-        timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchInterval));
+        if (searchInterval != null) {
+          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchInterval));
+        }
       }
     }
 
@@ -339,8 +342,9 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
    * @param timeline   timeline of a dataSource
    * @param skipOffset skipOFfset
    *
-   * @return found searchInterval
+   * @return found interval to search or null if it's not found
    */
+  @Nullable
   private static Interval findInitialSearchInterval(
       VersionedIntervalTimeline<String, DataSegment> timeline,
       Period skipOffset
@@ -354,25 +358,31 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     final Interval skipInterval = new Interval(skipOffset, last.getInterval().getEnd());
 
-    final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(
-        new Interval(first.getInterval().getStart(), last.getInterval().getEnd().minus(skipOffset))
-    );
-
-    final List<DataSegment> segments = holders
-        .stream()
-        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-        .map(PartitionChunk::getObject)
-        .filter(segment -> !segment.getInterval().overlaps(skipInterval))
-        .sorted((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval()))
-        .collect(Collectors.toList());
-
-    if (segments.isEmpty()) {
-      return new Interval(first.getInterval().getStart(), first.getInterval().getStart());
-    } else {
-      return new Interval(
-          segments.get(0).getInterval().getStart(),
-          segments.get(segments.size() - 1).getInterval().getEnd()
+    final DateTime lookupStart = first.getInterval().getStart();
+    final DateTime lookupEnd = last.getInterval().getEnd().minus(skipOffset);
+    if (lookupStart.isBefore(lookupEnd)) {
+      final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(
+          new Interval(lookupStart, lookupEnd)
       );
+
+      final List<DataSegment> segments = holders
+          .stream()
+          .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+          .map(PartitionChunk::getObject)
+          .filter(segment -> !segment.getInterval().overlaps(skipInterval))
+          .sorted((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval()))
+          .collect(Collectors.toList());
+
+      if (segments.isEmpty()) {
+        return null;
+      } else {
+        return new Interval(
+            segments.get(0).getInterval().getStart(),
+            segments.get(segments.size() - 1).getInterval().getEnd()
+        );
+      }
+    } else {
+      return null;
     }
   }
 

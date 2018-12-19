@@ -17,25 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.common.utils;
+package org.apache.druid.server.http;
 
-import org.junit.Assert;
-import org.junit.Test;
+import javax.ws.rs.core.MediaType;
 
-public class VMUtilsTest
+public class HttpMediaType
 {
-  @Test
-  public void testgetMaxDirectMemory()
-  {
-    try {
-      long maxMemory = VMUtils.getMaxDirectMemory();
-      Assert.assertTrue((maxMemory > 0));
-    }
-    catch (UnsupportedOperationException expected) {
-      Assert.assertTrue(true);
-    }
-    catch (RuntimeException expected) {
-      Assert.assertTrue(true);
-    }
-  }
+  public static final String TEXT_PLAIN_UTF8 = MediaType.TEXT_PLAIN + "; charset=UTF-8";
 }

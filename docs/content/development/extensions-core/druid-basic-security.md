@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Basic Security"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Druid Basic Security
 
@@ -58,7 +59,7 @@ druid.auth.authenticator.MyBasicAuthenticator.initialInternalClientPassword=pass
 druid.auth.authenticator.MyBasicAuthenticator.authorizerName=MyBasicAuthorizer
 ```
 
-To use the Basic authenticator, add an authenticator with type `basic` to the authenticatorChain. 
+To use the Basic authenticator, add an authenticator with type `basic` to the authenticatorChain.
 
 Configuration of the named authenticator is assigned through properties with the form:
 
@@ -208,14 +209,14 @@ Set the permissions of {roleName}. This replaces the previous set of permissions
 Content: List of JSON Resource-Action objects, e.g.:
 ```
 [
-{ 
+{
   "resource": {
     "name": "wiki.*",
     "type": "DATASOURCE"
   },
   "action": "READ"
 },
-{ 
+{
   "resource": {
     "name": "wikiticker",
     "type": "DATASOURCE"
@@ -225,7 +226,7 @@ Content: List of JSON Resource-Action objects, e.g.:
 ]
 ```
 
-The "name" field for resources in the permission definitions are regexes used to match resource names during authorization checks. 
+The "name" field for resources in the permission definitions are regexes used to match resource names during authorization checks.
 
 Please see [Defining permissions](#defining-permissions) for more details.
 
@@ -238,7 +239,7 @@ Return the current load status of the local caches of the authorization database
 ### Authenticator
 If `druid.auth.authenticator.<authenticator-name>.initialAdminPassword` is set, a default admin user named "admin" will be created, with the specified initial password. If this configuration is omitted, the "admin" user will not be created.
 
-If `druid.auth.authenticator.<authenticator-name>.initialInternalClientPassword` is set, a default internal system user named "druid_system" will be created, with the specified initial password. If this configuration is omitted, the "druid_system" user will not be created. 
+If `druid.auth.authenticator.<authenticator-name>.initialInternalClientPassword` is set, a default internal system user named "druid_system" will be created, with the specified initial password. If this configuration is omitted, the "druid_system" user will not be created.
 
 
 ### Authorizer

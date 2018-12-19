@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Druid vs Elasticsearch"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,12 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-Druid vs Elasticsearch
-======================
+# Druid vs Elasticsearch
 
 We are not experts on search systems, if anything is incorrect about our portrayal, please let us know on the mailing list or via some other means.
 

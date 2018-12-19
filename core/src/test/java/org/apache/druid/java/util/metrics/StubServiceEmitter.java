@@ -25,7 +25,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import java.util.ArrayList;
 import java.util.List;
 
-class StubServiceEmitter extends ServiceEmitter
+public class StubServiceEmitter extends ServiceEmitter
 {
   private List<Event> events = new ArrayList<>();
 

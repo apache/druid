@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Druid vs Kudu"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,12 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-Druid vs Kudu
-=============
+# Druid vs Kudu
 
 Kudu's storage format enables single row updates, whereas updates to existing Druid segments requires recreating the segment, so theoretically  
 the process for updating old values should be higher latency in Druid. However, the requirements in Kudu for maintaining extra head space to store 

@@ -235,10 +235,10 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
     if (!segmentsToDrop.isEmpty()) {
       currentlyProcessing = segmentsToDrop.firstEntry().getValue();
-      log.info("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      log.debug("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
     } else if (!segmentsToLoad.isEmpty()) {
       currentlyProcessing = segmentsToLoad.firstEntry().getValue();
-      log.info("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      log.debug("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
     } else {
       return;
     }
@@ -386,7 +386,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         );
         return;
       }
-      log.info(
+      log.debug(
           "Server[%s] done processing %s of segment [%s]",
           basePath,
           currentlyProcessing.getType() == LOAD ? "load" : "drop",

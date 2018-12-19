@@ -17,15 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.parquet.simple;
+package org.apache.druid.server.metrics;
 
-import org.apache.parquet.example.data.Group;
-import org.apache.parquet.hadoop.ParquetInputFormat;
+import java.util.Map;
 
-public class DruidParquetInputFormat extends ParquetInputFormat<Group>
+public interface TaskCountStatsProvider
 {
-  public DruidParquetInputFormat()
-  {
-    super(DruidParquetReadSupport.class);
-  }
+  /**
+   * Return the number of successful tasks for each datasource during emission period.
+   */
+  Map<String, Long> getSuccessfulTaskCount();
+
+  /**
+   * Return the number of failed tasks for each datasource during emission period.
+   */
+  Map<String, Long> getFailedTaskCount();
+
+  /**
+   * Return the number of current running tasks for each datasource.
+   */
+  Map<String, Long> getRunningTaskCount();
+
+  /**
+   * Return the number of current pending tasks for each datasource.
+   */
+  Map<String, Long> getPendingTaskCount();
+
+  /**
+   * Return the number of current waiting tasks for each datasource.
+   */
+  Map<String, Long> getWaitingTaskCount();
 }

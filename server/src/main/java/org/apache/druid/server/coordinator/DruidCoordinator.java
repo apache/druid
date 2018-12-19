@@ -334,7 +334,7 @@ public class DruidCoordinator
 
   public void removeSegment(DataSegment segment)
   {
-    log.info("Removing Segment[%s]", segment);
+    log.info("Removing Segment[%s]", segment.getIdentifier());
     metadataSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
   }
 

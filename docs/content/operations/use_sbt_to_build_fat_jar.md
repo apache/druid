@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Content for build.sbt"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,12 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
+# Content for build.sbt
 
-Content for build.sbt
----------------------
 ```scala
 libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk" % "1.9.23" exclude("common-logging", "common-logging"),

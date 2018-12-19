@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentUtils;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import javax.annotation.Nullable;
@@ -160,7 +161,11 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             config.getTuningConfig(),
             config.getTaskContext()
         );
-        LOG.info("Submitted a compactTask[%s] for segments[%s]", taskId, segmentsToCompact);
+        LOG.info(
+            "Submitted a compactTask[%s] for segments[%s]",
+            taskId,
+            DataSegmentUtils.getIdentifiersString(segmentsToCompact)
+        );
       } else if (segmentsToCompact.size() == 1) {
         throw new ISE("Found one segments[%s] to compact", segmentsToCompact);
       } else {

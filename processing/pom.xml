@@ -111,6 +111,11 @@
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm-commons</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.checkerframework</groupId>
+            <artifactId>checker</artifactId>
+            <version>${checkerframework.version}</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
@@ -195,7 +200,7 @@
                     <!-- set default options -->
                     <argLine>
                         -Xmx512m
-                        -XX:MaxDirectMemorySize=1500m
+                        -XX:MaxDirectMemorySize=2500m
                         -Duser.language=en
                         -Duser.GroupByQueryRunnerTest.javacountry=US
                         -Dfile.encoding=UTF-8

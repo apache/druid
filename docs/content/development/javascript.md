@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "JavaScript Programming Guide"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # JavaScript Programming Guide
 
 This page discusses how to use JavaScript to extend Druid.
