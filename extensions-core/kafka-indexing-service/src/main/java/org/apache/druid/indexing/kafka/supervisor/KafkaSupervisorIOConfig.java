@@ -112,6 +112,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", period=" + getPeriod() +
            ", useEarliestOffset=" + isUseEarliestOffset() +
            ", completionTimeout=" + getCompletionTimeout() +
+           ", earlyMessageRejectionPeriod=" + getEarlyMessageRejectionPeriod() +
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
            ", skipOffsetGaps=" + skipOffsetGaps +
            '}';

@@ -105,7 +105,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected SeekableStreamIndexTaskIOConfig createIoConfig(
+  protected SeekableStreamIndexTaskIOConfig createTaskIoConfig(
       int groupId,
       Map<String, String> startPartitions,
       Map<String, String> endPartitions,

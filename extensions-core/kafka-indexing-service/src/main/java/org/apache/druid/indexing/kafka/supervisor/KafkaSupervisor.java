@@ -191,7 +191,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
 
   @Override
-  protected SeekableStreamIndexTaskIOConfig createIoConfig(
+  protected SeekableStreamIndexTaskIOConfig createTaskIoConfig(
       int groupId,
       Map<Integer, Long> startPartitions,
       Map<Integer, Long> endPartitions,
@@ -282,8 +282,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
   @Override
   protected KafkaDataSourceMetadata createDataSourceMetaData(
-      String topic,
-      Map<Integer, Long> map
+      String topic, Map<Integer, Long> map
   )
   {
     return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, map));
@@ -291,8 +290,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
   @Override
   protected OrderedSequenceNumber<Long> makeSequenceNumber(
-      Long seq,
-      boolean isExclusive
+      Long seq, boolean isExclusive
   )
   {
     return KafkaSequenceNumber.of(seq);

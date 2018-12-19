@@ -2478,7 +2478,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     DateTime minimumMessageTime = activelyReadingTaskGroups.get(groupId).minimumMessageTime.orNull();
     DateTime maximumMessageTime = activelyReadingTaskGroups.get(groupId).maximumMessageTime.orNull();
 
-    SeekableStreamIndexTaskIOConfig newIoConfig = createIoConfig(
+    SeekableStreamIndexTaskIOConfig newIoConfig = createTaskIoConfig(
         groupId,
         startPartitions,
         endPartitions,
@@ -2665,11 +2665,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * creates a specific task IOConfig instance for Kafka/Kinesis*
+   * creates a specific task IOConfig instance for Kafka/Kinesis
    *
    * @return specific instance of Kafka/Kinesis IOConfig
    */
-  protected abstract SeekableStreamIndexTaskIOConfig createIoConfig(
+  protected abstract SeekableStreamIndexTaskIOConfig createTaskIoConfig(
       int groupId,
       Map<PartitionIdType, SequenceOffsetType> startPartitions,
       Map<PartitionIdType, SequenceOffsetType> endPartitions,
@@ -2737,8 +2737,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @return specific instance of datasource metadata
    */
   protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaData(
-      String
-          stream, Map<PartitionIdType, SequenceOffsetType> map
+      String stream, Map<PartitionIdType, SequenceOffsetType> map
   );
 
   /**
