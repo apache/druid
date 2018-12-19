@@ -75,7 +75,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final SeekableStreamIndexTaskTuningConfig tuningConfig;
   protected final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig;
   protected final Optional<ChatHandlerProvider> chatHandlerProvider;
-  protected final String type;
   protected final Map<String, Object> context;
   protected final AuthorizerMapper authorizerMapper;
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
@@ -92,17 +91,16 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
       @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      String type
+      String groupId
   )
   {
     super(
-        id == null ? makeTaskId(dataSchema.getDataSource(), RANDOM.nextInt(), type) : id,
-        StringUtils.format("%s_%s", type, dataSchema.getDataSource()),
+        id,
+        groupId,
         taskResource,
         dataSchema.getDataSource(),
         context
     );
-    this.type = type;
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
     this.parser = Preconditions.checkNotNull((InputRowParser<ByteBuffer>) dataSchema.getParser(), "parser");
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
@@ -129,17 +127,21 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     return Joiner.on("_").join(type, dataSource, suffix);
   }
 
+  protected static String getFormatedId(String dataSource, String type)
+  {
+    return makeTaskId(dataSource, RANDOM.nextInt(), type);
+  }
+
+  protected static String getFormattedGroupId(String dataSource, String type)
+  {
+    return StringUtils.format("%s_%s", type, dataSource);
+  }
+
 
   @Override
   public int getPriority()
   {
     return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_REALTIME_TASK_PRIORITY);
-  }
-
-  @Override
-  public String getType()
-  {
-    return type;
   }
 
   @Override

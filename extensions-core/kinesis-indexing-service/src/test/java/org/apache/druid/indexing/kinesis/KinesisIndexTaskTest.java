@@ -349,7 +349,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     emitter.close();
   }
 
-
   @Test(timeout = 120_000L)
   public void testRunAfterDataInserted() throws Exception
   {

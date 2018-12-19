@@ -120,12 +120,6 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected Type getRunnerType()
-  {
-    return Type.KINESIS;
-  }
-
-  @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
       RecordSupplier<String, String> recordSupplier,
@@ -162,6 +156,18 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
         }
       }
     }
+  }
+
+  @Override
+  protected boolean isEndSequenceOffsetsExclusive()
+  {
+    return false;
+  }
+
+  @Override
+  protected boolean isStartingSequenceOffsetsExclusive()
+  {
+    return true;
   }
 
   @Override

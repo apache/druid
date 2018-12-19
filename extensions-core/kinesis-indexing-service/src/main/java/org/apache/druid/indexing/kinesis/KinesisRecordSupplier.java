@@ -241,8 +241,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           rescheduleRunnable(retryMs);
         }
         catch (Throwable e) {
-          log.error(e, "getRecordRunnable exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
-          rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
+          log.error(e, "getRecordRunnable exception");
         }
 
       };
@@ -255,8 +254,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           scheduledExec.schedule(getRecordRunnable(), delayMillis, TimeUnit.MILLISECONDS);
         }
         catch (RejectedExecutionException e) {
-          log.info(
-              "Rejecting fetch records runnable submission, worker for partition[%s] is not in a valid state",
+          log.warn(
+              "Caught RejectedExecutionException, KinesisRecordSupplier for partition[%s] has likely temporarily shutdown the ExecutorService."
+              + "This is expected behavior after calling seek(), seekToEarliest() and seekToLatest()",
               streamPartition.getPartitionId()
           );
 
@@ -316,11 +316,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
 
-    /**
-     * the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
-     * The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
-     * docs page for more information on how to use deaggregation
-     */
+
+    // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
+    // The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
+    // docs page for more information on how to use deaggregation
     if (deaggregate) {
       try {
         Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");

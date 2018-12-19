@@ -35,6 +35,8 @@ import java.util.Map;
 
 public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
 {
+  private static final String TYPE = "index_kinesis";
+
   private final AWSCredentialsConfig awsCredentialsConfig;
 
   @JsonCreator
@@ -52,7 +54,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   )
   {
     super(
-        id,
+        id == null ? getFormatedId(dataSchema.getDataSource(), TYPE) : id,
         taskResource,
         dataSchema,
         tuningConfig,
@@ -61,7 +63,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         chatHandlerProvider,
         authorizerMapper,
         rowIngestionMetersFactory,
-        "index_kinesis"
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
     );
     this.awsCredentialsConfig = awsCredentialsConfig;
   }
@@ -115,5 +117,11 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   public KinesisIndexTaskIOConfig getIOConfig()
   {
     return (KinesisIndexTaskIOConfig) super.getIOConfig();
+  }
+
+  @Override
+  public String getType()
+  {
+    return TYPE;
   }
 }

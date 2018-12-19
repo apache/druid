@@ -84,52 +84,6 @@ public class KafkaRecordSupplierTest
     );
   }
 
-//  private static List<OrderedPartitionableRecord<Integer, Long>> generateOrderedPartitionableRecords(String topic)
-//  {
-//    return ImmutableList.of(
-//        new OrderedPartitionableRecord<>(
-//            topic,
-//            0,
-//            0L,
-//            ImmutableList.of(JB("2008", "a", "y", "10", "20.0", "1.0"))
-//        ),
-//        new OrderedPartitionableRecord<>(topic, 0, 1L, ImmutableList.of(JB("2009", "b", "y", "10", "20.0", "1.0"))),
-//        new OrderedPartitionableRecord<>(topic, 0, 2L, ImmutableList.of(JB("2010", "c", "y", "10", "20.0", "1.0"))),
-//        new OrderedPartitionableRecord<>(topic, 0, 3L, ImmutableList.of(JB("2011", "d", "y", "10", "20.0", "1.0"))),
-//        new OrderedPartitionableRecord<>(topic, 0, 4L, ImmutableList.of(JB("2011", "e", "y", "10", "20.0", "1.0"))),
-//        new OrderedPartitionableRecord<>(
-//            topic,
-//            0,
-//            5L,
-//            ImmutableList.of(JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0"))
-//        ),
-//        new OrderedPartitionableRecord<>(topic, 0, 6L, ImmutableList.of(StringUtils.toUtf8("unparseable"))),
-//        new OrderedPartitionableRecord<>(topic, 0, 7L, ImmutableList.of(StringUtils.toUtf8("unparseable2"))),
-//        new OrderedPartitionableRecord<>(topic, 0, 8L, ImmutableList.of()),
-//        new OrderedPartitionableRecord<>(topic, 0, 9L, ImmutableList.of(JB("2013", "f", "y", "10", "20.0", "1.0"))),
-//        new OrderedPartitionableRecord<>(
-//            topic,
-//            0,
-//            10L,
-//            ImmutableList.of(JB("2049", "f", "y", "notanumber", "20.0", "1.0"))
-//        ),
-//        new OrderedPartitionableRecord<>(
-//            topic,
-//            1,
-//            0L,
-//            ImmutableList.of(JB("2049", "f", "y", "10", "notanumber", "1.0"))
-//        ),
-//        new OrderedPartitionableRecord<>(
-//            topic,
-//            1,
-//            1L,
-//            ImmutableList.of(JB("2049", "f", "y", "10", "20.0", "notanumber"))
-//        ),
-//        new OrderedPartitionableRecord<>(topic, 1, 2L, ImmutableList.of(JB("2012", "g", "y", "10", "20.0", "1.0"))),
-//        new OrderedPartitionableRecord<>(topic, 1, 3L, ImmutableList.of(JB("2011", "h", "y", "10", "20.0", "1.0")))
-//    );
-//  }
-
   private static byte[] JB(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
     try {

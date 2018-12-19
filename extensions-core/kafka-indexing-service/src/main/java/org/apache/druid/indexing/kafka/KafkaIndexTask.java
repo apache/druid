@@ -29,7 +29,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -47,8 +46,7 @@ import java.util.stream.Collectors;
 
 public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 {
-
-  private static final EmittingLogger log = new EmittingLogger(KafkaIndexTask.class);
+  private static final String TYPE = "index_kafka";
   static final long POLL_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(100);
 
   private final KafkaIndexTaskIOConfig ioConfig;
@@ -72,7 +70,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   )
   {
     super(
-        id,
+        id == null ? getFormatedId(dataSchema.getDataSource(), TYPE) : id,
         taskResource,
         dataSchema,
         tuningConfig,
@@ -81,7 +79,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
         chatHandlerProvider,
         authorizerMapper,
         rowIngestionMetersFactory,
-        "index_kafka"
+        getFormattedGroupId(dataSchema.getDataSource(), TYPE)
     );
     this.configMapper = configMapper;
     this.ioConfig = ioConfig;
@@ -105,7 +103,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
       KafkaRecordSupplier.addConsumerPropertiesFromConfig(
           props,
           configMapper,
-          ((KafkaIndexTaskIOConfig) ioConfig).getConsumerProperties()
+          ioConfig.getConsumerProperties()
       );
 
       props.setProperty("enable.auto.commit", "false");
@@ -197,5 +195,11 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   public KafkaIndexTaskIOConfig getIOConfig()
   {
     return (KafkaIndexTaskIOConfig) super.getIOConfig();
+  }
+
+  @Override
+  public String getType()
+  {
+    return TYPE;
   }
 }

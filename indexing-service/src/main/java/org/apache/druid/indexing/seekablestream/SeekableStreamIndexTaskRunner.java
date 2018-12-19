@@ -141,13 +141,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     PUBLISHING
   }
 
-  protected enum Type
-  {
-    KAFKA,
-    KINESIS
-  }
-
-
   private final EmittingLogger log = new EmittingLogger(this.getClass());
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
   private static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
@@ -511,8 +504,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record : records) {
 
             // for Kafka, the end offsets are exclusive, so skip it
-            if (getRunnerType() == Type.KAFKA && createSequenceNumber(record.getSequenceNumber()).compareTo(
-                createSequenceNumber(endOffsets.get(record.getPartitionId()))) == 0) {
+            if (isEndSequenceOffsetsExclusive() &&
+                createSequenceNumber(record.getSequenceNumber()).compareTo(
+                    createSequenceNumber(endOffsets.get(record.getPartitionId()))) == 0) {
               continue;
             }
 
@@ -1763,15 +1757,21 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         if (!isOpen() || recordOffset == null || partitionEndOffset == null || partitionStartOffset == null) {
           return false;
         }
-        if (getRunnerType() == Type.KINESIS) {
-          return recordOffset.compareTo(partitionStartOffset)
-                 >= (getExclusiveStartPartitions().contains(record.getPartitionId()) ? 1 : 0)
-                 && recordOffset.compareTo(partitionEndOffset) <= 0;
+        boolean ret;
+        if (isStartingSequenceOffsetsExclusive()) {
+          ret = recordOffset.compareTo(partitionStartOffset)
+                >= (getExclusiveStartPartitions().contains(record.getPartitionId()) ? 1 : 0);
         } else {
-          return recordOffset.compareTo(partitionStartOffset) >= 0
-                 && recordOffset.compareTo(partitionEndOffset) < 0;
-
+          ret = recordOffset.compareTo(partitionStartOffset) >= 0;
         }
+
+        if (isEndSequenceOffsetsExclusive()) {
+          ret &= recordOffset.compareTo(partitionEndOffset) < 0;
+        } else {
+          ret &= recordOffset.compareTo(partitionEndOffset) <= 0;
+        }
+
+        return ret;
       }
       finally {
         lock.unlock();
@@ -1926,7 +1926,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
 
       // check exclusive starting sequence
-      if (getRunnerType() == Type.KINESIS && exclusiveStartingPartitions.contains(record.getPartitionId())) {
+      if (isStartingSequenceOffsetsExclusive() && exclusiveStartingPartitions.contains(record.getPartitionId())) {
         log.info("Skipping starting sequenceNumber for partition [%s] marked exclusive", record.getPartitionId());
 
         return false;
@@ -2015,13 +2015,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected abstract OrderedSequenceNumber<SequenceOffsetType> createSequenceNumber(SequenceOffsetType sequenceNumber);
 
   /**
-   * get the type{Kafka, Kinesis} of the TaskRunner, used mostly for Kafka/Kinesis specifc logic
-   *
-   * @return Type
-   */
-  protected abstract Type getRunnerType();
-
-  /**
    * check if the sequence offsets stored in currOffsets are still valid sequence offsets compared to
    * earliest sequence offsets fetched from stream
    *
@@ -2036,4 +2029,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       Set<StreamPartition<PartitionIdType>> assignment,
       Map<PartitionIdType, SequenceOffsetType> currOffsets
   );
+
+  /**
+   * In Kafka, the endOffsets are exclusive, so skip it.
+   * In Kinesis the endOffsets are inclusive
+   */
+  protected abstract boolean isEndSequenceOffsetsExclusive();
+
+  /**
+   * In Kafka, the startingOffsets are inclusive.
+   * In Kinesis, the startingOffsets are exclusive, except for the first
+   * partition we read from stream
+   */
+  protected abstract boolean isStartingSequenceOffsetsExclusive();
 }

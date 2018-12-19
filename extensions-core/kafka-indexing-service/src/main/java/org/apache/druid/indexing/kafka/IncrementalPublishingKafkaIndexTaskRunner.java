@@ -197,12 +197,6 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected Type getRunnerType()
-  {
-    return Type.KAFKA;
-  }
-
-  @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
       RecordSupplier<Integer, Long> recordSupplier,
@@ -237,6 +231,18 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
         }
       }
     }
+  }
+
+  @Override
+  protected boolean isEndSequenceOffsetsExclusive()
+  {
+    return true;
+  }
+
+  @Override
+  protected boolean isStartingSequenceOffsetsExclusive()
+  {
+    return false;
   }
 
   @Override

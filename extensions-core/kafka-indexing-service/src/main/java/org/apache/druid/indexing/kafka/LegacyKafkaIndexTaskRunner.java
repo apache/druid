@@ -81,6 +81,7 @@ import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
 import org.apache.kafka.common.TopicPartition;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -630,6 +631,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
     return false;
   }
 
+  @Nonnull
   @Override
   protected List<OrderedPartitionableRecord<Integer, Long>> getRecords(
       RecordSupplier<Integer, Long> recordSupplier, TaskToolbox toolbox
@@ -712,6 +714,18 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   )
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected boolean isEndSequenceOffsetsExclusive()
+  {
+    return false;
+  }
+
+  @Override
+  protected boolean isStartingSequenceOffsetsExclusive()
+  {
+    return false;
   }
 
 
@@ -1214,12 +1228,6 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   protected OrderedSequenceNumber<Long> createSequenceNumber(Long sequenceNumber)
   {
     throw new UnsupportedOperationException();
-  }
-
-  @Override
-  protected Type getRunnerType()
-  {
-    return Type.KAFKA;
   }
 
   @Override
