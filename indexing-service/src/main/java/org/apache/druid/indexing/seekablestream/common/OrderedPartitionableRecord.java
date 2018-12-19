@@ -26,6 +26,7 @@ import javax.validation.constraints.NotNull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Represents a generic record with a PartitionIdType (partition id) and SequenceOffsetType (sequence number) and data
@@ -94,16 +95,26 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
       return false;
     }
     OrderedPartitionableRecord<?, ?> that = (OrderedPartitionableRecord<?, ?>) o;
+
+    if (data.size() != that.data.size()) {
+      return false;
+    }
+
+    for (int i = 0; i < data.size(); i++) {
+      if (!Arrays.equals(data.get(i), that.data.get(i))) {
+        return false;
+      }
+    }
+
     return Objects.equals(stream, that.stream) &&
            Objects.equals(partitionId, that.partitionId) &&
-           Objects.equals(sequenceNumber, that.sequenceNumber) &&
-           data.size() == that.data.size() &&
-           data.stream().allMatch(d -> that.data.stream().anyMatch(d2 -> Arrays.equals(d, d2)));
+           Objects.equals(sequenceNumber, that.sequenceNumber);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(stream, partitionId, sequenceNumber, data);
+    final int hashOfData = data.stream().map(Arrays::hashCode).collect(Collectors.toList()).hashCode();
+    return Objects.hash(stream, partitionId, sequenceNumber, hashOfData);
   }
 }

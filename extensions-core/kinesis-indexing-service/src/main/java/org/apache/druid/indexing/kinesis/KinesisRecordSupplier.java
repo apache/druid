@@ -25,8 +25,10 @@ import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.kinesis.AmazonKinesis;
 import com.amazonaws.services.kinesis.AmazonKinesisClientBuilder;
+import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
+import com.amazonaws.services.kinesis.model.InvalidArgumentException;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
@@ -147,6 +149,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           return;
         }
 
+        // used for retrying on InterruptedException
+        GetRecordsResult recordsResult = null;
+        OrderedPartitionableRecord<String, String> currRecord = null;
 
         try {
 
@@ -154,14 +159,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             log.info("shardIterator[%s] has been closed and has no more records", streamPartition.getPartitionId());
 
             // add an end-of-shard marker so caller knows this shard is closed
-            OrderedPartitionableRecord<String, String> endOfShardRecord = new OrderedPartitionableRecord<>(
+            currRecord = new OrderedPartitionableRecord<>(
                 streamPartition.getStream(),
                 streamPartition.getPartitionId(),
                 KinesisSequenceNumber.END_OF_SHARD_MARKER,
                 null
             );
 
-            if (!records.offer(endOfShardRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
+            recordsResult = null;
+
+            if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
               log.warn("OrderedPartitionableRecord buffer full, retrying in [%,dms]", recordBufferFullWait);
               rescheduleRunnable(recordBufferFullWait);
             }
@@ -169,7 +176,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             return;
           }
 
-          GetRecordsResult recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(
+          recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(
               shardIterator).withLimit(recordsPerFetch));
 
           // list will come back empty if there are no records
@@ -195,7 +202,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
               data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
             }
 
-            final OrderedPartitionableRecord<String, String> record = new OrderedPartitionableRecord<>(
+            currRecord = new OrderedPartitionableRecord<>(
                 streamPartition.getStream(),
                 streamPartition.getPartitionId(),
                 kinesisRecord.getSequenceNumber(),
@@ -205,26 +212,26 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
             log.trace(
                 "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
-                record.getStream(),
-                record.getPartitionId(),
-                record.getSequenceNumber(),
+                currRecord.getStream(),
+                currRecord.getPartitionId(),
+                currRecord.getSequenceNumber(),
                 records.remainingCapacity(),
-                record.getData().stream().map(StringUtils::fromUtf8).collect(Collectors.toList())
+                currRecord.getData().stream().map(StringUtils::fromUtf8).collect(Collectors.toList())
             );
 
             // If the buffer was full and we weren't able to add the message, grab a new stream iterator starting
             // from this message and back off for a bit to let the buffer drain before retrying.
-            if (!records.offer(record, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
+            if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
               log.warn(
                   "OrderedPartitionableRecord buffer full, storing iterator and retrying in [%,dms]",
                   recordBufferFullWait
               );
 
               shardIterator = kinesis.getShardIterator(
-                  record.getStream(),
-                  record.getPartitionId(),
+                  currRecord.getStream(),
+                  currRecord.getPartitionId(),
                   ShardIteratorType.AT_SEQUENCE_NUMBER.toString(),
-                  record.getSequenceNumber()
+                  currRecord.getSequenceNumber()
               ).getShardIterator();
 
               rescheduleRunnable(recordBufferFullWait);
@@ -240,8 +247,47 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           long retryMs = Math.max(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS, fetchDelayMillis);
           rescheduleRunnable(retryMs);
         }
+        catch (InterruptedException e) {
+          // may happen if interrupted while BlockingQueue.offer() is waiting
+          log.warn(
+              e,
+              "Interrupted while waiting to add record to buffer, retrying in [%,dms]",
+              EXCEPTION_RETRY_DELAY_MS
+          );
+          if (currRecord != null) {
+            shardIterator = kinesis.getShardIterator(
+                currRecord.getStream(),
+                currRecord.getPartitionId(),
+                ShardIteratorType.AT_SEQUENCE_NUMBER.toString(),
+                currRecord.getSequenceNumber()
+            ).getShardIterator();
+            rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
+          } else {
+            throw new ISE("can't reschedule fetch records runnable, current record is null??");
+          }
+        }
+        catch (ExpiredIteratorException e) {
+          log.warn(
+              e,
+              "ShardIterator expired while trying to fetch records, retrying in [%,dms]",
+              fetchDelayMillis
+          );
+          if (recordsResult != null) {
+            shardIterator = recordsResult.getNextShardIterator(); // will be null if the shard has been closed
+            rescheduleRunnable(fetchDelayMillis);
+          } else {
+            throw new ISE("can't reschedule fetch records runnable, recordsResult is null??");
+          }
+        }
+        catch (ResourceNotFoundException | InvalidArgumentException e) {
+          // aws errors
+          log.error(e, "encounted AWS error while attempting to fetch records, will not retry");
+          throw e;
+        }
         catch (Throwable e) {
+          // non transient errors
           log.error(e, "getRecordRunnable exception");
+          throw new RuntimeException(e);
         }
 
       };
@@ -255,6 +301,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         }
         catch (RejectedExecutionException e) {
           log.warn(
+              e,
               "Caught RejectedExecutionException, KinesisRecordSupplier for partition[%s] has likely temporarily shutdown the ExecutorService."
               + "This is expected behavior after calling seek(), seekToEarliest() and seekToLatest()",
               streamPartition.getPartitionId()
@@ -548,6 +595,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
     catch (InterruptedException e) {
       log.warn(e, "InterruptedException while shutting down");
+      throw new RuntimeException(e);
     }
 
     this.closed = true;
@@ -598,7 +646,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     // filter records in buffer and only retain ones whose partition was not seeked
     BlockingQueue<OrderedPartitionableRecord<String, String>> newQ = new LinkedBlockingQueue<>(recordBufferSize);
     records
-        .parallelStream()
+        .stream()
         .filter(x -> !partitions.contains(x.getStreamPartition()))
         .forEachOrdered(newQ::offer);
 
@@ -622,7 +670,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       ).getShardIterator();
     }
     catch (ResourceNotFoundException e) {
-      log.warn("Caught ResourceNotFoundException: [%s]", e);
+      log.warn(e, "Caught ResourceNotFoundException while getting shardIterator");
     }
 
     return getSequenceNumberInternal(partition, shardIterator);

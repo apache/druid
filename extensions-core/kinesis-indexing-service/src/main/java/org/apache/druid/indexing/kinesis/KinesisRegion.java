@@ -55,7 +55,7 @@ public enum KinesisRegion
   {
     return EnumSet.allOf(KinesisRegion.class)
                   .stream()
-                  .filter(x -> x.toString().equals(value))
+                  .filter(x -> x.serialize().equals(value))
                   .findFirst()
                   .orElseThrow(() -> new IAE("Invalid region %s, region must be one of: %s", value, getNames()));
   }
@@ -71,8 +71,7 @@ public enum KinesisRegion
   }
 
   @JsonValue
-  @Override
-  public String toString()
+  public String serialize()
   {
     return StringUtils.toLowerCase(name()).replace('_', '-');
   }
