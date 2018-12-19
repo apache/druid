@@ -20,27 +20,20 @@
 package io.druid.query.aggregation.unique;
 
 import io.druid.data.input.InputRow;
-import io.druid.java.util.common.io.smoosh.FileSmoosher;
 import io.druid.segment.GenericColumnSerializer;
-import io.druid.segment.IndexIO;
 import io.druid.segment.column.ColumnBuilder;
-import io.druid.segment.column.ComplexColumn;
-import io.druid.segment.data.ColumnarMultiInts;
-import io.druid.segment.data.CompressionStrategy;
-import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.ObjectStrategy;
-import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
-import io.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
+import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
+import io.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
 import io.druid.segment.writeout.SegmentWriteOutMedium;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
 import java.util.List;
 
 public class RoaringBitmapComplexMetricSerde extends ComplexMetricSerde
@@ -79,7 +72,7 @@ public class RoaringBitmapComplexMetricSerde extends ComplexMetricSerde
             return bitmap;
           }
           for (String dimensionValue : dimValues) {
-            bitmap.add(Integer.valueOf(dimensionValue));
+            bitmap.add(Integer.parseInt(dimensionValue));
           }
           return bitmap;
         }
@@ -90,44 +83,12 @@ public class RoaringBitmapComplexMetricSerde extends ComplexMetricSerde
   @Override
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
   {
-
-    builder.setComplexColumn(() -> {
-      final int position = buffer.position();
-      final int limit = buffer.limit();
-      ColumnarMultiInts indexedInts = V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
-          buffer,
-          // TODO byteorder 必须和压缩的相同
-          IndexIO.BYTE_ORDER
-      ).get();
-      return new ComplexColumn()
-      {
-        @Override
-        public Class<?> getClazz()
-        {
-          return indexedInts.getClazz();
-        }
-
-        @Override
-        public String getTypeName()
-        {
-          return "ImmutableRoaringBitmap";
-        }
-
-        @Override
-        public Object getRowValue(int rowNum)
-        {
-          return indexedInts.get(rowNum);
-        }
-
-        @Override
-        public void close()
-        {
-          buffer.position(position);
-          buffer.limit(limit);
-        }
-      };
-    });
-
+    GenericIndexed<ImmutableRoaringBitmap> ge = GenericIndexed.read(
+        buffer,
+        ImmutableRoaringBitmapObjectStrategy.STRATEGY,
+        builder.getFileMapper()
+    );
+    builder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), ge));
   }
 
   @Override
@@ -140,51 +101,6 @@ public class RoaringBitmapComplexMetricSerde extends ComplexMetricSerde
   @Override
   public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
-    return new GenericColumnSerializer()
-    {
-      V3CompressedVSizeColumnarMultiIntsSerializer serializer = V3CompressedVSizeColumnarMultiIntsSerializer.create(
-          segmentWriteOutMedium,
-          "%s.complex_column",
-          Integer.MAX_VALUE,
-          CompressionStrategy.fromString(System.getProperty("druid.uniq.compress", "UNCOMPRESSED"))
-      );
-
-
-      @Override
-      public void open() throws IOException
-      {
-        serializer.open();
-      }
-
-      @Override
-      public void serialize(Object obj) throws IOException
-      {
-        if (obj instanceof ImmutableRoaringBitmap) {
-          serializer.add(((ImmutableRoaringBitmap) obj).toArray());
-        } else if (obj instanceof IndexedInts) {
-          IndexedInts indexedInts = (IndexedInts) obj;
-          final int size = indexedInts.size();
-          final int[] ints = new int[size];
-          for (int i = 0; i < size; i++) {
-            ints[i] = indexedInts.get(i);
-          }
-          serializer.add(ints);
-        } else {
-          throw new RuntimeException("Unexcept type: " + obj.getClass());
-        }
-      }
-
-      @Override
-      public long getSerializedSize() throws IOException
-      {
-        return serializer.getSerializedSize();
-      }
-
-      @Override
-      public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
-      {
-        serializer.writeTo(channel, smoosher);
-      }
-    };
+    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
 }

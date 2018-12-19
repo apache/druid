@@ -97,16 +97,15 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public MutableRoaringBitmap combine(Object lhs, Object rhs)
+  public ImmutableRoaringBitmap combine(Object lhs, Object rhs)
   {
     if (rhs == null) {
-      return (MutableRoaringBitmap) lhs;
+      return (ImmutableRoaringBitmap) lhs;
     }
     if (lhs == null) {
-      return (MutableRoaringBitmap) rhs;
+      return (ImmutableRoaringBitmap) rhs;
     }
-    ((MutableRoaringBitmap) lhs).or((MutableRoaringBitmap) rhs);
-    return (MutableRoaringBitmap) lhs;
+    return ImmutableRoaringBitmap.or((ImmutableRoaringBitmap) lhs, (ImmutableRoaringBitmap) rhs);
   }
 
   @Override

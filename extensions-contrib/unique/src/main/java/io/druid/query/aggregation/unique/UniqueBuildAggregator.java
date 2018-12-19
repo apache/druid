@@ -22,19 +22,19 @@ package io.druid.query.aggregation.unique;
 import io.druid.java.util.common.UOE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.ColumnValueSelector;
-import io.druid.segment.data.IndexedInts;
+import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 public class UniqueBuildAggregator implements Aggregator
 {
   private final ColumnValueSelector<Object> selector;
-  private MutableRoaringBitmap bitmap;
+  private MutableRoaringBitmap mutableRoaringBitmap;
 
   public UniqueBuildAggregator(ColumnValueSelector<Object> selector)
   {
     this.selector = selector;
-    this.bitmap = new MutableRoaringBitmap();
+    this.mutableRoaringBitmap = new MutableRoaringBitmap();
   }
 
   @Override
@@ -44,13 +44,19 @@ public class UniqueBuildAggregator implements Aggregator
     if (value == null) {
       return;
     }
-    if (value instanceof Long || value instanceof Integer) {
+    if (value instanceof Integer) {
       // POC 验证，直接使用int测试
-      bitmap.add((int) value);
-    } else if (value instanceof IndexedInts) {
-      ((IndexedInts) value).forEach(bitmap::add);
+      mutableRoaringBitmap.add((int) value);
     } else if (value instanceof ImmutableRoaringBitmap) {
-      bitmap.or((ImmutableRoaringBitmap) value);
+      ImmutableRoaringBitmap bitmap = (ImmutableRoaringBitmap) value;
+      if (bitmap.getCardinality() <= 10) {
+        IntIterator iterator = bitmap.getIntIterator();
+        while (iterator.hasNext()) {
+          mutableRoaringBitmap.add(iterator.next());
+        }
+      } else {
+        mutableRoaringBitmap.or(bitmap);
+      }
     } else {
       throw new UOE("Not implemented");
     }
@@ -59,7 +65,7 @@ public class UniqueBuildAggregator implements Aggregator
   @Override
   public ImmutableRoaringBitmap get()
   {
-    return bitmap;
+    return mutableRoaringBitmap;
   }
 
   @Override
@@ -77,6 +83,6 @@ public class UniqueBuildAggregator implements Aggregator
   @Override
   public void close()
   {
-    bitmap = null;
+    mutableRoaringBitmap = null;
   }
 }
