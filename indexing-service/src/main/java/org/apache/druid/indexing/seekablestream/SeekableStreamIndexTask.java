@@ -67,8 +67,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 {
   public static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
   private static final Random RANDOM = ThreadLocalRandom.current();
+  private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);
 
-  private final EmittingLogger log = new EmittingLogger(this.getClass());
   private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
   protected final DataSchema dataSchema;
   protected final InputRowParser<ByteBuffer> parser;

@@ -141,7 +141,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     PUBLISHING
   }
 
-  private final EmittingLogger log = new EmittingLogger(this.getClass());
+  private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskRunner.class);
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
   private static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
 

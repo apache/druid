@@ -131,7 +131,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
 
-  private final EmittingLogger log = new EmittingLogger(this.getClass());
+  private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
   // Internal data structures
   // --------------------------------------------------------

@@ -274,10 +274,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected OrderedSequenceNumber<String> makeSequenceNumber(
-      String seq,
-      boolean isExclusive
-  )
+  protected OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)
   {
     return KinesisSequenceNumber.of(seq, isExclusive);
   }

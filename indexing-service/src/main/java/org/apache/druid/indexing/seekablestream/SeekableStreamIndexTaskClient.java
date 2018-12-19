@@ -44,7 +44,7 @@ import java.util.TreeMap;
 
 public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType> extends IndexTaskClient
 {
-  private final EmittingLogger log = new EmittingLogger(this.getClass());
+  private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTaskClient.class);
 
   public SeekableStreamIndexTaskClient(
       HttpClient httpClient,

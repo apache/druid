@@ -281,17 +281,13 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
-  protected KafkaDataSourceMetadata createDataSourceMetaData(
-      String topic, Map<Integer, Long> map
-  )
+  protected KafkaDataSourceMetadata createDataSourceMetaData(String topic, Map<Integer, Long> map)
   {
     return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, map));
   }
 
   @Override
-  protected OrderedSequenceNumber<Long> makeSequenceNumber(
-      Long seq, boolean isExclusive
-  )
+  protected OrderedSequenceNumber<Long> makeSequenceNumber(Long seq, boolean isExclusive)
   {
     return KafkaSequenceNumber.of(seq);
   }
