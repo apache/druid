@@ -426,6 +426,7 @@ public class StringComparators
     @Override
     public int compare(String o1, String o2)
     {
+      //noinspection StringEquality
       if (o1 == o2) {
         return 0;
       }
