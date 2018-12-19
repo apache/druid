@@ -1952,13 +1952,39 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             // 3) Build a map of the highest sequence read by any task in the group for each partition
             final Map<PartitionIdType, SequenceOffsetType> endOffsets = new HashMap<>();
             for (int i = 0; i < input.size(); i++) {
-              Map<PartitionIdType, SequenceOffsetType> result = input.get(i);
+              final Map<PartitionIdType, SequenceOffsetType> result = input.get(i);
+              final String taskId = pauseTaskIds.get(i);
 
-              if (result == null || result.isEmpty()) { // kill tasks that didn't return a value
-                String taskId = pauseTaskIds.get(i);
-                killTask(taskId, "Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
+              if (result == null) {
+                // Get the exception
+                final Throwable pauseException;
+                try {
+                  // The below get should throw ExecutionException since result is null.
+                  final Map<PartitionIdType, SequenceOffsetType> pauseResult = pauseFutures.get(i).get();
+                  throw new ISE(
+                      "WTH? The pause request for task [%s] is supposed to fail, but returned [%s]",
+                      taskId,
+                      pauseResult
+                  );
+                }
+                catch (InterruptedException e) {
+                  throw new RuntimeException(e);
+                }
+                catch (ExecutionException e) {
+                  pauseException = e.getCause() == null ? e : e.getCause();
+                }
+
+                killTask(
+                    taskId,
+                    "An exception occured while waiting for task [%s] to pause: [%s]",
+                    taskId,
+                    pauseException
+                );
                 taskGroup.tasks.remove(taskId);
 
+              } else if (result.isEmpty()) {
+                killTask(taskId, "Task [%s] returned empty offsets after pause", taskId);
+                taskGroup.tasks.remove(taskId);
               } else { // otherwise build a map of the highest sequences seen
                 for (Entry<PartitionIdType, SequenceOffsetType> sequence : result.entrySet()) {
                   if (!endOffsets.containsKey(sequence.getKey())
