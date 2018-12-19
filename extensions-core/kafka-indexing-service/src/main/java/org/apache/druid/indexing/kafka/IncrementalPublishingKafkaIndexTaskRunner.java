@@ -204,33 +204,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       Map<Integer, Long> currOffsets
   )
   {
-    for (final StreamPartition<Integer> streamPartition : assignment) {
-      Long sequence = currOffsets.get(streamPartition.getPartitionId());
-      Long earliestSequenceNumber = recordSupplier.getEarliestSequenceNumber(streamPartition);
-      if (earliestSequenceNumber == null
-          || createSequenceNumber(earliestSequenceNumber).compareTo(createSequenceNumber(sequence)) > 0) {
-        if (task.getTuningConfig().isResetOffsetAutomatically()) {
-          log.info("Attempting to reset sequences automatically for all partitions");
-          try {
-            sendResetRequestAndWait(
-                assignment.stream()
-                          .collect(Collectors.toMap(x -> x, x -> currOffsets.get(x.getPartitionId()))),
-                toolbox
-            );
-          }
-          catch (IOException e) {
-            throw new ISE(e, "Exception while attempting to automatically reset sequences");
-          }
-        } else {
-          throw new ISE(
-              "Starting sequenceNumber [%s] is no longer available for partition [%s] (earliest: [%s]) and resetOffsetAutomatically is not enabled",
-              sequence,
-              streamPartition.getPartitionId(),
-              earliestSequenceNumber
-          );
-        }
-      }
-    }
+    // do nothing
   }
 
   @Override
