@@ -203,7 +203,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     druidSchema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestServerInventoryView(walker.getSegments()),
+        new TestServerInventoryView(walker.getSegments(), realtimeSegments),
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
         new NoopEscalator()
@@ -281,6 +281,8 @@ public class SystemSchemaTest extends CalciteTestBase
       DataSegment.PruneLoadSpecHolder.DEFAULT
   );
 
+  final List<DataSegment> realtimeSegments = ImmutableList.of(segment4, segment5);
+
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
       new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
       1L,
@@ -329,11 +331,6 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable() throws Exception
   {
-    // total segments = 6
-    // segments 1,2,3 are published but unavailable
-    // segments 4,5,6  are published and available
-    // segment 6 is published but not served
-    // segment 4 is served by 2 servers, so num_replicas=2
 
     final SystemSchema.SegmentsTable segmentsTable = EasyMock
         .createMockBuilder(SystemSchema.SegmentsTable.class)
@@ -356,9 +353,9 @@ public class SystemSchemaTest extends CalciteTestBase
         .anyTimes();
 
     AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
-    //published but unavailable segments
+    //segments in metadata store : wikipedia1, wikipedia2, wikipedia3, test1, test2
     final String json = "[{\n"
-                        + "\t\"dataSource\": \"wikipedia-kafka\",\n"
+                        + "\t\"dataSource\": \"wikipedia1\",\n"
                         + "\t\"interval\": \"2018-08-07T23:00:00.000Z/2018-08-08T00:00:00.000Z\",\n"
                         + "\t\"version\": \"2018-08-07T23:00:00.059Z\",\n"
                         + "\t\"loadSpec\": {\n"
@@ -376,7 +373,7 @@ public class SystemSchemaTest extends CalciteTestBase
                         + "\t\"size\": 47406,\n"
                         + "\t\"identifier\": \"wikipedia-kafka_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z_51\"\n"
                         + "}, {\n"
-                        + "\t\"dataSource\": \"wikipedia-kafka\",\n"
+                        + "\t\"dataSource\": \"wikipedia2\",\n"
                         + "\t\"interval\": \"2018-08-07T18:00:00.000Z/2018-08-07T19:00:00.000Z\",\n"
                         + "\t\"version\": \"2018-08-07T18:00:00.117Z\",\n"
                         + "\t\"loadSpec\": {\n"
@@ -394,7 +391,7 @@ public class SystemSchemaTest extends CalciteTestBase
                         + "\t\"size\": 83846,\n"
                         + "\t\"identifier\": \"wikipedia-kafka_2018-08-07T18:00:00.000Z_2018-08-07T19:00:00.000Z_2018-08-07T18:00:00.117Z_9\"\n"
                         + "}, {\n"
-                        + "\t\"dataSource\": \"wikipedia-kafka\",\n"
+                        + "\t\"dataSource\": \"wikipedia3\",\n"
                         + "\t\"interval\": \"2018-08-07T23:00:00.000Z/2018-08-08T00:00:00.000Z\",\n"
                         + "\t\"version\": \"2018-08-07T23:00:00.059Z\",\n"
                         + "\t\"loadSpec\": {\n"
@@ -411,6 +408,34 @@ public class SystemSchemaTest extends CalciteTestBase
                         + "\t\"binaryVersion\": 9,\n"
                         + "\t\"size\": 53527,\n"
                         + "\t\"identifier\": \"wikipedia-kafka_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z_50\"\n"
+                        + "}, {\n"
+                        + "\t\"dataSource\": \"test1\",\n"
+                        + "\t\"interval\": \"2010-01-01T00:00:00.000Z/2011-01-01T00:00:00.000Z\",\n"
+                        + "\t\"version\": \"version1\",\n"
+                        + "\t\"loadSpec\": null,\n"
+                        + "\t\"dimensions\": \"dim1,dim2\",\n"
+                        + "\t\"metrics\": \"met1,met2\",\n"
+                        + "\t\"shardSpec\": {\n"
+                        + "\t\t\"type\": \"none\",\n"
+                        + "\t\t\"domainDimensions\": []\n"
+                        + "\t},\n"
+                        + "\t\"binaryVersion\": 1,\n"
+                        + "\t\"size\": 100,\n"
+                        + "\t\"identifier\": \"test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1\"\n"
+                        + "}, {\n"
+                        + "\t\"dataSource\": \"test2\",\n"
+                        + "\t\"interval\": \"2011-01-01T00:00:00.000Z/2012-01-01T00:00:00.000Z\",\n"
+                        + "\t\"version\": \"version2\",\n"
+                        + "\t\"loadSpec\": null,\n"
+                        + "\t\"dimensions\": \"dim1,dim2\",\n"
+                        + "\t\"metrics\": \"met1,met2\",\n"
+                        + "\t\"shardSpec\": {\n"
+                        + "\t\t\"type\": \"none\",\n"
+                        + "\t\t\"domainDimensions\": []\n"
+                        + "\t},\n"
+                        + "\t\"binaryVersion\": 1,\n"
+                        + "\t\"size\": 100,\n"
+                        + "\t\"identifier\": \"test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2\"\n"
                         + "}]";
     byte[] bytesToWrite = json.getBytes(StandardCharsets.UTF_8);
     in.add(bytesToWrite);
@@ -447,15 +472,21 @@ public class SystemSchemaTest extends CalciteTestBase
 
     final List<Object[]> rows = segmentsTable.scan(dataContext).toList();
 
-    Assert.assertEquals(6, rows.size());
+    // total segments = 8
+    // segment wikipedia1, wikipedia2, wikipedia3 are published but unavailable
+    // segments test1, test2  are published and available
+    // segment test3 is served by historical but unpublished or unused
+    // segments test4, test5 are not published but available (realtime segments)
+
+    Assert.assertEquals(8, rows.size());
 
     Object[] row0 = rows.get(0);
     //segment 0 is published and unavailable, num_replicas is 0
     Assert.assertEquals(
-        "wikipedia-kafka_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z",
+        "wikipedia1_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z",
         row0[0]
     );
-    Assert.assertEquals("wikipedia-kafka", row0[1]);
+    Assert.assertEquals("wikipedia1", row0[1]);
     Assert.assertEquals("2018-08-07T23:00:00.000Z", row0[2]);
     Assert.assertEquals("2018-08-08T00:00:00.000Z", row0[3]);
     Assert.assertEquals(47406L, row0[4]);
@@ -469,10 +500,10 @@ public class SystemSchemaTest extends CalciteTestBase
 
     Object[] row1 = rows.get(1);
     Assert.assertEquals(
-        "wikipedia-kafka_2018-08-07T18:00:00.000Z_2018-08-07T19:00:00.000Z_2018-08-07T18:00:00.117Z",
+        "wikipedia2_2018-08-07T18:00:00.000Z_2018-08-07T19:00:00.000Z_2018-08-07T18:00:00.117Z",
         row1[0]
     );
-    Assert.assertEquals("wikipedia-kafka", row1[1]);
+    Assert.assertEquals("wikipedia2", row1[1]);
     Assert.assertEquals("2018-08-07T18:00:00.000Z", row1[2]);
     Assert.assertEquals("2018-08-07T19:00:00.000Z", row1[3]);
     Assert.assertEquals(83846L, row1[4]);
@@ -487,10 +518,10 @@ public class SystemSchemaTest extends CalciteTestBase
 
     Object[] row2 = rows.get(2);
     Assert.assertEquals(
-        "wikipedia-kafka_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z",
+        "wikipedia3_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z",
         row2[0]
     );
-    Assert.assertEquals("wikipedia-kafka", row2[1]);
+    Assert.assertEquals("wikipedia3", row2[1]);
     Assert.assertEquals("2018-08-07T23:00:00.000Z", row2[2]);
     Assert.assertEquals("2018-08-08T00:00:00.000Z", row2[3]);
     Assert.assertEquals(53527L, row2[4]);
@@ -525,7 +556,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(100L, row4[4]);
     Assert.assertEquals("version2", row4[5]);
     Assert.assertEquals(0L, row4[6]); //partition_num
-    Assert.assertEquals(2L, row4[7]); //num_replicas = 2
+    Assert.assertEquals(2L, row4[7]); //segment test2 is served by 2 servers, so num_replicas=2
     Assert.assertEquals(3L, row4[8]); //numRows = 3
     Assert.assertEquals(1L, row4[9]); //is_published
     Assert.assertEquals(1L, row4[10]); //is_available
@@ -533,18 +564,46 @@ public class SystemSchemaTest extends CalciteTestBase
 
 
     Object[] row5 = rows.get(5);
-    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row5[0]);
-    Assert.assertEquals("test3", row5[1]);
-    Assert.assertEquals("2012-01-01T00:00:00.000Z", row5[2]);
-    Assert.assertEquals("2013-01-01T00:00:00.000Z", row5[3]);
+    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row5[0]);
+    Assert.assertEquals("test5", row5[1]);
+    Assert.assertEquals("2017-01-01T00:00:00.000Z", row5[2]);
+    Assert.assertEquals("2018-01-01T00:00:00.000Z", row5[3]);
     Assert.assertEquals(100L, row5[4]);
-    Assert.assertEquals("version3", row5[5]);
+    Assert.assertEquals("version5", row5[5]);
     Assert.assertEquals(0L, row5[6]); //partition_num
     Assert.assertEquals(1L, row5[7]); //num_replicas
-    Assert.assertEquals(3L, row5[8]); //numRows = 3
-    Assert.assertEquals(1L, row5[9]); //is_published
+    Assert.assertEquals(0L, row5[8]); //numRows = 0
+    Assert.assertEquals(0L, row5[9]); //is_published
     Assert.assertEquals(1L, row5[10]); //is_available
-    Assert.assertEquals(0L, row5[11]); //is_realtime
+    Assert.assertEquals(1L, row5[11]); //is_realtime
+
+    Object[] row6 = rows.get(6);
+    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row6[0]);
+    Assert.assertEquals("test4", row6[1]);
+    Assert.assertEquals("2017-01-01T00:00:00.000Z", row6[2]);
+    Assert.assertEquals("2018-01-01T00:00:00.000Z", row6[3]);
+    Assert.assertEquals(100L, row6[4]);
+    Assert.assertEquals("version4", row6[5]);
+    Assert.assertEquals(0L, row6[6]); //partition_num
+    Assert.assertEquals(1L, row6[7]); //num_replicas
+    Assert.assertEquals(0L, row6[8]); //numRows
+    Assert.assertEquals(0L, row6[9]); //is_published
+    Assert.assertEquals(1L, row6[10]); //is_available
+    Assert.assertEquals(1L, row6[11]); //is_realtime
+
+    Object[] row7 = rows.get(7);
+    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row7[0]);
+    Assert.assertEquals("test3", row7[1]);
+    Assert.assertEquals("2012-01-01T00:00:00.000Z", row7[2]);
+    Assert.assertEquals("2013-01-01T00:00:00.000Z", row7[3]);
+    Assert.assertEquals(100L, row7[4]);
+    Assert.assertEquals("version3", row7[5]);
+    Assert.assertEquals(0L, row7[6]); //partition_num
+    Assert.assertEquals(1L, row7[7]); //num_replicas
+    Assert.assertEquals(3L, row7[8]); //numRows = 3
+    Assert.assertEquals(0L, row7[9]); //is_published
+    Assert.assertEquals(1L, row7[10]); //is_available
+    Assert.assertEquals(0L, row7[11]); //is_realtime
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.SEGMENTS_SIGNATURE);
