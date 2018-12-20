@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kinesis;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
@@ -290,9 +291,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           log.error(e, "encounted AWS error while attempting to fetch records, will not retry");
           throw e;
         }
+        catch (SdkClientException e) {
+          log.warn(e, "encounted unknown AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
+          rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
+        }
         catch (Throwable e) {
           // non transient errors
-          log.error(e, "getRecordRunnable exception");
+          log.error(e, "unknown getRecordRunnable exception, will not retry");
           throw new RuntimeException(e);
         }
 
