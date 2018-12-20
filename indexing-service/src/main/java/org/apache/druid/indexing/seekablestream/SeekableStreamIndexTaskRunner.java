@@ -492,12 +492,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
 
           // calling getRecord() ensures that exceptions specific to kafka/kinesis like OffsetOutOfRangeException
-          // are handled in the subclasses
+          // are handled in the subclasses.
           List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>> records = getRecords(
               recordSupplier,
               toolbox
           );
 
+          // note: getRecords() also updates assignment
           stillReading = !assignment.isEmpty();
 
           SequenceMetadata sequenceToCheckpoint = null;
@@ -516,14 +517,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               continue;
             }
 
-            if (log.isTraceEnabled()) {
-              log.trace(
-                  "Got stream[%s] partition[%s] sequence[%s].",
-                  record.getStream(),
-                  record.getPartitionId(),
-                  record.getSequenceNumber()
-              );
-            }
+            log.trace(
+                "Got stream[%s] partition[%s] sequence[%s].",
+                record.getStream(),
+                record.getPartitionId(),
+                record.getSequenceNumber()
+            );
 
             if (isEndOfShard(record.getSequenceNumber())) {
               // shard is closed, applies to Kinesis only
@@ -617,7 +616,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                         }
 
                         @Override
-                        public void onFailure(@ParametersAreNonnullByDefault Throwable t)
+                        public void onFailure(Throwable t)
                         {
                           log.error("Persist failed, dying");
                           backgroundThreadException = t;
@@ -1622,15 +1621,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     private final Set<PartitionIdType> assignments;
     private final boolean sentinel;
     private boolean checkpointed;
-
     /**
      * Lock for accessing {@link #endOffsets} and {@link #checkpointed}. This lock is required because
      * {@link #setEndOffsets)} can be called by both the main thread and the HTTP thread.
      */
-    protected final ReentrantLock lock = new ReentrantLock();
-    protected final Map<PartitionIdType, SequenceOffsetType> startOffsets;
-    protected final Map<PartitionIdType, SequenceOffsetType> endOffsets;
+    private final ReentrantLock lock = new ReentrantLock();
 
+    final Map<PartitionIdType, SequenceOffsetType> startOffsets;
+    final Map<PartitionIdType, SequenceOffsetType> endOffsets;
 
     @JsonCreator
     public SequenceMetadata(

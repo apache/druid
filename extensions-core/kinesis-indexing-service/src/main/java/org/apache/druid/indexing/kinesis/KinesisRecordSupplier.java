@@ -244,6 +244,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           rescheduleRunnable(fetchDelayMillis);
         }
         catch (ProvisionedThroughputExceededException e) {
+          log.warn(
+              e,
+              "encounted ProvisionedThroughputExceededException while fetching records, this means "
+              + "that the request rate for the stream is too high, or the requested data is too large for "
+              + "the available throughput. Reduce the frequency or size of your requests."
+          );
           long retryMs = Math.max(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS, fetchDelayMillis);
           rescheduleRunnable(retryMs);
         }
@@ -563,7 +569,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public String getPosition(StreamPartition<String> partition)
   {
-    throw new UnsupportedOperationException("getPosition is not supported in Kinesiss");
+    throw new UnsupportedOperationException("getPosition() is not supported in Kinesis");
   }
 
   @Override
@@ -690,9 +696,18 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
       GetRecordsResult recordsResult;
       try {
+        // we call getRecords with limit 1000 to make sure that we can find the first (earliest) record in the shard.
+        // In the case where the shard is constantly removing records that are past their retention period, it is possible
+        // that we never find the first record in the shard if we use a limit of 1.
         recordsResult = kinesis.getRecords(new GetRecordsRequest().withShardIterator(shardIterator).withLimit(1000));
       }
       catch (ProvisionedThroughputExceededException e) {
+        log.warn(
+            e,
+            "encounted ProvisionedThroughputExceededException while fetching records, this means "
+            + "that the request rate for the stream is too high, or the requested data is too large for "
+            + "the available throughput. Reduce the frequency or size of your requests."
+        );
         try {
           Thread.sleep(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS);
           continue;

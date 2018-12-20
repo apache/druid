@@ -45,6 +45,10 @@ import java.util.Objects;
  */
 public class SeekableStreamPartitions<PartitionIdType, SequenceOffsetType>
 {
+  // this special marker is used by the KinesisSupervisor to set the endOffsets
+  // of newly created indexing tasks. This is necessary because streaming tasks do not
+  // have endPartitionOffsets. This marker signals to the task that it should continue
+  // to ingest data until taskDuration has elapsed or the task was stopped or paused or killed
   public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
 
   // stream/topic

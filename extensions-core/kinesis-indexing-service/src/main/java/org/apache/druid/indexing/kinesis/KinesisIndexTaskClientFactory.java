@@ -36,10 +36,7 @@ public class KinesisIndexTaskClientFactory extends SeekableStreamIndexTaskClient
       @Json ObjectMapper mapper
   )
   {
-    super(
-        httpClient,
-        mapper
-    );
+    super(httpClient, mapper);
   }
 
   @Override

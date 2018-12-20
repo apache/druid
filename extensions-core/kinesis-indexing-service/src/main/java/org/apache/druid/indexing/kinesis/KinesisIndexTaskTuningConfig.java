@@ -205,11 +205,14 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            isLogParseExceptions() == that.isLogParseExceptions() &&
            getMaxParseExceptions() == that.getMaxParseExceptions() &&
            getMaxSavedParseExceptions() == that.getMaxSavedParseExceptions() &&
+           getMaxRecordsPerPoll() == that.getMaxRecordsPerPoll() &&
            Objects.equals(getIntermediatePersistPeriod(), that.getIntermediatePersistPeriod()) &&
            Objects.equals(getBasePersistDirectory(), that.getBasePersistDirectory()) &&
            Objects.equals(getIndexSpec(), that.getIndexSpec()) &&
            Objects.equals(getFetchThreads(), that.getFetchThreads()) &&
-           Objects.equals(getSegmentWriteOutMediumFactory(), that.getSegmentWriteOutMediumFactory());
+           Objects.equals(getSegmentWriteOutMediumFactory(), that.getSegmentWriteOutMediumFactory()) &&
+           Objects.equals(getMaxTotalRows(), that.getMaxTotalRows()) &&
+           Objects.equals(getIntermediateHandoffPeriod(), that.getIntermediateHandoffPeriod());
   }
 
   @Override
@@ -219,6 +222,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getMaxRowsInMemory(),
         getMaxBytesInMemory(),
         getMaxRowsPerSegment(),
+        getMaxTotalRows(),
         getIntermediatePersistPeriod(),
         getBasePersistDirectory(),
         getMaxPendingPersists(),
@@ -236,7 +240,9 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
         getSegmentWriteOutMediumFactory(),
         isLogParseExceptions(),
         getMaxParseExceptions(),
-        getMaxSavedParseExceptions()
+        getMaxSavedParseExceptions(),
+        getMaxRecordsPerPoll(),
+        getIntermediateHandoffPeriod()
     );
   }
 
@@ -247,6 +253,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            "maxRowsInMemory=" + getMaxRowsInMemory() +
            ", maxBytesInMemory=" + getMaxBytesInMemory() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
+           ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
@@ -265,6 +272,7 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxParseExceptions=" + getMaxParseExceptions() +
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", maxRecordsPerPoll=" + maxRecordsPerPoll +
+           ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            '}';
   }
 }
