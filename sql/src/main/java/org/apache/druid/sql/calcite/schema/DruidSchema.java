@@ -206,8 +206,17 @@ public class DruidSchema extends AbstractSchema
                           !wasRecentFailure &&
                           (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
                           (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                        // We need to do a refresh. Break out of the waiting loop.
                         break;
                       }
+
+                      if (isServerViewInitialized) {
+                        // Server view is initialized, but we don't need to do a refresh. Could happen if there are
+                        // no segments in the system yet. Just mark us as initialized, then.
+                        initialized.countDown();
+                      }
+
+                      // Wait some more, we'll wake up when it might be time to do another refresh.
                       lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
                     }
 
