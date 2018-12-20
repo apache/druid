@@ -95,6 +95,7 @@ import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
+import io.druid.indexer.ZkConfigManager;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -181,6 +182,7 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
             LifecycleModule.register(binder, ExecutorLifecycle.class);
+            LifecycleModule.register(binder, ZkConfigManager.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
                 new ExecutorLifecycleConfig()
                     .setTaskFile(new File(taskAndStatusFile.get(0)))

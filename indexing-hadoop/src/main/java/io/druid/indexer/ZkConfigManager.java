@@ -19,41 +19,50 @@
 
 package io.druid.indexer;
 
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import io.druid.curator.CuratorConfig;
+import io.druid.guice.ManageLifecycleLast;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.server.initialization.ZkPathsConfig;
 
-import java.util.List;
-
-public class HadoopDruidBuildDictJob implements Jobby
+@ManageLifecycleLast
+public class ZkConfigManager
 {
-  private static final Logger log = new Logger(HadoopDruidBuildDictJob.class);
-  private final HadoopDruidIndexerConfig config;
-  private final String zkHosts;
-  private final String zkBase;
-  private BuildDictJob dictJob;
+
+  private static final Logger log = new Logger(ZkConfigManager.class);
+
+
+  private static volatile String host;
+
+  private static volatile String base;
 
 
   @Inject
-  public HadoopDruidBuildDictJob(HadoopDruidIndexerConfig config, String zkHosts, String zkBase)
+  public ZkConfigManager(
+      CuratorConfig curatorConfig,
+      ZkPathsConfig zkPathsConfig
+  )
   {
-    config.verify();
-    this.config = config;
-    this.zkHosts = zkHosts;
-    this.zkBase = zkBase;
+    synchronized (ZkConfigManager.class) {
+      host = curatorConfig.getZkHosts();
+      base = zkPathsConfig.getBase();
+      log.info("ZkConfigManager get host:%s, base:%s", host, base);
+    }
+
   }
 
 
-  @Override
-  public boolean run()
+  public static String getZkHosts()
   {
-    List<Jobby> jobs = Lists.newArrayList();
-    JobHelper.ensurePaths(config);
+    synchronized (ZkConfigManager.class) {
+      return host;
+    }
+  }
 
-    dictJob = new BuildDictJob(config, zkHosts, zkBase);
-    jobs.add(dictJob);
-
-
-    return JobHelper.runJobs(jobs, config);
+  public static String getBase()
+  {
+    synchronized (ZkConfigManager.class) {
+      return base;
+    }
   }
 }

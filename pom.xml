@@ -787,6 +787,54 @@
                         <groupId>org.mozilla</groupId>
                         <artifactId>rhino</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.calcite</groupId>
+                        <artifactId>calcite-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.calcite.avatica</groupId>
+                        <artifactId>avatica</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.rocksdb</groupId>
+                        <artifactId>rocksdbjni</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>net.sf.ehcache</groupId>
+                        <artifactId>ehcache</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.tdunning</groupId>
+                        <artifactId>t-digest</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.commons</groupId>
+                        <artifactId>commons-email</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.freemarker</groupId>
+                        <artifactId>freemarker</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.httpcomponents</groupId>
+                        <artifactId>httpclient</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>metrics-jvm</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>metrics-json</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.github.joshelser</groupId>
+                        <artifactId>dropwizard-metrics-hadoop-metrics2-reporter</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>commons-dbcp</groupId>
+                        <artifactId>commons-dbcp</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
 

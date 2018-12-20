@@ -39,7 +39,6 @@ import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.kylin.common.KylinConfig;
 import org.apache.kylin.common.util.HadoopUtil;
 import org.apache.kylin.dict.AppendTrieDictionary;
-import org.apache.kylin.dict.global.AppendTrieDictionaryBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -58,10 +57,14 @@ public class BuildDictJob implements Jobby
   private static final Logger log = new Logger(BuildDictJob.class);
 
   private final HadoopDruidIndexerConfig config;
+  private final String zkHosts;
+  private final String zkBase;
 
-  public BuildDictJob(HadoopDruidIndexerConfig config)
+  public BuildDictJob(HadoopDruidIndexerConfig config, String zkHosts, String zkBase)
   {
     this.config = config;
+    this.zkHosts = zkHosts;
+    this.zkBase = zkBase;
   }
 
   @Override
@@ -85,6 +88,10 @@ public class BuildDictJob implements Jobby
       //can be override by jobproperty
       job.getConfiguration().set("mapreduce.reduce.memory.mb", "8500");
       job.getConfiguration().set("mapred.reduce.child.java.opts", "-Xmx8g");
+
+      job.getConfiguration().set(HadoopDruidIndexerConfig.CONFIG_PROPERTY + ".zkhosts", zkHosts);
+      job.getConfiguration().set(HadoopDruidIndexerConfig.CONFIG_PROPERTY + ".zkbase", zkBase);
+
 
       JobHelper.injectSystemProperties(job);
       config.addJobProperties(job);
@@ -280,7 +287,7 @@ public class BuildDictJob implements Jobby
     private AggregatorFactory uniqAggregator;
     private String fieldName;
 
-    private AppendTrieDictionaryBuilder builder;
+    private GlobalDictionaryBuilder builder;
 
     @Override
     protected void setup(Context context)
@@ -318,19 +325,14 @@ public class BuildDictJob implements Jobby
 
       Properties prop = new Properties();
       prop.setProperty("kylin.hdfs.working.dir", config.getWorkingPath());
+
       KylinConfig.setKylinConfigInEnvIfMissing(prop);
+      
+      this.builder = new GlobalDictionaryBuilder();
+      builder.init(config.getSchema().getDataSchema().getDataSource(), fieldName, KylinConfig.getInstanceFromEnv().getHdfsWorkingDirectory(),
+                   context.getConfiguration().get(HadoopDruidIndexerConfig.CONFIG_PROPERTY + ".zkhosts"),
+                   context.getConfiguration().get(HadoopDruidIndexerConfig.CONFIG_PROPERTY + ".zkbase"));
 
-      int maxEntriesPerSlice = KylinConfig.getInstanceFromEnv().getAppendDictEntrySize();
-      String dictHdfsDir = KylinConfig.getInstanceFromEnv().getHdfsWorkingDirectory() +
-                           "/resources/GlobalDict/dict/" +
-                           config.getSchema().getDataSchema().getDataSource() + "/" + fieldName + "/";
-
-      try {
-        this.builder = new AppendTrieDictionaryBuilder(dictHdfsDir, maxEntriesPerSlice, true);
-      }
-      catch (Throwable e) {
-        throw new RuntimeException(String.format("Failed to create global dictionary on %s ", fieldName), e);
-      }
     }
 
     @Override
@@ -344,7 +346,7 @@ public class BuildDictJob implements Jobby
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException
     {
-      AppendTrieDictionary<String> dict = builder.build(0);
+      AppendTrieDictionary<String> dict = builder.build();
 
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try (PrintStream ps = new PrintStream(baos, true, "UTF-8")) {
@@ -352,7 +354,7 @@ public class BuildDictJob implements Jobby
       }
       String dictInfo = new String(baos.toByteArray(), StandardCharsets.UTF_8);
 
-      log.info("dict info:%s,min:%s,max:%s", dictInfo, dict.getMinId(), dict.getMaxId());
+      log.info("dict info:%s,min:%s,max:%s", dictInfo, dict.getMinId(), dict.getMaxId() & 0xFFFFFFFFL);
     }
 
 

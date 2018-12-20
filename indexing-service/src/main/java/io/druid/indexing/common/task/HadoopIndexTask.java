@@ -36,6 +36,7 @@ import io.druid.indexer.HadoopDruidIndexerJob;
 import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
+import io.druid.indexer.ZkConfigManager;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskLockType;
 import io.druid.indexing.common.TaskStatus;
@@ -240,7 +241,9 @@ public class HadoopIndexTask extends HadoopTask
     final String buildResult = invokeForeignLoader(
         "io.druid.indexing.common.task.HadoopIndexTask$HadoopBuildDictInnerProcessing",
         new String[]{
-            toolbox.getObjectMapper().writeValueAsString(indexerSchema)
+            toolbox.getObjectMapper().writeValueAsString(indexerSchema),
+            ZkConfigManager.getZkHosts(),
+            ZkConfigManager.getBase()
         },
         loader
     );
@@ -350,6 +353,8 @@ public class HadoopIndexTask extends HadoopTask
     public static String runTask(String[] args) throws Exception
     {
       final String schema = args[0];
+      final String zkHosts = args[1];
+      final String zkBase = args[2];
 
       final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.JSON_MAPPER
           .readValue(
@@ -360,7 +365,7 @@ public class HadoopIndexTask extends HadoopTask
           theSchema
       );
 
-      Jobby job = new HadoopDruidBuildDictJob(config);
+      Jobby job = new HadoopDruidBuildDictJob(config, zkHosts, zkBase);
 
       log.info("Starting a hadoop build dict job...");
       if (job.run()) {
