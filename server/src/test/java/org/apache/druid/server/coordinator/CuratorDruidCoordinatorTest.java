@@ -72,7 +72,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * This tests zookeeper specific coordinator/load queue/historical interactions, such as moving segments by the balancer
@@ -384,7 +383,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     // clean up drop from load queue
     curator.delete().guaranteed().forPath(ZKPaths.makePath(SOURCE_LOAD_PATH, segmentToMove.getId().toString()));
 
-    List<DruidServer> servers = serverView.getInventory().stream().collect(Collectors.toList());
+    List<DruidServer> servers = new ArrayList<>(serverView.getInventory());
 
     Assert.assertEquals(2, servers.get(0).getTotalSegments());
     Assert.assertEquals(2, servers.get(1).getTotalSegments());

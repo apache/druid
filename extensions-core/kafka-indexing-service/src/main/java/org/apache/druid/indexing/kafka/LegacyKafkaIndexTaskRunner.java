@@ -87,6 +87,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -102,7 +103,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 
 /**
  * Kafka index task runner which doesn't support incremental segment publishing. We keep this to support rolling update.
@@ -455,10 +455,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
                 if (isPersistRequired) {
                   driver.persist(committerSupplier.get());
                 }
-                segmentsToMoveOut.entrySet().forEach(sequenceSegments -> driver.moveSegmentOut(
-                    sequenceSegments.getKey(),
-                    sequenceSegments.getValue().stream().collect(Collectors.toList())
-                ));
+                segmentsToMoveOut.forEach((String sequence, Set<SegmentIdWithShardSpec> segments) -> {
+                  driver.moveSegmentOut(sequence, new ArrayList<>(segments));
+                });
               }
               catch (ParseException e) {
                 handleParseException(e, record);

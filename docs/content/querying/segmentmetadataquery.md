@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Segment Metadata Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Segment Metadata Queries
+
 Segment metadata queries return per-segment information about:
 
 * Cardinality of all columns in the segment

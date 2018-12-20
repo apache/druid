@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Coordinator Node"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-Coordinator Node
-================
+# Coordinator Node
 
 ### Configuration
 
@@ -65,14 +66,14 @@ To ensure an even distribution of segments across historical nodes in the cluste
 ### Compacting Segments
 
 Each run, the Druid coordinator compacts small segments abutting each other. This is useful when you have a lot of small
-segments which may degrade the query performance as well as increasing the disk usage. Note that the data for an interval
-cannot be compacted across the segments.
+segments which may degrade the query performance as well as increasing the disk space usage.
 
 The coordinator first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
-Once it finds some segments, it launches a [compact task](../ingestion/tasks.html#compaction-task) to compact those segments.
-The maximum number of running compact tasks is `max(sum of worker capacity * slotRatio, maxSlots)`.
-Note that even though `max(sum of worker capacity * slotRatio, maxSlots)` = 1, at least one compact task is always submitted
-once a compaction is configured for a dataSource. See [Compaction Configuration API](../operations/api-reference.html#compaction-configuration) to set those values.
+Once some segments are found, it launches a [compact task](../ingestion/tasks.html#compaction-task) to compact those segments.
+The maximum number of running compact tasks is `min(sum of worker capacity * slotRatio, maxSlots)`.
+Note that even though `min(sum of worker capacity * slotRatio, maxSlots)` = 0, at least one compact task is always submitted
+if the compaction is enabled for a dataSource.
+See [Compaction Configuration API](../operations/api-reference.html#compaction-configuration) and [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) to enable the compaction.
 
 Compact tasks might fail due to some reasons.
 
@@ -80,9 +81,6 @@ Compact tasks might fail due to some reasons.
 - If a task of a higher priority acquires a lock for an interval overlapping with the interval of a compact task, the compact task fails.
 
 Once a compact task fails, the coordinator simply finds the segments for the interval of the failed task again, and launches a new compact task in the next run.
-
-To use this feature, you need to set some configurations for dataSources you want to compact.
-Please see [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for more details.
 
 ### Segment Search Policy
 

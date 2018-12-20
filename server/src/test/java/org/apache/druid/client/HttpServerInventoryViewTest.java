@@ -285,6 +285,7 @@ public class HttpServerInventoryViewTest
     public void registerListener(Listener listener)
     {
       listener.nodesAdded(ImmutableList.of());
+      listener.nodeViewInitialized();
       this.listener = listener;
     }
   }

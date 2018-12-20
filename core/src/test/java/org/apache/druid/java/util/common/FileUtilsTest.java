@@ -55,7 +55,10 @@ public class FileUtilsTest
   {
     final File tmpDir = folder.newFolder();
     final File tmpFile = new File(tmpDir, "file1");
-    FileUtils.writeAtomically(tmpFile, out -> out.write(StringUtils.toUtf8("foo")));
+    FileUtils.writeAtomically(tmpFile, out -> {
+      out.write(StringUtils.toUtf8("foo"));
+      return null;
+    });
     Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
 
     // Try writing again, throw error partway through.
@@ -71,7 +74,10 @@ public class FileUtilsTest
     }
     Assert.assertEquals("foo", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
 
-    FileUtils.writeAtomically(tmpFile, out -> out.write(StringUtils.toUtf8("baz")));
+    FileUtils.writeAtomically(tmpFile, out -> {
+      out.write(StringUtils.toUtf8("baz"));
+      return null;
+    });
     Assert.assertEquals("baz", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
   }
 }

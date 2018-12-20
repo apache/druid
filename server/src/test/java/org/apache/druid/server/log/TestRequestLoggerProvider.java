@@ -17,16 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.parquet.avro;
+package org.apache.druid.server.log;
 
-import org.apache.avro.generic.GenericRecord;
-import org.apache.parquet.avro.DruidParquetAvroReadSupport;
-import org.apache.parquet.hadoop.ParquetInputFormat;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 
-public class DruidParquetAvroInputFormat extends ParquetInputFormat<GenericRecord>
+@JsonTypeName("test")
+public class TestRequestLoggerProvider implements RequestLoggerProvider
 {
-  public DruidParquetAvroInputFormat()
+  @Override
+  public RequestLogger get()
   {
-    super(DruidParquetAvroReadSupport.class);
+    return new TestRequestLogger();
   }
 }

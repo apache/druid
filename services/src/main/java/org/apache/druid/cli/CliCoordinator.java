@@ -21,10 +21,8 @@ package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
@@ -217,12 +215,11 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorCleanupPendingSegments.class
             );
 
-            binder
-                .bind(DiscoverySideEffectsProvider.Child.class)
-                .annotatedWith(Coordinator.class)
-                .toProvider(new DiscoverySideEffectsProvider(NodeType.COORDINATOR, ImmutableList.of()))
-                .in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, Coordinator.class));
+            bindAnnouncer(
+                binder,
+                Coordinator.class,
+                DiscoverySideEffectsProvider.builder(NodeType.COORDINATOR).build()
+            );
           }
 
           @Provides

@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Real-time Node"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,12 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-Real-time Node
-==============
+# Real-time Node
 
 <div class="note info">
 NOTE: Realtime nodes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead. 

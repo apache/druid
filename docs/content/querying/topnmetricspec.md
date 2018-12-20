@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "TopNMetricSpec"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-TopNMetricSpec
-==================
+# TopNMetricSpec
 
 The topN metric spec specifies how topN values should be sorted.
 

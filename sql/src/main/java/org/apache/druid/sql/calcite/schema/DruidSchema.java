@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -99,7 +98,7 @@ public class DruidSchema extends AbstractSchema
   private final ConcurrentMap<String, DruidTable> tables;
 
   // For awaitInitialization.
-  private final CountDownLatch initializationLatch = new CountDownLatch(1);
+  private final CountDownLatch initialized = new CountDownLatch(1);
 
   // Protects access to segmentSignatures, mutableSegments, segmentsNeedingRefresh, lastRefresh, isServerViewInitialized
   private final Object lock = new Object();
@@ -176,7 +175,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   @LifecycleStart
-  public void start()
+  public void start() throws InterruptedException
   {
     cacheExec.submit(
         new Runnable()
@@ -255,7 +254,7 @@ public class DruidSchema extends AbstractSchema
                     }
                   }
 
-                  initializationLatch.countDown();
+                  initialized.countDown();
                 }
                 catch (InterruptedException e) {
                   // Fall through.
@@ -289,6 +288,13 @@ public class DruidSchema extends AbstractSchema
           }
         }
     );
+
+    if (config.isAwaitInitializationOnStart()) {
+      final long startMillis = System.currentTimeMillis();
+      log.info("%s waiting for initialization.", getClass().getSimpleName());
+      awaitInitialization();
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), System.currentTimeMillis() - startMillis);
+    }
   }
 
   @LifecycleStop
@@ -297,10 +303,9 @@ public class DruidSchema extends AbstractSchema
     cacheExec.shutdownNow();
   }
 
-  @VisibleForTesting
   public void awaitInitialization() throws InterruptedException
   {
-    initializationLatch.await();
+    initialized.await();
   }
 
   @Override

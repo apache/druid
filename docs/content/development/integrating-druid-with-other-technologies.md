@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Integrating Druid With Other Technologies"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Integrating Druid With Other Technologies
 
 This page discusses how we can integrate Druid with other technologies. 

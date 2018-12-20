@@ -115,7 +115,7 @@ public class AuthorizerMapperModule implements DruidModule
 
       for (String authorizerName : authorizers) {
         final String authorizerPropertyBase = StringUtils.format(AUTHORIZER_PROPERTIES_FORMAT_STRING, authorizerName);
-        final JsonConfigProvider<Authorizer> authorizerProvider = new JsonConfigProvider<>(
+        final JsonConfigProvider<Authorizer> authorizerProvider = JsonConfigProvider.of(
             authorizerPropertyBase,
             Authorizer.class
         );

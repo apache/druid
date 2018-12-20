@@ -105,7 +105,6 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     setUpMockExpectations(requestPath, true, requestMethod);
     EasyMock.replay(req, request, authorizerMapper);
-    Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     resourceFilter.getRequestFilter().filter(request);
     EasyMock.verify(req, request, authorizerMapper);
   }
@@ -115,7 +114,6 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
   {
     setUpMockExpectations(requestPath, false, requestMethod);
     EasyMock.replay(req, request, authorizerMapper);
-    Assert.assertTrue(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(requestPath));
     try {
       resourceFilter.getRequestFilter().filter(request);
       Assert.fail();
@@ -123,15 +121,6 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
     catch (ForbiddenException e) {
       throw e;
     }
-    EasyMock.verify(req, request, authorizerMapper);
-  }
-
-  @Test
-  public void testResourcesFilteringBadPath()
-  {
-    EasyMock.replay(req, request, authorizerMapper);
-    final String badRequestPath = WORD.matcher(requestPath).replaceAll("droid");
-    Assert.assertFalse(((AbstractResourceFilter) resourceFilter.getRequestFilter()).isApplicable(badRequestPath));
     EasyMock.verify(req, request, authorizerMapper);
   }
 }

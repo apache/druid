@@ -186,7 +186,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t7", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
   }
 
   @Test
@@ -218,7 +218,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t5", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "dimFilter");
   }
 
   @Test
@@ -246,7 +246,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filteredDim");
   }
 
   @Test
@@ -295,7 +295,7 @@ public class MultiValuedDimensionTest
               )
           )
       );
-      TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+      TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filteredDim");
     }
   }
 

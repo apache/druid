@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "HTTP Compression"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # HTTP Compression
 
 Druid supports http request decompression and response compression, to use this, http request header `Content-Encoding:gzip` and  `Accept-Encoding:gzip` is needed to be set.

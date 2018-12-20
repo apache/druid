@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -154,7 +155,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   public String toString()
   {
     return "SegmentInsertAction{" +
-           "segments=" + segments +
+           "segments=" + Iterables.transform(segments, DataSegment::getId) +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +
            '}';

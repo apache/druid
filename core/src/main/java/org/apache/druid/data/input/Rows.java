@@ -72,7 +72,8 @@ public final class Rows
   }
 
   /**
-   * Convert an object to a number. Nulls are treated as zeroes.
+   * Convert an object to a number. Nulls are treated as zeroes unless
+   * druid.generic.useDefaultValueForNull is set to false.
    *
    * @param name       field name of the object being converted (may be used for exception messages)
    * @param inputValue the actual object being converted

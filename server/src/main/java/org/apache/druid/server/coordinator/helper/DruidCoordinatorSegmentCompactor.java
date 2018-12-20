@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -160,7 +161,11 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             config.getTuningConfig(),
             config.getTaskContext()
         );
-        LOG.info("Submitted a compactTask[%s] for segments[%s]", taskId, segmentsToCompact);
+        LOG.info(
+            "Submitted a compactTask[%s] for segments %s",
+            taskId,
+            Iterables.transform(segmentsToCompact, DataSegment::getId)
+        );
       } else if (segmentsToCompact.size() == 1) {
         throw new ISE("Found one segments[%s] to compact", segmentsToCompact);
       } else {

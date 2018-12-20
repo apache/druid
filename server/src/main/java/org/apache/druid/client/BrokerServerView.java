@@ -27,10 +27,12 @@ import com.google.inject.Inject;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -50,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -57,6 +60,7 @@ import java.util.stream.Collectors;
 
 /**
  */
+@ManageLifecycle
 public class BrokerServerView implements TimelineServerView
 {
   private static final Logger log = new Logger(BrokerServerView.class);
@@ -75,19 +79,20 @@ public class BrokerServerView implements TimelineServerView
   private final FilteredServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
+  private final BrokerSegmentWatcherConfig segmentWatcherConfig;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
 
-  private volatile boolean initialized = false;
+  private final CountDownLatch initialized = new CountDownLatch(1);
 
   @Inject
   public BrokerServerView(
-      QueryToolChestWarehouse warehouse,
-      QueryWatcher queryWatcher,
-      @Smile ObjectMapper smileMapper,
-      @EscalatedClient HttpClient httpClient,
-      FilteredServerInventoryView baseView,
-      TierSelectorStrategy tierSelectorStrategy,
-      ServiceEmitter emitter,
+      final QueryToolChestWarehouse warehouse,
+      final QueryWatcher queryWatcher,
+      final @Smile ObjectMapper smileMapper,
+      final @EscalatedClient HttpClient httpClient,
+      final FilteredServerInventoryView baseView,
+      final TierSelectorStrategy tierSelectorStrategy,
+      final ServiceEmitter emitter,
       final BrokerSegmentWatcherConfig segmentWatcherConfig
   )
   {
@@ -98,6 +103,7 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
+    this.segmentWatcherConfig = segmentWatcherConfig;
     this.clients = new ConcurrentHashMap<>();
     this.selectors = new HashMap<>();
     this.timelines = new HashMap<>();
@@ -144,7 +150,7 @@ public class BrokerServerView implements TimelineServerView
           @Override
           public CallbackAction segmentViewInitialized()
           {
-            initialized = true;
+            initialized.countDown();
             runTimelineCallbacks(TimelineCallback::timelineInitialized);
             return ServerView.CallbackAction.CONTINUE;
           }
@@ -166,9 +172,25 @@ public class BrokerServerView implements TimelineServerView
     );
   }
 
+  @LifecycleStart
+  public void start() throws InterruptedException
+  {
+    if (segmentWatcherConfig.isAwaitInitializationOnStart()) {
+      final long startMillis = System.currentTimeMillis();
+      log.info("%s waiting for initialization.", getClass().getSimpleName());
+      awaitInitialization();
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), System.currentTimeMillis() - startMillis);
+    }
+  }
+
   public boolean isInitialized()
   {
-    return initialized;
+    return initialized.getCount() == 0;
+  }
+
+  public void awaitInitialization() throws InterruptedException
+  {
+    initialized.await();
   }
 
   private QueryableDruidServer addServer(DruidServer server)
@@ -184,7 +206,15 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getScheme(), server.getHost(), emitter);
+    return new DirectDruidClient(
+        warehouse,
+        queryWatcher,
+        smileMapper,
+        httpClient,
+        server.getScheme(),
+        server.getHost(),
+        emitter
+    );
   }
 
   private QueryableDruidServer removeServer(DruidServer server)

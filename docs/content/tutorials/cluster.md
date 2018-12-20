@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Clustering"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Clustering
 
@@ -223,7 +224,7 @@ In `conf/druid/_common/common.runtime.properties`, replace
 <div class="note caution">
 In production, we recommend running 2 servers, each running a Druid Coordinator
 and a Druid Overlord. We also recommend running a ZooKeeper cluster on its own dedicated hardware,
-as well as replicated <a href = "http://druid.io/docs/latest/dependencies/metadata-storage.html">metadata storage</a>
+as well as replicated <a href = "../dependencies/metadata-storage.html">metadata storage</a>
 such as MySQL or PostgreSQL, on its own dedicated hardware.
 </div>
 

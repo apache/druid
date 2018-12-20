@@ -140,7 +140,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
   private final AtomicInteger allocatedBuffers = new AtomicInteger();
   private final AtomicInteger droppedBuffers = new AtomicInteger();
 
-  private volatile long lastFillTimeMillis;
+  private volatile long lastBatchFillTimeMillis;
   private final ConcurrentTimeCounter batchFillingTimeCounter = new ConcurrentTimeCounter();
 
   private final Object startLock = new Object();
@@ -180,8 +180,8 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     emittingThread = new EmittingThread(config);
     long firstBatchNumber = 1;
     concurrentBatch.set(new Batch(this, acquireBuffer(), firstBatchNumber));
-    // lastFillTimeMillis must not be 0, minHttpTimeoutMillis could be.
-    lastFillTimeMillis = Math.max(config.minHttpTimeoutMillis, 1);
+    // lastBatchFillTimeMillis must not be 0, minHttpTimeoutMillis could be.
+    lastBatchFillTimeMillis = Math.max(config.minHttpTimeoutMillis, 1);
   }
 
   @Override
@@ -328,7 +328,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
     if (elapsedTimeMillis > 0) {
       // If elapsedTimeMillis is 0 or negative, it's likely because System.currentTimeMillis() is not monotonic, so not
       // accounting this time for determining batch sending timeout.
-      lastFillTimeMillis = elapsedTimeMillis;
+      lastBatchFillTimeMillis = elapsedTimeMillis;
     }
     addBatchToEmitQueue(batch);
     wakeUpEmittingThread();
@@ -663,7 +663,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
      */
     private boolean sendWithRetries(final byte[] buffer, final int length, final int eventCount, boolean withTimeout)
     {
-      long deadLineMillis = System.currentTimeMillis() + sendRequestTimeoutMillis(lastFillTimeMillis);
+      long deadLineMillis = System.currentTimeMillis() + computeTimeoutForSendRequestInMillis(lastBatchFillTimeMillis);
       try {
         RetryUtils.retry(
             new RetryUtils.Task<Object>()
@@ -709,8 +709,8 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
 
     private void send(byte[] buffer, int length) throws Exception
     {
-      long lastFillTimeMillis = HttpPostEmitter.this.lastFillTimeMillis;
-      final long timeoutMillis = sendRequestTimeoutMillis(lastFillTimeMillis);
+      long lastFillTimeMillis = HttpPostEmitter.this.lastBatchFillTimeMillis;
+      final long timeoutMillis = computeTimeoutForSendRequestInMillis(lastFillTimeMillis);
       if (timeoutMillis < config.getMinHttpTimeoutMillis()) {
         throw timeoutLessThanMinimumException;
       }
@@ -795,18 +795,27 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       accountSuccessfulSending(sendingStartMs);
     }
 
-    private long sendRequestTimeoutMillis(long lastFillTimeMillis)
+    /**
+     * This method computes the timeout for sending a batch of events over HTTP, based on how much time it took to
+     * populate that batch. The idea is that if it took X milliseconds to fill the batch, we couldn't wait for more than
+     * X * {@link HttpEmitterConfig#httpTimeoutAllowanceFactor} milliseconds to send that data, because at the same time
+     * the next batch is probably being filled with the same speed, so we have to keep up with the speed.
+     *
+     * Ideally it should use something like moving average instead of plain last batch fill time in order to accomodate
+     * for emitting bursts, but it might unnecessary because Druid application might not produce events in bursts.
+     */
+    private long computeTimeoutForSendRequestInMillis(long lastBatchFillTimeMillis)
     {
       int emitQueueSize = approximateBuffersToEmitCount.get();
       if (emitQueueSize < EMIT_QUEUE_THRESHOLD_1) {
-        return (long) (lastFillTimeMillis * config.httpTimeoutAllowanceFactor);
+        return (long) (lastBatchFillTimeMillis * config.httpTimeoutAllowanceFactor);
       }
       if (emitQueueSize < EMIT_QUEUE_THRESHOLD_2) {
         // The idea is to not let buffersToEmit queue to grow faster than we can emit buffers.
-        return (long) (lastFillTimeMillis * EQUILIBRIUM_ALLOWANCE_FACTOR);
+        return (long) (lastBatchFillTimeMillis * EQUILIBRIUM_ALLOWANCE_FACTOR);
       }
       // If buffersToEmit still grows, try to restrict even more
-      return (long) (lastFillTimeMillis * TIGHT_ALLOWANCE_FACTOR);
+      return (long) (lastBatchFillTimeMillis * TIGHT_ALLOWANCE_FACTOR);
     }
 
     private void accountSuccessfulSending(long sendingStartMs)
