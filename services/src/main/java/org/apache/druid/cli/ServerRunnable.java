@@ -20,19 +20,26 @@
 package org.apache.druid.cli;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Provider;
+import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
 import org.apache.druid.discovery.NodeType;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 
 /**
@@ -58,6 +65,32 @@ public abstract class ServerRunnable extends GuiceRunnable
     }
   }
 
+  public static void bindAnnouncer(
+      final Binder binder,
+      final DiscoverySideEffectsProvider provider
+  )
+  {
+    binder.bind(DiscoverySideEffectsProvider.Child.class)
+          .toProvider(provider)
+          .in(LazySingleton.class);
+
+    LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+  }
+
+  public static void bindAnnouncer(
+      final Binder binder,
+      final Class<? extends Annotation> annotation,
+      final DiscoverySideEffectsProvider provider
+  )
+  {
+    binder.bind(DiscoverySideEffectsProvider.Child.class)
+          .annotatedWith(annotation)
+          .toProvider(provider)
+          .in(LazySingleton.class);
+
+    LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, annotation));
+  }
+
   /**
    * This is a helper class used by CliXXX classes to announce {@link DiscoveryDruidNode}
    * as part of {@link Lifecycle.Stage#LAST}.
@@ -66,11 +99,49 @@ public abstract class ServerRunnable extends GuiceRunnable
   {
     public static class Child {}
 
-    @Inject @Self
+    public static class Builder
+    {
+      private NodeType nodeType;
+      private List<Class<? extends DruidService>> serviceClasses = ImmutableList.of();
+      private boolean useLegacyAnnouncer;
+
+      public Builder(final NodeType nodeType)
+      {
+        this.nodeType = nodeType;
+      }
+
+      public Builder serviceClasses(final List<Class<? extends DruidService>> serviceClasses)
+      {
+        this.serviceClasses = serviceClasses;
+        return this;
+      }
+
+      public Builder useLegacyAnnouncer(final boolean useLegacyAnnouncer)
+      {
+        this.useLegacyAnnouncer = useLegacyAnnouncer;
+        return this;
+      }
+
+      public DiscoverySideEffectsProvider build()
+      {
+        return new DiscoverySideEffectsProvider(nodeType, serviceClasses, useLegacyAnnouncer);
+      }
+    }
+
+    public static Builder builder(final NodeType nodeType)
+    {
+      return new Builder(nodeType);
+    }
+
+    @Inject
+    @Self
     private DruidNode druidNode;
 
     @Inject
     private DruidNodeAnnouncer announcer;
+
+    @Inject
+    private ServiceAnnouncer legacyAnnouncer;
 
     @Inject
     private Lifecycle lifecycle;
@@ -80,11 +151,17 @@ public abstract class ServerRunnable extends GuiceRunnable
 
     private final NodeType nodeType;
     private final List<Class<? extends DruidService>> serviceClasses;
+    private final boolean useLegacyAnnouncer;
 
-    public DiscoverySideEffectsProvider(NodeType nodeType, List<Class<? extends DruidService>> serviceClasses)
+    private DiscoverySideEffectsProvider(
+        final NodeType nodeType,
+        final List<Class<? extends DruidService>> serviceClasses,
+        final boolean useLegacyAnnouncer
+    )
     {
       this.nodeType = nodeType;
       this.serviceClasses = serviceClasses;
+      this.useLegacyAnnouncer = useLegacyAnnouncer;
     }
 
     @Override
@@ -105,11 +182,21 @@ public abstract class ServerRunnable extends GuiceRunnable
             public void start()
             {
               announcer.announce(discoveryDruidNode);
+
+              if (useLegacyAnnouncer) {
+                legacyAnnouncer.announce(discoveryDruidNode.getDruidNode());
+              }
             }
 
             @Override
             public void stop()
             {
+              // Reverse order vs. start().
+
+              if (useLegacyAnnouncer) {
+                legacyAnnouncer.unannounce(discoveryDruidNode.getDruidNode());
+              }
+
               announcer.unannounce(discoveryDruidNode);
             }
           },
