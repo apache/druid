@@ -34,7 +34,6 @@ import org.apache.druid.testing.utils.RetryUtil;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
-import org.testng.annotations.BeforeSuite;
 
 import java.io.Closeable;
 import java.io.InputStream;
