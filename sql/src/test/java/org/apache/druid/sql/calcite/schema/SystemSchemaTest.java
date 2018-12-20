@@ -73,6 +73,7 @@ import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -251,7 +252,7 @@ public class SystemSchemaTest extends CalciteTestBase
       null,
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
-      null,
+      new NumberedShardSpec(2,3),
       1,
       100L,
       DataSegment.PruneLoadSpecHolder.DEFAULT
@@ -548,7 +549,6 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(0L, row3[11]); //is_realtime
 
     Object[] row4 = rows.get(4);
-    //segment 4 is published and has 2 replicas
     Assert.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", row4[0]);
     Assert.assertEquals("test2", row4[1]);
     Assert.assertEquals("2011-01-01T00:00:00.000Z", row4[2]);
@@ -562,48 +562,48 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(1L, row4[10]); //is_available
     Assert.assertEquals(0L, row4[11]); //is_realtime
 
-
     Object[] row5 = rows.get(5);
-    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row5[0]);
-    Assert.assertEquals("test5", row5[1]);
-    Assert.assertEquals("2017-01-01T00:00:00.000Z", row5[2]);
-    Assert.assertEquals("2018-01-01T00:00:00.000Z", row5[3]);
+    //segment test3 is unpublished and has 3 partitions, the first 2 partitions are overshadowed by 3rd partition
+    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3_2", row5[0]);
+    Assert.assertEquals("test3", row5[1]);
+    Assert.assertEquals("2012-01-01T00:00:00.000Z", row5[2]);
+    Assert.assertEquals("2013-01-01T00:00:00.000Z", row5[3]);
     Assert.assertEquals(100L, row5[4]);
-    Assert.assertEquals("version5", row5[5]);
-    Assert.assertEquals(0L, row5[6]); //partition_num
+    Assert.assertEquals("version3", row5[5]);
+    Assert.assertEquals(2L, row5[6]); //partition_num = 2
     Assert.assertEquals(1L, row5[7]); //num_replicas
-    Assert.assertEquals(0L, row5[8]); //numRows = 0
+    Assert.assertEquals(3L, row5[8]); //numRows = 3
     Assert.assertEquals(0L, row5[9]); //is_published
     Assert.assertEquals(1L, row5[10]); //is_available
-    Assert.assertEquals(1L, row5[11]); //is_realtime
+    Assert.assertEquals(0L, row5[11]); //is_realtime
 
     Object[] row6 = rows.get(6);
-    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row6[0]);
-    Assert.assertEquals("test4", row6[1]);
+    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row6[0]);
+    Assert.assertEquals("test5", row6[1]);
     Assert.assertEquals("2017-01-01T00:00:00.000Z", row6[2]);
     Assert.assertEquals("2018-01-01T00:00:00.000Z", row6[3]);
     Assert.assertEquals(100L, row6[4]);
-    Assert.assertEquals("version4", row6[5]);
+    Assert.assertEquals("version5", row6[5]);
     Assert.assertEquals(0L, row6[6]); //partition_num
     Assert.assertEquals(1L, row6[7]); //num_replicas
-    Assert.assertEquals(0L, row6[8]); //numRows
+    Assert.assertEquals(0L, row6[8]); //numRows = 0
     Assert.assertEquals(0L, row6[9]); //is_published
     Assert.assertEquals(1L, row6[10]); //is_available
     Assert.assertEquals(1L, row6[11]); //is_realtime
 
     Object[] row7 = rows.get(7);
-    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row7[0]);
-    Assert.assertEquals("test3", row7[1]);
-    Assert.assertEquals("2012-01-01T00:00:00.000Z", row7[2]);
-    Assert.assertEquals("2013-01-01T00:00:00.000Z", row7[3]);
+    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row7[0]);
+    Assert.assertEquals("test4", row7[1]);
+    Assert.assertEquals("2017-01-01T00:00:00.000Z", row7[2]);
+    Assert.assertEquals("2018-01-01T00:00:00.000Z", row7[3]);
     Assert.assertEquals(100L, row7[4]);
-    Assert.assertEquals("version3", row7[5]);
+    Assert.assertEquals("version4", row7[5]);
     Assert.assertEquals(0L, row7[6]); //partition_num
     Assert.assertEquals(1L, row7[7]); //num_replicas
-    Assert.assertEquals(3L, row7[8]); //numRows = 3
+    Assert.assertEquals(0L, row7[8]); //numRows
     Assert.assertEquals(0L, row7[9]); //is_published
     Assert.assertEquals(1L, row7[10]); //is_available
-    Assert.assertEquals(0L, row7[11]); //is_realtime
+    Assert.assertEquals(1L, row7[11]); //is_realtime
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.SEGMENTS_SIGNATURE);
@@ -720,7 +720,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     Object[] row2 = rows.get(2);
     Assert.assertEquals("server2:1234", row2[0]);
-    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3", row2[1]);
+    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3_2", row2[1]);
 
     Object[] row3 = rows.get(3);
     Assert.assertEquals("server2:1234", row3[0]);
