@@ -41,11 +41,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>me.lemire.integercompression</groupId>
-            <artifactId>JavaFastPFOR</artifactId>
-        </dependency>
-
         <!-- Tests -->
         <dependency>
             <groupId>io.druid</groupId>

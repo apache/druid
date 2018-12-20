@@ -22,9 +22,7 @@ package io.druid.query.aggregation.unique;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import me.lemire.integercompression.differential.IntegratedIntCompressor;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -36,25 +34,11 @@ public class RoaringBitmapSerializer extends JsonSerializer<ImmutableRoaringBitm
   public void serialize(ImmutableRoaringBitmap value, JsonGenerator jgen, SerializerProvider provider)
       throws IOException
   {
-    final int size = value.getCardinality();
-    if (size <= 1000000) {
-      if (value instanceof MutableRoaringBitmap) {
-        ((MutableRoaringBitmap) value).runOptimize();
-      }
-      try (final ByteArrayOutputStream out = new ByteArrayOutputStream();
-           final DataOutputStream data = new DataOutputStream(out)) {
-        value.serialize(data);
-        jgen.writeBinary(out.toByteArray());
-      }
-    } else {
-      IntegratedIntCompressor iic = new IntegratedIntCompressor();
-      int[] compressed = iic.compress(value.toArray());
-      jgen.writeStartArray();
-      final int length = compressed.length;
-      for (int i = 0; i < length; i++) {
-        jgen.writeNumber(compressed[i]);
-      }
-      jgen.writeEndArray();
+    // http gzip压缩导致慢，更改druid.broker.http.compressionCodec=identity
+    try (final ByteArrayOutputStream out = new ByteArrayOutputStream();
+         final DataOutputStream data = new DataOutputStream(out)) {
+      value.serialize(data);
+      jgen.writeBinary(out.toByteArray());
     }
   }
 }

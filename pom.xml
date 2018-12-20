@@ -726,12 +726,6 @@
                 <version>1.2</version>
             </dependency>
 
-            <dependency>
-                <groupId>me.lemire.integercompression</groupId>
-                <artifactId>JavaFastPFOR</artifactId>
-                <version>0.1.12</version>
-            </dependency>
-
             <!-- https://mvnrepository.com/artifact/org.apache.kylin/kylin-core-common -->
             <dependency>
                 <groupId>org.apache.kylin</groupId>
