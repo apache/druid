@@ -135,7 +135,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  private void submitTaskAndWait(String taskSpec, String dataSourceName) throws IOException
+  private void submitTaskAndWait(String taskSpec, String dataSourceName)
   {
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
