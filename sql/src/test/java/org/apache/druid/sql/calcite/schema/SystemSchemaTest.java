@@ -563,7 +563,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(0L, row4[11]); //is_realtime
 
     Object[] row5 = rows.get(5);
-    //segment test3 is unpublished and has 3 partitions, the first 2 partitions are overshadowed by 3rd partition
+    //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
     Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3_2", row5[0]);
     Assert.assertEquals("test3", row5[1]);
     Assert.assertEquals("2012-01-01T00:00:00.000Z", row5[2]);
