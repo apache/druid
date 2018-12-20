@@ -82,15 +82,10 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
 
   private String fullDatasourceName;
 
-  @BeforeSuite
-  public void setFullDatasourceName()
-  {
-    fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix();
-  }
-
-
   void doTest()
   {
+    fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix();
+
     LOG.info("Starting test: ITRealtimeIndexTaskTest");
     try (final Closeable closeable = unloader(fullDatasourceName)) {
       // the task will run for 3 minutes and then shutdown itself
