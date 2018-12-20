@@ -25,6 +25,7 @@ import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CacheMonitor;
+import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.CacheModule;
@@ -104,7 +105,7 @@ public class CliHistorical extends ServerRunnable
           bindAnnouncer(
               binder,
               DiscoverySideEffectsProvider.builder(NodeType.HISTORICAL)
-                                          .serviceClasses(ImmutableList.of(LookupNodeService.class))
+                                          .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
                                           .build()
           );
         },
