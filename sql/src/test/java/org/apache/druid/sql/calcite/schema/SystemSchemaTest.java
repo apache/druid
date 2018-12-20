@@ -252,7 +252,7 @@ public class SystemSchemaTest extends CalciteTestBase
       null,
       ImmutableList.of("dim1", "dim2"),
       ImmutableList.of("met1", "met2"),
-      new NumberedShardSpec(2,3),
+      new NumberedShardSpec(2, 3),
       1,
       100L,
       DataSegment.PruneLoadSpecHolder.DEFAULT
