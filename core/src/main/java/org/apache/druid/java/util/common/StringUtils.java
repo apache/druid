@@ -154,8 +154,13 @@ public class StringUtils
     return s.toUpperCase(Locale.ENGLISH);
   }
 
+  @Nullable
   public static String urlEncode(String s)
   {
+    if (s == null) {
+      return null;
+    }
+
     try {
       // application/x-www-form-urlencoded encodes spaces as "+", but we use this to encode non-form
       // data as well, so replace "+" with "%20".
@@ -166,8 +171,13 @@ public class StringUtils
     }
   }
 
+  @Nullable
   public static String urlDecode(String s)
   {
+    if (s == null) {
+      return null;
+    }
+
     try {
       return URLDecoder.decode(s, "UTF-8");
     }
