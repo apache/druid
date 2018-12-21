@@ -76,7 +76,7 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
   @Override
   public IntIterator iterator()
   {
-    return bitmap.getIntIterator();
+    return new BatchIteratorWrapperIterator(bitmap.getBatchIterator(), 128);
   }
 
   @Override

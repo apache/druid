@@ -192,7 +192,7 @@ public class WrappedRoaringBitmap implements MutableBitmap
   @Override
   public IntIterator iterator()
   {
-    return bitmap.getIntIterator();
+    return new BatchIteratorWrapperIterator(bitmap.getBatchIterator(), 128);
   }
 
   @Override
