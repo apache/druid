@@ -21,42 +21,40 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Interval;
 
-/**
- */
-public class ClientKillQuery implements ClientQuery
+public class TaskPayloadResponse
 {
-  private final String dataSource;
-  private final Interval interval;
+  private final String task;
+  private final ClientQuery payload;
 
   @JsonCreator
-  public ClientKillQuery(
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
+  public TaskPayloadResponse(
+      @JsonProperty("task") final String task,
+      @JsonProperty("payload") final ClientQuery payload
   )
   {
-    this.dataSource = dataSource;
-    this.interval = interval;
+    this.task = task;
+    this.payload = payload;
   }
 
   @JsonProperty
+  public String getTask()
+  {
+    return task;
+  }
+
+  @JsonProperty
+  public ClientQuery getPayload()
+  {
+    return payload;
+  }
+
   @Override
-  public String getType()
+  public String toString()
   {
-    return "kill";
-  }
-
-  @JsonProperty
-  @Override
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  @JsonProperty
-  public Interval getInterval()
-  {
-    return interval;
+    return "TaskPayloadResponse{" +
+           "task='" + task + '\'' +
+           ", payload=" + payload +
+           '}';
   }
 }

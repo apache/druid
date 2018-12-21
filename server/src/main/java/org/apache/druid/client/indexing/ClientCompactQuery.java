@@ -26,7 +26,7 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.List;
 import java.util.Map;
 
-public class ClientCompactQuery
+public class ClientCompactQuery implements ClientQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
@@ -54,12 +54,14 @@ public class ClientCompactQuery
   }
 
   @JsonProperty
+  @Override
   public String getType()
   {
     return "compact";
   }
 
   @JsonProperty
+  @Override
   public String getDataSource()
   {
     return dataSource;
