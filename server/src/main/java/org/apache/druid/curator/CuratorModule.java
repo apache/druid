@@ -22,6 +22,7 @@ package org.apache.druid.curator;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.curator.RetryPolicy;
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.DefaultExhibitorRestClient;
 import org.apache.curator.ensemble.exhibitor.ExhibitorEnsembleProvider;
@@ -81,23 +82,34 @@ public class CuratorModule implements Module
       );
     }
 
-    final Function<Void, Void> exitFunction = new Function<Void, Void>()
-    {
-      @Override
-      public Void apply(Void someVoid)
+    RetryPolicy retryPolicy;
+    if (config.getTerminateDruidProcess()) {
+      final Function<Void, Void> exitFunction = new Function<Void, Void>()
       {
-        log.error("Zookeeper can't be reached, forcefully stopping lifecycle...");
-        lifecycle.stop();
-        log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
-        System.exit(1);
-        return null;
-      }
-    };
+        @Override
+        public Void apply(Void someVoid)
+        {
+          log.error("Zookeeper can't be reached, forcefully stopping lifecycle...");
+          lifecycle.stop();
+          log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
+          System.exit(1);
+          return null;
+        }
+      };
+      retryPolicy = new BoundedExponentialBackoffRetryWithQuit(
+          exitFunction,
+          BASE_SLEEP_TIME_MS,
+          MAX_SLEEP_TIME_MS,
+          MAX_RETRIES
+      );
+    } else {
+      retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES);
+    }
 
     final CuratorFramework framework = builder
         .ensembleProvider(ensembleProvider)
         .sessionTimeoutMs(config.getZkSessionTimeoutMs())
-        .retryPolicy(config.getQuitOnConnectFail() ? new BoundedExponentialBackoffRetryWithQuit(exitFunction, BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES) : new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES))
+        .retryPolicy(retryPolicy)
         .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
         .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
         .build();
@@ -142,16 +154,28 @@ public class CuratorModule implements Module
       return new FixedEnsembleProvider(config.getZkHosts());
     }
 
-    final Function<Void, Void> exitFunction = new Function<Void, Void>()
-    {
-      @Override
-      public Void apply(Void aVoid)
+    RetryPolicy retryPolicy;
+    if (config.getTerminateDruidProcess()) {
+      final Function<Void, Void> exitFunction = new Function<Void, Void>()
       {
-        log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
-        System.exit(1);
-        return null;
-      }
-    };
+        @Override
+        public Void apply(Void aVoid)
+        {
+          log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
+          System.exit(1);
+          return null;
+        }
+      };
+
+      retryPolicy = new BoundedExponentialBackoffRetryWithQuit(
+          exitFunction,
+          BASE_SLEEP_TIME_MS,
+          MAX_SLEEP_TIME_MS,
+          MAX_RETRIES
+      );
+    } else {
+      retryPolicy = new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES);
+    }
 
     return new ExhibitorEnsembleProvider(
         new Exhibitors(
@@ -162,7 +186,7 @@ public class CuratorModule implements Module
         new DefaultExhibitorRestClient(exConfig.getUseSsl()),
         exConfig.getRestUriPath(),
         exConfig.getPollingMs(),
-        config.getQuitOnConnectFail() ? new BoundedExponentialBackoffRetryWithQuit(exitFunction, BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES) : new BoundedExponentialBackoffRetry(BASE_SLEEP_TIME_MS, MAX_SLEEP_TIME_MS, MAX_RETRIES)
+        retryPolicy
     )
     {
       @Override

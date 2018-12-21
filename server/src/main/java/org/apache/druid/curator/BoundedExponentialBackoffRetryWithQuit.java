@@ -32,7 +32,12 @@ public class BoundedExponentialBackoffRetryWithQuit extends BoundedExponentialBa
 
   private final Function<Void, Void> exitFunction;
 
-  public BoundedExponentialBackoffRetryWithQuit(Function<Void, Void> exitFunction, int baseSleepTimeMs, int maxSleepTimeMs, int maxRetries)
+  public BoundedExponentialBackoffRetryWithQuit(
+      Function<Void, Void> exitFunction,
+      int baseSleepTimeMs,
+      int maxSleepTimeMs,
+      int maxRetries
+  )
   {
     super(baseSleepTimeMs, maxSleepTimeMs, maxRetries);
     this.exitFunction = exitFunction;
@@ -46,14 +51,9 @@ public class BoundedExponentialBackoffRetryWithQuit extends BoundedExponentialBa
     boolean shouldRetry = super.allowRetry(retryCount, elapsedTimeMs, sleeper);
     if (!shouldRetry) {
       log.warn("Since Zookeeper can't be reached after retries exhausted, calling exit function...");
-      getExitFunction().apply(null);
+      exitFunction.apply(null);
     }
     return shouldRetry;
-  }
-
-  public Function<Void, Void> getExitFunction()
-  {
-    return exitFunction;
   }
 
 }

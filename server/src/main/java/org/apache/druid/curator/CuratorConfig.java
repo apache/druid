@@ -52,8 +52,8 @@ public class CuratorConfig
   @JsonProperty("authScheme")
   private String authScheme = "digest";
 
-  @JsonProperty("quitOnConnectFail")
-  private boolean quitOnConnectFail = false;
+  @JsonProperty("terminateDruidProcess")
+  private boolean terminateDruidProcess = false;
 
 
   public String getZkHosts()
@@ -113,14 +113,14 @@ public class CuratorConfig
     return authScheme;
   }
 
-  public boolean getQuitOnConnectFail()
+  public boolean getTerminateDruidProcess()
   {
-    return quitOnConnectFail;
+    return terminateDruidProcess;
   }
 
-  public void setQuitOnConnectFail(Boolean quitOnConnectFail)
+  public void setTerminateDruidProcess(Boolean terminateDruidProcess)
   {
-    this.quitOnConnectFail = quitOnConnectFail == null ? false : quitOnConnectFail;
+    this.terminateDruidProcess = terminateDruidProcess == null ? false : terminateDruidProcess;
   }
 
 }
