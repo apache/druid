@@ -308,6 +308,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-time-min-max</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-virtual-columns</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:accurate-cardinality</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

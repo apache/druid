@@ -107,15 +107,15 @@ import java.util.Map;
 public class AggregationTestHelper implements Closeable
 {
   private final ObjectMapper mapper;
-  private final IndexMerger indexMerger;
-  private final IndexIO indexIO;
+  protected final IndexMerger indexMerger;
+  protected final IndexIO indexIO;
   private final QueryToolChest toolChest;
   private final QueryRunnerFactory factory;
 
-  private final TemporaryFolder tempFolder;
+  protected final TemporaryFolder tempFolder;
   private final Closer resourceCloser;
 
-  private AggregationTestHelper(
+  protected AggregationTestHelper(
       ObjectMapper mapper,
       IndexMerger indexMerger,
       IndexIO indexIO,
@@ -500,6 +500,7 @@ public class AggregationTestHelper implements Closeable
       index = new IncrementalIndex.Builder()
           .setIndexSchema(
               new IncrementalIndexSchema.Builder()
+                  .withDimensionsSpec(parser)
                   .withMinTimestamp(minTimestamp)
                   .withQueryGranularity(gran)
                   .withMetrics(metrics)
@@ -520,6 +521,7 @@ public class AggregationTestHelper implements Closeable
           index = new IncrementalIndex.Builder()
               .setIndexSchema(
                   new IncrementalIndexSchema.Builder()
+                      .withDimensionsSpec(parser)
                       .withMinTimestamp(minTimestamp)
                       .withQueryGranularity(gran)
                       .withMetrics(metrics)

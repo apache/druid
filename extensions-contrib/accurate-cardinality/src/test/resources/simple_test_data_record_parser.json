@@ -1,0 +1,26 @@
+{
+  "type": "string",
+  "parseSpec": {
+    "format": "tsv",
+    "timestampSpec": {
+      "column": "timestamp",
+      "format": "yyyyMMddHH"
+    },
+    "dimensionsSpec": {
+      "dimensions": [
+        {
+          "type": "long",
+          "name": "duration"
+        },
+        "product"
+      ],
+      "dimensionExclusions": [],
+      "spatialDimensions": []
+    },
+    "columns": [
+      "timestamp",
+      "duration",
+      "product"
+    ]
+  }
+}
