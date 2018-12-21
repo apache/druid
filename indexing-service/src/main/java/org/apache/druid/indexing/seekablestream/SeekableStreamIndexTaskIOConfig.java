@@ -56,7 +56,8 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps,
-      @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
+      @JsonProperty("exclusiveStartSequenceNumberPartitions")
+          Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
   )
   {
     this.taskGroupId = taskGroupId;
@@ -141,7 +142,4 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   {
     return skipOffsetGaps;
   }
-
-  @Override
-  public abstract String toString();
 }

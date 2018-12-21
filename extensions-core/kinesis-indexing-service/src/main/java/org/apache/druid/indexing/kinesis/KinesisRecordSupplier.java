@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.kinesis;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.ClientConfiguration;
-import com.amazonaws.SdkClientException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
@@ -41,8 +41,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Queues;
+import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
-import org.apache.druid.indexing.kinesis.aws.ConstructibleAWSCredentialsConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -53,6 +53,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
@@ -84,12 +85,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private static final long PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS = 3000;
   private static final long EXCEPTION_RETRY_DELAY_MS = 10000;
 
+  private static boolean isServiceExceptionRecoverable(AmazonServiceException ex)
+  {
+    final boolean isIOException = ex.getCause() instanceof IOException;
+    final boolean isTimeout = "RequestTimeout".equals(ex.getErrorCode());
+    return isIOException || isTimeout;
+  }
+
   private class PartitionResource
   {
     private final StreamPartition<String> streamPartition;
-
-    // lock for cooradinating startBackground fetch, guards started
-    private final Object startLock = new Object();
 
     // shardIterator points to the record that will be polled next by recordRunnable
     // can be null when shard is closed due to the user shard splitting or changing the number
@@ -109,22 +114,20 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
     void startBackgroundFetch()
     {
-      synchronized (startLock) {
-        if (started) {
-          return;
-        }
-
-        log.info(
-            "Starting scheduled fetch runnable for stream[%s] partition[%s]",
-            streamPartition.getStream(),
-            streamPartition.getPartitionId()
-        );
-
-        stopRequested = false;
-        started = true;
-
-        rescheduleRunnable(fetchDelayMillis);
+      if (started) {
+        return;
       }
+
+      log.info(
+          "Starting scheduled fetch runnable for stream[%s] partition[%s]",
+          streamPartition.getStream(),
+          streamPartition.getPartitionId()
+      );
+
+      stopRequested = false;
+      started = true;
+
+      rescheduleRunnable(fetchDelayMillis);
     }
 
     void stopBackgroundFetch()
@@ -152,7 +155,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
         // used for retrying on InterruptedException
         GetRecordsResult recordsResult = null;
-        OrderedPartitionableRecord<String, String> currRecord = null;
+        OrderedPartitionableRecord<String, String> currRecord;
 
         try {
 
@@ -261,17 +264,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
               "Interrupted while waiting to add record to buffer, retrying in [%,dms]",
               EXCEPTION_RETRY_DELAY_MS
           );
-          if (currRecord != null) {
-            shardIterator = kinesis.getShardIterator(
-                currRecord.getStream(),
-                currRecord.getPartitionId(),
-                ShardIteratorType.AT_SEQUENCE_NUMBER.toString(),
-                currRecord.getSequenceNumber()
-            ).getShardIterator();
-            rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
-          } else {
-            throw new ISE("can't reschedule fetch records runnable, current record is null??");
-          }
+          rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
         }
         catch (ExpiredIteratorException e) {
           log.warn(
@@ -291,9 +284,14 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           log.error(e, "encounted AWS error while attempting to fetch records, will not retry");
           throw e;
         }
-        catch (SdkClientException e) {
-          log.warn(e, "encounted unknown AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
-          rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
+        catch (AmazonServiceException e) {
+          if (isServiceExceptionRecoverable(e)) {
+            log.warn(e, "encounted unknown recoverable AWS exception, retrying in [%,dms]", EXCEPTION_RETRY_DELAY_MS);
+            rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
+          } else {
+            log.warn(e, "encounted unknown unrecoverable AWS exception, will not retry");
+            throw new RuntimeException(e);
+          }
         }
         catch (Throwable e) {
           // non transient errors
@@ -416,14 +414,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   public static AmazonKinesis getAmazonKinesisClient(
       String endpoint,
-      String awsAccessKeyId,
-      String awsSecretAccessKey,
+      AWSCredentialsConfig awsCredentialsConfig,
       String awsAssumedRoleArn,
       String awsExternalId
   )
   {
     AWSCredentialsProvider awsCredentialsProvider = AWSCredentialsUtils.defaultAWSCredentialsProviderChain(
-        new ConstructibleAWSCredentialsConfig(awsAccessKeyId, awsSecretAccessKey)
+        awsCredentialsConfig
     );
 
     if (awsAssumedRoleArn != null) {

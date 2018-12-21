@@ -62,12 +62,12 @@ public enum KinesisRegion
 
   private static List<String> getNames()
   {
-    return EnumSet.allOf(KinesisRegion.class).stream().map(KinesisRegion::toString).collect(Collectors.toList());
+    return EnumSet.allOf(KinesisRegion.class).stream().map(KinesisRegion::serialize).collect(Collectors.toList());
   }
 
   public String getEndpoint()
   {
-    return StringUtils.format("kinesis.%s.amazonaws.com%s", toString(), toString().startsWith("cn-") ? ".cn" : "");
+    return StringUtils.format("kinesis.%s.amazonaws.com%s", serialize(), serialize().startsWith("cn-") ? ".cn" : "");
   }
 
   @JsonValue

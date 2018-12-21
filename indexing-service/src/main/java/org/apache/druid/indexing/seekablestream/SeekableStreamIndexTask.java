@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -120,14 +121,11 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   private static String makeTaskId(String dataSource, int randomBits, String type)
   {
-    final StringBuilder suffix = new StringBuilder(8);
-    for (int i = 0; i < Integer.BYTES * 2; ++i) {
-      suffix.append((char) ('a' + ((randomBits >>> (i * 4)) & 0x0F)));
-    }
+    final String suffix = RandomIdUtils.getRandomId();
     return Joiner.on("_").join(type, dataSource, suffix);
   }
 
-  protected static String getFormatedId(String dataSource, String type)
+  protected static String getFormattedId(String dataSource, String type)
   {
     return makeTaskId(dataSource, RANDOM.nextInt(), type);
   }

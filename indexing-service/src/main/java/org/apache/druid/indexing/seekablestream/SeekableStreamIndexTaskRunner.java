@@ -86,7 +86,6 @@ import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
@@ -938,7 +937,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           }
 
           @Override
-          public void onFailure(@ParametersAreNonnullByDefault Throwable t)
+          public void onFailure(Throwable t)
           {
             log.error(t, "Error while publishing segments for sequence[%s]", sequenceMetadata);
             handoffFuture.setException(t);
@@ -2008,7 +2007,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @param sequenceNumber
    *
-   * @return
+   * @return a specific OrderedSequenceNumber instance for Kafka/Kinesis
    */
   protected abstract OrderedSequenceNumber<SequenceOffsetType> createSequenceNumber(SequenceOffsetType sequenceNumber);
 

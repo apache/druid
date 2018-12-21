@@ -195,7 +195,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 {
   private static final Logger log = new Logger(KinesisIndexTaskTest.class);
   private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-  // private static final long POLL_RETRY_MS = 100;
   private static String stream = "stream";
   private static String shardId1 = "1";
   private static String shardId0 = "0";
@@ -383,7 +382,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -463,7 +461,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "1"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -573,7 +570,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             startPartitions,
             endPartitions,
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -715,7 +711,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -834,7 +829,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "4"
             )),
             true,
-            null,
             DateTimes.of("2010"),
             null,
             "awsEndpoint",
@@ -918,7 +912,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "4"
             )),
             true,
-            null,
             null,
             DateTimes.of("2010"),
             "awsEndpoint",
@@ -1014,7 +1007,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -1095,7 +1087,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -1157,7 +1148,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "4"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -1237,7 +1227,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -1315,7 +1304,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -1380,7 +1368,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "12"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -1493,7 +1480,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -1583,7 +1569,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -1607,7 +1592,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "4"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -1696,7 +1680,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -1720,7 +1703,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "9"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -1809,7 +1791,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             false,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -1833,7 +1814,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "9"
             )),
             false,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -1921,7 +1901,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "1"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -2014,7 +1993,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -2038,7 +2016,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "1"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -2130,7 +2107,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             true,
             null,
             null,
-            null,
             "awsEndpoint",
             null,
             null,
@@ -2188,7 +2164,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "5"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -2273,7 +2248,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "13"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",
@@ -2412,7 +2386,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 "4"
             )),
             true,
-            null,
             null,
             null,
             "awsEndpoint",

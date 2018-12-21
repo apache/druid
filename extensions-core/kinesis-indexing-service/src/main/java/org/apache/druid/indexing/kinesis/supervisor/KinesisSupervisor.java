@@ -50,7 +50,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
-import org.apache.druid.indexing.seekablestream.utils.RandomId;
+import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 
@@ -123,7 +123,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         new SeekableStreamPartitions<>(ioConfig.getStream(), startPartitions),
         new SeekableStreamPartitions<>(ioConfig.getStream(), endPartitions),
         true,
-        true, // should pause after reading otherwise the task may complete early which will confuse the supervisor
         minimumMessageTime,
         maximumMessageTime,
         ioConfig.getEndpoint(),
@@ -163,7 +162,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
                                             .build();
     List<SeekableStreamIndexTask<String, String>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
-      String taskId = Joiner.on("_").join(baseSequenceName, RandomId.getRandomId());
+      String taskId = Joiner.on("_").join(baseSequenceName, RandomIdUtils.getRandomId());
       taskList.add(new KinesisIndexTask(
           taskId,
           new TaskResource(baseSequenceName, 1),
@@ -191,8 +190,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
             ioConfig.getEndpoint(),
-            awsCredentialsConfig.getAccessKey().getPassword(),
-            awsCredentialsConfig.getSecretKey().getPassword(),
+            awsCredentialsConfig,
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),

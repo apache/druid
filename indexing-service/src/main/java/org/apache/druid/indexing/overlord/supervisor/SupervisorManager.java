@@ -70,7 +70,7 @@ public class SupervisorManager
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
-    Preconditions.checkNotNull(spec.getId(), "spec.getStream()");
+    Preconditions.checkNotNull(spec.getId(), "spec.getId()");
     Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
 
     synchronized (lock) {
@@ -241,7 +241,10 @@ public class SupervisorManager
     }
 
     if (writeTombstone) {
-      metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, pair.rhs.getDataSources())); // where NoopSupervisorSpec is a tombstone
+      metadataSupervisorManager.insert(
+          id,
+          new NoopSupervisorSpec(null, pair.rhs.getDataSources())
+      ); // where NoopSupervisorSpec is a tombstone
     }
     pair.lhs.stop(true);
     supervisors.remove(id);

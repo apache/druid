@@ -81,7 +81,6 @@ public class KinesisIOConfigTest
         config.getEndPartitions().getPartitionSequenceNumberMap()
     );
     Assert.assertTrue(config.isUseTransaction());
-    Assert.assertTrue(config.isPauseAfterRead());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
     Assert.assertEquals(config.getRecordsPerFetch(), 4000);
@@ -103,7 +102,6 @@ public class KinesisIOConfigTest
                      + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
                      + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}},\n"
                      + "  \"useTransaction\": false,\n"
-                     + "  \"pauseAfterRead\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-2.amazonaws.com\",\n"
@@ -137,7 +135,6 @@ public class KinesisIOConfigTest
         config.getEndPartitions().getPartitionSequenceNumberMap()
     );
     Assert.assertFalse(config.isUseTransaction());
-    Assert.assertFalse(config.isPauseAfterRead());
     Assert.assertTrue("maximumMessageTime", config.getMaximumMessageTime().isPresent());
     Assert.assertTrue("minimumMessageTime", config.getMinimumMessageTime().isPresent());
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());

@@ -114,7 +114,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     response = createMock(HttpResponse.class);
     headers = createMock(HttpHeaders.class);
 
-    client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider);
+    client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider);
     expect(taskInfoProvider.getTaskLocation(TEST_ID))
         .andReturn(new TaskLocation(TEST_HOST, TEST_PORT, TEST_TLS_PORT))
         .anyTimes();
@@ -287,7 +287,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testGetCurrentOffsetsWithRetry() throws Exception
   {
-    client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 3);
+    client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 3);
 
     Capture<Request> captured = Capture.newInstance(CaptureType.ALL);
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(6)
@@ -332,7 +332,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     expectedException.expect(RuntimeException.class);
     expectedException.expectMessage("org.apache.druid.java.util.common.IOE: Received status [404]");
 
-    client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
+    client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
 
     expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).anyTimes();
     expect(responseHolder.getContent()).andReturn("").anyTimes();
@@ -387,7 +387,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testGetStartTime() throws Exception
   {
-    client = new TestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
+    client = new TestableKinesisIndexTaskClient(httpClient, objectMapper, taskInfoProvider, 2);
     DateTime now = DateTimes.nowUtc();
 
     Capture<Request> captured = Capture.newInstance();
@@ -1030,9 +1030,9 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
     }
   }
 
-  private class TestableKafkaIndexTaskClient extends KinesisIndexTaskClient
+  private class TestableKinesisIndexTaskClient extends KinesisIndexTaskClient
   {
-    public TestableKafkaIndexTaskClient(
+    TestableKinesisIndexTaskClient(
         HttpClient httpClient,
         ObjectMapper jsonMapper,
         TaskInfoProvider taskInfoProvider
@@ -1041,7 +1041,7 @@ public class KinesisIndexTaskClientTest extends EasyMockSupport
       this(httpClient, jsonMapper, taskInfoProvider, TEST_NUM_RETRIES);
     }
 
-    public TestableKafkaIndexTaskClient(
+    TestableKinesisIndexTaskClient(
         HttpClient httpClient,
         ObjectMapper jsonMapper,
         TaskInfoProvider taskInfoProvider,

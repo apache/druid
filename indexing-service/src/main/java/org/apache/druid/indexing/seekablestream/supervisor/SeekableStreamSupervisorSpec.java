@@ -157,10 +157,6 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return suspended;
   }
 
-  @Override
-  public abstract String toString();
-
-
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
 
 

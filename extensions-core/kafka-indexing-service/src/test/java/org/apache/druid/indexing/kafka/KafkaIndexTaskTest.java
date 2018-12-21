@@ -420,7 +420,6 @@ public class KafkaIndexTaskTest
   @Test(timeout = 60_000L)
   public void testRunBeforeDataInserted() throws Exception
   {
-    Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     final KafkaIndexTask task = createTask(
         null,
         new KafkaIndexTaskIOConfig(

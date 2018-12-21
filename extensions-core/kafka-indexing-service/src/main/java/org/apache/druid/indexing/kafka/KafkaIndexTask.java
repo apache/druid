@@ -70,7 +70,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
   )
   {
     super(
-        id == null ? getFormatedId(dataSchema.getDataSource(), TYPE) : id,
+        id == null ? getFormattedId(dataSchema.getDataSource(), TYPE) : id,
         taskResource,
         dataSchema,
         tuningConfig,

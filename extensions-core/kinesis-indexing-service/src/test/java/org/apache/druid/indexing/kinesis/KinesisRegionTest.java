@@ -60,6 +60,13 @@ public class KinesisRegionTest
     Assert.assertEquals(kinesisRegion, KinesisRegion.US_EAST_1);
   }
 
+  @Test
+  public void testGetEndpoint()
+  {
+    Assert.assertEquals("kinesis.cn-north-1.amazonaws.com.cn", KinesisRegion.CN_NORTH_1.getEndpoint());
+    Assert.assertEquals("kinesis.us-east-1.amazonaws.com", KinesisRegion.US_EAST_1.getEndpoint());
+  }
+
   @Test(expected = JsonMappingException.class)
   public void testBadSerde() throws IOException
   {

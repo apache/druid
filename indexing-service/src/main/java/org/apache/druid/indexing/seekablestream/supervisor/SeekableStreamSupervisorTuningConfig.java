@@ -52,8 +52,5 @@ public interface SeekableStreamSupervisorTuningConfig
   @JsonProperty
   Duration getShutdownTimeout();
 
-  @Override
-  String toString();
-
   SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig();
 }

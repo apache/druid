@@ -108,9 +108,6 @@ import java.util.stream.Stream;
  * this class is the parent class of both the Kafka and Kinesis supervisor. All the main run loop
  * logic are similar enough so they're grouped together into this class.
  * <p>
- * incremental handoff & checkpointing are not yet supported by Kinesis, but the logic is left in here
- * so in the future it's easier to implement
- * <p>
  * Supervisor responsible for managing the SeekableStreamIndexTasks (Kafka/Kinesis) for a single dataSource. At a high level, the class accepts a
  * {@link SeekableStreamSupervisorSpec} which includes the stream name (topic / stream) and configuration as well as an ingestion spec which will
  * be used to generate the indexing tasks. The run loop periodically refreshes its view of the stream's partitions
@@ -427,13 +424,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
 
-  // Map<{group RandomId}, {actively reading task group}>; see documentation for TaskGroup class
+  // Map<{group RandomIdUtils}, {actively reading task group}>; see documentation for TaskGroup class
   private final ConcurrentHashMap<Integer, TaskGroup> activelyReadingTaskGroups = new ConcurrentHashMap<>();
 
   // After telling a taskGroup to stop reading and begin publishing a segment, it is moved from [activelyReadingTaskGroups] to here so
   // we can monitor its status while we queue new tasks to read the next range of sequences. This is a list since we could
   // have multiple sets of tasks publishing at once if time-to-publish > taskDuration.
-  // Map<{group RandomId}, List<{pending completion task groups}>>
+  // Map<{group RandomIdUtils}, List<{pending completion task groups}>>
   private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
 
   // The starting sequence for a new partition in [partitionGroups] is initially set to getNotSetMarker(). When a new task group
@@ -445,7 +442,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // cause successive tasks to again grab their starting sequence from metadata store. This mechanism allows us to
   // start up successive tasks without waiting for the previous tasks to succeed and still be able to handle task
   // failures during publishing.
-  // Map<{group RandomId}, Map<{partition RandomId}, {startingOffset}>>
+  // Map<{group RandomIdUtils}, Map<{partition RandomIdUtils}, {startingOffset}>>
   private final ConcurrentHashMap<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> partitionGroups = new ConcurrentHashMap<>();
 
   protected final ObjectMapper sortingMapper;
@@ -970,7 +967,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     group.tasks.putAll(tasks.stream().collect(Collectors.toMap(x -> x, x -> new TaskData())));
     if (activelyReadingTaskGroups.putIfAbsent(taskGroupId, group) != null) {
       throw new ISE(
-          "trying to add taskGroup with RandomId [%s] to actively reading task groups, but group already exists.",
+          "trying to add taskGroup with RandomIdUtils [%s] to actively reading task groups, but group already exists.",
           taskGroupId
       );
     }
@@ -1839,15 +1836,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           earliestTaskStart = taskData.startTime;
         }
       }
-
-      // earlyPublishTime is only supported in Kinesis
-      // for now it is not implemented
-      //      boolean doEarlyPublish = false;
-      //      if (earlyPublishTime != null && (earlyPublishTime.isBeforeNow() || earlyPublishTime.isEqualNow())) {
-      //        log.info("Early publish requested - signalling tasks to publish");
-      //        earlyPublishTime = null;
-      //        doEarlyPublish = true;
-      //      }
 
       // if this task has run longer than the configured duration, signal all tasks in the group to persist
       if (earliestTaskStart.plus(ioConfig.getTaskDuration()).isBeforeNow()) {

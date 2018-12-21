@@ -31,11 +31,9 @@ import java.util.Set;
 
 public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>
 {
-  private static final boolean DEFAULT_PAUSE_AFTER_READ = true;
   public static final int DEFAULT_RECORDS_PER_FETCH = 4000;
   public static final int DEFAULT_FETCH_DELAY_MILLIS = 0;
 
-  private final boolean pauseAfterRead;
   private final String endpoint;
   private final Integer recordsPerFetch;
   private final Integer fetchDelayMillis;
@@ -51,7 +49,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("startPartitions") SeekableStreamPartitions<String, String> startPartitions,
       @JsonProperty("endPartitions") SeekableStreamPartitions<String, String> endPartitions,
       @JsonProperty("useTransaction") Boolean useTransaction,
-      @JsonProperty("pauseAfterRead") Boolean pauseAfterRead,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("endpoint") String endpoint,
@@ -79,19 +76,12 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
                                              .stream()
                                              .noneMatch(x -> x.equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)));
 
-    this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
     this.endpoint = Preconditions.checkNotNull(endpoint, "endpoint");
     this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : DEFAULT_RECORDS_PER_FETCH;
     this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
-  }
-
-  @JsonProperty
-  public boolean isPauseAfterRead()
-  {
-    return pauseAfterRead;
   }
 
   @JsonProperty
@@ -138,7 +128,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
            ", startPartitions=" + getStartPartitions() +
            ", endPartitions=" + getEndPartitions() +
            ", useTransaction=" + isUseTransaction() +
-           ", pauseAfterRead=" + pauseAfterRead +
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +
            ", endpoint='" + endpoint + '\'' +

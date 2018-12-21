@@ -149,12 +149,13 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   {
     return "KinesisSupervisorTuningConfig{" +
            "maxRowsInMemory=" + getMaxRowsInMemory() +
+           ", maxBytesInMemory=" + getMaxBytesInMemory() +
            ", maxRowsPerSegment=" + getMaxRowsPerSegment() +
+           ", maxTotalRows=" + getMaxTotalRows() +
            ", intermediatePersistPeriod=" + getIntermediatePersistPeriod() +
            ", basePersistDirectory=" + getBasePersistDirectory() +
            ", maxPendingPersists=" + getMaxPendingPersists() +
            ", indexSpec=" + getIndexSpec() +
-           ", buildV9Directly=" + true +
            ", reportParseExceptions=" + isReportParseExceptions() +
            ", handoffConditionTimeout=" + getHandoffConditionTimeout() +
            ", resetOffsetAutomatically=" + isResetOffsetAutomatically() +
@@ -170,6 +171,11 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", fetchSequenceNumberTimeout=" + getFetchSequenceNumberTimeout() +
            ", fetchThreads=" + getFetchThreads() +
            ", segmentWriteOutMediumFactory=" + getSegmentWriteOutMediumFactory() +
+           ", logParseExceptions=" + isLogParseExceptions() +
+           ", maxParseExceptions=" + getMaxParseExceptions() +
+           ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
+           ", maxRecordsPerPoll=" + getMaxRecordsPerPoll() +
+           ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            '}';
   }
 

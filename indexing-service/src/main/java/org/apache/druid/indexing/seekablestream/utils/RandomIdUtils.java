@@ -22,7 +22,7 @@ package org.apache.druid.indexing.seekablestream.utils;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class RandomId
+public class RandomIdUtils
 {
   private static final Random RANDOM = ThreadLocalRandom.current();
 

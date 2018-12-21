@@ -57,7 +57,6 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
@@ -114,7 +113,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
 
   private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-  private static final String TOPIC_PREFIX = "testTopic";
   private static final String DATASOURCE = "testDS";
   private static final int TEST_CHAT_THREADS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
@@ -125,31 +123,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private static String shardId0 = "0";
   private static StreamPartition<String> shard1Partition = StreamPartition.of(stream, shardId1);
   private static StreamPartition<String> shard0Partition = StreamPartition.of(stream, shardId0);
-  private static List<OrderedPartitionableRecord<String, String>> records = ImmutableList.of(
-      new OrderedPartitionableRecord<>(stream, "1", "0", JB("2008", "a", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "1", JB("2009", "b", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "2", JB("2010", "c", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "3", JB("2011", "d", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "4", JB("2011", "e", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(
-          stream,
-          "1",
-          "5",
-          JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
-      ),
-      new OrderedPartitionableRecord<>(stream, "1", "6", Collections.singletonList(StringUtils.toUtf8("unparseable"))),
-      new OrderedPartitionableRecord<>(stream, "1", "7", Collections.singletonList(StringUtils.toUtf8("unparseable2"))),
-      new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(StringUtils.toUtf8("{}"))),
-      new OrderedPartitionableRecord<>(stream, "1", "9", JB("2013", "f", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "10", JB("2049", "f", "y", "notanumber", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "11", JB("2049", "f", "y", "10", "notanumber", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "12", JB("2049", "f", "y", "10", "20.0", "notanumber")),
-      new OrderedPartitionableRecord<>(stream, "0", "0", JB("2012", "g", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "0", "1", JB("2011", "h", "y", "10", "20.0", "1.0"))
-  );
 
   private static DataSchema dataSchema;
-  private KinesisRecordSupplier taskRecordSupplier;
   private KinesisRecordSupplier supervisorRecordSupplier;
 
   private final int numThreads;
@@ -185,7 +160,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     taskClient = createMock(KinesisIndexTaskClient.class);
     taskQueue = createMock(TaskQueue.class);
     supervisorRecordSupplier = createMock(KinesisRecordSupplier.class);
-    taskRecordSupplier = mock(KinesisRecordSupplier.class);
 
     tuningConfig = new KinesisSupervisorTuningConfig(
         1000,
@@ -3633,7 +3607,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
             startPartitions,
             endPartitions,
             true,
-            null,
             minimumMessageTime,
             maximumMessageTime,
             "awsEndpoint",

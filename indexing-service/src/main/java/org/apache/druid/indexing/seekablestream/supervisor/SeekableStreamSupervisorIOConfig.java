@@ -131,7 +131,4 @@ public abstract class SeekableStreamSupervisorIOConfig
   {
     return lateMessageRejectionPeriod;
   }
-
-  @Override
-  public abstract String toString();
 }

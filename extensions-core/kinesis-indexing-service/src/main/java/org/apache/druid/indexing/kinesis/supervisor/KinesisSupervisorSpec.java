@@ -135,6 +135,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
            ", tuningConfig=" + getTuningConfig() +
            ", ioConfig=" + getIoConfig() +
            ", suspended=" + isSuspended() +
+           ", context=" + getContext() +
            '}';
   }
 

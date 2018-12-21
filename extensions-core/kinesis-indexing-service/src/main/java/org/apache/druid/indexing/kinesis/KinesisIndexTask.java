@@ -54,7 +54,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
   )
   {
     super(
-        id == null ? getFormatedId(dataSchema.getDataSource(), TYPE) : id,
+        id == null ? getFormattedId(dataSchema.getDataSource(), TYPE) : id,
         taskResource,
         dataSchema,
         tuningConfig,
@@ -95,8 +95,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
     return new KinesisRecordSupplier(
         KinesisRecordSupplier.getAmazonKinesisClient(
             ioConfig.getEndpoint(),
-            awsCredentialsConfig.getAccessKey().getPassword(),
-            awsCredentialsConfig.getSecretKey().getPassword(),
+            awsCredentialsConfig,
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),

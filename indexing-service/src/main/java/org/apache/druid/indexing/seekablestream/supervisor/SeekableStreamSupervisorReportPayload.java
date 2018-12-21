@@ -33,7 +33,7 @@ import java.util.Map;
 public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType>
 {
   private final String dataSource;
-  private final String id;
+  private final String stream;
   private final int partitions;
   private final int replicas;
   private final long durationSeconds;
@@ -47,7 +47,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
 
   public SeekableStreamSupervisorReportPayload(
       String dataSource,
-      String id,
+      String stream,
       int partitions,
       int replicas,
       long durationSeconds,
@@ -59,7 +59,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   )
   {
     this.dataSource = dataSource;
-    this.id = id;
+    this.stream = stream;
     this.partitions = partitions;
     this.replicas = replicas;
     this.durationSeconds = durationSeconds;
@@ -89,9 +89,10 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     return dataSource;
   }
 
+  @JsonProperty
   public String getStream()
   {
-    return id;
+    return stream;
   }
 
   @JsonProperty
@@ -153,7 +154,4 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   {
     return offsetsLastUpdated;
   }
-
-  @Override
-  public abstract String toString();
 }
