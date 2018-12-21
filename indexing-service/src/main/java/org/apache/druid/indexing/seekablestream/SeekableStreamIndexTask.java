@@ -119,7 +119,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
 
-  private static String makeTaskId(String dataSource, int randomBits, String type)
+  private static String makeTaskId(String dataSource, String type)
   {
     final String suffix = RandomIdUtils.getRandomId();
     return Joiner.on("_").join(type, dataSource, suffix);
@@ -127,7 +127,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   protected static String getFormattedId(String dataSource, String type)
   {
-    return makeTaskId(dataSource, RANDOM.nextInt(), type);
+    return makeTaskId(dataSource, type);
   }
 
   protected static String getFormattedGroupId(String dataSource, String type)
