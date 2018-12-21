@@ -1,0 +1,11 @@
+[
+  {
+    "type": "count",
+    "name": "count"
+  },
+  {
+    "type": "bitmapAgg",
+    "name": "duration",
+    "fieldName": "duration"
+  }
+]
