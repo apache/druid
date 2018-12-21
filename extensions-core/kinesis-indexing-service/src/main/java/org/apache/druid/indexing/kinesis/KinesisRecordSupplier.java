@@ -706,9 +706,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       catch (ProvisionedThroughputExceededException e) {
         log.warn(
             e,
-            "encounted ProvisionedThroughputExceededException while fetching records, this means "
+            "encountered ProvisionedThroughputExceededException while fetching records, this means "
             + "that the request rate for the stream is too high, or the requested data is too large for "
-            + "the available throughput. Reduce the frequency or size of your requests."
+            + "the available throughput. Reduce the frequency or size of your requests. Consider increasing "
+            + "the number of shards to increase throughput."
         );
         try {
           Thread.sleep(PROVISIONED_THROUGHPUT_EXCEEDED_BACKOFF_MS);
