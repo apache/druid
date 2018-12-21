@@ -241,7 +241,10 @@ public class SupervisorManager
     }
 
     if (writeTombstone) {
-      metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, pair.rhs.getDataSources())); // where NoopSupervisorSpec is a tombstone
+      metadataSupervisorManager.insert(
+          id,
+          new NoopSupervisorSpec(null, pair.rhs.getDataSources())
+      ); // where NoopSupervisorSpec is a tombstone
     }
     pair.lhs.stop(true);
     supervisors.remove(id);

@@ -17,35 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexing.kinesis.KinesisIndexingServiceModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 
-public class KafkaTuningConfigTest
+public class KinesisSupervisorTuningConfigTest
 {
   private final ObjectMapper mapper;
 
-  public KafkaTuningConfigTest()
+  public KinesisSupervisorTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
-    mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
+    mapper.registerModules((Iterable<Module>) new KinesisIndexingServiceModule().getJacksonModules());
   }
 
   @Test
   public void testSerdeWithDefaults() throws Exception
   {
-    String jsonStr = "{\"type\": \"kafka\"}";
+    String jsonStr = "{\"type\": \"kinesis\"}";
 
-    KafkaTuningConfig config = (KafkaTuningConfig) mapper.readValue(
+    KinesisSupervisorTuningConfig config = (KinesisSupervisorTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -58,30 +60,40 @@ public class KafkaTuningConfigTest
     Assert.assertNotNull(config.getBasePersistDirectory());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment());
-    Assert.assertEquals(null, config.getMaxTotalRows());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
+    Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
+    Assert.assertNull(config.getWorkerThreads());
+    Assert.assertNull(config.getChatThreads());
+    Assert.assertEquals(8L, (long) config.getChatRetries());
+    Assert.assertEquals(Duration.standardSeconds(10), config.getHttpTimeout());
+    Assert.assertEquals(Duration.standardSeconds(80), config.getShutdownTimeout());
   }
 
   @Test
   public void testSerdeWithNonDefaults() throws Exception
   {
     String jsonStr = "{\n"
-                     + "  \"type\": \"kafka\",\n"
+                     + "  \"type\": \"kinesis\",\n"
                      + "  \"basePersistDirectory\": \"/tmp/xxx\",\n"
                      + "  \"maxRowsInMemory\": 100,\n"
                      + "  \"maxRowsPerSegment\": 100,\n"
-                     + "  \"maxTotalRows\": 1000,\n"
                      + "  \"intermediatePersistPeriod\": \"PT1H\",\n"
                      + "  \"maxPendingPersists\": 100,\n"
+                     + "  \"buildV9Directly\": false,\n"
                      + "  \"reportParseExceptions\": true,\n"
-                     + "  \"handoffConditionTimeout\": 100\n"
+                     + "  \"handoffConditionTimeout\": 100,\n"
+                     + "  \"workerThreads\": 12,\n"
+                     + "  \"chatThreads\": 13,\n"
+                     + "  \"chatRetries\": 14,\n"
+                     + "  \"httpTimeout\": \"PT15S\",\n"
+                     + "  \"shutdownTimeout\": \"PT95S\"\n"
                      + "}";
 
-    KafkaTuningConfig config = (KafkaTuningConfig) mapper.readValue(
+    KinesisSupervisorTuningConfig config = (KinesisSupervisorTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -94,47 +106,15 @@ public class KafkaTuningConfigTest
     Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMaxRowsPerSegment());
-    Assert.assertNotEquals(null, config.getMaxTotalRows());
-    Assert.assertEquals(1000, config.getMaxTotalRows().longValue());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(0, config.getMaxPendingPersists());
+    Assert.assertEquals(100, config.getMaxPendingPersists());
+    Assert.assertEquals(true, config.getBuildV9Directly());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
-  }
-
-  @Test
-  public void testCopyOf()
-  {
-    KafkaTuningConfig original = new KafkaTuningConfig(
-        1,
-        null,
-        2,
-        10L,
-        new Period("PT3S"),
-        new File("/tmp/xxx"),
-        4,
-        new IndexSpec(),
-        true,
-        true,
-        5L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-    KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);
-
-    Assert.assertEquals(1, copy.getMaxRowsInMemory());
-    Assert.assertEquals(2, copy.getMaxRowsPerSegment());
-    Assert.assertNotEquals(null, copy.getMaxTotalRows());
-    Assert.assertEquals(10L, copy.getMaxTotalRows().longValue());
-    Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
-    Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
-    Assert.assertEquals(0, copy.getMaxPendingPersists());
-    Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
-    Assert.assertEquals(true, copy.isReportParseExceptions());
-    Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
+    Assert.assertEquals(12, (int) config.getWorkerThreads());
+    Assert.assertEquals(13, (int) config.getChatThreads());
+    Assert.assertEquals(14L, (long) config.getChatRetries());
+    Assert.assertEquals(Duration.standardSeconds(15), config.getHttpTimeout());
+    Assert.assertEquals(Duration.standardSeconds(95), config.getShutdownTimeout());
   }
 }
