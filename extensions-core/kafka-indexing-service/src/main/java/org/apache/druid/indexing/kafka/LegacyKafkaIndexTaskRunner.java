@@ -45,7 +45,14 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
-import org.apache.druid.indexing.kafka.KafkaIndexTask.Status;
+import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
+import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
+import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -74,6 +81,7 @@ import org.apache.kafka.clients.consumer.OffsetOutOfRangeException;
 import org.apache.kafka.common.TopicPartition;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -93,6 +101,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
@@ -109,7 +118,7 @@ import java.util.stream.Collectors;
  * This class will be removed in a future release.
  */
 @Deprecated
-public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
+public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<Integer, Long>
 {
   private static final EmittingLogger log = new EmittingLogger(LegacyKafkaIndexTaskRunner.class);
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
@@ -153,8 +162,8 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private final Condition isAwaitingRetry = pollRetryLock.newCondition();
 
   private final KafkaIndexTask task;
-  private final KafkaIOConfig ioConfig;
-  private final KafkaTuningConfig tuningConfig;
+  private final KafkaIndexTaskIOConfig ioConfig;
+  private final KafkaIndexTaskTuningConfig tuningConfig;
   private final InputRowParser<ByteBuffer> parser;
   private final AuthorizerMapper authorizerMapper;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
@@ -181,6 +190,14 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       RowIngestionMetersFactory rowIngestionMetersFactory
   )
   {
+    super(
+        task,
+        parser,
+        authorizerMapper,
+        chatHandlerProvider,
+        savedParseExceptions,
+        rowIngestionMetersFactory
+    );
     this.task = task;
     this.ioConfig = task.getIOConfig();
     this.tuningConfig = task.getTuningConfig();
@@ -190,7 +207,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     this.savedParseExceptions = savedParseExceptions;
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
-    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
+    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionSequenceNumberMap());
     this.ingestionState = IngestionState.NOT_STARTED;
   }
 
@@ -274,34 +291,39 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
 
       appenderator = appenderator0;
 
-      final String topic = ioConfig.getStartPartitions().getTopic();
+      final String topic = ioConfig.getStartPartitions().getStream();
 
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
       if (restoredMetadata == null) {
-        nextOffsets.putAll(ioConfig.getStartPartitions().getPartitionOffsetMap());
+        nextOffsets.putAll(ioConfig.getStartPartitions().getPartitionSequenceNumberMap());
       } else {
         final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
-        final KafkaPartitions restoredNextPartitions = toolbox.getObjectMapper().convertValue(
+        final SeekableStreamPartitions<Integer, Long> restoredNextPartitions = toolbox.getObjectMapper().convertValue(
             restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
-            KafkaPartitions.class
+            toolbox.getObjectMapper().getTypeFactory().constructParametrizedType(
+                SeekableStreamPartitions.class,
+                SeekableStreamPartitions.class,
+                Integer.class,
+                Long.class
+            )
         );
-        nextOffsets.putAll(restoredNextPartitions.getPartitionOffsetMap());
+        nextOffsets.putAll(restoredNextPartitions.getPartitionSequenceNumberMap());
 
         // Sanity checks.
-        if (!restoredNextPartitions.getTopic().equals(ioConfig.getStartPartitions().getTopic())) {
+        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartPartitions().getStream())) {
           throw new ISE(
               "WTF?! Restored topic[%s] but expected topic[%s]",
-              restoredNextPartitions.getTopic(),
-              ioConfig.getStartPartitions().getTopic()
+              restoredNextPartitions.getStream(),
+              ioConfig.getStartPartitions().getStream()
           );
         }
 
-        if (!nextOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionOffsetMap().keySet())) {
+        if (!nextOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet())) {
           throw new ISE(
               "WTF?! Restored partitions[%s] but expected partitions[%s]",
               nextOffsets.keySet(),
-              ioConfig.getStartPartitions().getPartitionOffsetMap().keySet()
+              ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet()
           );
         }
       }
@@ -326,8 +348,8 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
             public Object getMetadata()
             {
               return ImmutableMap.of(
-                  METADATA_NEXT_PARTITIONS, new KafkaPartitions(
-                      ioConfig.getStartPartitions().getTopic(),
+                  METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
+                      ioConfig.getStartPartitions().getStream(),
                       snapshot
                   )
               );
@@ -494,13 +516,20 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       }
 
       final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-        final KafkaPartitions finalPartitions = toolbox.getObjectMapper().convertValue(
+        final SeekableStreamPartitions<Integer, Long> finalPartitions = toolbox.getObjectMapper().convertValue(
             ((Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata")).get(METADATA_NEXT_PARTITIONS),
-            KafkaPartitions.class
+            toolbox.getObjectMapper()
+                   .getTypeFactory()
+                   .constructParametrizedType(
+                       SeekableStreamPartitions.class,
+                       SeekableStreamPartitions.class,
+                       Integer.class,
+                       Long.class
+                   )
         );
 
         // Sanity check, we should only be publishing things that match our desired end state.
-        if (!endOffsets.equals(finalPartitions.getPartitionOffsetMap())) {
+        if (!endOffsets.equals(finalPartitions.getPartitionSequenceNumberMap())) {
           throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
         }
 
@@ -530,9 +559,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       ).get();
 
       final List<String> publishedSegments = published.getSegments()
-                                                       .stream()
-                                                       .map(DataSegment::getIdentifier)
-                                                       .collect(Collectors.toList());
+                                                      .stream()
+                                                      .map(DataSegment::getIdentifier)
+                                                      .collect(Collectors.toList());
 
       log.info(
           "Published segments[%s] with metadata[%s].",
@@ -596,6 +625,21 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     );
   }
 
+  @Override
+  protected boolean isEndOfShard(Long seqNum)
+  {
+    return false;
+  }
+
+  @Nonnull
+  @Override
+  protected List<OrderedPartitionableRecord<Integer, Long>> getRecords(
+      RecordSupplier<Integer, Long> recordSupplier, TaskToolbox toolbox
+  )
+  {
+    throw new UnsupportedOperationException();
+  }
+
   private Set<Integer> assignPartitionsAndSeekToNext(KafkaConsumer consumer, String topic)
   {
     // Initialize consumer assignment.
@@ -615,7 +659,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
       }
     }
 
-    task.assignPartitions(consumer, topic, assignment);
+    KafkaIndexTask.assignPartitions(consumer, topic, assignment);
 
     // Seek to starting offsets.
     for (final int partition : assignment) {
@@ -661,6 +705,39 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     return false;
   }
 
+  @Override
+  protected void possiblyResetDataSourceMetadata(
+      TaskToolbox toolbox,
+      RecordSupplier<Integer, Long> recordSupplier,
+      Set<StreamPartition<Integer>> assignment,
+      Map<Integer, Long> currOffsets
+  )
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected boolean isEndSequenceOffsetsExclusive()
+  {
+    return false;
+  }
+
+  @Override
+  protected boolean isStartingSequenceOffsetsExclusive()
+  {
+    return false;
+  }
+
+
+  @Override
+  protected SeekableStreamPartitions<Integer, Long> deserializeSeekableStreamPartitionsFromMetadata(
+      ObjectMapper mapper,
+      Object object
+  )
+  {
+    throw new UnsupportedOperationException();
+  }
+
   private void possiblyResetOffsetsOrWait(
       Map<TopicPartition, Long> outOfRangePartitions,
       KafkaConsumer<byte[], byte[]> consumer,
@@ -689,7 +766,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     }
 
     if (doReset) {
-      sendResetRequestAndWait(resetPartitions, taskToolbox);
+      sendResetRequestAndWaitLegacy(resetPartitions, taskToolbox);
     } else {
       log.warn("Retrying in %dms", task.getPollRetryMs());
       pollRetryLock.lockInterruptibly();
@@ -705,7 +782,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     }
   }
 
-  private void sendResetRequestAndWait(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
+  private void sendResetRequestAndWaitLegacy(Map<TopicPartition, Long> outOfRangePartitions, TaskToolbox taskToolbox)
       throws IOException
   {
     Map<Integer, Long> partitionOffsetMap = new HashMap<>();
@@ -715,9 +792,9 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     boolean result = taskToolbox.getTaskActionClient()
                                 .submit(new ResetDataSourceMetadataAction(
                                     task.getDataSource(),
-                                    new KafkaDataSourceMetadata(new KafkaPartitions(
+                                    new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(
                                         ioConfig.getStartPartitions()
-                                                .getTopic(),
+                                                .getStream(),
                                         partitionOffsetMap
                                     ))
                                 ));
@@ -736,6 +813,12 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   private void requestPause()
   {
     pauseRequested = true;
+  }
+
+  @Override
+  protected Long getSequenceNumberToStoreAfterRead(Long sequenceNumber)
+  {
+    throw new UnsupportedOperationException();
   }
 
   private void handleParseException(ParseException pe, ConsumerRecord<byte[], byte[]> record)
@@ -817,7 +900,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     }
 
     try {
-      if (pauseLock.tryLock(KafkaIndexTask.LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+      if (pauseLock.tryLock(SeekableStreamIndexTask.LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
         try {
           if (pauseRequested) {
             pauseRequested = false;
@@ -833,7 +916,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
         return;
       }
 
-      if (pollRetryLock.tryLock(KafkaIndexTask.LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+      if (pollRetryLock.tryLock(SeekableStreamIndexTask.LOCK_ACQUIRE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
         try {
           isAwaitingRetry.signalAll();
         }
@@ -860,6 +943,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     return IndexTaskUtils.datasourceAuthorizationCheck(req, action, task.getDataSource(), authorizerMapper);
   }
 
+  @Override
   @POST
   @Path("/stop")
   public Response stop(@Context final HttpServletRequest req)
@@ -869,6 +953,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     return Response.status(Response.Status.OK).build();
   }
 
+  @Override
   @GET
   @Path("/status")
   @Produces(MediaType.APPLICATION_JSON)
@@ -884,6 +969,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     return status;
   }
 
+  @Override
   @GET
   @Path("/offsets/current")
   @Produces(MediaType.APPLICATION_JSON)
@@ -899,6 +985,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     return nextOffsets;
   }
 
+  @Override
   @GET
   @Path("/offsets/end")
   @Produces(MediaType.APPLICATION_JSON)
@@ -915,10 +1002,10 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
   }
 
   @Override
-  public Response setEndOffsets(Map<Integer, Long> offsets, boolean finish) throws InterruptedException
+  public Response setEndOffsets(Map<Integer, Long> sequenceNumbers, boolean finish) throws InterruptedException
   {
     // finish is not used in this mode
-    return setEndOffsets(offsets);
+    return setEndOffsets(sequenceNumbers);
   }
 
   @POST
@@ -934,6 +1021,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     return setEndOffsets(offsets);
   }
 
+  @Override
   @GET
   @Path("/rowStats")
   @Produces(MediaType.APPLICATION_JSON)
@@ -960,6 +1048,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     return Response.ok(returnMap).build();
   }
 
+  @Override
   @GET
   @Path("/unparseableEvents")
   @Produces(MediaType.APPLICATION_JSON)
@@ -1037,6 +1126,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
    * method has timed out and returned before the task has paused; 200 OK with a map of the current partition offsets
    * in the response body if the task successfully paused
    */
+  @Override
   @POST
   @Path("/pause")
   @Produces(MediaType.APPLICATION_JSON)
@@ -1095,6 +1185,7 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     }
   }
 
+  @Override
   @POST
   @Path("/resume")
   public Response resumeHTTP(@Context final HttpServletRequest req) throws InterruptedException
@@ -1125,6 +1216,21 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     }
   }
 
+  @Override
+  protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetadata(
+      SeekableStreamPartitions<Integer, Long> partitions
+  )
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  protected OrderedSequenceNumber<Long> createSequenceNumber(Long sequenceNumber)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   @GET
   @Path("/time/start")
   @Produces(MediaType.APPLICATION_JSON)
@@ -1133,4 +1239,15 @@ public class LegacyKafkaIndexTaskRunner implements KafkaIndexTaskRunner
     authorizationCheck(req, Action.WRITE);
     return startTime;
   }
+
+  @Nullable
+  @Override
+  protected TreeMap<Integer, Map<Integer, Long>> getCheckPointsFromContext(
+      TaskToolbox toolbox,
+      String checkpointsString
+  )
+  {
+    throw new UnsupportedOperationException();
+  }
+
 }

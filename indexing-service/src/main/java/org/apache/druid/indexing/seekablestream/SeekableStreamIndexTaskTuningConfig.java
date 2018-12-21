@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka;
+package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -32,10 +32,11 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
-public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
+public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
+  private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
@@ -53,13 +54,14 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   @Nullable
   private final SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   private final Period intermediateHandoffPeriod;
+  private final boolean skipSequenceNumberAvailabilityCheck;
 
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
   private final int maxSavedParseExceptions;
 
   @JsonCreator
-  public KafkaTuningConfig(
+  public SeekableStreamIndexTaskTuningConfig(
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
@@ -73,6 +75,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("handoffConditionTimeout") @Nullable Long handoffConditionTimeout,
       @JsonProperty("resetOffsetAutomatically") @Nullable Boolean resetOffsetAutomatically,
+      @JsonProperty("skipSequenceNumberAvailabilityCheck") Boolean skipSequenceNumberAvailabilityCheck,
       @JsonProperty("segmentWriteOutMediumFactory") @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
       @JsonProperty("intermediateHandoffPeriod") @Nullable Period intermediateHandoffPeriod,
       @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
@@ -85,15 +88,15 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
 
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : maxRowsPerSegment;
+    this.maxTotalRows = maxTotalRows;
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-    this.maxTotalRows = maxTotalRows;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaults.getIntermediatePersistPeriod()
                                      : intermediatePersistPeriod;
     this.basePersistDirectory = defaults.getBasePersistDirectory();
-    this.maxPendingPersists = 0;
+    this.maxPendingPersists = maxPendingPersists == null ? 0 : maxPendingPersists;
     this.indexSpec = indexSpec == null ? defaults.getIndexSpec() : indexSpec;
     this.reportParseExceptions = reportParseExceptions == null
                                  ? defaults.isReportParseExceptions()
@@ -108,40 +111,24 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     this.intermediateHandoffPeriod = intermediateHandoffPeriod == null
                                      ? new Period().withDays(Integer.MAX_VALUE)
                                      : intermediateHandoffPeriod;
+    this.skipSequenceNumberAvailabilityCheck = skipSequenceNumberAvailabilityCheck == null
+                                               ? DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK
+                                               : skipSequenceNumberAvailabilityCheck;
 
     if (this.reportParseExceptions) {
       this.maxParseExceptions = 0;
       this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
     } else {
-      this.maxParseExceptions = maxParseExceptions == null ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : maxParseExceptions;
+      this.maxParseExceptions = maxParseExceptions == null
+                                ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+                                : maxParseExceptions;
       this.maxSavedParseExceptions = maxSavedParseExceptions == null
                                      ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
                                      : maxSavedParseExceptions;
     }
-    this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
-  }
-
-  public static KafkaTuningConfig copyOf(KafkaTuningConfig config)
-  {
-    return new KafkaTuningConfig(
-        config.maxRowsInMemory,
-        config.maxBytesInMemory,
-        config.maxRowsPerSegment,
-        config.maxTotalRows,
-        config.intermediatePersistPeriod,
-        config.basePersistDirectory,
-        config.maxPendingPersists,
-        config.indexSpec,
-        true,
-        config.reportParseExceptions,
-        config.handoffConditionTimeout,
-        config.resetOffsetAutomatically,
-        config.segmentWriteOutMediumFactory,
-        config.intermediateHandoffPeriod,
-        config.logParseExceptions,
-        config.maxParseExceptions,
-        config.maxSavedParseExceptions
-    );
+    this.logParseExceptions = logParseExceptions == null
+                              ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
+                              : logParseExceptions;
   }
 
   @Override
@@ -164,7 +151,6 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   {
     return maxRowsPerSegment;
   }
-
 
   @JsonProperty
   @Override
@@ -264,28 +250,13 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return maxSavedParseExceptions;
   }
 
-  public KafkaTuningConfig withBasePersistDirectory(File dir)
+  @JsonProperty
+  public boolean isSkipSequenceNumberAvailabilityCheck()
   {
-    return new KafkaTuningConfig(
-        maxRowsInMemory,
-        maxBytesInMemory,
-        maxRowsPerSegment,
-        maxTotalRows,
-        intermediatePersistPeriod,
-        dir,
-        maxPendingPersists,
-        indexSpec,
-        true,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        resetOffsetAutomatically,
-        segmentWriteOutMediumFactory,
-        intermediateHandoffPeriod,
-        logParseExceptions,
-        maxParseExceptions,
-        maxSavedParseExceptions
-    );
+    return skipSequenceNumberAvailabilityCheck;
   }
+
+  public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
   public boolean equals(Object o)
@@ -296,23 +267,24 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    KafkaTuningConfig that = (KafkaTuningConfig) o;
+    SeekableStreamIndexTaskTuningConfig that = (SeekableStreamIndexTaskTuningConfig) o;
     return maxRowsInMemory == that.maxRowsInMemory &&
-           maxRowsPerSegment == that.maxRowsPerSegment &&
            maxBytesInMemory == that.maxBytesInMemory &&
-           Objects.equals(maxTotalRows, that.maxTotalRows) &&
+           maxRowsPerSegment == that.maxRowsPerSegment &&
            maxPendingPersists == that.maxPendingPersists &&
            reportParseExceptions == that.reportParseExceptions &&
            handoffConditionTimeout == that.handoffConditionTimeout &&
            resetOffsetAutomatically == that.resetOffsetAutomatically &&
+           skipSequenceNumberAvailabilityCheck == that.skipSequenceNumberAvailabilityCheck &&
+           logParseExceptions == that.logParseExceptions &&
+           maxParseExceptions == that.maxParseExceptions &&
+           maxSavedParseExceptions == that.maxSavedParseExceptions &&
+           Objects.equals(maxTotalRows, that.maxTotalRows) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
            Objects.equals(indexSpec, that.indexSpec) &&
            Objects.equals(segmentWriteOutMediumFactory, that.segmentWriteOutMediumFactory) &&
-           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod) &&
-           logParseExceptions == that.logParseExceptions &&
-           maxParseExceptions == that.maxParseExceptions &&
-           maxSavedParseExceptions == that.maxSavedParseExceptions;
+           Objects.equals(intermediateHandoffPeriod, that.intermediateHandoffPeriod);
   }
 
   @Override
@@ -320,8 +292,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   {
     return Objects.hash(
         maxRowsInMemory,
-        maxRowsPerSegment,
         maxBytesInMemory,
+        maxRowsPerSegment,
         maxTotalRows,
         intermediatePersistPeriod,
         basePersistDirectory,
@@ -332,6 +304,7 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         resetOffsetAutomatically,
         segmentWriteOutMediumFactory,
         intermediateHandoffPeriod,
+        skipSequenceNumberAvailabilityCheck,
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions
@@ -339,25 +312,5 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   }
 
   @Override
-  public String toString()
-  {
-    return "KafkaTuningConfig{" +
-           "maxRowsInMemory=" + maxRowsInMemory +
-           ", maxRowsPerSegment=" + maxRowsPerSegment +
-           ", maxTotalRows=" + maxTotalRows +
-           ", maxBytesInMemory=" + maxBytesInMemory +
-           ", intermediatePersistPeriod=" + intermediatePersistPeriod +
-           ", basePersistDirectory=" + basePersistDirectory +
-           ", maxPendingPersists=" + maxPendingPersists +
-           ", indexSpec=" + indexSpec +
-           ", reportParseExceptions=" + reportParseExceptions +
-           ", handoffConditionTimeout=" + handoffConditionTimeout +
-           ", resetOffsetAutomatically=" + resetOffsetAutomatically +
-           ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
-           ", intermediateHandoffPeriod=" + intermediateHandoffPeriod +
-           ", logParseExceptions=" + logParseExceptions +
-           ", maxParseExceptions=" + maxParseExceptions +
-           ", maxSavedParseExceptions=" + maxSavedParseExceptions +
-           '}';
-  }
+  public abstract String toString();
 }

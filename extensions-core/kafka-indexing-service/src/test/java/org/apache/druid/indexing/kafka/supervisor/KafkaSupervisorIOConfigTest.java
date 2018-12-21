@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
+import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
@@ -136,7 +136,7 @@ public class KafkaSupervisorIOConfigTest
 
     KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
     Properties props = new Properties();
-    KafkaIndexTask.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
+    KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
 
     Assert.assertEquals("my-topic", config.getTopic());
     Assert.assertEquals("localhost:9092", props.getProperty("bootstrap.servers"));
@@ -187,4 +187,5 @@ public class KafkaSupervisorIOConfigTest
     exception.expectMessage(CoreMatchers.containsString("bootstrap.servers"));
     mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
   }
+
 }
