@@ -21,7 +21,6 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.CoordinatorServerView;
@@ -40,7 +39,9 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -627,49 +628,23 @@ public class DatasourcesResource
   @Path("/{dataSourceName}/intervals/{interval}/serverview")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentServerview(
+  public Response getSegmentDataSourceSpecificInterval(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("interval") String interval,
       @QueryParam("partial") final boolean partial
   )
   {
-    final List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSourceName);
-    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
-    final DateTime now = DateTimes.nowUtc();
-    // init to true, reset to false only if segments inside this interval can be loaded by rules
-    boolean dropped = true;
-    for (Rule rule : rules) {
-      if (rule.appliesTo(theInterval, now)) {
-        if (rule instanceof LoadRule) {
-          dropped = false;
-        }
-        break;
-      }
-    }
-    if (dropped) {
-      return Response.ok(ImmutableMap.of(
-          "dropped",
-          true,
-          "segmentLoadInfo",
-          new ArrayList<ImmutableSegmentLoadInfo>()
-      )).build();
-    }
-
     TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
         new TableDataSource(dataSourceName)
     );
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     if (timeline == null) {
       log.debug("No timeline found for datasource[%s]", dataSourceName);
-      return Response.ok(ImmutableMap.of(
-          "dropped",
-          false,
-          "segmentLoadInfo",
-          new ArrayList<ImmutableSegmentLoadInfo>()
-      )).build();
+      return Response.ok(new ArrayList<ImmutableSegmentLoadInfo>()).build();
     }
 
     Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(theInterval);
-    FunctionalIterable<ImmutableSegmentLoadInfo> loadInfo = FunctionalIterable
+    FunctionalIterable<ImmutableSegmentLoadInfo> retval = FunctionalIterable
         .create(lookup).transformCat(
             (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
                 Iterables.transform(
@@ -678,6 +653,82 @@ public class DatasourcesResource
                         chunk.getObject().toImmutableSegmentLoadInfo()
                 )
         );
-    return Response.ok(ImmutableMap.of("dropped", false, "segmentLoadInfo", Lists.newArrayList(loadInfo))).build();
+    return Response.ok(retval).build();
+  }
+
+  @GET
+  @Path("/{dataSourceName}/handoffComplete")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response isHandOffComplete(
+      @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("interval") final String interval,
+      @QueryParam("partitionNumber") final int partitionNumber,
+      @QueryParam("version") final String version
+  )
+  {
+    try {
+      final List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSourceName);
+      final Interval theInterval = Intervals.of(interval);
+      final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
+      final DateTime now = DateTimes.nowUtc();
+      // dropped means a segment will never be handed off, i.e it completed hand off
+      // init to true, reset to false only if this segment can be loaded by rules
+      boolean dropped = true;
+      for (Rule rule : rules) {
+        if (rule.appliesTo(theInterval, now)) {
+          if (rule instanceof LoadRule) {
+            dropped = false;
+          }
+          break;
+        }
+      }
+      if (dropped) {
+        return Response.ok(true).build();
+      }
+
+      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+          new TableDataSource(dataSourceName)
+      );
+      if (timeline == null) {
+        log.debug("No timeline found for datasource[%s]", dataSourceName);
+        return Response.ok(false).build();
+      }
+
+      Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(
+          theInterval);
+      FunctionalIterable<ImmutableSegmentLoadInfo> loadInfoIterable = FunctionalIterable
+          .create(lookup).transformCat(
+              (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
+                  Iterables.transform(
+                      input.getObject(),
+                      (PartitionChunk<SegmentLoadInfo> chunk) ->
+                          chunk.getObject().toImmutableSegmentLoadInfo()
+                  )
+          );
+      if (isSegmentLoaded(loadInfoIterable, descriptor)) {
+        return Response.ok(true).build();
+      }
+
+      return Response.ok(false).build();
+    }
+    catch (Exception e) {
+      return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
+    }
+  }
+
+  static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
+  {
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
+      if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+          && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
+          && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
+          && Iterables.any(
+          segmentLoadInfo.getServers(), DruidServerMetadata::segmentReplicatable
+      )) {
+        return true;
+      }
+    }
+    return false;
   }
 }

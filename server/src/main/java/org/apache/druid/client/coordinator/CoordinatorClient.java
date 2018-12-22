@@ -23,17 +23,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
+import org.apache.druid.query.SegmentDescriptor;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.joda.time.Interval;
-
-import java.util.List;
-import java.util.Map;
 
 public class CoordinatorClient
 {
@@ -50,18 +46,18 @@ public class CoordinatorClient
     this.druidLeaderClient = druidLeaderClient;
   }
 
-
-  public Map<String, Object> fetchServerView(String dataSource, Interval interval, boolean incompleteOk)
+  public boolean isHandOffComplete(String dataSource, SegmentDescriptor descriptor)
   {
     try {
       FullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.GET,
               StringUtils.format(
-                  "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
+                  "/druid/coordinator/v1/datasources/%s/handoffComplete?interval=%s&partitionNumber=%d&version=%s",
                   dataSource,
-                  interval.toString().replace('/', '_'),
-                  incompleteOk
+                  descriptor.getInterval(),
+                  descriptor.getPartitionNumber(),
+                  descriptor.getVersion()
               )
           )
       );
@@ -73,23 +69,9 @@ public class CoordinatorClient
             response.getContent()
         );
       }
-
-      Map<String, Object> result = jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, Object>>()
-          {
-          }
-      );
-      result.computeIfPresent(
-          "segmentLoadInfo",
-          (k, v) -> jsonMapper.convertValue(
-              result.get(k),
-              new TypeReference<List<ImmutableSegmentLoadInfo>>()
-              {
-              }
-          )
-      );
-
-      return result;
+      return jsonMapper.readValue(response.getContent(), new TypeReference<Boolean>()
+      {
+      });
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

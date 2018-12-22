@@ -20,8 +20,8 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -31,7 +31,9 @@ import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -48,6 +50,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -58,6 +61,7 @@ import org.junit.Test;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -597,7 +601,7 @@ public class DatasourcesResourceTest
   }
 
   @Test
-  public void testGetSegmentServerview()
+  public void testIsHandOffComplete()
   {
     MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     Rule loadRule = new IntervalLoadRule(Intervals.of("2013-01-02T00:00:00Z/2013-01-03T00:00:00Z"), null);
@@ -618,11 +622,8 @@ public class DatasourcesResourceTest
     EasyMock.replay(databaseRuleManager);
 
     String interval1 = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
-    Response response1 = datasourcesResource.getSegmentServerview("dataSource1", interval1, true);
-    Assert.assertEquals(
-        ImmutableMap.of("dropped", true, "segmentLoadInfo", new ArrayList<ImmutableSegmentLoadInfo>()),
-        response1.getEntity()
-    );
+    Response response1 = datasourcesResource.isHandOffComplete("dataSource1", interval1, 1, "v1");
+    Assert.assertTrue((boolean) response1.getEntity());
 
     EasyMock.verify(databaseRuleManager);
 
@@ -637,27 +638,15 @@ public class DatasourcesResourceTest
     EasyMock.replay(inventoryView, databaseRuleManager);
 
     String interval2 = "2013-01-02T01:00:00Z/2013-01-02T02:00:00Z";
-    Response response2 = datasourcesResource.getSegmentServerview("dataSource1", interval2, true);
-    Assert.assertEquals(
-        ImmutableMap.of("dropped", false, "segmentLoadInfo", new ArrayList<ImmutableSegmentLoadInfo>()),
-        response2.getEntity()
-    );
+    Response response2 = datasourcesResource.isHandOffComplete("dataSource1", interval2, 1, "v1");
+    Assert.assertFalse((boolean) response2.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager);
 
     // test isn't dropped and timeline exist
     String interval3 = "2013-01-02T02:00:00Z/2013-01-02T03:00:00Z";
-    SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(new DataSegment(
-        "dataSource1",
-        Intervals.of(interval3),
-        "v1",
-        null,
-        null,
-        null,
-        null,
-        1,
-        1L
-    ));
+    SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval3), "v1", 1));
+    segmentLoadInfo.addServer(createHistoricalServerMetadata("test"));
     VersionedIntervalTimeline<String, SegmentLoadInfo> timeline = new VersionedIntervalTimeline<String, SegmentLoadInfo>(
         null)
     {
@@ -683,14 +672,182 @@ public class DatasourcesResourceTest
             .once();
     EasyMock.replay(inventoryView, databaseRuleManager);
 
-    Response response3 = datasourcesResource.getSegmentServerview("dataSource1", interval3, true);
-    List<ImmutableSegmentLoadInfo> loadInfoList = new ArrayList<>();
-    loadInfoList.add(segmentLoadInfo.toImmutableSegmentLoadInfo());
-    Assert.assertEquals(
-        ImmutableMap.of("dropped", false, "segmentLoadInfo", loadInfoList),
-        response3.getEntity()
-    );
+    Response response3 = datasourcesResource.isHandOffComplete("dataSource1", interval3, 1, "v1");
+    Assert.assertTrue((boolean) response3.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager);
+  }
+
+  @Test
+  public void testSegmentLoadChecksForVersion()
+  {
+    Interval interval = Intervals.of(
+        "2011-04-01/2011-04-02"
+    );
+    Assert.assertFalse(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 2),
+                    Sets.newHashSet(createHistoricalServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(interval, "v2", 2)
+        )
+    );
+
+    Assert.assertTrue(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v2", 2),
+                    Sets.newHashSet(createHistoricalServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(interval, "v1", 2)
+        )
+    );
+
+    Assert.assertTrue(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 2),
+                    Sets.newHashSet(createHistoricalServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(interval, "v1", 2)
+        )
+    );
+
+  }
+
+  @Test
+  public void testSegmentLoadChecksForAssignableServer()
+  {
+    Interval interval = Intervals.of(
+        "2011-04-01/2011-04-02"
+    );
+    Assert.assertTrue(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 2),
+                    Sets.newHashSet(createHistoricalServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(interval, "v1", 2)
+        )
+    );
+
+    Assert.assertFalse(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 2),
+                    Sets.newHashSet(createRealtimeServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(interval, "v1", 2)
+        )
+    );
+  }
+
+  @Test
+  public void testSegmentLoadChecksForPartitionNumber()
+  {
+    Interval interval = Intervals.of(
+        "2011-04-01/2011-04-02"
+    );
+    Assert.assertTrue(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 1),
+                    Sets.newHashSet(createHistoricalServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(interval, "v1", 1)
+        )
+    );
+
+    Assert.assertFalse(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(interval, "v1", 1),
+                    Sets.newHashSet(createHistoricalServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(interval, "v1", 2)
+        )
+    );
+
+  }
+
+  @Test
+  public void testSegmentLoadChecksForInterval()
+  {
+
+    Assert.assertFalse(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(Intervals.of("2011-04-01/2011-04-02"), "v1", 1),
+                    Sets.newHashSet(createHistoricalServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(Intervals.of("2011-04-01/2011-04-03"), "v1", 1)
+        )
+    );
+
+    Assert.assertTrue(
+        DatasourcesResource.isSegmentLoaded(
+            Collections.singletonList(
+                new ImmutableSegmentLoadInfo(
+                    createSegment(Intervals.of("2011-04-01/2011-04-04"), "v1", 1),
+                    Sets.newHashSet(createHistoricalServerMetadata("a"))
+                )
+            ),
+            new SegmentDescriptor(Intervals.of("2011-04-02/2011-04-03"), "v1", 1)
+        )
+    );
+  }
+
+  private DruidServerMetadata createRealtimeServerMetadata(String name)
+  {
+    return createServerMetadata(name, ServerType.REALTIME);
+  }
+
+  private DruidServerMetadata createHistoricalServerMetadata(String name)
+  {
+    return createServerMetadata(name, ServerType.HISTORICAL);
+  }
+
+  private DruidServerMetadata createServerMetadata(String name, ServerType type)
+  {
+    return new DruidServerMetadata(
+        name,
+        name,
+        null,
+        10000,
+        type,
+        "tier",
+        1
+    );
+  }
+
+  private DataSegment createSegment(Interval interval, String version, int partitionNumber)
+  {
+    return new DataSegment(
+        "test_ds",
+        interval,
+        version,
+        null,
+        null,
+        null,
+        new NumberedShardSpec(partitionNumber, 100),
+        0, 0
+    );
   }
 }
