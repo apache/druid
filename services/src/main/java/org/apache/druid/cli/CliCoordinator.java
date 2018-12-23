@@ -233,10 +233,14 @@ public class CliCoordinator extends ServerRunnable
               ZkPathsConfig zkPaths
           )
           {
+            int poolSize = Integer.parseInt(properties.getProperty(
+                "druid.coordinator.loadqueuepeon.threadPoolSize",
+                "1"
+            ));
             return new LoadQueueTaskMaster(
                 curator,
                 jsonMapper,
-                factory.create(1, "Master-PeonExec--%d"),
+                factory.create(poolSize, "Master-PeonExec--%d"),
                 Executors.newSingleThreadExecutor(),
                 config,
                 httpClient,

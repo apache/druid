@@ -223,24 +223,26 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   private void processSegmentChangeRequest()
   {
-    if (currentlyProcessing != null) {
-      log.debug(
-          "Server[%s] skipping processSegmentChangeRequest because something is currently loading[%s].",
-          basePath,
-          currentlyProcessing.getSegmentIdentifier()
-      );
+    synchronized (lock) {
+      if (currentlyProcessing != null) {
+        log.debug(
+            "Server[%s] skipping processSegmentChangeRequest because something is currently loading[%s].",
+            basePath,
+            currentlyProcessing.getSegmentIdentifier()
+        );
 
-      return;
-    }
+        return;
+      }
 
-    if (!segmentsToDrop.isEmpty()) {
-      currentlyProcessing = segmentsToDrop.firstEntry().getValue();
-      log.debug("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
-    } else if (!segmentsToLoad.isEmpty()) {
-      currentlyProcessing = segmentsToLoad.firstEntry().getValue();
-      log.debug("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
-    } else {
-      return;
+      if (!segmentsToDrop.isEmpty()) {
+        currentlyProcessing = segmentsToDrop.firstEntry().getValue();
+        log.debug("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      } else if (!segmentsToLoad.isEmpty()) {
+        currentlyProcessing = segmentsToLoad.firstEntry().getValue();
+        log.debug("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      } else {
+        return;
+      }
     }
 
     try {
