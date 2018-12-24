@@ -45,7 +45,6 @@ import org.apache.zookeeper.data.ACL;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.function.Function;
 
 /**
  */
@@ -83,21 +82,19 @@ public class CuratorModule implements Module
     }
 
     RetryPolicy retryPolicy;
-    if (config.getTerminateDruidProcess()) {
-      final Function<Void, Void> exitFunction = new Function<Void, Void>()
-      {
-        @Override
-        public Void apply(Void someVoid)
-        {
+    if (config.getTerminateDruidProcessOnConnectFail()) {
+      final Runnable exitRunner = () -> {
+        try {
           log.error("Zookeeper can't be reached, forcefully stopping lifecycle...");
           lifecycle.stop();
           log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
+        }
+        finally {
           System.exit(1);
-          return null;
         }
       };
       retryPolicy = new BoundedExponentialBackoffRetryWithQuit(
-          exitFunction,
+          exitRunner,
           BASE_SLEEP_TIME_MS,
           MAX_SLEEP_TIME_MS,
           MAX_RETRIES
@@ -155,20 +152,18 @@ public class CuratorModule implements Module
     }
 
     RetryPolicy retryPolicy;
-    if (config.getTerminateDruidProcess()) {
-      final Function<Void, Void> exitFunction = new Function<Void, Void>()
-      {
-        @Override
-        public Void apply(Void aVoid)
-        {
+    if (config.getTerminateDruidProcessOnConnectFail()) {
+      final Runnable exitRunner = () -> {
+        try {
           log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
+        }
+        finally {
           System.exit(1);
-          return null;
         }
       };
 
       retryPolicy = new BoundedExponentialBackoffRetryWithQuit(
-          exitFunction,
+          exitRunner,
           BASE_SLEEP_TIME_MS,
           MAX_SLEEP_TIME_MS,
           MAX_RETRIES

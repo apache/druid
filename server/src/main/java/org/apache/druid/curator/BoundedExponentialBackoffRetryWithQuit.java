@@ -23,24 +23,22 @@ import org.apache.curator.RetrySleeper;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.druid.java.util.common.logger.Logger;
 
-import java.util.function.Function;
-
 public class BoundedExponentialBackoffRetryWithQuit extends BoundedExponentialBackoffRetry
 {
 
   private static final Logger log = new Logger(BoundedExponentialBackoffRetryWithQuit.class);
 
-  private final Function<Void, Void> exitFunction;
+  private final Runnable exitRunner;
 
   public BoundedExponentialBackoffRetryWithQuit(
-      Function<Void, Void> exitFunction,
+      Runnable exitRunner,
       int baseSleepTimeMs,
       int maxSleepTimeMs,
       int maxRetries
   )
   {
     super(baseSleepTimeMs, maxSleepTimeMs, maxRetries);
-    this.exitFunction = exitFunction;
+    this.exitRunner = exitRunner;
     log.info("BoundedExponentialBackoffRetryWithQuit Retry Policy selected.");
   }
 
@@ -51,7 +49,7 @@ public class BoundedExponentialBackoffRetryWithQuit extends BoundedExponentialBa
     boolean shouldRetry = super.allowRetry(retryCount, elapsedTimeMs, sleeper);
     if (!shouldRetry) {
       log.warn("Since Zookeeper can't be reached after retries exhausted, calling exit function...");
-      exitFunction.apply(null);
+      exitRunner.run();
     }
     return shouldRetry;
   }

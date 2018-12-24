@@ -28,8 +28,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.function.Function;
-
 public final class BoundedExponentialBackoffRetryWithQuitTest
 {
 
@@ -71,15 +69,10 @@ public final class BoundedExponentialBackoffRetryWithQuitTest
     EasyMock.expectLastCall().andDelegateTo(actualNoop);
     EasyMock.replay(noop);
 
-    Function<Void, Void> exitFunction = new Function<Void, Void>()
-    {
-      @Override
-      public Void apply(Void aVoid)
-      {
-        log.info("Zookeeper retries exhausted, exiting...");
-        noop.stop();
-        throw new RuntimeException("Simulated exit");
-      }
+    Runnable exitFunction = () -> {
+      log.info("Zookeeper retries exhausted, exiting...");
+      noop.stop();
+      throw new RuntimeException("Simulated exit");
     };
 
     TestingServer server = new TestingServer();
