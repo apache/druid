@@ -17,16 +17,34 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
 <Configuration status="WARN">
-    <Appenders>
-        <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
-        </Console>
-    </Appenders>
-    <Loggers>
-        <Root level="info">
-            <AppenderRef ref="Console"/>
-        </Root>
-    </Loggers>
+<Properties>
+    <property name="base_path">log</property>
+    -->
+    <property name="rolling_max">50</property>
+    <property name="every_file_size">256MB</property>
+</Properties>
+
+<Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+        <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+    </Console>
+
+    <RollingFile name="RollingFile" fileName="${base_path}/${sys:log.path.prefix}.log"
+                 filePattern="${base_path}/%d{yyyy-MM}/${sys:log.path.prefix}-%d{yyyy-MM-dd}-%i.log.gz">
+        <PatternLayout>
+            <Pattern>%d{ISO8601} %p [%t] %c - %m%n</Pattern>
+        </PatternLayout>
+        <Policies>
+            <TimeBasedTriggeringPolicy interval="1"/>
+            <SizeBasedTriggeringPolicy size="${every_file_size}"/>
+        </Policies>
+        <DefaultRolloverStrategy max="${rolling_max}"/>
+    </RollingFile>
+</Appenders>
+<Loggers>
+    <Root level="info">
+        <AppenderRef ref="RollingFile"/>
+    </Root>
+</Loggers>
 </Configuration>
