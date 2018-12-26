@@ -637,6 +637,7 @@ public class NewestSegmentFirstPolicyTest
         0,
         targetCompactionSizeBytes,
         targetCompactionSizeBytes,
+        null,
         numTargetCompactionSegments,
         skipOffsetFromLatest,
         null,
