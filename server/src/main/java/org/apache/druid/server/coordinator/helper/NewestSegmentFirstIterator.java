@@ -405,7 +405,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
   )
   {
     final List<Interval> nonNullSkipIntervals = skipIntervals == null
-                                                ? new ArrayList<>()
+                                                ? new ArrayList<>(1)
                                                 : new ArrayList<>(skipIntervals.size());
 
     if (skipIntervals != null) {

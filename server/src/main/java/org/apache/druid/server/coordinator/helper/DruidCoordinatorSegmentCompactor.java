@@ -88,7 +88,8 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             indexingServiceClient.getPendingTasks(),
             indexingServiceClient.getWaitingTasks()
         );
-        final Map<String, List<Interval>> compactTaskIntervals = new HashMap<>();
+        // dataSource -> list of intervals of compact tasks
+        final Map<String, List<Interval>> compactTaskIntervals = new HashMap<>(compactionConfigList.size());
         for (TaskStatusPlus status : compactTasks) {
           final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());
           if (response == null) {
