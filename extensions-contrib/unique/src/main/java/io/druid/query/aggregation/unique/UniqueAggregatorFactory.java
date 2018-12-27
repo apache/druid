@@ -21,9 +21,9 @@ package io.druid.query.aggregation.unique;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Ordering;
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.StringUtils;
-import io.druid.java.util.common.guava.Comparators;
 import io.druid.query.aggregation.AggregateCombiner;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -48,6 +48,8 @@ import java.util.Objects;
 
 public class UniqueAggregatorFactory extends AggregatorFactory
 {
+  static final Comparator COMPARATOR = Ordering.from(Comparator.comparingInt(o -> ((ImmutableRoaringBitmap) o).getCardinality()))
+                                               .nullsFirst();
   private static final int DEFAULT_BITMAP_BYTES = 512 * 1024;
   private static final int DEFAULT_MIN_BITMAP_BYTES = 1024;
   private static final int DEFAULT_MAX_BITMAP_BYTES = 256 * 1024 * 1024;
@@ -93,7 +95,7 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return Comparators.naturalNullsFirst();
+    return COMPARATOR;
   }
 
   @Override
@@ -124,6 +126,9 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   @Override
   public ImmutableRoaringBitmap deserialize(Object object)
   {
+    if (object == null) {
+      return new MutableRoaringBitmap();
+    }
     final ByteBuffer buffer;
 
     if (object instanceof byte[]) {
