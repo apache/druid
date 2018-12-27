@@ -19,10 +19,8 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
 import org.joda.time.Period;
