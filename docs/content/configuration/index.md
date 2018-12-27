@@ -806,7 +806,7 @@ A description of the compaction config is:
 |`keepSegmentGranularity`|Set [keepSegmentGranularity](../ingestion/compaction.html) to true for compactionTask.|no (default = true)|
 |`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compact task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Total input segment size of a compactionTask.|no (default = 419430400)|
-|`targetCompactionSizeBytes`|The target segment size of compaction. The actual size of a compact segment might be slightly larger or smaller than this value.|no (default = 419430400)|
+|`targetCompactionSizeBytes`|The target segment size after compaction. The actual size of a compact segment might be slightly larger or smaller than this value.|no (default = 419430400)|
 |`maxNumSegmentsToCompact`|Max number of segments to compact together.|no (default = 150)|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
 |`tuningConfig`|Tuning config for compact tasks. See below [Compact Task TuningConfig](#compact-task-tuningconfig).|no|
@@ -820,7 +820,12 @@ An example of compaction config is:
 }
 ```
 
-For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large value to avoid frequent compact task failures.
+Note that compact tasks can fail if their locks are revoked by other tasks of higher priorities.
+Since realtime tasks have a higher priority than compact task by default,
+it can be problematic if there're frequent conflicts between compact tasks and realtime tasks.
+If this is the case, coordinator's automatic compaction might be stuck because of the frequent compact task fails.
+This kind of problem may happen especially in Kafka/Kinesis indexing systems which allow late data arrival.
+If you see this problem, it's recommended to set `skipOffsetFromLatest` to some large enough value to avoid such conflicts between compact tasks and realtime tasks.
 
 ## Overlord
 

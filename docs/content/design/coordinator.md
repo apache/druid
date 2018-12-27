@@ -86,17 +86,30 @@ Once a compact task fails, the coordinator simply finds the segments for the int
 
 #### Newest Segment First Policy
 
-This policy searches the segments of _all dataSources_ in inverse order of their intervals.
-For example, let me assume there are 3 dataSources (`ds1`, `ds2`, `ds3`) and 5 segments (`seg_ds1_2017-10-01_2017-10-02`, `seg_ds1_2017-11-01_2017-11-02`, `seg_ds2_2017-08-01_2017-08-02`, `seg_ds3_2017-07-01_2017-07-02`, `seg_ds3_2017-12-01_2017-12-02`) for those dataSources.
-The segment name indicates its dataSource and interval. The search result of newestSegmentFirstPolicy is [`seg_ds3_2017-12-01_2017-12-02`, `seg_ds1_2017-11-01_2017-11-02`, `seg_ds1_2017-10-01_2017-10-02`, `seg_ds2_2017-08-01_2017-08-02`, `seg_ds3_2017-07-01_2017-07-02`].
+At every coordinator run, this policy searches segments to compact by iterating segments from the latest to the oldest.
+Once it finds the latest segment among all dataSources, it checks the segment is _compactible_ with other segments of the same dataSource which have the same or abutting intervals.
+Note that segments are compactible if their total size is smaller than or equal to the configured `inputSegmentSizeBytes`.
 
-Every run, this policy starts searching from the (very latest interval - [skipOffsetFromLatest](../configuration/index.html#compaction-dynamic-configuration)).
-This is to handle the late segments ingested to realtime dataSources.
+Let me give you some more details with an example. Let me assume we have two dataSources (`foo`, `bar`)
+and 5 segments (`foo_2017-10-01/2017-11-01`, `foo_2017-11-01/2017-12-01`, `bar_2017-08-01/2017-09-01`, `bar_2017-09-01/2017-10-01`, `bar_2017-10-01/2017-11-01`).
+The segment name indicates its dataSource and interval, and each segment has the same size of 10 MB.
+When `inputSegmentSizeBytes` is 20 MB, this policy first returns two segments (`foo_2017-11-01/2017-12-01` and `foo_2017-10-01/2017-11-01`) to compact because
+they are the latest segment and its abutting segment, and their total size is equal to `inputSegmentSizeBytes`.
+
+If the coordinator has enough task slots for compaction, this policy would continue searching the next segments and return
+`bar_2017-10-01/2017-11-01` and `bar_2017-09-01/2017-10-01`.
+Note that `bar_2017-08-01/2017-09-01` is not compacted together even though it abuts to `bar_2017-09-01/2017-10-01`.
+This is because the total segment size to compact would be greater than `inputSegmentSizeBytes` if it's included.
+
+The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.html#compaction-dynamic-configuration)).
+If this is set, this policy will ignore the segments failling into the interval of (the end time of the very latest segment - `skipOffsetFromLatest`).
+This is to avoid conflicts between compact tasks and realtime tasks.
+Note that realtime tasks have a higher priority than compact tasks by default. They would revoke compact tasks if their intervals overlap each other.
 
 <div class="note caution">
 This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
-and their total size exceeds <a href="../configuration/index.html#compaction-dynamic-configuration">targetCompactionSizebytes</a>.
-If it finds such segments, it simply skips compacting them.
+and their total size exceeds <a href="../configuration/index.html#compaction-dynamic-configuration">inputSegmentSizeBytes</a>.
+If it finds such segments, it simply skips them.
 </div>
 
 ### The Coordinator Console

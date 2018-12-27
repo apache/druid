@@ -47,7 +47,7 @@ Compaction tasks merge all segments of the given interval. The syntax is:
 |`dataSource`|DataSource name to be compacted|Yes|
 |`interval`|Interval of segments to be compacted|Yes|
 |`dimensions`|Custom dimensionsSpec. compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
-|`keepSegmentGranularity`|If set to true, compactionTask will keep the time chunk boundaries and merge segments only if they fall into the same time chunk.|No (default = true)|
+|`keepSegmentGranularity`|If set to true, compactTask will keep the time chunk boundaries and merge segments only if they fall into the same time chunk.|No (default = true)|
 |`targetCompactionSizeBytes`|Target segment size after comapction. Cannot be used with `targetPartitionSize`, `maxTotalRows`, and `numShards` in tuningConfig.|No|
 |`tuningConfig`|[Index task tuningConfig](../ingestion/native_tasks.html#tuningconfig)|No|
 |`context`|[Task context](../ingestion/locking-and-priority.html#task-context)|No|
