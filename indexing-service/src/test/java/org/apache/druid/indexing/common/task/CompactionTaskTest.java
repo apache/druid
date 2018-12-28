@@ -762,7 +762,7 @@ public class CompactionTaskTest
       assertIngestionSchema(
           ingestionSpecs,
           expectedDimensionsSpec,
-          Lists.newArrayList(customMetricsSpec),
+          Arrays.asList(customMetricsSpec),
           SEGMENT_INTERVALS
       );
     } else {
@@ -770,7 +770,7 @@ public class CompactionTaskTest
       assertIngestionSchema(
           ingestionSpecs,
           expectedDimensionsSpec,
-          Lists.newArrayList(customMetricsSpec),
+          Arrays.asList(customMetricsSpec),
           Collections.singletonList(COMPACTION_INTERVAL)
       );
     }
