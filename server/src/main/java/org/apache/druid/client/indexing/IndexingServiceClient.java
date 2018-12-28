@@ -61,4 +61,7 @@ public interface IndexingServiceClient
 
   @Nullable
   TaskStatusPlus getLastCompleteTask();
+
+  @Nullable
+  TaskPayloadResponse getTaskPayload(String taskId);
 }

@@ -78,7 +78,8 @@ public class NewestSegmentFirstPolicyTest
                 new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     assertCompactSegmentIntervals(
@@ -102,7 +103,8 @@ public class NewestSegmentFirstPolicyTest
                 new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     assertCompactSegmentIntervals(
@@ -178,7 +180,8 @@ public class NewestSegmentFirstPolicyTest
                 // larger gap than SegmentCompactorUtil.LOOKUP_PERIOD (1 day)
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00"), segmentPeriod)
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     assertCompactSegmentIntervals(
@@ -211,7 +214,8 @@ public class NewestSegmentFirstPolicyTest
                 // larger gap than SegmentCompactorUtil.LOOKUP_PERIOD (1 day)
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00"), segmentPeriod)
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     assertCompactSegmentIntervals(
@@ -258,7 +262,8 @@ public class NewestSegmentFirstPolicyTest
                     DEFAULT_NUM_SEGMENTS_PER_SHARD
                 )
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     Interval lastInterval = null;
@@ -313,7 +318,8 @@ public class NewestSegmentFirstPolicyTest
                     80
                 )
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     Interval lastInterval = null;
@@ -392,7 +398,8 @@ public class NewestSegmentFirstPolicyTest
                     150
                 )
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -416,7 +423,8 @@ public class NewestSegmentFirstPolicyTest
                 new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     assertCompactSegmentIntervals(
@@ -449,7 +457,8 @@ public class NewestSegmentFirstPolicyTest
                     1
                 )
             )
-        )
+        ),
+        Collections.emptyMap()
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -481,7 +490,8 @@ public class NewestSegmentFirstPolicyTest
     );
     final CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(maxSizeOfSegmentsToCompact, 100, new Period("P0D"))),
-        ImmutableMap.of(DATA_SOURCE, timeline)
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
     );
 
     final List<DataSegment> expectedSegmentsToCompact = timeline
@@ -510,7 +520,8 @@ public class NewestSegmentFirstPolicyTest
 
     final CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, 100, new Period("P1D"))),
-        ImmutableMap.of(DATA_SOURCE, timeline)
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -530,10 +541,51 @@ public class NewestSegmentFirstPolicyTest
 
     final CompactionSegmentIterator iterator = policy.reset(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, 100, new Period("P1D"))),
-        ImmutableMap.of(DATA_SOURCE, timeline)
+        ImmutableMap.of(DATA_SOURCE, timeline),
+        Collections.emptyMap()
     );
 
     Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testWithSkipIntervals()
+  {
+    final Period segmentPeriod = new Period("PT1H");
+    final CompactionSegmentIterator iterator = policy.reset(
+        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, 100, new Period("P1D"))),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            createTimeline(
+                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
+                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
+            )
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE,
+            ImmutableList.of(
+                Intervals.of("2017-11-16T00:00:00/2017-11-17T00:00:00"),
+                Intervals.of("2017-11-15T00:00:00/2017-11-15T20:00:00"),
+                Intervals.of("2017-11-13T00:00:00/2017-11-14T01:00:00")
+            )
+        )
+    );
+
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-15T20:00:00/2017-11-15T21:00:00"),
+        Intervals.of("2017-11-15T23:00:00/2017-11-16T00:00:00"),
+        false
+    );
+
+    assertCompactSegmentIntervals(
+        iterator,
+        segmentPeriod,
+        Intervals.of("2017-11-14T01:00:00/2017-11-14T02:00:00"),
+        Intervals.of("2017-11-14T23:00:00/2017-11-15T00:00:00"),
+        true
+    );
   }
 
   private static void assertCompactSegmentIntervals(
