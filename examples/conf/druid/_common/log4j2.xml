@@ -20,7 +20,6 @@
 <Configuration status="WARN">
 <Properties>
     <property name="base_path">log</property>
-    -->
     <property name="rolling_max">50</property>
     <property name="every_file_size">256MB</property>
 </Properties>
@@ -44,7 +43,7 @@
 </Appenders>
 <Loggers>
     <Root level="info">
-        <AppenderRef ref="RollingFile"/>
+        <AppenderRef ref="${sys:log.appender.ref}"/>
     </Root>
 </Loggers>
 </Configuration>
