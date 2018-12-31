@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.utils;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -32,7 +33,9 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.QueryResourceTestClient;
+import org.apache.druid.testing.clients.SqlResourceTestClient;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +43,7 @@ public class TestQueryHelper
 {
   public static Logger LOG = new Logger(TestQueryHelper.class);
   private final QueryResourceTestClient queryClient;
+  private final SqlResourceTestClient sqlClient;
   private final ObjectMapper jsonMapper;
   private final String broker;
   private final String brokerTLS;
@@ -50,11 +54,13 @@ public class TestQueryHelper
   TestQueryHelper(
       ObjectMapper jsonMapper,
       QueryResourceTestClient queryClient,
+      SqlResourceTestClient sqlClient,
       IntegrationTestingConfig config
   )
   {
     this.jsonMapper = jsonMapper;
     this.queryClient = queryClient;
+    this.sqlClient = sqlClient;
     this.broker = config.getBrokerUrl();
     this.brokerTLS = config.getBrokerTLSUrl();
     this.router = config.getRouterUrl();
@@ -135,6 +141,62 @@ public class TestQueryHelper
   private String getQueryURL(String schemeAndHost)
   {
     return StringUtils.format("%s/druid/v2?pretty", schemeAndHost);
+  }
+
+  public void testSqlQueriesFromFile(String filePath, int timesToRun) throws Exception
+  {
+    testSqlQueriesFromFile(getSqlQueryURL(broker), filePath, timesToRun);
+    testSqlQueriesFromFile(getSqlQueryURL(brokerTLS), filePath, timesToRun);
+    testSqlQueriesFromFile(getSqlQueryURL(router), filePath, timesToRun);
+    testSqlQueriesFromFile(getSqlQueryURL(routerTLS), filePath, timesToRun);
+  }
+
+  private void testSqlQueriesFromFile(String url, String filePath, int timesToRun) throws IOException
+  {
+    LOG.info("Starting query tests for [%s]", filePath);
+    List<SqlQueryWithResults> queries =
+        jsonMapper.readValue(
+            TestQueryHelper.class.getResourceAsStream(filePath),
+            new TypeReference<List<SqlQueryWithResults>>()
+            {
+            }
+        );
+    testSqlQueries(url, queries, timesToRun);
+  }
+
+  private void testSqlQueries(String url, List<SqlQueryWithResults> queries, int timesToRun)
+      throws JsonProcessingException
+  {
+    LOG.info("Running queries, url [%s]", url);
+    for (int i = 0; i < timesToRun; i++) {
+      LOG.info("Starting Iteration %d", i);
+
+      boolean failed = false;
+      for (SqlQueryWithResults queryWithResult : queries) {
+        LOG.info("Running Query %s", queryWithResult.getSqlQuery());
+        List<Map<String, Object>> result = sqlClient.query(url, queryWithResult.getSqlQuery());
+        if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults())) {
+          LOG.error(
+              "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
+              queryWithResult.getSqlQuery(),
+              jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
+              jsonMapper.writeValueAsString(result)
+          );
+          failed = true;
+        } else {
+          LOG.info("Results Verified for Query %s", queryWithResult.getSqlQuery());
+        }
+      }
+
+      if (failed) {
+        throw new ISE("one or more queries failed");
+      }
+    }
+  }
+
+  private String getSqlQueryURL(String schemeAndHost)
+  {
+    return StringUtils.format("%s/druid/v2/sql", schemeAndHost);
   }
 
   @SuppressWarnings("unchecked")
