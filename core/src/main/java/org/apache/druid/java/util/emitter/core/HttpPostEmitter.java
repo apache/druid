@@ -927,7 +927,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
 
   public ConcurrentTimeCounter getFailedSendingTimeCounter()
   {
-    return emittingThread.successfulSendingTimeCounter;
+    return emittingThread.failedSendingTimeCounter;
   }
 
   @VisibleForTesting
