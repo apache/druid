@@ -382,6 +382,8 @@ public class EmitterTest
     final UnitEvent event2 = new UnitEvent("test", 2);
     emitter = sizeBasedEmitter(1);
     Assert.assertEquals(0, emitter.getTotalEmittedEvents());
+    Assert.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCountAndReset());
+    Assert.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCountAndReset());
 
     httpClient.setGoHandler(
         new GoHandler()
@@ -401,6 +403,8 @@ public class EmitterTest
 
     // Failed to emit the first event.
     Assert.assertEquals(0, emitter.getTotalEmittedEvents());
+    Assert.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCountAndReset());
+    Assert.assertTrue(emitter.getFailedSendingTimeCounter().getTimeSumAndCountAndReset() > 0);
 
     httpClient.setGoHandler(
         new GoHandler()
@@ -423,6 +427,8 @@ public class EmitterTest
 
     // Succeed to emit both events.
     Assert.assertEquals(2, emitter.getTotalEmittedEvents());
+    Assert.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCountAndReset() > 0);
+    Assert.assertTrue(emitter.getFailedSendingTimeCounter().getTimeSumAndCountAndReset() > 0);
 
     Assert.assertTrue(httpClient.succeeded());
   }
@@ -491,6 +497,8 @@ public class EmitterTest
     final AtomicInteger counter = new AtomicInteger();
     emitter = manualFlushEmitterWithBatchSize(1024 * 1024);
     Assert.assertEquals(0, emitter.getTotalEmittedEvents());
+    Assert.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCountAndReset());
+    Assert.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCountAndReset());
 
     httpClient.setGoHandler(
         new GoHandler()
@@ -522,10 +530,14 @@ public class EmitterTest
     }
     waitForEmission(emitter, 1);
     Assert.assertEquals(2, emitter.getTotalEmittedEvents());
+    Assert.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCountAndReset() > 0);
+    Assert.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCountAndReset());
 
     emitter.flush();
     waitForEmission(emitter, 2);
     Assert.assertEquals(4, emitter.getTotalEmittedEvents());
+    Assert.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCountAndReset() > 0);
+    Assert.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCountAndReset());
     closeNoFlush(emitter);
     Assert.assertTrue(httpClient.succeeded());
   }
