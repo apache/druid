@@ -34,7 +34,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public static final String TRUST_STORE_PASSWORD_KEY = "ssl.truststore.password";
   public static final String KEY_STORE_PASSWORD_KEY = "ssl.keystore.password";
   public static final String KEY_PASSWORD_KEY = "ssl.key.password";
-  public static final long DEFAULT_POLL_TIMEOUT = 100;
+  public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 100;
 
   private final Map<String, Object> consumerProperties;
   private final long pollTimeout;
@@ -75,7 +75,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
         StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
-    this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT;
+    this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
     this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : false;
   }
 
