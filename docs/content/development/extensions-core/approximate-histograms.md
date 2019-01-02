@@ -135,6 +135,8 @@ The outlier handling mode specifies what should be done with values outside of t
 `overflow`: A count of outlier values will be tracked by the histogram, available in the `lowerOutlierCount` and `upperOutlierCount` fields.
 `clip`: Outlier values will be clipped to the `lowerLimit` or the `upperLimit` and included in the histogram.
 
+If you don't care about outliers, `ignore` is the cheapest option performance-wise. There is currently no difference in storage size among the modes.
+
 ### Output fields
 
 The histogram aggregator's output object has the following fields:

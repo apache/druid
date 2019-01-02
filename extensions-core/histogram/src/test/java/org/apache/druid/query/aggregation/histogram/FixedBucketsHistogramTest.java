@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.histogram;
 
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
-import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.junit.Assert;
 import org.junit.Test;
@@ -90,15 +89,6 @@ public class FixedBucketsHistogramTest
       doubles[i] = VALUES2[i];
     }
 
-    Percentile percentile = new Percentile();
-    percentile.setData(doubles);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P50: " + quantiles[1]);
-    log.debug("MY-P98: " + quantiles[2]);
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
-
     Assert.assertArrayEquals(
         new float[]{2.5f, 20.0f, 46.76f},
         quantiles,
@@ -125,18 +115,6 @@ public class FixedBucketsHistogramTest
     }
 
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 25.0f, 50.0f, 98f});
-
-    Percentile percentile = new Percentile();
-    percentile.setData(values);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P25: " + quantiles[1]);
-    log.debug("MY-P50: " + quantiles[2]);
-    log.debug("MY-P98: " + quantiles[3]);
-
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P25: " + percentile.evaluate(25));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
 
     Assert.assertArrayEquals(
         new float[]{125.04082f, 248.84348f, 501.67166f, 979.7799f},
@@ -169,18 +147,6 @@ public class FixedBucketsHistogramTest
       h.add(val);
     }
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 25.0f, 50.0f, 98f});
-    Percentile percentile = new Percentile();
-    percentile.setData(values);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P25: " + quantiles[1]);
-    log.debug("MY-P50: " + quantiles[2]);
-    log.debug("MY-P98: " + quantiles[3]);
-
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P25: " + percentile.evaluate(25));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
-
 
     Assert.assertArrayEquals(
         new float[]{38565.324f, 43297.95f, 50091.902f, 70509.125f},
@@ -207,15 +173,6 @@ public class FixedBucketsHistogramTest
       doubles[i] = VALUES2[i];
     }
 
-    Percentile percentile = new Percentile();
-    percentile.setData(doubles);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P50: " + quantiles[1]);
-    log.debug("MY-P98: " + quantiles[2]);
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
-
     Assert.assertArrayEquals(
         new float[]{3.0f, 20.0f, 47.52f},
         quantiles,
@@ -240,15 +197,6 @@ public class FixedBucketsHistogramTest
     for (int i = 0; i < doubles.length; i++) {
       doubles[i] = VALUES3[i];
     }
-
-    Percentile percentile = new Percentile();
-    percentile.setData(doubles);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P50: " + quantiles[1]);
-    log.debug("MY-P98: " + quantiles[2]);
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
 
     Assert.assertArrayEquals(
         new float[]{14.857142f, 20.0f, 28.4f},
@@ -275,15 +223,6 @@ public class FixedBucketsHistogramTest
       doubles[i] = VALUES4[i];
     }
 
-    Percentile percentile = new Percentile();
-    percentile.setData(doubles);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P50: " + quantiles[1]);
-    log.debug("MY-P98: " + quantiles[2]);
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
-
     Assert.assertArrayEquals(
         new float[]{-8.5f, 20.0f, 67.6f},
         quantiles,
@@ -308,15 +247,6 @@ public class FixedBucketsHistogramTest
     for (int i = 0; i < doubles.length; i++) {
       doubles[i] = VALUES5[i];
     }
-
-    Percentile percentile = new Percentile();
-    percentile.setData(doubles);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P50: " + quantiles[1]);
-    log.debug("MY-P98: " + quantiles[2]);
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
 
     Assert.assertArrayEquals(
         new float[]{2.125f, 5.5f, 9.82f},
@@ -343,15 +273,6 @@ public class FixedBucketsHistogramTest
       doubles[i] = VALUES6[i];
     }
 
-    Percentile percentile = new Percentile();
-    percentile.setData(doubles);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P50: " + quantiles[1]);
-    log.debug("MY-P98: " + quantiles[2]);
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
-
     Assert.assertArrayEquals(
         new float[]{2.125f, 5.5f, 9.82f},
         quantiles,
@@ -376,15 +297,6 @@ public class FixedBucketsHistogramTest
     for (int i = 0; i < doubles.length; i++) {
       doubles[i] = VALUES7[i];
     }
-
-    Percentile percentile = new Percentile();
-    percentile.setData(doubles);
-    log.debug("MY-P12.5: " + quantiles[0]);
-    log.debug("MY-P50: " + quantiles[1]);
-    log.debug("MY-P98: " + quantiles[2]);
-    log.debug("THEIR-P12.5: " + percentile.evaluate(12.5));
-    log.debug("THEIR-P50: " + percentile.evaluate(50));
-    log.debug("THEIR-P98: " + percentile.evaluate(98));
 
     Assert.assertArrayEquals(
         new float[]{3.25f, 10f, 25.88f},
