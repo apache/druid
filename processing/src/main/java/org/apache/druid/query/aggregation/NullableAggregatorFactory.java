@@ -107,7 +107,7 @@ public abstract class NullableAggregatorFactory<T extends BaseNullableColumnValu
   /**
    * Creates an {@link BufferAggregator} to aggregate values from several rows into a ByteBuffer.
    *
-   * @param columnSelectorFactory columnSelectorFactory
+   * @param columnSelectorFactory columnSelectorFactory in case any other columns are needed.
    * @param selector              {@link ColumnValueSelector} for the column to aggregate.
    *
    * @see BufferAggregator
@@ -118,15 +118,16 @@ public abstract class NullableAggregatorFactory<T extends BaseNullableColumnValu
   );
 
   /**
-   * Creates an {@link BufferAggregator} to aggregate values from several rows into a ByteBuffer.
+   * Creates a {@link VectorAggregator} to aggregate values from several rows into a ByteBuffer.
    *
-   * @param columnSelectorFactory columnSelectorFactory
-   * @param selector              {@link ColumnValueSelector} for the column to aggregate.
+   * @param columnSelectorFactory columnSelectorFactory in case any other columns are needed.
+   * @param selector              {@link VectorValueSelector} for the column to aggregate.
    *
    * @see BufferAggregator
    */
   protected VectorAggregator factorizeVector(
-      VectorColumnSelectorFactory columnSelectorFactory,
+      // Not used by current aggregators, but here for parity with "factorizeBuffered".
+      @SuppressWarnings("unused") VectorColumnSelectorFactory columnSelectorFactory,
       VectorValueSelector selector
   )
   {

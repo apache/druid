@@ -125,7 +125,7 @@ public class GroupByQueryEngineV2
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
 
     final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
-        VectorGroupByEngine.canVectorize(query, storageAdapter, filter, interval)
+        VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
     );
 
     final Sequence<Row> result;

@@ -65,6 +65,7 @@ public interface VectorCursor extends VectorSizeInspector, Closeable
   /**
    * Resets the cursor back to its original state. Useful for query engines that want to make multiple passes.
    */
+  @SuppressWarnings("unused") /* Not currently used, but anticipated to be used by topN in the future. */
   void reset();
 
   /**

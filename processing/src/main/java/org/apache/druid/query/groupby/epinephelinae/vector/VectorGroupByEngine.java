@@ -71,8 +71,7 @@ public class VectorGroupByEngine
   public static boolean canVectorize(
       final GroupByQuery query,
       final StorageAdapter adapter,
-      @Nullable final Filter filter,
-      final Interval interval
+      @Nullable final Filter filter
   )
   {
     // Not yet supported:
@@ -81,7 +80,7 @@ public class VectorGroupByEngine
     return GroupByQueryEngineV2.isAllSingleValueDims(adapter, query.getDimensions())
            && query.getDimensions().stream().allMatch(DimensionSpec::canVectorize)
            && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
-           && adapter.canVectorize(filter, interval, query.getVirtualColumns(), false);
+           && adapter.canVectorize(filter, query.getVirtualColumns(), false);
   }
 
   public static Sequence<Row> process(
@@ -94,7 +93,7 @@ public class VectorGroupByEngine
       final GroupByQueryConfig config
   )
   {
-    if (!canVectorize(query, storageAdapter, filter, interval)) {
+    if (!canVectorize(query, storageAdapter, filter)) {
       throw new ISE("Cannot vectorize");
     }
 

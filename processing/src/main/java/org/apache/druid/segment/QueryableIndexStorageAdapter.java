@@ -206,7 +206,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public boolean canVectorize(
       @Nullable final Filter filter,
-      final Interval interval,
       final VirtualColumns virtualColumns,
       final boolean descending
   )
@@ -237,7 +236,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-    if (!canVectorize(filter, interval, virtualColumns, descending)) {
+    if (!canVectorize(filter, virtualColumns, descending)) {
       throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
     }
 

@@ -85,7 +85,7 @@ public class TimeseriesQueryEngine
     final boolean descending = query.isDescending();
 
     final boolean doVectorize = QueryContexts.getVectorize(query).shouldVectorize(
-        adapter.canVectorize(filter, interval, query.getVirtualColumns(), descending)
+        adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && query.getAggregatorSpecs().stream().allMatch(AggregatorFactory::canVectorize)
     );
 

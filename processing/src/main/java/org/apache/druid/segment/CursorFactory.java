@@ -43,7 +43,6 @@ public interface CursorFactory
    */
   default boolean canVectorize(
       @Nullable Filter filter,
-      Interval interval,
       VirtualColumns virtualColumns,
       boolean descending
   )
