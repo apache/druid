@@ -27,12 +27,5 @@
         "server_type": "historical"
       }
     ]
-  },
-  {
-    "sqlQuery": {
-      "query": "SELECT * FROM sys.tasks where status='FAILED'"
-    },
-    "expectedResults": [
-    ]
   }
 ]

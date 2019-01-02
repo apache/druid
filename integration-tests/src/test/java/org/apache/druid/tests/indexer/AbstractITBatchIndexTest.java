@@ -78,6 +78,22 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
+  void doIndexTestSqlTest(
+      String dataSource,
+      String indexTaskFilePath,
+      String queryFilePath
+  ) throws IOException
+  {
+    submitTaskAndWait(indexTaskFilePath, dataSource);
+    try {
+      queryHelper.testSqlQueriesFromFile(queryFilePath, 2);
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error while testing");
+      throw new RuntimeException(e);
+    }
+  }
+
   private void submitTaskAndWait(String indexTaskFilePath, String dataSourceName) throws IOException
   {
     final String taskID = indexer.submitTask(getTaskAsString(indexTaskFilePath));
