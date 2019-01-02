@@ -681,7 +681,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>0.7.30</version>
+                <version>0.7.36</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
@@ -982,7 +982,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>
-                <version>1.15</version>
+                <version>1.17</version>
                 <executions>
                     <execution>
                         <id>check-java-api</id>
