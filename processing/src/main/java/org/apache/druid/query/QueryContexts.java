@@ -52,6 +52,7 @@ public class QueryContexts
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
   public static final long NO_TIMEOUT = 0;
 
+  @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
   {
     FALSE {
