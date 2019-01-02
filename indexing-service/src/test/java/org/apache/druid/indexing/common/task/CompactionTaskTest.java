@@ -851,6 +851,37 @@ public class CompactionTaskTest
         new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
         new PartitionConfigurationManager(null, TUNING_CONFIG),
         null,
+        null,
+        new PeriodGranularity(Period.months(3), null, null),
+        objectMapper
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = ImmutableList.of(
+        new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
+    );
+
+    ingestionSpecs.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+        )
+    );
+    Assert.assertEquals(1, ingestionSpecs.size());
+    assertIngestionSchema(
+        ingestionSpecs,
+        expectedDimensionsSpec,
+        Collections.singletonList(COMPACTION_INTERVAL),
+        new PeriodGranularity(Period.months(3), null, null)
+    );
+  }
+
+  @Test
+  public void testSegmentGranularityWithFalseKeepSegmentGranularity() throws IOException, SegmentLoadingException
+  {
+    final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        null,
         false,
         new PeriodGranularity(Period.months(3), null, null),
         objectMapper
@@ -875,6 +906,37 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testNullSegmentGranularityAndNullKeepSegmentGranularity() throws IOException, SegmentLoadingException
+  {
+    final List<IndexIngestionSpec> ingestionSpecs = CompactionTask.createIngestionSchema(
+        toolbox,
+        new SegmentProvider(DATA_SOURCE, COMPACTION_INTERVAL),
+        new PartitionConfigurationManager(null, TUNING_CONFIG),
+        null,
+        null,
+        null,
+        objectMapper
+    );
+    final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration(
+        true
+    );
+
+    ingestionSpecs.sort(
+        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
+            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
+            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
+        )
+    );
+    Assert.assertEquals(6, ingestionSpecs.size());
+    assertIngestionSchema(
+        ingestionSpecs,
+        expectedDimensionsSpec,
+        SEGMENT_INTERVALS,
+        Granularities.MONTH
+    );
+  }
+
+  @Test
   public void testUseKeepSegmentGranularityAndSegmentGranularityTogether()
   {
     expectedException.expect(IAE.class);
@@ -886,7 +948,7 @@ public class CompactionTaskTest
         COMPACTION_INTERVAL,
         null,
         null,
-        false,
+        true,
         Granularities.YEAR,
         null,
         createTuningConfig(),

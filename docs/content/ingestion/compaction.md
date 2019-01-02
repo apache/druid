@@ -34,6 +34,7 @@ Compaction tasks merge all segments of the given interval. The syntax is:
     "interval": <interval to specify segments to be merged>,
     "dimensions" <custom dimensionsSpec>,
     "keepSegmentGranularity": <true or false>,
+    "segmentGranularity": <segment granularity after compaction>,
     "targetCompactionSizeBytes": <target size of compacted segments>
     "tuningConfig" <index task tuningConfig>,
     "context": <task context>
@@ -47,7 +48,8 @@ Compaction tasks merge all segments of the given interval. The syntax is:
 |`dataSource`|DataSource name to be compacted|Yes|
 |`interval`|Interval of segments to be compacted|Yes|
 |`dimensions`|Custom dimensionsSpec. compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
-|`keepSegmentGranularity`|If set to true, compactionTask will keep the time chunk boundaries and merge segments only if they fall into the same time chunk.|No (default = true)|
+|`segmentGranularity`|If this is set, compactionTask will change the segment granularity. `keepSegmentGranularity` must be set to false or null to use this option. If this is not set, the original segment granularity will be kept if keepSegmentGranularity is null or true. Otheriwse, `ALL` segment granularity will be used.|No|
+|`keepSegmentGranularity`|Deprecated. Please use `segmentGranularity` instead. Please see `segmentGranularity` for its behavior.|No|
 |`targetCompactionSizeBytes`|Target segment size after comapction. Cannot be used with `targetPartitionSize`, `maxTotalRows`, and `numShards` in tuningConfig.|No|
 |`tuningConfig`|[Index task tuningConfig](../ingestion/native_tasks.html#tuningconfig)|No|
 |`context`|[Task context](../ingestion/locking-and-priority.html#task-context)|No|
@@ -63,9 +65,9 @@ An example of compaction task is
 ```
 
 This compaction task reads _all segments_ of the interval `2017-01-01/2018-01-01` and results in new segments.
-Note that intervals of the input segments are merged into a single interval of `2017-01-01/2018-01-01` no matter what the segmentGranularity was.
-To control the number of result segments, you can set `targetPartitionSize` or `numShards`. See [indexTuningConfig](../ingestion/native_tasks.html#tuningconfig) for more details.
-To merge each day's worth of data into separate segments, you can submit multiple `compact` tasks, one for each day. They will run in parallel.
+Since both `segmentGranularity` and `keepSegmentGranularity` are null, the original segment granularity will be remained and not changed after compaction.
+To control the number of result segments per time chunk, you can set `targetPartitionSize` or `numShards`. See [indexTuningConfig](../ingestion/native_tasks.html#tuningconfig) for more details.
+Please note that you can run multiple compactionTasks at the same time. For example, you can run 12 compactionTasks per month instead of running a single task for the entire year.
 
 A compaction task internally generates an `index` task spec for performing compaction work with some fixed parameters.
 For example, its `firehose` is always the [ingestSegmentSpec](./firehose.html#ingestsegmentfirehose), and `dimensionsSpec` and `metricsSpec`
