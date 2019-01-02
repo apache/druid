@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Geographic Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Geographic Queries
+
 Druid supports filtering specially spatially indexed columns based on an origin and a bound.
 
 # Spatial Indexing

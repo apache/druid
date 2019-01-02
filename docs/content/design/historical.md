@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Historical Node"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-Historical Node
-===============
+# Historical Node
 
 ### Configuration
 

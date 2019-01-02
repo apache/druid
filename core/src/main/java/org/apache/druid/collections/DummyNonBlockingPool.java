@@ -35,6 +35,7 @@ public final class DummyNonBlockingPool<T> implements NonBlockingPool<T>
   private DummyNonBlockingPool()
   {
   }
+
   @Override
   public ResourceHolder<T> take()
   {

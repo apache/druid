@@ -34,7 +34,7 @@ import org.apache.druid.sql.avatica.AvaticaMonitor;
 import org.apache.druid.sql.avatica.AvaticaServerConfig;
 import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
-import org.apache.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
@@ -71,8 +71,8 @@ public class SqlModule implements Module
       // Add empty SqlAggregator binder.
       Multibinder.newSetBinder(binder, SqlAggregator.class);
 
-      // LookupOperatorConversion isn't in DruidOperatorTable since it needs a LookupReferencesManager injected.
-      SqlBindings.addOperatorConversion(binder, LookupOperatorConversion.class);
+      // QueryLookupOperatorConversion isn't in DruidOperatorTable since it needs a LookupReferencesManager injected.
+      SqlBindings.addOperatorConversion(binder, QueryLookupOperatorConversion.class);
 
       if (isJsonOverHttpEnabled()) {
         Jerseys.addResource(binder, SqlResource.class);

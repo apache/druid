@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Working with different versions of Hadoop"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Working with different versions of Hadoop
 
 Druid can interact with Hadoop in two ways:

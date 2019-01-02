@@ -35,7 +35,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.common.guava.ThreadRenamingCallable;
 import org.apache.druid.common.guava.ThreadRenamingRunnable;
-import org.apache.druid.common.utils.VMUtils;
 import org.apache.druid.concurrent.TaskThreadPriority;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -76,6 +75,7 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -331,7 +331,7 @@ public class RealtimePlumber implements Plumber
             handed off instead of individual segments being handed off (that is, if one of the set succeeds in handing
             off and the others fail, the real-time would believe that it needs to re-ingest the data).
              */
-            long persistThreadCpuTime = VMUtils.safeGetThreadCpuTime();
+            long persistThreadCpuTime = JvmUtils.safeGetThreadCpuTime();
             try {
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(
@@ -345,7 +345,7 @@ public class RealtimePlumber implements Plumber
               throw e;
             }
             finally {
-              metrics.incrementPersistCpuTime(VMUtils.safeGetThreadCpuTime() - persistThreadCpuTime);
+              metrics.incrementPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - persistThreadCpuTime);
               metrics.incrementNumPersists();
               metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
               persistStopwatch.stop();
@@ -415,7 +415,7 @@ public class RealtimePlumber implements Plumber
                   }
                 }
               }
-              final long mergeThreadCpuTime = VMUtils.safeGetThreadCpuTime();
+              final long mergeThreadCpuTime = JvmUtils.safeGetThreadCpuTime();
               mergeStopwatch = Stopwatch.createStarted();
 
               final File mergedFile;
@@ -447,7 +447,7 @@ public class RealtimePlumber implements Plumber
               }
 
               // emit merge metrics before publishing segment
-              metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
+              metrics.incrementMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
               metrics.incrementMergeTimeMillis(mergeStopwatch.elapsed(TimeUnit.MILLISECONDS));
 
               log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());

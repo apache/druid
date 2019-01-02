@@ -236,7 +236,13 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
     File cacheDir = new File(commonCacheConfig.getCacheDirectory());
     cacheDir.mkdirs();
     File userMapFile = new File(commonCacheConfig.getCacheDirectory(), getUserMapFilename(prefix));
-    FileUtils.writeAtomically(userMapFile, out -> out.write(userMapBytes));
+    FileUtils.writeAtomically(
+        userMapFile,
+        out -> {
+          out.write(userMapBytes);
+          return null;
+        }
+    );
   }
 
   private Map<String, BasicAuthenticatorUser> tryFetchUserMapFromCoordinator(String prefix) throws Exception

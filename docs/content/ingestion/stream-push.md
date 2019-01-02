@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Stream Push"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-## Stream Push
+# Stream Push
 
 Druid can connect to any streaming data source through
 [Tranquility](https://github.com/druid-io/tranquility/blob/master/README.md), a package for pushing

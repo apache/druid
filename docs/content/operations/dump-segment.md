@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "DumpSegment tool"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # DumpSegment tool
 
 The DumpSegment tool can be used to dump the metadata or contents of a segment for debugging purposes. Note that the

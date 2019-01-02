@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "OpenTSDB Emitter"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,17 +22,13 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-# Opentsdb Emitter
+# OpenTSDB Emitter
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `opentsdb-emitter` extension.
 
 ## Introduction
 
-This extension emits druid metrics to [OpenTSDB](https://github.com/OpenTSDB/opentsdb) over HTTP (Using `Jersey client`). And this emitter only emits service metric events to OpenTSDB (See http://druid.io/docs/latest/operations/metrics.html for a list of metrics).
+This extension emits druid metrics to [OpenTSDB](https://github.com/OpenTSDB/opentsdb) over HTTP (Using `Jersey client`). And this emitter only emits service metric events to OpenTSDB (See [Druid metrics](../../operations/metrics.html) for a list of metrics).
 
 ## Configuration
 
@@ -57,5 +58,5 @@ e.g.
     "type"
 ]
 ```
- 
+
 For most use-cases, the default configuration is sufficient.

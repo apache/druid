@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -45,6 +46,7 @@ public class DimensionConverter
     metricMap = readMap(mapper, dimensionMapPath);
   }
 
+  @Nullable
   public StatsDMetric addFilteredUserDims(
       String service,
       String metric,

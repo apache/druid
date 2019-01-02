@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Druid Redis Cache"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,12 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-Druid Redis Cache
---------------------
+# Druid Redis Cache
 
 A cache implementation for Druid based on [Redis](https://github.com/antirez/redis).
 

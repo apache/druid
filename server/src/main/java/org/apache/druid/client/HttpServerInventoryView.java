@@ -152,23 +152,23 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               private final AtomicBoolean initialized = new AtomicBoolean(false);
 
               @Override
-              public void nodesAdded(List<DiscoveryDruidNode> nodes)
+              public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
               {
-                nodes.forEach(
-                    node -> serverAdded(toDruidServer(node))
-                );
-
-                if (!initialized.getAndSet(true)) {
-                  executor.execute(HttpServerInventoryView.this::serverInventoryInitialized);
-                }
+                nodes.forEach(node -> serverAdded(toDruidServer(node)));
               }
 
               @Override
-              public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+              public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
               {
-                nodes.forEach(
-                    node -> serverRemoved(toDruidServer(node))
-                );
+                nodes.forEach(node -> serverRemoved(toDruidServer(node)));
+              }
+
+              @Override
+              public void nodeViewInitialized()
+              {
+                if (!initialized.getAndSet(true)) {
+                  executor.execute(HttpServerInventoryView.this::serverInventoryInitialized);
+                }
               }
 
               private DruidServer toDruidServer(DiscoveryDruidNode node)

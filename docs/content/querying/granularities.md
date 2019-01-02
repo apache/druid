@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Aggregation Granularity"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
 # Aggregation Granularity
+
 The granularity field determines how data gets bucketed across the time dimension, or how it gets aggregated by hour, day, minute, etc.
 
 It can be specified either as a string for simple granularities or as an object for arbitrary granularities.

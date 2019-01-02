@@ -443,18 +443,22 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
-            nodes.stream().forEach(node -> addWorker(toWorker(node)));
-
-            //CountDownLatch.countDown() does nothing when count has already reached 0.
-            workerViewInitialized.countDown();
+            nodes.forEach(node -> addWorker(toWorker(node)));
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
-            nodes.stream().forEach(node -> removeWorker(toWorker(node)));
+            nodes.forEach(node -> removeWorker(toWorker(node)));
+          }
+
+          @Override
+          public void nodeViewInitialized()
+          {
+            //CountDownLatch.countDown() does nothing when count has already reached 0.
+            workerViewInitialized.countDown();
           }
         }
     );

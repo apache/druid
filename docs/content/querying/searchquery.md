@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Search Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Search Queries
+
 A search query returns dimension values that match the search specification.
 
 ```json

@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.http.client;
 
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -70,7 +71,7 @@ public class HttpClientConfig
   private static final int DEFAULT_BOSS_COUNT = 1;
 
   // Default from SelectorUtil.DEFAULT_IO_THREADS, which is private:
-  private static final int DEFAULT_WORKER_COUNT = Runtime.getRuntime().availableProcessors() * 2;
+  private static final int DEFAULT_WORKER_COUNT = JvmUtils.getRuntimeInfo().getAvailableProcessors() * 2;
 
   private static final Duration DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION = new Period("PT4M").toStandardDuration();
 

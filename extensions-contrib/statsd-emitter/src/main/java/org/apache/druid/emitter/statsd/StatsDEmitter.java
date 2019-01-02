@@ -32,9 +32,9 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.List;
 
 /**
  */
@@ -47,7 +47,7 @@ public class StatsDEmitter implements Emitter
   private static final Pattern BLANK = Pattern.compile("\\s+");
   private static final String[] EMPTY_ARRAY = new String[0];
 
-  static final StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
+  static StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
     NonBlockingStatsDClient client = new NonBlockingStatsDClient(
         config.getPrefix(),
@@ -163,7 +163,7 @@ public class StatsDEmitter implements Emitter
           }
         }
       } else {
-        log.debug("Metric=[%s] has no StatsD type mapping", statsDMetric);
+        log.debug("Service=[%s], Metric=[%s] has no StatsD type mapping", service, metric);
       }
     }
   }

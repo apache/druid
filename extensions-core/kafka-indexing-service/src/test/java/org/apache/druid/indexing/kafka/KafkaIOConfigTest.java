@@ -32,6 +32,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import java.util.Collections;
+
 public class KafkaIOConfigTest
 {
   private final ObjectMapper mapper;
@@ -57,7 +59,7 @@ public class KafkaIOConfigTest
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"}\n"
                      + "}";
 
-    KafkaIOConfig config = (KafkaIOConfig) mapper.readValue(
+    KafkaIndexTaskIOConfig config = (KafkaIndexTaskIOConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -67,13 +69,15 @@ public class KafkaIOConfigTest
     );
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mytopic", config.getStartPartitions().getTopic());
-    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartPartitions().getPartitionOffsetMap());
-    Assert.assertEquals("mytopic", config.getEndPartitions().getTopic());
-    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndPartitions().getPartitionOffsetMap());
+    Assert.assertEquals("mytopic", config.getStartPartitions().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartPartitions().getPartitionSequenceNumberMap());
+    Assert.assertEquals("mytopic", config.getEndPartitions().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndPartitions().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
+    Assert.assertFalse("maximumMessageTime", config.getMaximumMessageTime().isPresent());
+    Assert.assertEquals(Collections.EMPTY_SET, config.getExclusiveStartSequenceNumberPartitions());
   }
 
   @Test
@@ -91,7 +95,7 @@ public class KafkaIOConfigTest
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
-    KafkaIOConfig config = (KafkaIOConfig) mapper.readValue(
+    KafkaIndexTaskIOConfig config = (KafkaIndexTaskIOConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -101,14 +105,15 @@ public class KafkaIOConfigTest
     );
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mytopic", config.getStartPartitions().getTopic());
-    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartPartitions().getPartitionOffsetMap());
-    Assert.assertEquals("mytopic", config.getEndPartitions().getTopic());
-    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndPartitions().getPartitionOffsetMap());
+    Assert.assertEquals("mytopic", config.getStartPartitions().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartPartitions().getPartitionSequenceNumberMap());
+    Assert.assertEquals("mytopic", config.getEndPartitions().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndPartitions().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertFalse(config.isUseTransaction());
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
     Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
+    Assert.assertEquals(Collections.EMPTY_SET, config.getExclusiveStartSequenceNumberPartitions());
   }
 
   @Test
@@ -208,7 +213,7 @@ public class KafkaIOConfigTest
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-    exception.expectMessage(CoreMatchers.containsString("start topic and end topic must match"));
+    exception.expectMessage(CoreMatchers.containsString("start topic/stream and end topic/stream must match"));
     mapper.readValue(jsonStr, IOConfig.class);
   }
 

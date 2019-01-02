@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Kafka Indexing Service"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,17 +22,13 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
 # Kafka Indexing Service
 
 The Kafka indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
 Kafka by managing the creation and lifetime of Kafka indexing tasks. These indexing tasks read events using Kafka's own
 partition and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion. They are also
 able to read non-recent events from Kafka and are not subject to the window period considerations imposed on other
-ingestion mechanisms. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
+ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
 This service is provided in the `druid-kafka-indexing-service` core extension (see
@@ -124,8 +125,8 @@ A sample supervisor spec is shown below:
 |--------|-----------|---------|
 |`type`|The supervisor type, this should always be `kafka`.|yes|
 |`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [Ingestion Spec DataSchema](../../ingestion/ingestion-spec.html#dataschema).|yes|
-|`tuningConfig`|A KafkaSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
 |`ioConfig`|A KafkaSupervisorIOConfig to configure the supervisor and indexing tasks, see below.|yes|
+|`tuningConfig`|A KafkaSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
 
 ### KafkaSupervisorTuningConfig
 
@@ -150,7 +151,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`httpTimeout`|ISO8601 Period|How long to wait for a HTTP response from an indexing task.|no (default == PT10S)|
 |`shutdownTimeout`|ISO8601 Period|How long to wait for the supervisor to attempt a graceful shutdown of tasks before exiting.|no (default == PT80S)|
 |`offsetFetchPeriod`|ISO8601 Period|How often the supervisor queries Kafka and the indexing tasks to fetch current offsets and calculate lag.|no (default == PT30S, min == PT5S)|
-|`segmentWriteOutMediumFactory`|String|Segment write-out medium to use when creating segments. See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../../configuration/index.html#segmentwriteoutmediumfactory) for explanation and available options.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used)|
+|`segmentWriteOutMediumFactory`|Object|Segment write-out medium to use when creating segments. See below for more information.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used)|
 |`intermediateHandoffPeriod`|ISO8601 Period|How often the tasks should hand off segments. Handoff will happen either if `maxRowsPerSegment` or `maxTotalRows` is hit or every `intermediateHandoffPeriod`, whichever happens earlier.|no (default == P2147483647D)|
 |`logParseExceptions`|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|no, default == false|
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overridden if `reportParseExceptions` is set.|no, unlimited default|
@@ -179,6 +180,12 @@ For Roaring bitmaps:
 |-----|----|-----------|--------|
 |`type`|String|Must be `roaring`.|yes|
 |`compressRunOnSerialization`|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
+
+#### SegmentWriteOutMediumFactory
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../../configuration/index.html#segmentwriteoutmediumfactory) for explanation and available options.|yes|
 
 ### KafkaSupervisorIOConfig
 
@@ -304,7 +311,7 @@ compatible because they have a different ingestion spec or partition allocation,
 supervisor will create a new set of tasks. In this way, the supervisors are persistent across overlord restarts and
 fail-overs.
 
-A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown` endpoint. This places a
+A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` endpoint. This places a
 tombstone marker in the database (to prevent the supervisor from being reloaded on a restart) and then gracefully
 shuts down the currently running supervisor. When a supervisor is shut down in this way, it will instruct its
 managed tasks to stop reading and begin publishing their segments immediately. The call to the shutdown endpoint will

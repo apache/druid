@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "pull-deps Tool"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # pull-deps Tool
 
@@ -112,8 +113,6 @@ extensions
 │   ├── twitter4j-core-3.0.3.jar
 │   └── twitter4j-stream-3.0.3.jar
 └── mysql-metadata-storage
-    ├── jdbi-2.32.jar
-    ├── mysql-connector-java-5.1.34.jar
     └── mysql-metadata-storage-#{DRUIDVERSION}.jar
 ```
 
