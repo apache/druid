@@ -34,14 +34,13 @@ public class CloseableGrouperIterator<KeyType, T> implements CloseableIterator<T
   private final Closer closer;
 
   public CloseableGrouperIterator(
-      final Grouper<KeyType> grouper,
-      final boolean sorted,
+      final CloseableIterator<Entry<KeyType>> iterator,
       final Function<Grouper.Entry<KeyType>, T> transformer,
       final Closeable closeable
   )
   {
     this.transformer = transformer;
-    this.iterator = grouper.iterator(sorted);
+    this.iterator = iterator;
     this.closer = Closer.create();
 
     closer.register(iterator);

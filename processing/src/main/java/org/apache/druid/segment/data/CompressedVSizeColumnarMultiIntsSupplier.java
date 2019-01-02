@@ -38,17 +38,21 @@ import java.util.Iterator;
  * Format -
  * byte 1 - version
  * offsets - {@link ColumnarInts} of length num of rows + 1 representing offsets of starting index of first element of
- *           each row in values index and last element equal to length of values column, the last element in the offsets
- *           represents the total length of values column.
+ * each row in values index and last element equal to length of values column, the last element in the offsets
+ * represents the total length of values column.
  * values - {@link ColumnarInts} representing concatenated values of all rows
  */
 public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplier<ColumnarMultiInts>
 {
   private static final byte version = 0x2;
 
-  /** See class-level comment */
+  /**
+   * See class-level comment
+   */
   private final CompressedVSizeColumnarIntsSupplier offsetSupplier;
-  /** See class-level comment */
+  /**
+   * See class-level comment
+   */
   private final CompressedVSizeColumnarIntsSupplier valueSupplier;
 
   private CompressedVSizeColumnarMultiIntsSupplier(
@@ -176,6 +180,39 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
       final int size = offsets.get(index + 1) - offset;
       rowValues.setValues(offset, size);
       return rowValues;
+    }
+
+    @Override
+    public IndexedInts getUnshared(int index)
+    {
+      final int offset = offsets.get(index);
+      final int size = offsets.get(index + 1) - offset;
+
+      class UnsharedIndexedInts implements IndexedInts
+      {
+        @Override
+        public int size()
+        {
+          return size;
+        }
+
+        @Override
+        public int get(int index)
+        {
+          if (index >= size) {
+            throw new IAE("Index[%d] >= size[%d]", index, size);
+          }
+          return values.get(index + offset);
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          inspector.visit("values", values);
+        }
+      }
+
+      return new UnsharedIndexedInts();
     }
 
     @Override

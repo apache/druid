@@ -67,7 +67,7 @@ import java.util.concurrent.TimeUnit;
  * Benchmark that tests various SQL queries.
  */
 @State(Scope.Benchmark)
-@Fork(value = 3)
+@Fork(value = 1)
 @Warmup(iterations = 15)
 @Measurement(iterations = 25)
 public class SqlBenchmark
@@ -154,7 +154,7 @@ public class SqlBenchmark
   @Param({"false", "force"})
   private String vectorize;
 
-  @Param({"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18"})
+  @Param({"10", "15"})
   private String query;
 
   @Nullable

@@ -21,7 +21,6 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 
 import java.nio.ByteBuffer;
@@ -85,6 +84,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
             buffer = holder.get();
             // asLongBuffer() makes the longBuffer's position = 0
             longBuffer = buffer.asLongBuffer();
+            reader.setBuffer(buffer);
             currBufferNum = bufferNum;
           }
         };
@@ -120,7 +120,9 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     int currBufferNum = -1;
     ResourceHolder<ByteBuffer> holder;
     ByteBuffer buffer;
-    /** longBuffer's position must be 0 */
+    /**
+     * longBuffer's position must be 0
+     */
     LongBuffer longBuffer;
 
     @Override
@@ -144,17 +146,41 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     }
 
     @Override
-    public void fill(int index, long[] toFill)
+    public void get(final long[] out, final int start, final int length)
     {
-      if (totalSize - index < toFill.length) {
-        throw new IndexOutOfBoundsException(
-            StringUtils.format(
-                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-            )
-        );
+      // division + remainder is optimized by the compiler so keep those together
+      int bufferNum = start / sizePer;
+      int bufferIndex = start % sizePer;
+
+      int p = 0;
+
+      while (p < length) {
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int limit = Math.min(length - p, sizePer - bufferIndex);
+        reader.read(out, p, bufferIndex, limit);
+        p += limit;
+        bufferNum++;
+        bufferIndex = 0;
       }
-      for (int i = 0; i < toFill.length; i++) {
-        toFill[i] = get(index + i);
+    }
+
+    @Override
+    public void get(final long[] out, final int[] indexes, final int length)
+    {
+      int p = 0;
+
+      while (p < length) {
+        int bufferNum = indexes[p] / sizePer;
+        if (bufferNum != currBufferNum) {
+          loadBuffer(bufferNum);
+        }
+
+        final int numRead = reader.read(out, p, indexes, length - p, bufferNum * sizePer, sizePer);
+        assert numRead > 0;
+        p += numRead;
       }
     }
 

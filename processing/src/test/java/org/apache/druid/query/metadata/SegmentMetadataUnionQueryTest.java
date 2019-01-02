@@ -101,7 +101,7 @@ public class SegmentMetadataUnionQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                false,
+                !mmap,
                 mmap ? 43524 : 43056,
                 1,
                 "preferred",

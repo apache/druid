@@ -24,6 +24,8 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
 
@@ -78,6 +80,56 @@ public class ComplexColumn implements BaseColumn
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("column", ComplexColumn.this);
+      }
+    };
+  }
+
+  @Override
+  public VectorObjectSelector makeVectorObjectSelector(ReadableVectorOffset offset)
+  {
+    return new VectorObjectSelector()
+    {
+      final Object[] vector = new Object[offset.getMaxVectorSize()];
+
+      private int id = ReadableVectorOffset.NULL_ID;
+
+      @Override
+      public Object[] getObjectVector()
+      {
+        if (id == offset.getId()) {
+          return vector;
+        }
+
+        if (offset.isContiguous()) {
+          final int startOffset = offset.getStartOffset();
+          final int vectorSize = offset.getCurrentVectorSize();
+
+          for (int i = 0; i < vectorSize; i++) {
+            vector[i] = getRowValue(startOffset + i);
+          }
+        } else {
+          final int[] offsets = offset.getOffsets();
+          final int vectorSize = offset.getCurrentVectorSize();
+
+          for (int i = 0; i < vectorSize; i++) {
+            vector[i] = getRowValue(offsets[i]);
+          }
+        }
+
+        id = offset.getId();
+        return vector;
+      }
+
+      @Override
+      public int getCurrentVectorSize()
+      {
+        return offset.getCurrentVectorSize();
+      }
+
+      @Override
+      public int getMaxVectorSize()
+      {
+        return offset.getMaxVectorSize();
       }
     };
   }

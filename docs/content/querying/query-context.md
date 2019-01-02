@@ -60,3 +60,31 @@ In addition, some query types offer context parameters specific to that query ty
 ### GroupBy queries
 
 See [GroupBy query context](groupbyquery.html#query-context).
+
+### Vectorizable queries
+
+The GroupBy and Timeseries query types can run in _vectorized_ mode, which speeds up query execution by processing
+batches of rows at a time. Not all queries can be vectorized. In particular, vectorization currently has the following
+requirements:
+
+- All query-level filters must either be able to run on bitmap indexes or must offer vectorized row-matchers. These
+include "selector", "bound", "in", "like", "regex", "search", "and", "or", and "not".
+- All filters in filtered aggregators must offer vectorized row-matchers.
+- All aggregators must offer vectorized implementations. These include "count", "doubleSum", "floatSum", "longSum",
+"hyperUnique", and "filtered".
+- No virtual columns.
+- For GroupBy: All dimension specs must be "default" (no extraction functions or filtered dimension specs).
+- For GroupBy: No multi-value dimensions.
+- For Timeseries: No "descending" order.
+- Only immutable segments (not real-time).
+
+Other query types (like TopN, Scan, Select, and Search) ignore the "vectorize" parameter, and will execute without
+vectorization. These query types will ignore the "vectorize" parameter even if it is set to `"force"`.
+
+Vectorization is an alpha-quality feature as of Druid #{DRUIDVERSION}. We heartily welcome any feedback and testing
+from the community as we work to battle-test it.
+
+|property|default| description|
+|--------|-------|------------|
+|vectorize|`false`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail).|
+|vectorSize|`512`|Sets the row batching size for a particular query.|

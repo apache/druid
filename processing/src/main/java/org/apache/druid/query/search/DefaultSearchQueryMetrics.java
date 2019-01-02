@@ -155,6 +155,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void vectorized(final boolean vectorized)
+  {
+    delegateQueryMetrics.vectorized(vectorized);
+  }
+
+  @Override
   public BitmapResultFactory<?> makeBitmapResultFactory(BitmapFactory factory)
   {
     return delegateQueryMetrics.makeBitmapResultFactory(factory);

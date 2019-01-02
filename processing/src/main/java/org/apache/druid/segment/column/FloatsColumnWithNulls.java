@@ -24,6 +24,8 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.data.ColumnarFloats;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 /**
  * FloatsColumn with null values.
@@ -42,6 +44,12 @@ class FloatsColumnWithNulls extends FloatsColumn
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
     return column.makeColumnValueSelector(offset, nullValueBitmap);
+  }
+
+  @Override
+  public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
+  {
+    return column.makeVectorValueSelector(offset, nullValueBitmap);
   }
 
   @Override

@@ -423,8 +423,7 @@ public class RowBasedGrouperHelper
     final boolean includeTimestamp = GroupByStrategyV2.getUniversalTimestamp(query) == null;
 
     return new CloseableGrouperIterator<>(
-        grouper,
-        true,
+        grouper.iterator(true),
         new Function<Grouper.Entry<RowBasedKey>, Row>()
         {
           @Override
@@ -820,7 +819,10 @@ public class RowBasedGrouperHelper
             @Override
             public int compare(Grouper.Entry<RowBasedKey> entry1, Grouper.Entry<RowBasedKey> entry2)
             {
-              final int timeCompare = Longs.compare((long) entry1.getKey().getKey()[0], (long) entry2.getKey().getKey()[0]);
+              final int timeCompare = Longs.compare(
+                  (long) entry1.getKey().getKey()[0],
+                  (long) entry2.getKey().getKey()[0]
+              );
 
               if (timeCompare != 0) {
                 return timeCompare;
@@ -917,8 +919,10 @@ public class RowBasedGrouperHelper
           // use natural comparison
           cmp = Comparators.<Comparable>naturalNullsFirst().compare(lhs, rhs);
         } else {
-          cmp = comparator.compare(DimensionHandlerUtils.convertObjectToString(lhs),
-                                   DimensionHandlerUtils.convertObjectToString(rhs));
+          cmp = comparator.compare(
+              DimensionHandlerUtils.convertObjectToString(lhs),
+              DimensionHandlerUtils.convertObjectToString(rhs)
+          );
         }
 
         if (cmp != 0) {
@@ -1624,7 +1628,8 @@ public class RowBasedGrouperHelper
       FloatRowBasedKeySerdeHelper(
           int keyBufferPosition,
           boolean pushLimitDown,
-          @Nullable StringComparator stringComparator)
+          @Nullable StringComparator stringComparator
+      )
       {
         this.keyBufferPosition = keyBufferPosition;
         if (isPrimitiveComparable(pushLimitDown, stringComparator)) {

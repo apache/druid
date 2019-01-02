@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
 
 import java.io.Closeable;
@@ -69,6 +70,11 @@ public interface Sequence<T>
   default <U> Sequence<U> map(Function<? super T, ? extends U> mapper)
   {
     return new MappedSequence<>(this, mapper);
+  }
+
+  default Sequence<T> filter(Predicate<? super T> predicate)
+  {
+    return Sequences.filter(this, predicate);
   }
 
   default List<T> toList()

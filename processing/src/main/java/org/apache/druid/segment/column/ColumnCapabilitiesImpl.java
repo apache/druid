@@ -38,6 +38,13 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   @JsonIgnore
   private boolean filterable;
 
+  public static ColumnCapabilitiesImpl copyOf(final ColumnCapabilities other)
+  {
+    final ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+    capabilities.merge(other);
+    return capabilities;
+  }
+
   @Override
   @JsonProperty
   public ValueType getType()

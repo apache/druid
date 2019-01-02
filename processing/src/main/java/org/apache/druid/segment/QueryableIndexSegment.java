@@ -22,16 +22,18 @@ package org.apache.druid.segment;
 import org.joda.time.Interval;
 
 /**
-*/
+ */
 public class QueryableIndexSegment extends AbstractSegment
 {
   private final QueryableIndex index;
+  private final QueryableIndexStorageAdapter storageAdapter;
   private final String identifier;
 
   public QueryableIndexSegment(final String segmentIdentifier, QueryableIndex index)
   {
     this.index = index;
-    identifier = segmentIdentifier;
+    this.storageAdapter = new QueryableIndexStorageAdapter(index);
+    this.identifier = segmentIdentifier;
   }
 
   @Override
@@ -55,7 +57,7 @@ public class QueryableIndexSegment extends AbstractSegment
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return new QueryableIndexStorageAdapter(index);
+    return storageAdapter;
   }
 
   @Override

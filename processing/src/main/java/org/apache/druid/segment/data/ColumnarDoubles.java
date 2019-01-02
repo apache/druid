@@ -25,7 +25,12 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.historical.HistoricalColumnSelector;
+import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.VectorSelectorUtils;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 
 /**
@@ -37,6 +42,20 @@ public interface ColumnarDoubles extends Closeable
   int size();
 
   double get(int index);
+
+  default void get(double[] out, int start, int length)
+  {
+    for (int i = 0; i < length; i++) {
+      out[i] = get(i + start);
+    }
+  }
+
+  default void get(double[] out, int[] indexes, int length)
+  {
+    for (int i = 0; i < length; i++) {
+      out[i] = get(indexes[i]);
+    }
+  }
 
   @Override
   void close();
@@ -106,5 +125,60 @@ public interface ColumnarDoubles extends Closeable
       return new HistoricalDoubleColumnSelectorWithNulls();
     }
   }
-}
 
+  default VectorValueSelector makeVectorValueSelector(
+      final ReadableVectorOffset theOffset,
+      final ImmutableBitmap nullValueBitmap
+  )
+  {
+    class ColumnarDoublesVectorValueSelector extends BaseDoubleVectorValueSelector
+    {
+      private final double[] doubleVector;
+
+      private int id = ReadableVectorOffset.NULL_ID;
+
+      @Nullable
+      private boolean[] nullVector = null;
+
+      private ColumnarDoublesVectorValueSelector()
+      {
+        super(theOffset);
+        this.doubleVector = new double[offset.getMaxVectorSize()];
+      }
+
+      @Nullable
+      @Override
+      public boolean[] getNullVector()
+      {
+        computeVectorsIfNeeded();
+        return nullVector;
+      }
+
+      @Override
+      public double[] getDoubleVector()
+      {
+        computeVectorsIfNeeded();
+        return doubleVector;
+      }
+
+      private void computeVectorsIfNeeded()
+      {
+        if (id == offset.getId()) {
+          return;
+        }
+
+        if (offset.isContiguous()) {
+          ColumnarDoubles.this.get(doubleVector, offset.getStartOffset(), offset.getCurrentVectorSize());
+        } else {
+          ColumnarDoubles.this.get(doubleVector, offset.getOffsets(), offset.getCurrentVectorSize());
+        }
+
+        nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullValueBitmap);
+
+        id = offset.getId();
+      }
+    }
+
+    return new ColumnarDoublesVectorValueSelector();
+  }
+}
