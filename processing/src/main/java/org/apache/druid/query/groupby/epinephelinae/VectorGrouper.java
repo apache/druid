@@ -34,7 +34,7 @@ import java.nio.ByteBuffer;
 public interface VectorGrouper extends Closeable
 {
   /**
-   * Initialize the grouper. This method needs to be called before calling {@link #aggregateVector(int[], int)}.
+   * Initialize the grouper. This method needs to be called before calling {@link #aggregateVector}.
    */
   void initVectorized(int maxVectorSize);
 
