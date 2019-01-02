@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Refining Search Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Refining Search Queries
+
 Search query specs define how a "match" is defined between a search value and a dimension value. The available search query specs are:
 
 InsensitiveContainsSearchQuerySpec

@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
@@ -41,7 +40,6 @@ import org.apache.druid.server.security.ResourceAction;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
-import java.util.List;
 
 public class SupervisorResourceFilter extends AbstractResourceFilter
 {
@@ -109,17 +107,4 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
 
     return request;
   }
-
-  @Override
-  public boolean isApplicable(String requestPath)
-  {
-    List<String> applicablePaths = ImmutableList.of("druid/indexer/v1/supervisor/");
-    for (String path : applicablePaths) {
-      if (requestPath.startsWith(path) && !requestPath.equals(path)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
 }

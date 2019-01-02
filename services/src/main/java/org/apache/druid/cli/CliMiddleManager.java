@@ -100,7 +100,7 @@ public class CliMiddleManager extends ServerRunnable
             binder.bind(ForkingTaskRunner.class).in(LazySingleton.class);
 
             binder.bind(IndexingServiceClient.class).toProvider(Providers.of(null));
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>() {})
                   .toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
             PolyBind.createChoice(
@@ -130,13 +130,12 @@ public class CliMiddleManager extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
 
-            binder
-                .bind(DiscoverySideEffectsProvider.Child.class)
-                .toProvider(
-                    new DiscoverySideEffectsProvider(NodeType.MIDDLE_MANAGER, ImmutableList.of(WorkerNodeService.class))
-                )
-                .in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+            bindAnnouncer(
+                binder,
+                DiscoverySideEffectsProvider.builder(NodeType.MIDDLE_MANAGER)
+                                            .serviceClasses(ImmutableList.of(WorkerNodeService.class))
+                                            .build()
+            );
           }
 
           @Provides

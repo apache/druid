@@ -91,7 +91,8 @@ public class FileIteratingFirehoseTest
     this.expectedResults = inputs.stream()
         .map(input -> input.split("\n"))
         .flatMap(lines -> {
-          final List<String> filteredLines = Arrays.asList(lines).stream()
+          final List<String> filteredLines = Arrays
+              .stream(lines)
               .filter(line -> line.length() > 0)
               .map(line -> line.split(",")[1])
               .collect(Collectors.toList());

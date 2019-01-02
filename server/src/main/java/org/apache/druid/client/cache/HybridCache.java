@@ -20,10 +20,13 @@
 package org.apache.druid.client.cache;
 
 import com.google.common.collect.Sets;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -127,8 +130,35 @@ public class HybridCache implements Cache
   @Override
   public void close(String namespace)
   {
-    level1.close(namespace);
-    level2.close(namespace);
+    Throwable t = null;
+    try {
+      level1.close(namespace);
+    }
+    catch (Throwable t1) {
+      t = t1;
+      throw t1;
+    }
+    finally {
+      if (t != null) {
+        try {
+          level2.close(namespace);
+        }
+        catch (Throwable t2) {
+          t.addSuppressed(t2);
+        }
+      } else {
+        level2.close(namespace);
+      }
+    }
+  }
+
+  @Override
+  @LifecycleStop
+  public void close() throws IOException
+  {
+    try (Closeable closeable1 = level1; Closeable closeable2 = level2) {
+      // Just for closing
+    }
   }
 
   @Override

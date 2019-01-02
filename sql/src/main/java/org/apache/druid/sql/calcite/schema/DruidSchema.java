@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -51,7 +50,6 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -98,7 +96,7 @@ public class DruidSchema extends AbstractSchema
   private final ConcurrentMap<String, DruidTable> tables;
 
   // For awaitInitialization.
-  private final CountDownLatch initializationLatch = new CountDownLatch(1);
+  private final CountDownLatch initialized = new CountDownLatch(1);
 
   // Protects access to segmentSignatures, mutableSegments, segmentsNeedingRefresh, lastRefresh, isServerViewInitialized
   private final Object lock = new Object();
@@ -175,7 +173,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   @LifecycleStart
-  public void start()
+  public void start() throws InterruptedException
   {
     cacheExec.submit(
         new Runnable()
@@ -208,8 +206,17 @@ public class DruidSchema extends AbstractSchema
                           !wasRecentFailure &&
                           (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
                           (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                        // We need to do a refresh. Break out of the waiting loop.
                         break;
                       }
+
+                      if (isServerViewInitialized) {
+                        // Server view is initialized, but we don't need to do a refresh. Could happen if there are
+                        // no segments in the system yet. Just mark us as initialized, then.
+                        initialized.countDown();
+                      }
+
+                      // Wait some more, we'll wake up when it might be time to do another refresh.
                       lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
                     }
 
@@ -254,7 +261,7 @@ public class DruidSchema extends AbstractSchema
                     }
                   }
 
-                  initializationLatch.countDown();
+                  initialized.countDown();
                 }
                 catch (InterruptedException e) {
                   // Fall through.
@@ -288,6 +295,13 @@ public class DruidSchema extends AbstractSchema
           }
         }
     );
+
+    if (config.isAwaitInitializationOnStart()) {
+      final long startMillis = System.currentTimeMillis();
+      log.info("%s waiting for initialization.", getClass().getSimpleName());
+      awaitInitialization();
+      log.info("%s initialized in [%,d] ms.", getClass().getSimpleName(), System.currentTimeMillis() - startMillis);
+    }
   }
 
   @LifecycleStop
@@ -296,10 +310,9 @@ public class DruidSchema extends AbstractSchema
     cacheExec.shutdownNow();
   }
 
-  @VisibleForTesting
   public void awaitInitialization() throws InterruptedException
   {
-    initializationLatch.await();
+    initialized.await();
   }
 
   @Override
@@ -325,10 +338,9 @@ public class DruidSchema extends AbstractSchema
       if (knownSegments == null || !knownSegments.containsKey(segment)) {
         // segmentReplicatable is used to determine if segments are served by realtime servers or not
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
-        final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
         final SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(
             segment.getIdentifier(),
-            isPublished,
+            0,
             1,
             isRealtime,
             1

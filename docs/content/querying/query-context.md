@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Query Context"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,12 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-Query Context
-=============
+# Query Context
 
 The query context is used for various query configuration parameters. The following parameters apply to all queries.
 

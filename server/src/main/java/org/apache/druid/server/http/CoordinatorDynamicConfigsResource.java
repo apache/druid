@@ -67,31 +67,24 @@ public class CoordinatorDynamicConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDynamicConfigs()
   {
-    return Response.ok(
-        manager.watch(
-            CoordinatorDynamicConfig.CONFIG_KEY,
-            CoordinatorDynamicConfig.class
-        ).get()
-    ).build();
+    return Response.ok(CoordinatorDynamicConfig.current(manager)).build();
   }
 
   // default value is used for backwards compatibility
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response setDynamicConfigs(final CoordinatorDynamicConfig.Builder dynamicConfigBuilder,
-                                    @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-                                    @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
-                                    @Context HttpServletRequest req
+  public Response setDynamicConfigs(
+      final CoordinatorDynamicConfig.Builder dynamicConfigBuilder,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context HttpServletRequest req
   )
   {
-    CoordinatorDynamicConfig current = manager.watch(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        CoordinatorDynamicConfig.class
-    ).get();
+    CoordinatorDynamicConfig current = CoordinatorDynamicConfig.current(manager);
 
     final SetResult setResult = manager.set(
         CoordinatorDynamicConfig.CONFIG_KEY,
-        current == null ? dynamicConfigBuilder.build() : dynamicConfigBuilder.build(current),
+        dynamicConfigBuilder.build(current),
         new AuditInfo(author, comment, req.getRemoteAddr())
     );
 

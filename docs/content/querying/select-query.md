@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Select Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Select Queries
 
 Select queries return raw Druid rows and support pagination.

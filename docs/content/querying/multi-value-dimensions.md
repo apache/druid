@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Multi-value dimensions"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Multi-value dimensions
 
 Druid supports "multi-value" string dimensions. These are generated when an input field contains an array of values

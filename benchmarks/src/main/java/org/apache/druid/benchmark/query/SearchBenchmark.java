@@ -282,7 +282,9 @@ public class SearchBenchmark
 
   private static SearchQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
+        Collections.singletonList(basicSchema.getDataInterval())
+    );
 
     final List<String> dimUniformFilterVals = new ArrayList<>();
     final int resultNum = (int) (100000 * 0.1);
@@ -296,9 +298,6 @@ public class SearchBenchmark
     dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
     dimFilters.add(new SelectorDimFilter(dimName, "3", null));
     dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")

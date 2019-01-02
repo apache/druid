@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
@@ -72,6 +73,7 @@ import org.apache.druid.sql.calcite.expression.builtin.TimestampToMillisOperator
 import org.apache.druid.sql.calcite.expression.builtin.TrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TruncateOperatorConversion;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -94,6 +96,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new SumZeroSqlAggregator())
           .build();
 
+
   // STRLEN has so many aliases.
   private static final SqlOperatorConversion CHARACTER_LENGTH_CONVERSION = new DirectOperatorConversion(
       SqlStdOperatorTable.CHARACTER_LENGTH,
@@ -111,7 +114,6 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new DirectOperatorConversion(SqlStdOperatorTable.CONCAT, "concat"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.EXP, "exp"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.DIVIDE_INTEGER, "div"))
-          .add(new DirectOperatorConversion(SqlStdOperatorTable.LIKE, "like"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.LN, "log"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.LOWER, "lower"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.LOG10, "log10"))
@@ -140,20 +142,12 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, "<="))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
-          .add(new CastOperatorConversion())
+          // time operators
           .add(new CeilOperatorConversion())
           .add(new DateTruncOperatorConversion())
           .add(new ExtractOperatorConversion())
           .add(new FloorOperatorConversion())
           .add(new MillisToTimestampOperatorConversion())
-          .add(new ReinterpretOperatorConversion())
-          .add(new RegexpExtractOperatorConversion())
-          .add(new PositionOperatorConversion())
-          .add(new StrposOperatorConversion())
-          .add(new SubstringOperatorConversion())
-          .add(new ConcatOperatorConversion())
-          .add(new TextcatOperatorConversion())
-          .add(new AliasedOperatorConversion(new SubstringOperatorConversion(), "SUBSTR"))
           .add(new TimeArithmeticOperatorConversion.TimeMinusIntervalOperatorConversion())
           .add(new TimeArithmeticOperatorConversion.TimePlusIntervalOperatorConversion())
           .add(new TimeExtractOperatorConversion())
@@ -162,12 +156,24 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new TimeParseOperatorConversion())
           .add(new TimeShiftOperatorConversion())
           .add(new TimestampToMillisOperatorConversion())
-          .add(new TruncateOperatorConversion())
-          .add(new TrimOperatorConversion())
+          // string operators
           .add(new BTrimOperatorConversion())
+          .add(new LikeOperatorConversion())
           .add(new LTrimOperatorConversion())
+          .add(new PositionOperatorConversion())
+          .add(new RegexpExtractOperatorConversion())
           .add(new RTrimOperatorConversion())
+          .add(new StrposOperatorConversion())
+          .add(new SubstringOperatorConversion())
+          .add(new AliasedOperatorConversion(new SubstringOperatorConversion(), "SUBSTR"))
+          .add(new ConcatOperatorConversion())
+          .add(new TextcatOperatorConversion())
+          .add(new TrimOperatorConversion())
+          .add(new TruncateOperatorConversion())
           .add(new AliasedOperatorConversion(new TruncateOperatorConversion(), "TRUNC"))
+          // value coercion operators
+          .add(new CastOperatorConversion())
+          .add(new ReinterpretOperatorConversion())
           .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.
@@ -222,6 +228,7 @@ public class DruidOperatorTable implements SqlOperatorTable
     }
   }
 
+  @Nullable
   public SqlAggregator lookupAggregator(final SqlAggFunction aggFunction)
   {
     final SqlAggregator sqlAggregator = aggregators.get(OperatorKey.of(aggFunction));
@@ -232,6 +239,7 @@ public class DruidOperatorTable implements SqlOperatorTable
     }
   }
 
+  @Nullable
   public SqlOperatorConversion lookupOperatorConversion(final SqlOperator operator)
   {
     final SqlOperatorConversion operatorConversion = operatorConversions.get(OperatorKey.of(operator));
@@ -250,6 +258,10 @@ public class DruidOperatorTable implements SqlOperatorTable
       final List<SqlOperator> operatorList
   )
   {
+    if (opName == null) {
+      return;
+    }
+
     if (opName.names.size() != 1) {
       return;
     }
@@ -301,7 +313,7 @@ public class DruidOperatorTable implements SqlOperatorTable
     private final String name;
     private final SqlSyntax syntax;
 
-    public OperatorKey(final String name, final SqlSyntax syntax)
+    OperatorKey(final String name, final SqlSyntax syntax)
     {
       this.name = StringUtils.toLowerCase(Preconditions.checkNotNull(name, "name"));
       this.syntax = normalizeSyntax(Preconditions.checkNotNull(syntax, "syntax"));

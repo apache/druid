@@ -113,8 +113,6 @@ public final class UriCacheGenerator implements CacheGenerator<UriExtractionName
       uri = extractionNamespace.getUri();
     }
 
-    final String uriPath = uri.getPath();
-
     return RetryUtils.retry(
         () -> {
           final String version = puller.getVersion(uri);

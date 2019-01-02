@@ -21,7 +21,6 @@ package org.apache.druid.server.http.security;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
@@ -34,7 +33,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.core.PathSegment;
-import java.util.List;
 
 
 /**
@@ -88,17 +86,5 @@ public class RulesResourceFilter extends AbstractResourceFilter
     }
 
     return request;
-  }
-
-  @Override
-  public boolean isApplicable(String requestPath)
-  {
-    List<String> applicablePaths = ImmutableList.of("druid/coordinator/v1/rules/");
-    for (String path : applicablePaths) {
-      if (requestPath.startsWith(path) && !requestPath.equals(path)) {
-        return true;
-      }
-    }
-    return false;
   }
 }

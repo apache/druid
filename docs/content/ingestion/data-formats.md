@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Data Formats for Ingestion"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-Data Formats for Ingestion
-==========================
+# Data Formats for Ingestion
 
 Druid can ingest denormalized data in JSON, CSV, or a delimited form such as TSV, or any custom format. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest any other delimited data.
 We welcome any contributions to new formats.

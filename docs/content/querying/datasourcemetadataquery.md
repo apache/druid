@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Data Source Metadata Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Data Source Metadata Queries
+
 Data Source Metadata queries return metadata information for a dataSource.  These queries return information about:
 
 * The timestamp of latest ingested event for the dataSource. This is the ingested event without any consideration of rollup.

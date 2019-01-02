@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "groupBy Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # groupBy Queries
 
 These types of queries take a groupBy query object and return an array of JSON objects where each object represents a

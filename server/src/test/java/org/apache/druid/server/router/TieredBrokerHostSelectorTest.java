@@ -103,6 +103,7 @@ public class TieredBrokerHostSelectorTest
       public void registerListener(Listener listener)
       {
         listener.nodesAdded(ImmutableList.of(node1, node2, node3));
+        listener.nodeViewInitialized();
       }
     };
 

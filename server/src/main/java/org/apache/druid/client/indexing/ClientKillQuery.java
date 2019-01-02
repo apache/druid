@@ -25,7 +25,7 @@ import org.joda.time.Interval;
 
 /**
  */
-public class ClientKillQuery
+public class ClientKillQuery implements ClientQuery
 {
   private final String dataSource;
   private final Interval interval;
@@ -41,12 +41,14 @@ public class ClientKillQuery
   }
 
   @JsonProperty
+  @Override
   public String getType()
   {
     return "kill";
   }
 
   @JsonProperty
+  @Override
   public String getDataSource()
   {
     return dataSource;

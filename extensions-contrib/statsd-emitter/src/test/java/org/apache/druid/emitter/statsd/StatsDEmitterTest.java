@@ -38,11 +38,30 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
-    client.gauge("broker.query.cache.total.hitRate", 54);
+    client.gauge("broker.query.cache.total.hitRate", 54, new String[0]);
+    replay(client);
+    emitter.emit(new ServiceMetricEvent.Builder()
+                     .setDimension("dataSource", "data-source")
+                     .build(DateTimes.nowUtc(), "query/cache/total/hitRate", 0.54)
+                     .build("broker", "brokerHost1")
+    );
+    verify(client);
+  }
+
+  @Test
+  public void testConvertRangeWithDogstatsd()
+  {
+    StatsDClient client = createMock(StatsDClient.class);
+    StatsDEmitter emitter = new StatsDEmitter(
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, true),
+        new ObjectMapper(),
+        client
+    );
+    client.gauge("broker.query.cache.total.hitRate", 0.54, new String[0]);
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
@@ -57,11 +76,11 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
-    client.time("broker.query.time.data-source.groupBy", 10);
+    client.time("broker.query.time.data-source.groupBy", 10, new String[0]);
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
@@ -85,11 +104,40 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, null),
         new ObjectMapper(),
         client
     );
-    client.time("brokerHost1#broker#query#time#data-source#groupBy", 10);
+    client.time("brokerHost1#broker#query#time#data-source#groupBy", 10, new String[0]);
+    replay(client);
+    emitter.emit(new ServiceMetricEvent.Builder()
+                     .setDimension("dataSource", "data-source")
+                     .setDimension("type", "groupBy")
+                     .setDimension("interval", "2013/2015")
+                     .setDimension("some_random_dim1", "random_dim_value1")
+                     .setDimension("some_random_dim2", "random_dim_value2")
+                     .setDimension("hasFilters", "no")
+                     .setDimension("duration", "P1D")
+                     .setDimension("remoteAddress", "194.0.90.2")
+                     .setDimension("id", "ID")
+                     .setDimension("context", "{context}")
+                     .build(DateTimes.nowUtc(), "query/time", 10)
+                     .build("broker", "brokerHost1")
+    );
+    verify(client);
+  }
+
+  @Test
+  public void testDogstatsdEnabled()
+  {
+    StatsDClient client = createMock(StatsDClient.class);
+    StatsDEmitter emitter = new StatsDEmitter(
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, true),
+        new ObjectMapper(),
+        client
+    );
+    client.time("broker#query#time", 10,
+        new String[] {"dataSource:data-source", "type:groupBy", "hostname:brokerHost1"});
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("dataSource", "data-source")
@@ -113,11 +161,11 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, null),
         new ObjectMapper(),
         client
     );
-    client.count("brokerHost1.broker.jvm.gc.count.G1-GC", 1);
+    client.count("brokerHost1.broker.jvm.gc.count.G1-GC", 1, new String[0]);
     replay(client);
     emitter.emit(new ServiceMetricEvent.Builder()
                      .setDimension("gcName", "G1 GC")

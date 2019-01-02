@@ -279,6 +279,26 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
+  public TaskPayloadResponse getTaskPayload(String taskId)
+  {
+    try {
+      final FullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/task/%s", taskId))
+      );
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<TaskPayloadResponse>()
+          {
+          }
+      );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
   public int killPendingSegments(String dataSource, DateTime end)
   {
     final String endPoint = StringUtils.format(

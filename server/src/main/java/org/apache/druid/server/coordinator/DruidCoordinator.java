@@ -324,25 +324,17 @@ public class DruidCoordinator
 
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
-    return configManager.watch(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        CoordinatorDynamicConfig.class,
-        CoordinatorDynamicConfig.builder().build()
-    ).get();
+    return CoordinatorDynamicConfig.current(configManager);
   }
 
   public CoordinatorCompactionConfig getCompactionConfig()
   {
-    return configManager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class,
-        CoordinatorCompactionConfig.empty()
-    ).get();
+    return CoordinatorCompactionConfig.current(configManager);
   }
 
   public void removeSegment(DataSegment segment)
   {
-    log.info("Removing Segment[%s]", segment);
+    log.info("Removing Segment[%s]", segment.getIdentifier());
     metadataSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
   }
 

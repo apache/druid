@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tasks Overview"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Tasks Overview
 
 Tasks are run on middle managers and always operate on a single data source.

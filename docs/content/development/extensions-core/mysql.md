@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "MySQL Metadata Store"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # MySQL Metadata Store
 
@@ -85,12 +86,6 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
   druid.metadata.storage.connector.user=druid
   druid.metadata.storage.connector.password=druid
   ```
-
-  Note: the metadata storage extension is not packaged within the main Druid tarball; it is
-  packaged in a separate tarball that can be downloaded from [here](http://druid.io/downloads.html).
-  You can also get it using [pull-deps](../../operations/pull-deps.html), or you can build
-  it from source code; see [Build from Source](../build.html).
-
 
 ## Encrypting MySQL connections
   This extension provides support for encrypting MySQL connections. To get more information about encrypting MySQL connections using TLS/SSL in general, please refer to this [guide](https://dev.mysql.com/doc/refman/5.7/en/using-encrypted-connections.html).

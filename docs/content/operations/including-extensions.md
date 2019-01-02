@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Loading extensions"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Loading extensions
 
@@ -44,8 +45,8 @@ common.runtime.properties for your setup.
 </div>
 
 <div class="note caution">
-Because of licensing, the mysql-metadata-storage extension is not packaged with the default Druid tarball. In order to get it, you can download it from <a href="http://druid.io/downloads.html">druid.io</a>, 
-then unpack and move it into the extensions directory. Make sure to include the name of the extension in the loadList configuration.
+Because of licensing, the mysql-metadata-storage extension does not include the required MySQL JDBC driver. For instructions 
+on how to install this library, see the <a href="../development/extensions-core/mysql.html">MySQL extension page</a>.
 </div>
 
 ## Loading community and third-party extensions (contrib extensions)

@@ -383,6 +383,7 @@ public class SupervisorManagerTest extends EasyMockSupport
       this.suspended = suspended;
       this.suspendedSupervisor = suspendedSupervisor;
     }
+
     @Override
     public SupervisorSpec createSuspendedSpec()
     {
