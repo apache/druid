@@ -90,7 +90,7 @@ At every coordinator run, this policy searches segments to compact by iterating 
 Once it finds the latest segment among all dataSources, it checks the segment is _compactible_ with other segments of the same dataSource which have the same or abutting intervals.
 Note that segments are compactible if their total size is smaller than or equal to the configured `inputSegmentSizeBytes`.
 
-Let me give you some more details with an example. Let me assume we have two dataSources (`foo`, `bar`)
+Here are some details with example. Let us assume we have two dataSources (`foo`, `bar`)
 and 5 segments (`foo_2017-10-01/2017-11-01`, `foo_2017-11-01/2017-12-01`, `bar_2017-08-01/2017-09-01`, `bar_2017-09-01/2017-10-01`, `bar_2017-10-01/2017-11-01`).
 The segment name indicates its dataSource and interval, and each segment has the same size of 10 MB.
 When `inputSegmentSizeBytes` is 20 MB, this policy first returns two segments (`foo_2017-11-01/2017-12-01` and `foo_2017-10-01/2017-11-01`) to compact because
@@ -102,7 +102,7 @@ Note that `bar_2017-08-01/2017-09-01` is not compacted together even though it a
 This is because the total segment size to compact would be greater than `inputSegmentSizeBytes` if it's included.
 
 The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.html#compaction-dynamic-configuration)).
-If this is set, this policy will ignore the segments failling into the interval of (the end time of the very latest segment - `skipOffsetFromLatest`).
+If this is set, this policy will ignore the segments falling into the interval of (the end time of the very latest segment - `skipOffsetFromLatest`).
 This is to avoid conflicts between compact tasks and realtime tasks.
 Note that realtime tasks have a higher priority than compact tasks by default. They would revoke compact tasks if their intervals overlap each other.
 
