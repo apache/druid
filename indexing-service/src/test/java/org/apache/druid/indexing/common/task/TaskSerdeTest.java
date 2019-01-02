@@ -120,6 +120,13 @@ public class TaskSerdeTest
     Assert.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\"}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+
+    tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"maxRowsPerSegment\":10}",
         IndexTask.IndexTuningConfig.class
     );

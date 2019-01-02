@@ -1536,7 +1536,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     /**
-     * Return the target number of rows per segment. This returns null if it's not specified in tuningConfig.
+     * Return the max number of rows per segment. This returns null if it's not specified in tuningConfig.
      * Please use {@link IndexTask#getValidMaxRowsPerSegment} instead to get the valid value.
      */
     @Nullable
