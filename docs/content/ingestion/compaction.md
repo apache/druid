@@ -48,11 +48,22 @@ Compaction tasks merge all segments of the given interval. The syntax is:
 |`dataSource`|DataSource name to be compacted|Yes|
 |`interval`|Interval of segments to be compacted|Yes|
 |`dimensions`|Custom dimensionsSpec. compaction task will use this dimensionsSpec if exist instead of generating one. See below for more details.|No|
-|`segmentGranularity`|If this is set, compactionTask will change the segment granularity. `keepSegmentGranularity` must be set to false or null to use this option. If this is not set, the original segment granularity will be kept if keepSegmentGranularity is null or true. Otheriwse, `ALL` segment granularity will be used.|No|
-|`keepSegmentGranularity`|Deprecated. Please use `segmentGranularity` instead. Please see `segmentGranularity` for its behavior.|No|
+|`segmentGranularity`|If this is set, compactionTask will change the segment granularity for the given interval. See [segmentGranularity of Uniform Granularity Spec](./ingestion-spec.html#uniform-granularity-spec) for more details. See the below table for the behavior.|No|
+|`keepSegmentGranularity`|Deprecated. Please use `segmentGranularity` instead. See the below table for its behavior.|No|
 |`targetCompactionSizeBytes`|Target segment size after comapction. Cannot be used with `targetPartitionSize`, `maxTotalRows`, and `numShards` in tuningConfig.|No|
 |`tuningConfig`|[Index task tuningConfig](../ingestion/native_tasks.html#tuningconfig)|No|
 |`context`|[Task context](../ingestion/locking-and-priority.html#task-context)|No|
+
+### Used segmentGranularity based on `segmentGranularity` and `keepSegmentGranularity`
+
+|SegmentGranularity|keepSegmentGranularity|Used SegmentGranularity|
+|------------------|----------------------|-----------------------|
+|Non-null|True|Error|
+|Non-null|False|Given segmentGranularity|
+|Non-null|Null|Given segmentGranularity|
+|Null|True|Original segmentGranularity|
+|Null|False|ALL segmentGranularity. All events will fall into the single time chunk.|
+|Null|Null|Original segmentGranularity|
 
 An example of compaction task is
 
