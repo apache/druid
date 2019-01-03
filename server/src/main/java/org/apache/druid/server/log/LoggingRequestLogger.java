@@ -66,6 +66,7 @@ public class LoggingRequestLogger implements RequestLogger
           MDC.put("queryId", query.getId());
           MDC.put("dataSource", findInnerDatasource(query).toString());
           MDC.put("queryType", query.getType());
+          MDC.put("isNested", String.valueOf(!(query.getDataSource() instanceof TableDataSource)));
           MDC.put("hasFilters", Boolean.toString(query.hasFilters()));
           MDC.put("remoteAddr", requestLogLine.getRemoteAddr());
           MDC.put("duration", query.getDuration().toString());
