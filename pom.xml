@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-incubating-SNAPSHOT</version>
+    <version>0.13.0.0-incubating-lyft</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -93,7 +93,7 @@
         <netty4.version>4.1.30.Final</netty4.version>
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
-        <hadoop.compile.version>2.8.3</hadoop.compile.version>
+        <hadoop.compile.version>2.6.0</hadoop.compile.version>
         <hive.version>2.0.0</hive.version>
         <powermock.version>1.6.6</powermock.version>
         <aws.sdk.version>1.11.199</aws.sdk.version>
@@ -127,7 +127,7 @@
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
         <module>extensions-core/druid-bloom-filter</module>
-        <module>extensions-core/druid-kerberos</module>
+        <!--<module>extensions-core/druid-kerberos</module>-->
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
         <module>extensions-core/stats</module>
@@ -176,6 +176,28 @@
             <id>${repoOrgId}</id>
             <name>${repoOrgName}</name>
             <url>${repoOrgUrl}</url>
+        </repository>
+        <repository>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <id>hortonworks.extrepo</id>
+            <name>Hortonworks HDP</name>
+            <url>http://repo.hortonworks.com/content/repositories/releases</url>
+        </repository>
+        <repository>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <id>spring-io</id>
+            <name>Spring IO</name>
+            <url>http://repo.spring.io/plugins-release/</url>
         </repository>
     </repositories>
 
