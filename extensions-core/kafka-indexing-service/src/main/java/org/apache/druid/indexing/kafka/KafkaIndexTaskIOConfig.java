@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.joda.time.DateTime;
@@ -32,6 +33,7 @@ import java.util.Map;
 public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Integer, Long>
 {
   private final Map<String, Object> consumerProperties;
+  private final long pollTimeout;
 
   @JsonCreator
   public KafkaIndexTaskIOConfig(
@@ -40,6 +42,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       @JsonProperty("startPartitions") SeekableStreamPartitions<Integer, Long> startPartitions,
       @JsonProperty("endPartitions") SeekableStreamPartitions<Integer, Long> endPartitions,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
+      @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
@@ -59,6 +62,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
+    this.pollTimeout = pollTimeout != null ? pollTimeout : KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
 
     for (int partition : endPartitions.getPartitionSequenceNumberMap().keySet()) {
       Preconditions.checkArgument(
@@ -77,6 +81,12 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
     return consumerProperties;
   }
 
+  @JsonProperty
+  public long getPollTimeout()
+  {
+    return pollTimeout;
+  }
+
   @Override
   public String toString()
   {
@@ -86,6 +96,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
            ", startPartitions=" + getStartPartitions() +
            ", endPartitions=" + getEndPartitions() +
            ", consumerProperties=" + consumerProperties +
+           ", pollTimeout=" + pollTimeout +
            ", useTransaction=" + isUseTransaction() +
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +

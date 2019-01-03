@@ -100,7 +100,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
     // that has not been written yet (which is totally legitimate). So let's wait for it to show up.
     List<OrderedPartitionableRecord<Integer, Long>> records = new ArrayList<>();
     try {
-      records = recordSupplier.poll(KafkaIndexTask.POLL_TIMEOUT_MILLIS);
+      records = recordSupplier.poll(task.getIOConfig().getPollTimeout());
     }
     catch (OffsetOutOfRangeException e) {
       log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
