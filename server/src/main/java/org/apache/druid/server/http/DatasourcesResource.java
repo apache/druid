@@ -656,6 +656,10 @@ public class DatasourcesResource
     return Response.ok(retval).build();
   }
 
+  /**
+   * Used by the realtime tasks to learn whether a segment is handed off or not.
+   * It returns true when the segment will never be handed off or is already handed off. Otherwise, it returns false.
+   */
   @GET
   @Path("/{dataSourceName}/handoffComplete")
   @Produces(MediaType.APPLICATION_JSON)
@@ -713,6 +717,7 @@ public class DatasourcesResource
       return Response.ok(false).build();
     }
     catch (Exception e) {
+      log.error(e, "");
       return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
     }
   }
