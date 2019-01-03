@@ -340,6 +340,7 @@ public class QueryServer
         final String remoteAddr = getRemoteAddress(call.getAttributes());
         return new ServerCall.Listener<Supplier<Query>>()
         {
+          @Override
           public void onMessage(Supplier<Query> querySupplier)
           {
             final Map priorMap = MDC.getCopyOfContextMap();
@@ -477,6 +478,7 @@ public class QueryServer
             }
           }
 
+          @Override
           public void onCancel()
           {
             // Small race condition here where the query has been received but not enqueued when the cancel comes in.
