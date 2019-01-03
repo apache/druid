@@ -129,6 +129,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-datasketches</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-grpc</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-hdfs-storage</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-histogram</argument>
