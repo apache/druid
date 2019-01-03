@@ -5,7 +5,7 @@ _Note: This tool is very much a work in progress... the code might be a bit.. ro
 A standalone web ui for viewing status, monitoring, and management of the 
 Druid watermarks system. 
 
-![screenshot](TODO)
+![screenshot](https://user-images.githubusercontent.com/8213081/50620166-ddd1ea00-0eb2-11e9-9149-ddd1ace496fd.png)
 
 The watermark console is a static html/js web application built
 with [react](https://facebook.github.io/react/) that interacts with the API of the 
