@@ -154,6 +154,15 @@ public class StringUtils
     return s.toUpperCase(Locale.ENGLISH);
   }
 
+  /**
+   * Encodes a String in application/x-www-form-urlencoded format, with one exception:
+   * "+" in the encoded form is replaced with "%20".
+   *
+   * application/x-www-form-urlencoded encodes spaces as "+", but we use this to encode non-form data as well.
+   *
+   * @param s String to be encoded
+   * @return application/x-www-form-urlencoded format encoded String, but with "+" replaced with "%20".
+   */
   @Nullable
   public static String urlEncode(String s)
   {
@@ -162,8 +171,6 @@ public class StringUtils
     }
 
     try {
-      // application/x-www-form-urlencoded encodes spaces as "+", but we use this to encode non-form
-      // data as well, so replace "+" with "%20".
       return StringUtils.replace(URLEncoder.encode(s, "UTF-8"), "+", "%20");
     }
     catch (UnsupportedEncodingException e) {

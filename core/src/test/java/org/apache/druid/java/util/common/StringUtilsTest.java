@@ -154,8 +154,10 @@ public class StringUtilsTest
   {
     String s1 = StringUtils.urlEncode("aaa bbb");
     Assert.assertEquals(s1, "aaa%20bbb");
+    Assert.assertEquals("aaa bbb", StringUtils.urlDecode(s1));
 
     String s2 = StringUtils.urlEncode("fff+ggg");
     Assert.assertEquals(s2, "fff%2Bggg");
+    Assert.assertEquals("fff+ggg", StringUtils.urlDecode(s2));
   }
 }
