@@ -155,6 +155,7 @@
                   <shadedPattern>org.apache.druid.grpc.shaded.com.google.common.util.concurrent</shadedPattern>
                 </relocation>
               </relocations>
+              <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
             </configuration>
           </execution>
         </executions>
