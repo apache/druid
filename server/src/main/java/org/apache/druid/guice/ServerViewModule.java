@@ -36,9 +36,9 @@ public class ServerViewModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.announcer", ServerInventoryViewProvider.class);
-    JsonConfigProvider.bind(binder, "druid.announcer", FilteredServerInventoryViewProvider.class);
-    JsonConfigProvider.bind(binder, "druid.announcer.http", HttpServerInventoryViewConfig.class);
+    JsonConfigProvider.bind(binder, "druid.serverview", ServerInventoryViewProvider.class);
+    JsonConfigProvider.bind(binder, "druid.serverview", FilteredServerInventoryViewProvider.class);
+    JsonConfigProvider.bind(binder, "druid.serverview.http", HttpServerInventoryViewConfig.class);
     binder.bind(InventoryView.class).to(ServerInventoryView.class);
     binder.bind(ServerView.class).to(ServerInventoryView.class);
     binder.bind(ServerInventoryView.class).toProvider(ServerInventoryViewProvider.class).in(ManageLifecycle.class);

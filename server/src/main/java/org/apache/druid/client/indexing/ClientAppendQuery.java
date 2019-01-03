@@ -27,7 +27,7 @@ import java.util.List;
 
 /**
  */
-public class ClientAppendQuery
+public class ClientAppendQuery implements ClientQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
@@ -43,12 +43,14 @@ public class ClientAppendQuery
   }
 
   @JsonProperty
+  @Override
   public String getType()
   {
     return "append";
   }
 
   @JsonProperty
+  @Override
   public String getDataSource()
   {
     return dataSource;

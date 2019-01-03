@@ -493,7 +493,7 @@ public interface IndexMerger
         mergeBufferTotalSize += bufferAllocation.rhs;
         ByteBufferUtils.free(bufferAllocation.lhs);
       }
-      log.info("Freed [,%d] bytes of dictionary merging direct buffers", mergeBufferTotalSize);
+      log.info("Freed [%,d] bytes of dictionary merging direct buffers", mergeBufferTotalSize);
     }
   }
 }

@@ -32,6 +32,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 
@@ -49,11 +50,27 @@ public class TestServerInventoryView implements TimelineServerView
       "dummy",
       0
   );
+  private static final DruidServerMetadata DUMMY_SERVER_REALTIME = new DruidServerMetadata(
+      "dummy",
+      "dummy",
+      null,
+      0,
+      ServerType.REALTIME,
+      "dummy",
+      0
+  );
   private final List<DataSegment> segments;
+  private List<DataSegment> realtimeSegments = new ArrayList<>();
 
   public TestServerInventoryView(List<DataSegment> segments)
   {
     this.segments = ImmutableList.copyOf(segments);
+  }
+
+  public TestServerInventoryView(List<DataSegment> segments, List<DataSegment> realtimeSegments)
+  {
+    this.segments = ImmutableList.copyOf(segments);
+    this.realtimeSegments = ImmutableList.copyOf(realtimeSegments);
   }
 
   @Override
@@ -75,7 +92,9 @@ public class TestServerInventoryView implements TimelineServerView
     for (final DataSegment segment : segments) {
       exec.execute(() -> callback.segmentAdded(DUMMY_SERVER, segment));
     }
-
+    for (final DataSegment segment : realtimeSegments) {
+      exec.execute(() -> callback.segmentAdded(DUMMY_SERVER_REALTIME, segment));
+    }
     exec.execute(callback::segmentViewInitialized);
   }
 
@@ -85,7 +104,9 @@ public class TestServerInventoryView implements TimelineServerView
     for (DataSegment segment : segments) {
       exec.execute(() -> callback.segmentAdded(DUMMY_SERVER, segment));
     }
-
+    for (final DataSegment segment : realtimeSegments) {
+      exec.execute(() -> callback.segmentAdded(DUMMY_SERVER_REALTIME, segment));
+    }
     exec.execute(callback::timelineInitialized);
   }
 

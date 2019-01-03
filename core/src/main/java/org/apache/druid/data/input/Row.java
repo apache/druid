@@ -78,7 +78,8 @@ public interface Row extends Comparable<Row>
   /**
    * Returns the metric column value for the given column name. This method is different from {@link #getRaw} in two
    * aspects:
-   *  1. If the column is absent in the row, numeric zero is returned, rather than null.
+   *  1. If the column is absent in the row, either numeric zero or null will be returned, depending on
+   *     the value of druid.generic.useDefaultValueForNull.
    *  2. If the column has string value, an attempt is made to parse this value as a number.
    */
   @Nullable
