@@ -24,7 +24,9 @@ import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 import javax.annotation.Nullable;
 
 /**
- * Interface containing
+ * Interface containing dictionary-related methods common to {@link DimensionSelector},
+ * {@link org.apache.druid.segment.vector.SingleValueDimensionVectorSelector}, and
+ * {@link org.apache.druid.segment.vector.MultiValueDimensionVectorSelector}.
  */
 public interface DimensionDictionarySelector
 {
@@ -84,7 +86,7 @@ public interface DimensionDictionarySelector
    *
    * <p>Returns false if {@link #lookupName(int)} could be called with ids, returned from the most recent row (or row
    * vector) returned by this DimensionSelector, but not earlier. If {@link #getValueCardinality()} of this
-   * DimensionSelector additionally returns {@link #CARDINALITY_UNKNOWN}, {@code lookupName()} couldn't be called with
+   * selector additionally returns {@link #CARDINALITY_UNKNOWN}, {@code lookupName()} couldn't be called with
    * ids, returned by not the most recent row (or row vector), i. e. names for ids couldn't be looked up "later". If
    * {@link #getValueCardinality()} returns a non-negative number, {@code lookupName()} could be called with any ids,
    * returned from rows (or row vectors) returned since the creation of this DimensionSelector.

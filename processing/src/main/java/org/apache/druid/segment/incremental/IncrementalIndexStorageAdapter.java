@@ -32,8 +32,8 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.Capabilities;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionIndexer;
-import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -99,7 +99,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     DimensionIndexer indexer = desc.getIndexer();
     int cardinality = indexer.getCardinality();
-    return cardinality != DimensionSelector.CARDINALITY_UNKNOWN ? cardinality : Integer.MAX_VALUE;
+    return cardinality != DimensionDictionarySelector.CARDINALITY_UNKNOWN ? cardinality : Integer.MAX_VALUE;
   }
 
   @Override
