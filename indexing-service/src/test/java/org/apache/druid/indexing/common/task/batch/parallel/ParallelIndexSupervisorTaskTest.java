@@ -31,6 +31,7 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -176,6 +177,24 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
                 return false;
               }
             },
+            false
+        )
+    );
+    actionClient = createActionClient(task);
+    toolbox = createTaskToolbox(task);
+
+    prepareTaskForLocking(task);
+    Assert.assertTrue(task.isReady(actionClient));
+    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
+  }
+
+  @Test
+  public void testPublishEmptySegments() throws Exception
+  {
+    final ParallelIndexSupervisorTask task = newTask(
+        Intervals.of("2020/2021"),
+        new ParallelIndexIOConfig(
+            new LocalFirehoseFactory(inputDir, "test_*", null),
             false
         )
     );
