@@ -40,7 +40,6 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
@@ -80,7 +79,6 @@ import java.util.stream.StreamSupport;
 @ManageLifecycle
 public class DruidSchema extends AbstractSchema
 {
-  private static final Logger LOG = new Logger(DruidSchema.class);
   // Newest segments first, so they override older ones.
   private static final Comparator<DataSegment> SEGMENT_ORDER = Comparator
       .comparing((DataSegment segment) -> segment.getInterval().getStart()).reversed()

@@ -281,7 +281,7 @@ public class SystemSchemaTest extends CalciteTestBase
       DataSegment.PruneLoadSpecHolder.DEFAULT
   );
 
-  final List<DataSegment> realtimeSegments = ImmutableList.of(segment4, segment5);
+  final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
 
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
       new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
@@ -555,7 +555,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(100L, row4[4]);
     Assert.assertEquals("version2", row4[5]);
     Assert.assertEquals(0L, row4[6]); //partition_num
-    Assert.assertEquals(1L, row4[7]); //num_replicas
+    Assert.assertEquals(2L, row4[7]); //segment test2 is served by historical and realtime servers
     Assert.assertEquals(3L, row4[8]); //numRows = 3
     Assert.assertEquals(1L, row4[9]); //is_published
     Assert.assertEquals(1L, row4[10]); //is_available
