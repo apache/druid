@@ -774,7 +774,7 @@ public class CompactionTaskTest
               s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
           )
       );
-      Assert.assertEquals(5, ingestionSpecs.size());
+      Assert.assertEquals(6, ingestionSpecs.size());
       assertIngestionSchema(
           ingestionSpecs,
           expectedDimensionsSpec,
