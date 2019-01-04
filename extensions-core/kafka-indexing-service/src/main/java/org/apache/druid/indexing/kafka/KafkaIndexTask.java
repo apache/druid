@@ -41,13 +41,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 {
   private static final String TYPE = "index_kafka";
-  static final long POLL_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(100);
 
   private final KafkaIndexTaskIOConfig ioConfig;
   private final ObjectMapper configMapper;

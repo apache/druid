@@ -1742,7 +1742,7 @@ public class IndexTaskTest
     );
   }
 
-  private static IndexTuningConfig createTuningConfig(
+  static IndexTuningConfig createTuningConfig(
       @Nullable Integer maxRowsPerSegment,
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,

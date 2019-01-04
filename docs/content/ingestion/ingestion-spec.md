@@ -271,7 +271,8 @@ for the `comment` column.
  
 ## GranularitySpec
 
-The default granularity spec is `uniform`, and can be changed by setting the `type` field.
+GranularitySpec is to define how to partition a dataSource into [time chunks](../design/index.html#datasources-and-segments).
+The default granularitySpec is `uniform`, and can be changed by setting the `type` field.
 Currently, `uniform` and `arbitrary` types are supported.
 
 ### Uniform Granularity Spec
@@ -280,8 +281,8 @@ This spec is used to generated segments with uniform intervals.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| segmentGranularity | string | The granularity to create segments at. | no (default == 'DAY') |
-| queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. A granularity of 'NONE' means millisecond granularity.| no (default == 'NONE') |
+| segmentGranularity | string | The granularity to create time chunks at. Multiple segments can be created per time chunk. For example, with 'DAY' `segmentGranularity`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. See [Granularity](../querying/granularities.html) for supported granularities.| no (default == 'DAY') |
+| queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. A granularity of 'NONE' means millisecond granularity. See [Granularity](../querying/granularities.html) for supported granularities.| no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
 | intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | no. If specified, batch ingestion tasks may skip determining partitions phase which results in faster ingestion. |
 
@@ -291,7 +292,7 @@ This spec is used to generate segments with arbitrary intervals (it tries to cre
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. A granularity of 'NONE' means millisecond granularity.| no (default == 'NONE') |
+| queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. A granularity of 'NONE' means millisecond granularity. See [Granularity](../querying/granularities.html) for supported granularities.| no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
 | intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | no. If specified, batch ingestion tasks may skip determining partitions phase which results in faster ingestion. |
 
