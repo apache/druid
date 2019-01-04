@@ -73,6 +73,8 @@ public class TimestampParserTest
         parser.apply("2009-02-13 23:31:30 PST"));
     Assert.assertEquals(new DateTime("2009-02-13T23:31:30Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("PST"))),
         parser.apply("\"2009-02-13 23:31:30 PST\""));
+    Assert.assertEquals(DateTimes.of("3000-01-01T00:00:00Z"), parser.apply(32503680000L));
+    Assert.assertEquals(DateTimes.of("1971-01-12T04:48:01Z"), parser.apply(32503681000L));
   }
 
   @Test

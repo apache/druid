@@ -36,6 +36,9 @@ import java.util.concurrent.TimeUnit;
 
 public class TimestampParser
 {
+  // 32503680000s <=> 3000-01-01T00:00:00Z
+  private static final long MAX_TIMESTAMP_IN_SECONDS = 32503680000L;
+
   public static Function<String, DateTime> createTimestampParser(
       final String format
   )
@@ -63,7 +66,12 @@ public class TimestampParser
           }
         }
 
-        return DateTimes.utc(Long.parseLong(input));
+        long timestamp = Long.parseLong(input);
+        if (timestamp > MAX_TIMESTAMP_IN_SECONDS) {
+          return DateTimes.utc(timestamp);
+        } else {
+          return DateTimes.utc(timestamp * 1000);
+        }
       };
     } else if ("iso".equalsIgnoreCase(format)) {
       return input -> {
@@ -112,7 +120,14 @@ public class TimestampParser
     } else if ("ruby".equalsIgnoreCase(format)) {
       return input -> DateTimes.utc(Double.valueOf(input.doubleValue() * 1000).longValue());
     } else {
-      return input -> DateTimes.utc(input.longValue());
+      return input -> {
+        long timestamp = input.longValue();
+        if (timestamp > MAX_TIMESTAMP_IN_SECONDS) {
+          return DateTimes.utc(timestamp);
+        } else {
+          return DateTimes.utc(timestamp * 1000);
+        }
+      };
     }
   }
 
