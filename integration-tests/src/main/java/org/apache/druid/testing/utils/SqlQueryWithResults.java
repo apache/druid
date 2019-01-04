@@ -32,9 +32,7 @@ public class SqlQueryWithResults
   private final SqlQuery sqlQuery;
   private final List<Map<String, Object>> expectedResults;
 
-
   @JsonCreator
-  @JsonIgnoreProperties(ignoreUnknown = true)
   public SqlQueryWithResults(
       @JsonProperty("sqlQuery") SqlQuery query,
       @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
@@ -43,7 +41,6 @@ public class SqlQueryWithResults
     this.sqlQuery = query;
     this.expectedResults = expectedResults;
   }
-
 
   @JsonProperty
   public SqlQuery getSqlQuery()
