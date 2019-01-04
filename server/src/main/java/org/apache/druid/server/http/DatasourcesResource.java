@@ -717,7 +717,7 @@ public class DatasourcesResource
       return Response.ok(false).build();
     }
     catch (Exception e) {
-      log.error(e, "");
+      log.error(e, "Error while handling hand off check request");
       return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
     }
   }
