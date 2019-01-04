@@ -277,6 +277,8 @@ public class BrokerServerView implements TimelineServerView
             server,
             segmentId
         );
+      } else {
+        runTimelineCallbacks(callback -> callback.segmentRemoved(server, segment));
       }
 
       if (selector.isEmpty()) {

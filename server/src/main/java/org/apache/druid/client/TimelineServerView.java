@@ -81,5 +81,14 @@ public interface TimelineServerView extends ServerView
      * @return continue or unregister
      */
     CallbackAction segmentRemoved(DataSegment segment);
+
+    /**
+     * Called when a segment is removed from a server.
+     *
+     * @param server The server that removed a segment
+     * @param segment The segment that was removed
+     * @return continue or unregister
+     */
+    CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment);
   }
 }
