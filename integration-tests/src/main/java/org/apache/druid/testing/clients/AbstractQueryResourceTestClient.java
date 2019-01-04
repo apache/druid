@@ -90,5 +90,5 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
       throw Throwables.propagate(e);
     }
   }
-  
+
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.sql.http.SqlQuery;
 
