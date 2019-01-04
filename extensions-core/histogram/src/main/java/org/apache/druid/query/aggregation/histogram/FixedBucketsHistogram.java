@@ -1133,7 +1133,7 @@ public class FixedBucketsHistogram
     }
   }
 
-  private class IgnoreOutlierHandler implements OutlierHandler
+  private static class IgnoreOutlierHandler implements OutlierHandler
   {
     @Override
     public void handleOutlierAdd(boolean exceededMax)
@@ -1142,7 +1142,9 @@ public class FixedBucketsHistogram
 
     @Override
     public void simpleInterpolateMergeHandleOutliers(
-        FixedBucketsHistogram otherHistogram, double rangeStart, double rangeEnd
+        FixedBucketsHistogram otherHistogram,
+        double rangeStart,
+        double rangeEnd
     )
     {
     }
@@ -1177,7 +1179,9 @@ public class FixedBucketsHistogram
 
     @Override
     public void simpleInterpolateMergeHandleOutliers(
-        FixedBucketsHistogram otherHistogram, double rangeStart, double rangeEnd
+        FixedBucketsHistogram otherHistogram,
+        double rangeStart,
+        double rangeEnd
     )
     {
       // They contain me
@@ -1222,7 +1226,8 @@ public class FixedBucketsHistogram
 
     @Override
     public void handleOutliersCombineDifferentBucketsAllLower(FixedBucketsHistogram otherHistogram)
-    {// ignore any upper outliers in the other histogram, we're not sure where those outliers would fall
+    {
+      // ignore any upper outliers in the other histogram, we're not sure where those outliers would fall
       // within our range.
       lowerOutlierCount += otherHistogram.getCount() + otherHistogram.getLowerOutlierCount();
     }
@@ -1252,7 +1257,9 @@ public class FixedBucketsHistogram
 
     @Override
     public void simpleInterpolateMergeHandleOutliers(
-        FixedBucketsHistogram otherHistogram, double rangeStart, double rangeEnd
+        FixedBucketsHistogram otherHistogram,
+        double rangeStart,
+        double rangeEnd
     )
     {
       // They contain me
