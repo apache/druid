@@ -19,44 +19,23 @@
 
 package org.apache.druid.client.indexing;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Interval;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
+ * org.apache.druid.indexing.common.task.Task representation for clients
  */
-public class ClientKillQuery implements ClientQuery
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @Type(name = "append", value = ClientAppendQuery.class),
+    @Type(name = "merge", value = ClientMergeQuery.class),
+    @Type(name = "kill", value = ClientKillQuery.class),
+    @Type(name = "compact", value = ClientCompactQuery.class)
+})
+public interface ClientQuery
 {
-  private final String dataSource;
-  private final Interval interval;
+  String getType();
 
-  @JsonCreator
-  public ClientKillQuery(
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval
-  )
-  {
-    this.dataSource = dataSource;
-    this.interval = interval;
-  }
-
-  @JsonProperty
-  @Override
-  public String getType()
-  {
-    return "kill";
-  }
-
-  @JsonProperty
-  @Override
-  public String getDataSource()
-  {
-    return dataSource;
-  }
-
-  @JsonProperty
-  public Interval getInterval()
-  {
-    return interval;
-  }
+  String getDataSource();
 }
