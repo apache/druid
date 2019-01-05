@@ -651,34 +651,34 @@ public class KafkaIndexTaskTest
         )
     );
 
-      final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
-          topic,
-          ImmutableMap.of(
-              0,
-              10L,
-              1,
-              2L
-          )
-      );
-      final KafkaIndexTask task = createTask(
-          null,
-          new KafkaIndexTaskIOConfig(
-              0,
-              baseSequenceName,
-              startPartitions,
-              endPartitions,
-              consumerProps,
-              KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
-              true,
-              null,
-              null
-          )
-      );
-      final ListenableFuture<TaskStatus> future = runTask(task);
-      while (task.getRunner().getStatus() != Status.PAUSED) {
-        Thread.sleep(10);
-      }
-      final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(
+            0,
+            10L,
+            1,
+            2L
+        )
+    );
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            baseSequenceName,
+            startPartitions,
+            endPartitions,
+            consumerProps,
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null
+        )
+    );
+    final ListenableFuture<TaskStatus> future = runTask(task);
+    while (task.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
     Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets));
     task.getRunner().setEndOffsets(currentOffsets, false);
