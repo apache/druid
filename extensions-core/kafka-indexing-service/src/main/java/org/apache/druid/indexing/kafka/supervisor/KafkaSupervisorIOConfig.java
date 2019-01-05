@@ -34,8 +34,11 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public static final String TRUST_STORE_PASSWORD_KEY = "ssl.truststore.password";
   public static final String KEY_STORE_PASSWORD_KEY = "ssl.keystore.password";
   public static final String KEY_PASSWORD_KEY = "ssl.key.password";
+  public static final long DEFAULT_POLL_TIMEOUT_MILLIS = 100;
 
   private final Map<String, Object> consumerProperties;
+  private final long pollTimeout;
+
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -44,6 +47,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("taskCount") Integer taskCount,
       @JsonProperty("taskDuration") Period taskDuration,
       @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
+      @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
       @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
@@ -70,6 +74,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
         StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
     );
+    this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
   }
 
   @JsonProperty
@@ -82,6 +87,12 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public Map<String, Object> getConsumerProperties()
   {
     return consumerProperties;
+  }
+
+  @JsonProperty
+  public long getPollTimeout()
+  {
+    return pollTimeout;
   }
 
   @JsonProperty
@@ -99,6 +110,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
            ", consumerProperties=" + consumerProperties +
+           ", pollTimeout=" + pollTimeout +
            ", startDelay=" + getStartDelay() +
            ", period=" + getPeriod() +
            ", useEarliestOffset=" + isUseEarliestOffset() +

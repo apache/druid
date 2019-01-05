@@ -143,7 +143,7 @@ public class UniformGranularitySpec implements GranularitySpec
 
     UniformGranularitySpec that = (UniformGranularitySpec) o;
 
-    if (segmentGranularity != that.segmentGranularity) {
+    if (!segmentGranularity.equals(that.segmentGranularity)) {
       return false;
     }
     if (!queryGranularity.equals(that.queryGranularity)) {

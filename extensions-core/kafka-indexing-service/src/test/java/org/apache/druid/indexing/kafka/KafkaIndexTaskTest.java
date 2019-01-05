@@ -69,6 +69,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -394,6 +395,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -435,6 +437,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -534,6 +537,7 @@ public class KafkaIndexTaskTest
             startPartitions,
             endPartitions,
             consumerProps,
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -647,33 +651,34 @@ public class KafkaIndexTaskTest
         )
     );
 
-    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
-        topic,
-        ImmutableMap.of(
-            0,
-            10L,
-            1,
-            2L
-        )
-    );
-    final KafkaIndexTask task = createTask(
-        null,
-        new KafkaIndexTaskIOConfig(
-            0,
-            baseSequenceName,
-            startPartitions,
-            endPartitions,
-            consumerProps,
-            true,
-            null,
-            null
-        )
-    );
-    final ListenableFuture<TaskStatus> future = runTask(task);
-    while (task.getRunner().getStatus() != Status.PAUSED) {
-      Thread.sleep(10);
-    }
-    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+      final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
+          topic,
+          ImmutableMap.of(
+              0,
+              10L,
+              1,
+              2L
+          )
+      );
+      final KafkaIndexTask task = createTask(
+          null,
+          new KafkaIndexTaskIOConfig(
+              0,
+              baseSequenceName,
+              startPartitions,
+              endPartitions,
+              consumerProps,
+              KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+              true,
+              null,
+              null
+          )
+      );
+      final ListenableFuture<TaskStatus> future = runTask(task);
+      while (task.getRunner().getStatus() != Status.PAUSED) {
+        Thread.sleep(10);
+      }
+      final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
     Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets));
     task.getRunner().setEndOffsets(currentOffsets, false);
@@ -803,6 +808,7 @@ public class KafkaIndexTaskTest
             startPartitions,
             endPartitions,
             consumerProps,
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -907,6 +913,7 @@ public class KafkaIndexTaskTest
             startPartitions,
             endPartitions,
             consumerProps,
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -942,6 +949,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             DateTimes.of("2010"),
             null
@@ -991,6 +999,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             DateTimes.of("2010")
@@ -1050,6 +1059,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1101,6 +1111,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1137,6 +1148,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1184,6 +1196,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1234,6 +1247,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 7L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1273,6 +1287,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 13L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1350,6 +1365,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1409,6 +1425,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1422,6 +1439,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1471,6 +1489,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1484,6 +1503,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 3L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1534,6 +1554,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             false,
             null,
             null
@@ -1547,6 +1568,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 3L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             false,
             null,
             null
@@ -1602,6 +1624,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L, 1, 0L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L, 1, 2L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1661,6 +1684,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1674,6 +1698,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(1, 0L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(1, 1L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1725,6 +1750,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 6L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1764,6 +1790,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 6L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1819,6 +1846,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 6L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1907,6 +1935,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1941,6 +1970,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 200L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 500L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -1990,6 +2020,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null
@@ -2032,6 +2063,7 @@ public class KafkaIndexTaskTest
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
             new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 13L)),
             kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
             null

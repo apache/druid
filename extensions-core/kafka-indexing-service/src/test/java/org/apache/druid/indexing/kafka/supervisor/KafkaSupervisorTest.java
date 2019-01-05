@@ -2790,6 +2790,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         taskCount,
         new Period(duration),
         consumerProperties,
+        KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
         new Period("P1D"),
         new Period("PT30S"),
         useEarliestOffset,
@@ -2900,6 +2901,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             startPartitions,
             endPartitions,
             ImmutableMap.of("bootstrap.servers", kafkaHost),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             minimumMessageTime,
             maximumMessageTime
