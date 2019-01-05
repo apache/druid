@@ -24,22 +24,29 @@ import com.github.stanfordfuturedata.momentsketch.MomentStruct;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Class for wrapping the operations of the moments sketch for use in
+ * the moment sketch aggregator
+ * {@link org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchAggregatorFactory}.
+ *
+ * k controls the size and accuracy provided by the sketch.
+ * The sinh function is used to compress the range of data to allow for more robust results
+ * on skewed and long-tailed metrics, but slightly reducing accuracy on metrics with more uniform
+ * distributions.
+ */
 public class MomentSketchWrapper
 {
-  public MomentStruct data;
+  // The MomentStruct object stores the relevant statistics about a metric distribution.
+  protected MomentStruct data;
   // Whether we use arcsinh to compress the range
-  public boolean useArcSinh = true;
+  protected boolean useArcSinh = true;
 
-  public MomentSketchWrapper(
-      int k
-  )
+  public MomentSketchWrapper(int k)
   {
     data = new MomentStruct(k);
   }
 
-  public MomentSketchWrapper(
-      MomentStruct data
-  )
+  public MomentSketchWrapper(MomentStruct data)
   {
     this.data = data;
   }
@@ -66,18 +73,29 @@ public class MomentSketchWrapper
 
   public double getMin()
   {
-    return data.min;
+    if (useArcSinh) {
+      return Math.sinh(data.min);
+    } else {
+      return data.min;
+    }
   }
 
   public double getMax()
   {
-    return data.max;
+    if (useArcSinh) {
+      return Math.sinh(data.max);
+    } else {
+      return data.max;
+    }
   }
 
   public void add(double rawX)
   {
     double x = rawX;
     if (useArcSinh) {
+      // Since Java does not have a native arcsinh implementation we
+      // compute it manually using the following formula.
+      // This is the inverse operation of Math.sinh
       x = Math.log(rawX + Math.sqrt(1 + rawX * rawX));
     }
     data.add(x);
@@ -100,24 +118,32 @@ public class MomentSketchWrapper
     return ms;
   }
 
+  /**
+   * Estimates quantiles given the statistics in a moments sketch.
+   * @param fractions real values between [0,1] for which we want to estimate quantiles
+   *
+   * @return estimated quantiles.
+   */
   public double[] getQuantiles(double[] fractions)
   {
+    // The solver attempts to construct a distribution estimate which matches the
+    // statistics tracked by the moments sketch. We can then read off quantile estimates
+    // from the reconstructed distribution.
+    // This operation can be relatively expensive (~1 ms) so we set the parameters from distribution
+    // reconstruction to conservative values.
     MomentSolver ms = new MomentSolver(data);
+    // Constants here are chosen to yield maximum precision while keeping solve times ~1ms on 2Ghz cpu
+    // Grid size can be increased if longer solve times are acceptable
     ms.setGridSize(1024);
     ms.setMaxIter(15);
     ms.solve();
-
-    double[] quantiles = new double[fractions.length];
+    double[] rawQuantiles = ms.getQuantiles(fractions);
     for (int i = 0; i < fractions.length; i++) {
-      double rawQuantile = ms.getQuantile(fractions[i]);
       if (useArcSinh) {
-        quantiles[i] = Math.sinh(rawQuantile);
-      } else {
-        quantiles[i] = rawQuantile;
+        rawQuantiles[i] = Math.sinh(rawQuantiles[i]);
       }
     }
-
-    return quantiles;
+    return rawQuantiles;
   }
 
   public ByteBuffer toBytes(ByteBuffer bb)
@@ -155,6 +181,7 @@ public class MomentSketchWrapper
     return fromBytes(bb);
   }
 
+  @Override
   public String toString()
   {
     return data.toString();

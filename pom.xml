@@ -167,6 +167,7 @@
         <module>extensions-contrib/opentsdb-emitter</module>
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
+        <module>extensions-contrib/momentsketch</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>

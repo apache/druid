@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.momentsketch;
 
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchAggregatorFactory;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
@@ -36,7 +35,7 @@ import java.nio.ByteBuffer;
 
 public class MomentSketchComplexMetricSerde extends ComplexMetricSerde
 {
-  private static final MomentSketchObjectStrategy strategy = new MomentSketchObjectStrategy();
+  private static final MomentSketchObjectStrategy STRATEGY = new MomentSketchObjectStrategy();
 
   @Override
   public String getTypeName()
@@ -58,12 +57,7 @@ public class MomentSketchComplexMetricSerde extends ComplexMetricSerde
       @Override
       public Object extractValue(final InputRow inputRow, final String metricName)
       {
-        Object rawValue = inputRow.getRaw(metricName);
-        if (rawValue instanceof MomentSketchWrapper) {
-          return (MomentSketchWrapper) rawValue;
-        } else {
-          throw new IAE("Not a momentSketch");
-        }
+        return (MomentSketchWrapper) inputRow.getRaw(metricName);
       }
     };
   }
@@ -73,16 +67,16 @@ public class MomentSketchComplexMetricSerde extends ComplexMetricSerde
   {
     final GenericIndexed<MomentSketchWrapper> column = GenericIndexed.read(
         buffer,
-        strategy,
+        STRATEGY,
         builder.getFileMapper()
     );
     builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   @Override
-  public ObjectStrategy getObjectStrategy()
+  public ObjectStrategy<MomentSketchWrapper> getObjectStrategy()
   {
-    return strategy;
+    return STRATEGY;
   }
 
   @Override

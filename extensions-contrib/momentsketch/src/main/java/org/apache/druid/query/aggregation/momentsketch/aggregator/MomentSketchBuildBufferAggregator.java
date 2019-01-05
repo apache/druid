@@ -21,18 +21,18 @@ package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
-import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
 public class MomentSketchBuildBufferAggregator implements BufferAggregator
 {
-  private final ColumnValueSelector<Double> selector;
+  private final BaseDoubleColumnValueSelector selector;
   private final int k;
   private final boolean compress;
 
   public MomentSketchBuildBufferAggregator(
-      final ColumnValueSelector<Double> valueSelector,
+      final BaseDoubleColumnValueSelector valueSelector,
       final int k,
       final boolean compress
   )
@@ -88,7 +88,7 @@ public class MomentSketchBuildBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public synchronized void close()
+  public void close()
   {
   }
 }

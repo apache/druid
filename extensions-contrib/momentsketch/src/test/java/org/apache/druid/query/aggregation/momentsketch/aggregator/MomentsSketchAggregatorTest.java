@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.stanfordfuturedata.momentsketch.MomentStruct;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -40,7 +39,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -128,7 +126,9 @@ public class MomentsSketchAggregatorTest
             "    {\"type\": \"momentSketchMerge\", \"name\": \"sketch\", \"fieldName\": \"sketch\", \"k\": 10, \"compress\": true}",
             "  ],",
             "  \"postAggregations\": [",
-            "    {\"type\": \"momentSketchSolveQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
+            "    {\"type\": \"momentSketchSolveQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"momentSketchMin\", \"name\": \"min\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"momentSketchMax\", \"name\": \"max\", \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
             "  ],",
             "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
             "}"
@@ -141,7 +141,12 @@ public class MomentsSketchAggregatorTest
     assertEquals(0, quantilesArray[0], 0.05);
     assertEquals(.5, quantilesArray[1], 0.05);
     assertEquals(1.0, quantilesArray[2], 0.05);
-    System.out.println(Arrays.toString(quantilesArray));
+
+    Double minValue = (Double) row.getRaw("min");
+    assertEquals(0.0011, minValue, 0.0001);
+
+    Double maxValue = (Double) row.getRaw("max");
+    assertEquals(0.9969, maxValue, 0.0001);
 
     MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.getRaw("sketch");
     assertEquals(400.0, sketchObject.getPowerSums()[0], 1e-10);
@@ -192,9 +197,8 @@ public class MomentsSketchAggregatorTest
     Row row = results.get(0);
 
     MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.getRaw("sketch");
-    MomentStruct sketchStruct = sketchObject.data;
     // 9 total products since we pre-sum the values.
-    assertEquals(9.0, sketchStruct.power_sums[0], 1e-10);
+    assertEquals(9.0, sketchObject.getPowerSums()[0], 1e-10);
   }
 }
 

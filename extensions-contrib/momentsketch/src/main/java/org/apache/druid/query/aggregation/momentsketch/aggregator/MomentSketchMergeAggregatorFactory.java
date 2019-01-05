@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.momentsketch.aggregator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -30,7 +31,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 public class MomentSketchMergeAggregatorFactory extends MomentSketchAggregatorFactory
 {
   public static final String TYPE_NAME = "momentSketchMerge";
-  private static final byte MOMENTS_SKETCH_MERGE_CACHE_ID = 0x52;
 
   @JsonCreator
   public MomentSketchMergeAggregatorFactory(
@@ -39,7 +39,7 @@ public class MomentSketchMergeAggregatorFactory extends MomentSketchAggregatorFa
       @JsonProperty("compress") final Boolean compress
   )
   {
-    super(name, name, k, compress, MOMENTS_SKETCH_MERGE_CACHE_ID);
+    super(name, name, k, compress, AggregatorUtil.MOMENTS_SKETCH_MERGE_CACHE_TYPE_ID);
   }
 
   @Override

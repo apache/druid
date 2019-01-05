@@ -21,18 +21,18 @@ package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
-import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 public class MomentSketchBuildAggregator implements Aggregator
 {
-  private final ColumnValueSelector<Double> valueSelector;
+  private final BaseDoubleColumnValueSelector valueSelector;
   private final int k;
   private final boolean compress;
 
   private MomentSketchWrapper momentsSketch;
 
   public MomentSketchBuildAggregator(
-      final ColumnValueSelector<Double> valueSelector,
+      final BaseDoubleColumnValueSelector valueSelector,
       final int k,
       final boolean compress
   )

@@ -19,16 +19,15 @@
 
 package org.apache.druid.query.aggregation.momentsketch;
 
-import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchAggregatorFactory;
+import org.apache.druid.segment.data.ObjectStrategy;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class MomentSketchObjectStrategy implements ObjectStrategy<MomentSketchWrapper>
 {
-  private static final byte[] EMPTY_BYTES = new byte[]{};
-  public static final MomentSketchWrapper EMPTY_SKETCH = new MomentSketchWrapper(1);
-
+  private static final byte[] EMPTY_BYTES = new byte[0];
 
   @Override
   public Class<? extends MomentSketchWrapper> getClazz()
@@ -40,14 +39,14 @@ public class MomentSketchObjectStrategy implements ObjectStrategy<MomentSketchWr
   public MomentSketchWrapper fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
     if (numBytes == 0) {
-      return EMPTY_SKETCH;
+      return null;
     }
     buffer.limit(buffer.position() + numBytes);
     return MomentSketchWrapper.fromBytes(buffer);
   }
 
   @Override
-  public byte[] toBytes(MomentSketchWrapper val)
+  public byte[] toBytes(@Nullable MomentSketchWrapper val)
   {
     if (val == null) {
       return EMPTY_BYTES;

@@ -30,8 +30,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.apache.druid.extensions.contrib</groupId>
-    <artifactId>momentsketch-druid</artifactId>
-    <name>momentsketch-druid</name>
+    <artifactId>druid-momentsketch</artifactId>
+    <name>druid-momentsketch</name>
     <description>Aggregators for the approximate quantile moment sketch</description>
 
 
@@ -44,12 +44,13 @@
         <dependency>
             <groupId>com.github.stanford-futuredata.momentsketch</groupId>
             <artifactId>momentsketch-solver</artifactId>
-            <version>0.1.0</version>
+            <version>0.1.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>16.0.1</version>
+            <version>${guava.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -93,12 +94,7 @@
             <version>${project.parent.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-benchmarks</artifactId>
-            <version>${project.parent.version}</version>
-            <scope>test</scope>
-        </dependency>
+
     </dependencies>
 
 </project>

@@ -25,20 +25,27 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchAggregatorFactory;
+import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchMaxPostAggregator;
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchMinPostAggregator;
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchQuantilePostAggregator;
+import org.apache.druid.segment.serde.ComplexMetrics;
 
 import java.util.List;
 
+/**
+ * Module defining aggregators for the moments approximate quantiles sketch
+ * @see MomentSketchAggregatorFactory
+ */
 public class MomentSketchModule implements DruidModule
 {
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
-        new SimpleModule(getClass().getSimpleName()
+        new SimpleModule(
+            getClass().getSimpleName()
         ).registerSubtypes(
             new NamedType(
                 MomentSketchAggregatorFactory.class,
@@ -51,20 +58,25 @@ public class MomentSketchModule implements DruidModule
             new NamedType(
                 MomentSketchQuantilePostAggregator.class,
                 MomentSketchQuantilePostAggregator.TYPE_NAME
+            ),
+            new NamedType(
+                MomentSketchMinPostAggregator.class,
+                MomentSketchMinPostAggregator.TYPE_NAME
+            ),
+            new NamedType(
+                MomentSketchMaxPostAggregator.class,
+                MomentSketchMaxPostAggregator.TYPE_NAME
             )
-        ).addSerializer(
-            MomentSketchWrapper.class,
-            new MomentSketchJsonSerializer()
-        )
+        ).addSerializer(MomentSketchWrapper.class, new MomentSketchJsonSerializer())
     );
   }
 
   @Override
   public void configure(Binder binder)
   {
-    String typeName = MomentSketchAggregatorFactory.TYPE_NAME;
-    if (ComplexMetrics.getSerdeForType(typeName) == null) {
-      ComplexMetrics.registerSerde(typeName, new MomentSketchComplexMetricSerde());
-    }
+    ComplexMetrics.registerSerde(
+        MomentSketchAggregatorFactory.TYPE_NAME,
+        MomentSketchComplexMetricSerde::new
+    );
   }
 }

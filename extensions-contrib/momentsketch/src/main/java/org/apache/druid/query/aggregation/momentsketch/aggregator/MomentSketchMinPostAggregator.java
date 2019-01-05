@@ -29,29 +29,24 @@ import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-public class MomentSketchQuantilePostAggregator implements PostAggregator
+public class MomentSketchMinPostAggregator implements PostAggregator
 {
   private final String name;
   private final PostAggregator field;
-  private final double[] fractions;
-
-  public static final String TYPE_NAME = "momentSketchSolveQuantiles";
+  public static final String TYPE_NAME = "momentSketchMin";
 
   @JsonCreator
-  public MomentSketchQuantilePostAggregator(
+  public MomentSketchMinPostAggregator(
       @JsonProperty("name") final String name,
-      @JsonProperty("field") final PostAggregator field,
-      @JsonProperty("fractions") final double[] fractions
+      @JsonProperty("field") final PostAggregator field
   )
   {
     this.name = Preconditions.checkNotNull(name, "name is null");
     this.field = Preconditions.checkNotNull(field, "field is null");
-    this.fractions = Preconditions.checkNotNull(fractions, "array of fractions is null");
   }
 
   @Override
@@ -67,18 +62,11 @@ public class MomentSketchQuantilePostAggregator implements PostAggregator
     return field;
   }
 
-  @JsonProperty
-  public double[] getFractions()
-  {
-    return fractions;
-  }
-
   @Override
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final MomentSketchWrapper sketch = (MomentSketchWrapper) field.compute(combinedAggregators);
-    double[] quantiles = sketch.getQuantiles(fractions);
-    return quantiles;
+    return sketch.getMin();
   }
 
   @Override
@@ -99,7 +87,6 @@ public class MomentSketchQuantilePostAggregator implements PostAggregator
     return getClass().getSimpleName() + "{" +
            "name='" + name + '\'' +
            ", field=" + field +
-           ", fractions=" + Arrays.toString(fractions) +
            "}";
   }
 
@@ -112,11 +99,8 @@ public class MomentSketchQuantilePostAggregator implements PostAggregator
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final MomentSketchQuantilePostAggregator that = (MomentSketchQuantilePostAggregator) o;
+    final MomentSketchMinPostAggregator that = (MomentSketchMinPostAggregator) o;
     if (!name.equals(that.name)) {
-      return false;
-    }
-    if (!Arrays.equals(fractions, that.fractions)) {
       return false;
     }
     return field.equals(that.field);
@@ -125,19 +109,15 @@ public class MomentSketchQuantilePostAggregator implements PostAggregator
   @Override
   public int hashCode()
   {
-    return (name.hashCode() * 31 + field.hashCode()) * 31 + Arrays.hashCode(fractions);
+    return (name.hashCode() * 31 + field.hashCode());
   }
 
   @Override
   public byte[] getCacheKey()
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(
-        PostAggregatorIds.MOMENTS_SKETCH_TO_QUANTILES_CACHE_TYPE_ID
-    ).appendCacheable(
-        field
-    ).appendDoubleArray(
-        fractions
-    );
+        PostAggregatorIds.MOMENTS_SKETCH_TO_MIN_CACHE_TYPE_ID
+    ).appendCacheable(field);
     return builder.build();
   }
 
@@ -146,5 +126,4 @@ public class MomentSketchQuantilePostAggregator implements PostAggregator
   {
     return this;
   }
-
 }

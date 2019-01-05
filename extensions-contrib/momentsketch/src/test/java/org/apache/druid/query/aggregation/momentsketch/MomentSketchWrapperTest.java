@@ -36,4 +36,18 @@ public class MomentSketchWrapperTest
 
     assertEquals(10, mw2.getPowerSums()[1], 1e-10);
   }
+
+  @Test
+  public void testSimpleSolve()
+  {
+    MomentSketchWrapper mw = new MomentSketchWrapper(13);
+    mw.setCompressed(true);
+    for (int x = 0; x < 101; x++) {
+      mw.add((double) x);
+    }
+    double[] ps = {0.0, 0.5, 1.0};
+    double[] qs = mw.getQuantiles(ps);
+    assertEquals(0, qs[0], 1.0);
+    assertEquals(50, qs[1], 1.0);
+  }
 }

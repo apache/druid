@@ -21,11 +21,13 @@ package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.commons.codec.Charsets;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -33,26 +35,36 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.commons.codec.Charsets;
-import org.apache.commons.codec.binary.Base64;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Aggregation operations over the moment-based quantile sketch
+ * available on <a href="https://github.com/stanford-futuredata/momentsketch">github</a> and described
+ * in the paper <a href="https://arxiv.org/abs/1803.01969">Moment-based quantile sketches</a>.
+ *
+ * This sketch stores a set of (k) statistics about univariate metrics that can be used to
+ * solve for approximate quantiles of the original distribution at query time after aggregating
+ * the statistics.
+ */
 public class MomentSketchAggregatorFactory extends AggregatorFactory
 {
-  public static final int DEFAULT_K = 11;
+  // Default number of moments (k) chosen for ~1% quantile error.
+  public static final int DEFAULT_K = 13;
+  // Safer to compress data with unknown ranges by default, but reduces accuracy on uniform data
   public static final boolean DEFAULT_COMPRESS = true;
 
   private final String name;
   private final String fieldName;
+  // Number of moments tracked. Larger k allows for better estimates but greater resource usage
   private final int k;
+  // Controls whether or not data is compressed onto a smaller range using arcsinh
   private final boolean compress;
   private final byte cacheTypeId;
-
-  private static final byte MOMENTS_SKETCH_CACHE_ID = 0x51;
 
   public static final String TYPE_NAME = "momentSketch";
 
@@ -64,24 +76,20 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
       @JsonProperty("compress") final Boolean compress
   )
   {
-    this(name, fieldName, k, compress, MOMENTS_SKETCH_CACHE_ID);
+    this(name, fieldName, k, compress, AggregatorUtil.MOMENTS_SKETCH_BUILD_CACHE_TYPE_ID);
   }
 
   MomentSketchAggregatorFactory(
       final String name,
       final String fieldName,
-      final Integer k,
-      final Boolean compress,
+      @Nullable final Integer k,
+      @Nullable final Boolean compress,
       final byte cacheTypeId
   )
   {
-    if (name == null) {
-      throw new IAE("Must have a valid, non-null aggregator name");
-    }
+    Objects.requireNonNull(name, "Must have a valid, non-null aggregator name");
     this.name = name;
-    if (fieldName == null) {
-      throw new IAE("Parameter fieldName must be specified");
-    }
+    Objects.requireNonNull(fieldName, "Parameter fieldName must be specified");
     this.fieldName = fieldName;
     this.k = k == null ? DEFAULT_K : k;
     this.compress = compress == null ? DEFAULT_COMPRESS : compress;
@@ -94,7 +102,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   {
     return new CacheKeyBuilder(
         cacheTypeId
-    ).appendString(name).appendString(fieldName).appendInt(k).build();
+    ).appendString(fieldName).appendInt(k).appendBoolean(compress).build();
   }
 
 
@@ -124,8 +132,8 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
     }
   }
 
-  public static final Comparator<MomentSketchWrapper> COMPARATOR = Comparator.comparingDouble(
-      a -> a.getPowerSums()[0]
+  public static final Comparator<MomentSketchWrapper> COMPARATOR = Comparator.nullsFirst(
+      Comparator.comparingDouble(a -> a.getPowerSums()[0])
   );
 
   @Override
@@ -135,8 +143,14 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object combine(Object lhs, Object rhs)
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
   {
+    if (lhs == null) {
+      return rhs;
+    }
+    if (rhs == null) {
+      return lhs;
+    }
     MomentSketchWrapper union = (MomentSketchWrapper) lhs;
     union.merge((MomentSketchWrapper) rhs);
     return union;
@@ -161,7 +175,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(
+    return Collections.singletonList(
         new MomentSketchAggregatorFactory(
             fieldName,
             fieldName,
@@ -185,12 +199,12 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
     } else if (serializedSketch instanceof byte[]) {
       return deserializeFromByteArray((byte[]) serializedSketch);
     } else if (serializedSketch instanceof MomentSketchWrapper) {
-      return (MomentSketchWrapper) serializedSketch;
+      return serializedSketch;
     }
     throw new ISE(
-        "Object is not of a type that can be deserialized to a Moments Sketch"
-        + serializedSketch.getClass());
-
+        "Object cannot be deserialized to a Moments Sketch: "
+        + serializedSketch.getClass()
+    );
   }
 
   @Override
@@ -239,7 +253,10 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return (k + 2) * 8 + 2 * 4 + 8;
+    // k double precision moments, 2 doubles for the min and max
+    // one integer to specify the number of moments
+    // one integer to specify whether data range is compressed
+    return (k + 2) * Double.BYTES + 2 * Integer.BYTES;
   }
 
   @Override
@@ -275,5 +292,4 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
            + ", compress=" + compress
            + "}";
   }
-
 }

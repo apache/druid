@@ -27,8 +27,6 @@ public class MomentSketchMergeAggregator implements Aggregator
 {
   private final ColumnValueSelector<MomentSketchWrapper> selector;
   private MomentSketchWrapper momentsSketch;
-  private final int k;
-  private final boolean compress;
 
   public MomentSketchMergeAggregator(
       ColumnValueSelector<MomentSketchWrapper> selector,
@@ -37,8 +35,6 @@ public class MomentSketchMergeAggregator implements Aggregator
   )
   {
     this.selector = selector;
-    this.k = k;
-    this.compress = compress;
     this.momentsSketch = new MomentSketchWrapper(k);
     momentsSketch.setCompressed(compress);
   }
