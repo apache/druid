@@ -280,7 +280,7 @@ public class KafkaRecordSupplierTest
   public void testSeek() throws InterruptedException, ExecutionException
   {
     // Insert data
-   insertData();
+    insertData();
 
     StreamPartition<Integer> partition0 = StreamPartition.of(topic, 0);
     StreamPartition<Integer> partition1 = StreamPartition.of(topic, 1);
