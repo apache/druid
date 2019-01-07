@@ -48,7 +48,7 @@ There are performance tradeoffs between string and numeric columns. Numeric colu
 than string columns. But unlike string columns, numeric columns don't have indexes, so they are generally slower to
 filter on.
 
-See [Dimension Schema](../ingestion/index.html#dimension-schema) for more information.
+See [Dimension Schema](../ingestion/ingestion-spec.html#dimension-schema) for more information.
 
 ## High cardinality dimensions (e.g. unique IDs)
 
