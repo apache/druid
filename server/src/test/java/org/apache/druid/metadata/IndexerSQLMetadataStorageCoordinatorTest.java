@@ -302,7 +302,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
 
@@ -320,7 +321,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment2), true), result2);
 
@@ -376,7 +378,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = failOnceCoordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
 
@@ -397,7 +400,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result2 = failOnceCoordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment2), true), result2);
 
@@ -427,7 +431,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(ImmutableMap.of("foo", "bar")),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result1);
 
@@ -441,14 +446,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
 
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result2);
 
@@ -462,14 +469,16 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
 
     final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment2),
         new ObjectMetadata(ImmutableMap.of("foo", "qux")),
-        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        true
     );
     Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result2);
 
@@ -774,7 +783,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest
     coordinator.announceHistoricalSegments(
         ImmutableSet.of(defaultSegment),
         new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        true
     );
 
     Assert.assertEquals(

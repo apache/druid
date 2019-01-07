@@ -1501,10 +1501,11 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       public SegmentPublishResult announceHistoricalSegments(
           Set<DataSegment> segments,
           DataSourceMetadata startMetadata,
-          DataSourceMetadata endMetadata
+          DataSourceMetadata endMetadata,
+          boolean defaultUsed
       ) throws IOException
       {
-        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata);
+        SegmentPublishResult result = super.announceHistoricalSegments(segments, startMetadata, endMetadata, defaultUsed);
 
         Assert.assertFalse(
             "Segment latch not initialized, did you forget to call expectPublishSegments?",

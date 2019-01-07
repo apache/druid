@@ -71,7 +71,8 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         null,
         null,
-        null
+        null,
+        true
     );
   }
 
@@ -95,6 +96,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final List<String> allowedHadoopPrefix;
   private final boolean logParseExceptions;
   private final int maxParseExceptions;
+  private final boolean defaultUsed;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -121,7 +123,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("useExplicitVersion") boolean useExplicitVersion,
       final @JsonProperty("allowedHadoopPrefix") List<String> allowedHadoopPrefix,
       final @JsonProperty("logParseExceptions") @Nullable Boolean logParseExceptions,
-      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions
+      final @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
+      final @JsonProperty("defaultUsed") Boolean defaultUsed
   )
   {
     this.workingPath = workingPath;
@@ -162,6 +165,7 @@ public class HadoopTuningConfig implements TuningConfig
       }
     }
     this.logParseExceptions = logParseExceptions == null ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS : logParseExceptions;
+    this.defaultUsed = defaultUsed == null ? true: defaultUsed;
   }
 
   @JsonProperty
@@ -295,6 +299,12 @@ public class HadoopTuningConfig implements TuningConfig
     return maxParseExceptions;
   }
 
+  @JsonProperty
+  public boolean isDefaultUsed()
+  {
+    return defaultUsed;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -319,7 +329,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        defaultUsed
     );
   }
 
@@ -347,7 +358,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        defaultUsed
     );
   }
 
@@ -375,7 +387,8 @@ public class HadoopTuningConfig implements TuningConfig
         useExplicitVersion,
         allowedHadoopPrefix,
         logParseExceptions,
-        maxParseExceptions
+        maxParseExceptions,
+        defaultUsed
     );
   }
 }

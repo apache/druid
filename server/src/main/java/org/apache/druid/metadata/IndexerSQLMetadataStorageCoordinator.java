@@ -264,7 +264,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    final SegmentPublishResult result = announceHistoricalSegments(segments, null, null);
+    final SegmentPublishResult result = announceHistoricalSegments(segments, null, null, true);
 
     // Metadata transaction cannot fail because we are not trying to do one.
     if (!result.isSuccess()) {
@@ -281,7 +281,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public SegmentPublishResult announceHistoricalSegments(
       final Set<DataSegment> segments,
       final DataSourceMetadata startMetadata,
-      final DataSourceMetadata endMetadata
+      final DataSourceMetadata endMetadata,
+      final boolean defaultUsed
   ) throws IOException
   {
     if (segments.isEmpty()) {
@@ -348,7 +349,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
               }
 
               for (final DataSegment segment : segments) {
-                if (announceHistoricalSegment(handle, segment, usedSegments.contains(segment))) {
+                if (announceHistoricalSegment(handle, segment, defaultUsed && usedSegments.contains(segment))) {
                   inserted.add(segment);
                 }
               }

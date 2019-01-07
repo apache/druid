@@ -276,7 +276,8 @@ public class DeterminePartitionsJobTest
                 false,
                 null,
                 null,
-                null
+                null,
+                true
             )
         )
     );

@@ -112,7 +112,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
       DataSourceMetadata oldCommitMetadata,
-      DataSourceMetadata newCommitMetadata
+      DataSourceMetadata newCommitMetadata,
+      boolean defaultUsed
   )
   {
     // Don't actually compare metadata, just do it!

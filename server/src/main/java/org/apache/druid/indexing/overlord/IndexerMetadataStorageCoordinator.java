@@ -134,6 +134,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
    *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                      involve a metadata transaction
+   * @param defaultUsed   whether enable this segment at time of announce
    *
    * @return segment publish result indicating transaction success or failure, and set of segments actually published.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
@@ -145,7 +146,8 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult announceHistoricalSegments(
       Set<DataSegment> segments,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      boolean defaultUsed
   ) throws IOException;
 
   /**

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.task.HadoopIndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -98,12 +99,13 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
 
   /**
    * Behaves similarly to
-   * {@link org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#announceHistoricalSegments(Set, DataSourceMetadata, DataSourceMetadata)}.
+   * {@link org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator#announceHistoricalSegments(Set, DataSourceMetadata, DataSourceMetadata, defaultUsed)}.
    */
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+    final boolean defaultUsed = !(task instanceof HadoopIndexTask) || ((HadoopIndexTask) task).getSpec().getTuningConfig().isDefaultUsed();
 
     final SegmentPublishResult retVal;
     try {
@@ -115,7 +117,8 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
                   () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
                       segments,
                       startMetadata,
-                      endMetadata
+                      endMetadata,
+                      defaultUsed
                   )
               )
               .onInvalidLocks(SegmentPublishResult::fail)
