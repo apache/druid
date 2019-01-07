@@ -134,6 +134,7 @@
         <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
+        <module>extensions-core/kinesis-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/parquet-extensions</module>
         <module>extensions-core/postgresql-metadata-storage</module>
@@ -680,7 +681,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>0.5.18</version>
+                <version>0.7.30</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
@@ -950,7 +951,9 @@
                         <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
-                    <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
+                    <suppressAnnotations>
+                        <annotation>**.SuppressForbidden</annotation>
+                    </suppressAnnotations>
                 </configuration>
                 <executions>
                     <execution>
@@ -1000,6 +1003,8 @@
                                 <ignore>sun.nio.ch.DirectBuffer</ignore>
                                 <ignore>sun.misc.Cleaner</ignore>
                                 <ignore>sun.misc.Unsafe</ignore>
+                                <!-- ignore java reflection polymorphic api signatures -->
+                                <ignore>java.lang.invoke.MethodHandle</ignore>
                             </ignores>
                         </configuration>
                     </execution>
@@ -1349,9 +1354,9 @@
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                             <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
-                              -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                              <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
-                              -Ddruid.indexing.doubleStorage=double
+                                -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                                <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
+                                -Ddruid.indexing.doubleStorage=double
                             </argLine>
                             <!-- our tests are very verbose, let's keep the volume down -->
                             <redirectTestOutputToFile>true</redirectTestOutputToFile>

@@ -109,4 +109,10 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   {
     return null;
   }
+
+  @Override
+  public TaskPayloadResponse getTaskPayload(String taskId)
+  {
+    return null;
+  }
 }

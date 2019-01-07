@@ -247,11 +247,11 @@ public class SystemSchema extends AbstractSchema
               metadataSegments,
               root
           ))
-          .transform(val -> {
+          .transform((DataSegment val) -> {
             try {
               segmentsAlreadySeen.add(val.getId());
               final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getId());
-              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 1L;
+              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
               if (partialSegmentData != null) {
                 numReplicas = partialSegmentData.getNumReplicas();
                 numRows = partialSegmentData.getNumRows();

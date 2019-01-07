@@ -485,8 +485,9 @@ public class AppenderatorImpl implements Appenderator
     final List<Pair<FireHydrant, SegmentIdWithShardSpec>> indexesToPersist = new ArrayList<>();
     int numPersistedRows = 0;
     long bytesPersisted = 0L;
-    for (SegmentIdWithShardSpec identifier : sinks.keySet()) {
-      final Sink sink = sinks.get(identifier);
+    for (Map.Entry<SegmentIdWithShardSpec, Sink> entry : sinks.entrySet()) {
+      final SegmentIdWithShardSpec identifier = entry.getKey();
+      final Sink sink = entry.getValue();
       if (sink == null) {
         throw new ISE("No sink for identifier: %s", identifier);
       }
