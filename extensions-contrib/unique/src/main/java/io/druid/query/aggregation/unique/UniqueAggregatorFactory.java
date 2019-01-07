@@ -57,17 +57,20 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   private final String name;
   private final String fieldName;
   private final Integer maxCardinality;
+  private final Boolean useSortOr;
 
   @JsonCreator
   public UniqueAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
-      @Nullable @JsonProperty("maxCardinality") Integer maxCardinality
+      @Nullable @JsonProperty("maxCardinality") Integer maxCardinality,
+      @Nullable @JsonProperty("useSortOr") Boolean useSortOr
   )
   {
     this.name = Objects.requireNonNull(name);
     this.fieldName = Objects.requireNonNull(fieldName);
-    this.maxCardinality = maxCardinality;
+    this.maxCardinality = computeMaxSize(maxCardinality);
+    this.useSortOr = useSortOr == null ? Boolean.FALSE : useSortOr;
   }
 
   private int computeMaxSize(Integer maxCardinality)
@@ -83,13 +86,13 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new UniqueBuildAggregator(metricFactory.makeColumnValueSelector(getFieldName()));
+    return new UniqueBuildAggregator(metricFactory.makeColumnValueSelector(getFieldName()), useSortOr);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new UniqueBufferAggregator(metricFactory.makeColumnValueSelector(getFieldName()));
+    return new UniqueBufferAggregator(metricFactory.makeColumnValueSelector(getFieldName()), useSortOr);
   }
 
   @Override
@@ -113,13 +116,13 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new UniqueAggregatorFactory(name, name, maxCardinality);
+    return new UniqueAggregatorFactory(name, name, maxCardinality, useSortOr);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    AggregatorFactory aggregatorFactory = new UniqueAggregatorFactory(name, fieldName, maxCardinality);
+    AggregatorFactory aggregatorFactory = new UniqueAggregatorFactory(name, fieldName, maxCardinality, useSortOr);
     return Collections.singletonList(aggregatorFactory);
   }
 
@@ -170,6 +173,13 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   public Integer getMaxCardinality()
   {
     return maxCardinality;
+  }
+
+  @Nullable
+  @JsonProperty
+  public Boolean getuseSortOr()
+  {
+    return useSortOr;
   }
 
   @Override
@@ -235,7 +245,7 @@ public class UniqueAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return computeMaxSize(maxCardinality);
+    return this.maxCardinality;
   }
 
   @Override
@@ -260,13 +270,14 @@ public class UniqueAggregatorFactory extends AggregatorFactory
     UniqueAggregatorFactory that = (UniqueAggregatorFactory) o;
     return Objects.equals(name, that.name) &&
            Objects.equals(fieldName, that.fieldName) &&
-           Objects.equals(maxCardinality, that.maxCardinality);
+           Objects.equals(maxCardinality, that.maxCardinality) &&
+           Objects.equals(useSortOr, that.useSortOr);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, fieldName, maxCardinality);
+    return Objects.hash(name, fieldName, maxCardinality, useSortOr);
   }
 
   @Override
@@ -276,6 +287,7 @@ public class UniqueAggregatorFactory extends AggregatorFactory
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            ", maxCardinality=" + maxCardinality +
+           ", useSortOr=" + useSortOr +
            '}';
   }
 }

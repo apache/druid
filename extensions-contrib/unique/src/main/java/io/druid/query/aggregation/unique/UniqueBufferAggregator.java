@@ -25,50 +25,47 @@ import io.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import io.druid.segment.ColumnValueSelector;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.List;
 
 public class UniqueBufferAggregator implements BufferAggregator
 {
   private final ColumnValueSelector<Object> selector;
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<MutableRoaringBitmap>> bitmapCache = new IdentityHashMap<>();
+  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<List<ImmutableRoaringBitmap>>> bitmapCache = new IdentityHashMap<>();
+  private final boolean useSortOr;
 
-  public UniqueBufferAggregator(ColumnValueSelector<Object> selector)
+  public UniqueBufferAggregator(ColumnValueSelector<Object> selector, boolean useSortOr)
   {
     this.selector = selector;
+    this.useSortOr = useSortOr;
   }
 
   @Override
   public void init(ByteBuffer buf, int position)
   {
     // TODO MutableRoaringBitmap 不支持offheap, 先用heap的
+    bitmapCache.computeIfAbsent(buf, k -> new Int2ObjectOpenHashMap<>())
+               .computeIfAbsent(position, k -> new ArrayList<>());
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    MutableRoaringBitmap mutableRoaringBitmap = bitmapCache.computeIfAbsent(buf, k -> new Int2ObjectOpenHashMap<>())
-                                                           .computeIfAbsent(position, k -> new MutableRoaringBitmap());
     Object value = selector.getObject();
     if (value == null) {
       return;
     }
-    if (value instanceof Integer) {
-      mutableRoaringBitmap.add((int) value);
-    } else if (value instanceof ImmutableRoaringBitmap) {
+
+    if (value instanceof ImmutableRoaringBitmap) {
+      List<ImmutableRoaringBitmap> bitmaps = bitmapCache.computeIfAbsent(buf, k -> new Int2ObjectOpenHashMap<>())
+                                                        .computeIfAbsent(position, k -> new ArrayList<>());
       ImmutableRoaringBitmap bitmap = (ImmutableRoaringBitmap) value;
-      if (bitmap.getCardinality() <= 10) {
-        IntIterator iterator = bitmap.getIntIterator();
-        while (iterator.hasNext()) {
-          mutableRoaringBitmap.add(iterator.next());
-        }
-      } else {
-        mutableRoaringBitmap.or(bitmap);
-      }
+      bitmaps.add(bitmap);
     } else {
       throw new UOE("Not implemented");
     }
@@ -77,7 +74,19 @@ public class UniqueBufferAggregator implements BufferAggregator
   @Override
   public ImmutableRoaringBitmap get(ByteBuffer buf, int position)
   {
-    return bitmapCache.get(buf).get(position);
+    Int2ObjectMap<List<ImmutableRoaringBitmap>> c = bitmapCache.get(buf);
+    if (c == null) {
+      return new MutableRoaringBitmap();
+    }
+    List<ImmutableRoaringBitmap> bitmaps = c.get(position);
+    if (bitmaps == null || bitmaps.isEmpty()) {
+      return new MutableRoaringBitmap();
+    }
+    if (useSortOr) {
+      return UniqueBuildAggregator.batchOr(bitmaps);
+    } else {
+      return ImmutableRoaringBitmap.or(bitmaps.toArray(new ImmutableRoaringBitmap[0]));
+    }
   }
 
   @Override
