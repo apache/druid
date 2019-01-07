@@ -40,37 +40,45 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  *
  */
 public class Execs
 {
-  private static final ListeningExecutorService DIRECT_EXECUTOR;
+  private static final Supplier<ListeningExecutorService> DIRECT_EXECUTOR_FACTORY;
 
   static {
-    Method factory = null;
+    Method maybeFactory = null;
     try {
-      factory = MoreExecutors.class.getMethod("sameThreadExecutor");
+      // Guava <=18
+      maybeFactory = MoreExecutors.class.getMethod("sameThreadExecutor");
     }
     catch (NoSuchMethodException ignored) {
     }
-    if (factory == null) {
+    if (maybeFactory == null) {
       try {
-        factory = MoreExecutors.class.getMethod("newDirectExecutorService");
+        // Guava > 18
+        maybeFactory = MoreExecutors.class.getMethod("newDirectExecutorService");
       }
       catch (NoSuchMethodException ignored) {
       }
     }
-    if (factory == null) {
+    if (maybeFactory == null) {
       throw new IllegalStateException("cannot find direct executor factory");
     }
-    try {
-      DIRECT_EXECUTOR = (ListeningExecutorService) factory.invoke(null);
-    }
-    catch (IllegalAccessException | InvocationTargetException | ClassCastException e) {
-      throw new IllegalStateException("unable to generate direct executor", e);
-    }
+    final Method factory = maybeFactory;
+    DIRECT_EXECUTOR_FACTORY = () -> {
+      try {
+        return (ListeningExecutorService) factory.invoke(null);
+      }
+      catch (IllegalAccessException | InvocationTargetException | ClassCastException e) {
+        throw new IllegalStateException("unable to generate direct executor", e);
+      }
+    };
+    // Fail fast
+    DIRECT_EXECUTOR_FACTORY.get();
   }
 
   /**
@@ -187,6 +195,6 @@ public class Execs
 
   public static ListeningExecutorService directExecutor()
   {
-    return DIRECT_EXECUTOR;
+    return DIRECT_EXECUTOR_FACTORY.get();
   }
 }
