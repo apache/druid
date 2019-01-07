@@ -350,10 +350,12 @@ public class DruidSchema extends AbstractSchema
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
         final Map<String, Set<String>> serverSegmentMap = new HashMap<>();
         serverSegmentMap.put(segment.getIdentifier(), Sets.newHashSet(server.getName()));
+        final long isPublished = 0;
+        final long isAvailable = 1;
         final SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(
             segment.getIdentifier(),
-            0,
-            1,
+            isPublished,
+            isAvailable,
             isRealtime,
             serverSegmentMap
         ).build();
