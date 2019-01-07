@@ -20,11 +20,11 @@
 package org.apache.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import junit.framework.Assert;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -86,7 +86,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     final AtomicBoolean callbackCalled = new AtomicBoolean(false);
     notifier.registerSegmentHandoffCallback(
         descriptor,
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         () -> callbackCalled.set(true)
     );
     notifier.checkForSegmentHandoffs();
@@ -133,7 +133,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
 
     notifier.registerSegmentHandoffCallback(
         descriptor,
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         () -> callbackCalled.set(true)
     );
     Assert.assertEquals(1, notifier.getHandOffCallbacks().size());

@@ -21,10 +21,14 @@ package org.apache.druid.java.util.common.concurrent;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -38,9 +42,37 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class Execs
 {
+  private static final ListeningExecutorService DIRECT_EXECUTOR;
+
+  static {
+    Method factory = null;
+    try {
+      factory = MoreExecutors.class.getMethod("sameThreadExecutor");
+    }
+    catch (NoSuchMethodException ignored) {
+    }
+    if (factory == null) {
+      try {
+        factory = MoreExecutors.class.getMethod("newDirectExecutorService");
+      }
+      catch (NoSuchMethodException ignored) {
+      }
+    }
+    if (factory == null) {
+      throw new IllegalStateException("cannot find direct executor factory");
+    }
+    try {
+      DIRECT_EXECUTOR = (ListeningExecutorService) factory.invoke(null);
+    }
+    catch (IllegalAccessException | InvocationTargetException | ClassCastException e) {
+      throw new IllegalStateException("unable to generate direct executor", e);
+    }
+  }
+
   /**
    * Returns an ExecutorService which is terminated and shutdown from the beginning and not able to accept any tasks.
    */
@@ -151,5 +183,10 @@ public class Execs
           }
         }
     );
+  }
+
+  public static ListeningExecutorService directExecutor()
+  {
+    return DIRECT_EXECUTOR;
   }
 }
