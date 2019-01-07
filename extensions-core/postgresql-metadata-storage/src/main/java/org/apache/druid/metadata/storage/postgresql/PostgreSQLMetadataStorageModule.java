@@ -19,10 +19,13 @@
 
 package org.apache.druid.metadata.storage.postgresql;
 
+
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
+import org.apache.druid.firehose.PostgresqlFirehoseDatabaseConnector;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
@@ -35,52 +38,54 @@ import org.apache.druid.metadata.NoopMetadataStorageProvider;
 import org.apache.druid.metadata.PostgreSQLMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.SQLMetadataConnector;
 
+import java.util.Collections;
 import java.util.List;
 
-public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModule implements DruidModule
-{
+public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModule implements DruidModule {
 
-  public static final String TYPE = "postgresql";
+    public static final String TYPE = "postgresql";
 
-  public PostgreSQLMetadataStorageModule()
-  {
-    super(TYPE);
-  }
+    public PostgreSQLMetadataStorageModule() {
+        super(TYPE);
+    }
 
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return ImmutableList.of();
-  }
+    @Override
+    public List<? extends Module> getJacksonModules() {
+        return Collections.singletonList(
+                new SimpleModule()
+                        .registerSubtypes(
+                                new NamedType(PostgresqlFirehoseDatabaseConnector.class, "postgresql")
+                        )
+        );
+    }
 
-  @Override
-  public void configure(Binder binder)
-  {
-    super.configure(binder);
+    @Override
+    public void configure(Binder binder) {
+        super.configure(binder);
 
-    JsonConfigProvider.bind(binder, "druid.metadata.postgres.ssl", PostgreSQLConnectorConfig.class);
+        JsonConfigProvider.bind(binder, "druid.metadata.postgres.ssl", PostgreSQLConnectorConfig.class);
 
-    PolyBind
-        .optionBinder(binder, Key.get(MetadataStorageProvider.class))
-        .addBinding(TYPE)
-        .to(NoopMetadataStorageProvider.class)
-        .in(LazySingleton.class);
+        PolyBind
+                .optionBinder(binder, Key.get(MetadataStorageProvider.class))
+                .addBinding(TYPE)
+                .to(NoopMetadataStorageProvider.class)
+                .in(LazySingleton.class);
 
-    PolyBind
-        .optionBinder(binder, Key.get(MetadataStorageConnector.class))
-        .addBinding(TYPE)
-        .to(PostgreSQLConnector.class)
-        .in(LazySingleton.class);
+        PolyBind
+                .optionBinder(binder, Key.get(MetadataStorageConnector.class))
+                .addBinding(TYPE)
+                .to(PostgreSQLConnector.class)
+                .in(LazySingleton.class);
 
-    PolyBind
-        .optionBinder(binder, Key.get(SQLMetadataConnector.class))
-        .addBinding(TYPE)
-        .to(PostgreSQLConnector.class)
-        .in(LazySingleton.class);
+        PolyBind
+                .optionBinder(binder, Key.get(SQLMetadataConnector.class))
+                .addBinding(TYPE)
+                .to(PostgreSQLConnector.class)
+                .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
-            .addBinding(TYPE)
-            .to(PostgreSQLMetadataStorageActionHandlerFactory.class)
-            .in(LazySingleton.class);
-  }
+        PolyBind.optionBinder(binder, Key.get(MetadataStorageActionHandlerFactory.class))
+                .addBinding(TYPE)
+                .to(PostgreSQLMetadataStorageActionHandlerFactory.class)
+                .in(LazySingleton.class);
+    }
 }
