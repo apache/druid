@@ -34,7 +34,7 @@ public class ClientCompactQueryTuningConfig
   private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
-  private static final long DEFAULT_PUBLISH_TIMEOUT = 0;
+  private static final long DEFAULT_PUSH_TIMEOUT = 0;
 
   @Nullable
   private final Integer maxRowsPerSegment;
@@ -74,7 +74,7 @@ public class ClientCompactQueryTuningConfig
     this.maxTotalRows = maxTotalRows == null ? DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-    this.pushTimeout = pushTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : pushTimeout;
+    this.pushTimeout = pushTimeout == null ? DEFAULT_PUSH_TIMEOUT : pushTimeout;
   }
 
   @JsonProperty
