@@ -289,7 +289,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           segmentsToCompact.getNumSegments(),
           chunks.size()
       );
-      if (isCompactibleSize && isCompactibleNum && isSameOrAbuttingInterval && (!keepSegmentGranularity || segmentsToCompact.isEmpty())) {
+      if (isCompactibleSize
+          && isCompactibleNum
+          && isSameOrAbuttingInterval
+          && (!keepSegmentGranularity || segmentsToCompact.isEmpty())) {
         chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
       } else {
         if (segmentsToCompact.getNumSegments() > 1) {
