@@ -66,7 +66,7 @@ public class Execs
       }
     }
     if (maybeFactory == null) {
-      throw new IllegalStateException("cannot find direct executor factory");
+      throw new IllegalStateException("Cannot find direct executor factory");
     }
     final Method factory = maybeFactory;
     DIRECT_EXECUTOR_FACTORY = () -> {
@@ -74,11 +74,13 @@ public class Execs
         return (ListeningExecutorService) factory.invoke(null);
       }
       catch (IllegalAccessException | InvocationTargetException | ClassCastException e) {
-        throw new IllegalStateException("unable to generate direct executor", e);
+        throw new IllegalStateException("Unable to generate direct executor", e);
       }
     };
     // Fail fast
-    DIRECT_EXECUTOR_FACTORY.get();
+    if (null == DIRECT_EXECUTOR_FACTORY.get()) {
+      throw new IllegalStateException("Direct executor factory yields null");
+    }
   }
 
   /**
