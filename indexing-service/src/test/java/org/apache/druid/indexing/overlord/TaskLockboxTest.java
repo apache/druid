@@ -651,14 +651,16 @@ public class TaskLockboxTest
     );
 
     final TaskLockPosse highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
-        highPriorityTask, Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
+        highPriorityTask,
+        Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
     );
 
     Assert.assertTrue(highLockPosse.containsTask(highPriorityTask));
     Assert.assertFalse(highLockPosse.getTaskLock().isRevoked());
 
-    final TaskLockPosse lowLockPosse  = lockbox.getOnlyTaskLockPosseContainingInterval(
-        lowPriorityTask, Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
+    final TaskLockPosse lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+        lowPriorityTask,
+        Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
     );
 
     Assert.assertTrue(lowLockPosse.containsTask(lowPriorityTask));
