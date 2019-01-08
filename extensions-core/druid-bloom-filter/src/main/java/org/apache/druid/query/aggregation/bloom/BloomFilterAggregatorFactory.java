@@ -21,8 +21,11 @@ package org.apache.druid.query.aggregation.bloom;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.primitives.Ints;
+import io.netty.buffer.ByteBuf;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.guice.BloomFilterSerializersModule;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -96,8 +99,24 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    // idk how to compare?
-    return (Comparator<BloomKFilter>) (o1, o2) -> 0;
+    return (Comparator<Object>) (o1, o2) -> {
+      try {
+        if (o1 instanceof ByteBuffer && o2 instanceof ByteBuffer) {
+          BloomKFilter o1f = BloomKFilter.deserialize((ByteBuffer) o1);
+          BloomKFilter o2f = BloomKFilter.deserialize((ByteBuffer) o2);
+          return Ints.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
+        } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
+          BloomKFilter o1f = (BloomKFilter) o1;
+          BloomKFilter o2f = (BloomKFilter) o2;
+          return Ints.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
+        } else {
+          throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());
+        }
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException("Failed to deserialize BloomKFilter");
+      }
+    };
   }
 
   @Override
@@ -109,8 +128,17 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     if (lhs == null) {
       return rhs;
     }
-    ((BloomKFilter) lhs).merge((BloomKFilter) rhs);
-    return lhs;
+    if (rhs instanceof BloomKFilter) {
+      ((BloomKFilter) lhs).merge((BloomKFilter) rhs);
+      return lhs;
+    } else {
+      ByteBuffer buf = (ByteBuffer) lhs;
+      int position = buf.position();
+      int sizeBytes = 5 + (buf.getInt(position + 1) << 3);
+      ByteBuffer other = (ByteBuffer) rhs;
+      BloomKFilter.mergeBloomFilterByteBuffers(buf, position, sizeBytes, other, other.position(), sizeBytes);
+      return lhs;
+    }
   }
 
   @Override
@@ -131,22 +159,26 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     if (object instanceof String) {
       return ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
     } else {
-      throw new RuntimeException("Failed to deserialize BloomKFilter");
+      return object;
     }
   }
 
   @Override
   public Object finalizeComputation(Object object)
   {
-    if (object instanceof ByteBuffer) {
-      try {
+
+    try {
+      if (object instanceof ByteBuffer) {
         return BloomKFilter.deserialize((ByteBuffer) object);
-      }
-      catch (IOException ioe) {
-        throw new RuntimeException("Failed to deserialize BloomKFilter");
+      } else if (object instanceof byte[]) {
+        BloomKFilter.deserialize(ByteBuffer.wrap((byte[]) object));
+      } else {
+        return object;
       }
     }
-    return object;
+    catch(IOException ioe){
+      throw new RuntimeException("Failed to deserialize BloomKFilter");
+    }
   }
 
   @JsonProperty

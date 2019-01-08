@@ -603,6 +603,11 @@ public class BloomKFilter
     return bitSet.getData().length * Long.SIZE;
   }
 
+  public int getNumSetBits()
+  {
+    return bitSet.setBitsCount();
+  }
+
   public int getNumHashFunctions()
   {
     return k;
@@ -688,6 +693,18 @@ public class BloomKFilter
     public boolean get(int index)
     {
       return (data[index >>> 6] & (1L << index)) != 0;
+    }
+
+
+    public int setBitsCount()
+    {
+      int setCount = 0;
+      for (int i = 0; i < bitSize(); i++) {
+        if (get(i)) {
+          setCount++;
+        }
+      }
+      return setCount;
     }
 
     /**
