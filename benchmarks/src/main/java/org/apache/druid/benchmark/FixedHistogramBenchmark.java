@@ -74,7 +74,7 @@ public class FixedHistogramBenchmark
   private double[] percentilesForFixed = new double[]{12.5, 25, 50, 75, 98};
 
   @Setup
-  public void setup() throws Exception
+  public void setup()
   {
     fixedHistogram = new FixedBucketsHistogram(
         LOWER_LIMIT,

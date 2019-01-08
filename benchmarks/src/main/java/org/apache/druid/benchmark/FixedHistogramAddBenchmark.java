@@ -63,7 +63,7 @@ public class FixedHistogramAddBenchmark
   private float[] normalDistributionValues;
 
   @Setup
-  public void setup() throws Exception
+  public void setup()
   {
     randomValues = new int[numEvents];
     Random r = ThreadLocalRandom.current();
