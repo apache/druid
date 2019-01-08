@@ -17,32 +17,50 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.bloom.types;
+package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
-import java.nio.ByteBuffer;
+import javax.annotation.Nullable;
 
-public class DoubleBloomFilterAggregatorColumnSelectorStrategy
-    implements BloomFilterAggregatorColumnSelectorStrategy<BaseDoubleColumnValueSelector>
+public abstract class BaseBloomFilterAggregator implements Aggregator
 {
-  @Override
-  public void add(BaseDoubleColumnValueSelector selector, BloomKFilter bloomFilter)
+  protected final BloomKFilter collector;
+
+  public BaseBloomFilterAggregator(BloomKFilter filter)
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      bloomFilter.addDouble(selector.getDouble());
-    }
+    this.collector = filter;
+  }
+
+  @Nullable
+  @Override
+  public Object get()
+  {
+    return collector;
   }
 
   @Override
-  public void bufferAdd(BaseDoubleColumnValueSelector selector, ByteBuffer buffer)
+  public float getFloat()
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      BloomKFilter.addDouble(buffer, selector.getDouble());
-    } else {
-      BloomKFilter.addBytes(buffer, null, 0, 0);
-    }
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getFloat()");
+  }
+
+  @Override
+  public long getLong()
+  {
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getDouble()");
+  }
+
+  @Override
+  public void close()
+  {
+    // nothing to close
   }
 }

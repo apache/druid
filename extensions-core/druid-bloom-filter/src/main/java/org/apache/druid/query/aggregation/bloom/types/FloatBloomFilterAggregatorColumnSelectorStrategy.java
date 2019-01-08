@@ -23,6 +23,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
+import java.nio.ByteBuffer;
+
 public class FloatBloomFilterAggregatorColumnSelectorStrategy
     implements BloomFilterAggregatorColumnSelectorStrategy<BaseFloatColumnValueSelector>
 {
@@ -31,6 +33,16 @@ public class FloatBloomFilterAggregatorColumnSelectorStrategy
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
       bloomFilter.addFloat(selector.getFloat());
+    }
+  }
+
+  @Override
+  public void bufferAdd(BaseFloatColumnValueSelector selector, ByteBuffer buffer)
+  {
+    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      BloomKFilter.addFloat(buffer, selector.getFloat());
+    } else {
+      BloomKFilter.addBytes(buffer, null, 0, 0);
     }
   }
 }

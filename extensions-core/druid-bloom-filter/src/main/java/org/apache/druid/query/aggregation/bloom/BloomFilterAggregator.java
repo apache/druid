@@ -20,60 +20,25 @@
 package org.apache.druid.query.aggregation.bloom;
 
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColumnSelectorStrategy;
 import org.apache.druid.query.filter.BloomKFilter;
 
-import javax.annotation.Nullable;
-
-public class BloomFilterAggregator implements Aggregator
+public class BloomFilterAggregator extends BaseBloomFilterAggregator
 {
   private final ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus;
-  private final BloomKFilter collector;
 
   public BloomFilterAggregator(
       ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus,
       int maxNumEntries
   )
   {
+    super(new BloomKFilter(maxNumEntries));
     this.selectorPlus = selectorPlus;
-    this.collector = new BloomKFilter(maxNumEntries);
   }
 
   @Override
   public void aggregate()
   {
     selectorPlus.getColumnSelectorStrategy().add(selectorPlus.getSelector(), collector);
-  }
-
-  @Nullable
-  @Override
-  public Object get()
-  {
-    return collector;
-  }
-
-  @Override
-  public float getFloat()
-  {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getFloat()");
-  }
-
-  @Override
-  public long getLong()
-  {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getLong()");
-  }
-
-  @Override
-  public double getDouble()
-  {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getDouble()");
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
   }
 }

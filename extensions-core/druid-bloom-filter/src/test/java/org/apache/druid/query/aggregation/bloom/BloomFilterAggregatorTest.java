@@ -432,8 +432,13 @@ public class BloomFilterAggregatorTest
   @Test
   public void testBuferMergeValues() throws IOException
   {
-    final TestBloomFilterColumnSelector mergeDim =
-        new TestBloomFilterColumnSelector(ImmutableList.of(filter1, filter2));
+    final TestBloomFilterBufferColumnSelector mergeDim =
+        new TestBloomFilterBufferColumnSelector(
+            ImmutableList.of(
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter1)),
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter2))
+            )
+        );
 
     BloomFilterMergeBufferAggregator mergeAggregator = new BloomFilterMergeBufferAggregator(mergeDim, maxNumValues);
 
@@ -573,6 +578,14 @@ public class BloomFilterAggregatorTest
   public static class TestBloomFilterColumnSelector extends SteppableSelector<BloomKFilter>
   {
     public TestBloomFilterColumnSelector(List<BloomKFilter> values)
+    {
+      super(values);
+    }
+  }
+
+  public static class TestBloomFilterBufferColumnSelector extends SteppableSelector<ByteBuffer>
+  {
+    public TestBloomFilterBufferColumnSelector(List<ByteBuffer> values)
     {
       super(values);
     }

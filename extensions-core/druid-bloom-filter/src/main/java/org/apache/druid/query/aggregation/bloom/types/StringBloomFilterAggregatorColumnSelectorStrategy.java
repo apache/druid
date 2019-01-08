@@ -22,6 +22,8 @@ package org.apache.druid.query.aggregation.bloom.types;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.DimensionSelector;
 
+import java.nio.ByteBuffer;
+
 public class StringBloomFilterAggregatorColumnSelectorStrategy
     implements BloomFilterAggregatorColumnSelectorStrategy<DimensionSelector>
 {
@@ -43,6 +45,28 @@ public class StringBloomFilterAggregatorColumnSelectorStrategy
         bloomFilter.addBytes(null, 0, 0);
       } else {
         bloomFilter.addString(value);
+      }
+    }
+  }
+
+  @Override
+  public void bufferAdd(DimensionSelector selector, ByteBuffer buffer)
+  {
+    if (selector.getRow().size() > 1) {
+      selector.getRow().forEach(v -> {
+        String value = selector.lookupName(v);
+        if (value == null) {
+          BloomKFilter.addBytes(buffer, null, 0, 0);
+        } else {
+          BloomKFilter.addString(buffer, value);
+        }
+      });
+    } else {
+      String value = (String) selector.getObject();
+      if (value == null) {
+        BloomKFilter.addBytes(buffer, null, 0, 0);
+      } else {
+        BloomKFilter.addString(buffer, value);
       }
     }
   }

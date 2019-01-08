@@ -22,10 +22,14 @@ package org.apache.druid.query.aggregation.bloom.types;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.filter.BloomKFilter;
 
+import java.nio.ByteBuffer;
+
 public interface BloomFilterAggregatorColumnSelectorStrategy<TValueSelector> extends ColumnSelectorStrategy
 {
   /**
    * Add column value to bloomK filter
    */
   void add(TValueSelector selector, BloomKFilter bloomFilter);
+
+  void bufferAdd(TValueSelector selector, ByteBuffer buffer);
 }

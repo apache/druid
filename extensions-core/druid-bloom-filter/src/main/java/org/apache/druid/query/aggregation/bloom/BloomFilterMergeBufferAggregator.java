@@ -19,102 +19,32 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import com.fasterxml.jackson.databind.util.ByteBufferBackedOutputStream;
-import org.apache.druid.io.ByteBufferInputStream;
-import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class BloomFilterMergeBufferAggregator implements BufferAggregator
+public class BloomFilterMergeBufferAggregator extends BaseBloomFilterBufferAggregator
 {
-  private final ColumnValueSelector<BloomKFilter> selector;
-  private final int maxNumEntries;
+  private final ColumnValueSelector<ByteBuffer> selector;
 
-  public BloomFilterMergeBufferAggregator(ColumnValueSelector<BloomKFilter> selector, int maxNumEntries)
+  public BloomFilterMergeBufferAggregator(ColumnValueSelector<ByteBuffer> selector, int maxNumEntries)
   {
+    super(maxNumEntries);
     this.selector = selector;
-    this.maxNumEntries = maxNumEntries;
-  }
-
-  @Override
-  public void init(ByteBuffer buf, int position)
-  {
-    final ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
-    BloomKFilter filter = new BloomKFilter(maxNumEntries);
-    ByteBufferBackedOutputStream outputStream = new ByteBufferBackedOutputStream(mutationBuffer);
-    try {
-      BloomKFilter.serialize(outputStream, filter);
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("Failed to initialize bloomK filter", ex);
-    }
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
     final int oldPosition = buf.position();
-    final int oldLimit = buf.limit();
-    try {
-      buf.position(position);
-      BloomKFilter collector = BloomKFilter.deserialize(new ByteBufferInputStream(buf));
-      BloomKFilter other = selector.getObject();
-      if (other != null) {
-        collector.merge(other);
-        buf.position(position);
-        ByteBufferBackedOutputStream out = new ByteBufferBackedOutputStream(buf);
-        BloomKFilter.serialize(out, collector);
-      }
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("Failed to merge bloomK filters", ex);
-    }
-    finally {
-      buf.position(oldPosition);
-      buf.limit(oldLimit);
-    }
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    try {
-      ByteBuffer mutationBuffer = buf.duplicate();
-      mutationBuffer.position(position);
-      return BloomKFilter.deserialize(new ByteBufferInputStream(mutationBuffer));
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("Failed to deserialize bloomK filter", ex);
-    }
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterMergeBufferAggregator does not support getFloat()");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterMergeBufferAggregator does not support getLong()");
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterMergeBufferAggregator does not support getDouble()");
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
+    buf.position(position);
+    // size is 5 header bytes + length of long array
+    int sizeBytes = 5 + (buf.getInt(position + 1) << 3);
+    ByteBuffer other = selector.getObject();
+    BloomKFilter.mergeBloomFilterByteBuffers(buf, position, sizeBytes, other, other.position(), sizeBytes);
+    buf.position(oldPosition);
   }
 
   @Override

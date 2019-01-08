@@ -31,6 +31,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
@@ -57,7 +58,7 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
-    final ColumnValueSelector<BloomKFilter> selector = metricFactory.makeColumnValueSelector(fieldName);
+    final ColumnValueSelector<ByteBuffer> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       return NoopBufferAggregator.instance();
     }

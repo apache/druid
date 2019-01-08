@@ -22,7 +22,7 @@ package org.apache.druid.query.aggregation.bloom;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.druid.io.ByteBufferInputStream;
+import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -128,31 +128,24 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    final ByteBuffer buffer;
-
-    if (object instanceof byte[]) {
-      buffer = ByteBuffer.wrap((byte[]) object);
-    } else if (object instanceof ByteBuffer) {
-      // Be conservative, don't assume we own this buffer.
-      buffer = ((ByteBuffer) object).duplicate();
-    } else if (object instanceof String) {
-      buffer = ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
+    if (object instanceof String) {
+      return ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
     } else {
-      return object;
-    }
-
-    ByteBufferInputStream byteBufferInputStream = new ByteBufferInputStream(buffer);
-    try {
-      return BloomKFilter.deserialize(byteBufferInputStream);
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("Failed to deserialize bloomK filter", ex);
+      throw new RuntimeException("Failed to deserialize BloomKFilter");
     }
   }
 
   @Override
   public Object finalizeComputation(Object object)
   {
+    if (object instanceof ByteBuffer) {
+      try {
+        return BloomKFilter.deserialize((ByteBuffer) object);
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException("Failed to deserialize BloomKFilter");
+      }
+    }
     return object;
   }
 
@@ -184,14 +177,13 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "bloomFilter";
+    return BloomFilterSerializersModule.BLOOM_FILTER_TYPE_NAME;
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    BloomKFilter throwaway = new BloomKFilter(maxNumEntries);
-    return (throwaway.getBitSet().length * Long.BYTES) + 5;
+    return BloomKFilter.computeSizeBytes(maxNumEntries);
   }
 
   @Override

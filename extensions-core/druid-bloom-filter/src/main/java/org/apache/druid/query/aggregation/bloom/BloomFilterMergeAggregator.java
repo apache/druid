@@ -19,61 +19,42 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.ColumnValueSelector;
 
-import javax.annotation.Nullable;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
-public class BloomFilterMergeAggregator implements Aggregator
+public class BloomFilterMergeAggregator extends BaseBloomFilterAggregator
 {
   private final ColumnValueSelector<BloomKFilter> selector;
-  private final BloomKFilter collector;
 
   public BloomFilterMergeAggregator(ColumnValueSelector<BloomKFilter> selector, int maxNumEntries)
   {
+    super(new BloomKFilter(maxNumEntries));
     this.selector = selector;
-    this.collector = new BloomKFilter(maxNumEntries);
   }
 
   @Override
   public void aggregate()
   {
-    BloomKFilter other = selector.getObject();
+    Object other = selector.getObject();
     if (other != null) {
-      collector.merge(other);
+      if (other instanceof BloomKFilter) {
+        collector.merge((BloomKFilter) other);
+      } else if (other instanceof ByteBuffer) {
+        // fun fact: because bloom filter agg factory deserialize returns a byte buffer to avoid unnecessary serde,
+        // but group by v1 ends up trying to merge bytebuffers from buffer aggs with this agg instead of the buffer
+        // merge agg. fun! Also, it requires a 'ComplexMetricSerde' to be registered even for query time only aggs, but
+        // then never uses it. also fun!
+        try {
+          BloomKFilter otherFilter = BloomKFilter.deserialize((ByteBuffer) other);
+          collector.merge(otherFilter);
+        }
+        catch (IOException ioe) {
+          throw new RuntimeException("Failed to deserialize BloomKFilter", ioe);
+        }
+      }
     }
-  }
-
-  @Nullable
-  @Override
-  public Object get()
-  {
-    return collector;
-  }
-
-
-  @Override
-  public float getFloat()
-  {
-    throw new UnsupportedOperationException("BloomFilterMergeAggregator does not support getFloat()");
-  }
-
-  @Override
-  public long getLong()
-  {
-    throw new UnsupportedOperationException("BloomFilterMergeAggregator does not support getLong()");
-  }
-
-  @Override
-  public double getDouble()
-  {
-    throw new UnsupportedOperationException("BloomFilterMergeAggregator does not support getDouble()");
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
   }
 }

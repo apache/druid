@@ -19,104 +19,33 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import com.fasterxml.jackson.databind.util.ByteBufferBackedOutputStream;
-import org.apache.druid.io.ByteBufferInputStream;
 import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColumnSelectorStrategy;
-import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 
-public class BloomFilterBufferAggregator implements BufferAggregator
+public class BloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator
 {
   private final ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus;
-  private final int maxNumEntries;
 
   public BloomFilterBufferAggregator(
       ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus,
       int maxNumEntries
   )
   {
+    super(maxNumEntries);
     this.selectorPlus = selectorPlus;
-    this.maxNumEntries = maxNumEntries;
-  }
-
-  @Override
-  public void init(ByteBuffer buf, int position)
-  {
-    final ByteBuffer mutationBuffer = buf.duplicate();
-    mutationBuffer.position(position);
-    BloomKFilter filter = new BloomKFilter(maxNumEntries);
-    ByteBufferBackedOutputStream outputStream = new ByteBufferBackedOutputStream(mutationBuffer);
-    try {
-      BloomKFilter.serialize(outputStream, filter);
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("Failed to initialize bloomK filter", ex);
-    }
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
     final int oldPosition = buf.position();
-    final int oldLimit = buf.limit();
-    try {
-      buf.position(position);
-      BloomKFilter collector = BloomKFilter.deserialize(new ByteBufferInputStream(buf));
-      selectorPlus.getColumnSelectorStrategy().add(selectorPlus.getSelector(), collector);
-      buf.position(position);
-      ByteBufferBackedOutputStream out = new ByteBufferBackedOutputStream(buf);
-      BloomKFilter.serialize(out, collector);
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("Failed to merge bloomK filters", ex);
-    }
-    finally {
-      buf.position(oldPosition);
-      buf.limit(oldLimit);
-    }
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    try {
-      ByteBuffer mutationBuffer = buf.duplicate();
-      mutationBuffer.position(position);
-      return BloomKFilter.deserialize(new ByteBufferInputStream(mutationBuffer));
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("Failed to deserialize bloomK filter", ex);
-    }
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getFloat()");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getLong()");
-  }
-
-  @Override
-  public double getDouble(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getDouble()");
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
+    buf.position(position);
+    selectorPlus.getColumnSelectorStrategy().bufferAdd(selectorPlus.getSelector(), buf);
+    buf.position(oldPosition);
   }
 
   @Override
