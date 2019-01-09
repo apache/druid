@@ -290,20 +290,22 @@ public class BloomKFilter
    * Merges BloomKFilter bf2 into bf1.
    * Assumes 2 BloomKFilters with the same size/hash functions are serialized to ByteBuffers
    *
-   * @param bf1Bytes
+   * @param bf1Buffer
    * @param bf1Start
-   * @param bf2Bytes
+   * @param bf2Buffer
    * @param bf2Start
    */
   public static void mergeBloomFilterByteBuffers(
-      ByteBuffer bf1Bytes,
+      ByteBuffer bf1Buffer,
       int bf1Start,
-      ByteBuffer bf2Bytes,
+      ByteBuffer bf2Buffer,
       int bf2Start
   )
   {
-    final int bf1Length = bf1Bytes.getInt(1 + bf1Start);
-    final int bf2Length = bf2Bytes.getInt(1 + bf2Start);
+    ByteBuffer view1 = bf1Buffer.duplicate().order(ByteOrder.BIG_ENDIAN);
+    ByteBuffer view2 = bf2Buffer.duplicate().order(ByteOrder.BIG_ENDIAN);
+    final int bf1Length = view1.getInt(1 + bf1Start);
+    final int bf2Length = view2.getInt(1 + bf2Start);
 
     if (bf1Length != bf2Length) {
       throw new IllegalArgumentException("bf1Length " + bf1Length + " does not match bf2Length " + bf2Length);
@@ -311,7 +313,7 @@ public class BloomKFilter
 
     // Validation on the bitset size/3 hash functions.
     for (int idx = 0; idx < START_OF_SERIALIZED_LONGS; ++idx) {
-      if (bf1Bytes.get(bf1Start + idx) != bf2Bytes.get(bf2Start + idx)) {
+      if (view1.get(bf1Start + idx) != view2.get(bf2Start + idx)) {
         throw new IllegalArgumentException("bf1 NumHashFunctions/NumBits does not match bf2");
       }
     }
@@ -321,8 +323,7 @@ public class BloomKFilter
     for (int idx = START_OF_SERIALIZED_LONGS; idx < bf1Length; ++idx) {
       final int pos1 = bf1Start + idx;
       final int pos2 = bf2Start + idx;
-      final byte val = (byte) (bf1Bytes.get(pos1) | bf2Bytes.get(pos2));
-      bf1Bytes.put(pos1, val);
+      view1.put(pos1, (byte) (view1.get(pos1) | view2.get(pos2)));
     }
   }
 
