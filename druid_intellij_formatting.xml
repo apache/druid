@@ -128,6 +128,7 @@
     <option name="PARENT_SETTINGS_INSTALLED" value="true" />
   </codeStyleSettings>
   <codeStyleSettings language="JAVA">
+    <option name="BLANK_LINES_BEFORE_PACKAGE" value="1" />
     <option name="CLASS_BRACE_STYLE" value="2" />
     <option name="METHOD_BRACE_STYLE" value="2" />
     <option name="CATCH_ON_NEW_LINE" value="true" />

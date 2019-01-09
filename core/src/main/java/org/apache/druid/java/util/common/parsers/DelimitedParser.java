@@ -24,6 +24,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 public class DelimitedParser extends AbstractFlatTextFormatParser
@@ -74,6 +77,26 @@ public class DelimitedParser extends AbstractFlatTextFormatParser
   @Override
   protected List<String> parseLine(String input)
   {
-    return splitter.splitToList(input);
+    return splitToList(input);
+  }
+
+  /**
+   * Copied from Guava's {@link Splitter#splitToList(CharSequence)}.
+   * This is to avoid the error of the missing method signature when using an old Guava library.
+   * For example, it may happen when running Druid Hadoop indexing jobs, since we may inherit the version provided by
+   * the Hadoop cluster. See https://github.com/apache/incubator-druid/issues/6801.
+   */
+  private List<String> splitToList(String input)
+  {
+    Preconditions.checkNotNull(input);
+
+    Iterator<String> iterator = splitter.split(input).iterator();
+    List<String> result = new ArrayList<String>();
+
+    while (iterator.hasNext()) {
+      result.add(iterator.next());
+    }
+
+    return Collections.unmodifiableList(result);
   }
 }

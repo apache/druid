@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.kafka.supervisor;
+package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,29 +26,24 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-public class TaskReportData
+public class TaskReportData<PartitionIdType, SequenceOffsetType>
 {
-  public enum TaskType
-  {
-    ACTIVE, PUBLISHING, UNKNOWN
-  }
-
   private final String id;
-  private final Map<Integer, Long> startingOffsets;
+  private final Map<PartitionIdType, SequenceOffsetType> startingOffsets;
   private final DateTime startTime;
   private final Long remainingSeconds;
   private final TaskType type;
-  private final Map<Integer, Long> currentOffsets;
-  private final Map<Integer, Long> lag;
+  private final Map<PartitionIdType, SequenceOffsetType> currentOffsets;
+  private final Map<PartitionIdType, SequenceOffsetType> lag;
 
   public TaskReportData(
       String id,
-      @Nullable Map<Integer, Long> startingOffsets,
-      @Nullable Map<Integer, Long> currentOffsets,
+      @Nullable Map<PartitionIdType, SequenceOffsetType> startingOffsets,
+      @Nullable Map<PartitionIdType, SequenceOffsetType> currentOffsets,
       @Nullable DateTime startTime,
       Long remainingSeconds,
       TaskType type,
-      @Nullable Map<Integer, Long> lag
+      @Nullable Map<PartitionIdType, SequenceOffsetType> lag
   )
   {
     this.id = id;
@@ -68,14 +63,14 @@ public class TaskReportData
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getStartingOffsets()
+  public Map<PartitionIdType, SequenceOffsetType> getStartingOffsets()
   {
     return startingOffsets;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getCurrentOffsets()
+  public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets()
   {
     return currentOffsets;
   }
@@ -100,7 +95,7 @@ public class TaskReportData
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<Integer, Long> getLag()
+  public Map<PartitionIdType, SequenceOffsetType> getLag()
   {
     return lag;
   }
@@ -116,5 +111,16 @@ public class TaskReportData
            ", remainingSeconds=" + remainingSeconds +
            (lag != null ? ", lag=" + lag : "") +
            '}';
+  }
+
+  /**
+   * Used by the Supervisor to report status of tasks
+   * ACTIVE - task is waiting to be started, started, or reading
+   * PUBLISHING - task is publishing or registering handoff
+   * UNNKNOWN - unknown
+   */
+  public enum TaskType
+  {
+    ACTIVE, PUBLISHING, UNKNOWN
   }
 }

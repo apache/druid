@@ -28,7 +28,7 @@ The Kafka indexing service enables the configuration of *supervisors* on the Ove
 Kafka by managing the creation and lifetime of Kafka indexing tasks. These indexing tasks read events using Kafka's own
 partition and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion. They are also
 able to read non-recent events from Kafka and are not subject to the window period considerations imposed on other
-ingestion mechanisms. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
+ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
 This service is provided in the `druid-kafka-indexing-service` core extension (see
@@ -125,8 +125,8 @@ A sample supervisor spec is shown below:
 |--------|-----------|---------|
 |`type`|The supervisor type, this should always be `kafka`.|yes|
 |`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [Ingestion Spec DataSchema](../../ingestion/ingestion-spec.html#dataschema).|yes|
-|`tuningConfig`|A KafkaSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
 |`ioConfig`|A KafkaSupervisorIOConfig to configure the supervisor and indexing tasks, see below.|yes|
+|`tuningConfig`|A KafkaSupervisorTuningConfig to configure the supervisor and indexing tasks, see below.|no|
 
 ### KafkaSupervisorTuningConfig
 
@@ -193,6 +193,7 @@ For Roaring bitmaps:
 |-----|----|-----------|--------|
 |`topic`|String|The Kafka topic to read from. This must be a specific topic as topic patterns are not supported.|yes|
 |`consumerProperties`|Map<String, Object>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`. For SSL connections, the `keystore`, `truststore` and `key` passwords can be provided as a [Password Provider](../../operations/password-provider.html) or String password.|yes|
+|`pollTimeout`|Long|The length of time to wait for the kafka consumer to poll records, in milliseconds|no (default == 100)|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKafkaPartitions}`.|no (default == 1)|
 |`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
@@ -312,7 +313,7 @@ compatible because they have a different ingestion spec or partition allocation,
 supervisor will create a new set of tasks. In this way, the supervisors are persistent across overlord restarts and
 fail-overs.
 
-A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown` endpoint. This places a
+A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` endpoint. This places a
 tombstone marker in the database (to prevent the supervisor from being reloaded on a restart) and then gracefully
 shuts down the currently running supervisor. When a supervisor is shut down in this way, it will instruct its
 managed tasks to stop reading and begin publishing their segments immediately. The call to the shutdown endpoint will

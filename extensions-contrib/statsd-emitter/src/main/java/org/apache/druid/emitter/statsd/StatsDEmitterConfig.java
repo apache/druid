@@ -23,6 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
 /**
  */
 public class StatsDEmitterConfig
@@ -44,6 +48,8 @@ public class StatsDEmitterConfig
   private final String blankHolder;
   @JsonProperty
   private final Boolean dogstatsd;
+  @JsonProperty
+  private final List<String> dogstatsdConstantTags;
 
   @JsonCreator
   public StatsDEmitterConfig(
@@ -54,7 +60,8 @@ public class StatsDEmitterConfig
       @JsonProperty("includeHost") Boolean includeHost,
       @JsonProperty("dimensionMapPath") String dimensionMapPath,
       @JsonProperty("blankHolder") String blankHolder,
-      @JsonProperty("dogstatsd") Boolean dogstatsd
+      @JsonProperty("dogstatsd") Boolean dogstatsd,
+      @JsonProperty("dogstatsdConstantTags") List<String> dogstatsdConstantTags
   )
   {
     this.hostname = Preconditions.checkNotNull(hostname, "StatsD hostname cannot be null.");
@@ -65,6 +72,7 @@ public class StatsDEmitterConfig
     this.dimensionMapPath = dimensionMapPath;
     this.blankHolder = blankHolder != null ? blankHolder : "-";
     this.dogstatsd = dogstatsd != null ? dogstatsd : false;
+    this.dogstatsdConstantTags = dogstatsdConstantTags != null ? dogstatsdConstantTags : Collections.emptyList();
   }
 
   @Override
@@ -97,22 +105,19 @@ public class StatsDEmitterConfig
     if (dimensionMapPath != null ? !dimensionMapPath.equals(that.dimensionMapPath) : that.dimensionMapPath != null) {
       return false;
     }
-    return dogstatsd != null ? dogstatsd.equals(that.dogstatsd) : that.dogstatsd == null;
+    if (dogstatsd != null ? !dogstatsd.equals(that.dogstatsd) : that.dogstatsd != null) {
+      return false;
+    }
+    return dogstatsdConstantTags != null ? dogstatsdConstantTags.equals(that.dogstatsdConstantTags)
+            : that.dogstatsdConstantTags == null;
 
   }
 
   @Override
   public int hashCode()
   {
-    int result = hostname != null ? hostname.hashCode() : 0;
-    result = 31 * result + (port != null ? port.hashCode() : 0);
-    result = 31 * result + (prefix != null ? prefix.hashCode() : 0);
-    result = 31 * result + (separator != null ? separator.hashCode() : 0);
-    result = 31 * result + (includeHost != null ? includeHost.hashCode() : 0);
-    result = 31 * result + (dimensionMapPath != null ? dimensionMapPath.hashCode() : 0);
-    result = 31 * result + (blankHolder != null ? blankHolder.hashCode() : 0);
-    result = 31 * result + (dogstatsd != null ? dogstatsd.hashCode() : 0);
-    return result;
+    return Objects.hash(hostname, port, prefix, separator, includeHost, dimensionMapPath,
+            blankHolder, dogstatsd, dogstatsdConstantTags);
   }
 
   @JsonProperty
@@ -158,8 +163,14 @@ public class StatsDEmitterConfig
   }
 
   @JsonProperty
-  public Boolean getDogstatsd()
+  public Boolean isDogstatsd()
   {
     return dogstatsd;
+  }
+
+  @JsonProperty
+  public List<String> getDogstatsdConstantTags()
+  {
+    return dogstatsdConstantTags;
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.emitter.core;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.UnsignedInts;
 
 import javax.annotation.Nullable;
@@ -64,6 +65,12 @@ public class ConcurrentTimeCounter
         return;
       }
     } while (!this.min.compareAndSet(min, UnsignedInts.toLong(time)));
+  }
+
+  @VisibleForTesting
+  long getTimeSumAndCount()
+  {
+    return timeSumAndCount.get();
   }
 
   public long getTimeSumAndCountAndReset()

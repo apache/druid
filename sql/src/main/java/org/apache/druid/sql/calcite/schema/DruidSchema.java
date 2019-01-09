@@ -50,7 +50,6 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -207,8 +206,17 @@ public class DruidSchema extends AbstractSchema
                           !wasRecentFailure &&
                           (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
                           (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                        // We need to do a refresh. Break out of the waiting loop.
                         break;
                       }
+
+                      if (isServerViewInitialized) {
+                        // Server view is initialized, but we don't need to do a refresh. Could happen if there are
+                        // no segments in the system yet. Just mark us as initialized, then.
+                        initialized.countDown();
+                      }
+
+                      // Wait some more, we'll wake up when it might be time to do another refresh.
                       lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
                     }
 
@@ -330,10 +338,9 @@ public class DruidSchema extends AbstractSchema
       if (knownSegments == null || !knownSegments.containsKey(segment)) {
         // segmentReplicatable is used to determine if segments are served by realtime servers or not
         final long isRealtime = server.segmentReplicatable() ? 0 : 1;
-        final long isPublished = server.getType() == ServerType.HISTORICAL ? 1 : 0;
         final SegmentMetadataHolder holder = new SegmentMetadataHolder.Builder(
             segment.getIdentifier(),
-            isPublished,
+            0,
             1,
             isRealtime,
             1

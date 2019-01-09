@@ -21,6 +21,7 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -30,8 +31,10 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.LegacyDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.server.QueryStats;
@@ -84,6 +87,62 @@ public class LoggingRequestLoggerTest
         }
       }, false, queryContext
   );
+
+  final Query nestedQuery = new FakeQuery(
+      new QueryDataSource(query),
+      new QuerySegmentSpec()
+      {
+        @Override
+        public List<Interval> getIntervals()
+        {
+          return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
+        }
+
+        @Override
+        public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
+        {
+          return null;
+        }
+      }, false, queryContext
+  );
+
+  final Query nestedNestedQuery = new FakeQuery(
+      new QueryDataSource(nestedQuery),
+      new QuerySegmentSpec()
+      {
+        @Override
+        public List<Interval> getIntervals()
+        {
+          return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
+        }
+
+        @Override
+        public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
+        {
+          return null;
+        }
+      }, false, queryContext
+  );
+
+  final Query unionQuery = new FakeQuery(
+      new UnionDataSource(ImmutableList.of(new LegacyDataSource("A"), new LegacyDataSource("B"))),
+      new QuerySegmentSpec()
+      {
+        @Override
+        public List<Interval> getIntervals()
+        {
+          return Collections.singletonList(Intervals.of("2016-01-01T00Z/2016-01-02T00Z"));
+        }
+
+        @Override
+        public <T> QueryRunner<T> lookup(Query<T> query, QuerySegmentWalker walker)
+        {
+          return null;
+        }
+      }, false, queryContext
+  );
+
+
   final QueryStats queryStats = new QueryStats(ImmutableMap.of());
   final RequestLogLine logLine = new RequestLogLine(
       timestamp,
@@ -141,6 +200,7 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
     Assert.assertEquals("false", map.get("descending"));
+    Assert.assertEquals("false", map.get("isNested"));
     Assert.assertNull(map.get("foo"));
   }
 
@@ -156,7 +216,71 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
     Assert.assertEquals("false", map.get("descending"));
+    Assert.assertEquals("false", map.get("isNested"));
     Assert.assertEquals("bar", map.get("foo"));
+  }
+
+  @Test
+  public void testNestedQueryLoggingMDC() throws Exception
+  {
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
+    requestLogger.log(new RequestLogLine(
+        timestamp,
+        remoteAddr,
+        nestedQuery,
+        queryStats
+    ));
+    final Map<String, Object> map = readContextMap(baos.toByteArray());
+    Assert.assertEquals("datasource", map.get("dataSource"));
+    Assert.assertEquals("PT86400S", map.get("duration"));
+    Assert.assertEquals("false", map.get("hasFilters"));
+    Assert.assertEquals("fake", map.get("queryType"));
+    Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
+    Assert.assertEquals("false", map.get("descending"));
+    Assert.assertEquals("true", map.get("isNested"));
+    Assert.assertNull(map.get("foo"));
+  }
+
+  @Test
+  public void testNestedNestedQueryLoggingMDC() throws Exception
+  {
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
+    requestLogger.log(new RequestLogLine(
+        timestamp,
+        remoteAddr,
+        nestedNestedQuery,
+        queryStats
+    ));
+    final Map<String, Object> map = readContextMap(baos.toByteArray());
+    Assert.assertEquals("datasource", map.get("dataSource"));
+    Assert.assertEquals("PT86400S", map.get("duration"));
+    Assert.assertEquals("false", map.get("hasFilters"));
+    Assert.assertEquals("fake", map.get("queryType"));
+    Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
+    Assert.assertEquals("true", map.get("isNested"));
+    Assert.assertEquals("false", map.get("descending"));
+    Assert.assertNull(map.get("foo"));
+  }
+
+  @Test
+  public void testUnionQueryLoggingMDC() throws Exception
+  {
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
+    requestLogger.log(new RequestLogLine(
+        timestamp,
+        remoteAddr,
+        unionQuery,
+        queryStats
+    ));
+    final Map<String, Object> map = readContextMap(baos.toByteArray());
+    Assert.assertEquals("A,B", map.get("dataSource"));
+    Assert.assertEquals("true", map.get("isNested"));
+    Assert.assertEquals("PT86400S", map.get("duration"));
+    Assert.assertEquals("false", map.get("hasFilters"));
+    Assert.assertEquals("fake", map.get("queryType"));
+    Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
+    Assert.assertEquals("false", map.get("descending"));
+    Assert.assertNull(map.get("foo"));
   }
 
   private static Map<String, Object> readContextMap(byte[] bytes) throws Exception
