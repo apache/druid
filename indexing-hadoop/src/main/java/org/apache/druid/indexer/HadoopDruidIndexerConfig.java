@@ -96,6 +96,7 @@ public class HadoopDruidIndexerConfig
   public static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
   public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
+  private String hadoopJobIdFileName;
 
 
 
@@ -373,6 +374,16 @@ public class HadoopDruidIndexerConfig
   public int getMaxParseExceptions()
   {
     return schema.getTuningConfig().getMaxParseExceptions();
+  }
+
+  public void setHadoopJobIdFileName(String hadoopJobIdFileName)
+  {
+    this.hadoopJobIdFileName = hadoopJobIdFileName;
+  }
+
+  public String getHadoopJobIdFileName()
+  {
+    return hadoopJobIdFileName;
   }
 
   /**

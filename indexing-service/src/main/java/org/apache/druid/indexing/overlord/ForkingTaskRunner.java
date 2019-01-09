@@ -97,6 +97,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private static final EmittingLogger log = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
   private static final String TASK_RESTORE_FILENAME = "restore.json";
+  public static final String INDEX_TASK_DIR = "index.task.temporary.dir";
+  public static final String INDEX_HADOOP_COORDINATE = "index.task.hadoop.coordinate.list";
   private final ForkingTaskRunnerConfig config;
   private final TaskConfig taskConfig;
   private final Properties props;
@@ -228,6 +230,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         final String attemptUUID = UUID.randomUUID().toString();
                         final File taskDir = taskConfig.getTaskDir(task.getId());
                         final File attemptDir = new File(taskDir, attemptUUID);
+
+                        task.getContext().put(INDEX_TASK_DIR, taskDir.toString());
+                        task.getContext().put(INDEX_HADOOP_COORDINATE, taskConfig.getDefaultHadoopCoordinates());
 
                         final ProcessHolder processHolder;
                         final String childHost = node.getHost();

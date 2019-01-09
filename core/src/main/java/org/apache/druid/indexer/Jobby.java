@@ -31,6 +31,17 @@ public interface Jobby
   boolean run();
 
   /**
+   *
+   * @return A string represtenting the jobId of the actual MR job.
+   * Run method is now divided into two parts. The first one being submitAndGetHadoopJobId which just submits the job and returns the job ID
+   * Run then monitors this job for completion
+   */
+  default String submitAndGetHadoopJobId()
+  {
+    return null;
+  }
+
+  /**
    * @return A map containing statistics for a Jobby, optionally null if the Jobby is unable to provide stats.
    */
   @Nullable

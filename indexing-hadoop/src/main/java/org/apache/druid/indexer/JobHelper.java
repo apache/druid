@@ -20,6 +20,7 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -59,8 +60,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -349,6 +352,22 @@ public class JobHelper
 
   public static boolean runSingleJob(Jobby job, HadoopDruidIndexerConfig config)
   {
+    String hadoopJobId = job.submitAndGetHadoopJobId();
+    ObjectMapper objectMapper = new ObjectMapper();
+    String hadoopJobIdFileName = config.getHadoopJobIdFileName();
+
+    if (hadoopJobIdFileName != null) {
+      try {
+        objectMapper.writeValue(new OutputStreamWriter(
+            new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
+            hadoopJobId);
+        log.info("MR job id is written to jobId file");
+      }
+      catch (IOException e) {
+        log.error("Error wriritng job id to jobId file. Exception %s ", Throwables.getStackTraceAsString(e));
+      }
+    }
+
     boolean succeeded = job.run();
 
     if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
@@ -372,7 +391,23 @@ public class JobHelper
   public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
   {
     boolean succeeded = true;
+    ObjectMapper objectMapper = new ObjectMapper();
+
     for (Jobby job : jobs) {
+      String hadoopJobId = job.submitAndGetHadoopJobId();
+      String hadoopJobIdFileName = config.getHadoopJobIdFileName();
+
+      if (hadoopJobIdFileName != null) {
+        try {
+          objectMapper.writeValue(new OutputStreamWriter(
+                  new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
+              hadoopJobId);
+          log.info("MR job id is written to jobId file");
+        }
+        catch (IOException e) {
+          log.error("Error wriritng job id to jobId file. Exception %s ", Throwables.getStackTraceAsString(e));
+        }
+      }
       if (!job.run()) {
         succeeded = false;
         break;

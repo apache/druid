@@ -156,7 +156,7 @@ public class IndexGeneratorJob implements Jobby
   }
 
   @Override
-  public boolean run()
+  public String submitAndGetHadoopJobId()
   {
     try {
       job = Job.getInstance(
@@ -207,6 +207,17 @@ public class IndexGeneratorJob implements Jobby
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
 
+      return job.getJobID().toString();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public boolean run()
+  {
+    try {
       boolean success = job.waitForCompletion(true);
 
       Counters counters = job.getCounters();

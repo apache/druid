@@ -50,6 +50,7 @@ import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
+import org.apache.druid.indexing.overlord.ForkingTaskRunner;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -59,6 +60,9 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.logging.log4j.util.Strings;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -69,11 +73,13 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.SortedSet;
 
@@ -218,6 +224,15 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     return classpathPrefix;
   }
 
+  public String getHadoopJobIdFileName()
+  {
+    String hadoopJobIdFileName = "mapReduceJobId.json";
+    StringBuilder fileName = new StringBuilder(getContext().getOrDefault(ForkingTaskRunner.INDEX_TASK_DIR, Strings.EMPTY).toString());
+    fileName.append("/");
+    fileName.append(hadoopJobIdFileName);
+    return fileName.toString();
+  }
+
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
@@ -259,6 +274,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @SuppressWarnings("unchecked")
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
+    String hadoopJobIdFile = getHadoopJobIdFileName();
     final ClassLoader loader = buildClassLoader(toolbox);
     boolean determineIntervals = !spec.getDataSchema().getGranularitySpec().bucketIntervals().isPresent();
 
@@ -277,7 +293,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     String[] determinePartitionsInput = new String[]{
         toolbox.getObjectMapper().writeValueAsString(spec),
         toolbox.getConfig().getHadoopWorkingPath(),
-        toolbox.getSegmentPusher().getPathForHadoop()
+        toolbox.getSegmentPusher().getPathForHadoop(),
+        hadoopJobIdFile
     };
 
     HadoopIngestionSpec indexerSchema;
@@ -367,7 +384,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
     String[] buildSegmentsInput = new String[]{
         toolbox.getObjectMapper().writeValueAsString(indexerSchema),
-        version
+        version,
+        hadoopJobIdFile
     };
 
     Class<?> buildSegmentsRunnerClass = innerProcessingRunner.getClass();
@@ -410,6 +428,63 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     finally {
       Thread.currentThread().setContextClassLoader(oldLoader);
     }
+  }
+
+  @Override
+  public boolean canRestore()
+  {
+    return true;
+  }
+
+  @Override
+  public void stopGracefully()
+  {
+    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+    ObjectMapper objectMapper = new ObjectMapper();
+    File hadoopJobIdFile = new File(getHadoopJobIdFileName());
+    String jobId = null;
+
+    try {
+      if (hadoopJobIdFile.exists()) {
+        jobId = objectMapper.readValue(hadoopJobIdFile, String.class);
+      }
+    }
+    catch (Exception e) {
+      log.info("Exeption while reading json file from path: " + hadoopJobIdFile);
+      log.error(Throwables.getStackTraceAsString(e));
+    }
+
+    try {
+      if (jobId != null) {
+        ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
+            (List<String>) getContext().getOrDefault(ForkingTaskRunner.INDEX_HADOOP_COORDINATE, ImmutableList.of()));
+
+        Object killMRJobInnerProcessingRunner = getForeignClassloaderObject("org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
+            loader);
+        String[] buildKillJobInput = new String[]{
+            "-kill",
+            jobId
+        };
+
+        Class<?> buildKillJobRunnerClass = killMRJobInnerProcessingRunner.getClass();
+        Method innerProcessingRunTask = buildKillJobRunnerClass.getMethod("runTask", buildKillJobInput.getClass());
+
+        Thread.currentThread().setContextClassLoader(loader);
+        final String killStatusString = (String) innerProcessingRunTask.invoke(
+            killMRJobInnerProcessingRunner,
+            new Object[]{buildKillJobInput}
+        );
+
+        log.info(String.format(Locale.ENGLISH, "Tried killing job %s , status: %s", jobId, killStatusString));
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(oldLoader);
+    }
+
   }
 
   @GET
@@ -540,6 +615,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       final String schema = args[0];
       final String workingPath = args[1];
       final String segmentOutputPath = args[2];
+      final String hadoopJobIdFile = args[3];
 
       final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.JSON_MAPPER
           .readValue(
@@ -553,6 +629,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       );
 
       job = new HadoopDruidDetermineConfigurationJob(config);
+      job.setHadoopJobIdFile(hadoopJobIdFile);
 
       log.info("Starting a hadoop determine configuration job...");
       if (job.run()) {
@@ -585,6 +662,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
     {
       final String schema = args[0];
       String version = args[1];
+      final String HadoopJobIdFile = args[2];
 
       final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.JSON_MAPPER
           .readValue(
@@ -606,6 +684,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         maybeHandler = null;
       }
       job = new HadoopDruidIndexerJob(config, maybeHandler);
+      job.setHadoopJobIdFile(HadoopJobIdFile);
 
       log.info("Starting a hadoop index generator job...");
       try {
@@ -646,6 +725,16 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
 
       return job.getStats();
+    }
+  }
+
+  @SuppressWarnings("unused")
+  public static class HadoopKillMRJobIdProcessingRunner
+  {
+    public String runTask(String[] args) throws Exception
+    {
+      int res = ToolRunner.run(new JobClient(), args);
+      return res == 0 ? "Sucess" : "Fail";
     }
   }
 
