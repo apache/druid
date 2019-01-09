@@ -170,12 +170,12 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
       if (object instanceof ByteBuffer) {
         return BloomKFilter.deserialize((ByteBuffer) object);
       } else if (object instanceof byte[]) {
-        BloomKFilter.deserialize(ByteBuffer.wrap((byte[]) object));
+        return BloomKFilter.deserialize(ByteBuffer.wrap((byte[]) object));
       } else {
         return object;
       }
     }
-    catch(IOException ioe){
+    catch(IOException ioe) {
       throw new RuntimeException("Failed to deserialize BloomKFilter");
     }
   }
