@@ -119,15 +119,15 @@ public final class SegmentId implements Comparable<SegmentId>
    * Returns a (potentially empty) lazy iteration of all possible valid parsings of the given segment id string into
    * {@code SegmentId} objects.
    *
-   * Warning: this iterable repeats most of the parsing work on each iteration, so it should be iterated only once if
-   * possible.
+   * Warning: most of the parsing work is repeated each time {@link Iterable#iterator()} of this iterable is consumed,
+   * so it should be consumed only once if possible.
    */
   public static Iterable<SegmentId> iterateAllPossibleParsings(String segmentId)
   {
     List<String> splits = DELIMITER_SPLITTER.splitToList(segmentId);
     String probableDataSource = tryExtractMostProbableDataSource(segmentId);
-    // Iterate probable parsings first to allow for the users of iterateAllPossibleParsings() to break from the
-    // iteration earlier with higher probability.
+    // Iterate parsings with the most probably data source first to allow the users of iterateAllPossibleParsings() to
+    // break from the iteration earlier with higher probability.
     if (probableDataSource != null) {
       List<SegmentId> probableParsings = iteratePossibleParsingsWithDataSource(probableDataSource, segmentId);
       Iterable<SegmentId> otherPossibleParsings = () -> IntStream

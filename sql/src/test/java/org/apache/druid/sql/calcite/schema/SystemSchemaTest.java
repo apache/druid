@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
@@ -482,141 +483,142 @@ public class SystemSchemaTest extends CalciteTestBase
     };
 
     final List<Object[]> rows = segmentsTable.scan(dataContext).toList();
+    rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
     // total segments = 8
-    // segment wikipedia1, wikipedia2, wikipedia3 are published but unavailable
     // segments test1, test2  are published and available
     // segment test3 is served by historical but unpublished or unused
     // segments test4, test5 are not published but available (realtime segments)
+    // segment wikipedia1, wikipedia2, wikipedia3 are published but unavailable
 
     Assert.assertEquals(8, rows.size());
 
-    Object[] row0 = rows.get(0);
-    //segment 0 is published and unavailable, num_replicas is 0
-    Assert.assertEquals(
-        "wikipedia1_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z",
-        row0[0].toString()
+    verifyRow(
+        rows.get(0),
+        "test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1",
+        100L,
+        0L, //partition_num
+        1L, //num_replicas
+        3L, //numRows
+        1L, //is_published
+        1L, //is_available
+        0L //is_realtime
     );
-    Assert.assertEquals("wikipedia1", row0[1]);
-    Assert.assertEquals("2018-08-07T23:00:00.000Z", row0[2]);
-    Assert.assertEquals("2018-08-08T00:00:00.000Z", row0[3]);
-    Assert.assertEquals(47406L, row0[4]);
-    Assert.assertEquals("2018-08-07T23:00:00.059Z", row0[5]);
-    Assert.assertEquals(0L, row0[6]); //partition_num
-    Assert.assertEquals(0L, row0[7]); //num_replicas
-    Assert.assertEquals(0L, row0[8]); //numRows = 0
-    Assert.assertEquals(1L, row0[9]); //is_published
-    Assert.assertEquals(0L, row0[10]); //is_available
-    Assert.assertEquals(0L, row0[11]); //is_realtime
 
-    Object[] row1 = rows.get(1);
-    Assert.assertEquals(
-        "wikipedia2_2018-08-07T18:00:00.000Z_2018-08-07T19:00:00.000Z_2018-08-07T18:00:00.117Z",
-        row1[0].toString()
+    verifyRow(
+        rows.get(1),
+        "test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2",
+        100L,
+        0L, //partition_num
+        2L, //segment test2 is served by 2 servers, so num_replicas = 2
+        3L, //numRows
+        1L, //is_published
+        1L, //is_available
+        0L //is_realtime
     );
-    Assert.assertEquals("wikipedia2", row1[1]);
-    Assert.assertEquals("2018-08-07T18:00:00.000Z", row1[2]);
-    Assert.assertEquals("2018-08-07T19:00:00.000Z", row1[3]);
-    Assert.assertEquals(83846L, row1[4]);
-    Assert.assertEquals("2018-08-07T18:00:00.117Z", row1[5]);
-    Assert.assertEquals(0L, row1[6]); //partition_num
-    Assert.assertEquals(0L, row1[7]); //num_replicas
-    Assert.assertEquals(0L, row1[8]); //numRows = 0
-    Assert.assertEquals(1L, row1[9]); //is_published
-    Assert.assertEquals(0L, row1[10]); //is_available
-    Assert.assertEquals(0L, row1[11]); //is_realtime
 
-
-    Object[] row2 = rows.get(2);
-    Assert.assertEquals(
-        "wikipedia3_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z",
-        row2[0].toString()
-    );
-    Assert.assertEquals("wikipedia3", row2[1]);
-    Assert.assertEquals("2018-08-07T23:00:00.000Z", row2[2]);
-    Assert.assertEquals("2018-08-08T00:00:00.000Z", row2[3]);
-    Assert.assertEquals(53527L, row2[4]);
-    Assert.assertEquals("2018-08-07T23:00:00.059Z", row2[5]);
-    Assert.assertEquals(0L, row2[6]); //partition_num
-    Assert.assertEquals(0L, row2[7]); //num_replicas
-    Assert.assertEquals(0L, row2[8]); //numRows = 0
-    Assert.assertEquals(1L, row2[9]); //is_published
-    Assert.assertEquals(0L, row2[10]); //is_available
-    Assert.assertEquals(0L, row2[11]); //is_realtime
-
-    Object[] row3 = rows.get(3);
-    Assert.assertEquals("test1_2010-01-01T00:00:00.000Z_2011-01-01T00:00:00.000Z_version1", row3[0].toString());
-    Assert.assertEquals("test1", row3[1]);
-    Assert.assertEquals("2010-01-01T00:00:00.000Z", row3[2]);
-    Assert.assertEquals("2011-01-01T00:00:00.000Z", row3[3]);
-    Assert.assertEquals(100L, row3[4]);
-    Assert.assertEquals("version1", row3[5]);
-    Assert.assertEquals(0L, row3[6]); //partition_num
-    Assert.assertEquals(1L, row3[7]); //num_replicas
-    Assert.assertEquals(3L, row3[8]); //numRows = 3
-    Assert.assertEquals(1L, row3[9]); //is_published
-    Assert.assertEquals(1L, row3[10]); //is_available
-    Assert.assertEquals(0L, row3[11]); //is_realtime
-
-    Object[] row4 = rows.get(4);
-    Assert.assertEquals("test2_2011-01-01T00:00:00.000Z_2012-01-01T00:00:00.000Z_version2", row4[0].toString());
-    Assert.assertEquals("test2", row4[1]);
-    Assert.assertEquals("2011-01-01T00:00:00.000Z", row4[2]);
-    Assert.assertEquals("2012-01-01T00:00:00.000Z", row4[3]);
-    Assert.assertEquals(100L, row4[4]);
-    Assert.assertEquals("version2", row4[5]);
-    Assert.assertEquals(0L, row4[6]); //partition_num
-    Assert.assertEquals(2L, row4[7]); //segment test2 is served by 2 servers, so num_replicas=2
-    Assert.assertEquals(3L, row4[8]); //numRows = 3
-    Assert.assertEquals(1L, row4[9]); //is_published
-    Assert.assertEquals(1L, row4[10]); //is_available
-    Assert.assertEquals(0L, row4[11]); //is_realtime
-
-    Object[] row5 = rows.get(5);
     //segment test3 is unpublished and has a NumberedShardSpec with partitionNum = 2
-    Assert.assertEquals("test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3_2", row5[0].toString());
-    Assert.assertEquals("test3", row5[1]);
-    Assert.assertEquals("2012-01-01T00:00:00.000Z", row5[2]);
-    Assert.assertEquals("2013-01-01T00:00:00.000Z", row5[3]);
-    Assert.assertEquals(100L, row5[4]);
-    Assert.assertEquals("version3", row5[5]);
-    Assert.assertEquals(2L, row5[6]); //partition_num = 2
-    Assert.assertEquals(1L, row5[7]); //num_replicas
-    Assert.assertEquals(3L, row5[8]); //numRows = 3
-    Assert.assertEquals(0L, row5[9]); //is_published
-    Assert.assertEquals(1L, row5[10]); //is_available
-    Assert.assertEquals(0L, row5[11]); //is_realtime
+    verifyRow(
+        rows.get(2),
+        "test3_2012-01-01T00:00:00.000Z_2013-01-01T00:00:00.000Z_version3_2",
+        100L,
+        2L, //partition_num
+        1L, //num_replicas
+        3L, //numRows
+        0L, //is_published
+        1L, //is_available
+        0L //is_realtime
+    );
 
-    Object[] row6 = rows.get(6);
-    Assert.assertEquals("test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5", row6[0].toString());
-    Assert.assertEquals("test5", row6[1]);
-    Assert.assertEquals("2017-01-01T00:00:00.000Z", row6[2]);
-    Assert.assertEquals("2018-01-01T00:00:00.000Z", row6[3]);
-    Assert.assertEquals(100L, row6[4]);
-    Assert.assertEquals("version5", row6[5]);
-    Assert.assertEquals(0L, row6[6]); //partition_num
-    Assert.assertEquals(1L, row6[7]); //num_replicas
-    Assert.assertEquals(0L, row6[8]); //numRows = 0
-    Assert.assertEquals(0L, row6[9]); //is_published
-    Assert.assertEquals(1L, row6[10]); //is_available
-    Assert.assertEquals(1L, row6[11]); //is_realtime
+    verifyRow(
+        rows.get(3),
+        "test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4",
+        100L,
+        0L, //partition_num
+        1L, //num_replicas
+        0L, //numRows = 3
+        0L, //is_published
+        1L, //is_available
+        1L //is_realtime
+    );
 
-    Object[] row7 = rows.get(7);
-    Assert.assertEquals("test4_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version4", row7[0].toString());
-    Assert.assertEquals("test4", row7[1]);
-    Assert.assertEquals("2017-01-01T00:00:00.000Z", row7[2]);
-    Assert.assertEquals("2018-01-01T00:00:00.000Z", row7[3]);
-    Assert.assertEquals(100L, row7[4]);
-    Assert.assertEquals("version4", row7[5]);
-    Assert.assertEquals(0L, row7[6]); //partition_num
-    Assert.assertEquals(1L, row7[7]); //num_replicas
-    Assert.assertEquals(0L, row7[8]); //numRows
-    Assert.assertEquals(0L, row7[9]); //is_published
-    Assert.assertEquals(1L, row7[10]); //is_available
-    Assert.assertEquals(1L, row7[11]); //is_realtime
+    verifyRow(
+        rows.get(4),
+        "test5_2017-01-01T00:00:00.000Z_2018-01-01T00:00:00.000Z_version5",
+        100L,
+        0L, //partition_num
+        1L, //num_replicas
+        0L, //numRows
+        0L, //is_published
+        1L, //is_available
+        1L //is_realtime
+    );
+
+    // wikipedia segments are published and unavailable, num_replicas is 0
+    verifyRow(
+        rows.get(5),
+        "wikipedia1_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z",
+        47406L,
+        0L, //partition_num
+        0L, //num_replicas
+        0L, //numRows
+        1L, //is_published
+        0L, //is_available
+        0L //is_realtime
+    );
+
+    verifyRow(
+        rows.get(6),
+        "wikipedia2_2018-08-07T18:00:00.000Z_2018-08-07T19:00:00.000Z_2018-08-07T18:00:00.117Z",
+        83846L,
+        0L, //partition_num
+        0L, //num_replicas
+        0L, //numRows
+        1L, //is_published
+        0L, //is_available
+        0L //is_realtime
+    );
+
+    verifyRow(
+        rows.get(7),
+        "wikipedia3_2018-08-07T23:00:00.000Z_2018-08-08T00:00:00.000Z_2018-08-07T23:00:00.059Z",
+        53527L,
+        0L, //partition_num
+        0L, //num_replicas
+        0L, //numRows
+        1L, //is_published
+        0L, //is_available
+        0L //is_realtime
+    );
 
     // Verify value types.
     verifyTypes(rows, SystemSchema.SEGMENTS_SIGNATURE);
+  }
+
+  private void verifyRow(
+      Object[] row,
+      String segmentId,
+      long size,
+      long partitionNum,
+      long numReplicas,
+      long numRows,
+      long isPublished,
+      long isAvailable,
+      long isRealtime)
+  {
+    Assert.assertEquals(segmentId, row[0].toString());
+    SegmentId id = Iterables.get(SegmentId.iterateAllPossibleParsings(segmentId), 0);
+    Assert.assertEquals(id.getDataSource(), row[1]);
+    Assert.assertEquals(id.getIntervalStart().toString(), row[2]);
+    Assert.assertEquals(id.getIntervalEnd().toString(), row[3]);
+    Assert.assertEquals(size, row[4]);
+    Assert.assertEquals(id.getVersion(), row[5]);
+    Assert.assertEquals(partitionNum, row[6]);
+    Assert.assertEquals(numReplicas, row[7]);
+    Assert.assertEquals(numRows, row[8]);
+    Assert.assertEquals(isPublished, row[9]);
+    Assert.assertEquals(isAvailable, row[10]);
+    Assert.assertEquals(isRealtime, row[11]);
   }
 
   @Test

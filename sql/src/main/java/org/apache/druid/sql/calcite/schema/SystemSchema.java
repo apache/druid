@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
@@ -82,7 +83,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
@@ -223,15 +223,13 @@ public class SystemSchema extends AbstractSchema
           availableSegmentMetadata.entrySet().iterator();
 
       // in memory map to store segment data from available segments
-      final Map<SegmentId, PartialSegmentData> partialSegmentDataMap = availableSegmentMetadata
-          .values()
-          .stream()
-          .collect(
-              Collectors.toMap(
-                  SegmentMetadataHolder::getSegmentId,
-                  h -> new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(), h.getNumRows())
-              )
-          );
+      final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
+          Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
+      for (SegmentMetadataHolder h : availableSegmentMetadata.values()) {
+        PartialSegmentData partialSegmentData =
+            new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(), h.getNumRows());
+        partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
+      }
 
       //get published segments from coordinator
       final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
