@@ -49,9 +49,9 @@ To construct a BloomKFilter externally with Java to use as a filter in a Druid q
 
 ```java
 BloomKFilter bloomFilter = new BloomKFilter(1500);
-bloomFilter.addString("some string");
-bloomFilter.addString("some other string");
-bloomFilter.addString("striiings!");
+bloomFilter.addString("value 1");
+bloomFilter.addString("value 2");
+bloomFilter.addString("value 3");
 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 BloomKFilter.serialize(byteArrayOutputStream, bloomFilter);
 String base64Serialized= Base64.encodeBase64String(bytes);
