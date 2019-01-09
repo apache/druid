@@ -132,10 +132,8 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
       return lhs;
     } else {
       ByteBuffer buf = (ByteBuffer) lhs;
-      int position = buf.position();
-      int sizeBytes = 5 + (buf.getInt(position + 1) << 3);
       ByteBuffer other = (ByteBuffer) rhs;
-      BloomKFilter.mergeBloomFilterByteBuffers(buf, position, sizeBytes, other, other.position(), sizeBytes);
+      BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
       return lhs;
     }
   }

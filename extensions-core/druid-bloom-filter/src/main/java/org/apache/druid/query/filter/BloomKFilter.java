@@ -218,13 +218,19 @@ public class BloomKFilter
     }
   }
 
+  public static void serialize(ByteBuffer out, BloomKFilter bloomFilter)
+  {
+    serialize(out, out.position(), bloomFilter);
+  }
+
   /**
-   * Serialize a bloom filter
+   * Serialize a bloom filter to a ByteBuffer
    *
    * @param out         output buffer to write to
+   * @param position    output buffer position
    * @param bloomFilter BloomKFilter that needs to be seralized
    */
-  public static void serialize(ByteBuffer out, BloomKFilter bloomFilter)
+  public static void serialize(ByteBuffer out, int position, BloomKFilter bloomFilter)
   {
     /**
      * Serialized BloomKFilter format:
@@ -233,6 +239,7 @@ public class BloomKFilter
      * big endina longs in the BloomKFilter bitset
      */
     ByteBuffer view = out.duplicate().order(ByteOrder.BIG_ENDIAN);
+    view.position(position);
     view.put((byte) bloomFilter.k);
     view.putInt(bloomFilter.getBitSet().length);
     for (long value : bloomFilter.getBitSet()) {
@@ -240,17 +247,22 @@ public class BloomKFilter
     }
   }
 
+  public static BloomKFilter deserialize(ByteBuffer in) throws IOException
+  {
+    return deserialize(in, in.position());
+  }
+
   /**
    * Deserialize a bloom filter
    * Read a byte buffer, which was written by {@linkplain #serialize(OutputStream, BloomKFilter)} or
-   * {@linkplain #serialize(ByteBuffer, BloomKFilter)}
+   * {@linkplain #serialize(ByteBuffer, int, BloomKFilter)}
    * into a {@code BloomKFilter}
    *
    * @param in input ByteBuffer
    *
    * @return deserialized BloomKFilter
    */
-  public static BloomKFilter deserialize(ByteBuffer in) throws IOException
+  public static BloomKFilter deserialize(ByteBuffer in, int position) throws IOException
   {
     if (in == null) {
       throw new IOException("Input stream is null");
@@ -258,6 +270,7 @@ public class BloomKFilter
 
     try {
       ByteBuffer dataBuffer = in.duplicate().order(ByteOrder.BIG_ENDIAN);
+      dataBuffer.position(position);
       int numHashFunc = dataBuffer.get();
       int bitsetArrayLen = dataBuffer.getInt();
       long[] data = new long[bitsetArrayLen];
@@ -279,20 +292,19 @@ public class BloomKFilter
    *
    * @param bf1Bytes
    * @param bf1Start
-   * @param bf1Length
    * @param bf2Bytes
    * @param bf2Start
-   * @param bf2Length
    */
   public static void mergeBloomFilterByteBuffers(
       ByteBuffer bf1Bytes,
       int bf1Start,
-      int bf1Length,
       ByteBuffer bf2Bytes,
-      int bf2Start,
-      int bf2Length
+      int bf2Start
   )
   {
+    final int bf1Length = bf1Bytes.getInt(1 + bf1Start);
+    final int bf2Length = bf2Bytes.getInt(1 + bf2Start);
+
     if (bf1Length != bf2Length) {
       throw new IllegalArgumentException("bf1Length " + bf1Length + " does not match bf2Length " + bf2Length);
     }

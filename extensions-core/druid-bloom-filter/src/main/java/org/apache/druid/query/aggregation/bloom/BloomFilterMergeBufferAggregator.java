@@ -40,10 +40,8 @@ public class BloomFilterMergeBufferAggregator extends BaseBloomFilterBufferAggre
   {
     final int oldPosition = buf.position();
     buf.position(position);
-    // size is 5 header bytes + length of long array
-    int sizeBytes = 5 + (buf.getInt(position + 1) << 3);
     ByteBuffer other = selector.getObject();
-    BloomKFilter.mergeBloomFilterByteBuffers(buf, position, sizeBytes, other, other.position(), sizeBytes);
+    BloomKFilter.mergeBloomFilterByteBuffers(buf, position, other, other.position());
     buf.position(oldPosition);
   }
 

@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.bloom;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.filter.BloomKFilter;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public abstract class BaseBloomFilterBufferAggregator implements BufferAggregator
@@ -40,12 +39,7 @@ public abstract class BaseBloomFilterBufferAggregator implements BufferAggregato
     final ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
     BloomKFilter filter = new BloomKFilter(maxNumEntries);
-    try {
-      BloomKFilter.serialize(mutationBuffer, filter);
-    }
-    catch (IOException ex) {
-      throw new RuntimeException("Failed to initialize bloomK filter", ex);
-    }
+    BloomKFilter.serialize(mutationBuffer, filter);
   }
 
   @Override

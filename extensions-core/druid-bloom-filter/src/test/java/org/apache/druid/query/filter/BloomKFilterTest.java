@@ -485,10 +485,8 @@ public class BloomKFilterTest
     BloomKFilter.mergeBloomFilterByteBuffers(
         buf1,
         0,
-        bf1Bytes.length,
         buf2,
-        0,
-        bf2Bytes.length
+        0
     );
 
     // Deserialize and test
