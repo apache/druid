@@ -603,7 +603,8 @@ public class DruidSchema extends AbstractSchema
     return segmentMetadata;
   }
 
-  int getTotalSegments() {
+  int getTotalSegments()
+  {
     return totalSegments;
   }
 }
