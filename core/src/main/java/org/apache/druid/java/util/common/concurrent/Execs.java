@@ -22,13 +22,10 @@ package org.apache.druid.java.util.common.concurrent;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -40,48 +37,12 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 /**
  *
  */
 public class Execs
 {
-  private static final Supplier<ListeningExecutorService> DIRECT_EXECUTOR_FACTORY;
-
-  static {
-    Method maybeFactory = null;
-    try {
-      // Guava <=18
-      maybeFactory = MoreExecutors.class.getMethod("sameThreadExecutor");
-    }
-    catch (NoSuchMethodException ignored) {
-    }
-    if (maybeFactory == null) {
-      try {
-        // Guava > 18
-        maybeFactory = MoreExecutors.class.getMethod("newDirectExecutorService");
-      }
-      catch (NoSuchMethodException ignored) {
-      }
-    }
-    if (maybeFactory == null) {
-      throw new IllegalStateException("Cannot find direct executor factory");
-    }
-    final Method factory = maybeFactory;
-    DIRECT_EXECUTOR_FACTORY = () -> {
-      try {
-        return (ListeningExecutorService) factory.invoke(null);
-      }
-      catch (IllegalAccessException | InvocationTargetException | ClassCastException e) {
-        throw new IllegalStateException("Unable to generate direct executor", e);
-      }
-    };
-    // Fail fast
-    if (null == DIRECT_EXECUTOR_FACTORY.get()) {
-      throw new IllegalStateException("Direct executor factory yields null");
-    }
-  }
 
   /**
    * Returns an ExecutorService which is terminated and shutdown from the beginning and not able to accept any tasks.
@@ -197,6 +158,6 @@ public class Execs
 
   public static ListeningExecutorService directExecutor()
   {
-    return DIRECT_EXECUTOR_FACTORY.get();
+    return new DirectExecutorService();
   }
 }
