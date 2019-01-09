@@ -61,10 +61,6 @@ public class DataSegment implements Comparable<DataSegment>
   /*
    * The difference between this class and org.apache.druid.segment.Segment is that this class contains the segment
    * metadata only, while org.apache.druid.segment.Segment represents the actual body of segment data, queryable.
-   *
-   * The difference between this class and org.apache.druid.query.SegmentDescriptor is that SegmentDescriptor is
-   * a "light" version of DataSegment that only contains the interval, version, and partition number. SegmentDescriptor
-   * is used when Brokers tell data servers which segments to include for a particular query.
    */
 
   /**
