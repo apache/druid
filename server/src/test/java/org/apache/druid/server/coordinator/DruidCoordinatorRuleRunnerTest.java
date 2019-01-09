@@ -1423,6 +1423,7 @@ public class DruidCoordinatorRuleRunnerTest
                                    .withEmitBalancingStats(false)
                                    .withKillDataSourceWhitelist(null)
                                    .withKillAllDataSources(false)
+                                   .withBalancerNodeLimit(0)
                                    .withMaxSegmentsInNodeLoadingQueue(1000)
                                    .build();
   }

@@ -766,6 +766,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`killAllDataSources`|Send kill tasks for ALL dataSources if property `druid.coordinator.kill.on` is true. If this is set to true then `killDataSourceWhitelist` must not be specified or be empty list.|false|
 |`killPendingSegmentsSkipList`|List of dataSources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated dataSources or a JSON array.|none|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments that could be queued for loading to any given server. This parameter could be used to speed up segments loading process, especially if there are "slow" nodes in the cluster (with low loading speed) or if too much segments scheduled to be replicated to some particular node (faster loading could be preferred to better segments distribution). Desired value depends on segments loading speed, acceptable replication time and number of nodes. Value 1000 could be a start point for a rather big cluster. Default value is 0 (loading queue is unbounded) |0|
+|`balancerNodeLimit`|The maximum number of nodes when considering rebalancing. Of all nodes available during rebalancing, a random subsample is considered for moving segments off of, and another random subsample is considered for moving segments onto|no limit, all nodes considered|
 
 To view the audit history of coordinator dynamic config issue a GET request to the URL -
 

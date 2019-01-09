@@ -33,6 +33,7 @@ import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 {
@@ -106,8 +108,18 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       return;
     }
 
-    final List<ServerHolder> toMoveFrom = Lists.newArrayList(servers);
-    final List<ServerHolder> toMoveTo = Lists.newArrayList(servers);
+    // Sort order is ascending based on available size. We reverse the "from" to shed the largest nodes first
+    final List<ServerHolder> toMoveFrom;
+    final List<ServerHolder> toMoveTo;
+
+    final int nodeLimit = params.getCoordinatorDynamicConfig().getBalancerNodeLimit();
+    if (nodeLimit > 0) {
+      toMoveFrom = Lists.reverse(randomSortedSubList(servers, nodeLimit));
+      toMoveTo = randomSortedSubList(servers, nodeLimit);
+    } else {
+      toMoveFrom = Lists.reverse(Lists.newArrayList(servers));
+      toMoveTo = Lists.newArrayList(servers);
+    }
 
     if (toMoveTo.size() <= 1) {
       log.info("[%s]: One or fewer servers found.  Cannot balance.", tier);
@@ -169,7 +181,9 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       if (iter >= maxIterations) {
         log.info(
             "Unable to select %d remaining candidate segments out of %d total to balance after %d iterations, ending run.",
-            (maxSegmentsToMove - moved - unmoved), maxSegmentsToMove, iter
+            (maxSegmentsToMove - moved - unmoved),
+            maxSegmentsToMove,
+            iter
         );
         break;
       }
@@ -190,6 +204,13 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         moved,
         unmoved
     );
+  }
+
+  static <T> List<T> randomSortedSubList(Iterable<T> in, int limit)
+  {
+    final List<T> toShuffle = Lists.newArrayList(in);
+    Collections.shuffle(toShuffle);
+    return toShuffle.stream().limit(limit).sorted().collect(Collectors.toList());
   }
 
   protected void moveSegment(
