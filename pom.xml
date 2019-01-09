@@ -749,6 +749,11 @@
                 <artifactId>caffeine</artifactId>
                 <version>${caffeine.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-artifact</artifactId>
+                <version>3.6.0</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.apache.calcite</groupId>
