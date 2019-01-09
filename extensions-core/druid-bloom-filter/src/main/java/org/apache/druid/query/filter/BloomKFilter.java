@@ -304,8 +304,8 @@ public class BloomKFilter
   {
     ByteBuffer view1 = bf1Buffer.duplicate().order(ByteOrder.BIG_ENDIAN);
     ByteBuffer view2 = bf2Buffer.duplicate().order(ByteOrder.BIG_ENDIAN);
-    final int bf1Length = view1.getInt(1 + bf1Start);
-    final int bf2Length = view2.getInt(1 + bf2Start);
+    final int bf1Length = START_OF_SERIALIZED_LONGS + (view1.getInt(1 + bf1Start) * Long.BYTES);
+    final int bf2Length = START_OF_SERIALIZED_LONGS + (view2.getInt(1 + bf2Start) * Long.BYTES);
 
     if (bf1Length != bf2Length) {
       throw new IllegalArgumentException("bf1Length " + bf1Length + " does not match bf2Length " + bf2Length);
