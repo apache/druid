@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.bloom;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.primitives.Ints;
-import io.netty.buffer.ByteBuf;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.java.util.common.RE;
@@ -175,7 +174,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
         return object;
       }
     }
-    catch(IOException ioe) {
+    catch (IOException ioe) {
       throw new RuntimeException("Failed to deserialize BloomKFilter");
     }
   }
