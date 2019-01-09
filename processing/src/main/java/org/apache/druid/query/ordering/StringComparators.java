@@ -24,6 +24,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedBytes;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
@@ -34,16 +35,19 @@ public class StringComparators
   public static final String ALPHANUMERIC_NAME = "alphanumeric";
   public static final String NUMERIC_NAME = "numeric";
   public static final String STRLEN_NAME = "strlen";
+  public static final String VERSION_NAME = "version";
 
   public static final StringComparator LEXICOGRAPHIC = new LexicographicComparator();
   public static final StringComparator ALPHANUMERIC = new AlphanumericComparator();
   public static final StringComparator NUMERIC = new NumericComparator();
   public static final StringComparator STRLEN = new StrlenComparator();
+  public static final StringComparator VERSION = new VersionComparator();
 
   public static final int LEXICOGRAPHIC_CACHE_ID = 0x01;
   public static final int ALPHANUMERIC_CACHE_ID = 0x02;
   public static final int NUMERIC_CACHE_ID = 0x03;
   public static final int STRLEN_CACHE_ID = 0x04;
+  public static final int VERSION_CACHE_ID = 0x05;
 
   public static class LexicographicComparator extends StringComparator
   {
@@ -414,6 +418,53 @@ public class StringComparators
     public byte[] getCacheKey()
     {
       return new byte[]{(byte) NUMERIC_CACHE_ID};
+    }
+  }
+
+  public static class VersionComparator extends StringComparator
+  {
+    @Override
+    public int compare(String o1, String o2)
+    {
+      //noinspection StringEquality
+      if (o1 == o2) {
+        return 0;
+      }
+      if (o1 == null) {
+        return -1;
+      }
+      if (o2 == null) {
+        return 1;
+      }
+
+      DefaultArtifactVersion version1 = new DefaultArtifactVersion(o1);
+      DefaultArtifactVersion version2 = new DefaultArtifactVersion(o2);
+      return version1.compareTo(version2);
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringComparators.VERSION_NAME;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) VERSION_CACHE_ID};
     }
   }
 }

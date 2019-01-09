@@ -22,6 +22,7 @@ package org.apache.druid.collections.bitmap;
 import com.google.common.base.Throwables;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringBitmap;
+import org.roaringbitmap.RoaringBitmapWriter;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.io.ByteArrayOutputStream;
@@ -39,7 +40,7 @@ public class WrappedRoaringBitmap implements MutableBitmap
   /**
    * Underlying bitmap.
    */
-  private MutableRoaringBitmap bitmap;
+  private RoaringBitmapWriter<MutableRoaringBitmap> writer;
 
   /**
    * Creates a new WrappedRoaringBitmap wrapping an empty MutableRoaringBitmap
@@ -56,17 +57,17 @@ public class WrappedRoaringBitmap implements MutableBitmap
    */
   public WrappedRoaringBitmap(boolean compressRunOnSerialization)
   {
-    this.bitmap = new MutableRoaringBitmap();
+    this.writer = RoaringBitmapWriter.bufferWriter().get();
     this.compressRunOnSerialization = compressRunOnSerialization;
   }
 
   ImmutableBitmap toImmutableBitmap()
   {
-    MutableRoaringBitmap mrb = bitmap.clone();
+    MutableRoaringBitmap bitmap = writer.get().clone();
     if (compressRunOnSerialization) {
-      mrb.runOptimize();
+      bitmap.runOptimize();
     }
-    return new WrappedImmutableRoaringBitmap(mrb);
+    return new WrappedImmutableRoaringBitmap(bitmap.toImmutableRoaringBitmap());
   }
 
   @Override
@@ -74,6 +75,7 @@ public class WrappedRoaringBitmap implements MutableBitmap
   {
     try {
       final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      MutableRoaringBitmap bitmap = writer.get();
       if (compressRunOnSerialization) {
         bitmap.runOptimize();
       }
@@ -88,21 +90,22 @@ public class WrappedRoaringBitmap implements MutableBitmap
   @Override
   public void clear()
   {
-    this.bitmap.clear();
+    this.writer.reset();
   }
 
   @Override
   public void or(MutableBitmap mutableBitmap)
   {
     WrappedRoaringBitmap other = (WrappedRoaringBitmap) mutableBitmap;
-    MutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    bitmap.or(unwrappedOtherBitmap);
+    MutableRoaringBitmap unwrappedOtherBitmap = other.writer.get();
+    writer.get().or(unwrappedOtherBitmap);
   }
 
 
   @Override
   public int getSizeInBytes()
   {
+    MutableRoaringBitmap bitmap = writer.get();
     if (compressRunOnSerialization) {
       bitmap.runOptimize();
     }
@@ -112,21 +115,22 @@ public class WrappedRoaringBitmap implements MutableBitmap
   @Override
   public void add(int entry)
   {
-    bitmap.add(entry);
+    writer.add(entry);
   }
 
   @Override
   public int size()
   {
-    return bitmap.getCardinality();
+    return writer.get().getCardinality();
   }
 
   public void serialize(ByteBuffer buffer)
   {
-    if (compressRunOnSerialization) {
-      bitmap.runOptimize();
-    }
     try {
+      MutableRoaringBitmap bitmap = writer.get();
+      if (compressRunOnSerialization) {
+        bitmap.runOptimize();
+      }
       bitmap.serialize(
           new DataOutputStream(
               new OutputStream()
@@ -180,38 +184,38 @@ public class WrappedRoaringBitmap implements MutableBitmap
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + bitmap;
+    return getClass().getSimpleName() + writer.getUnderlying();
   }
 
   @Override
   public void remove(int entry)
   {
-    bitmap.remove(entry);
+    writer.get().remove(entry);
   }
 
   @Override
   public IntIterator iterator()
   {
-    return bitmap.getIntIterator();
+    return writer.get().getIntIterator();
   }
 
   @Override
   public boolean isEmpty()
   {
-    return bitmap.isEmpty();
+    return writer.get().isEmpty();
   }
 
   @Override
   public ImmutableBitmap intersection(ImmutableBitmap otherBitmap)
   {
     WrappedRoaringBitmap other = (WrappedRoaringBitmap) otherBitmap;
-    MutableRoaringBitmap unwrappedOtherBitmap = other.bitmap;
-    return new WrappedImmutableRoaringBitmap(MutableRoaringBitmap.and(bitmap, unwrappedOtherBitmap));
+    MutableRoaringBitmap unwrappedOtherBitmap = other.writer.get();
+    return new WrappedImmutableRoaringBitmap(MutableRoaringBitmap.and(writer.get(), unwrappedOtherBitmap));
   }
 
   @Override
   public boolean get(int value)
   {
-    return bitmap.contains(value);
+    return writer.get().contains(value);
   }
 }
