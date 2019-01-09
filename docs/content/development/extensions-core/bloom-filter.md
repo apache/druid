@@ -28,21 +28,35 @@ This extension adds the ability to both construct bloom filters from query resul
 against a bloom filter. Make sure to [include](../../operations/including-extensions.html) `druid-bloom-filter` as an 
 extension.
 
-A BloomFilter is a probabilistic data structure for set membership check. 
-Following are some characterstics of BloomFilter 
+A BloomFilter is a probabilistic data structure for performing a set membership check. A bloom filter is a good candidate 
+to use with Druid for cases where an explicit filter is impossible, e.g. filtering a query against a set of millions of
+ values.
+ 
+Following are some characterstics of BloomFilters:
 - BloomFilters are highly space efficient when compared to using a HashSet.
-- Because of the probabilistic nature of bloom filter false positive results are possible (e.g. element was not actually 
-present in bloom filter construction, but `test()` says true) 
+- Because of the probabilistic nature of bloom filters, false positive results are possible (e.g. element was not actually 
+inserted into a bloom filter during construction, but `test()` says true) 
 - False negatives are not possible (if element is present then `test()` will never say false). 
-- The false positive probability is configurable (default: 5%) depending on which storage requirement may increase or
- decrease. 
-- Lower the false positive probability greater is the space requirement.
-- Bloom filters are sensitive to number of elements that will be inserted in the bloom filter.
-- During the creation of bloom filter expected number of entries must be specified. If the number of insertions exceed
+- The false positive probability of this implementation is currently fixed at 5%, but increasing the number of entries 
+that the filter can hold can decrease this false positive rate in exchange for overall size.
+- Bloom filters are sensitive to number of elements that will be inserted in the bloom filter. During the creation of bloom filter expected number of entries must be specified. If the number of insertions exceed
  the specified initial number of entries then false positive probability will increase accordingly.
 
-This extension is built on top of `org.apache.hive.common.util.BloomKFilter`. Internally, this implementation of bloom 
-filter uses Murmur3 fast non-cryptographic hash algorithm.
+This extension is currently based on `org.apache.hive.common.util.BloomKFilter` from `hive-storage-api`. Internally, 
+this implementation uses Murmur3 as the hash algorithm.
+
+To construct a BloomKFilter externally with Java to use as a filter in a Druid query:
+
+```java
+BloomKFilter bloomFilter = new BloomKFilter(1500);
+bloomFilter.addString("some string");
+bloomFilter.addString("some other string");
+bloomFilter.addString("striiings!");
+ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+BloomKFilter.serialize(byteArrayOutputStream, bloomFilter);
+String base64Serialized= Base64.encodeBase64String(bytes);
+```
+This string can then be used in the native or sql Druid query.
 
 ## Filtering queries with a Bloom Filter
 

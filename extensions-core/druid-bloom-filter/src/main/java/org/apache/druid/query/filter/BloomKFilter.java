@@ -221,10 +221,10 @@ public class BloomKFilter
   /**
    * Serialize a bloom filter
    *
-   * @param out         output stream to write to
+   * @param out         output buffer to write to
    * @param bloomFilter BloomKFilter that needs to be seralized
    */
-  public static void serialize(ByteBuffer out, BloomKFilter bloomFilter) throws IOException
+  public static void serialize(ByteBuffer out, BloomKFilter bloomFilter)
   {
     /**
      * Serialized BloomKFilter format:
@@ -242,10 +242,11 @@ public class BloomKFilter
 
   /**
    * Deserialize a bloom filter
-   * Read a byte stream, which was written by {@linkplain #serialize(OutputStream, BloomKFilter)}
+   * Read a byte buffer, which was written by {@linkplain #serialize(OutputStream, BloomKFilter)} or
+   * {@linkplain #serialize(ByteBuffer, BloomKFilter)}
    * into a {@code BloomKFilter}
    *
-   * @param in input bytestream
+   * @param in input ByteBuffer
    *
    * @return deserialized BloomKFilter
    */
