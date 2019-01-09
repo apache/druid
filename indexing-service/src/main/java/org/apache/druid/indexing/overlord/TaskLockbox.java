@@ -76,7 +76,6 @@ public class TaskLockbox
   // startTime.
   private final Map<String, NavigableMap<DateTime, SortedMap<Interval, List<TaskLockPosse>>>> running = new HashMap<>();
 
-
   private final TaskStorage taskStorage;
   private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition lockReleaseCondition = giant.newCondition();
@@ -929,7 +928,10 @@ public class TaskLockbox
         );
 
         return StreamSupport.stream(searchStartTimes.spliterator(), false)
-                            .flatMap(startTime -> dsRunning.get(startTime).entrySet().stream())
+                            .filter(java.util.Objects::nonNull)
+                            .map(dsRunning::get)
+                            .filter(java.util.Objects::nonNull)
+                            .flatMap(sortedMap -> sortedMap.entrySet().stream())
                             .filter(entry -> entry.getKey().overlaps(interval))
                             .flatMap(entry -> entry.getValue().stream())
                             .collect(Collectors.toList());
