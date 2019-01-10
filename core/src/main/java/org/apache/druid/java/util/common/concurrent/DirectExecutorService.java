@@ -26,13 +26,14 @@ import javax.annotation.concurrent.GuardedBy;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 // Copy of Guava's Apache 2.0 licensed https://github.com/google/guava/blob/a5cafa67da64a12444037bd4f4c30c39a0c184aa/guava/src/com/google/common/util/concurrent/MoreExecutors.java#L240-L339
 
 /**
  * Creates an executor service that runs each task in the thread that invokes {@code
- * execute/submit}, as in {@link CallerRunsPolicy} This applies both to individually submitted
+ * execute/submit}, as in {@link ThreadPoolExecutor.CallerRunsPolicy} This applies both to individually submitted
  * tasks and to collections of tasks submitted via {@code invokeAll} or {@code invokeAny}. In the
  * latter case, tasks will run serially on the calling thread. Tasks are run to completion before
  * a {@code Future} is returned to the caller (unless the executor has been shutdown).
