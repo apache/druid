@@ -687,6 +687,7 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
@@ -768,6 +769,7 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
@@ -1156,6 +1158,7 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
