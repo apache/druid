@@ -20,9 +20,11 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
+import org.apache.druid.segment.IndexSpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -44,27 +46,35 @@ public class DataSourceCompactionConfig
   private final boolean keepSegmentGranularity;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
-  private final long targetCompactionSizeBytes;
+  @Nullable
+  private final Long targetCompactionSizeBytes;
   // The number of input segments is limited because the byte size of a serialized task spec is limited by
   // RemoteTaskRunnerConfig.maxZnodeBytes.
+  @Nullable
+  private final Integer maxRowsPerSegment;
   private final int maxNumSegmentsToCompact;
   private final Period skipOffsetFromLatest;
-  private final ClientCompactQueryTuningConfig tuningConfig;
+  private final UserCompactTuningConfig tuningConfig;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
   public DataSourceCompactionConfig(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("keepSegmentGranularity") Boolean keepSegmentGranularity,
+      @JsonProperty("keepSegmentGranularity") @Nullable Boolean keepSegmentGranularity,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxNumSegmentsToCompact") @Nullable Integer maxNumSegmentsToCompact,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
-      @JsonProperty("tuningConfig") @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      @JsonProperty("tuningConfig") @Nullable UserCompactTuningConfig tuningConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
+    Preconditions.checkArgument(
+        targetCompactionSizeBytes == null || maxRowsPerSegment == null,
+        "targetCompactionSizeBytes and maxRowsPerSegment in tuningConfig can't be used together"
+    );
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.keepSegmentGranularity = keepSegmentGranularity == null
                                   ? DEFAULT_KEEP_SEGMENT_GRANULARITY
@@ -75,9 +85,12 @@ public class DataSourceCompactionConfig
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
-    this.targetCompactionSizeBytes = targetCompactionSizeBytes == null
-                                     ? DEFAULT_TARGET_COMPACTION_SIZE_BYTES
-                                     : targetCompactionSizeBytes;
+    if (targetCompactionSizeBytes == null && maxRowsPerSegment == null) {
+      this.targetCompactionSizeBytes = DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
+    } else {
+      this.targetCompactionSizeBytes = targetCompactionSizeBytes;
+    }
+    this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxNumSegmentsToCompact = maxNumSegmentsToCompact == null
                                    ? DEFAULT_NUM_INPUT_SEGMENTS
                                    : maxNumSegmentsToCompact;
@@ -122,9 +135,17 @@ public class DataSourceCompactionConfig
   }
 
   @JsonProperty
-  public long getTargetCompactionSizeBytes()
+  @Nullable
+  public Long getTargetCompactionSizeBytes()
   {
     return targetCompactionSizeBytes;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Integer getMaxRowsPerSegment()
+  {
+    return maxRowsPerSegment;
   }
 
   @JsonProperty
@@ -135,7 +156,7 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public ClientCompactQueryTuningConfig getTuningConfig()
+  public UserCompactTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
@@ -150,49 +171,22 @@ public class DataSourceCompactionConfig
   @Override
   public boolean equals(Object o)
   {
-    if (o == this) {
+    if (this == o) {
       return true;
     }
-
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final DataSourceCompactionConfig that = (DataSourceCompactionConfig) o;
-
-    if (!dataSource.equals(that.dataSource)) {
-      return false;
-    }
-
-    if (keepSegmentGranularity != that.keepSegmentGranularity) {
-      return false;
-    }
-
-    if (taskPriority != that.taskPriority) {
-      return false;
-    }
-
-    if (inputSegmentSizeBytes != that.inputSegmentSizeBytes) {
-      return false;
-    }
-
-    if (maxNumSegmentsToCompact != that.maxNumSegmentsToCompact) {
-      return false;
-    }
-
-    if (targetCompactionSizeBytes != that.targetCompactionSizeBytes) {
-      return false;
-    }
-
-    if (!skipOffsetFromLatest.equals(that.skipOffsetFromLatest)) {
-      return false;
-    }
-
-    if (!Objects.equals(tuningConfig, that.tuningConfig)) {
-      return false;
-    }
-
-    return Objects.equals(taskContext, that.taskContext);
+    DataSourceCompactionConfig that = (DataSourceCompactionConfig) o;
+    return keepSegmentGranularity == that.keepSegmentGranularity &&
+           taskPriority == that.taskPriority &&
+           inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
+           maxNumSegmentsToCompact == that.maxNumSegmentsToCompact &&
+           Objects.equals(dataSource, that.dataSource) &&
+           Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
+           Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
+           Objects.equals(tuningConfig, that.tuningConfig) &&
+           Objects.equals(taskContext, that.taskContext);
   }
 
   @Override
@@ -203,11 +197,34 @@ public class DataSourceCompactionConfig
         keepSegmentGranularity,
         taskPriority,
         inputSegmentSizeBytes,
-        maxNumSegmentsToCompact,
         targetCompactionSizeBytes,
+        maxNumSegmentsToCompact,
         skipOffsetFromLatest,
         tuningConfig,
         taskContext
     );
+  }
+
+  public static class UserCompactTuningConfig extends ClientCompactQueryTuningConfig
+  {
+    @JsonCreator
+    public UserCompactTuningConfig(
+        @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
+        @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
+        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+        @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
+        @JsonProperty("pushTimeout") @Nullable Long pushTimeout
+    )
+    {
+      super(null, maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
+    }
+
+    @Override
+    @Nullable
+    @JsonIgnore
+    public Integer getMaxRowsPerSegment()
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }

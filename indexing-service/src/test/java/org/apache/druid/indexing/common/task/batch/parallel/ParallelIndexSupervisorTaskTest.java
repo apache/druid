@@ -246,6 +246,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
             null,
             null,
             null,
+            null,
             2,
             null,
             null,
