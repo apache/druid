@@ -62,39 +62,40 @@ class ParquetGroupConverter
 
     final int fieldIndex = g.getType().getFieldIndex(fieldName);
 
-    if (g.getFieldRepetitionCount(fieldIndex) > 0) {
-      Type fieldType = g.getType().getFields().get(fieldIndex);
-
-      // primitive field
-      if (fieldType.isPrimitive()) {
-        // primitive list
-        if (fieldType.getRepetition().equals(Type.Repetition.REPEATED)) {
-          int repeated = g.getFieldRepetitionCount(fieldIndex);
-          List<Object> vals = new ArrayList<>();
-          for (int i = 0; i < repeated; i++) {
-            vals.add(convertPrimitiveField(g, fieldIndex, i, binaryAsString));
-          }
-          return vals;
-        }
-        return convertPrimitiveField(g, fieldIndex, binaryAsString);
-      } else {
-        if (fieldType.isRepetition(Type.Repetition.REPEATED)) {
-          return convertRepeatedFieldToList(g, fieldIndex, binaryAsString);
-        }
-
-        if (isLogicalMapType(fieldType)) {
-          return convertLogicalMap(g.getGroup(fieldIndex, 0), binaryAsString);
-        }
-
-        if (isLogicalListType(fieldType)) {
-          return convertLogicalList(g.getGroup(fieldIndex, 0), binaryAsString);
-        }
-
-        // not a list, but not a primtive, return the nested group type
-        return g.getGroup(fieldIndex, 0);
-      }
+    if (!(g.getFieldRepetitionCount(fieldIndex) > 0)) {
+      return null;
     }
-    return null;
+
+    Type fieldType = g.getType().getFields().get(fieldIndex);
+
+    // primitive field
+    if (fieldType.isPrimitive()) {
+      // primitive list
+      if (fieldType.getRepetition().equals(Type.Repetition.REPEATED)) {
+        int repeated = g.getFieldRepetitionCount(fieldIndex);
+        List<Object> vals = new ArrayList<>();
+        for (int i = 0; i < repeated; i++) {
+          vals.add(convertPrimitiveField(g, fieldIndex, i, binaryAsString));
+        }
+        return vals;
+      }
+      return convertPrimitiveField(g, fieldIndex, binaryAsString);
+    } else {
+      if (fieldType.isRepetition(Type.Repetition.REPEATED)) {
+        return convertRepeatedFieldToList(g, fieldIndex, binaryAsString);
+      }
+
+      if (isLogicalMapType(fieldType)) {
+        return convertLogicalMap(g.getGroup(fieldIndex, 0), binaryAsString);
+      }
+
+      if (isLogicalListType(fieldType)) {
+        return convertLogicalList(g.getGroup(fieldIndex, 0), binaryAsString);
+      }
+
+      // not a list, but not a primtive, return the nested group type
+      return g.getGroup(fieldIndex, 0);
+    }
   }
 
   /**
