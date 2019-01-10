@@ -139,11 +139,8 @@ public class FixedBucketsHistogramTest
         FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW
     );
 
-    double[] values = new double[100000];
-
     for (int i = 0; i < 100000; i++) {
       double val = normalDistribution.sample();
-      values[i] = val;
       h.add(val);
     }
     float[] quantiles = h.percentilesFloat(new double[]{12.5f, 25.0f, 50.0f, 98f});
