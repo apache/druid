@@ -17,21 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.security.authorization;
+package org.apache.druid.security.basic.authentication;
 
-import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.server.security.AuthenticationResult;
 
-public class NoopBasicAuthorizerCacheNotifier implements BasicAuthorizerCacheNotifier
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DBCredentialsValidator.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "db", value = DBCredentialsValidator.class),
+    @JsonSubTypes.Type(name = "ldap", value = LDAPCredentialsValidator.class),
+})
+public interface CredentialsValidator
 {
-  @Override
-  public void addUpdate(String authorizerPrefix, byte[] userAndRoleMap)
-  {
-
-  }
-
-  @Override
-  public void addUpdateGroup(String authorizerPrefix, byte[] groupAndRoleMap)
-  {
-
-  }
+  AuthenticationResult validateCredentials(
+      String authenticatorName,
+      String authorizerName,
+      String username,
+      char[] password
+  );
 }

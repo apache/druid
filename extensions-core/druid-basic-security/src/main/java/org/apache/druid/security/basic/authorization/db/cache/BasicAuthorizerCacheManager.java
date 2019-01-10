@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.basic.authorization.db.cache;
 
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroup;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 
@@ -39,6 +40,15 @@ public interface BasicAuthorizerCacheManager
   void handleAuthorizerUpdate(String authorizerPrefix, byte[] serializedUserAndRoleMap);
 
   /**
+   * Update this cache manager's local state with fresh information pushed by the coordinator.
+   *
+   * @param authorizerPrefix The name of the authorizer this update applies to.
+   * @param serializedGroupAndRoleMap The updated, serialized group and role maps
+   */
+  void handleAuthorizerGroupUpdate(String authorizerPrefix, byte[] serializedGroupAndRoleMap);
+
+
+  /**
    * Return the cache manager's local view of the user map for the authorizer named `authorizerPrefix`.
    *
    * @param authorizerPrefix The name of the authorizer
@@ -53,4 +63,20 @@ public interface BasicAuthorizerCacheManager
    * @return Role map
    */
   Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix);
+
+  /**
+   * Return the cache manager's local view of the group map for the authorizer named `authorizerPrefix`.
+   *
+   * @param authorizerPrefix The name of the authorizer
+   * @return Group map
+   */
+  Map<String, BasicAuthorizerGroup> getGroupMap(String authorizerPrefix);
+
+  /**
+   * Return the cache manager's local view of the group-role map for the authorizer named `authorizerPrefix`.
+   *
+   * @param authorizerPrefix The name of the authorizer
+   * @return Role map
+   */
+  Map<String, BasicAuthorizerRole> getGroupRoleMap(String authorizerPrefix);
 }

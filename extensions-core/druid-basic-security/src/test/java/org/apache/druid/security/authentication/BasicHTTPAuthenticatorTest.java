@@ -70,7 +70,7 @@ public class BasicHTTPAuthenticatorTest
   public static BasicHTTPAuthenticator AUTHENTICATOR = new BasicHTTPAuthenticator(
       CACHE_MANAGER_PROVIDER,
       "basic",
-      "basic",
+      null, "basic",
       new DefaultPasswordProvider("a"),
       new DefaultPasswordProvider("a"),
       false,

@@ -109,6 +109,24 @@ public class BasicAuthorizerResource
   }
 
   /**
+   * @param req HTTP request
+   *
+   * @return List of all groups
+   */
+  @GET
+  @Path("/db/{authorizerName}/groups")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getAllGroups(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName
+  )
+  {
+    return resourceHandler.getAllGroups(authorizerName);
+  }
+
+  /**
    * @param req      HTTP request
    * @param userName Name of user to retrieve information about
    *
@@ -127,6 +145,27 @@ public class BasicAuthorizerResource
   )
   {
     return resourceHandler.getUser(authorizerName, userName, full != null);
+  }
+
+  /**
+   * @param req       HTTP request
+   * @param groupName Name of group to retrieve information about
+   *
+   * @return Name, roles, and permissions of the group with groupName, 400 error response if user doesn't exist
+   */
+  @GET
+  @Path("/db/{authorizerName}/groups/{groupName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getGroup(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupName") final String groupName,
+      @QueryParam("full") String full
+  )
+  {
+    return resourceHandler.getGroup(authorizerName, groupName, full != null);
   }
 
   /**
@@ -171,6 +210,50 @@ public class BasicAuthorizerResource
   )
   {
     return resourceHandler.deleteUser(authorizerName, userName);
+  }
+
+  /**
+   * Create a new group with name groupName
+   *
+   * @param req      HTTP request
+   * @param groupName Name to assign the new groupName
+   *
+   * @return OK response, or 400 error response if group already exists
+   */
+  @POST
+  @Path("/db/{authorizerName}/groups/{groupName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response createGroup(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupName") String groupName
+  )
+  {
+    return resourceHandler.createGroup(authorizerName, groupName);
+  }
+
+  /**
+   * Delete a group with name groupName
+   *
+   * @param req      HTTP request
+   * @param groupName Name of group to delete
+   *
+   * @return OK response, or 400 error response if group doesn't exist
+   */
+  @DELETE
+  @Path("/db/{authorizerName}/groups/{groupName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response deleteGroup(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupName") String groupName
+  )
+  {
+    return resourceHandler.deleteGroup(authorizerName, groupName);
   }
 
   /**
@@ -307,6 +390,54 @@ public class BasicAuthorizerResource
   }
 
   /**
+   * Assign a role to a group.
+   *
+   * @param req       HTTP request
+   * @param groupName Name of group
+   * @param roleName  Name of role
+   *
+   * @return OK response. 400 error if group/role don't exist, or if group already has the role
+   */
+  @POST
+  @Path("/db/{authorizerName}/groups/{groupName}/roles/{roleName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response assignRoleToGroup(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupName") String groupName,
+      @PathParam("roleName") String roleName
+  )
+  {
+    return resourceHandler.assignRoleToGroup(authorizerName, groupName, roleName);
+  }
+
+  /**
+   * Remove a role from a group.
+   *
+   * @param req       HTTP request
+   * @param groupName Name of group
+   * @param roleName  Name of role
+   *
+   * @return OK response. 400 error if group/role don't exist, or if group does not have the role.
+   */
+  @DELETE
+  @Path("/db/{authorizerName}/groups/{groupName}/roles/{roleName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response unassignRoleFromGroup(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      @PathParam("groupName") String groupName,
+      @PathParam("roleName") String roleName
+  )
+  {
+    return resourceHandler.unassignRoleFromGroup(authorizerName, groupName, roleName);
+  }
+
+  /**
    * Set the permissions of a role. This replaces the previous permissions of the role.
    *
    * @param req         HTTP request
@@ -348,9 +479,27 @@ public class BasicAuthorizerResource
     return resourceHandler.getCachedMaps(authorizerName);
   }
 
+  /**
+   * @param req HTTP request
+   *
+   * @return serialized group map
+   */
+  @GET
+  @Path("/db/{authorizerName}/cachedSerializedGroupMap")
+  @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getCachedSerializedGroupMap(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName
+  )
+  {
+    return resourceHandler.getCachedGroupMaps(authorizerName);
+  }
+
 
   /**
-   * Listen for update notifications for the auth storage
+   * Listen for update notifications for the user auth storage
    */
   @POST
   @Path("/listen/{authorizerName}")
@@ -364,5 +513,22 @@ public class BasicAuthorizerResource
   )
   {
     return resourceHandler.authorizerUpdateListener(authorizerName, serializedUserAndRoleMap);
+  }
+
+  /**
+   * Listen for update notifications for the group auth storage
+   */
+  @POST
+  @Path("/listen/groups/{authorizerName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response authorizerGroupUpdateListener(
+      @Context HttpServletRequest req,
+      @PathParam("authorizerName") final String authorizerName,
+      byte[] serializedGroupAndRoleMap
+  )
+  {
+    return resourceHandler.authorizerGroupUpdateListener(authorizerName, serializedGroupAndRoleMap);
   }
 }

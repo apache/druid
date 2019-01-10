@@ -24,13 +24,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.inject.Provider;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.security.basic.BasicAuthDBConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
-import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
@@ -46,7 +43,6 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 
@@ -57,11 +53,13 @@ public class BasicHTTPAuthenticator implements Authenticator
   private final String name;
   private final String authorizerName;
   private final BasicAuthDBConfig dbConfig;
+  private final CredentialsValidator credentialsValidator;
 
   @JsonCreator
   public BasicHTTPAuthenticator(
       @JacksonInject Provider<BasicAuthenticatorCacheManager> cacheManager,
       @JsonProperty("name") String name,
+      @JsonProperty("credentialsValidator") CredentialsValidator credentialsValidator,
       @JsonProperty("authorizerName") String authorizerName,
       @JsonProperty("initialAdminPassword") PasswordProvider initialAdminPassword,
       @JsonProperty("initialInternalClientPassword") PasswordProvider initialInternalClientPassword,
@@ -75,11 +73,17 @@ public class BasicHTTPAuthenticator implements Authenticator
     this.dbConfig = new BasicAuthDBConfig(
         initialAdminPassword,
         initialInternalClientPassword,
+        null,
         enableCacheNotifications == null ? true : enableCacheNotifications,
         cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout,
         credentialIterations == null ? BasicAuthUtils.DEFAULT_KEY_ITERATIONS : credentialIterations
     );
     this.cacheManager = cacheManager;
+    if (credentialsValidator == null) {
+      this.credentialsValidator = new DBCredentialsValidator(this.cacheManager);
+    } else {
+      this.credentialsValidator = credentialsValidator;
+    }
   }
 
   @Override
@@ -105,11 +109,7 @@ public class BasicHTTPAuthenticator implements Authenticator
       return null;
     }
 
-    if (checkCredentials(user, password.toCharArray())) {
-      return new AuthenticationResult(user, authorizerName, name, null);
-    } else {
-      return null;
-    }
+    return credentialsValidator.validateCredentials(name, authorizerName, user, password.toCharArray());
   }
 
 
@@ -183,8 +183,8 @@ public class BasicHTTPAuthenticator implements Authenticator
       String user = splits[0];
       char[] password = splits[1].toCharArray();
 
-      if (checkCredentials(user, password)) {
-        AuthenticationResult authenticationResult = new AuthenticationResult(user, authorizerName, name, null);
+      AuthenticationResult authenticationResult = credentialsValidator.validateCredentials(name, authorizerName, user, password);
+      if (authenticationResult != null) {
         servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
         filterChain.doFilter(servletRequest, servletResponse);
       } else {
@@ -197,30 +197,5 @@ public class BasicHTTPAuthenticator implements Authenticator
     {
 
     }
-  }
-
-  private boolean checkCredentials(String username, char[] password)
-  {
-    Map<String, BasicAuthenticatorUser> userMap = cacheManager.get().getUserMap(name);
-    if (userMap == null) {
-      throw new IAE("No authenticator found with prefix: [%s]", name);
-    }
-
-    BasicAuthenticatorUser user = userMap.get(username);
-    if (user == null) {
-      return false;
-    }
-    BasicAuthenticatorCredentials credentials = user.getCredentials();
-    if (credentials == null) {
-      return false;
-    }
-
-    byte[] recalculatedHash = BasicAuthUtils.hashPassword(
-        password,
-        credentials.getSalt(),
-        credentials.getIterations()
-    );
-
-    return Arrays.equals(recalculatedHash, credentials.getHash());
   }
 }

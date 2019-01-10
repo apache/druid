@@ -25,7 +25,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.security.basic.BasicAuthDBConfig;
+import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheManager;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroup;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
@@ -35,7 +37,9 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.Resource;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,6 +55,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
   public BasicRoleBasedAuthorizer(
       @JacksonInject BasicAuthorizerCacheManager cacheManager,
       @JsonProperty("name") String name,
+      @JsonProperty("initialAdminGroup") String initialAdminGroup,
       @JsonProperty("enableCacheNotifications") Boolean enableCacheNotifications,
       @JsonProperty("cacheNotificationTimeout") Long cacheNotificationTimeout
   )
@@ -60,6 +65,7 @@ public class BasicRoleBasedAuthorizer implements Authorizer
     this.dbConfig = new BasicAuthDBConfig(
         null,
         null,
+        initialAdminGroup,
         enableCacheNotifications == null ? true : enableCacheNotifications,
         cacheNotificationTimeout == null ? BasicAuthDBConfig.DEFAULT_CACHE_NOTIFY_TIMEOUT_MS : cacheNotificationTimeout,
         0
@@ -73,22 +79,51 @@ public class BasicRoleBasedAuthorizer implements Authorizer
       throw new IAE("WTF? authenticationResult should never be null.");
     }
 
-    Map<String, BasicAuthorizerUser> userMap = cacheManager.getUserMap(name);
-    if (userMap == null) {
-      throw new IAE("Could not load userMap for authorizer [%s]", name);
+    Set<String> roles;
+    Map<String, BasicAuthorizerRole> roleMap;
+
+    if (authenticationResult.getContext() != null
+        && authenticationResult.getContext().get(BasicAuthUtils.GROUPS_CONTEXT_KEY) != null) {
+      roles = new HashSet<>();
+      Map<String, BasicAuthorizerGroup> groupMap = cacheManager.getGroupMap(name);
+      if (groupMap == null) {
+        throw new IAE("Could not load groupMap for authorizer [%s]", name);
+      } else {
+        Set<BasicAuthorizerGroup> basicAuthorizerGroups = new HashSet<>();
+        Set<String> groups = (Set<String>) authenticationResult.getContext().get(BasicAuthUtils.GROUPS_CONTEXT_KEY);
+        for (String group : groups) {
+          if (groupMap.get(group) != null) {
+            basicAuthorizerGroups.add(groupMap.get(group));
+          }
+        }
+
+        if (basicAuthorizerGroups.isEmpty()) {
+          return new Access(false);
+        } else {
+          basicAuthorizerGroups.forEach(basicAuthorizerGroup -> roles.addAll(basicAuthorizerGroup.getRoles()));
+        }
+      }
+      roleMap = cacheManager.getGroupRoleMap(name);
+    } else {
+      Map<String, BasicAuthorizerUser> userMap = cacheManager.getUserMap(name);
+      if (userMap == null) {
+        throw new IAE("Could not load userMap for authorizer [%s]", name);
+      } else {
+        BasicAuthorizerUser user = userMap.get(authenticationResult.getIdentity());
+        if (user == null) {
+          return new Access(false);
+        } else {
+          roles = user.getRoles();
+        }
+      }
+      roleMap = cacheManager.getRoleMap(name);
     }
 
-    Map<String, BasicAuthorizerRole> roleMap = cacheManager.getRoleMap(name);
     if (roleMap == null) {
       throw new IAE("Could not load roleMap for authorizer [%s]", name);
     }
 
-    BasicAuthorizerUser user = userMap.get(authenticationResult.getIdentity());
-    if (user == null) {
-      return new Access(false);
-    }
-
-    for (String roleName : user.getRoles()) {
+    for (String roleName : roles) {
       BasicAuthorizerRole role = roleMap.get(roleName);
       for (BasicAuthorizerPermission permission : role.getPermissions()) {
         if (permissionCheck(resource, action, permission)) {

@@ -38,15 +38,19 @@ import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
+import org.apache.druid.security.basic.BasicAuthDBConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityDBResourceException;
 import org.apache.druid.security.basic.authorization.BasicRoleBasedAuthorizer;
 import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroup;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapBundle;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRoleMapBundle;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUserMapBundle;
+import org.apache.druid.security.basic.authorization.entity.GroupAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Authorizer;
@@ -63,7 +67,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -78,6 +81,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private static final long UPDATE_RETRY_DELAY = 1000;
 
   private static final String USERS = "users";
+  private static final String GROUPS = "groups";
   private static final String ROLES = "roles";
 
   public static final List<ResourceAction> SUPERUSER_PERMISSIONS = makeSuperUserPermissions();
@@ -91,6 +95,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   private final int numRetries = 5;
 
   private final Map<String, BasicAuthorizerUserMapBundle> cachedUserMaps;
+  private final Map<String, BasicAuthorizerGroupMapBundle> cachedGroupMaps;
   private final Map<String, BasicAuthorizerRoleMapBundle> cachedRoleMaps;
 
   private final Set<String> authorizerNames;
@@ -118,6 +123,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     this.objectMapper = objectMapper;
     this.cacheNotifier = cacheNotifier;
     this.cachedUserMaps = new ConcurrentHashMap<>();
+    this.cachedGroupMaps = new ConcurrentHashMap<>();
     this.cachedRoleMaps = new ConcurrentHashMap<>();
     this.authorizerNames = new HashSet<>();
   }
@@ -138,6 +144,9 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       for (Map.Entry<String, Authorizer> entry : authorizerMapper.getAuthorizerMap().entrySet()) {
         Authorizer authorizer = entry.getValue();
         if (authorizer instanceof BasicRoleBasedAuthorizer) {
+          BasicRoleBasedAuthorizer basicRoleBasedAuthorizer = (BasicRoleBasedAuthorizer) authorizer;
+          BasicAuthDBConfig dbConfig = basicRoleBasedAuthorizer.getDbConfig();
+          String adminGroupName = dbConfig.getInitialAdminGroup();
           String authorizerName = entry.getKey();
           authorizerNames.add(authorizerName);
 
@@ -148,6 +157,13 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           );
           cachedUserMaps.put(authorizerName, new BasicAuthorizerUserMapBundle(userMap, userMapBytes));
 
+          byte[] groupMapBytes = getCurrentGroupMapBytes(authorizerName);
+          Map<String, BasicAuthorizerGroup> groupMap = BasicAuthUtils.deserializeAuthorizerGroupMap(
+              objectMapper,
+              groupMapBytes
+          );
+          cachedGroupMaps.put(authorizerName, new BasicAuthorizerGroupMapBundle(groupMap, groupMapBytes));
+
           byte[] roleMapBytes = getCurrentRoleMapBytes(authorizerName);
           Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
               objectMapper,
@@ -156,6 +172,17 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           cachedRoleMaps.put(authorizerName, new BasicAuthorizerRoleMapBundle(roleMap, roleMapBytes));
 
           initSuperusers(authorizerName, userMap, roleMap);
+
+          roleMapBytes = getCurrentRoleMapBytes(authorizerName);
+          roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+              objectMapper,
+              roleMapBytes
+          );
+          cachedRoleMaps.put(authorizerName, new BasicAuthorizerRoleMapBundle(roleMap, roleMapBytes));
+
+          if (org.apache.commons.lang3.StringUtils.isNotBlank(adminGroupName)) {
+            initSupergroups(authorizerName, adminGroupName, groupMap, roleMap);
+          }
         }
       }
 
@@ -163,47 +190,53 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           exec,
           new Duration(commonCacheConfig.getPollingPeriod()),
           new Duration(commonCacheConfig.getPollingPeriod()),
-          new Callable<ScheduledExecutors.Signal>()
-          {
-            @Override
-            public ScheduledExecutors.Signal call()
-            {
-              if (stopped) {
-                return ScheduledExecutors.Signal.STOP;
-              }
-              try {
-                LOG.debug("Scheduled db poll is running");
-                for (String authorizerName : authorizerNames) {
+          () -> {
+            if (stopped) {
+              return ScheduledExecutors.Signal.STOP;
+            }
+            try {
+              LOG.debug("Scheduled db poll is running");
+              for (String authorizerName : authorizerNames) {
 
-                  byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
-                  Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
-                      objectMapper,
-                      userMapBytes
-                  );
-                  if (userMapBytes != null) {
-                    synchronized (cachedUserMaps) {
-                      cachedUserMaps.put(authorizerName, new BasicAuthorizerUserMapBundle(userMap, userMapBytes));
-                    }
-                  }
-
-                  byte[] roleMapBytes = getCurrentRoleMapBytes(authorizerName);
-                  Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
-                      objectMapper,
-                      roleMapBytes
-                  );
-                  if (roleMapBytes != null) {
-                    synchronized (cachedUserMaps) {
-                      cachedRoleMaps.put(authorizerName, new BasicAuthorizerRoleMapBundle(roleMap, roleMapBytes));
-                    }
+                byte[] userMapBytes = getCurrentUserMapBytes(authorizerName);
+                Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(
+                    objectMapper,
+                    userMapBytes
+                );
+                if (userMapBytes != null) {
+                  synchronized (cachedUserMaps) {
+                    cachedUserMaps.put(authorizerName, new BasicAuthorizerUserMapBundle(userMap, userMapBytes));
                   }
                 }
-                LOG.debug("Scheduled db poll is done");
+
+                byte[] groupMapBytes = getCurrentGroupMapBytes(authorizerName);
+                Map<String, BasicAuthorizerGroup> groupMap = BasicAuthUtils.deserializeAuthorizerGroupMap(
+                    objectMapper,
+                    groupMapBytes
+                );
+                if (groupMapBytes != null) {
+                  synchronized (cachedGroupMaps) {
+                    cachedGroupMaps.put(authorizerName, new BasicAuthorizerGroupMapBundle(groupMap, groupMapBytes));
+                  }
+                }
+
+                byte[] roleMapBytes = getCurrentRoleMapBytes(authorizerName);
+                Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+                    objectMapper,
+                    roleMapBytes
+                );
+                if (roleMapBytes != null) {
+                  synchronized (cachedRoleMaps) {
+                    cachedRoleMaps.put(authorizerName, new BasicAuthorizerRoleMapBundle(roleMap, roleMapBytes));
+                  }
+                }
               }
-              catch (Throwable t) {
-                LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
-              }
-              return ScheduledExecutors.Signal.REPEAT;
+              LOG.debug("Scheduled db poll is done");
             }
+            catch (Throwable t) {
+              LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
+            }
+            return ScheduledExecutors.Signal.REPEAT;
           }
       );
 
@@ -240,6 +273,16 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   )
   {
     return tryUpdateUserAndRoleMap(prefix, userMap, oldUserMapValue, newUserMapValue, null, null, null);
+  }
+
+  private boolean tryUpdateGroupMap(
+      String prefix,
+      Map<String, BasicAuthorizerGroup> groupMap,
+      byte[] oldGroupMapValue,
+      byte[] newGroupMapValue
+  )
+  {
+    return tryUpdateGroupAndRoleMap(prefix, groupMap, oldGroupMapValue, newGroupMapValue, null, null, null);
   }
 
   private boolean tryUpdateRoleMap(
@@ -313,6 +356,67 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     }
   }
 
+  private boolean tryUpdateGroupAndRoleMap(
+      String prefix,
+      Map<String, BasicAuthorizerGroup> groupMap,
+      byte[] oldGroupMapValue,
+      byte[] newGroupMapValue,
+      Map<String, BasicAuthorizerRole> roleMap,
+      byte[] oldRoleMapValue,
+      byte[] newRoleMapValue
+  )
+  {
+    try {
+      List<MetadataCASUpdate> updates = new ArrayList<>();
+      if (groupMap != null) {
+        updates.add(
+            new MetadataCASUpdate(
+                connectorConfig.getConfigTable(),
+                MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+                MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
+                getPrefixedKeyColumn(prefix, GROUPS),
+                oldGroupMapValue,
+                newGroupMapValue
+            )
+        );
+      }
+
+      if (roleMap != null) {
+        updates.add(
+            new MetadataCASUpdate(
+                connectorConfig.getConfigTable(),
+                MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+                MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
+                getPrefixedKeyColumn(prefix, ROLES),
+                oldRoleMapValue,
+                newRoleMapValue
+            )
+        );
+      }
+
+      boolean succeeded = connector.compareAndSwap(updates);
+      if (succeeded) {
+        if (groupMap != null) {
+          cachedGroupMaps.put(prefix, new BasicAuthorizerGroupMapBundle(groupMap, newGroupMapValue));
+        }
+        if (roleMap != null) {
+          cachedRoleMaps.put(prefix, new BasicAuthorizerRoleMapBundle(roleMap, newRoleMapValue));
+        }
+
+        byte[] serializedGroupAndRoleMap = getCurrentGroupAndRoleMapSerialized(prefix);
+        cacheNotifier.addUpdateGroup(prefix, serializedGroupAndRoleMap);
+
+        return true;
+      } else {
+        return false;
+      }
+
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   @Override
   public void createUser(String prefix, String userName)
   {
@@ -325,6 +429,21 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     deleteUserInternal(prefix, userName);
+  }
+
+  @Override
+  public void createGroup(String prefix, String groupName)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    createGroupInternal(prefix, groupName);
+
+  }
+
+  @Override
+  public void deleteGroup(String prefix, String groupName)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    deleteGroupInternal(prefix, groupName);
   }
 
   @Override
@@ -356,6 +475,20 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   }
 
   @Override
+  public void assignGroupRole(String prefix, String groupName, String roleName)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    assignGroupRoleInternal(prefix, groupName, roleName);
+  }
+
+  @Override
+  public void unassignGroupRole(String prefix, String groupName, String roleName)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    unassignGroupRoleInternal(prefix, groupName, roleName);
+  }
+
+  @Override
   public void setPermissions(String prefix, String roleName, List<ResourceAction> permissions)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
@@ -368,6 +501,13 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   {
     BasicAuthorizerUserMapBundle userMapBundle = cachedUserMaps.get(prefix);
     return userMapBundle == null ? null : userMapBundle.getUserMap();
+  }
+
+  @Override
+  public Map<String, BasicAuthorizerGroup> getCachedGroupMap(String prefix)
+  {
+    BasicAuthorizerGroupMapBundle groupMapBundle = cachedGroupMaps.get(prefix);
+    return groupMapBundle == null ? null : groupMapBundle.getGroupMap();
   }
 
   @Override
@@ -390,6 +530,17 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
   }
 
   @Override
+  public byte[] getCurrentGroupMapBytes(String prefix)
+  {
+    return connector.lookup(
+        connectorConfig.getConfigTable(),
+        MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
+        MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
+        getPrefixedKeyColumn(prefix, GROUPS)
+    );
+  }
+
+  @Override
   public byte[] getCurrentRoleMapBytes(String prefix)
   {
     return connector.lookup(
@@ -408,6 +559,9 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
           try {
             byte[] serializedUserAndRoleMap = getCurrentUserAndRoleMapSerialized(authorizerName);
             cacheNotifier.addUpdate(authorizerName, serializedUserAndRoleMap);
+
+            byte[] serializeGroupAndRoleMap = getCurrentGroupAndRoleMapSerialized(authorizerName);
+            cacheNotifier.addUpdateGroup(authorizerName, serializeGroupAndRoleMap);
           }
           catch (IOException ioe) {
             throw new RuntimeException(ioe);
@@ -427,6 +581,19 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     );
 
     return objectMapper.writeValueAsBytes(userAndRoleMap);
+  }
+
+  private byte[] getCurrentGroupAndRoleMapSerialized(String prefix) throws IOException
+  {
+    BasicAuthorizerGroupMapBundle groupMapBundle = cachedGroupMaps.get(prefix);
+    BasicAuthorizerRoleMapBundle roleMapBundle = cachedRoleMaps.get(prefix);
+
+    GroupAndRoleMap groupAndRoleMap = new GroupAndRoleMap(
+        groupMapBundle == null ? null : groupMapBundle.getGroupMap(),
+        roleMapBundle == null ? null : roleMapBundle.getRoleMap()
+    );
+
+    return objectMapper.writeValueAsBytes(groupAndRoleMap);
   }
 
   private void createUserInternal(String prefix, String userName)
@@ -465,6 +632,44 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       }
     }
     throw new ISE("Could not delete user[%s] due to concurrent update contention.", userName);
+  }
+
+  private void createGroupInternal(String prefix, String groupName)
+  {
+    int attempts = 0;
+    while (attempts < numRetries) {
+      if (createGroupOnce(prefix, groupName)) {
+        return;
+      } else {
+        attempts++;
+      }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
+    }
+    throw new ISE("Could not create group[%s] due to concurrent update contention.", groupName);
+  }
+
+  private void deleteGroupInternal(String prefix, String groupName)
+  {
+    int attempts = 0;
+    while (attempts < numRetries) {
+      if (deleteGroupOnce(prefix, groupName)) {
+        return;
+      } else {
+        attempts++;
+      }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
+    }
+    throw new ISE("Could not delete group[%s] due to concurrent update contention.", groupName);
   }
 
   private void createRoleInternal(String prefix, String roleName)
@@ -543,6 +748,44 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     throw new ISE("Could not unassign role[%s] from user[%s] due to concurrent update contention.", roleName, userName);
   }
 
+  private void assignGroupRoleInternal(String prefix, String groupName, String roleName)
+  {
+    int attempts = 0;
+    while (attempts < numRetries) {
+      if (assignGroupRoleOnce(prefix, groupName, roleName)) {
+        return;
+      } else {
+        attempts++;
+      }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
+    }
+    throw new ISE("Could not assign role[%s] to group[%s] due to concurrent update contention.", roleName, groupName);
+  }
+
+  private void unassignGroupRoleInternal(String prefix, String groupName, String roleName)
+  {
+    int attempts = 0;
+    while (attempts < numRetries) {
+      if (unassignGroupRoleOnce(prefix, groupName, roleName)) {
+        return;
+      } else {
+        attempts++;
+      }
+      try {
+        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+      }
+      catch (InterruptedException ie) {
+        throw new RuntimeException(ie);
+      }
+    }
+    throw new ISE("Could not unassign role[%s] from user[%s] due to concurrent update contention.", roleName, groupName);
+  }
+
   private void setPermissionsInternal(String prefix, String roleName, List<ResourceAction> permissions)
   {
     int attempts = 0;
@@ -562,6 +805,19 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     throw new ISE("Could not set permissions for role[%s] due to concurrent update contention.", roleName);
   }
 
+  private boolean deleteUserOnce(String prefix, String userName)
+  {
+    byte[] oldValue = getCurrentUserMapBytes(prefix);
+    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(objectMapper, oldValue);
+    if (userMap.get(userName) == null) {
+      throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
+    } else {
+      userMap.remove(userName);
+    }
+    byte[] newValue = BasicAuthUtils.serializeAuthorizerUserMap(objectMapper, userMap);
+    return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
+  }
+
   private boolean createUserOnce(String prefix, String userName)
   {
     byte[] oldValue = getCurrentUserMapBytes(prefix);
@@ -575,17 +831,30 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
   }
 
-  private boolean deleteUserOnce(String prefix, String userName)
+  private boolean deleteGroupOnce(String prefix, String groupName)
   {
-    byte[] oldValue = getCurrentUserMapBytes(prefix);
-    Map<String, BasicAuthorizerUser> userMap = BasicAuthUtils.deserializeAuthorizerUserMap(objectMapper, oldValue);
-    if (userMap.get(userName) == null) {
-      throw new BasicSecurityDBResourceException("User [%s] does not exist.", userName);
+    byte[] oldValue = getCurrentGroupMapBytes(prefix);
+    Map<String, BasicAuthorizerGroup> groupMap = BasicAuthUtils.deserializeAuthorizerGroupMap(objectMapper, oldValue);
+    if (groupMap.get(groupName) == null) {
+      throw new BasicSecurityDBResourceException("Group [%s] does not exist.", groupName);
     } else {
-      userMap.remove(userName);
+      groupMap.remove(groupName);
     }
-    byte[] newValue = BasicAuthUtils.serializeAuthorizerUserMap(objectMapper, userMap);
-    return tryUpdateUserMap(prefix, userMap, oldValue, newValue);
+    byte[] newValue = BasicAuthUtils.serializeAuthorizerGroupMap(objectMapper, groupMap);
+    return tryUpdateGroupMap(prefix, groupMap, oldValue, newValue);
+  }
+
+  private boolean createGroupOnce(String prefix, String groupName)
+  {
+    byte[] oldValue = getCurrentGroupMapBytes(prefix);
+    Map<String, BasicAuthorizerGroup> groupMap = BasicAuthUtils.deserializeAuthorizerGroupMap(objectMapper, oldValue);
+    if (groupMap.get(groupName) != null) {
+      throw new BasicSecurityDBResourceException("Group [%s] already exists.", groupName);
+    } else {
+      groupMap.put(groupName, new BasicAuthorizerGroup(groupName, null));
+    }
+    byte[] newValue = BasicAuthUtils.serializeAuthorizerGroupMap(objectMapper, groupMap);
+    return tryUpdateGroupMap(prefix, groupMap, oldValue, newValue);
   }
 
   private boolean createRoleOnce(String prefix, String roleName)
@@ -623,12 +892,27 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
       user.getRoles().remove(roleName);
     }
     byte[] newUserMapValue = BasicAuthUtils.serializeAuthorizerUserMap(objectMapper, userMap);
+
+    byte[] oldGroupMapValue = getCurrentGroupMapBytes(prefix);
+    Map<String, BasicAuthorizerGroup> groupMap = BasicAuthUtils.deserializeAuthorizerGroupMap(
+        objectMapper,
+        oldGroupMapValue
+    );
+    for (BasicAuthorizerGroup group : groupMap.values()) {
+      group.getRoles().remove(roleName);
+    }
+    byte[] newGroupMapValue = BasicAuthUtils.serializeAuthorizerGroupMap(objectMapper, groupMap);
+
     byte[] newRoleMapValue = BasicAuthUtils.serializeAuthorizerRoleMap(objectMapper, roleMap);
 
     return tryUpdateUserAndRoleMap(
         prefix,
         userMap, oldUserMapValue, newUserMapValue,
         roleMap, oldRoleMapValue, newRoleMapValue
+    ) && tryUpdateGroupAndRoleMap(
+        prefix,
+        groupMap, oldGroupMapValue, newGroupMapValue,
+        roleMap, newRoleMapValue, newRoleMapValue
     );
   }
 
@@ -704,6 +988,78 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     );
   }
 
+  private boolean assignGroupRoleOnce(String prefix, String groupName, String roleName)
+  {
+    byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
+        oldRoleMapValue
+    );
+    if (roleMap.get(roleName) == null) {
+      throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
+    }
+
+    byte[] oldGroupMapValue = getCurrentGroupMapBytes(prefix);
+    Map<String, BasicAuthorizerGroup> groupMap = BasicAuthUtils.deserializeAuthorizerGroupMap(
+        objectMapper,
+        oldGroupMapValue
+    );
+    BasicAuthorizerGroup group = groupMap.get(groupName);
+    if (groupMap.get(groupName) == null) {
+      throw new BasicSecurityDBResourceException("Group [%s] does not exist.", groupName);
+    }
+
+    if (group.getRoles().contains(roleName)) {
+      throw new BasicSecurityDBResourceException("Group [%s] already has role [%s].", groupName, roleName);
+    }
+
+    group.getRoles().add(roleName);
+    byte[] newGroupMapValue = BasicAuthUtils.serializeAuthorizerGroupMap(objectMapper, groupMap);
+
+    // Role map is unchanged, but submit as an update to ensure that the table didn't change (e.g., role deleted)
+    return tryUpdateGroupAndRoleMap(
+        prefix,
+        groupMap, oldGroupMapValue, newGroupMapValue,
+        roleMap, oldRoleMapValue, oldRoleMapValue
+    );
+  }
+
+  private boolean unassignGroupRoleOnce(String prefix, String groupName, String roleName)
+  {
+    byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
+    Map<String, BasicAuthorizerRole> roleMap = BasicAuthUtils.deserializeAuthorizerRoleMap(
+        objectMapper,
+        oldRoleMapValue
+    );
+    if (roleMap.get(roleName) == null) {
+      throw new BasicSecurityDBResourceException("Role [%s] does not exist.", roleName);
+    }
+
+    byte[] oldGroupMapValue = getCurrentGroupMapBytes(prefix);
+    Map<String, BasicAuthorizerGroup> groupMap = BasicAuthUtils.deserializeAuthorizerGroupMap(
+        objectMapper,
+        oldGroupMapValue
+    );
+    BasicAuthorizerGroup group = groupMap.get(groupName);
+    if (groupMap.get(groupName) == null) {
+      throw new BasicSecurityDBResourceException("Group [%s] does not exist.", groupName);
+    }
+
+    if (!group.getRoles().contains(roleName)) {
+      throw new BasicSecurityDBResourceException("Group [%s] does not have role [%s].", groupName, roleName);
+    }
+
+    group.getRoles().remove(roleName);
+    byte[] newGroupMapValue = BasicAuthUtils.serializeAuthorizerGroupMap(objectMapper, groupMap);
+
+    // Role map is unchanged, but submit as an update to ensure that the table didn't change (e.g., role deleted)
+    return tryUpdateGroupAndRoleMap(
+        prefix,
+        groupMap, oldGroupMapValue, newGroupMapValue,
+        roleMap, oldRoleMapValue, oldRoleMapValue
+    );
+  }
+
   private boolean setPermissionsOnce(String prefix, String roleName, List<ResourceAction> permissions)
   {
     byte[] oldRoleMapValue = getCurrentRoleMapBytes(prefix);
@@ -747,6 +1103,23 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
     if (!userMap.containsKey(BasicAuthUtils.ADMIN_NAME)) {
       createUserInternal(authorizerName, BasicAuthUtils.ADMIN_NAME);
       assignRoleInternal(authorizerName, BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.ADMIN_NAME);
+    }
+  }
+
+  private void initSupergroups(
+      String authorizerName,
+      String groupName,
+      Map<String, BasicAuthorizerGroup> groupMap,
+      Map<String, BasicAuthorizerRole> roleMap
+  )
+  {
+    if (!roleMap.containsKey(groupName)) {
+      createRoleInternal(authorizerName, groupName);
+      setPermissionsInternal(authorizerName, groupName, SUPERUSER_PERMISSIONS);
+    }
+    if (!groupMap.containsKey(groupName)) {
+      createGroupInternal(authorizerName, groupName);
+      assignGroupRoleInternal(authorizerName, groupName, groupName);
     }
   }
 

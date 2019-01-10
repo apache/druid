@@ -21,6 +21,7 @@ package org.apache.druid.security.basic.authorization.db.cache;
 
 import com.google.inject.Inject;
 import org.apache.druid.security.basic.authorization.db.updater.BasicAuthorizerMetadataStorageUpdater;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroup;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
 
@@ -45,6 +46,12 @@ public class MetadataStoragePollingBasicAuthorizerCacheManager implements BasicA
   }
 
   @Override
+  public void handleAuthorizerGroupUpdate(String authorizerPrefix, byte[] serializedGroupAndRoleMap)
+  {
+
+  }
+
+  @Override
   public Map<String, BasicAuthorizerUser> getUserMap(String authorizerPrefix)
   {
     return storageUpdater.getCachedUserMap(authorizerPrefix);
@@ -54,5 +61,17 @@ public class MetadataStoragePollingBasicAuthorizerCacheManager implements BasicA
   public Map<String, BasicAuthorizerRole> getRoleMap(String authorizerPrefix)
   {
     return storageUpdater.getCachedRoleMap(authorizerPrefix);
+  }
+
+  @Override
+  public Map<String, BasicAuthorizerGroup> getGroupMap(String authorizerPrefix)
+  {
+    return storageUpdater.getCachedGroupMap(authorizerPrefix);
+  }
+
+  @Override
+  public Map<String, BasicAuthorizerRole> getGroupRoleMap(String authorizerPrefix)
+  {
+    return getRoleMap(authorizerPrefix);
   }
 }

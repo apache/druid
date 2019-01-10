@@ -17,21 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.security.authorization;
+package org.apache.druid.security.basic.authorization.entity;
 
-import org.apache.druid.security.basic.authorization.db.cache.BasicAuthorizerCacheNotifier;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class NoopBasicAuthorizerCacheNotifier implements BasicAuthorizerCacheNotifier
+import java.util.Map;
+
+public class GroupAndRoleMap
 {
-  @Override
-  public void addUpdate(String authorizerPrefix, byte[] userAndRoleMap)
-  {
+  @JsonProperty
+  private Map<String, BasicAuthorizerGroup> groupMap;
 
+  @JsonProperty
+  private Map<String, BasicAuthorizerRole> roleMap;
+
+  @JsonCreator
+  public GroupAndRoleMap(
+      @JsonProperty("groupMap") Map<String, BasicAuthorizerGroup> groupMap,
+      @JsonProperty("roleMap") Map<String, BasicAuthorizerRole> roleMap
+  )
+  {
+    this.groupMap = groupMap;
+    this.roleMap = roleMap;
   }
 
-  @Override
-  public void addUpdateGroup(String authorizerPrefix, byte[] groupAndRoleMap)
+  @JsonProperty
+  public Map<String, BasicAuthorizerGroup> getGroupMap()
   {
+    return groupMap;
+  }
 
+  @JsonProperty
+  public Map<String, BasicAuthorizerRole> getRoleMap()
+  {
+    return roleMap;
   }
 }

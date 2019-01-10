@@ -34,11 +34,19 @@ public interface BasicAuthorizerResourceHandler
   // coordinator methods
   Response getAllUsers(String authorizerName);
 
+  Response getAllGroups(String authorizerName);
+
   Response getUser(String authorizerName, String userName, boolean isFull);
+
+  Response getGroup(String authorizerName, String userName, boolean isFull);
 
   Response createUser(String authorizerName, String userName);
 
+  Response createGroup(String authorizerName, String userName);
+
   Response deleteUser(String authorizerName, String userName);
+
+  Response deleteGroup(String authorizerName, String userName);
 
   Response getAllRoles(String authorizerName);
 
@@ -50,16 +58,23 @@ public interface BasicAuthorizerResourceHandler
 
   Response assignRoleToUser(String authorizerName, String userName, String roleName);
 
+  Response assignRoleToGroup(String authorizerName, String userName, String roleName);
+
   Response unassignRoleFromUser(String authorizerName, String userName, String roleName);
+  Response unassignRoleFromGroup(String authorizerName, String userName, String roleName);
 
   Response setRolePermissions(String authorizerName, String roleName, List<ResourceAction> permissions);
 
   Response getCachedMaps(String authorizerName);
 
+  Response getCachedGroupMaps(String authorizerName);
+
   Response refreshAll();
 
   // non-coordinator methods
   Response authorizerUpdateListener(String authorizerName, byte[] serializedUserAndRoleMap);
+
+  Response authorizerGroupUpdateListener(String authorizerName, byte[] serializedGroupAndRoleMap);
 
   // common
   Response getLoadStatus();

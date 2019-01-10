@@ -45,6 +45,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
   private CommonCacheNotifier cacheNotifier;
+  private CommonCacheNotifier cacheGroupNotifier;
 
   @Inject
   public CoordinatorBasicAuthorizerCacheNotifier(
@@ -60,6 +61,13 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
         "/druid-ext/basic-security/authorization/listen/%s",
         "CoordinatorBasicAuthorizerCacheNotifier"
     );
+    cacheGroupNotifier = new CommonCacheNotifier(
+        getAuthorizerConfigMap(authorizerMapper),
+        discoveryProvider,
+        httpClient,
+        "/druid-ext/basic-security/authorization/listen/groups/%s",
+        "CoordinatorBasicAuthorizerCacheNotifier"
+    );
   }
 
   @LifecycleStart
@@ -71,6 +79,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
 
     try {
       cacheNotifier.start();
+      cacheGroupNotifier.start();
       lifecycleLock.started();
     }
     finally {
@@ -86,6 +95,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
     }
     try {
       cacheNotifier.stop();
+      cacheGroupNotifier.stop();
     }
     finally {
       lifecycleLock.exitStop();
@@ -93,10 +103,17 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
   }
 
   @Override
-  public void addUpdate(String updatedAuthorizerPrefix, byte[] updatedUserMap)
+  public void addUpdate(String updatedAuthorizerPrefix, byte[] userAndRoleMap)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    cacheNotifier.addUpdate(updatedAuthorizerPrefix, updatedUserMap);
+    cacheNotifier.addUpdate(updatedAuthorizerPrefix, userAndRoleMap);
+  }
+
+  @Override
+  public void addUpdateGroup(String updatedAuthorizerPrefix, byte[] groupAndRoleMap)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    cacheGroupNotifier.addUpdate(updatedAuthorizerPrefix, groupAndRoleMap);
   }
 
   private Map<String, BasicAuthDBConfig> getAuthorizerConfigMap(AuthorizerMapper mapper)

@@ -71,7 +71,20 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
+  public Response getAllGroups(String authorizerName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+
+  @Override
   public Response getUser(String authorizerName, String userName, boolean isFull)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response getGroup(String authorizerName, String userName, boolean isFull)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -83,7 +96,19 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
+  public Response createGroup(String authorizerName, String userName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
   public Response deleteUser(String authorizerName, String userName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response deleteGroup(String authorizerName, String userName)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -119,7 +144,19 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
   }
 
   @Override
+  public Response assignRoleToGroup(String authorizerName, String userName, String roleName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
   public Response unassignRoleFromUser(String authorizerName, String userName, String roleName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response unassignRoleFromGroup(String authorizerName, String userName, String roleName)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -132,6 +169,12 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
 
   @Override
   public Response getCachedMaps(String authorizerName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response getCachedGroupMaps(String authorizerName)
   {
     return NOT_FOUND_RESPONSE;
   }
@@ -158,6 +201,25 @@ public class DefaultBasicAuthorizerResourceHandler implements BasicAuthorizerRes
     }
 
     cacheManager.handleAuthorizerUpdate(authorizerName, serializedUserAndRoleMap);
+    return Response.ok().build();
+  }
+
+  @Override
+  public Response authorizerGroupUpdateListener(String authorizerName, byte[] serializedGroupAndRoleMap)
+  {
+    final BasicRoleBasedAuthorizer authorizer = authorizerMap.get(authorizerName);
+    if (authorizer == null) {
+      String errMsg = StringUtils.format("Received update for unknown authorizer[%s]", authorizerName);
+      log.error(errMsg);
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.<String, Object>of(
+                         "error",
+                         StringUtils.format(errMsg)
+                     ))
+                     .build();
+    }
+
+    cacheManager.handleAuthorizerGroupUpdate(authorizerName, serializedGroupAndRoleMap);
     return Response.ok().build();
   }
 

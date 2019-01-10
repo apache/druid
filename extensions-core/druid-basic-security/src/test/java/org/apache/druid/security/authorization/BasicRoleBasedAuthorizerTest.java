@@ -71,6 +71,7 @@ public class BasicRoleBasedAuthorizerTest
                     null,
                     AUTHORIZER_NAME,
                     null,
+                    null,
                     null
                 )
             )
@@ -90,6 +91,7 @@ public class BasicRoleBasedAuthorizerTest
             updater
         ),
         AUTHORIZER_NAME,
+        null,
         null,
         null
     );

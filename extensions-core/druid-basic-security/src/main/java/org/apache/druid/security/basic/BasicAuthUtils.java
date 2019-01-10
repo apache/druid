@@ -26,8 +26,10 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroup;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerUser;
+import org.apache.druid.security.basic.authorization.entity.GroupAndRoleMap;
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 
 import javax.annotation.Nullable;
@@ -50,6 +52,7 @@ public class BasicAuthUtils
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   public static final String ADMIN_NAME = "admin";
   public static final String INTERNAL_USER_NAME = "druid_system";
+  public static final String GROUPS_CONTEXT_KEY = "groups";
 
   // PBKDF2WithHmacSHA512 is chosen since it has built-in support in Java8.
   // Argon2 (https://github.com/p-h-c/phc-winner-argon2) is newer but the only presently
@@ -58,6 +61,9 @@ public class BasicAuthUtils
   // 256-bit salt should be more than sufficient for uniqueness, expected user count is on the order of thousands.
   public static final int SALT_LENGTH = 32;
   public static final int DEFAULT_KEY_ITERATIONS = 10000;
+  public static final int DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS = 600;
+  public static final int DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS = 3600;
+  public static final int DEFAULT_CREDENTIAL_CACHE_SIZE = 100;
   public static final int KEY_LENGTH = 512;
   public static final String ALGORITHM = "PBKDF2WithHmacSHA512";
 
@@ -71,6 +77,11 @@ public class BasicAuthUtils
       {
       };
 
+  public static final TypeReference AUTHORIZER_GROUP_MAP_TYPE_REFERENCE =
+      new TypeReference<Map<String, BasicAuthorizerGroup>>()
+      {
+      };
+
   public static final TypeReference AUTHORIZER_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<Map<String, BasicAuthorizerRole>>()
       {
@@ -78,6 +89,11 @@ public class BasicAuthUtils
 
   public static final TypeReference AUTHORIZER_USER_AND_ROLE_MAP_TYPE_REFERENCE =
       new TypeReference<UserAndRoleMap>()
+      {
+      };
+
+  public static final TypeReference AUTHORIZER_GROUP_AND_ROLE_MAP_TYPE_REFERENCE =
+      new TypeReference<GroupAndRoleMap>()
       {
       };
 
@@ -201,6 +217,35 @@ public class BasicAuthUtils
     }
     catch (IOException ioe) {
       throw new ISE(ioe, "WTF? Couldn't serialize userMap!");
+    }
+  }
+
+  public static Map<String, BasicAuthorizerGroup> deserializeAuthorizerGroupMap(
+      ObjectMapper objectMapper,
+      byte[] groupMapBytes
+  )
+  {
+    Map<String, BasicAuthorizerGroup> groupMap;
+    if (groupMapBytes == null) {
+      groupMap = new HashMap<>();
+    } else {
+      try {
+        groupMap = objectMapper.readValue(groupMapBytes, BasicAuthUtils.AUTHORIZER_GROUP_MAP_TYPE_REFERENCE);
+      }
+      catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+    return groupMap;
+  }
+
+  public static byte[] serializeAuthorizerGroupMap(ObjectMapper objectMapper, Map<String, BasicAuthorizerGroup> groupMap)
+  {
+    try {
+      return objectMapper.writeValueAsBytes(groupMap);
+    }
+    catch (IOException ioe) {
+      throw new ISE(ioe, "Couldn't serialize groupMap!");
     }
   }
 

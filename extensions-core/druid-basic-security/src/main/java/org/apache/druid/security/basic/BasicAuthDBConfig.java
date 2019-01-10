@@ -27,6 +27,7 @@ public class BasicAuthDBConfig
 
   private final PasswordProvider initialAdminPassword;
   private final PasswordProvider initialInternalClientPassword;
+  private final String initialAdminGroup;
   private final boolean enableCacheNotifications;
   private final long cacheNotificationTimeout;
   private final int iterations;
@@ -34,6 +35,7 @@ public class BasicAuthDBConfig
   public BasicAuthDBConfig(
       final PasswordProvider initialAdminPassword,
       final PasswordProvider initialInternalClientPassword,
+      final String initialAdminGroup,
       final Boolean enableCacheNotifications,
       final Long cacheNotificationTimeout,
       final int iterations
@@ -41,6 +43,7 @@ public class BasicAuthDBConfig
   {
     this.initialAdminPassword = initialAdminPassword;
     this.initialInternalClientPassword = initialInternalClientPassword;
+    this.initialAdminGroup = initialAdminGroup;
     this.enableCacheNotifications = enableCacheNotifications;
     this.cacheNotificationTimeout = cacheNotificationTimeout;
     this.iterations = iterations;
@@ -54,6 +57,11 @@ public class BasicAuthDBConfig
   public PasswordProvider getInitialInternalClientPassword()
   {
     return initialInternalClientPassword;
+  }
+
+  public String getInitialAdminGroup()
+  {
+    return initialAdminGroup;
   }
 
   public boolean isEnableCacheNotifications()

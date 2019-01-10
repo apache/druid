@@ -22,29 +22,22 @@ package org.apache.druid.security.basic.authorization.entity;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Set;
 
-public class BasicAuthorizerRoleFull
+public class BasicAuthorizerGroup
 {
   private final String name;
-  private final Set<String> users;
-  private final Set<String> groups;
-  private final List<BasicAuthorizerPermission> permissions;
+  private final Set<String> roles;
 
   @JsonCreator
-  public BasicAuthorizerRoleFull(
+  public BasicAuthorizerGroup(
       @JsonProperty("name") String name,
-      @JsonProperty("users") Set<String> users,
-      @JsonProperty("groups") Set<String> groups,
-      @JsonProperty("permissions") List<BasicAuthorizerPermission> permissions
+      @JsonProperty("roles") Set<String> roles
   )
   {
     this.name = name;
-    this.users = users;
-    this.groups = groups;
-    this.permissions = permissions == null ? new ArrayList<>() : permissions;
+    this.roles = roles == null ? new HashSet<>() : roles;
   }
 
   @JsonProperty
@@ -54,21 +47,9 @@ public class BasicAuthorizerRoleFull
   }
 
   @JsonProperty
-  public List<BasicAuthorizerPermission> getPermissions()
+  public Set<String> getRoles()
   {
-    return permissions;
-  }
-
-  @JsonProperty
-  public Set<String> getUsers()
-  {
-    return users;
-  }
-
-  @JsonProperty
-  public Set<String> getGroups()
-  {
-    return groups;
+    return roles;
   }
 
   @Override
@@ -81,18 +62,12 @@ public class BasicAuthorizerRoleFull
       return false;
     }
 
-    BasicAuthorizerRoleFull that = (BasicAuthorizerRoleFull) o;
+    BasicAuthorizerGroup that = (BasicAuthorizerGroup) o;
 
     if (getName() != null ? !getName().equals(that.getName()) : that.getName() != null) {
       return false;
     }
-    if (getUsers() != null ? !getUsers().equals(that.getUsers()) : that.getUsers() != null) {
-      return false;
-    }
-    if (getGroups() != null ? !getGroups().equals(that.getGroups()) : that.getGroups() != null) {
-      return false;
-    }
-    return getPermissions() != null ? getPermissions().equals(that.getPermissions()) : that.getPermissions() == null;
+    return getRoles() != null ? getRoles().equals(that.getRoles()) : that.getRoles() == null;
 
   }
 
@@ -100,9 +75,7 @@ public class BasicAuthorizerRoleFull
   public int hashCode()
   {
     int result = getName() != null ? getName().hashCode() : 0;
-    result = 31 * result + (getUsers() != null ? getUsers().hashCode() : 0);
-    result = 31 * result + (getGroups() != null ? getGroups().hashCode() : 0);
-    result = 31 * result + (getPermissions() != null ? getPermissions().hashCode() : 0);
+    result = 31 * result + (getRoles() != null ? getRoles().hashCode() : 0);
     return result;
   }
 }

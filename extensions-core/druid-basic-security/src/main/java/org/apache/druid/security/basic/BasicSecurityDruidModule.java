@@ -34,6 +34,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.BasicHTTPEscalator;
+import org.apache.druid.security.basic.authentication.DBCredentialsValidator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheNotifier;
 import org.apache.druid.security.basic.authentication.db.cache.CoordinatorBasicAuthenticatorCacheNotifier;
@@ -163,7 +164,8 @@ public class BasicSecurityDruidModule implements DruidModule
         new SimpleModule("BasicDruidSecurity").registerSubtypes(
             BasicHTTPAuthenticator.class,
             BasicHTTPEscalator.class,
-            BasicRoleBasedAuthorizer.class
+            BasicRoleBasedAuthorizer.class,
+            DBCredentialsValidator.class
         )
     );
   }
