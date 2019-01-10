@@ -134,7 +134,10 @@ public class RemoteTaskActionClientTest
         objectMapper
     );
     expectedException.expect(IOException.class);
-    expectedException.expectMessage("Error with status[400 Bad Request] and message[testSubmitWithIllegalStatusCode]. Check overlord logs for details.");
+    expectedException.expectMessage(
+        "Error with status[400 Bad Request] and message[testSubmitWithIllegalStatusCode]. "
+        + "Check overlord logs for details."
+    );
     client.submit(new LockListAction());
   }
 }
