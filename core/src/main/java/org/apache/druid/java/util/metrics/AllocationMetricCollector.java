@@ -24,10 +24,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 class AllocationMetricCollector
 {
@@ -64,6 +62,15 @@ class AllocationMetricCollector
     }
   }
 
+  /**
+   * Uses getThreadAllocatedBytes internally.
+   * Tests show the call to getThreadAllocatedBytes for a single thread ID out of 500 threads running takes around
+   * 9000 ns (in the worst case), which for 500 IDs should take 500*9000/1000/1000 = 4.5 ms to the max.
+   * AllocationMetricCollector takes linear time to calculate delta, for 500 threads it's negligible. One can call it as
+   * frequently as once a second, which is far too frequent for any known purpose to me.
+   *
+   * @return all threads summed allocated bytes delta
+   */
   public Optional<Long> calculateDelta()
   {
     if (!initialized) {
@@ -74,22 +81,22 @@ class AllocationMetricCollector
       // the call time depends on number of threads, for 500 threads the estimated time is 4 ms
       long[] bytes = (long[]) getThreadAllocatedBytes.invoke(threadMXBean, (Object) allThreadIds);
       long sum = 0;
+      Map<Long, Long> newResults = new Long2LongOpenHashMap();
       for (int i = 0; i < allThreadIds.length; i++) {
         long threadId = allThreadIds[i];
         Long previous = previousResults.get(threadId);
         Long current = bytes[i];
+        newResults.put(threadId, current);
         // a) some threads can be terminated and their ids won't be present
         // b) if new threads ids can collide with terminated threads ids then the current allocation can be lesser than
         // before
         if (previous == null || previous > current) {
           sum += current;
-        } else if (previous <= current) {
+        } else {
           sum += current - previous;
         }
-        this.previousResults.put(threadId, current);
       }
-      // remove terminated thread ids
-      previousResults.keySet().retainAll(Arrays.stream(allThreadIds).boxed().collect(Collectors.toSet()));
+      previousResults = newResults;
       return Optional.of(sum);
     }
     catch (ReflectiveOperationException e) {
