@@ -62,7 +62,7 @@ class ParquetGroupConverter
 
     final int fieldIndex = g.getType().getFieldIndex(fieldName);
 
-    if (!(g.getFieldRepetitionCount(fieldIndex) > 0)) {
+    if (g.getFieldRepetitionCount(fieldIndex) <= 0) {
       return null;
     }
 
