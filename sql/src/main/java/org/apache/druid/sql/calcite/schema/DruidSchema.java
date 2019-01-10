@@ -469,17 +469,29 @@ public class DruidSchema extends AbstractSchema
             final RowSignature rowSignature = analysisToRowSignature(analysis);
             log.debug("Segment[%s] has signature[%s].", segment.getIdentifier(), rowSignature);
             final Map<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.get(segment.getDataSource());
-            SegmentMetadataHolder holder = dataSourceSegments.get(segment);
-            SegmentMetadataHolder updatedHolder = new SegmentMetadataHolder.Builder(
-                holder.getSegmentId(),
-                holder.isPublished(),
-                holder.isAvailable(),
-                holder.isRealtime(),
-                holder.getNumReplicas()
-            ).withRowSignature(rowSignature).withNumRows(analysis.getNumRows()).build();
-            dataSourceSegments.put(segment, updatedHolder);
-            setSegmentSignature(segment, updatedHolder);
-            retVal.add(segment);
+            if (dataSourceSegments == null) {
+              log.warn("No segment map found with datasource[%s], skipping refresh", segment.getDataSource());
+            } else {
+              SegmentMetadataHolder holder = dataSourceSegments.get(segment);
+              if (holder == null) {
+                log.warn(
+                    "No segment[%s] found with datasource[%s], skipping refresh",
+                    segment.getIdentifier(),
+                    segment.getDataSource()
+                );
+              } else {
+                SegmentMetadataHolder updatedHolder = new SegmentMetadataHolder.Builder(
+                    holder.getSegmentId(),
+                    holder.isPublished(),
+                    holder.isAvailable(),
+                    holder.isRealtime(),
+                    holder.getNumReplicas()
+                ).withRowSignature(rowSignature).withNumRows(analysis.getNumRows()).build();
+                dataSourceSegments.put(segment, updatedHolder);
+                setSegmentSignature(segment, updatedHolder);
+                retVal.add(segment);
+              }
+            }
           }
         }
 
