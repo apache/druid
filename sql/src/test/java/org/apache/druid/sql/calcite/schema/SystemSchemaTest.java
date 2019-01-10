@@ -477,6 +477,7 @@ public class SystemSchemaTest extends CalciteTestBase
     // segments test1, test2  are published and available
     // segment test3 is served by historical but unpublished or unused
     // segments test4, test5 are not published but available (realtime segments)
+    // segment test2 is both published and served by a realtime server.
 
     Assert.assertEquals(8, rows.size());
 
