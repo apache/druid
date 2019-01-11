@@ -33,6 +33,8 @@ public class LongBloomFilterAggregatorColumnValueSelectorStrategy
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
       bloomFilter.addLong(selector.getLong());
+    } else {
+      bloomFilter.addBytes(null, 0, 0);
     }
   }
 

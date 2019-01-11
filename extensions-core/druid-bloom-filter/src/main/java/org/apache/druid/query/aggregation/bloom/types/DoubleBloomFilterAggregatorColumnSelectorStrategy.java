@@ -33,6 +33,8 @@ public class DoubleBloomFilterAggregatorColumnSelectorStrategy
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
       bloomFilter.addDouble(selector.getDouble());
+    } else {
+      bloomFilter.addBytes(null, 0, 0);
     }
   }
 

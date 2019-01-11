@@ -33,6 +33,8 @@ public class FloatBloomFilterAggregatorColumnSelectorStrategy
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
       bloomFilter.addFloat(selector.getFloat());
+    } else {
+      bloomFilter.addBytes(null, 0, 0);
     }
   }
 
