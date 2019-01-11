@@ -111,8 +111,8 @@ public class AggregatorUtil
   public static final byte HLL_SKETCH_TO_ESTIMATE_AND_BOUNDS_CACHE_TYPE_ID = 0x32;
 
   // bloom filter extension
-  public static final byte BLOOM_FILTER_CACHE_TYPE_ID = 0x33;
-  public static final byte BLOOM_FILTER_MERGE_CACHE_TYPE_ID = 0x34;
+  public static final byte BLOOM_FILTER_CACHE_TYPE_ID = 0x34;
+  public static final byte BLOOM_FILTER_MERGE_CACHE_TYPE_ID = 0x35;
 
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
