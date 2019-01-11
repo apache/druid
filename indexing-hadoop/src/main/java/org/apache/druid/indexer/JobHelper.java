@@ -361,10 +361,10 @@ public class JobHelper
         objectMapper.writeValue(new OutputStreamWriter(
             new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
             hadoopJobId);
-        log.info("MR job id is written to jobId file");
+        log.info("MR job id: %s is written to the file: %s", hadoopJobId, hadoopJobIdFileName);
       }
       catch (IOException e) {
-        log.error("Error wriritng job id to jobId file. Exception %s ", Throwables.getStackTraceAsString(e));
+        log.error(e, "Error writing job id: %s to the file: %s.", hadoopJobId, hadoopJobIdFileName);
       }
     }
 
@@ -402,10 +402,10 @@ public class JobHelper
           objectMapper.writeValue(new OutputStreamWriter(
                   new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
               hadoopJobId);
-          log.info("MR job id is written to jobId file");
+          log.info("MR job id: %s is written to the file: %s", hadoopJobId, hadoopJobIdFileName);
         }
         catch (IOException e) {
-          log.error("Error wriritng job id to jobId file. Exception %s ", Throwables.getStackTraceAsString(e));
+          log.error(e, "Error writing job id: %s to the file: %s.", hadoopJobId, hadoopJobIdFileName);
         }
       }
       if (!job.run()) {
