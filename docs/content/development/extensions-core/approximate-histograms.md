@@ -102,6 +102,14 @@ The fixed buckets histogram aggregator builds a histogram on a numeric column, w
 
 This histogram supports the min/max/quantiles post-aggregators but does not support the bucketing post-aggregators.
 
+### When to use
+
+The accuracy/usefulness of the fixed buckets histogram is extremely data-dependent; it is provided to support special use cases where the user has a great deal of prior information about the data being aggregated and knows that a fixed buckets implementation is suitable. 
+
+For general histogram and quantile use cases, the [DataSketches Quantiles Sketch](../extensions-core/datasketches-quantiles.html) extension is recommended.
+
+### Properties
+
 
 |Property                 |Description                   |Default                           |
 |-------------------------|------------------------------|----------------------------------|
