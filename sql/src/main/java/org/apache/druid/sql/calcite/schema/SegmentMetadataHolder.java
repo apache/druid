@@ -19,11 +19,11 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Immutable representation of RowSignature and other segment attributes needed by {@link SystemSchema.SegmentsTable}
@@ -38,7 +38,8 @@ public class SegmentMetadataHolder
   private final long isAvailable;
   private final long isRealtime;
   private final String segmentId;
-  private final ImmutableMap<String, ImmutableSet<String>> segmentServerMap;
+  //segmentId -> set of servers that contain the segment
+  private final Map<String, Set<String>> segmentServerMap;
   private final long numRows;
   @Nullable
   private final RowSignature rowSignature;
@@ -74,7 +75,7 @@ public class SegmentMetadataHolder
     return segmentId;
   }
 
-  public ImmutableMap<String, ImmutableSet<String>> getsegmentServerMap()
+  public Map<String, Set<String>> getReplicas()
   {
     return segmentServerMap;
   }
@@ -102,7 +103,7 @@ public class SegmentMetadataHolder
     private final long isAvailable;
     private final long isRealtime;
 
-    private ImmutableMap<String, ImmutableSet<String>> segmentServerMap;
+    private Map<String, Set<String>> segmentServerMap;
     @Nullable
     private RowSignature rowSignature;
     private long numRows;
@@ -112,7 +113,7 @@ public class SegmentMetadataHolder
         long isPublished,
         long isAvailable,
         long isRealtime,
-        ImmutableMap<String, ImmutableSet<String>> segmentServerMap
+        Map<String, Set<String>> segmentServerMap
     )
     {
       this.segmentId = segmentId;
@@ -134,7 +135,7 @@ public class SegmentMetadataHolder
       return this;
     }
 
-    public Builder withReplicas(ImmutableMap<String, ImmutableSet<String>> segmentServerMap)
+    public Builder withReplicas(Map<String, Set<String>> segmentServerMap)
     {
       this.segmentServerMap = segmentServerMap;
       return this;
