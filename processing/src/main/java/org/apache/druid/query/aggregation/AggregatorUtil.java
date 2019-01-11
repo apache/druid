@@ -75,7 +75,6 @@ public class AggregatorUtil
   public static final byte LONG_LAST_CACHE_TYPE_ID = 0x18;
   public static final byte TIMESTAMP_CACHE_TYPE_ID = 0x19;
   public static final byte VARIANCE_CACHE_TYPE_ID = 0x1A;
-  public static final byte FIXED_BUCKET_HIST_CACHE_TYPE_ID = 0x1B;
 
   // Quantiles sketch aggregator
   public static final byte QUANTILES_DOUBLES_SKETCH_BUILD_CACHE_TYPE_ID = 0x1B;
@@ -110,6 +109,9 @@ public class AggregatorUtil
   public static final byte HLL_SKETCH_UNION_CACHE_TYPE_ID = 0x30;
   public static final byte HLL_SKETCH_TO_STRING_CACHE_TYPE_ID = 0x31;
   public static final byte HLL_SKETCH_TO_ESTIMATE_AND_BOUNDS_CACHE_TYPE_ID = 0x32;
+
+  // Fixed buckets histogram aggregator
+  public static final byte FIXED_BUCKET_HIST_CACHE_TYPE_ID = 0x33;
 
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg

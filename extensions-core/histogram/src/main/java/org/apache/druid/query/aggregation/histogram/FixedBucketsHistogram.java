@@ -44,7 +44,7 @@ public class FixedBucketsHistogram
    * Serialization header format:
    *
    * byte: serialization version, must be 0x01
-   * byte: encoding mode, 0x01 for full, 0x02 for full
+   * byte: encoding mode, 0x01 for full, 0x02 for sparse
    */
   public static final int SERDE_HEADER_SIZE = Byte.BYTES +
                                               Byte.BYTES;
