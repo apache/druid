@@ -153,11 +153,14 @@ public abstract class AbstractTask implements Task
     return false;
   }
 
+  /**
+   * Should be called independent of canRestore so that Resource cleaning can be achieved.
+   * If resource cleaning is required, concrete class should override this method
+   */
   @Override
   public void stopGracefully()
   {
-    // Should not be called when canRestore = false.
-    throw new UnsupportedOperationException("Cannot stop gracefully");
+    // Do nothing and let the concrete class handle it
   }
 
   @Override

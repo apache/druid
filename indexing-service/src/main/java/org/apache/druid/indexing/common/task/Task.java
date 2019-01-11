@@ -163,8 +163,8 @@ public interface Task
   boolean canRestore();
 
   /**
-   * Asks a task to arrange for its "run" method to exit promptly. This method will only be called if
-   * {@link #canRestore()} returns true. Tasks that take too long to stop gracefully will be terminated with
+   * Asks a task to arrange for its "run" method to exit promptly. This method will be called, whether
+   * {@link #canRestore()} returns true/false. Tasks that take too long to stop gracefully will be terminated with
    * extreme prejudice.
    */
   void stopGracefully();

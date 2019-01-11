@@ -182,13 +182,14 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       final long elapsed;
       boolean error = false;
 
-      if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
-        // Attempt graceful shutdown.
-        graceful = true;
-        log.info("Starting graceful shutdown of task[%s].", task.getId());
+      // stopGracefully for resource cleaning, independent of the fact whether the task is restorable or not
+      // Attempt graceful shutdown.
+      graceful = true;
+      log.info("Starting graceful shutdown of task[%s].", task.getId());
+      task.stopGracefully();
 
+      if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
         try {
-          task.stopGracefully();
           final TaskStatus taskStatus = runningItem.getResult().get(
               new Interval(DateTimes.utc(start), taskConfig.getGracefulShutdownTimeout()).toDurationMillis(),
               TimeUnit.MILLISECONDS
@@ -213,7 +214,6 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
         }
       } else {
-        graceful = false;
         TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
       }
 

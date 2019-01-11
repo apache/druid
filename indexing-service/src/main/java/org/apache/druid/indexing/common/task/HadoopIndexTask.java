@@ -431,12 +431,6 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
   @Override
-  public boolean canRestore()
-  {
-    return true;
-  }
-
-  @Override
   public void stopGracefully()
   {
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
