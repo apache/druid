@@ -38,7 +38,9 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -71,6 +73,8 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
   private final ExecutorService pathChildrenCacheExecutor;
 
   private volatile PathChildrenCache childrenCache;
+
+  private final CountDownLatch inventoryInitializationLatch = new CountDownLatch(1);
 
   public CuratorInventoryManager(
       CuratorFramework curatorFramework,
@@ -113,6 +117,11 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
 
     try {
       childrenCache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
+
+      log.info("Waiting for Server Inventory Initialization...");
+      while (!inventoryInitializationLatch.await(1, TimeUnit.MINUTES)) {
+        log.info("Still waiting for Server Inventory Initialization...");
+      }
     }
     catch (Exception e) {
       synchronized (lock) {
@@ -347,6 +356,7 @@ public class CuratorInventoryManager<ContainerClass, InventoryClass>
       // only fire if we are done initializing the parent PathChildrenCache
       if (containersInitialized && uninitializedInventory.isEmpty()) {
         doneInitializing = true;
+        inventoryInitializationLatch.countDown();
         strategy.inventoryInitialized();
       }
     }
