@@ -226,7 +226,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public String getHadoopJobIdFileName()
   {
     final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
-    StringBuilder fileName = new StringBuilder(taskConfig.getBaseDir());
+    StringBuilder fileName = new StringBuilder(taskConfig.getTaskDir(getId()).toString());
     fileName.append("/");
     fileName.append(HADOOP_JOB_ID_FILENAME);
     return fileName.toString();
