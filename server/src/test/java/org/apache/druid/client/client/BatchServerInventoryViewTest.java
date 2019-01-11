@@ -43,6 +43,7 @@ import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
@@ -77,6 +78,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ *
  */
 public class BatchServerInventoryViewTest
 {
@@ -118,7 +120,7 @@ public class BatchServerInventoryViewTest
 
     announcer = new Announcer(
         cf,
-        MoreExecutors.sameThreadExecutor()
+        Execs.directExecutor()
     );
     announcer.start();
 
@@ -204,7 +206,8 @@ public class BatchServerInventoryViewTest
             return input.rhs.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
           }
         }
-    ) {
+    )
+    {
       @Override
       protected DruidServer addInnerInventory(DruidServer container, String inventoryKey, Set<DataSegment> inventory)
       {
@@ -337,7 +340,7 @@ public class BatchServerInventoryViewTest
     EasyMock.replay(callback);
 
     filteredBatchServerInventoryView.registerSegmentCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         callback,
         new Predicate<Pair<DruidServerMetadata, DataSegment>>()
         {
@@ -407,7 +410,11 @@ public class BatchServerInventoryViewTest
     while (inventoryUpdateCounter.get() != count) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > forWaitingTiming.milliseconds()) {
-        throw new ISE("BatchServerInventoryView is not updating counter expected[%d] value[%d]", count, inventoryUpdateCounter.get());
+        throw new ISE(
+            "BatchServerInventoryView is not updating counter expected[%d] value[%d]",
+            count,
+            inventoryUpdateCounter.get()
+        );
       }
     }
   }

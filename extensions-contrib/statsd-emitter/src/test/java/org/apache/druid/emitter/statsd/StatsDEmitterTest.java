@@ -38,7 +38,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -57,7 +57,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, true),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, true, null),
         new ObjectMapper(),
         client
     );
@@ -76,7 +76,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, null, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -104,7 +104,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, null, null),
         new ObjectMapper(),
         client
     );
@@ -132,7 +132,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, true),
+        new StatsDEmitterConfig("localhost", 8888, null, "#", true, null, null, true, null),
         new ObjectMapper(),
         client
     );
@@ -161,7 +161,7 @@ public class StatsDEmitterTest
   {
     StatsDClient client = createMock(StatsDClient.class);
     StatsDEmitter emitter = new StatsDEmitter(
-        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, null),
+        new StatsDEmitterConfig("localhost", 8888, null, null, true, null, null, null, null),
         new ObjectMapper(),
         client
     );

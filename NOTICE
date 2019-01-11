@@ -77,7 +77,7 @@ This product contains a modified version of The Guava Authors's Closer class fro
  * HOMEPAGE:
    * https://github.com/google/guava
  * COMMIT TAG:
-   * https://github.com/google/guava/blob/c462d69329709f72a17a64cb229d15e76e72199c
+   * https://github.com/google/guava/commit/0ba7ccf36f5384a321cb78d62375bf7574e7bc24
 
 This product contains code adapted from Apache Hadoop
   * LICENSE:

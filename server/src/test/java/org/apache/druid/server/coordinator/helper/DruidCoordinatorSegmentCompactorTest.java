@@ -45,6 +45,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -65,7 +66,7 @@ public class DruidCoordinatorSegmentCompactorTest
     public String compactSegments(
         List<DataSegment> segments,
         boolean keepSegmentGranularity,
-        long targetCompactionSizeBytes,
+        @Nullable Long targetCompactionSizeBytes,
         int compactionTaskPriority,
         ClientCompactQueryTuningConfig tuningConfig,
         Map<String, Object> context
@@ -462,6 +463,7 @@ public class DruidCoordinatorSegmentCompactorTest
               0,
               50L,
               50L,
+              null,
               null,
               new Period("PT1H"), // smaller than segment interval
               null,
