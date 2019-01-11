@@ -40,8 +40,8 @@ wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.11/zookeeper-
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor
-wget -q -O - http://www.us.apache.org/dist/kafka/0.10.2.0/kafka_2.11-0.10.2.0.tgz | tar -xzf - -C /usr/local \
- && ln -s /usr/local/kafka_2.11-0.10.2.0 /usr/local/kafka
+wget -q -O - http://www.us.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz | tar -xzf - -C /usr/local \
+ && ln -s /usr/local/kafka_2.12-0.10.2.2 /usr/local/kafka
 
 # Druid system user
 adduser --system --group --no-create-home druid \
