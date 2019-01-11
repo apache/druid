@@ -39,6 +39,6 @@ public class SqlBindings
       final Class<? extends SqlOperatorConversion> clazz
   )
   {
-      Multibinder.newSetBinder(binder, SqlOperatorConversion.class).addBinding().to(clazz);
+    Multibinder.newSetBinder(binder, SqlOperatorConversion.class).addBinding().to(clazz);
   }
 }
