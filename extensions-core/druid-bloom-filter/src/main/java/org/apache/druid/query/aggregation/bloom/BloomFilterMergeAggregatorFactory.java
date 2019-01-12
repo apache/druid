@@ -24,8 +24,6 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.NoopAggregator;
-import org.apache.druid.query.aggregation.NoopBufferAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.ColumnSelectorFactory;

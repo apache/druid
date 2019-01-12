@@ -20,8 +20,6 @@
 package org.apache.druid.query.aggregation.bloom;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.codec.binary.Base64;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -38,7 +36,6 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
