@@ -6768,6 +6768,118 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSemiJoinWithOuterTimeExtractScan() throws Exception
+  {
+    testQuery(
+        "SELECT dim1, EXTRACT(MONTH FROM __time) FROM druid.foo\n"
+        + " WHERE dim2 IN (\n"
+        + "   SELECT dim2\n"
+        + "   FROM druid.foo\n"
+        + "   WHERE dim1 = 'def'\n"
+        + " ) AND dim1 <> ''",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(QSS(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                        .setDimFilter(SELECTOR("dim1", "def", null))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build(),
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(QSS(Filtration.eternity()))
+                .virtualColumns(
+                    EXPRESSION_VIRTUAL_COLUMN("v0", "timestamp_extract(\"__time\",'MONTH','UTC')", ValueType.LONG)
+                )
+                .filters(
+                    AND(
+                        NOT(SELECTOR("dim1", "", null)),
+                        SELECTOR("dim2", "abc", null)
+                    )
+                )
+                .columns("dim1", "v0")
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"def", 1L}
+        )
+    );
+  }
+
+  @Test
+  public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy() throws Exception
+  {
+    testQuery(
+        "SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time) FROM druid.foo\n"
+        + " WHERE dim2 IN (\n"
+        + "   SELECT dim2\n"
+        + "   FROM druid.foo\n"
+        + "   WHERE dim1 = 'def'\n"
+        + " ) AND dim1 <> ''"
+        + "GROUP BY EXTRACT(MONTH FROM __time)\n"
+        + "ORDER BY EXTRACT(MONTH FROM __time)",
+        ImmutableList.of(
+            GroupByQuery
+                .builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(QSS(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(DIMS(new DefaultDimensionSpec("dim2", "d0")))
+                .setDimFilter(SELECTOR("dim1", "def", null))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build(),
+            GroupByQuery
+                .builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setVirtualColumns(
+                    EXPRESSION_VIRTUAL_COLUMN("d0:v", "timestamp_extract(\"__time\",'MONTH','UTC')", ValueType.LONG)
+                )
+                .setDimFilter(
+                    AND(
+                        NOT(SELECTOR("dim1", "", null)),
+                        SELECTOR("dim2", "abc", null)
+                    )
+                )
+                .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                .setInterval(QSS(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setAggregatorSpecs(
+                    AGGS(
+                        new CardinalityAggregatorFactory(
+                            "a0",
+                            null,
+                            ImmutableList.of(
+                                new DefaultDimensionSpec("dim1", "dim1", ValueType.STRING)
+                            ),
+                            false,
+                            true
+                        )
+                    )
+                )
+                .setLimitSpec(
+                    new DefaultLimitSpec(
+                        ImmutableList.of(
+                            new OrderByColumnSpec(
+                                "d0",
+                                OrderByColumnSpec.Direction.ASCENDING,
+                                StringComparators.NUMERIC
+                            )
+                        ),
+                        Integer.MAX_VALUE
+                    )
+                )
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L, 1L}
+        )
+    );
+  }
+
+  @Test
   public void testUsingSubqueryWithExtractionFns() throws Exception
   {
     testQuery(

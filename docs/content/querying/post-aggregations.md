@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Post-Aggregations"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Post-Aggregations
+
 Post-aggregations are specifications of processing that should happen on aggregated values as they come out of Druid. If you include a post aggregation as part of a query, make sure to include all aggregators the post-aggregator requires.
 
 There are several post-aggregators available.

@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Loading a file"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Tutorial: Loading a file
 
@@ -97,7 +98,7 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000,
+      "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000,
       "forceExtendableShardSpecs" : true
     }

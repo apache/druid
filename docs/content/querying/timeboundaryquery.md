@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Time Boundary Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Time Boundary Queries
+
 Time boundary queries return the earliest and latest data points of a data set. The grammar is:
 
 ```json

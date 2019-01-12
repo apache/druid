@@ -17,15 +17,44 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.parquet.simple;
+package org.apache.druid.client.indexing;
 
-import org.apache.parquet.example.data.Group;
-import org.apache.parquet.hadoop.ParquetInputFormat;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class DruidParquetInputFormat extends ParquetInputFormat<Group>
+public class TaskPayloadResponse
 {
-  public DruidParquetInputFormat()
+  private final String task;
+  private final ClientQuery payload;
+
+  @JsonCreator
+  public TaskPayloadResponse(
+      @JsonProperty("task") final String task,
+      @JsonProperty("payload") final ClientQuery payload
+  )
   {
-    super(DruidParquetReadSupport.class);
+    this.task = task;
+    this.payload = payload;
+  }
+
+  @JsonProperty
+  public String getTask()
+  {
+    return task;
+  }
+
+  @JsonProperty
+  public ClientQuery getPayload()
+  {
+    return payload;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskPayloadResponse{" +
+           "task='" + task + '\'' +
+           ", payload=" + payload +
+           '}';
   }
 }

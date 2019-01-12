@@ -250,7 +250,7 @@ public class SystemSchema extends AbstractSchema
             try {
               segmentsAlreadySeen.add(val.getIdentifier());
               final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getIdentifier());
-              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 1L;
+              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
               if (partialSegmentData != null) {
                 numReplicas = partialSegmentData.getNumReplicas();
                 numRows = partialSegmentData.getNumRows();

@@ -58,6 +58,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -92,7 +93,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -352,10 +352,14 @@ public class OverlordResource
           public Response apply(TaskQueue taskQueue)
           {
             final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
-            for (final TaskInfo<Task, TaskStatus> task : tasks) {
-              taskQueue.shutdown(task.getId(), "Shutdown request from user");
+            if (tasks.isEmpty()) {
+              return Response.status(Status.NOT_FOUND).build();
+            } else {
+              for (final TaskInfo<Task, TaskStatus> task : tasks) {
+                taskQueue.shutdown(task.getId(), "Shutdown request from user");
+              }
+              return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
             }
-            return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
           }
         }
     );
@@ -480,9 +484,9 @@ public class OverlordResource
               retMap = new HashMap<>();
               retMap.put("result", ret);
             }
-            catch (IOException e) {
+            catch (Exception e) {
               log.warn(e, "Failed to perform task action");
-              return Response.serverError().build();
+              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
             }
 
             return Response.ok().entity(retMap).build();
@@ -949,7 +953,7 @@ public class OverlordResource
 
   @GET
   @Path("/task/{taskid}/log")
-  @Produces("text/plain")
+  @Produces(HttpMediaType.TEXT_PLAIN_UTF8)
   @ResourceFilters(TaskResourceFilter.class)
   public Response doGetLog(
       @PathParam("taskid") final String taskid,

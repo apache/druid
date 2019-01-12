@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -30,11 +31,11 @@ import org.junit.Test;
 
 import java.io.File;
 
-public class KafkaTuningConfigTest
+public class KafkaIndexTaskTuningConfigTest
 {
   private final ObjectMapper mapper;
 
-  public KafkaTuningConfigTest()
+  public KafkaIndexTaskTuningConfigTest()
   {
     mapper = new DefaultObjectMapper();
     mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
@@ -45,7 +46,7 @@ public class KafkaTuningConfigTest
   {
     String jsonStr = "{\"type\": \"kafka\"}";
 
-    KafkaTuningConfig config = (KafkaTuningConfig) mapper.readValue(
+    KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -57,7 +58,7 @@ public class KafkaTuningConfigTest
 
     Assert.assertNotNull(config.getBasePersistDirectory());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
-    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment());
+    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(null, config.getMaxTotalRows());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
@@ -81,7 +82,7 @@ public class KafkaTuningConfigTest
                      + "  \"handoffConditionTimeout\": 100\n"
                      + "}";
 
-    KafkaTuningConfig config = (KafkaTuningConfig) mapper.readValue(
+    KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -93,19 +94,19 @@ public class KafkaTuningConfigTest
 
     Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
-    Assert.assertEquals(100, config.getMaxRowsPerSegment());
+    Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
     Assert.assertNotEquals(null, config.getMaxTotalRows());
     Assert.assertEquals(1000, config.getMaxTotalRows().longValue());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(0, config.getMaxPendingPersists());
+    Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertEquals(true, config.isReportParseExceptions());
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
   }
 
   @Test
-  public void testCopyOf()
+  public void testConvert()
   {
-    KafkaTuningConfig original = new KafkaTuningConfig(
+    KafkaSupervisorTuningConfig original = new KafkaSupervisorTuningConfig(
         1,
         null,
         2,
@@ -122,19 +123,48 @@ public class KafkaTuningConfigTest
         null,
         null,
         null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
         null
     );
-    KafkaTuningConfig copy = KafkaTuningConfig.copyOf(original);
+    KafkaIndexTaskTuningConfig copy = (KafkaIndexTaskTuningConfig) original.convertToTaskTuningConfig();
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
-    Assert.assertEquals(2, copy.getMaxRowsPerSegment());
+    Assert.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
     Assert.assertNotEquals(null, copy.getMaxTotalRows());
     Assert.assertEquals(10L, copy.getMaxTotalRows().longValue());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
-    Assert.assertEquals(0, copy.getMaxPendingPersists());
+    Assert.assertEquals(4, copy.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
     Assert.assertEquals(true, copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
+  }
+
+  private static KafkaIndexTaskTuningConfig copy(KafkaIndexTaskTuningConfig config)
+  {
+    return new KafkaIndexTaskTuningConfig(
+        config.getMaxRowsInMemory(),
+        config.getMaxBytesInMemory(),
+        config.getMaxRowsPerSegment(),
+        config.getMaxTotalRows(),
+        config.getIntermediatePersistPeriod(),
+        config.getBasePersistDirectory(),
+        0,
+        config.getIndexSpec(),
+        true,
+        config.isReportParseExceptions(),
+        config.getHandoffConditionTimeout(),
+        config.isResetOffsetAutomatically(),
+        config.getSegmentWriteOutMediumFactory(),
+        config.getIntermediateHandoffPeriod(),
+        config.isLogParseExceptions(),
+        config.getMaxParseExceptions(),
+        config.getMaxSavedParseExceptions()
+    );
   }
 }

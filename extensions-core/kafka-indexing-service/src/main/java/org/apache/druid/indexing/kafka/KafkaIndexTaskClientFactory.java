@@ -24,23 +24,19 @@ import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.TaskInfoProvider;
-import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.joda.time.Duration;
 
-public class KafkaIndexTaskClientFactory implements IndexTaskClientFactory<KafkaIndexTaskClient>
+public class KafkaIndexTaskClientFactory extends SeekableStreamIndexTaskClientFactory<KafkaIndexTaskClient>
 {
-  private HttpClient httpClient;
-  private ObjectMapper mapper;
-
   @Inject
   public KafkaIndexTaskClientFactory(
       @EscalatedGlobal HttpClient httpClient,
       @Json ObjectMapper mapper
   )
   {
-    this.httpClient = httpClient;
-    this.mapper = mapper;
+    super(httpClient, mapper);
   }
 
   @Override
@@ -53,8 +49,8 @@ public class KafkaIndexTaskClientFactory implements IndexTaskClientFactory<Kafka
   )
   {
     return new KafkaIndexTaskClient(
-        httpClient,
-        mapper,
+        getHttpClient(),
+        getMapper(),
         taskInfoProvider,
         dataSource,
         numThreads,

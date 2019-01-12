@@ -223,7 +223,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                             handleResponseStatus(e.getRequest(), e.getStatus());
                             break;
                           case PENDING:
-                            log.info("Request[%s] is still pending on server[%s].", e.getRequest(), serverId);
+                            log.debug("Request[%s] is still pending on server[%s].", e.getRequest(), serverId);
                             break;
                           default:
                             scheduleNextRunImmediately = false;
@@ -521,7 +521,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
 
     public void requestSucceeded()
     {
-      log.info(
+      log.debug(
           "Server[%s] Successfully processed segment[%s] request[%s].",
           serverId,
           segment.getIdentifier(),

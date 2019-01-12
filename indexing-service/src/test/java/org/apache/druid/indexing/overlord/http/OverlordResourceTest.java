@@ -65,7 +65,9 @@ import org.junit.rules.ExpectedException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -973,6 +975,19 @@ public class OverlordResourceTest
         .shutdownTasksForDataSource("datasource")
         .getEntity();
     Assert.assertEquals("datasource", response.get("dataSource"));
+  }
+
+  @Test
+  public void testShutdownAllTasksForNonExistingDataSource()
+  {
+    final TaskQueue taskQueue = EasyMock.createMock(TaskQueue.class);
+    EasyMock.expect(taskMaster.isLeader()).andReturn(true).anyTimes();
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskStorageQueryAdapter.getActiveTaskInfo(EasyMock.anyString())).andReturn(Collections.emptyList());
+    EasyMock.replay(taskRunner, taskMaster, taskStorageQueryAdapter, indexerMetadataStorageAdapter, req);
+
+    final Response response = overlordResource.shutdownTasksForDataSource("notExisting");
+    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
   }
 
   private void expectAuthorizationTokenCheck()

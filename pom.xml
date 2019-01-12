@@ -100,6 +100,7 @@
         <caffeine.version>2.5.5</caffeine.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
+        <checkerframework.version>2.5.7</checkerframework.version>
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -133,6 +134,7 @@
         <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>
+        <module>extensions-core/kinesis-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/parquet-extensions</module>
         <module>extensions-core/postgresql-metadata-storage</module>
@@ -679,7 +681,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>0.5.18</version>
+                <version>0.7.36</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
@@ -746,6 +748,11 @@
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
                 <version>${caffeine.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-artifact</artifactId>
+                <version>3.6.0</version>
             </dependency>
 
             <dependency>
@@ -880,7 +887,9 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.0.0</version>
                 <configuration>
-                    <sourceDirectories>${project.build.sourceDirectory}</sourceDirectories>
+                    <sourceDirectories>
+                        <sourceDirectory>${project.build.sourceDirectory}</sourceDirectory>
+                    </sourceDirectories>
                     <includeTestSourceDirectory>true</includeTestSourceDirectory>
                     <configLocation>codestyle/checkstyle.xml</configLocation>
                     <suppressionsLocation>codestyle/checkstyle-suppressions.xml</suppressionsLocation>
@@ -947,7 +956,9 @@
                         <signaturesFile>${project.parent.basedir}/codestyle/joda-time-forbidden-apis.txt</signaturesFile>
                         <signaturesFile>${project.parent.basedir}/codestyle/druid-forbidden-apis.txt</signaturesFile>
                     </signaturesFiles>
-                    <suppressAnnotations><annotation>**.SuppressForbidden</annotation></suppressAnnotations>
+                    <suppressAnnotations>
+                        <annotation>**.SuppressForbidden</annotation>
+                    </suppressAnnotations>
                 </configuration>
                 <executions>
                     <execution>
@@ -976,7 +987,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>animal-sniffer-maven-plugin</artifactId>
-                <version>1.15</version>
+                <version>1.17</version>
                 <executions>
                     <execution>
                         <id>check-java-api</id>
@@ -997,6 +1008,8 @@
                                 <ignore>sun.nio.ch.DirectBuffer</ignore>
                                 <ignore>sun.misc.Cleaner</ignore>
                                 <ignore>sun.misc.Unsafe</ignore>
+                                <!-- ignore java reflection polymorphic api signatures -->
+                                <ignore>java.lang.invoke.MethodHandle</ignore>
                             </ignores>
                         </configuration>
                     </execution>
@@ -1346,9 +1359,9 @@
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                             <argLine>-Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
-                              -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
-                              <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
-                              -Ddruid.indexing.doubleStorage=double
+                                -Duser.timezone=UTC -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                                <!--@TODO After fixing https://github.com/apache/incubator-druid/issues/4964 remove this parameter-->
+                                -Ddruid.indexing.doubleStorage=double
                             </argLine>
                             <!-- our tests are very verbose, let's keep the volume down -->
                             <redirectTestOutputToFile>true</redirectTestOutputToFile>

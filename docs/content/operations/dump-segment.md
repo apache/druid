@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "DumpSegment tool"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # DumpSegment tool
 
 The DumpSegment tool can be used to dump the metadata or contents of a segment for debugging purposes. Note that the
@@ -29,7 +31,7 @@ complex metric values may not be complete.
 To run the tool, point it at a segment directory and provide a file for writing output:
 
 ```
-java org.apache.druid.cli.Main tools dump-segment \
+java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools dump-segment \
   --directory /home/druid/path/to/segment/ \
   --out /home/druid/output.txt
 ```

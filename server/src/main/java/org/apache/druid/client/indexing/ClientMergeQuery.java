@@ -28,7 +28,7 @@ import java.util.List;
 
 /**
  */
-public class ClientMergeQuery
+public class ClientMergeQuery implements ClientQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
@@ -48,12 +48,14 @@ public class ClientMergeQuery
   }
 
   @JsonProperty
+  @Override
   public String getType()
   {
     return "merge";
   }
 
   @JsonProperty
+  @Override
   public String getDataSource()
   {
     return dataSource;
