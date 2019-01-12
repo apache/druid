@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.bloom;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.guice.BloomFilterExtensionModule;
@@ -37,6 +38,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -78,30 +80,58 @@ public class BloomFilterGroupByQueryTest
   }
 
   @Test
-  public void testIngestWithNullsIgnoredAndQuery() throws Exception
+  public void testQuery() throws Exception
   {
-    MapBasedRow row = ingestAndQuery(true);
-    Object o = row.getRaw("blooming_quality");
+
+    String query = "{"
+                   + "\"queryType\": \"groupBy\","
+                   + "\"dataSource\": \"test_datasource\","
+                   + "\"granularity\": \"ALL\","
+                   + "\"dimensions\": [],"
+                   + "\"filter\":{ \"type\":\"selector\", \"dimension\":\"market\", \"value\":\"upfront\"},"
+                   + "\"aggregations\": ["
+                   + "  { \"type\": \"bloom\", \"name\": \"blooming_quality\", \"field\": \"quality\" }"
+                   + "],"
+                   + "\"intervals\": [ \"1970/2050\" ]"
+                   + "}";
+
+    MapBasedRow row = ingestAndQuery(query);
+
+
     Assert.assertTrue(((BloomKFilter) row.getRaw("blooming_quality")).testString("mezzanine"));
     Assert.assertTrue(((BloomKFilter) row.getRaw("blooming_quality")).testString("premium"));
     Assert.assertFalse(((BloomKFilter) row.getRaw("blooming_quality")).testString("entertainment"));
-
   }
 
   @Test
-  public void testIngestWithNullsToZeroAndQuery() throws Exception
+  public void testQueryFakeDimension() throws Exception
   {
-    // Nulls are ignored and not replaced with default for SQL compatible null handling.
-    // This is already tested in testIngestWithNullsIgnoredAndQuery()
-    if (NullHandling.replaceWithDefault()) {
-      MapBasedRow row = ingestAndQuery(false);
-      Assert.assertTrue(((BloomKFilter) row.getRaw("blooming_quality")).testString("mezzanine"));
-      Assert.assertTrue(((BloomKFilter) row.getRaw("blooming_quality")).testString("premium"));
-      Assert.assertFalse(((BloomKFilter) row.getRaw("blooming_quality")).testString("entertainment"));
-    }
+    String query = "{"
+                   + "\"queryType\": \"groupBy\","
+                   + "\"dataSource\": \"test_datasource\","
+                   + "\"granularity\": \"ALL\","
+                   + "\"dimensions\": [],"
+                   + "\"filter\":{ \"type\":\"selector\", \"dimension\":\"market\", \"value\":\"upfront\"},"
+                   + "\"aggregations\": ["
+                   + "  { \"type\": \"bloom\", \"name\": \"blooming_quality\", \"field\": \"nope\" }"
+                   + "],"
+                   + "\"intervals\": [ \"1970/2050\" ]"
+                   + "}";
+
+    MapBasedRow row = ingestAndQuery(query);
+
+    BloomKFilter filter = new BloomKFilter(1500);
+    filter.addBytes(null, 0, 0);
+
+    Object val = row.getRaw("blooming_quality");
+
+    String serialized = BloomFilterAggregatorTest.filterToString((BloomKFilter) val);
+    String empty = BloomFilterAggregatorTest.filterToString(filter);
+
+    Assert.assertEquals(empty, serialized);
   }
 
-  private MapBasedRow ingestAndQuery(boolean ignoreNulls) throws Exception
+  private MapBasedRow ingestAndQuery(String query) throws Exception
   {
     String metricSpec = "[{ \"type\": \"count\", \"name\": \"count\"}]";
 
@@ -121,18 +151,6 @@ public class BloomFilterGroupByQueryTest
                        + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
                        + "  }"
                        + "}";
-
-    String query = "{"
-                   + "\"queryType\": \"groupBy\","
-                   + "\"dataSource\": \"test_datasource\","
-                   + "\"granularity\": \"ALL\","
-                   + "\"dimensions\": [],"
-                   + "\"filter\":{ \"type\":\"selector\", \"dimension\":\"market\", \"value\":\"upfront\"},"
-                   + "\"aggregations\": ["
-                   + "  { \"type\": \"bloom\", \"name\": \"blooming_quality\", \"field\": \"quality\" }"
-                   + "],"
-                   + "\"intervals\": [ \"1970/2050\" ]"
-                   + "}";
 
     Sequence seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"),

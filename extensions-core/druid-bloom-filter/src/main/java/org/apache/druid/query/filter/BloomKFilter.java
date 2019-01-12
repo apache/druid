@@ -180,6 +180,8 @@ public class BloomKFilter
     }
   }
 
+  // custom Druid ByteBuffer methods start here
+
   /**
    * Merges BloomKFilter bf2 into bf1.
    * Assumes 2 BloomKFilters with the same size/hash functions are serialized to byte arrays
@@ -224,7 +226,7 @@ public class BloomKFilter
   }
 
   /**
-   * Serialize a bloom filter to a ByteBuffer
+   * Serialize a bloom filter to a ByteBuffer. Does not mutate buffer position.
    *
    * @param out         output buffer to write to
    * @param position    output buffer position
@@ -235,8 +237,8 @@ public class BloomKFilter
     /**
      * Serialized BloomKFilter format:
      * 1 byte for the number of hash functions.
-     * 1 big endian int(That is how OutputStream works) for the number of longs in the bitset
-     * big endina longs in the BloomKFilter bitset
+     * 1 big endian int(to match OutputStream) for the number of longs in the bitset
+     * big endian longs in the BloomKFilter bitset
      */
     ByteBuffer view = out.duplicate().order(ByteOrder.BIG_ENDIAN);
     view.position(position);
@@ -256,7 +258,7 @@ public class BloomKFilter
    * Deserialize a bloom filter
    * Read a byte buffer, which was written by {@linkplain #serialize(OutputStream, BloomKFilter)} or
    * {@linkplain #serialize(ByteBuffer, int, BloomKFilter)}
-   * into a {@code BloomKFilter}
+   * into a {@code BloomKFilter}. Does not mutate buffer position.
    *
    * @param in input ByteBuffer
    *
@@ -287,7 +289,7 @@ public class BloomKFilter
   }
 
   /**
-   * Merges BloomKFilter bf2 into bf1.
+   * Merges BloomKFilter bf2Buffer into bf1Buffer in place. Does not mutate buffer positions.
    * Assumes 2 BloomKFilters with the same size/hash functions are serialized to ByteBuffers
    *
    * @param bf1Buffer
@@ -328,12 +330,29 @@ public class BloomKFilter
   }
 
   /**
-   * Caculate size in bytes of a BloomKFilter for a given number of entries
-   * @param maxNumEntries
+   * ByteBuffer based copy of logic of {@link BloomKFilter#getNumSetBits()}
+   * @param bfBuffer
+   * @param start
    * @return
+   */
+  public static int getNumSetBits(ByteBuffer bfBuffer, int start)
+  {
+    ByteBuffer view = bfBuffer.duplicate().order(ByteOrder.BIG_ENDIAN);
+    view.position(start);
+    int numLongs = view.getInt(1 + start);
+    int setBits = 0;
+    for (int i = 0, pos = START_OF_SERIALIZED_LONGS + start; i < numLongs; i++, pos += Long.BYTES) {
+      setBits += Long.bitCount(view.getLong(pos));
+    }
+    return setBits;
+  }
+
+  /**
+   * Calculate size in bytes of a BloomKFilter for a given number of entries
    */
   public static int computeSizeBytes(long maxNumEntries)
   {
+    // copied from constructor
     checkArgument(maxNumEntries > 0, "expectedEntries should be > 0");
     long numBits = optimalNumOfBits(maxNumEntries, DEFAULT_FPP);
 
@@ -342,11 +361,18 @@ public class BloomKFilter
     return START_OF_SERIALIZED_LONGS + ((nLongs + padLongs) * Long.BYTES);
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#add(byte[])} that adds a value to the ByteBuffer in place.
+   */
   public static void add(ByteBuffer buffer, byte[] val)
   {
     addBytes(buffer, val);
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addBytes(byte[], int, int)} that adds a value to the ByteBuffer
+   * in place.
+   */
   public static void addBytes(ByteBuffer buffer, byte[] val, int offset, int length)
   {
     long hash64 = val == null ? Murmur3.NULL_HASHCODE :
@@ -354,11 +380,17 @@ public class BloomKFilter
     addHash(buffer, hash64);
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addBytes(byte[])} that adds a value to the ByteBuffer in place.
+   */
   public static void addBytes(ByteBuffer buffer, byte[] val)
   {
     addBytes(buffer, val, 0, val.length);
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addHash(long)} that adds a value to the ByteBuffer in place.
+   */
   public static void addHash(ByteBuffer buffer, long hash64)
   {
     final int hash1 = (int) hash64;
@@ -394,37 +426,54 @@ public class BloomKFilter
     }
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addString(String)} that adds a value to the ByteBuffer in place.
+   */
   public static void addString(ByteBuffer buffer, String val)
   {
     addBytes(buffer, StringUtils.toUtf8(val));
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addByte(byte)} that adds a value to the ByteBuffer in place.
+   */
   public static void addByte(ByteBuffer buffer, byte val)
   {
     addBytes(buffer, new byte[]{val});
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addInt(int)} that adds a value to the ByteBuffer in place.
+   */
   public static void addInt(ByteBuffer buffer, int val)
   {
-    // puts int in little endian order
     addBytes(buffer, intToByteArrayLE(val));
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addLong(long)} that adds a value to the ByteBuffer in place.
+   */
   public static void addLong(ByteBuffer buffer, long val)
   {
-    // puts long in little endian order
     addHash(buffer, Murmur3.hash64(val));
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addFloat(float)} that adds a value to the ByteBuffer in place.
+   */
   public static void addFloat(ByteBuffer buffer, float val)
   {
     addInt(buffer, Float.floatToIntBits(val));
   }
 
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addDouble(double)}
+   */
   public static void addDouble(ByteBuffer buffer, double val)
   {
     addLong(buffer, Double.doubleToLongBits(val));
   }
+  // custom Druid ByteBuffer methods end here
 
   public void add(byte[] val)
   {
@@ -619,7 +668,11 @@ public class BloomKFilter
 
   public int getNumSetBits()
   {
-    return bitSet.setBitsCount();
+    int setCount = 0;
+    for (long datum : bitSet.getData()) {
+      setCount += Long.bitCount(datum);
+    }
+    return setCount;
   }
 
   public int getNumHashFunctions()
@@ -707,18 +760,6 @@ public class BloomKFilter
     public boolean get(int index)
     {
       return (data[index >>> 6] & (1L << index)) != 0;
-    }
-
-
-    public int setBitsCount()
-    {
-      int setCount = 0;
-      for (int i = 0; i < bitSize(); i++) {
-        if (get(i)) {
-          setCount++;
-        }
-      }
-      return setCount;
     }
 
     /**

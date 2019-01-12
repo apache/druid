@@ -20,6 +20,7 @@
 package org.apache.druid.query.filter;
 
 import org.apache.druid.io.ByteBufferInputStream;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -27,13 +28,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.Assert.assertEquals;
 
 public class BloomKFilterTest
 {
   private static final int COUNT = 100;
-  Random rand = new Random(123);
+  Random rand = ThreadLocalRandom.current();
 
   @Test
   public void testBloomKFilterBytes() throws IOException
@@ -444,6 +446,7 @@ public class BloomKFilterTest
 
     assertEquals(77952, rehydrated.sizeInBytes());
   }
+
   @Test
   public void testMergeBloomKFilterByteBuffers() throws Exception
   {
@@ -502,5 +505,37 @@ public class BloomKFilterTest
     for (String val : inputs2) {
       assert bfMerged.testString(val);
     }
+  }
+
+  @Test
+  public void testCountBitBloomKFilterByteBuffersEmpty() throws Exception
+  {
+    BloomKFilter bfWithValues = new BloomKFilter(10000);
+    BloomKFilter bfEmpty = new BloomKFilter(10000);
+    BloomKFilter bfNull = new BloomKFilter(10000);
+
+    for (int i = 0; i < 1000; i++) {
+      bfWithValues.addInt(rand.nextInt());
+    }
+
+    bfNull.addBytes(null, 0, 0);
+
+    ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
+    BloomKFilter.serialize(bytesOut, bfWithValues);
+    ByteBuffer bufWithValues = ByteBuffer.wrap(bytesOut.toByteArray());
+    bytesOut.reset();
+    BloomKFilter.serialize(bytesOut, bfEmpty);
+    ByteBuffer bufEmpty = ByteBuffer.wrap(bytesOut.toByteArray());
+    bytesOut.reset();
+    BloomKFilter.serialize(bytesOut, bfNull);
+    ByteBuffer bufWithNull = ByteBuffer.wrap(bytesOut.toByteArray());
+
+
+    Assert.assertTrue(BloomKFilter.getNumSetBits(bufWithValues, 0) > 0);
+    Assert.assertFalse(BloomKFilter.getNumSetBits(bufEmpty, 0) > 0);
+    Assert.assertTrue(BloomKFilter.getNumSetBits(bufWithNull, 0) > 0);
+    Assert.assertTrue(
+        BloomKFilter.getNumSetBits(bufWithValues, 0) > BloomKFilter.getNumSetBits(bufWithNull, 0)
+    );
   }
 }

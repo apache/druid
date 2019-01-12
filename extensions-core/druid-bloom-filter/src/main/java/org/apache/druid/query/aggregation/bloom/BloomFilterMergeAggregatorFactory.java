@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -50,7 +51,7 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
   {
     final ColumnValueSelector<BloomKFilter> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
-      return NoopAggregator.instance();
+      throw new ISE("WTF?! Unexpected NilColumnValueSelector");
     }
     return new BloomFilterMergeAggregator(selector, getMaxNumEntries());
   }
@@ -60,7 +61,7 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
   {
     final ColumnValueSelector<ByteBuffer> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
-      return NoopBufferAggregator.instance();
+      throw new ISE("WTF?! Unexpected NilColumnValueSelector");
     }
     return new BloomFilterMergeBufferAggregator(selector, getMaxNumEntries());
   }

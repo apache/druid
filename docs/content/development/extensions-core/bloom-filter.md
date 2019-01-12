@@ -32,10 +32,10 @@ A BloomFilter is a probabilistic data structure for performing a set membership 
 to use with Druid for cases where an explicit filter is impossible, e.g. filtering a query against a set of millions of
  values.
  
-Following are some characterstics of BloomFilters:
+Following are some characteristics of BloomFilters:
 - BloomFilters are highly space efficient when compared to using a HashSet.
-- Because of the probabilistic nature of bloom filters, false positive results are possible (e.g. element was not actually 
-inserted into a bloom filter during construction, but `test()` says true) 
+- Because of the probabilistic nature of bloom filters, false positive results are possible (element was not actually 
+inserted into a bloom filter during construction, but `test()` says true)
 - False negatives are not possible (if element is present then `test()` will never say false). 
 - The false positive probability of this implementation is currently fixed at 5%, but increasing the number of entries 
 that the filter can hold can decrease this false positive rate in exchange for overall size.
@@ -54,8 +54,9 @@ bloomFilter.addString("value 2");
 bloomFilter.addString("value 3");
 ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 BloomKFilter.serialize(byteArrayOutputStream, bloomFilter);
-String base64Serialized= Base64.encodeBase64String(bytes);
+String base64Serialized = Base64.encodeBase64String(byteArrayOutputStream.toByteArray());
 ```
+
 This string can then be used in the native or sql Druid query.
 
 ## Filtering queries with a Bloom Filter
@@ -142,4 +143,8 @@ response
 [{"timestamp":"2015-09-12T00:00:00.000Z","result":{"userBloom":"BAAAJhAAAA..."}}]
 ```
 
-These values can then be set in the filter specification above.
+These values can then be set in the filter specification above. 
+
+Ordering results by a bloom filter aggregator, for example in a TopN query, will perform a comparatively expensive 
+linear scan _of the filter itself_ to count the number of set bits as a means of approximating how many items have been 
+added to the set. As such, ordering by an alternate aggregation is recommended if possible. 

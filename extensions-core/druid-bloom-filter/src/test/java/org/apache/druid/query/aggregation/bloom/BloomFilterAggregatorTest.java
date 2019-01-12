@@ -224,7 +224,7 @@ public class BloomFilterAggregatorTest
     }
   }
 
-  private static String filterToString(BloomKFilter bloomKFilter) throws IOException
+  static String filterToString(BloomKFilter bloomKFilter) throws IOException
   {
     return Base64.encodeBase64String(BloomFilterSerializersModule.bloomKFilterToBytes(bloomKFilter));
   }
