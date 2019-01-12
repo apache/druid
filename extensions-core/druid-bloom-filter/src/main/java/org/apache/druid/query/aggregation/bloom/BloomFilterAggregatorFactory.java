@@ -99,21 +99,19 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   public Comparator getComparator()
   {
     return (Comparator<Object>) (o1, o2) -> {
-      try {
-        if (o1 instanceof ByteBuffer && o2 instanceof ByteBuffer) {
-          BloomKFilter o1f = BloomKFilter.deserialize((ByteBuffer) o1);
-          BloomKFilter o2f = BloomKFilter.deserialize((ByteBuffer) o2);
-          return Ints.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
-        } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
-          BloomKFilter o1f = (BloomKFilter) o1;
-          BloomKFilter o2f = (BloomKFilter) o2;
-          return Ints.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
-        } else {
-          throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());
-        }
-      }
-      catch (IOException ioe) {
-        throw new RuntimeException("Failed to deserialize BloomKFilter");
+      if (o1 instanceof ByteBuffer && o2 instanceof ByteBuffer) {
+        ByteBuffer buf1 = (ByteBuffer) o1;
+        ByteBuffer buf2 = (ByteBuffer) o2;
+        return Ints.compare(
+            BloomKFilter.getNumSetBits(buf1, buf1.position()),
+            BloomKFilter.getNumSetBits(buf2, buf2.position())
+        );
+      } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
+        BloomKFilter o1f = (BloomKFilter) o1;
+        BloomKFilter o2f = (BloomKFilter) o2;
+        return Ints.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
+      } else {
+        throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());
       }
     };
   }
