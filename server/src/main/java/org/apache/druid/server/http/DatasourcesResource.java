@@ -37,8 +37,13 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordinator.rules.LoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -85,6 +90,7 @@ public class DatasourcesResource
 
   private final CoordinatorServerView serverInventoryView;
   private final MetadataSegmentManager databaseSegmentManager;
+  private final MetadataRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
@@ -93,6 +99,7 @@ public class DatasourcesResource
   public DatasourcesResource(
       CoordinatorServerView serverInventoryView,
       MetadataSegmentManager databaseSegmentManager,
+      MetadataRuleManager databaseRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper
@@ -100,6 +107,7 @@ public class DatasourcesResource
   {
     this.serverInventoryView = serverInventoryView;
     this.databaseSegmentManager = databaseSegmentManager;
+    this.databaseRuleManager = databaseRuleManager;
     this.indexingServiceClient = indexingServiceClient;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
@@ -646,5 +654,86 @@ public class DatasourcesResource
                 )
         );
     return Response.ok(retval).build();
+  }
+
+  /**
+   * Used by the realtime tasks to learn whether a segment is handed off or not.
+   * It returns true when the segment will never be handed off or is already handed off. Otherwise, it returns false.
+   */
+  @GET
+  @Path("/{dataSourceName}/handoffComplete")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response isHandOffComplete(
+      @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("interval") final String interval,
+      @QueryParam("partitionNumber") final int partitionNumber,
+      @QueryParam("version") final String version
+  )
+  {
+    try {
+      final List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSourceName);
+      final Interval theInterval = Intervals.of(interval);
+      final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
+      final DateTime now = DateTimes.nowUtc();
+      // dropped means a segment will never be handed off, i.e it completed hand off
+      // init to true, reset to false only if this segment can be loaded by rules
+      boolean dropped = true;
+      for (Rule rule : rules) {
+        if (rule.appliesTo(theInterval, now)) {
+          if (rule instanceof LoadRule) {
+            dropped = false;
+          }
+          break;
+        }
+      }
+      if (dropped) {
+        return Response.ok(true).build();
+      }
+
+      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+          new TableDataSource(dataSourceName)
+      );
+      if (timeline == null) {
+        log.debug("No timeline found for datasource[%s]", dataSourceName);
+        return Response.ok(false).build();
+      }
+
+      Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(
+          theInterval);
+      FunctionalIterable<ImmutableSegmentLoadInfo> loadInfoIterable = FunctionalIterable
+          .create(lookup).transformCat(
+              (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
+                  Iterables.transform(
+                      input.getObject(),
+                      (PartitionChunk<SegmentLoadInfo> chunk) ->
+                          chunk.getObject().toImmutableSegmentLoadInfo()
+                  )
+          );
+      if (isSegmentLoaded(loadInfoIterable, descriptor)) {
+        return Response.ok(true).build();
+      }
+
+      return Response.ok(false).build();
+    }
+    catch (Exception e) {
+      log.error(e, "Error while handling hand off check request");
+      return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
+    }
+  }
+
+  static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
+  {
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
+      if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+          && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
+          && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
+          && Iterables.any(
+          segmentLoadInfo.getServers(), DruidServerMetadata::segmentReplicatable
+      )) {
+        return true;
+      }
+    }
+    return false;
   }
 }

@@ -93,7 +93,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -485,9 +484,9 @@ public class OverlordResource
               retMap = new HashMap<>();
               retMap.put("result", ret);
             }
-            catch (IOException e) {
+            catch (Exception e) {
               log.warn(e, "Failed to perform task action");
-              return Response.serverError().build();
+              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
             }
 
             return Response.ok().entity(retMap).build();

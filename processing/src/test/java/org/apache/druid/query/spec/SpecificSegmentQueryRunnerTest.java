@@ -21,10 +21,10 @@ package org.apache.druid.query.spec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -116,6 +116,7 @@ public class SpecificSegmentQueryRunnerTest
         new YieldingAccumulator()
         {
           final List lists = new ArrayList<>();
+
           @Override
           public Object accumulate(Object accumulated, Object in)
           {
@@ -162,7 +163,7 @@ public class SpecificSegmentQueryRunnerTest
                     throw new SegmentMissingException("FAILSAUCE");
                   }
                 },
-                MoreExecutors.sameThreadExecutor()
+                Execs.directExecutor()
             );
           }
         },

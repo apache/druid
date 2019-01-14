@@ -24,10 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
@@ -304,7 +304,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -372,7 +372,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -440,7 +440,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -557,7 +557,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -609,7 +609,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -671,7 +671,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -729,7 +729,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -787,7 +787,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -832,7 +832,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
                 //https://github.com/apache/incubator-druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare

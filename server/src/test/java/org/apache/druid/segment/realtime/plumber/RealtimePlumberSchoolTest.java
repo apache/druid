@@ -24,7 +24,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
@@ -38,6 +37,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -79,6 +79,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class RealtimePlumberSchoolTest
@@ -115,7 +116,10 @@ public class RealtimePlumberSchoolTest
   private FireDepartmentMetrics metrics;
   private File tmpDir;
 
-  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  public RealtimePlumberSchoolTest(
+      RejectionPolicyFactory rejectionPolicy,
+      SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  )
   {
     this.rejectionPolicy = rejectionPolicy;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
@@ -219,7 +223,7 @@ public class RealtimePlumberSchoolTest
         announcer,
         segmentPublisher,
         handoffNotifierFactory,
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory),
         TestHelper.getTestIndexIO(),
         MapCache.create(0),

@@ -22,10 +22,10 @@ package org.apache.druid.query.scan;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class MultiSegmentScanQueryTest
@@ -167,7 +168,10 @@ public class MultiSegmentScanQueryTest
   @Parameterized.Parameters(name = "limit={0},batchSize={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    return QueryRunnerTestHelper.cartesian(Arrays.asList(0, 1, 3, 7, 10, 20, 1000), Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000));
+    return QueryRunnerTestHelper.cartesian(
+        Arrays.asList(0, 1, 3, 7, 10, 20, 1000),
+        Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000)
+    );
   }
 
   private final int limit;
@@ -196,8 +200,9 @@ public class MultiSegmentScanQueryTest
     ScanQuery query = newBuilder().build();
     List<ScanResultValue> results = factory
         .mergeRunners(
-            MoreExecutors.sameThreadExecutor(),
-            ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1)))
+            Execs.directExecutor(),
+            ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1))
+        )
         .run(QueryPlus.wrap(query), new HashMap<>())
         .toList();
     int totalCount = 0;
@@ -215,7 +220,8 @@ public class MultiSegmentScanQueryTest
   public void testMergeResultsWithLimit()
   {
     QueryRunner<ScanResultValue> runner = toolChest.mergeResults(
-        new QueryRunner<ScanResultValue>() {
+        new QueryRunner<ScanResultValue>()
+        {
           @Override
           public Sequence<ScanResultValue> run(
               QueryPlus<ScanResultValue> queryPlus,

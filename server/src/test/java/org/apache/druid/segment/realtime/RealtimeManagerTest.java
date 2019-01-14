@@ -27,7 +27,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -41,6 +40,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -100,6 +100,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class RealtimeManagerTest
 {
@@ -1018,7 +1019,8 @@ public class RealtimeManagerTest
     }
 
     @Override
-    public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+    public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier)
+        throws IndexSizeExceededException
     {
       if (row == null) {
         return Plumber.THROWAWAY;
@@ -1055,7 +1057,7 @@ public class RealtimeManagerTest
         return factory.getToolchest()
                       .mergeResults(
                           factory.mergeRunners(
-                              MoreExecutors.sameThreadExecutor(),
+                              Execs.directExecutor(),
                               Iterables.transform(
                                   baseQuery.getIntervals(),
                                   new Function<Interval, QueryRunner<T>>()

@@ -209,6 +209,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         new SeekableStreamPartitions<>(kafkaIoConfig.getTopic(), startPartitions),
         new SeekableStreamPartitions<>(kafkaIoConfig.getTopic(), endPartitions),
         kafkaIoConfig.getConsumerProperties(),
+        kafkaIoConfig.getPollTimeout(),
         true,
         minimumMessageTime,
         maximumMessageTime,
