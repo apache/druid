@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
 import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -35,6 +36,8 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
 
   @Inject
   IntegrationTestingConfig config;
+  @Inject
+  protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
@@ -86,7 +89,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     submitTaskAndWait(indexTaskFilePath, dataSource);
     try {
-      queryHelper.testSqlQueriesFromFile(queryFilePath, 2);
+      sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");

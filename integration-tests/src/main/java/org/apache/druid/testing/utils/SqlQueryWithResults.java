@@ -20,45 +20,21 @@
 package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.sql.http.SqlQuery;
 
 import java.util.List;
 import java.util.Map;
 
-public class SqlQueryWithResults
+public class SqlQueryWithResults extends AbstractQueryWithResults<SqlQuery>
 {
-  private final SqlQuery sqlQuery;
-  private final List<Map<String, Object>> expectedResults;
 
   @JsonCreator
   public SqlQueryWithResults(
-      @JsonProperty("sqlQuery") SqlQuery query,
-      @JsonProperty("expectedResults") List<Map<String, Object>> expectedResults
+      SqlQuery query,
+      List<Map<String, Object>> expectedResults
   )
   {
-    this.sqlQuery = query;
-    this.expectedResults = expectedResults;
+    super(query, expectedResults);
   }
 
-  @JsonProperty
-  public SqlQuery getSqlQuery()
-  {
-    return sqlQuery;
-  }
-
-  @JsonProperty
-  public List<Map<String, Object>> getExpectedResults()
-  {
-    return expectedResults;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "QueryWithResults{" +
-           "query=" + sqlQuery +
-           ", expectedResults=" + expectedResults +
-           '}';
-  }
 }

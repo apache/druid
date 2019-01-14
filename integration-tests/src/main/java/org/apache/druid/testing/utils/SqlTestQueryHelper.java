@@ -23,19 +23,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.clients.QueryResourceTestClient;
+import org.apache.druid.testing.clients.SqlResourceTestClient;
 
-public class TestQueryHelper extends AbstractTestQueryHelper<QueryWithResults>
+public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResults>
 {
 
   @Inject
-  TestQueryHelper(
+  public SqlTestQueryHelper(
       ObjectMapper jsonMapper,
-      QueryResourceTestClient queryClient,
+      SqlResourceTestClient sqlClient,
       IntegrationTestingConfig config
   )
   {
-    super(jsonMapper, queryClient, config);
+    super(jsonMapper, sqlClient, config);
   }
 
   @Override
@@ -47,19 +47,9 @@ public class TestQueryHelper extends AbstractTestQueryHelper<QueryWithResults>
     testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
   }
 
-  public void testQueriesFromString(String str, int timesToRun) throws Exception
-  {
-    testQueriesFromString(getQueryURL(broker), str, timesToRun);
-    testQueriesFromString(getQueryURL(brokerTLS), str, timesToRun);
-    testQueriesFromString(getQueryURL(router), str, timesToRun);
-    testQueriesFromString(getQueryURL(routerTLS), str, timesToRun);
-  }
-
-
   @Override
   protected String getQueryURL(String schemeAndHost)
   {
-    return StringUtils.format("%s/druid/v2?pretty", schemeAndHost);
+    return StringUtils.format("%s/druid/v2/sql", schemeAndHost);
   }
-
 }

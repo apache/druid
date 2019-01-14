@@ -25,7 +25,7 @@ import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.RetryUtil;
-import org.apache.druid.testing.utils.TestQueryHelper;
+import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -40,7 +40,7 @@ public class ITSystemTableQueryTest
   @Inject
   CoordinatorResourceTestClient coordinatorClient;
   @Inject
-  private TestQueryHelper queryHelper;
+  private SqlTestQueryHelper queryHelper;
   @Inject
   IntegrationTestingConfig config;
 
@@ -62,7 +62,7 @@ public class ITSystemTableQueryTest
   public void testSystemTableQueries()
   {
     try {
-      this.queryHelper.testSqlQueriesFromFile(SYSTEM_QUERIES_RESOURCE, 2);
+      this.queryHelper.testQueriesFromFile(SYSTEM_QUERIES_RESOURCE, 2);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
