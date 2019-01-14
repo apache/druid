@@ -24,6 +24,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.ints.IntIterable;
+import it.unimi.dsi.fastutil.ints.IntIterator;
+import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.query.BitmapResultFactory;
@@ -46,15 +49,15 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IntIteratorUtils;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.data.Indexed;
-import it.unimi.dsi.fastutil.ints.IntIterable;
-import it.unimi.dsi.fastutil.ints.IntIterator;
-import it.unimi.dsi.fastutil.ints.IntList;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -268,14 +271,18 @@ public class Filters
     Preconditions.checkNotNull(predicate, "predicate");
 
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    final Indexed<String> dimValues = selector.getDimensionValues(dimension);
-    if (dimValues == null || dimValues.size() == 0) {
-      return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
-    }
+    try (final CloseableIndexed<String> dimValues = selector.getDimensionValues(dimension)) {
+      if (dimValues == null || dimValues.size() == 0) {
+        return ImmutableList.of(predicate.apply(null) ? allTrue(selector) : allFalse(selector));
+      }
 
-    // Apply predicate to all dimension values and union the matching bitmaps
-    final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
-    return makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues);
+      // Apply predicate to all dimension values and union the matching bitmaps
+      final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
+      return makePredicateQualifyingBitmapIterable(bitmapIndex, predicate, dimValues);
+    }
+    catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
@@ -300,18 +307,24 @@ public class Filters
     Preconditions.checkNotNull(predicate, "predicate");
 
     // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
-    final Indexed<String> dimValues = indexSelector.getDimensionValues(dimension);
-    if (dimValues == null || dimValues.size() == 0) {
-      return predicate.apply(null) ? 1. : 0.;
-    }
+    try (final CloseableIndexed<String> dimValues = indexSelector.getDimensionValues(dimension)) {
+      if (dimValues == null || dimValues.size() == 0) {
+        return predicate.apply(null) ? 1. : 0.;
+      }
 
-    // Apply predicate to all dimension values and union the matching bitmaps
-    final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
-    return estimateSelectivity(
-        bitmapIndex,
-        IntIteratorUtils.toIntList(makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues).iterator()),
-        indexSelector.getNumRows()
-    );
+      // Apply predicate to all dimension values and union the matching bitmaps
+      final BitmapIndex bitmapIndex = indexSelector.getBitmapIndex(dimension);
+      return estimateSelectivity(
+          bitmapIndex,
+          IntIteratorUtils.toIntList(
+              makePredicateQualifyingIndexIterable(bitmapIndex, predicate, dimValues).iterator()
+          ),
+          indexSelector.getNumRows()
+      );
+    }
+    catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   /**
@@ -384,7 +397,7 @@ public class Filters
         {
           private final int bitmapIndexCardinality = bitmapIndex.getCardinality();
           private int nextIndex = 0;
-          private int found = -1;
+          private int found;
 
           {
             found = findNextIndex();
@@ -432,9 +445,9 @@ public class Filters
   )
   {
     if (filter.supportsBitmapIndex(indexSelector)) {
-      final Column column = columnSelector.getColumn(dimension);
-      if (column != null) {
-        return !column.getCapabilities().hasMultipleValues();
+      final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
+      if (columnHolder != null) {
+        return !columnHolder.getCapabilities().hasMultipleValues();
       }
     }
     return false;
@@ -491,14 +504,14 @@ public class Filters
         return pushDownNot(((NotFilter) child).getBaseFilter());
       }
       if (child instanceof AndFilter) {
-        List<Filter> children = Lists.newArrayList();
+        List<Filter> children = new ArrayList<>();
         for (Filter grandChild : ((AndFilter) child).getFilters()) {
           children.add(pushDownNot(new NotFilter(grandChild)));
         }
         return new OrFilter(children);
       }
       if (child instanceof OrFilter) {
-        List<Filter> children = Lists.newArrayList();
+        List<Filter> children = new ArrayList<>();
         for (Filter grandChild : ((OrFilter) child).getFilters()) {
           children.add(pushDownNot(new NotFilter(grandChild)));
         }
@@ -508,7 +521,7 @@ public class Filters
 
 
     if (current instanceof AndFilter) {
-      List<Filter> children = Lists.newArrayList();
+      List<Filter> children = new ArrayList<>();
       for (Filter child : ((AndFilter) current).getFilters()) {
         children.add(pushDownNot(child));
       }
@@ -517,7 +530,7 @@ public class Filters
 
 
     if (current instanceof OrFilter) {
-      List<Filter> children = Lists.newArrayList();
+      List<Filter> children = new ArrayList<>();
       for (Filter child : ((OrFilter) current).getFilters()) {
         children.add(pushDownNot(child));
       }
@@ -534,7 +547,7 @@ public class Filters
       return new NotFilter(convertToCNFInternal(((NotFilter) current).getBaseFilter()));
     }
     if (current instanceof AndFilter) {
-      List<Filter> children = Lists.newArrayList();
+      List<Filter> children = new ArrayList<>();
       for (Filter child : ((AndFilter) current).getFilters()) {
         children.add(convertToCNFInternal(child));
       }
@@ -558,7 +571,7 @@ public class Filters
         }
       }
       if (!andList.isEmpty()) {
-        List<Filter> result = Lists.newArrayList();
+        List<Filter> result = new ArrayList<>();
         generateAllCombinations(result, andList, nonAndList);
         return new AndFilter(result);
       }
@@ -635,10 +648,7 @@ public class Filters
       }
     }
     if (andList.size() > 1) {
-      generateAllCombinations(
-          result, andList.subList(1, andList.size()),
-          nonAndList
-      );
+      generateAllCombinations(result, andList.subList(1, andList.size()), nonAndList);
     }
   }
 }

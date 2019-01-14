@@ -62,9 +62,8 @@ public class CassandraDataSegmentPuller extends CassandraStorage
     final File tmpFile = new File(outDir, "index.zip");
     log.info("Pulling to temporary local cache [%s]", tmpFile.getAbsolutePath());
 
-    final FileUtils.FileCopyResult localResult;
     try {
-      localResult = RetryUtils.retry(
+      RetryUtils.retry(
           () -> {
             try (OutputStream os = new FileOutputStream(tmpFile)) {
               ChunkedStorage

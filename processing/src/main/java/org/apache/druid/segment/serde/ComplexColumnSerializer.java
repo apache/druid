@@ -31,7 +31,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-public class ComplexColumnSerializer implements GenericColumnSerializer
+public class ComplexColumnSerializer<T> implements GenericColumnSerializer<T>
 {
   @PublicApi
   public static ComplexColumnSerializer create(SegmentWriteOutMedium segmentWriteOutMedium, String filenameBase, ObjectStrategy strategy)
@@ -60,7 +60,7 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<? extends T> selector) throws IOException
   {
     writer.write(selector.getObject());
   }

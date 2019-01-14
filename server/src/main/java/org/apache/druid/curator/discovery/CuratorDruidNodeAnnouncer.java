@@ -23,13 +23,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.curator.utils.ZKPaths;
 
 /**
  */
@@ -42,11 +42,7 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
   private final ObjectMapper jsonMapper;
 
   @Inject
-  public CuratorDruidNodeAnnouncer(
-      Announcer announcer,
-      ZkPathsConfig config,
-      @Json ObjectMapper jsonMapper
-  )
+  public CuratorDruidNodeAnnouncer(Announcer announcer, ZkPathsConfig config, @Json ObjectMapper jsonMapper)
   {
     this.announcer = announcer;
     this.config = config;
@@ -59,14 +55,12 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
     try {
       log.info("Announcing [%s].", discoveryDruidNode);
 
-      announcer.announce(
-          ZKPaths.makePath(
-              config.getInternalDiscoveryPath(),
-              discoveryDruidNode.getNodeType(),
-              discoveryDruidNode.getDruidNode().getHostAndPortToUse()
-          ),
-          jsonMapper.writeValueAsBytes(discoveryDruidNode)
+      String path = ZKPaths.makePath(
+          config.getInternalDiscoveryPath(),
+          discoveryDruidNode.getNodeType().toString(),
+          discoveryDruidNode.getDruidNode().getHostAndPortToUse()
       );
+      announcer.announce(path, jsonMapper.writeValueAsBytes(discoveryDruidNode));
 
       log.info("Announced [%s].", discoveryDruidNode);
     }
@@ -80,13 +74,12 @@ public class CuratorDruidNodeAnnouncer implements DruidNodeAnnouncer
   {
     log.info("Unannouncing [%s].", discoveryDruidNode);
 
-    announcer.unannounce(
-        ZKPaths.makePath(
-            config.getInternalDiscoveryPath(),
-            discoveryDruidNode.getNodeType(),
-            discoveryDruidNode.getDruidNode().getHostAndPortToUse()
-        )
+    String path = ZKPaths.makePath(
+        config.getInternalDiscoveryPath(),
+        discoveryDruidNode.getNodeType().toString(),
+        discoveryDruidNode.getDruidNode().getHostAndPortToUse()
     );
+    announcer.unannounce(path);
 
     log.info("Unannounced [%s].", discoveryDruidNode);
   }

@@ -26,6 +26,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.RetryOneTime;
+import org.apache.curator.test.TestingServer;
+import org.apache.curator.test.Timing;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -62,11 +67,6 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.RetryOneTime;
-import org.apache.curator.test.TestingServer;
-import org.apache.curator.test.Timing;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -166,7 +166,7 @@ public class OverlordTest
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
-    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
+    druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
     taskMaster = new TaskMaster(
         new TaskQueueConfig(null, new Period(1), null, new Period(10)),
@@ -248,7 +248,7 @@ public class OverlordTest
     Assert.assertEquals(taskId_0, ((TaskStatusResponse) response.getEntity()).getTask());
     Assert.assertEquals(
         TaskStatus.running(taskId_0).getStatusCode(),
-        ((TaskStatusResponse) response.getEntity()).getStatus().getState()
+        ((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode()
     );
 
     // Simulate completion of task_0
@@ -296,7 +296,7 @@ public class OverlordTest
   {
     while (true) {
       Response response = overlordResource.getTaskStatus(taskId);
-      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getState())) {
+      if (status.equals(((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode())) {
         break;
       }
       Thread.sleep(10);
@@ -408,7 +408,7 @@ public class OverlordTest
     }
 
     @Override
-    public void shutdown(String taskid) {}
+    public void shutdown(String taskid, String reason) {}
 
     @Override
     public synchronized Collection<? extends TaskRunnerWorkItem> getRunningTasks()

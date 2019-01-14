@@ -22,6 +22,10 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskLocation;
@@ -33,10 +37,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 
 /**
  * This class is deprecated and required only to support {@link org.apache.druid.indexing.overlord.RemoteTaskRunner}.
@@ -72,7 +72,11 @@ public class WorkerTaskMonitor extends WorkerTaskManager
 
     this.jsonMapper = jsonMapper;
     this.pathChildrenCache = new PathChildrenCache(
-        cf, workerCuratorCoordinator.getTaskPathForWorker(), false, true, Execs.makeThreadFactory("TaskMonitorCache-%s")
+        cf,
+        workerCuratorCoordinator.getTaskPathForWorker(),
+        false,
+        true,
+        Execs.makeThreadFactory("TaskMonitorCache-%s")
     );
     this.cf = cf;
     this.workerCuratorCoordinator = workerCuratorCoordinator;

@@ -28,8 +28,8 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
@@ -40,6 +40,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -59,33 +60,23 @@ public class ClusterResource
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getClusterServers(
-      @QueryParam("full") boolean full
-  )
+  public Response getClusterServers(@QueryParam("full") boolean full)
   {
-    ImmutableMap.Builder<String, Object> entityBuilder = new ImmutableMap.Builder<>();
+    ImmutableMap.Builder<NodeType, Object> entityBuilder = new ImmutableMap.Builder<>();
 
-    entityBuilder.put(DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
-                      getNodes(DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR, full)
-    );
-    entityBuilder.put(DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
-                      getNodes(DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD, full)
-    );
-    entityBuilder.put(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
-                      getNodes(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER, full)
-    );
-    entityBuilder.put(DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
-                      getNodes(DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL, full)
-    );
+    entityBuilder.put(NodeType.COORDINATOR, getNodes(NodeType.COORDINATOR, full));
+    entityBuilder.put(NodeType.OVERLORD, getNodes(NodeType.OVERLORD, full));
+    entityBuilder.put(NodeType.BROKER, getNodes(NodeType.BROKER, full));
+    entityBuilder.put(NodeType.HISTORICAL, getNodes(NodeType.HISTORICAL, full));
 
-    Collection<Object> mmNodes = getNodes(DruidNodeDiscoveryProvider.NODE_TYPE_MM, full);
+    Collection<Object> mmNodes = getNodes(NodeType.MIDDLE_MANAGER, full);
     if (!mmNodes.isEmpty()) {
-      entityBuilder.put(DruidNodeDiscoveryProvider.NODE_TYPE_MM, mmNodes);
+      entityBuilder.put(NodeType.MIDDLE_MANAGER, mmNodes);
     }
 
-    Collection<Object> routerNodes = getNodes(DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER, full);
+    Collection<Object> routerNodes = getNodes(NodeType.ROUTER, full);
     if (!routerNodes.isEmpty()) {
-      entityBuilder.put(DruidNodeDiscoveryProvider.NODE_TYPE_ROUTER, routerNodes);
+      entityBuilder.put(NodeType.ROUTER, routerNodes);
     }
 
     return Response.status(Response.Status.OK).entity(entityBuilder.build()).build();
@@ -94,28 +85,19 @@ public class ClusterResource
   @GET
   @Produces({MediaType.APPLICATION_JSON})
   @Path("/{nodeType}")
-  public Response getClusterServers(
-      @PathParam("nodeType") String nodeType,
-      @QueryParam("full") boolean full
-  )
+  public Response getClusterServers(@PathParam("nodeType") NodeType nodeType, @QueryParam("full") boolean full)
   {
-    if (nodeType == null || !DruidNodeDiscoveryProvider.ALL_NODE_TYPES.contains(nodeType)) {
+    if (nodeType == null) {
       return Response.serverError()
                      .status(Response.Status.BAD_REQUEST)
-                     .entity(StringUtils.format(
-                         "Invalid nodeType [%s]. Valid node types are %s .",
-                         nodeType,
-                         DruidNodeDiscoveryProvider.ALL_NODE_TYPES
-                     ))
+                     .entity("Invalid nodeType of null. Valid node types are " + Arrays.toString(NodeType.values()))
                      .build();
     } else {
-      return Response.status(Response.Status.OK).entity(
-          getNodes(nodeType, full)
-      ).build();
+      return Response.status(Response.Status.OK).entity(getNodes(nodeType, full)).build();
     }
   }
 
-  private Collection<Object> getNodes(String nodeType, boolean full)
+  private Collection<Object> getNodes(NodeType nodeType, boolean full)
   {
     Collection<DiscoveryDruidNode> discoveryDruidNodes = druidNodeDiscoveryProvider.getForNodeType(nodeType)
                                                                                    .getAllNodes();

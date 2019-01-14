@@ -412,7 +412,8 @@ public class JobHelper
     final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
-        DataPusher.class, new DataPusher()
+        DataPusher.class,
+        new DataPusher()
         {
           @Override
           public long push() throws IOException
@@ -469,7 +470,8 @@ public class JobHelper
       throws IOException
   {
     final DataPusher descriptorPusher = (DataPusher) RetryProxy.create(
-        DataPusher.class, new DataPusher()
+        DataPusher.class,
+        new DataPusher()
         {
           @Override
           public long push() throws IOException
@@ -488,7 +490,6 @@ public class JobHelper
                   progressable
               )) {
                 HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(descriptorOut, segment);
-                descriptorOut.flush();
               }
             }
             catch (RuntimeException | IOException ex) {
@@ -694,7 +695,8 @@ public class JobHelper
     }
 
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
-        DataPusher.class, new DataPusher()
+        DataPusher.class,
+        new DataPusher()
         {
           @Override
           public long push() throws IOException
@@ -763,7 +765,11 @@ public class JobHelper
       // getHdfsStorageDir. But that wouldn't fix this issue for people who already have segments with ":".
       // Because of this we just URL encode the : making everything work as it should.
       segmentLocURI = URI.create(
-          StringUtils.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
+          StringUtils.format(
+              "gs://%s/%s",
+              loadSpec.get("bucket"),
+              StringUtils.replaceChar(loadSpec.get("path").toString(), ':', "%3A")
+          )
       );
     } else if ("local".equals(type)) {
       try {

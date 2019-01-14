@@ -20,8 +20,8 @@
 package org.apache.druid.server;
 
 import com.google.inject.Inject;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;

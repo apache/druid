@@ -16,14 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
-import org.apache.druid.data.input.avro.AvroExtensionsModule;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.file.FileReader;
@@ -31,6 +30,8 @@ import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.data.input.avro.AvroExtensionsModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.pig.ExecType;
 import org.apache.pig.PigServer;
 import org.apache.pig.backend.executionengine.ExecJob;
@@ -83,7 +84,7 @@ public class AvroHadoopInputRowParserTest
         AvroHadoopInputRowParser.class
     );
     InputRow inputRow = parser2.parseBatch(record).get(0);
-    assertInputRowCorrect(inputRow, DIMENSIONS);
+    assertInputRowCorrect(inputRow, DIMENSIONS, fromPigAvroStorage);
   }
 
 

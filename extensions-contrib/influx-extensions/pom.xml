@@ -22,7 +22,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.apache.druid.extensions</groupId>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>druid-influx-extensions</artifactId>
   <name>druid-influx-extensions</name>
   <description>druid-influx-extensions</description>
@@ -30,7 +30,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-SNAPSHOT</version>
+    <version>0.13.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
@@ -43,7 +43,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
-      <artifactId>druid-common</artifactId>
+      <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>

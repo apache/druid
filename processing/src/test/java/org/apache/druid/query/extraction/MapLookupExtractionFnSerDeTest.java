@@ -55,7 +55,7 @@ public class MapLookupExtractionFnSerDeTest
   @Test
   public void testDeserialization() throws IOException
   {
-    final DimExtractionFn fn = mapper.reader(DimExtractionFn.class).readValue(
+    final DimExtractionFn fn = mapper.readerFor(DimExtractionFn.class).readValue(
         StringUtils.format(
             "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}}",
             mapper.writeValueAsString(renames)
@@ -68,12 +68,16 @@ public class MapLookupExtractionFnSerDeTest
     Assert.assertEquals(null, fn.apply(crazyString));
 
     Assert.assertEquals(
-        crazyString, mapper.reader(DimExtractionFn.class).<DimExtractionFn>readValue(
-            StringUtils.format(
-                "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}, \"retainMissingValue\":true}",
-                mapper.writeValueAsString(renames)
+        crazyString,
+        mapper
+            .readerFor(DimExtractionFn.class)
+            .<DimExtractionFn>readValue(
+                StringUtils.format(
+                    "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}, \"retainMissingValue\":true}",
+                    mapper.writeValueAsString(renames)
+                )
             )
-        ).apply(crazyString)
+            .apply(crazyString)
     );
   }
 }

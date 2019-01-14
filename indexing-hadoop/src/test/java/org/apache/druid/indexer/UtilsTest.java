@@ -22,9 +22,9 @@ package org.apache.druid.indexer;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -68,7 +68,7 @@ public class UtilsTest
     @Override
     public Object apply(Object input)
     {
-      return input.toString() + DUMMY_STRING;
+      return input + DUMMY_STRING;
     }
   }
 

@@ -16,13 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input.avro;
 
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.mapreduce.AvroJob;
 import org.apache.commons.lang.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,9 +46,8 @@ public class AvroValueInputFormat extends FileInputFormat<NullWritable, GenericR
    * {@inheritDoc}
    */
   @Override
-  public RecordReader<NullWritable, GenericRecord> createRecordReader(
-      InputSplit split, TaskAttemptContext context
-  ) throws IOException
+  public RecordReader<NullWritable, GenericRecord> createRecordReader(InputSplit split, TaskAttemptContext context)
+      throws IOException
   {
     Schema readerSchema = AvroJob.getInputValueSchema(context.getConfiguration());
 

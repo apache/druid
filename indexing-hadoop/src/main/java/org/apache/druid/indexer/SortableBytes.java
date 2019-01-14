@@ -115,10 +115,7 @@ public class SortableBytes
       int b1Length = ByteBuffer.wrap(b1, s1 + 4, l1 - 4).getInt();
       int b2Length = ByteBuffer.wrap(b2, s2 + 4, l2 - 4).getInt();
 
-      final int retVal = compareBytes(
-          b1, s1 + 8, b1Length,
-          b2, s2 + 8, b2Length
-      );
+      final int retVal = compareBytes(b1, s1 + 8, b1Length, b2, s2 + 8, b2Length);
 
       return retVal;
     }
@@ -138,15 +135,16 @@ public class SortableBytes
       int b1Length = ByteBuffer.wrap(b1, s1 + 4, l1 - 4).getInt();
       int b2Length = ByteBuffer.wrap(b2, s2 + 4, l2 - 4).getInt();
 
-      int retVal = compareBytes(
-          b1, s1 + 8, b1Length,
-          b2, s2 + 8, b2Length
-      );
+      int retVal = compareBytes(b1, s1 + 8, b1Length, b2, s2 + 8, b2Length);
 
       if (retVal == 0) {
         retVal = compareBytes(
-            b1, s1 + 8 + b1Length, l1 - 8 - b1Length,
-            b2, s2 + 8 + b2Length, l2 - 8 - b2Length
+            b1,
+            s1 + 8 + b1Length,
+            l1 - 8 - b1Length,
+            b2,
+            s2 + 8 + b2Length,
+            l2 - 8 - b2Length
         );
       }
 

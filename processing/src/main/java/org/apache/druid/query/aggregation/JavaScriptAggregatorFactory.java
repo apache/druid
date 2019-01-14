@@ -27,11 +27,14 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.ContextFactory;
@@ -57,8 +60,15 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   private final String fnCombine;
   private final JavaScriptConfig config;
 
-  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
-  private JavaScriptAggregator.ScriptAggregator compiledScript;
+  /**
+   * The field is declared volatile in order to ensure safe publication of the object
+   * in {@link #compileScript(String, String, String)} without worrying about final modifiers
+   * on the fields of the created object
+   *
+   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
+   */
+  private volatile JavaScriptAggregator.@MonotonicNonNull ScriptAggregator compiledScript;
 
   @JsonCreator
   public JavaScriptAggregatorFactory(
@@ -88,7 +98,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
-    checkAndCompileScript();
+    JavaScriptAggregator.ScriptAggregator compiledScript = getCompiledScript();
     return new JavaScriptAggregator(
         fieldNames.stream().map(columnFactory::makeColumnValueSelector).collect(Collectors.toList()),
         compiledScript
@@ -98,7 +108,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
-    checkAndCompileScript();
+    JavaScriptAggregator.ScriptAggregator compiledScript = getCompiledScript();
     return new JavaScriptBufferAggregator(
         fieldNames.stream().map(columnSelectorFactory::makeColumnValueSelector).collect(Collectors.toList()),
         compiledScript
@@ -114,7 +124,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    checkAndCompileScript();
+    JavaScriptAggregator.ScriptAggregator compiledScript = getCompiledScript();
     return compiledScript.combine(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
@@ -134,7 +144,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(ColumnValueSelector selector)
       {
-        checkAndCompileScript();
+        JavaScriptAggregator.ScriptAggregator compiledScript = getCompiledScript();
         combined = compiledScript.combine(combined, selector.getDouble());
       }
 
@@ -282,19 +292,24 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
    * This class can be used by multiple threads, so this function should be thread-safe to avoid extra
    * script compilation.
    */
-  private void checkAndCompileScript()
+  @EnsuresNonNull("compiledScript")
+  private JavaScriptAggregator.ScriptAggregator getCompiledScript()
   {
-    if (compiledScript == null) {
-      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+    // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+    // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
+    JavaScriptAggregator.ScriptAggregator syncedCompiledScript = compiledScript;
+    if (syncedCompiledScript == null) {
       synchronized (config) {
-        if (compiledScript == null) {
-          compiledScript = compileScript(fnAggregate, fnReset, fnCombine);
+        syncedCompiledScript = compiledScript;
+        if (syncedCompiledScript == null) {
+          syncedCompiledScript = compileScript(fnAggregate, fnReset, fnCombine);
+          compiledScript = syncedCompiledScript;
         }
       }
     }
+    return syncedCompiledScript;
   }
 
   @VisibleForTesting
@@ -339,11 +354,11 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
             if (arg != null && arg.getClass().isArray()) {
               // Context.javaToJS on an array sort of works, although it returns false for Array.isArray(...) and
               // may have other issues too. Let's just copy the array and wrap that.
-              final Object[] arrayAsObjectArray = new Object[Array.getLength(arg)];
-              for (int j = 0; j < Array.getLength(arg); j++) {
-                arrayAsObjectArray[j] = Array.get(arg, j);
-              }
-              args[i + 1] = cx.newArray(scope, arrayAsObjectArray);
+              args[i + 1] = cx.newArray(scope, arrayToObjectArray(arg));
+            } else if (arg instanceof List) {
+              // Using toArray(Object[]), instead of just toArray(), because Arrays.asList()'s impl and similar List
+              // impls could clone the underlying array in toArray(), that could be not Object[], but e. g. String[].
+              args[i + 1] = cx.newArray(scope, ((List) arg).toArray(ObjectArrays.EMPTY_ARRAY));
             } else {
               args[i + 1] = Context.javaToJS(arg, scope);
             }
@@ -352,6 +367,16 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
 
         final Object res = fnAggregate.call(cx, scope, scope, args);
         return Context.toNumber(res);
+      }
+
+      private Object[] arrayToObjectArray(Object array)
+      {
+        int len = Array.getLength(array);
+        final Object[] objectArray = new Object[len];
+        for (int j = 0; j < len; j++) {
+          objectArray[j] = Array.get(array, j);
+        }
+        return objectArray;
       }
 
       @Override

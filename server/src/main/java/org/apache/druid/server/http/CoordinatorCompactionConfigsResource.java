@@ -27,7 +27,6 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -66,35 +65,27 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactConfig()
   {
-    return Response.ok(
-        manager.watch(
-            CoordinatorCompactionConfig.CONFIG_KEY,
-            CoordinatorCompactionConfig.class
-        ).get()
-    ).build();
+    return Response.ok(CoordinatorCompactionConfig.current(manager)).build();
   }
 
   @POST
+  @Path("/taskslots")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response setCompactionTaskLimit(
-      @QueryParam("slotRatio") Double compactionTaskSlotRatio,
-      @QueryParam("maxSlots") Integer maxCompactionTaskSlots,
+      @QueryParam("ratio") Double compactionTaskSlotRatio,
+      @QueryParam("max") Integer maxCompactionTaskSlots,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
       @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
-    CoordinatorCompactionConfig current = manager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class
-    ).get();
+    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
 
-    final CoordinatorCompactionConfig newCompactionConfig;
-    if (current != null) {
-      newCompactionConfig = CoordinatorCompactionConfig.from(current, compactionTaskSlotRatio, maxCompactionTaskSlots);
-    } else {
-      newCompactionConfig = new CoordinatorCompactionConfig(null, compactionTaskSlotRatio, maxCompactionTaskSlots);
-    }
+    final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
+        current,
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots
+    );
 
     final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
@@ -112,45 +103,22 @@ public class CoordinatorCompactionConfigsResource
   }
 
   @POST
-  @Path("/{dataSource}")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response addOrUpdateCompactionConfig(
       final DataSourceCompactionConfig newConfig,
-      @PathParam("dataSource") String dataSource,
       @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
       @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
-    if (!dataSource.equals(newConfig.getDataSource())) {
-      return Response
-          .status(Response.Status.BAD_REQUEST)
-          .entity(
-              StringUtils.format(
-                  "dataSource[%s] in config is different from the requested one[%s]",
-                  newConfig.getDataSource(),
-                  dataSource
-              )
-          )
-          .build();
-    }
-
-    CoordinatorCompactionConfig current = manager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class
-    ).get();
-
+    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final CoordinatorCompactionConfig newCompactionConfig;
-    if (current != null) {
-      final Map<String, DataSourceCompactionConfig> newConfigs = current
-          .getCompactionConfigs()
-          .stream()
-          .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-      newConfigs.put(dataSource, newConfig);
-      newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
-    } else {
-      newCompactionConfig = CoordinatorCompactionConfig.from(ImmutableList.of(newConfig));
-    }
+    final Map<String, DataSourceCompactionConfig> newConfigs = current
+        .getCompactionConfigs()
+        .stream()
+        .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+    newConfigs.put(newConfig.getDataSource(), newConfig);
+    newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 
     final SetResult setResult = manager.set(
         CoordinatorCompactionConfig.CONFIG_KEY,
@@ -170,15 +138,7 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactionConfig(@PathParam("dataSource") String dataSource)
   {
-    CoordinatorCompactionConfig current = manager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class
-    ).get();
-
-    if (current == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
-    }
-
+    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final Map<String, DataSourceCompactionConfig> configs = current
         .getCompactionConfigs()
         .stream()
@@ -202,15 +162,7 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    CoordinatorCompactionConfig current = manager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class
-    ).get();
-
-    if (current == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
-    }
-
+    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
     final Map<String, DataSourceCompactionConfig> configs = current
         .getCompactionConfigs()
         .stream()

@@ -71,12 +71,6 @@ public class LongMaxAggregator implements Aggregator
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new LongMaxAggregator(selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup

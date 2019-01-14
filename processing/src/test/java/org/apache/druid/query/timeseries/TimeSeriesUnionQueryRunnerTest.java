@@ -50,9 +50,7 @@ public class TimeSeriesUnionQueryRunnerTest
   private final QueryRunner runner;
   private final boolean descending;
 
-  public TimeSeriesUnionQueryRunnerTest(
-      QueryRunner runner, boolean descending
-  )
+  public TimeSeriesUnionQueryRunnerTest(QueryRunner runner, boolean descending)
   {
     this.runner = runner;
     this.descending = descending;

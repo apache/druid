@@ -103,7 +103,10 @@ public class NullableValueGroupByColumnSelectorStrategy implements GroupByColumn
 
   @Override
   public boolean checkRowIndexAndAddValueToGroupingKey(
-      int keyBufferPosition, Object rowObj, int rowValIdx, ByteBuffer keyBuffer
+      int keyBufferPosition,
+      Object rowObj,
+      int rowValIdx,
+      ByteBuffer keyBuffer
   )
   {
     // rows from a nullable column always have a single value, multi-value is not currently supported

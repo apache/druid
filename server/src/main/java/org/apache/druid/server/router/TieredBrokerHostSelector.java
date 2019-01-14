@@ -25,21 +25,23 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.client.selector.Server;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.coordinator.rules.LoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,12 +127,12 @@ public class TieredBrokerHostSelector<T>
         servers.put(entry.getValue(), new NodesHolder());
       }
 
-      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_BROKER);
+      DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.BROKER);
       druidNodeDiscovery.registerListener(
           new DruidNodeDiscovery.Listener()
           {
             @Override
-            public void nodesAdded(List<DiscoveryDruidNode> nodes)
+            public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
             {
               nodes.forEach(
                   (node) -> {
@@ -143,7 +145,7 @@ public class TieredBrokerHostSelector<T>
             }
 
             @Override
-            public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+            public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
             {
               nodes.forEach(
                   (node) -> {

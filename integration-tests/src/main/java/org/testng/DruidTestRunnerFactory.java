@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.testng;
+package /*CHECKSTYLE.OFF: PackageName*/org.testng/*CHECKSTYLE.ON: PackageName*/;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Injector;
@@ -43,6 +43,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * This class must be in package org.testng to access protected methods like TestNG.getDefault().getConfiguration()
+ */
 public class DruidTestRunnerFactory implements ITestRunnerFactory
 {
   private static final Logger LOG = new Logger(DruidTestRunnerFactory.class);

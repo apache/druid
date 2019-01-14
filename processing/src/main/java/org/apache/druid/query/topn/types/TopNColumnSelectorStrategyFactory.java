@@ -37,7 +37,8 @@ public class TopNColumnSelectorStrategyFactory implements ColumnSelectorStrategy
 
   @Override
   public TopNColumnSelectorStrategy makeColumnSelectorStrategy(
-      ColumnCapabilities capabilities, ColumnValueSelector selector
+      ColumnCapabilities capabilities,
+      ColumnValueSelector selector
   )
   {
     final ValueType selectorType = capabilities.getType();

@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input.orc;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -25,7 +26,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -36,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.io.orc.OrcSerde;
 import org.apache.hadoop.hive.ql.io.orc.OrcStruct;
 import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -81,8 +84,11 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   {
     this.parseSpec = parseSpec;
     this.typeString = typeString == null ? typeStringFromParseSpec(parseSpec) : typeString;
-    this.mapFieldNameFormat = mapFieldNameFormat == null || mapFieldNameFormat.indexOf(MAP_PARENT_TAG) < 0 || mapFieldNameFormat.indexOf(MAP_CHILD_TAG) < 0 ? DEFAULT_MAP_FIELD_NAME_FORMAT : mapFieldNameFormat;
-    this.mapParentFieldNameFormat = this.mapFieldNameFormat.replace(MAP_PARENT_TAG, "%s");
+    this.mapFieldNameFormat =
+        mapFieldNameFormat == null ||
+        !mapFieldNameFormat.contains(MAP_PARENT_TAG) ||
+        !mapFieldNameFormat.contains(MAP_CHILD_TAG) ? DEFAULT_MAP_FIELD_NAME_FORMAT : mapFieldNameFormat;
+    this.mapParentFieldNameFormat = StringUtils.replace(this.mapFieldNameFormat, MAP_PARENT_TAG, "%s");
     this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.oip = makeObjectInspector(this.typeString);
   }
@@ -91,7 +97,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   @Override
   public List<InputRow> parseBatch(OrcStruct input)
   {
-    Map<String, Object> map = Maps.newHashMap();
+    Map<String, Object> map = new HashMap<>();
     List<? extends StructField> fields = oip.getAllStructFieldRefs();
     for (StructField field : fields) {
       ObjectInspector objectInspector = field.getFieldObjectInspector();
@@ -125,6 +131,14 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     TimestampSpec timestampSpec = parseSpec.getTimestampSpec();
     DateTime dateTime = timestampSpec.extractTimestamp(map);
 
+    final List<String> dimensions;
+    if (!this.dimensions.isEmpty()) {
+      dimensions = this.dimensions;
+    } else {
+      dimensions = Lists.newArrayList(
+          Sets.difference(map.keySet(), parseSpec.getDimensionsSpec().getDimensionExclusions())
+      );
+    }
     return ImmutableList.of(new MapBasedInputRow(dateTime, dimensions, map));
   }
 
@@ -155,7 +169,11 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     if (mapObjectInspector.getMapSize(mapObject) < 0) {
       return;
     }
-    String mapChildFieldNameFormat = StringUtils.format(mapParentFieldNameFormat, parentName).replace(MAP_CHILD_TAG, "%s");
+    String mapChildFieldNameFormat = StringUtils.replace(
+        StringUtils.format(mapParentFieldNameFormat, parentName),
+        MAP_CHILD_TAG,
+        "%s"
+    );
 
     Map objectMap = mapObjectInspector.getMap(mapObject);
     PrimitiveObjectInspector key = (PrimitiveObjectInspector) mapObjectInspector.getMapKeyObjectInspector();
@@ -226,9 +244,16 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   {
     StringBuilder builder = new StringBuilder("struct<");
     builder.append(parseSpec.getTimestampSpec().getTimestampColumn()).append(":string");
+    // the typeString seems positionally dependent, so repeated timestamp column causes incorrect mapping
     if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0) {
       builder.append(",");
-      builder.append(String.join(":string,", parseSpec.getDimensionsSpec().getDimensionNames()));
+      builder.append(String.join(
+          ":string,",
+          parseSpec.getDimensionsSpec()
+                   .getDimensionNames()
+                   .stream()
+                   .filter(s -> !s.equals(parseSpec.getTimestampSpec().getTimestampColumn()))
+                   .collect(Collectors.toList())));
       builder.append(":string");
     }
     builder.append(">");
@@ -241,6 +266,8 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     if (object instanceof HiveDecimalWritable) {
       // inspector on HiveDecimal rounds off to integer for some reason.
       return ((HiveDecimalWritable) object).getHiveDecimal().doubleValue();
+    } else if (object instanceof DateWritable) {
+      return object.toString();
     } else {
       return inspector.getPrimitiveJavaObject(object);
     }

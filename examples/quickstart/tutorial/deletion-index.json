@@ -49,14 +49,14 @@
       "type" : "index",
       "firehose" : {
         "type" : "local",
-        "baseDir" : "quickstart/",
+        "baseDir" : "quickstart/tutorial/",
         "filter" : "wikiticker-2015-09-12-sampled.json.gz"
       },
       "appendToExisting" : false
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000,
+      "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000,
       "forceExtendableShardSpecs" : true
     }

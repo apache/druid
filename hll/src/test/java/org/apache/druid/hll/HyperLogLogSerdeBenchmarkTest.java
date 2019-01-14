@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.hll;
 
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
@@ -47,6 +48,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
 {
   private final HyperLogLogCollector collector;
   private final long NUM_HASHES;
+
   public HyperLogLogSerdeBenchmarkTest(final HyperLogLogCollector collector, Long num_hashes)
   {
     this.collector = collector;
@@ -74,7 +76,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     );
   }
 
-  private static final class priorByteBufferSerializer extends HLLCV1
+  private static final class priorByteBufferSerializer extends VersionOneHyperLogLogCollector
   {
     @Override
     public ByteBuffer toByteBuffer()
@@ -108,7 +110,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     }
   }
 
-  private static final class newByteBufferSerializer extends HLLCV1
+  private static final class newByteBufferSerializer extends VersionOneHyperLogLogCollector
   {
     @Override
     public ByteBuffer toByteBuffer()
@@ -163,7 +165,7 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
   }
 
 
-  private static final class newByteBufferSerializerWithPuts extends HLLCV1
+  private static final class newByteBufferSerializerWithPuts extends VersionOneHyperLogLogCollector
   {
     @Override
     public ByteBuffer toByteBuffer()

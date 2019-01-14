@@ -16,19 +16,20 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input.avro;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.schemarepo.SubjectAndIdConverter;
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.util.ByteBufferInputStream;
+import org.apache.druid.data.input.schemarepo.SubjectAndIdConverter;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.schemarepo.Repository;
 import org.schemarepo.api.TypedSchemaRepository;
 import org.schemarepo.api.converter.AvroSchemaConverter;
@@ -84,7 +85,9 @@ public class SchemaRepoBasedAvroBytesDecoder<SUBJECT, ID> implements AvroBytesDe
     catch (EOFException eof) {
       // waiting for avro v1.9.0 (#AVRO-813)
       throw new ParseException(
-          eof, "Avro's unnecessary EOFException, detail: [%s]", "https://issues.apache.org/jira/browse/AVRO-813"
+          eof,
+          "Avro's unnecessary EOFException, detail: [%s]",
+          "https://issues.apache.org/jira/browse/AVRO-813"
       );
     }
     catch (IOException e) {

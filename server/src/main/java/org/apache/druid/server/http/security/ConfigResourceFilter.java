@@ -22,8 +22,8 @@ package org.apache.druid.server.http.security;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -67,14 +67,5 @@ public class ConfigResourceFilter extends AbstractResourceFilter
     }
 
     return request;
-  }
-
-  @Override
-  public boolean isApplicable(String requestPath)
-  {
-    return requestPath.startsWith("druid/worker/v1") ||
-           requestPath.startsWith("druid/indexer/v1") ||
-           requestPath.startsWith("status/properties") ||
-           requestPath.startsWith("druid/coordinator/v1/config");
   }
 }

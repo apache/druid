@@ -34,6 +34,7 @@ import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.discovery.LookupNodeService;
@@ -62,7 +63,6 @@ import org.apache.druid.server.listener.resource.AbstractListenerHandler;
 import org.apache.druid.server.listener.resource.ListenerResource;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
-import org.apache.curator.utils.ZKPaths;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Response;
@@ -147,9 +147,7 @@ class LookupListeningResource extends ListenerResource
         })
         {
           @Override
-          public Response handleUpdates(
-              InputStream inputStream, ObjectMapper mapper
-          )
+          public Response handleUpdates(InputStream inputStream, ObjectMapper mapper)
           {
             final LookupsState<LookupExtractorFactoryContainer> state;
             try {

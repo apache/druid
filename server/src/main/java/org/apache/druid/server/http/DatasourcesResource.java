@@ -21,9 +21,6 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.CoordinatorServerView;
@@ -40,8 +37,13 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordinator.rules.LoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -65,8 +67,10 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +78,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -85,6 +90,7 @@ public class DatasourcesResource
 
   private final CoordinatorServerView serverInventoryView;
   private final MetadataSegmentManager databaseSegmentManager;
+  private final MetadataRuleManager databaseRuleManager;
   private final IndexingServiceClient indexingServiceClient;
   private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
@@ -93,6 +99,7 @@ public class DatasourcesResource
   public DatasourcesResource(
       CoordinatorServerView serverInventoryView,
       MetadataSegmentManager databaseSegmentManager,
+      MetadataRuleManager databaseRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper
@@ -100,6 +107,7 @@ public class DatasourcesResource
   {
     this.serverInventoryView = serverInventoryView;
     this.databaseSegmentManager = databaseSegmentManager;
+    this.databaseRuleManager = databaseRuleManager;
     this.indexingServiceClient = indexingServiceClient;
     this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
@@ -243,7 +251,7 @@ public class DatasourcesResource
     if (indexingServiceClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
-    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
       indexingServiceClient.killSegments(dataSourceName, theInterval);
     }
@@ -276,14 +284,14 @@ public class DatasourcesResource
       return Response.noContent().build();
     }
 
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
 
     if (full != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
+      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         Map<String, Object> segments = retVal.get(dataSegment.getInterval());
         if (segments == null) {
-          segments = Maps.newHashMap();
+          segments = new HashMap<>();
           retVal.put(dataSegment.getInterval(), segments);
         }
 
@@ -298,11 +306,11 @@ public class DatasourcesResource
     }
 
     if (simple != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
+      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         Map<String, Object> properties = retVal.get(dataSegment.getInterval());
         if (properties == null) {
-          properties = Maps.newHashMap();
+          properties = new HashMap<>();
           properties.put("size", dataSegment.getSize());
           properties.put("count", 1);
 
@@ -316,7 +324,7 @@ public class DatasourcesResource
       return Response.ok(retVal).build();
     }
 
-    final Set<Interval> intervals = Sets.newTreeSet(comparator);
+    final Set<Interval> intervals = new TreeSet<>(comparator);
     for (DataSegment dataSegment : dataSource.getSegments()) {
       intervals.add(dataSegment.getInterval());
     }
@@ -336,20 +344,20 @@ public class DatasourcesResource
   )
   {
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
-    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
 
     if (dataSource == null) {
       return Response.noContent().build();
     }
 
-    final Comparator<Interval> comparator = Comparators.inverse(Comparators.intervalsByStartThenEnd());
+    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
     if (full != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newTreeMap(comparator);
+      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (theInterval.contains(dataSegment.getInterval())) {
           Map<String, Object> segments = retVal.get(dataSegment.getInterval());
           if (segments == null) {
-            segments = Maps.newHashMap();
+            segments = new HashMap<>();
             retVal.put(dataSegment.getInterval(), segments);
           }
 
@@ -365,12 +373,12 @@ public class DatasourcesResource
     }
 
     if (simple != null) {
-      final Map<Interval, Map<String, Object>> retVal = Maps.newHashMap();
+      final Map<Interval, Map<String, Object>> retVal = new HashMap<>();
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (theInterval.contains(dataSegment.getInterval())) {
           Map<String, Object> properties = retVal.get(dataSegment.getInterval());
           if (properties == null) {
-            properties = Maps.newHashMap();
+            properties = new HashMap<>();
             properties.put("size", dataSegment.getSize());
             properties.put("count", 1);
 
@@ -385,7 +393,7 @@ public class DatasourcesResource
       return Response.ok(retVal).build();
     }
 
-    final Set<String> retVal = Sets.newTreeSet(Comparators.inverse(String.CASE_INSENSITIVE_ORDER));
+    final Set<String> retVal = new TreeSet<>(String.CASE_INSENSITIVE_ORDER.reversed());
     for (DataSegment dataSegment : dataSource.getSegments()) {
       if (theInterval.contains(dataSegment.getInterval())) {
         retVal.add(dataSegment.getIdentifier());
@@ -486,7 +494,7 @@ public class DatasourcesResource
       @PathParam("dataSourceName") String dataSourceName
   )
   {
-    Set<String> retVal = Sets.newHashSet();
+    Set<String> retVal = new HashSet<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       if (druidServer.getDataSource(dataSourceName) != null) {
         retVal.add(druidServer.getTier());
@@ -525,7 +533,7 @@ public class DatasourcesResource
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)
   {
     DataSegment theSegment = null;
-    Set<String> servers = Sets.newHashSet();
+    Set<String> servers = new HashSet<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       DataSegment currSegment = druidServer.getSegments().get(segmentId);
       if (currSegment != null) {
@@ -551,14 +559,14 @@ public class DatasourcesResource
 
   private Map<String, Map<String, Object>> getSimpleDatasource(String dataSourceName)
   {
-    Map<String, Object> tiers = Maps.newHashMap();
-    Map<String, Object> segments = Maps.newHashMap();
+    Map<String, Object> tiers = new HashMap<>();
+    Map<String, Object> segments = new HashMap<>();
     Map<String, Map<String, Object>> retVal = ImmutableMap.of(
         "tiers", tiers,
         "segments", segments
     );
-    Set<String> totalDistinctSegments = Sets.newHashSet();
-    Map<String, HashSet<Object>> tierDistinctSegments = Maps.newHashMap();
+    Set<String> totalDistinctSegments = new HashSet<>();
+    Map<String, HashSet<Object>> tierDistinctSegments = new HashMap<>();
 
     long totalSegmentSize = 0;
     DateTime minTime = DateTimes.MAX;
@@ -573,7 +581,7 @@ public class DatasourcesResource
       }
 
       if (!tierDistinctSegments.containsKey(tier)) {
-        tierDistinctSegments.put(tier, Sets.newHashSet());
+        tierDistinctSegments.put(tier, new HashSet<>());
       }
 
       long dataSourceSegmentSize = 0;
@@ -596,7 +604,7 @@ public class DatasourcesResource
       // tier stats
       Map<String, Object> tierStats = (Map) tiers.get(tier);
       if (tierStats == null) {
-        tierStats = Maps.newHashMap();
+        tierStats = new HashMap<>();
         tiers.put(druidServer.getTier(), tierStats);
       }
       tierStats.put("segmentCount", tierDistinctSegments.get(tier).size());
@@ -629,10 +637,10 @@ public class DatasourcesResource
     TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
         new TableDataSource(dataSourceName)
     );
-    final Interval theInterval = Intervals.of(interval.replace("_", "/"));
+    final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     if (timeline == null) {
       log.debug("No timeline found for datasource[%s]", dataSourceName);
-      return Response.ok(Lists.<ImmutableSegmentLoadInfo>newArrayList()).build();
+      return Response.ok(new ArrayList<ImmutableSegmentLoadInfo>()).build();
     }
 
     Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(theInterval);
@@ -646,5 +654,86 @@ public class DatasourcesResource
                 )
         );
     return Response.ok(retval).build();
+  }
+
+  /**
+   * Used by the realtime tasks to learn whether a segment is handed off or not.
+   * It returns true when the segment will never be handed off or is already handed off. Otherwise, it returns false.
+   */
+  @GET
+  @Path("/{dataSourceName}/handoffComplete")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response isHandOffComplete(
+      @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("interval") final String interval,
+      @QueryParam("partitionNumber") final int partitionNumber,
+      @QueryParam("version") final String version
+  )
+  {
+    try {
+      final List<Rule> rules = databaseRuleManager.getRulesWithDefault(dataSourceName);
+      final Interval theInterval = Intervals.of(interval);
+      final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
+      final DateTime now = DateTimes.nowUtc();
+      // dropped means a segment will never be handed off, i.e it completed hand off
+      // init to true, reset to false only if this segment can be loaded by rules
+      boolean dropped = true;
+      for (Rule rule : rules) {
+        if (rule.appliesTo(theInterval, now)) {
+          if (rule instanceof LoadRule) {
+            dropped = false;
+          }
+          break;
+        }
+      }
+      if (dropped) {
+        return Response.ok(true).build();
+      }
+
+      TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+          new TableDataSource(dataSourceName)
+      );
+      if (timeline == null) {
+        log.debug("No timeline found for datasource[%s]", dataSourceName);
+        return Response.ok(false).build();
+      }
+
+      Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(
+          theInterval);
+      FunctionalIterable<ImmutableSegmentLoadInfo> loadInfoIterable = FunctionalIterable
+          .create(lookup).transformCat(
+              (TimelineObjectHolder<String, SegmentLoadInfo> input) ->
+                  Iterables.transform(
+                      input.getObject(),
+                      (PartitionChunk<SegmentLoadInfo> chunk) ->
+                          chunk.getObject().toImmutableSegmentLoadInfo()
+                  )
+          );
+      if (isSegmentLoaded(loadInfoIterable, descriptor)) {
+        return Response.ok(true).build();
+      }
+
+      return Response.ok(false).build();
+    }
+    catch (Exception e) {
+      log.error(e, "Error while handling hand off check request");
+      return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
+    }
+  }
+
+  static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
+  {
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
+      if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+          && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum() == descriptor.getPartitionNumber()
+          && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
+          && Iterables.any(
+          segmentLoadInfo.getServers(), DruidServerMetadata::segmentReplicatable
+      )) {
+        return true;
+      }
+    }
+    return false;
   }
 }

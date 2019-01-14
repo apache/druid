@@ -23,13 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -39,6 +39,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 public class LocalDataSegmentPusherTest
 {
@@ -124,8 +125,10 @@ public class LocalDataSegmentPusherTest
     DataSegment segment = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, true);
 
     String path = segment.getLoadSpec().get("path").toString();
-    String matcher = ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index\\.zip";
-    Assert.assertTrue(path, path.matches(matcher));
+    Pattern pattern = Pattern.compile(
+        ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index\\.zip"
+    );
+    Assert.assertTrue(path, pattern.matcher(path).matches());
     Assert.assertTrue(new File(path).exists());
   }
 

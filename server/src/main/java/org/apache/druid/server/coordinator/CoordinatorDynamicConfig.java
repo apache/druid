@@ -16,26 +16,30 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.IAE;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * This class is for users to change their configurations while their Druid cluster is running.
  * These configurations are designed to allow only simple values rather than complicated JSON objects.
  *
- * @see org.apache.druid.common.config.JacksonConfigManager
+ * @see JacksonConfigManager
  * @see org.apache.druid.common.config.ConfigManager
  */
 public class CoordinatorDynamicConfig
@@ -129,6 +133,21 @@ public class CoordinatorDynamicConfig
     } else {
       return ImmutableSet.of();
     }
+  }
+
+  public static AtomicReference<CoordinatorDynamicConfig> watch(final JacksonConfigManager configManager)
+  {
+    return configManager.watch(
+        CoordinatorDynamicConfig.CONFIG_KEY,
+        CoordinatorDynamicConfig.class,
+        CoordinatorDynamicConfig.builder().build()
+    );
+  }
+
+  @Nonnull
+  public static CoordinatorDynamicConfig current(final JacksonConfigManager configManager)
+  {
+    return Preconditions.checkNotNull(watch(configManager).get(), "Got null config from watcher?!");
   }
 
   @JsonProperty
@@ -500,7 +519,9 @@ public class CoordinatorDynamicConfig
           killableDataSources,
           killAllDataSources == null ? DEFAULT_KILL_ALL_DATA_SOURCES : killAllDataSources,
           killPendingSegmentsSkipList,
-          maxSegmentsInNodeLoadingQueue == null ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE : maxSegmentsInNodeLoadingQueue,
+          maxSegmentsInNodeLoadingQueue == null
+          ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
+          : maxSegmentsInNodeLoadingQueue,
           maintenanceList,
           maintenanceModeSegmentsPriority == null ? DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY : maintenanceModeSegmentsPriority
       );
@@ -519,10 +540,16 @@ public class CoordinatorDynamicConfig
           emitBalancingStats == null ? defaults.emitBalancingStats() : emitBalancingStats,
           killableDataSources == null ? defaults.getKillableDataSources() : killableDataSources,
           killAllDataSources == null ? defaults.isKillAllDataSources() : killAllDataSources,
-          killPendingSegmentsSkipList == null ? defaults.getProtectedPendingSegmentDatasources() : killPendingSegmentsSkipList,
-          maxSegmentsInNodeLoadingQueue == null ? defaults.getMaxSegmentsInNodeLoadingQueue() : maxSegmentsInNodeLoadingQueue,
+          killPendingSegmentsSkipList == null
+          ? defaults.getProtectedPendingSegmentDatasources()
+          : killPendingSegmentsSkipList,
+          maxSegmentsInNodeLoadingQueue == null
+          ? defaults.getMaxSegmentsInNodeLoadingQueue()
+          : maxSegmentsInNodeLoadingQueue,
           maintenanceList == null ? defaults.getHistoricalNodesInMaintenance() : maintenanceList,
-          maintenanceModeSegmentsPriority == null ? defaults.getNodesInMaintenancePriority() : maintenanceModeSegmentsPriority
+          maintenanceModeSegmentsPriority == null
+          ? defaults.getNodesInMaintenancePriority()
+          : maintenanceModeSegmentsPriority
       );
     }
   }

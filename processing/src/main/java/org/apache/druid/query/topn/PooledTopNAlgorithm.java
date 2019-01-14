@@ -209,9 +209,7 @@ public class PooledTopNAlgorithm
   }
 
   @Override
-  public PooledTopNParams makeInitParams(
-      ColumnSelectorPlus selectorPlus, Cursor cursor
-  )
+  public PooledTopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
   {
     ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take();
     ByteBuffer resultsBuf = resultsBufHolder.get();
@@ -744,11 +742,7 @@ public class PooledTopNAlgorithm
         }
 
         // Output type must be STRING in order for PooledTopNAlgorithm to make sense; so no need to convert value.
-        resultBuilder.addEntry(
-            dimSelector.lookupName(i),
-            i,
-            vals
-        );
+        resultBuilder.addEntry(dimSelector.lookupName(i), i, vals);
       }
     }
   }

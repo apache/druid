@@ -20,7 +20,6 @@
 package org.apache.druid.client;
 
 import com.google.common.base.Predicate;
-
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
@@ -30,7 +29,9 @@ import java.util.concurrent.Executor;
 public interface FilteredServerInventoryView extends InventoryView
 {
   void registerSegmentCallback(
-      Executor exec, ServerView.SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter
+      Executor exec,
+      ServerView.SegmentCallback callback,
+      Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   );
 
   void registerServerRemovedCallback(Executor exec, ServerView.ServerRemovedCallback callback);

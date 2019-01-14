@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
@@ -45,6 +44,7 @@ import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.AbstractDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
@@ -55,12 +55,13 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class CardinalityAggregatorTest
 {
-  public static class TestDimensionSelector implements DimensionSelector
+  public static class TestDimensionSelector extends AbstractDimensionSelector
   {
     private final List<Integer[]> column;
     private final Map<String, Integer> ids;
@@ -71,8 +72,8 @@ public class CardinalityAggregatorTest
 
     public TestDimensionSelector(Iterable<String[]> values, ExtractionFn exFn)
     {
-      this.lookup = Maps.newHashMap();
-      this.ids = Maps.newHashMap();
+      this.lookup = new HashMap<>();
+      this.ids = new HashMap<>();
       this.exFn = exFn;
 
       int index = 0;
@@ -88,25 +89,14 @@ public class CardinalityAggregatorTest
 
       this.column = Lists.newArrayList(
           Iterables.transform(
-              values, new Function<String[], Integer[]>()
+              values,
+              new Function<String[], Integer[]>()
               {
                 @Nullable
                 @Override
                 public Integer[] apply(@Nullable String[] input)
                 {
-                  return Iterators.toArray(
-                      Iterators.transform(
-                          Iterators.forArray(input), new Function<String, Integer>()
-                          {
-                            @Nullable
-                            @Override
-                            public Integer apply(@Nullable String input)
-                            {
-                              return ids.get(input);
-                            }
-                          }
-                      ), Integer.class
-                  );
+                  return Iterators.toArray(Iterators.transform(Iterators.forArray(input), ids::get), Integer.class);
                 }
               }
           )
@@ -192,13 +182,6 @@ public class CardinalityAggregatorTest
           return ids.get(s);
         }
       };
-    }
-
-    @Nullable
-    @Override
-    public Object getObject()
-    {
-      return defaultGetObject();
     }
 
     @Override
@@ -357,22 +340,18 @@ public class CardinalityAggregatorTest
         false
     );
 
-
     String superJsFn = "function(str) { return 'super-' + str; }";
     ExtractionFn superFn = new JavaScriptExtractionFn(superJsFn, false, JavaScriptConfig.getEnabledInstance());
     dim1WithExtraction = new TestDimensionSelector(values1, superFn);
     dim2WithExtraction = new TestDimensionSelector(values2, superFn);
-    selectorListWithExtraction = Lists.newArrayList(
-        (DimensionSelector) dim1WithExtraction,
-        dim2WithExtraction
-    );
+    selectorListWithExtraction = Lists.newArrayList(dim1WithExtraction, dim2WithExtraction);
     dimInfoListWithExtraction = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim1WithExtraction
         ),
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim2WithExtraction
@@ -383,17 +362,14 @@ public class CardinalityAggregatorTest
     ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getEnabledInstance());
     dim1ConstantVal = new TestDimensionSelector(values1, helloFn);
     dim2ConstantVal = new TestDimensionSelector(values2, helloFn);
-    selectorListConstantVal = Lists.newArrayList(
-        (DimensionSelector) dim1ConstantVal,
-        dim2ConstantVal
-    );
+    selectorListConstantVal = Lists.newArrayList(dim1ConstantVal, dim2ConstantVal);
     dimInfoListConstantVal = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim1ConstantVal
         ),
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim2ConstantVal
@@ -406,7 +382,6 @@ public class CardinalityAggregatorTest
   public void testAggregateRows()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         dimInfoList,
         true
     );
@@ -423,7 +398,6 @@ public class CardinalityAggregatorTest
   public void testAggregateValues()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         dimInfoList,
         false
     );
@@ -499,8 +473,8 @@ public class CardinalityAggregatorTest
         )
     );
 
-    CardinalityAggregator agg1 = new CardinalityAggregator("billy", dimInfo1, true);
-    CardinalityAggregator agg2 = new CardinalityAggregator("billy", dimInfo2, true);
+    CardinalityAggregator agg1 = new CardinalityAggregator(dimInfo1, true);
+    CardinalityAggregator agg2 = new CardinalityAggregator(dimInfo2, true);
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selector1, agg1);
@@ -545,8 +519,8 @@ public class CardinalityAggregatorTest
         )
     );
 
-    CardinalityAggregator agg1 = new CardinalityAggregator("billy", dimInfo1, false);
-    CardinalityAggregator agg2 = new CardinalityAggregator("billy", dimInfo2, false);
+    CardinalityAggregator agg1 = new CardinalityAggregator(dimInfo1, false);
+    CardinalityAggregator agg2 = new CardinalityAggregator(dimInfo2, false);
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selector1, agg1);
@@ -574,7 +548,6 @@ public class CardinalityAggregatorTest
   public void testAggregateRowsWithExtraction()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         dimInfoListWithExtraction,
         true
     );
@@ -584,7 +557,6 @@ public class CardinalityAggregatorTest
     Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
 
     CardinalityAggregator agg2 = new CardinalityAggregator(
-        "billy",
         dimInfoListConstantVal,
         true
     );
@@ -598,7 +570,6 @@ public class CardinalityAggregatorTest
   public void testAggregateValuesWithExtraction()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         dimInfoListWithExtraction,
         false
     );
@@ -608,7 +579,6 @@ public class CardinalityAggregatorTest
     Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
 
     CardinalityAggregator agg2 = new CardinalityAggregator(
-        "billy",
         dimInfoListConstantVal,
         false
     );

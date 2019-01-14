@@ -32,14 +32,14 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-SNAPSHOT</version>
+    <version>0.13.0-incubating-SNAPSHOT</version>
   </parent>
 
   <dependencies>
 
     <dependency>
       <groupId>org.apache.druid</groupId>
-      <artifactId>java-util</artifactId>
+      <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
 

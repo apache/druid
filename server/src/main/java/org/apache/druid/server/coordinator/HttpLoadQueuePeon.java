@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -35,9 +34,6 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.io.AppendableByteArrayInputStream;
-import org.apache.druid.java.util.http.client.response.ClientResponse;
-import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeCallback;
 import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
@@ -47,7 +43,6 @@ import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
 import javax.servlet.http.HttpServletResponse;
@@ -207,13 +202,12 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             {
               boolean scheduleNextRunImmediately = true;
               try {
-                if (responseHandler.status == HttpServletResponse.SC_NO_CONTENT) {
+                if (responseHandler.getStatus() == HttpServletResponse.SC_NO_CONTENT) {
                   log.debug("Received NO CONTENT reseponse from [%s]", serverId);
-                } else if (HttpServletResponse.SC_OK == responseHandler.status) {
+                } else if (HttpServletResponse.SC_OK == responseHandler.getStatus()) {
                   try {
-                    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses = jsonMapper.readValue(
-                        result, RESPONSE_ENTITY_TYPE_REF
-                    );
+                    List<SegmentLoadDropHandler.DataSegmentChangeRequestAndStatus> statuses =
+                        jsonMapper.readValue(result, RESPONSE_ENTITY_TYPE_REF);
                     log.debug("Server[%s] returned status response [%s].", serverId, statuses);
                     synchronized (lock) {
                       if (stopped) {
@@ -229,7 +223,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                             handleResponseStatus(e.getRequest(), e.getStatus());
                             break;
                           case PENDING:
-                            log.info("Request[%s] is still pending on server[%s].", e.getRequest(), serverId);
+                            log.debug("Request[%s] is still pending on server[%s].", e.getRequest(), serverId);
                             break;
                           default:
                             scheduleNextRunImmediately = false;
@@ -260,7 +254,6 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
             public void onFailure(Throwable t)
             {
               try {
-                responseHandler.description = t.toString();
                 logRequestFailure(t);
               }
               finally {
@@ -274,8 +267,8 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
                   t,
                   "Request[%s] Failed with status[%s]. Reason[%s].",
                   changeRequestURL,
-                  responseHandler.status,
-                  responseHandler.description
+                  responseHandler.getStatus(),
+                  responseHandler.getDescription()
               );
             }
           },
@@ -476,7 +469,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
   {
     private final DataSegment segment;
     private final DataSegmentChangeRequest changeRequest;
-    private final List<LoadPeonCallback> callbacks = Lists.newArrayList();
+    private final List<LoadPeonCallback> callbacks = new ArrayList<>();
 
     // Time when this request was sent to target server the first time.
     private volatile long scheduleTime = -1;
@@ -528,7 +521,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
 
     public void requestSucceeded()
     {
-      log.info(
+      log.debug(
           "Server[%s] Successfully processed segment[%s] request[%s].",
           serverId,
           segment.getIdentifier(),
@@ -596,17 +589,4 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
     }
   }
 
-  private static class BytesAccumulatingResponseHandler extends InputStreamResponseHandler
-  {
-    private int status;
-    private String description;
-
-    @Override
-    public ClientResponse<AppendableByteArrayInputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
-    {
-      status = response.getStatus().getCode();
-      description = response.getStatus().getReasonPhrase();
-      return ClientResponse.unfinished(super.handleResponse(response, trafficCop).getObj());
-    }
-  }
 }

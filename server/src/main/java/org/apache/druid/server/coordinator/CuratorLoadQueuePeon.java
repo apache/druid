@@ -21,7 +21,9 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.CuratorWatcher;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -30,12 +32,10 @@ import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.api.CuratorWatcher;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -235,10 +235,10 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
     if (!segmentsToDrop.isEmpty()) {
       currentlyProcessing = segmentsToDrop.firstEntry().getValue();
-      log.info("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      log.debug("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
     } else if (!segmentsToLoad.isEmpty()) {
       currentlyProcessing = segmentsToLoad.firstEntry().getValue();
-      log.info("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      log.debug("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
     } else {
       return;
     }
@@ -386,7 +386,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         );
         return;
       }
-      log.info(
+      log.debug(
           "Server[%s] done processing %s of segment [%s]",
           basePath,
           currentlyProcessing.getType() == LOAD ? "load" : "drop",
@@ -411,7 +411,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     private final DataSegment segment;
     private final DataSegmentChangeRequest changeRequest;
     private final int type;
-    private final List<LoadPeonCallback> callbacks = Lists.newArrayList();
+    private final List<LoadPeonCallback> callbacks = new ArrayList<>();
 
     private SegmentHolder(
         DataSegment segment,

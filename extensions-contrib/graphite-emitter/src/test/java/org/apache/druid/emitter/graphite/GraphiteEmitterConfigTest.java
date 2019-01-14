@@ -59,7 +59,7 @@ public class GraphiteEmitterConfigTest
         null
     );
     String graphiteEmitterConfigString = mapper.writeValueAsString(graphiteEmitterConfig);
-    GraphiteEmitterConfig graphiteEmitterConfigExpected = mapper.reader(GraphiteEmitterConfig.class).readValue(
+    GraphiteEmitterConfig graphiteEmitterConfigExpected = mapper.readerFor(GraphiteEmitterConfig.class).readValue(
         graphiteEmitterConfigString
     );
     Assert.assertEquals(graphiteEmitterConfigExpected, graphiteEmitterConfig);
@@ -75,7 +75,7 @@ public class GraphiteEmitterConfigTest
         false
     );
     String noopGraphiteEventConverterString = mapper.writeValueAsString(sendAllGraphiteEventConverter);
-    DruidToGraphiteEventConverter druidToGraphiteEventConverter = mapper.reader(DruidToGraphiteEventConverter.class)
+    DruidToGraphiteEventConverter druidToGraphiteEventConverter = mapper.readerFor(DruidToGraphiteEventConverter.class)
                                                                         .readValue(noopGraphiteEventConverterString);
     Assert.assertEquals(druidToGraphiteEventConverter, sendAllGraphiteEventConverter);
 
@@ -88,7 +88,7 @@ public class GraphiteEmitterConfigTest
         new DefaultObjectMapper()
     );
     String whiteListBasedConverterString = mapper.writeValueAsString(whiteListBasedConverter);
-    druidToGraphiteEventConverter = mapper.reader(DruidToGraphiteEventConverter.class)
+    druidToGraphiteEventConverter = mapper.readerFor(DruidToGraphiteEventConverter.class)
                                           .readValue(whiteListBasedConverterString);
     Assert.assertEquals(druidToGraphiteEventConverter, whiteListBasedConverter);
   }

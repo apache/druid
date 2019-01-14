@@ -21,28 +21,30 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.metrics.JvmCpuMonitor;
-import org.apache.druid.java.util.metrics.JvmMonitor;
-import org.apache.druid.java.util.metrics.Monitor;
-import org.apache.druid.java.util.metrics.MonitorScheduler;
-import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.JvmCpuMonitor;
+import org.apache.druid.java.util.metrics.JvmMonitor;
+import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
+import org.apache.druid.java.util.metrics.Monitor;
+import org.apache.druid.java.util.metrics.MonitorScheduler;
+import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -87,7 +89,7 @@ public class MetricsModule implements Module
       Injector injector
   )
   {
-    List<Monitor> monitors = Lists.newArrayList();
+    List<Monitor> monitors = new ArrayList<>();
 
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
       final Monitor monitor = injector.getInstance(monitorClass);
@@ -111,10 +113,11 @@ public class MetricsModule implements Module
       DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
-    return new JvmMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
-    ));
+    );
+    return new JvmMonitor(dimensions);
   }
 
   @Provides
@@ -123,10 +126,22 @@ public class MetricsModule implements Module
       DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
-    return new JvmCpuMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
-    ));
+    );
+    return new JvmCpuMonitor(dimensions);
+  }
+
+  @Provides
+  @ManageLifecycle
+  public JvmThreadsMonitor getJvmThreadsMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
+  {
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
+        dataSourceTaskIdHolder.getDataSource(),
+        dataSourceTaskIdHolder.getTaskId()
+    );
+    return new JvmThreadsMonitor(dimensions);
   }
 
   @Provides
@@ -135,9 +150,10 @@ public class MetricsModule implements Module
       DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
-    return new SysMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
+    Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
-    ));
+    );
+    return new SysMonitor(dimensions);
   }
 }

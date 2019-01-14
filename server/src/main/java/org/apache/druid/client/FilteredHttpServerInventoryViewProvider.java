@@ -22,10 +22,10 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.http.client.HttpClient;
 
 import javax.validation.constraints.NotNull;
 
@@ -55,7 +55,8 @@ public class FilteredHttpServerInventoryViewProvider implements FilteredServerIn
   public HttpServerInventoryView get()
   {
     return new HttpServerInventoryView(
-        smileMapper, httpClient,
+        smileMapper,
+        httpClient,
         druidNodeDiscoveryProvider,
         Predicates.alwaysFalse(),
         config

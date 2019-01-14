@@ -19,16 +19,45 @@
 
 package org.apache.druid.server.log;
 
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.ProvisionException;
+import org.apache.druid.guice.JsonConfigurator;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.easymock.EasyMock;
+import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
+import javax.validation.Validation;
 import java.io.IOException;
+import java.util.Properties;
 
 public class FilteredRequestLoggerTest
 {
+  private final DefaultObjectMapper mapper = new DefaultObjectMapper();
+
+  @Rule
+  public final ExpectedException expectedException = ExpectedException.none();
+
+  public FilteredRequestLoggerTest()
+  {
+    mapper.registerSubtypes(
+        LoggingRequestLoggerProvider.class,
+        FilteredRequestLoggerProvider.class,
+        TestRequestLoggerProvider.class,
+        NoopRequestLoggerProvider.class
+    );
+
+    final InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ObjectMapper.class, mapper);
+    mapper.setInjectableValues(injectableValues);
+  }
+
   @Test
   public void testFilterBelowThreshold() throws IOException
   {
@@ -69,5 +98,105 @@ public class FilteredRequestLoggerTest
     logger.log(requestLogLine);
 
     EasyMock.verify(requestLogLine, delegate);
+  }
+
+  @Test
+  public void testConfiguration()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("log.type", "filtered");
+    properties.setProperty("log.queryTimeThresholdMs", "100");
+    properties.setProperty("log.delegate.type", "slf4j");
+    properties.setProperty("log.delegate.setMDC", "true");
+    properties.setProperty("log.delegate.setContextMDC", "true");
+
+    final JsonConfigurator configurator = new JsonConfigurator(
+        mapper,
+        Validation.buildDefaultValidatorFactory()
+                  .getValidator()
+    );
+
+    final FilteredRequestLoggerProvider provider = (FilteredRequestLoggerProvider) configurator.configurate(
+        properties,
+        "log",
+        RequestLoggerProvider.class
+    );
+    final FilteredRequestLoggerProvider.FilteredRequestLogger logger =
+        ((FilteredRequestLoggerProvider.FilteredRequestLogger) provider.get());
+    final LoggingRequestLogger delegate = (LoggingRequestLogger) logger.getDelegate();
+
+    Assert.assertEquals(100, logger.getQueryTimeThresholdMs());
+    Assert.assertTrue(delegate.isSetContextMDC());
+    Assert.assertTrue(delegate.isSetMDC());
+  }
+
+  @Test
+  public void testStartStop() throws Exception
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("log.type", "filtered");
+    properties.setProperty("log.queryTimeThresholdMs", "100");
+    properties.setProperty("log.delegate.type", "test");
+
+    final JsonConfigurator configurator = new JsonConfigurator(
+        mapper,
+        Validation.buildDefaultValidatorFactory()
+                  .getValidator()
+    );
+
+    final FilteredRequestLoggerProvider provider = (FilteredRequestLoggerProvider) configurator.configurate(
+        properties,
+        "log",
+        RequestLoggerProvider.class
+    );
+
+    final FilteredRequestLoggerProvider.FilteredRequestLogger logger =
+        ((FilteredRequestLoggerProvider.FilteredRequestLogger) provider.get());
+    final TestRequestLogger delegate = (TestRequestLogger) logger.getDelegate();
+
+    Assert.assertFalse(delegate.isStarted());
+
+    logger.start();
+    Assert.assertTrue(delegate.isStarted());
+
+    logger.stop();
+    Assert.assertFalse(delegate.isStarted());
+  }
+
+  @Test
+  public void testInvalidDelegateType()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("log.type", "filtered");
+    properties.setProperty("log.queryTimeThresholdMs", "100");
+    properties.setProperty("log.delegate.type", "nope");
+
+    final JsonConfigurator configurator = new JsonConfigurator(
+        mapper,
+        Validation.buildDefaultValidatorFactory()
+                  .getValidator()
+    );
+
+    expectedException.expect(ProvisionException.class);
+    expectedException.expectMessage("Could not resolve type id 'nope'");
+    configurator.configurate(properties, "log", RequestLoggerProvider.class);
+  }
+
+  @Test
+  public void testNoDelegate()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("log.type", "filtered");
+    properties.setProperty("log.queryTimeThresholdMs", "100");
+
+    final JsonConfigurator configurator = new JsonConfigurator(
+        mapper,
+        Validation.buildDefaultValidatorFactory()
+                  .getValidator()
+    );
+
+    expectedException.expect(ProvisionException.class);
+    expectedException.expectMessage("log.delegate - may not be null");
+    configurator.configurate(properties, "log", RequestLoggerProvider.class);
   }
 }

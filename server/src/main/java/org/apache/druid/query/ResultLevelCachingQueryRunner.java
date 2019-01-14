@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.QueryResource;
 
-
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -177,9 +176,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     return StringUtils.fromUtf8(Arrays.copyOfRange(cachedResult, Integer.BYTES, etagLength + Integer.BYTES));
   }
 
-  private Sequence<T> deserializeResults(
-      final byte[] cachedResult, CacheStrategy strategy, String resultSetId
-  )
+  private Sequence<T> deserializeResults(final byte[] cachedResult, CacheStrategy strategy, String resultSetId)
   {
     if (cachedResult == null) {
       log.error("Cached result set is null");

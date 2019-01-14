@@ -22,12 +22,14 @@ package org.apache.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.validation.constraints.Min;
 import java.util.Objects;
 
 public class LookupConfig
 {
+  static int DEFAULT_COORDINATOR_RETRY_DELAY = 60_000;
 
   @JsonProperty("snapshotWorkingDir")
   private String snapshotWorkingDir;
@@ -37,11 +39,18 @@ public class LookupConfig
 
   @Min(1)
   @JsonProperty("numLookupLoadingThreads")
-  private int numLookupLoadingThreads = Math.max(1, Runtime.getRuntime().availableProcessors() / 2);
+  private int numLookupLoadingThreads = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() / 2);
 
   @Min(1)
   @JsonProperty("coordinatorFetchRetries")
   private int coordinatorFetchRetries = 3;
+
+  // By default, add an extra minute in addition to the retry wait. In RetryUtils, retry wait starts from a few
+  // seconds, that is likely not enough to coordinator to be back to healthy state, e. g. if it experiences
+  // 30-second GC pause.
+  @Min(0)
+  @JsonProperty("coordinatorRetryDelay")
+  private int coordinatorRetryDelay = DEFAULT_COORDINATOR_RETRY_DELAY;
 
   @Min(1)
   @JsonProperty("lookupStartRetries")
@@ -84,6 +93,11 @@ public class LookupConfig
     return lookupStartRetries;
   }
 
+  public int getCoordinatorRetryDelay()
+  {
+    return coordinatorRetryDelay;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -100,7 +114,8 @@ public class LookupConfig
            enableLookupSyncOnStartup == that.enableLookupSyncOnStartup &&
            numLookupLoadingThreads == that.numLookupLoadingThreads &&
            coordinatorFetchRetries == that.coordinatorFetchRetries &&
-           lookupStartRetries == that.lookupStartRetries;
+           lookupStartRetries == that.lookupStartRetries &&
+           coordinatorRetryDelay == that.coordinatorRetryDelay;
   }
 
   @Override
@@ -111,7 +126,8 @@ public class LookupConfig
         enableLookupSyncOnStartup,
         numLookupLoadingThreads,
         coordinatorFetchRetries,
-        lookupStartRetries
+        lookupStartRetries,
+        coordinatorRetryDelay
     );
   }
 
@@ -124,6 +140,7 @@ public class LookupConfig
            ", numLookupLoadingThreads=" + numLookupLoadingThreads +
            ", coordinatorFetchRetries=" + coordinatorFetchRetries +
            ", lookupStartRetries=" + lookupStartRetries +
+           ", coordinatorRetryDelay=" + coordinatorRetryDelay +
            '}';
   }
 }

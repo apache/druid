@@ -23,16 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycleLast;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -41,6 +38,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -52,9 +51,11 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -144,7 +145,7 @@ public class DerivativeDataSourceManager
 
   public static ImmutableSet<DerivativeDataSource> getDerivatives(String datasource)
   {
-    return ImmutableSet.copyOf(derivativesRef.get().getOrDefault(datasource, Sets.newTreeSet()));
+    return ImmutableSet.copyOf(derivativesRef.get().getOrDefault(datasource, new TreeSet<>()));
   }
 
   public static ImmutableMap<String, Set<DerivativeDataSource>> getAllDerivatives()
@@ -199,7 +200,7 @@ public class DerivativeDataSourceManager
     
     ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> newDerivatives = new ConcurrentHashMap<>();
     for (DerivativeDataSource derivative : derivativeDataSources) {
-      newDerivatives.putIfAbsent(derivative.getBaseDataSource(), Sets.newTreeSet());
+      newDerivatives.putIfAbsent(derivative.getBaseDataSource(), new TreeSet<>());
       newDerivatives.get(derivative.getBaseDataSource()).add(derivative);
     }
     ConcurrentHashMap<String, SortedSet<DerivativeDataSource>> current;
@@ -227,7 +228,7 @@ public class DerivativeDataSourceManager
   {
     return connector.retryWithHandle(
         new HandleCallback<Long>() {
-          Set<Interval> intervals = Sets.newHashSet();
+          Set<Interval> intervals = new HashSet<>();
           long totalSize = 0;
           @Override
           public Long withHandle(Handle handle)

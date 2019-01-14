@@ -19,8 +19,8 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -49,9 +49,7 @@ public class FluentQueryRunnerBuilder<T>
     }
 
     @Override
-    public Sequence<T> run(
-        QueryPlus<T> queryPlus, Map<String, Object> responseContext
-    )
+    public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
     {
       return baseRunner.run(queryPlus, responseContext);
     }
@@ -63,25 +61,12 @@ public class FluentQueryRunnerBuilder<T>
 
     public FluentQueryRunner applyPostMergeDecoration()
     {
-      return from(
-          new FinalizeResultsQueryRunner<T>(
-              toolChest.postMergeQueryDecoration(
-                  baseRunner
-              ),
-              toolChest
-          )
-      );
+      return from(new FinalizeResultsQueryRunner<>(toolChest.postMergeQueryDecoration(baseRunner), toolChest));
     }
 
     public FluentQueryRunner applyPreMergeDecoration()
     {
-      return from(
-          new UnionQueryRunner<T>(
-              toolChest.preMergeQueryDecoration(
-                  baseRunner
-              )
-          )
-      );
+      return from(new UnionQueryRunner<>(toolChest.preMergeQueryDecoration(baseRunner)));
     }
 
     public FluentQueryRunner emitCPUTimeMetric(ServiceEmitter emitter)
@@ -99,17 +84,12 @@ public class FluentQueryRunnerBuilder<T>
 
     public FluentQueryRunner postProcess(PostProcessingOperator<T> postProcessing)
     {
-      return from(
-          postProcessing != null ?
-             postProcessing.postProcess(baseRunner) : baseRunner
-      );
+      return from(postProcessing != null ? postProcessing.postProcess(baseRunner) : baseRunner);
     }
 
     public FluentQueryRunner mergeResults()
     {
-      return from(
-          toolChest.mergeResults(baseRunner)
-      );
+      return from(toolChest.mergeResults(baseRunner));
     }
   }
 }

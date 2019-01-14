@@ -16,12 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.benchmark;
 
 import com.google.common.base.Function;
-
 import org.apache.druid.java.util.common.parsers.TimestampParser;
-
 import org.joda.time.DateTime;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;

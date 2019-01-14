@@ -25,10 +25,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -36,6 +34,7 @@ import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -48,6 +47,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -64,10 +64,9 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
@@ -75,8 +74,8 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -86,16 +85,17 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
 import org.roaringbitmap.IntIterator;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Command(
     name = "dump-segment",
@@ -143,7 +143,7 @@ public class DumpSegment extends GuiceRunnable
       title = "column",
       description = "Column to include, specify multiple times for multiple columns, or omit to include all columns.",
       required = false)
-  public List<String> columnNamesFromCli = Lists.newArrayList();
+  public List<String> columnNamesFromCli = new ArrayList<>();
 
   @Option(
       name = "--time-iso8601",
@@ -274,13 +274,11 @@ public class DumpSegment extends GuiceRunnable
                   @Override
                   public Object apply(Cursor cursor)
                   {
-                    final List<BaseObjectColumnValueSelector> selectors = Lists.newArrayList();
-
-                    for (String columnName : columnNames) {
-                      ColumnValueSelector selector =
-                          cursor.getColumnSelectorFactory().makeColumnValueSelector(columnName);
-                      selectors.add(new ListObjectSelector(selector));
-                    }
+                    ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+                    final List<BaseObjectColumnValueSelector> selectors = columnNames
+                        .stream()
+                        .map(columnSelectorFactory::makeColumnValueSelector)
+                        .collect(Collectors.toList());
 
                     while (!cursor.isDone()) {
                       final Map<String, Object> row = Maps.newLinkedHashMap();
@@ -289,7 +287,7 @@ public class DumpSegment extends GuiceRunnable
                         final String columnName = columnNames.get(i);
                         final Object value = selectors.get(i).getObject();
 
-                        if (timeISO8601 && columnNames.get(i).equals(Column.TIME_COLUMN_NAME)) {
+                        if (timeISO8601 && columnNames.get(i).equals(ColumnHolder.TIME_COLUMN_NAME)) {
                           row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
                         } else {
                           row.put(columnName, value);
@@ -345,47 +343,49 @@ public class DumpSegment extends GuiceRunnable
           @Override
           public Object apply(final OutputStream out)
           {
-            try {
-              final JsonGenerator jg = objectMapper.getFactory().createGenerator(out);
-
+            try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
               jg.writeStartObject();
-              jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
-              jg.writeFieldName("bitmaps");
-              jg.writeStartObject();
+              {
+                jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
+                jg.writeFieldName("bitmaps");
+                jg.writeStartObject();
+                {
+                  for (final String columnName : columnNames) {
+                    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                    final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
 
-              for (final String columnName : columnNames) {
-                final Column column = index.getColumn(columnName);
-                final BitmapIndex bitmapIndex = column.getBitmapIndex();
-
-                if (bitmapIndex == null) {
-                  jg.writeNullField(columnName);
-                } else {
-                  jg.writeFieldName(columnName);
-                  jg.writeStartObject();
-                  for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                    String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
-                    if (val != null) {
-                      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-                      if (decompressBitmaps) {
-                        jg.writeStartArray();
-                        final IntIterator iterator = bitmap.iterator();
-                        while (iterator.hasNext()) {
-                          final int rowNum = iterator.next();
-                          jg.writeNumber(rowNum);
+                    if (bitmapIndex == null) {
+                      jg.writeNullField(columnName);
+                    } else {
+                      jg.writeFieldName(columnName);
+                      jg.writeStartObject();
+                      for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
+                        String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
+                        if (val != null) {
+                          final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                          if (decompressBitmaps) {
+                            jg.writeStartArray();
+                            final IntIterator iterator = bitmap.iterator();
+                            while (iterator.hasNext()) {
+                              final int rowNum = iterator.next();
+                              jg.writeNumber(rowNum);
+                            }
+                            jg.writeEndArray();
+                          } else {
+                            byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                            if (bytes != null) {
+                              jg.writeBinary(bytes);
+                            }
+                          }
                         }
-                        jg.writeEndArray();
-                      } else {
-                        jg.writeBinary(bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap));
                       }
+                      jg.writeEndObject();
                     }
                   }
-                  jg.writeEndObject();
                 }
+                jg.writeEndObject();
               }
-
               jg.writeEndObject();
-              jg.writeEndObject();
-              jg.close();
             }
             catch (IOException e) {
               throw Throwables.propagate(e);
@@ -403,12 +403,12 @@ public class DumpSegment extends GuiceRunnable
 
     // Empty columnNames => include all columns.
     if (columnNames.isEmpty()) {
-      columnNames.add(Column.TIME_COLUMN_NAME);
+      columnNames.add(ColumnHolder.TIME_COLUMN_NAME);
       Iterables.addAll(columnNames, index.getColumnNames());
     } else {
       // Remove any provided columns that do not exist in this segment.
       for (String columnName : ImmutableList.copyOf(columnNames)) {
-        if (index.getColumn(columnName) == null) {
+        if (index.getColumnHolder(columnName) == null) {
           columnNames.remove(columnName);
         }
       }
@@ -417,6 +417,7 @@ public class DumpSegment extends GuiceRunnable
     return ImmutableList.copyOf(columnNames);
   }
 
+  @SuppressForbidden(reason = "System#out")
   private <T> T withOutputStream(Function<OutputStream, T> f) throws IOException
   {
     if (outputFileName == null) {
@@ -480,12 +481,12 @@ public class DumpSegment extends GuiceRunnable
   private static <T> Sequence<T> executeQuery(final Injector injector, final QueryableIndex index, final Query<T> query)
   {
     final QueryRunnerFactoryConglomerate conglomerate = injector.getInstance(QueryRunnerFactoryConglomerate.class);
-    final QueryRunnerFactory factory = conglomerate.findFactory(query);
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
-    final Sequence results = factory.getToolchest().mergeResults(
-        factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner))
-    ).run(QueryPlus.wrap(query), Maps.newHashMap());
-    return (Sequence<T>) results;
+    return factory
+        .getToolchest()
+        .mergeResults(factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner)))
+        .run(QueryPlus.wrap(query), new HashMap<>());
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)
@@ -493,61 +494,4 @@ public class DumpSegment extends GuiceRunnable
     sequence.accumulate(null, (accumulated, in) -> null);
   }
 
-  private static class ListObjectSelector implements ColumnValueSelector
-  {
-    private final ColumnValueSelector delegate;
-
-    private ListObjectSelector(ColumnValueSelector delegate)
-    {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public double getDouble()
-    {
-      return delegate.getDouble();
-    }
-
-    @Override
-    public float getFloat()
-    {
-      return delegate.getFloat();
-    }
-
-    @Override
-    public long getLong()
-    {
-      return delegate.getLong();
-    }
-
-    @Nullable
-    @Override
-    public Object getObject()
-    {
-      Object object = delegate.getObject();
-      if (object instanceof String[]) {
-        return Arrays.asList((String[]) object);
-      } else {
-        return object;
-      }
-    }
-
-    @Override
-    public Class classOfObject()
-    {
-      return Object.class;
-    }
-
-    @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("delegate", delegate);
-    }
-
-    @Override
-    public boolean isNull()
-    {
-      return delegate.isNull();
-    }
-  }
 }

@@ -23,10 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.net.HostAndPort;
-
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.FunctionalIterable;
-import org.apache.druid.java.util.common.logger.Logger;
 import kafka.api.FetchRequest;
 import kafka.api.FetchRequestBuilder;
 import kafka.api.PartitionOffsetRequestInfo;
@@ -42,6 +38,9 @@ import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.guava.FunctionalIterable;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -197,10 +196,8 @@ public class KafkaSimpleConsumer
             earliest ? kafka.api.OffsetRequest.EarliestTime() : kafka.api.OffsetRequest.LatestTime(), 1
         )
     );
-    OffsetRequest request = new OffsetRequest(
-        requestInfo, kafka.api.OffsetRequest.CurrentVersion(), clientId
-    );
-    OffsetResponse response = null;
+    OffsetRequest request = new OffsetRequest(requestInfo, kafka.api.OffsetRequest.CurrentVersion(), clientId);
+    OffsetResponse response;
     try {
       response = consumer.getOffsetsBefore(request);
     }
@@ -222,7 +219,7 @@ public class KafkaSimpleConsumer
 
   public Iterable<BytesMessageWithOffset> fetch(long offset, int timeoutMs) throws InterruptedException
   {
-    FetchResponse response = null;
+    FetchResponse response;
     Broker previousLeader = leaderBroker;
     while (true) {
       ensureConsumer(previousLeader);
@@ -324,7 +321,11 @@ public class KafkaSimpleConsumer
       catch (Exception e) {
         ensureNotInterrupted(e);
         log.warn(
-            e, "error communicating with Kafka Broker [%s] to find leader for [%s] - [%s]", broker, topic, partitionId
+            e,
+            "error communicating with Kafka Broker [%s] to find leader for [%s] - [%s]",
+            broker,
+            topic,
+            partitionId
         );
       }
       finally {

@@ -25,11 +25,9 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.DateTimes;
@@ -37,6 +35,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DatasourceWhitelist;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -48,6 +47,8 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -77,7 +78,7 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
     DatasourceWhitelist whitelist = whiteListRef.get();
 
     CoordinatorStats stats = new CoordinatorStats();
-    Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = Maps.newHashMap();
+    Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources = new HashMap<>();
 
     // Find serviced segments by using a timeline
     for (DataSegment dataSegment : params.getAvailableSegments()) {
@@ -193,7 +194,7 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
 
     private SegmentsToMerge()
     {
-      this.timelineObjects = Lists.newArrayList();
+      this.timelineObjects = new ArrayList<>();
       this.segments = HashMultiset.create();
       this.byteCount = 0;
     }

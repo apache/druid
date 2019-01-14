@@ -28,6 +28,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,13 +48,13 @@ public class DruidNodeDiscoveryProviderTest
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
             dataNodes.addAll(nodes);
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
             dataNodes.removeAll(nodes);
           }
@@ -66,13 +67,13 @@ public class DruidNodeDiscoveryProviderTest
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
             lookupNodes.addAll(nodes);
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
             lookupNodes.removeAll(nodes);
           }
@@ -86,66 +87,66 @@ public class DruidNodeDiscoveryProviderTest
     Assert.assertTrue(lookupNodeDiscovery.getAllNodes().isEmpty());
 
     DiscoveryDruidNode node1 = new DiscoveryDruidNode(
-        new DruidNode("s1", "h1", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
+        new DruidNode("s1", "h1", false, 8080, null, true, false),
+        NodeType.HISTORICAL,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0),
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier"))
     );
 
     DiscoveryDruidNode node2 = new DiscoveryDruidNode(
-        new DruidNode("s2", "h2", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
+        new DruidNode("s2", "h2", false, 8080, null, true, false),
+        NodeType.HISTORICAL,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
     );
 
     DiscoveryDruidNode node3 = new DiscoveryDruidNode(
-        new DruidNode("s3", "h3", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
+        new DruidNode("s3", "h3", false, 8080, null, true, false),
+        NodeType.HISTORICAL,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier"))
     );
 
     DiscoveryDruidNode node4 = new DiscoveryDruidNode(
-        new DruidNode("s4", "h4", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
+        new DruidNode("s4", "h4", false, 8080, null, true, false),
+        NodeType.PEON,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0),
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier"))
     );
 
     DiscoveryDruidNode node5 = new DiscoveryDruidNode(
-        new DruidNode("s5", "h5", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
+        new DruidNode("s5", "h5", false, 8080, null, true, false),
+        NodeType.PEON,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0))
     );
 
     DiscoveryDruidNode node6 = new DiscoveryDruidNode(
-        new DruidNode("s6", "h6", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_PEON,
+        new DruidNode("s6", "h6", false, 8080, null, true, false),
+        NodeType.PEON,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier"))
     );
 
     DiscoveryDruidNode node7 = new DiscoveryDruidNode(
-        new DruidNode("s7", "h7", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+        new DruidNode("s7", "h7", false, 8080, null, true, false),
+        NodeType.BROKER,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier"))
     );
 
     DiscoveryDruidNode node7Clone = new DiscoveryDruidNode(
-        new DruidNode("s7", "h7", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
+        new DruidNode("s7", "h7", false, 8080, null, true, false),
+        NodeType.BROKER,
         ImmutableMap.of(
             LookupNodeService.DISCOVERY_SERVICE_KEY, new LookupNodeService("tier"))
     );
 
     DiscoveryDruidNode node8 = new DiscoveryDruidNode(
-        new DruidNode("s8", "h8", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+        new DruidNode("s8", "h8", false, 8080, null, true, false),
+        NodeType.COORDINATOR,
         ImmutableMap.of()
     );
 
@@ -183,7 +184,7 @@ public class DruidNodeDiscoveryProviderTest
     private List<DruidNodeDiscovery.Listener> listeners = new ArrayList<>();
 
     @Override
-    public DruidNodeDiscovery getForNodeType(String nodeType)
+    public DruidNodeDiscovery getForNodeType(NodeType nodeType)
     {
       return new DruidNodeDiscovery()
       {

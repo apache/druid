@@ -23,26 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import org.apache.druid.collections.StupidResourceHolder;
-import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.initialization.Initialization;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.metrics.AbstractMonitor;
 import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
@@ -57,6 +43,19 @@ import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 import net.spy.memcached.transcoders.Transcoder;
+import org.apache.druid.collections.StupidResourceHolder;
+import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.initialization.Initialization;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -65,6 +64,7 @@ import org.junit.Test;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -353,9 +353,7 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public <T> Future<Boolean> append(
-      String s, T t, Transcoder<T> tTranscoder
-  )
+  public <T> Future<Boolean> append(String s, T t, Transcoder<T> tTranscoder)
   {
     return null;
   }
@@ -379,9 +377,7 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public <T> Future<Boolean> prepend(
-      String s, T t, Transcoder<T> tTranscoder
-  )
+  public <T> Future<Boolean> prepend(String s, T t, Transcoder<T> tTranscoder)
   {
     return null;
   }
@@ -399,17 +395,13 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public Future<CASResponse> asyncCAS(
-      String s, long l, int i, Object o
-  )
+  public Future<CASResponse> asyncCAS(String s, long l, int i, Object o)
   {
     return null;
   }
 
   @Override
-  public <T> OperationFuture<CASResponse> asyncCAS(
-      String s, long l, int i, T t, Transcoder<T> tTranscoder
-  )
+  public <T> OperationFuture<CASResponse> asyncCAS(String s, long l, int i, T t, Transcoder<T> tTranscoder)
   {
     return null;
   }
@@ -433,9 +425,7 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public <T> CASResponse cas(
-      String s, long l, T t, Transcoder<T> tTranscoder
-  )
+  public <T> CASResponse cas(String s, long l, T t, Transcoder<T> tTranscoder)
   {
     return null;
   }
@@ -684,7 +674,7 @@ class MockMemcachedClient implements MemcachedClientIF
       @Override
       public Map<String, T> get()
       {
-        Map<String, T> retVal = Maps.newHashMap();
+        Map<String, T> retVal = new HashMap<>();
 
         while (keys.hasNext()) {
           String key = keys.next();
@@ -1004,9 +994,7 @@ class MockMemcachedClient implements MemcachedClientIF
   }
 
   @Override
-  public CountDownLatch broadcastOp(
-      BroadcastOpFactory broadcastOpFactory, Collection<MemcachedNode> memcachedNodes
-  )
+  public CountDownLatch broadcastOp(BroadcastOpFactory broadcastOpFactory, Collection<MemcachedNode> memcachedNodes)
   {
     return null;
   }

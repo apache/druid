@@ -21,7 +21,7 @@ package org.apache.druid.query.search;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
@@ -38,12 +38,12 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.GenericColumn;
-import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.NumericColumn;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -114,8 +114,8 @@ public class UseIndexesStrategy extends SearchStrategy
       List<DimensionSpec> dimensions
   )
   {
-    final List<DimensionSpec> bitmapDims = Lists.newArrayList();
-    final List<DimensionSpec> nonBitmapDims = Lists.newArrayList();
+    final List<DimensionSpec> bitmapDims = new ArrayList<>();
+    final List<DimensionSpec> nonBitmapDims = new ArrayList<>();
     final List<DimensionSpec> dimsToSearch = getDimsToSearch(
         adapter.getAvailableDimensions(),
         dimensions
@@ -164,8 +164,8 @@ public class UseIndexesStrategy extends SearchStrategy
     final ImmutableBitmap timeFilteredBitmap;
     if (!interval.contains(segment.getDataInterval())) {
       final MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
-      final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
-      try (final GenericColumn timeValues = timeColumn.getGenericColumn()) {
+      final ColumnHolder timeColumnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
+      try (final NumericColumn timeValues = (NumericColumn) timeColumnHolder.getColumn()) {
 
         int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
         int endIndex = Math.min(
@@ -188,7 +188,7 @@ public class UseIndexesStrategy extends SearchStrategy
     return timeFilteredBitmap;
   }
 
-  private static int getStartIndexOfTime(GenericColumn timeValues, long time, boolean inclusive)
+  private static int getStartIndexOfTime(NumericColumn timeValues, long time, boolean inclusive)
   {
     int low = 0;
     int high = timeValues.length() - 1;
@@ -224,7 +224,8 @@ public class UseIndexesStrategy extends SearchStrategy
     private final ImmutableBitmap timeFilteredBitmap;
 
     public IndexOnlyExecutor(
-        SearchQuery query, Segment segment,
+        SearchQuery query,
+        Segment segment,
         ImmutableBitmap timeFilteredBitmap,
         List<DimensionSpec> dimensionSpecs
     )
@@ -245,12 +246,12 @@ public class UseIndexesStrategy extends SearchStrategy
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
       for (DimensionSpec dimension : dimsToSearch) {
-        final Column column = index.getColumn(dimension.getDimension());
-        if (column == null) {
+        final ColumnHolder columnHolder = index.getColumnHolder(dimension.getDimension());
+        if (columnHolder == null) {
           continue;
         }
 
-        final BitmapIndex bitmapIndex = column.getBitmapIndex();
+        final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
         Preconditions.checkArgument(bitmapIndex != null,
                                     "Dimension [%s] should support bitmap index", dimension.getDimension()
         );

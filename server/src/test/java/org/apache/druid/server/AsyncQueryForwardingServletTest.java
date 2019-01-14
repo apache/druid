@@ -39,6 +39,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -118,7 +119,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", null, null, true, false)
+                    new DruidNode("test", "localhost", false, null, null, true, false)
                 );
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
                 binder.bind(AuthorizerMapper.class).toInstance(
@@ -348,13 +349,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           )
           {
             @Override
-            protected URI rewriteURI(HttpServletRequest request, String scheme, String host)
+            protected String rewriteURI(HttpServletRequest request, String scheme, String host)
             {
-              String uri = super.rewriteURI(request, scheme, host).toString();
+              String uri = super.rewriteURI(request, scheme, host);
               if (uri.contains("/druid/v2")) {
-                return URI.create(uri.replace("/druid/v2", "/default"));
+                return URI.create(StringUtils.replace(uri, "/druid/v2", "/default")).toString();
               }
-              return URI.create(uri.replace("/proxy", ""));
+              return URI.create(StringUtils.replace(uri, "/proxy", "")).toString();
             }
           });
       //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
@@ -378,7 +379,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     // test params
     Assert.assertEquals(
-        new URI("http://localhost:1234/some/path?param=1"),
+        "http://localhost:1234/some/path?param=1",
         AsyncQueryForwardingServlet.makeURI("http", "localhost:1234", "/some/path", "param=1")
     );
 
@@ -391,20 +392,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             HostAndPort.fromParts("2a00:1450:4007:805::1007", 1234).toString(),
             "/some/path",
             "param=1&param2=%E2%82%AC"
-        ).toASCIIString()
+        )
     );
 
     // test null query
     Assert.assertEquals(
-        new URI("http://localhost/"),
+        "http://localhost/",
         AsyncQueryForwardingServlet.makeURI("http", "localhost", "/", null)
     );
 
     // Test reWrite Encoded interval with timezone info
     // decoded parameters 1900-01-01T00:00:00.000+01.00 -> 1900-01-01T00:00:00.000+01:00
     Assert.assertEquals(
-        new URI(
-            "http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00"),
+        "http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00",
         AsyncQueryForwardingServlet.makeURI(
             "http",
             "localhost:1234",

@@ -21,12 +21,13 @@ package org.apache.druid.server.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.query.DruidMetrics;
 
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,10 +79,7 @@ public class MonitorsConfig
            '}';
   }
 
-  public static Map<String, String[]> mapOfDatasourceAndTaskID(
-      final String datasource,
-      final String taskId
-  )
+  public static Map<String, String[]> mapOfDatasourceAndTaskID(final String datasource, final String taskId)
   {
     final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
     if (datasource != null) {
@@ -112,15 +110,17 @@ public class MonitorsConfig
 
   private static List<Class<? extends Monitor>> getMonitorsFromNames(List<String> monitorNames)
   {
-    List<Class<? extends Monitor>> monitors = Lists.newArrayList();
+    List<Class<? extends Monitor>> monitors = new ArrayList<>();
     if (monitorNames == null) {
       return monitors;
     }
     try {
       for (String monitorName : monitorNames) {
-        String effectiveMonitorName = monitorName
-            .replace(METAMX_PACKAGE, APACHE_DRUID_PACKAGE_NAME)
-            .replace(IO_DRUID_PACKAGE, APACHE_DRUID_PACKAGE_NAME);
+        final String effectiveMonitorName = StringUtils.replace(
+            StringUtils.replace(monitorName, METAMX_PACKAGE, APACHE_DRUID_PACKAGE_NAME),
+            IO_DRUID_PACKAGE,
+            APACHE_DRUID_PACKAGE_NAME
+        );
         if (!effectiveMonitorName.equals(monitorName)) {
           log.warn(
               "Deprecated Monitor class name[%s] found, please use name[%s] instead.",

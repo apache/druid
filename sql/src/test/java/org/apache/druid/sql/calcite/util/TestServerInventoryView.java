@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.util;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.DataSource;
@@ -30,9 +31,14 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 
+/**
+ * This class is used for testing and benchmark
+ */
 public class TestServerInventoryView implements TimelineServerView
 {
   private static final DruidServerMetadata DUMMY_SERVER = new DruidServerMetadata(
@@ -44,15 +50,38 @@ public class TestServerInventoryView implements TimelineServerView
       "dummy",
       0
   );
+  private static final DruidServerMetadata DUMMY_SERVER_REALTIME = new DruidServerMetadata(
+      "dummy",
+      "dummy",
+      null,
+      0,
+      ServerType.REALTIME,
+      "dummy",
+      0
+  );
   private final List<DataSegment> segments;
+  private List<DataSegment> realtimeSegments = new ArrayList<>();
 
   public TestServerInventoryView(List<DataSegment> segments)
   {
     this.segments = ImmutableList.copyOf(segments);
   }
 
+  public TestServerInventoryView(List<DataSegment> segments, List<DataSegment> realtimeSegments)
+  {
+    this.segments = ImmutableList.copyOf(segments);
+    this.realtimeSegments = ImmutableList.copyOf(realtimeSegments);
+  }
+
   @Override
   public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Nullable
+  @Override
+  public List<ImmutableDruidServer> getDruidServers()
   {
     throw new UnsupportedOperationException();
   }
@@ -63,7 +92,9 @@ public class TestServerInventoryView implements TimelineServerView
     for (final DataSegment segment : segments) {
       exec.execute(() -> callback.segmentAdded(DUMMY_SERVER, segment));
     }
-
+    for (final DataSegment segment : realtimeSegments) {
+      exec.execute(() -> callback.segmentAdded(DUMMY_SERVER_REALTIME, segment));
+    }
     exec.execute(callback::segmentViewInitialized);
   }
 
@@ -73,7 +104,9 @@ public class TestServerInventoryView implements TimelineServerView
     for (DataSegment segment : segments) {
       exec.execute(() -> callback.segmentAdded(DUMMY_SERVER, segment));
     }
-
+    for (final DataSegment segment : realtimeSegments) {
+      exec.execute(() -> callback.segmentAdded(DUMMY_SERVER_REALTIME, segment));
+    }
     exec.execute(callback::timelineInitialized);
   }
 

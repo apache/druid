@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
+import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
@@ -31,6 +32,8 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+
+import java.util.Properties;
 
 public class KafkaSupervisorIOConfigTest
 {
@@ -68,6 +71,7 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(1, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assert.assertEquals(100, config.getPollTimeout());
     Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
     Assert.assertEquals(false, config.isUseEarliestOffset());
@@ -87,6 +91,7 @@ public class KafkaSupervisorIOConfigTest
                      + "  \"taskCount\": 9,\n"
                      + "  \"taskDuration\": \"PT30M\",\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+                     + "  \"pollTimeout\": 1000,\n"
                      + "  \"startDelay\": \"PT1M\",\n"
                      + "  \"period\": \"PT10S\",\n"
                      + "  \"useEarliestOffset\": true,\n"
@@ -110,6 +115,7 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(9, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assert.assertEquals(1000, config.getPollTimeout());
     Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
     Assert.assertEquals(true, config.isUseEarliestOffset());
@@ -117,6 +123,29 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
     Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
     Assert.assertTrue("skipOffsetGaps", config.isSkipOffsetGaps());
+  }
+
+  @Test
+  public void testSerdeForConsumerPropertiesWithPasswords() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kafka\",\n"
+                     + "  \"topic\": \"my-topic\",\n"
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\",\n"
+                     + "   \"ssl.truststore.password\":{\"type\": \"default\", \"password\": \"mytruststorepassword\"},\n"
+                     + "   \"ssl.keystore.password\":{\"type\": \"default\", \"password\": \"mykeystorepassword\"},\n"
+                     + "   \"ssl.key.password\":\"mykeypassword\"}\n"
+                     + "}";
+
+    KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+    Properties props = new Properties();
+    KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
+
+    Assert.assertEquals("my-topic", config.getTopic());
+    Assert.assertEquals("localhost:9092", props.getProperty("bootstrap.servers"));
+    Assert.assertEquals("mytruststorepassword", props.getProperty("ssl.truststore.password"));
+    Assert.assertEquals("mykeystorepassword", props.getProperty("ssl.keystore.password"));
+    Assert.assertEquals("mykeypassword", props.getProperty("ssl.key.password"));
   }
 
   @Test
@@ -161,4 +190,5 @@ public class KafkaSupervisorIOConfigTest
     exception.expectMessage(CoreMatchers.containsString("bootstrap.servers"));
     mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
   }
+
 }

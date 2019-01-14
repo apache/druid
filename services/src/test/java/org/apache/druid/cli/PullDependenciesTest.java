@@ -21,10 +21,9 @@ package org.apache.druid.cli;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.java.util.common.StringUtils;
-import io.tesla.aether.internal.DefaultTeslaAether;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.resolution.DependencyRequest;
@@ -36,6 +35,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -115,7 +115,7 @@ public class PullDependenciesTest
   private List<Artifact> getArtifactsForExtension(Artifact artifact)
   {
     final List<String> jarNames = extensionToJars.get(artifact);
-    final List<Artifact> artifacts = Lists.newArrayList();
+    final List<Artifact> artifacts = new ArrayList<>();
     for (String jarName : jarNames) {
       final File jarFile = new File(localRepo, jarName);
       try {

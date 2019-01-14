@@ -21,11 +21,14 @@ package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -50,10 +53,13 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.Socket;
-import java.net.URI;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Abstract class to communicate with index tasks via HTTP. This class provides interfaces to serialize/deserialize
@@ -140,6 +146,11 @@ public abstract class IndexTaskClient implements AutoCloseable
     return retryPolicyFactory.makeRetryPolicy();
   }
 
+  protected <T> T deserialize(String content, JavaType type) throws IOException
+  {
+    return objectMapper.readValue(content, type);
+  }
+
   protected <T> T deserialize(String content, TypeReference<T> typeReference) throws IOException
   {
     return objectMapper.readValue(content, typeReference);
@@ -148,6 +159,33 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected <T> T deserialize(String content, Class<T> typeReference) throws IOException
   {
     return objectMapper.readValue(content, typeReference);
+  }
+
+  protected <T> T deserializeMap(String content, Class<? extends Map> mapClass, Class<?> keyClass, Class<?> valueClass)
+      throws IOException
+  {
+    return deserialize(content, objectMapper.getTypeFactory().constructMapType(mapClass, keyClass, valueClass));
+  }
+
+  protected <T> T deserializeNestedValueMap(
+      String content,
+      Class<? extends Map> mapClass,
+      Class<?> keyClass,
+      Class<? extends Map> valueMapClass,
+      Class<?> valueMapClassKey,
+      Class<?> valueMapClassValue
+  )
+      throws IOException
+  {
+    TypeFactory factory = objectMapper.getTypeFactory();
+    return deserialize(
+        content,
+        factory.constructMapType(
+            mapClass,
+            factory.constructType(keyClass),
+            factory.constructMapType(valueMapClass, valueMapClassKey, valueMapClassValue)
+        )
+    );
   }
 
   protected byte[] serialize(Object value) throws JsonProcessingException
@@ -174,12 +212,12 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected FullResponseHolder submitRequestWithEmptyContent(
       String taskId,
       HttpMethod method,
-      String pathSuffix,
-      @Nullable String query,
+      String encodedPathSuffix,
+      @Nullable String encodedQueryString,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
   {
-    return submitRequest(taskId, null, method, pathSuffix, query, new byte[0], retry);
+    return submitRequest(taskId, null, method, encodedPathSuffix, encodedQueryString, new byte[0], retry);
   }
 
   /**
@@ -188,13 +226,21 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected FullResponseHolder submitJsonRequest(
       String taskId,
       HttpMethod method,
-      String pathSuffix,
-      @Nullable String query,
+      String encodedPathSuffix,
+      @Nullable String encodedQueryString,
       byte[] content,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
   {
-    return submitRequest(taskId, MediaType.APPLICATION_JSON, method, pathSuffix, query, content, retry);
+    return submitRequest(
+        taskId,
+        MediaType.APPLICATION_JSON,
+        method,
+        encodedPathSuffix,
+        encodedQueryString,
+        content,
+        retry
+    );
   }
 
   /**
@@ -203,13 +249,53 @@ public abstract class IndexTaskClient implements AutoCloseable
   protected FullResponseHolder submitSmileRequest(
       String taskId,
       HttpMethod method,
-      String pathSuffix,
-      @Nullable String query,
+      String encodedPathSuffix,
+      @Nullable String encodedQueryString,
       byte[] content,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
   {
-    return submitRequest(taskId, SmileMediaTypes.APPLICATION_JACKSON_SMILE, method, pathSuffix, query, content, retry);
+    return submitRequest(
+        taskId,
+        SmileMediaTypes.APPLICATION_JACKSON_SMILE,
+        method,
+        encodedPathSuffix,
+        encodedQueryString,
+        content,
+        retry
+    );
+  }
+
+  private Request createRequest(
+      String taskId,
+      TaskLocation location,
+      String path,
+      @Nullable String encodedQueryString,
+      HttpMethod method,
+      @Nullable String mediaType,
+      byte[] content
+  ) throws MalformedURLException
+  {
+    final String host = location.getHost();
+    final String scheme = location.getTlsPort() >= 0 ? "https" : "http";
+    final int port = location.getTlsPort() >= 0 ? location.getTlsPort() : location.getPort();
+
+    // Use URL constructor, not URI, since the path is already encoded.
+    // The below line can throw a MalformedURLException, and this method should return immediately without rety.
+    final URL serviceUrl = new URL(
+        scheme,
+        host,
+        port,
+        encodedQueryString == null ? path : StringUtils.format("%s?%s", path, encodedQueryString)
+    );
+
+    final Request request = new Request(method, serviceUrl);
+    // used to validate that we are talking to the correct worker
+    request.addHeader(ChatHandlerResource.TASK_ID_HEADER, taskId);
+    if (content.length > 0) {
+      request.setContent(Preconditions.checkNotNull(mediaType, "mediaType"), content);
+    }
+    return request;
   }
 
   /**
@@ -219,8 +305,8 @@ public abstract class IndexTaskClient implements AutoCloseable
       String taskId,
       @Nullable String mediaType, // nullable if content is empty
       HttpMethod method,
-      String pathSuffix,
-      @Nullable String query,
+      String encodedPathSuffix,
+      @Nullable String encodedQueryString,
       byte[] content,
       boolean retry
   ) throws IOException, ChannelException, NoTaskLocationException
@@ -228,69 +314,40 @@ public abstract class IndexTaskClient implements AutoCloseable
     final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
 
     while (true) {
-      FullResponseHolder response = null;
-      Request request = null;
-      TaskLocation location = TaskLocation.unknown();
-      String path = StringUtils.format("%s/%s/%s", BASE_PATH, taskId, pathSuffix);
+      String path = StringUtils.format("%s/%s/%s", BASE_PATH, StringUtils.urlEncode(taskId), encodedPathSuffix);
 
       Optional<TaskStatus> status = taskInfoProvider.getTaskStatus(taskId);
       if (!status.isPresent() || !status.get().isRunnable()) {
-        throw new TaskNotRunnableException(StringUtils.format(
-            "Aborting request because task [%s] is not runnable",
-            taskId
-        ));
+        throw new TaskNotRunnableException(
+            StringUtils.format(
+                "Aborting request because task [%s] is not runnable",
+                taskId
+            )
+        );
       }
 
-      String host = location.getHost();
-      String scheme = "";
-      int port = -1;
+      final TaskLocation location = taskInfoProvider.getTaskLocation(taskId);
+      if (location.equals(TaskLocation.unknown())) {
+        throw new NoTaskLocationException(StringUtils.format("No TaskLocation available for task [%s]", taskId));
+      }
 
+      final Request request = createRequest(
+          taskId,
+          location,
+          path,
+          encodedQueryString,
+          method,
+          mediaType,
+          content
+      );
+
+      FullResponseHolder response = null;
       try {
-        location = taskInfoProvider.getTaskLocation(taskId);
-        if (location.equals(TaskLocation.unknown())) {
-          throw new NoTaskLocationException(StringUtils.format("No TaskLocation available for task [%s]", taskId));
-        }
-
-        host = location.getHost();
-        scheme = location.getTlsPort() >= 0 ? "https" : "http";
-        port = location.getTlsPort() >= 0 ? location.getTlsPort() : location.getPort();
-
         // Netty throws some annoying exceptions if a connection can't be opened, which happens relatively frequently
         // for tasks that happen to still be starting up, so test the connection first to keep the logs clean.
-        checkConnection(host, port);
+        checkConnection(request.getUrl().getHost(), request.getUrl().getPort());
 
-        try {
-          URI serviceUri = new URI(
-              scheme,
-              null,
-              host,
-              port,
-              path,
-              query,
-              null
-          );
-          request = new Request(method, serviceUri.toURL());
-
-          // used to validate that we are talking to the correct worker
-          request.addHeader(ChatHandlerResource.TASK_ID_HEADER, taskId);
-
-          if (content.length > 0) {
-            request.setContent(Preconditions.checkNotNull(mediaType, "mediaType"), content);
-          }
-
-          log.debug("HTTP %s: %s", method.getName(), serviceUri.toString());
-          response = httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
-        }
-        catch (IOException | ChannelException ioce) {
-          throw ioce;
-        }
-        catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-          throw new RuntimeException(ie);
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
+        response = submitRequest(request);
 
         int responseCode = response.getStatus().getCode();
         if (responseCode / 100 == 2) {
@@ -325,15 +382,7 @@ public abstract class IndexTaskClient implements AutoCloseable
         } else {
           delay = retryPolicy.getAndIncrementRetryDelay();
         }
-        String urlForLog = (request != null
-                            ? request.getUrl().toString()
-                            : StringUtils.nonStrictFormat(
-                                "%s://%s:%d%s",
-                                scheme,
-                                host,
-                                port,
-                                path
-                            ));
+        final String urlForLog = request.getUrl().toString();
         if (!retry) {
           // if retry=false, we probably aren't too concerned if the operation doesn't succeed (i.e. the request was
           // for informational purposes only) so don't log a scary stack trace
@@ -371,6 +420,58 @@ public abstract class IndexTaskClient implements AutoCloseable
         throw e;
       }
     }
+  }
+
+  private FullResponseHolder submitRequest(Request request) throws IOException, ChannelException
+  {
+    try {
+      log.debug("HTTP %s: %s", request.getMethod().getName(), request.getUrl().toString());
+      return httpClient.go(request, new FullResponseHandler(StandardCharsets.UTF_8), httpTimeout).get();
+    }
+    catch (Exception e) {
+      throw throwIfPossible(e);
+    }
+  }
+
+  /**
+   * Throws if it's possible to throw the given Throwable.
+   * <p>
+   * - The input throwable shouldn't be null.
+   * - If Throwable is an {@link ExecutionException}, this calls itself recursively with the cause of ExecutionException.
+   * - If Throwable is an {@link IOException} or a {@link ChannelException}, this simply throws it.
+   * - If Throwable is an {@link InterruptedException}, this interrupts the current thread and throws a RuntimeException
+   * wrapping the InterruptedException
+   * - Otherwise, this simply returns the given Throwable.
+   * <p>
+   * Note that if the given Throable is an ExecutionException, this can return the cause of ExecutionException.
+   */
+  private RuntimeException throwIfPossible(Throwable t) throws IOException, ChannelException
+  {
+    Preconditions.checkNotNull(t, "Throwable shoulnd't null");
+
+    if (t instanceof ExecutionException) {
+      if (t.getCause() != null) {
+        return throwIfPossible(t.getCause());
+      } else {
+        return new RuntimeException(t);
+      }
+    }
+
+    if (t instanceof IOException) {
+      throw (IOException) t;
+    }
+
+    if (t instanceof ChannelException) {
+      throw (ChannelException) t;
+    }
+
+    if (t instanceof InterruptedException) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(t);
+    }
+
+    Throwables.propagateIfPossible(t);
+    return new RuntimeException(t);
   }
 
   @Override

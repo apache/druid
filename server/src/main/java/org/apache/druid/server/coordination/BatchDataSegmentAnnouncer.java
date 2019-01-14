@@ -25,10 +25,10 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,11 +38,11 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.curator.utils.ZKPaths;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -213,7 +213,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   public void announceSegments(Iterable<DataSegment> segments) throws IOException
   {
     SegmentZNode segmentZNode = new SegmentZNode(makeServedSegmentPath());
-    Set<DataSegment> batch = Sets.newHashSet();
+    Set<DataSegment> batch = new HashSet<>();
     List<DataSegmentChangeRequest> changesBatch = new ArrayList<>();
 
     int byteSize = 0;
@@ -247,7 +247,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
           announcer.announce(segmentZNode.getPath(), segmentZNode.getBytes());
 
           segmentZNode = new SegmentZNode(makeServedSegmentPath());
-          batch = Sets.newHashSet();
+          batch = new HashSet<>();
           count = 0;
           byteSize = 0;
         }
@@ -353,11 +353,12 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
     public Set<DataSegment> getSegments()
     {
       if (bytes.length == 0) {
-        return Sets.newHashSet();
+        return new HashSet<>();
       }
       try {
         return jsonMapper.readValue(
-            bytes, new TypeReference<Set<DataSegment>>()
+            bytes,
+            new TypeReference<Set<DataSegment>>()
             {
             }
         );

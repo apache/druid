@@ -23,8 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.runtime.Hook;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.NlsString;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -47,27 +52,25 @@ import org.apache.druid.query.topn.DimensionAndMetricValueExtractor;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.avatica.ColumnMetaData;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.runtime.Hook;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.NlsString;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public class QueryMaker
 {
@@ -142,7 +145,7 @@ public class QueryMaker
 
     // SQL row column index -> Scan query column index
     final int[] columnMapping = new int[outputRowSignature.getRowOrder().size()];
-    final Map<String, Integer> scanColumnOrder = Maps.newHashMap();
+    final Map<String, Integer> scanColumnOrder = new HashMap<>();
 
     for (int i = 0; i < query.getColumns().size(); i++) {
       scanColumnOrder.put(query.getColumns().get(i), i);
@@ -242,7 +245,7 @@ public class QueryMaker
                               final Object[] retVal = new Object[fieldList.size()];
                               for (RelDataTypeField field : fieldList) {
                                 final String outputName = outputRowSignature.getRowOrder().get(field.getIndex());
-                                if (outputName.equals(Column.TIME_COLUMN_NAME)) {
+                                if (outputName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
                                   retVal[field.getIndex()] = coerce(
                                       holder.getTimestamp().getMillis(),
                                       field.getType().getSqlTypeName()
@@ -424,6 +427,18 @@ public class QueryMaker
         coercedValue = ((NlsString) value).getValue();
       } else if (value instanceof Number) {
         coercedValue = String.valueOf(value);
+      } else if (value instanceof Collection) {
+        // Iterate through the collection, coercing each value. Useful for handling selects of multi-value dimensions.
+        final List<String> valueStrings = ((Collection<?>) value).stream()
+                                                                 .map(v -> (String) coerce(v, sqlType))
+                                                                 .collect(Collectors.toList());
+
+        try {
+          coercedValue = jsonMapper.writeValueAsString(valueStrings);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
       } else {
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }

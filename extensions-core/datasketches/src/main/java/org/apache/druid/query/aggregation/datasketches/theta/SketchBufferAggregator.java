@@ -23,13 +23,14 @@ import com.yahoo.memory.WritableMemory;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Union;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.IdentityHashMap;
 
 public class SketchBufferAggregator implements BufferAggregator
@@ -155,7 +156,7 @@ public class SketchBufferAggregator implements BufferAggregator
   {
     WritableMemory mem = memCache.get(buffer);
     if (mem == null) {
-      mem = WritableMemory.wrap(buffer);
+      mem = WritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN);
       memCache.put(buffer, mem);
     }
     return mem;

@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
@@ -37,6 +38,8 @@ import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.loading.LocalDataSegmentPuller;
+import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -63,7 +66,6 @@ public class TestUtils
     this.jsonMapper = new DefaultObjectMapper();
     indexIO = new IndexIO(
         jsonMapper,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -94,6 +96,18 @@ public class TestUtils
             .addValue(DataSegment.PruneLoadSpecHolder.class, DataSegment.PruneLoadSpecHolder.DEFAULT)
             .addValue(IndexingServiceClient.class, new NoopIndexingServiceClient())
             .addValue(AuthorizerMapper.class, new AuthorizerMapper(ImmutableMap.of()))
+            .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
+    );
+
+    jsonMapper.registerModule(
+        new SimpleModule()
+        {
+          @Override
+          public void setupModule(SetupContext context)
+          {
+            context.registerSubtypes(LocalLoadSpec.class);
+          }
+        }
     );
   }
 

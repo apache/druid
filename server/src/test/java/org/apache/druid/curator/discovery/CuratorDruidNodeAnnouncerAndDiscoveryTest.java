@@ -23,13 +23,13 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -39,10 +39,10 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
+ *
  */
 public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 {
@@ -69,7 +69,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 
     Announcer announcer = new Announcer(
         curator,
-        MoreExecutors.sameThreadExecutor()
+        Execs.directExecutor()
     );
     announcer.start();
 
@@ -80,26 +80,26 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     );
 
     DiscoveryDruidNode node1 = new DiscoveryDruidNode(
-        new DruidNode("s1", "h1", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+        new DruidNode("s1", "h1", false, 8080, null, true, false),
+        NodeType.COORDINATOR,
         ImmutableMap.of()
     );
 
     DiscoveryDruidNode node2 = new DiscoveryDruidNode(
-        new DruidNode("s2", "h2", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR,
+        new DruidNode("s2", "h2", false, 8080, null, true, false),
+        NodeType.COORDINATOR,
         ImmutableMap.of()
     );
 
     DiscoveryDruidNode node3 = new DiscoveryDruidNode(
-        new DruidNode("s3", "h3", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
+        new DruidNode("s3", "h3", false, 8080, null, true, false),
+        NodeType.OVERLORD,
         ImmutableMap.of()
     );
 
     DiscoveryDruidNode node4 = new DiscoveryDruidNode(
-        new DruidNode("s4", "h4", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
+        new DruidNode("s4", "h4", false, 8080, null, true, false),
+        NodeType.OVERLORD,
         ImmutableMap.of()
     );
 
@@ -113,8 +113,8 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     );
     druidNodeDiscoveryProvider.start();
 
-    DruidNodeDiscovery coordDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_COORDINATOR);
-    DruidNodeDiscovery overlordDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD);
+    DruidNodeDiscovery coordDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.COORDINATOR);
+    DruidNodeDiscovery overlordDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.OVERLORD);
 
     while (!checkNodes(ImmutableSet.of(node1), coordDiscovery.getAllNodes())) {
       Thread.sleep(100);
@@ -129,13 +129,13 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
             coordNodes.addAll(nodes);
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
             coordNodes.removeAll(nodes);
           }
@@ -147,13 +147,13 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
             overlordNodes.addAll(nodes);
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
             overlordNodes.removeAll(nodes);
           }

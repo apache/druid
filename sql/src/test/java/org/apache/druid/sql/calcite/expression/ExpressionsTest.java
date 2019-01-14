@@ -21,6 +21,19 @@ package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.avatica.util.TimeUnit;
+import org.apache.calcite.avatica.util.TimeUnitRange;
+import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlFunction;
+import org.apache.calcite.sql.SqlIntervalQualifier;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
+import org.apache.calcite.sql.fun.SqlTrimFunction;
+import org.apache.calcite.sql.parser.SqlParserPos;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprEval;
@@ -42,19 +55,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.calcite.avatica.util.TimeUnit;
-import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexBuilder;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.SqlIntervalQualifier;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.apache.calcite.sql.fun.SqlTrimFunction;
-import org.apache.calcite.sql.parser.SqlParserPos;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -195,6 +195,42 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         DruidExpression.fromExpression("(strpos(null,'ax') + 1)"),
         NullHandling.replaceWithDefault() ? 0L : null
+    );
+  }
+
+  @Test
+  public void testPosition()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',0) + 1)"),
+        2L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s"),
+            rexBuilder.makeExactLiteral(BigDecimal.valueOf(2))
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',(2 - 1)) + 1)"),
+        2L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s"),
+            rexBuilder.makeExactLiteral(BigDecimal.valueOf(3))
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',(3 - 1)) + 1)"),
+        0L
     );
   }
 
@@ -783,10 +819,10 @@ public class ExpressionsTest extends CalciteTestBase
   )
   {
     final DruidExpression expression = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
-    Assert.assertEquals("Expression for: " + rexNode.toString(), expectedExpression, expression);
+    Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
 
     final ExprEval result = Parser.parse(expression.getExpression(), plannerContext.getExprMacroTable())
                                   .eval(Parser.withMap(bindings));
-    Assert.assertEquals("Result for: " + rexNode.toString(), expectedResult, result.value());
+    Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }
 }

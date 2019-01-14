@@ -24,10 +24,10 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import org.apache.druid.client.DirectDruidClient;
@@ -69,6 +69,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -133,7 +134,7 @@ public class QueryResource implements QueryCountStatsProvider
     Set<String> datasources = queryManager.getQueryDatasources(queryId);
     if (datasources == null) {
       log.warn("QueryId [%s] not registered with QueryManager, cannot cancel", queryId);
-      datasources = Sets.newTreeSet();
+      datasources = new TreeSet<>();
     }
 
     Access authResult = AuthorizationUtils.authorizeAllResourceActions(
@@ -156,13 +157,19 @@ public class QueryResource implements QueryCountStatsProvider
   public Response doPost(
       final InputStream in,
       @QueryParam("pretty") final String pretty,
-      @Context final HttpServletRequest req // used to get request content-type, remote address and auth-related headers
+      @Context final HttpServletRequest req // used to get request content-type,Accept header, remote address and auth-related headers
   ) throws IOException
   {
     final QueryLifecycle queryLifecycle = queryLifecycleFactory.factorize();
     Query<?> query = null;
 
-    final ResponseContext context = createContext(req.getContentType(), pretty != null);
+    String acceptHeader = req.getHeader("Accept");
+    if (Strings.isNullOrEmpty(acceptHeader)) {
+      //default to content-type
+      acceptHeader = req.getContentType();
+    }
+
+    final ResponseContext context = createContext(acceptHeader, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
     try {
@@ -187,6 +194,8 @@ public class QueryResource implements QueryCountStatsProvider
       final String prevEtag = getPreviousEtag(req);
 
       if (prevEtag != null && prevEtag.equals(responseContext.get(HEADER_ETAG))) {
+        queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
+        successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
       }
 
@@ -294,13 +303,13 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
-  private static Query<?> readQuery(
+  private Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
       final ResponseContext context
   ) throws IOException
   {
-    Query baseQuery = context.getObjectMapper().readValue(in, Query.class);
+    Query baseQuery = getMapperForRequest(req.getContentType()).readValue(in, Query.class);
     String prevEtag = getPreviousEtag(req);
 
     if (prevEtag != null) {
@@ -315,6 +324,13 @@ public class QueryResource implements QueryCountStatsProvider
   private static String getPreviousEtag(final HttpServletRequest req)
   {
     return req.getHeader(HEADER_IF_NONE_MATCH);
+  }
+
+  protected ObjectMapper getMapperForRequest(String requestContentType)
+  {
+    boolean isSmile = SmileMediaTypes.APPLICATION_JACKSON_SMILE.equals(requestContentType) ||
+        APPLICATION_SMILE.equals(requestContentType);
+    return isSmile ? smileMapper : jsonMapper;
   }
 
   protected ObjectMapper serializeDataTimeAsLong(ObjectMapper mapper)

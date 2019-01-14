@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -32,6 +33,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -48,7 +50,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -64,8 +65,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -346,9 +345,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   }
 
   @Override
-  protected Response.Listener newProxyResponseListener(
-      HttpServletRequest request, HttpServletResponse response
-  )
+  protected Response.Listener newProxyResponseListener(HttpServletRequest request, HttpServletResponse response)
   {
     final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
     if (query != null) {
@@ -365,29 +362,22 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         request,
         (String) request.getAttribute(SCHEME_ATTRIBUTE),
         (String) request.getAttribute(HOST_ATTRIBUTE)
-    ).toString();
+    );
   }
 
-  protected URI rewriteURI(HttpServletRequest request, String scheme, String host)
+  protected String rewriteURI(HttpServletRequest request, String scheme, String host)
   {
     return makeURI(scheme, host, request.getRequestURI(), request.getQueryString());
   }
 
-  protected static URI makeURI(String scheme, String host, String requestURI, String rawQueryString)
+  @VisibleForTesting
+  static String makeURI(String scheme, String host, String requestURI, String rawQueryString)
   {
-    try {
-      return new URIBuilder()
-          .setScheme(scheme)
-          .setHost(host)
-          .setPath(requestURI)
-          // No need to encode-decode queryString, it is already encoded
-          .setQuery(rawQueryString)
-          .build();
-    }
-    catch (URISyntaxException e) {
-      log.error(e, "Unable to rewrite URI [%s]", e.getMessage());
-      throw Throwables.propagate(e);
-    }
+    return JettyUtils.concatenateForRewrite(
+        StringUtils.format("%s://%s", scheme, host),
+        requestURI,
+        rawQueryString
+    );
   }
 
   @Override

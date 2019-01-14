@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Bytes;
+import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -34,12 +35,12 @@ import org.apache.druid.collections.spatial.search.RectangularBound;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
-import junit.framework.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
@@ -399,7 +400,7 @@ public class ImmutableRTreeTest
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() == 500);
 
-    Set<Integer> expected = Sets.newHashSet();
+    Set<Integer> expected = new HashSet<>();
     for (int i = 0; i < 500; i++) {
       expected.add(i);
     }
@@ -445,7 +446,7 @@ public class ImmutableRTreeTest
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() == 500);
 
-    Set<Integer> expected = Sets.newHashSet();
+    Set<Integer> expected = new HashSet<>();
     for (int i = 0; i < 500; i++) {
       expected.add(i);
     }

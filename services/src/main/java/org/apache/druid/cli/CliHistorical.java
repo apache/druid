@@ -20,15 +20,14 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CacheMonitor;
 import org.apache.druid.discovery.DataNodeService;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
@@ -103,13 +102,12 @@ public class CliHistorical extends ServerRunnable
           binder.install(new CacheModule());
           MetricsModule.register(binder, CacheMonitor.class);
 
-          binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
-              new DiscoverySideEffectsProvider(
-                  DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
-                  ImmutableList.of(DataNodeService.class, LookupNodeService.class)
-              )
-          ).in(LazySingleton.class);
-          LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+          bindAnnouncer(
+              binder,
+              DiscoverySideEffectsProvider.builder(NodeType.HISTORICAL)
+                                          .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
+                                          .build()
+          );
         },
         new LookupModule()
     );

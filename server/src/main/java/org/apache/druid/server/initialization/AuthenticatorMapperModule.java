@@ -35,10 +35,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.apache.druid.server.security.AllowAllAuthenticator;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -103,7 +103,7 @@ public class AuthenticatorMapperModule implements DruidModule
 
       for (String authenticatorName : authenticators) {
         final String authenticatorPropertyBase = StringUtils.format(AUTHENTICATOR_PROPERTIES_FORMAT_STRING, authenticatorName);
-        final JsonConfigProvider<Authenticator> authenticatorProvider = new JsonConfigProvider<>(
+        final JsonConfigProvider<Authenticator> authenticatorProvider = JsonConfigProvider.of(
             authenticatorPropertyBase,
             Authenticator.class
         );

@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "API Reference"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # API Reference
 
@@ -292,7 +312,7 @@ Returns total size and count for each datasource for each interval within given 
 
 #### GET
 
-* `/druid/coordinator/v1/config/compaction/`
+* `/druid/coordinator/v1/config/compaction`
 
 Returns all compaction configs.
 
@@ -302,15 +322,15 @@ Returns a compaction config of a dataSource.
 
 #### POST
 
-* `/druid/coordinator/v1/config/compaction?slotRatio={someRatio}&maxSlots={someMaxSlots}`
+* `/druid/coordinator/v1/config/compaction/taskslots?ratio={someRatio}&max={someMaxSlots}`
 
-Update the capacity for compaction tasks. `slotRatio` and `maxSlots` are used to limit the max number of compaction tasks.
+Update the capacity for compaction tasks. `ratio` and `max` are used to limit the max number of compaction tasks.
 They mean the ratio of the total task slots to the copmaction task slots and the maximum number of task slots for compaction tasks, respectively.
-The actual max number of compaction tasks is `min(maxSlots, slotRatio * total task slots)`.
-Note that `slotRatio` and `maxSlots` are optional and can be omitted. If they are omitted, default values (0.1 and unbounded)
+The actual max number of compaction tasks is `min(max, ratio * total task slots)`.
+Note that `ratio` and `max` are optional and can be omitted. If they are omitted, default values (0.1 and unbounded)
 will be set for them.
 
-* `/druid/coordinator/v1/config/compaction/{dataSource}`
+* `/druid/coordinator/v1/config/compaction`
 
 Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
 
@@ -368,6 +388,14 @@ Retrieve the status of a task.
 
 Retrieve information about the segments of a task.
 
+<div class="note caution">
+This API is deprecated and will be removed in future releases.
+</div>
+
+* `/druid/indexer/v1/task/{taskId}/reports`
+
+Retrieve a [task completion report](../ingestion/reports.html) for a task. Only works for completed tasks.
+
 #### POST
 
 * `/druid/indexer/v1/task` 
@@ -378,9 +406,85 @@ Endpoint for submitting tasks and supervisor specs to the overlord. Returns the 
 
 Shuts down a task.
 
-* `druid/indexer/v1/task/{dataSource}/shutdownAllTasks`
+* `druid/indexer/v1/datasources/{dataSource}/shutdownAllTasks`
 
 Shuts down all tasks for a dataSource.
+
+### Supervisors
+
+#### GET
+
+* `/druid/indexer/v1/supervisor`
+
+Returns a list of strings of the currently active supervisor ids.
+
+* `/druid/indexer/v1/supervisor?full`
+
+Returns a list of objects of the currently active supervisors.
+
+|Field|Type|Description|
+|---|---|---|
+|`id`|String|supervisor unique identifier|
+|`spec`|SupervisorSpec|json specification of supervisor (See Supervisor Configuration for details)|
+
+* `/druid/indexer/v1/supervisor/<supervisorId>`
+
+Returns the current spec for the supervisor with the provided ID.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/status`
+
+Returns the current status of the supervisor with the provided ID.
+
+* `/druid/indexer/v1/supervisor/history`
+
+Returns an audit history of specs for all supervisors (current and past).
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/history`
+
+Returns an audit history of specs for the supervisor with the provided ID.
+
+#### POST
+
+* `/druid/indexer/v1/supervisor`
+
+Create a new supervisor or update an existing one.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/suspend`
+
+Suspend the current running supervisor of the provided ID. Responds with updated SupervisorSpec.
+
+* `/druid/indexer/v1/supervisor/suspendAll`
+
+Suspend all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/resume`
+
+Resume indexing tasks for a supervisor. Responds with updated SupervisorSpec.
+
+* `/druid/indexer/v1/supervisor/resumeAll`
+
+Resume all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/reset`
+
+Reset the specified supervisor.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/terminate`
+
+Terminate a supervisor of the provided ID.
+
+* `/druid/indexer/v1/supervisor/terminateAll`
+
+Terminate all supervisors at once.
+
+* `/druid/indexer/v1/supervisor/<supervisorId>/shutdown`
+
+Shutdown a supervisor.
+
+<div class="note caution">
+This API is deprecated and will be removed in future releases.
+Please use the equivalent 'terminate' instead.
+</div>
 
 ## MiddleManager
 
@@ -388,7 +492,16 @@ The MiddleManager does not have any API endpoints beyond the [common endpoints](
 
 ## Peon
 
-The Peon does not have any API endpoints beyond the [common endpoints](#common).
+#### GET
+
+* `/druid/worker/v1/chat/{taskId}/rowStats`
+
+Retrieve a live row stats report from a peon. See [task reports](../ingestion/reports.html) for more details.
+
+* `/druid/worker/v1/chat/{taskId}/unparseableEvents`
+
+Retrieve an unparseable events report from a peon. See [task reports](../ingestion/reports.html) for more details.
+
 
 ## Broker
 
@@ -412,9 +525,21 @@ druid.query.segmentMetadata.defaultHistory
 
 Returns the dimensions of the datasource.
 
+<div class="note caution">
+This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.html) instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.html#retrieving-metadata)
+if you're using SQL.
+</div>
+
 * `/druid/v2/datasources/{dataSourceName}/metrics`
 
 Returns the metrics of the datasource.
+
+<div class="note caution">
+This API is deprecated and will be removed in future releases. Please use [SegmentMetadataQuery](../querying/segmentmetadataquery.html) instead
+which provides more comprehensive information and supports all dataSource types including streaming dataSources. It's also encouraged to use [INFORMATION_SCHEMA tables](../querying/sql.html#retrieving-metadata)
+if you're using SQL.
+</div>
 
 * `/druid/v2/datasources/{dataSourceName}/candidates?intervals={comma-separated-intervals-in-ISO8601-format}&numCandidates={numCandidates}`
 

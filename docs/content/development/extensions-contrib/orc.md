@@ -1,14 +1,34 @@
 ---
 layout: doc_page
+title: "ORC"
 ---
 
-# Orc
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+# ORC
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-orc-extensions`.
 
-This extension enables Druid to ingest and understand the Apache Orc data format offline.
+This extension enables Druid to ingest and understand the Apache ORC data format offline.
 
-## Orc Hadoop Parser
+## ORC Hadoop Parser
 
 This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inputSpec in ioConfig must be set to `"org.apache.hadoop.hive.ql.io.orc.OrcNewInputFormat"`.
 
@@ -16,7 +36,7 @@ This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inp
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
 |type      | String      | This should say `orc`                                                                  | yes|
 |parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Any parse spec that extends ParseSpec is possible but only their TimestampSpec and DimensionsSpec are used. | yes|
-|typeString| String      | String representation of Orc struct type info. If not specified, auto constructed from parseSpec but all metric columns are dropped | no|
+|typeString| String      | String representation of ORC struct type info. If not specified, auto constructed from parseSpec but all metric columns are dropped | no|
 |mapFieldNameFormat| String | String format for resolving the flatten map fields. Default is `<PARENT>_<CHILD>`. | no |
 
 For example of `typeString`, string column col1 and array of string column col2 is represented by `"struct<col1:string,col2:array<string>>"`.

@@ -36,6 +36,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -58,7 +59,7 @@ public class IndexBuilder
   private IndexSpec indexSpec = new IndexSpec();
   private int maxRows = DEFAULT_MAX_ROWS;
 
-  private final List<InputRow> rows = Lists.newArrayList();
+  private final List<InputRow> rows = new ArrayList<>();
 
   private IndexBuilder()
   {
@@ -112,7 +113,7 @@ public class IndexBuilder
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
     try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
-      return TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(
+      return TestHelper.getTestIndexIO().loadIndex(
           indexMerger.persist(
               incrementalIndex,
               new File(tmpDir, StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))),
@@ -131,11 +132,11 @@ public class IndexBuilder
     IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory);
     Preconditions.checkNotNull(tmpDir, "tmpDir");
 
-    final List<QueryableIndex> persisted = Lists.newArrayList();
+    final List<QueryableIndex> persisted = new ArrayList<>();
     try {
       for (int i = 0; i < rows.size(); i += ROWS_PER_INDEX_FOR_MERGING) {
         persisted.add(
-            TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(
+            TestHelper.getTestIndexIO().loadIndex(
                 indexMerger.persist(
                     buildIncrementalIndexWithRows(
                         schema,
@@ -149,7 +150,7 @@ public class IndexBuilder
             )
         );
       }
-      final QueryableIndex merged = TestHelper.getTestIndexIO(segmentWriteOutMediumFactory).loadIndex(
+      final QueryableIndex merged = TestHelper.getTestIndexIO().loadIndex(
           indexMerger.merge(
               Lists.transform(
                   persisted,

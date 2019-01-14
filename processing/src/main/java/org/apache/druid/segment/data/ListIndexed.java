@@ -21,6 +21,8 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
+import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -29,21 +31,16 @@ import java.util.List;
 public class ListIndexed<T> implements Indexed<T>
 {
   private final List<T> baseList;
-  private final Class<? extends T> clazz;
 
-  public ListIndexed(
-      List<T> baseList,
-      Class<? extends T> clazz
-  )
+  public ListIndexed(List<T> baseList)
   {
     this.baseList = baseList;
-    this.clazz = clazz;
   }
 
-  @Override
-  public Class<? extends T> getClazz()
+  @SafeVarargs
+  public ListIndexed(T... values)
   {
-    return clazz;
+    this(Arrays.asList(values));
   }
 
   @Override
@@ -59,7 +56,7 @@ public class ListIndexed<T> implements Indexed<T>
   }
 
   @Override
-  public int indexOf(T value)
+  public int indexOf(@Nullable T value)
   {
     return baseList.indexOf(value);
   }

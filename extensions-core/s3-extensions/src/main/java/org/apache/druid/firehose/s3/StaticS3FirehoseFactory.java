@@ -40,8 +40,8 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.storage.s3.S3Utils;
+import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -288,9 +288,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     final String authority = originalAuthority.endsWith("/") ?
                              originalAuthority.substring(0, originalAuthority.length() - 1) :
                              originalAuthority;
-    final String path = originalPath.startsWith("/") ?
-                        originalPath.substring(1, originalPath.length()) :
-                        originalPath;
+    final String path = originalPath.startsWith("/") ? originalPath.substring(1) : originalPath;
 
     return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }

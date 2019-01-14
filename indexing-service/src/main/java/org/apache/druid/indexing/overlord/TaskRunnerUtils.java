@@ -19,11 +19,20 @@
 
 package org.apache.druid.indexing.overlord;
 
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.Arrays;
 import java.util.concurrent.Executor;
 
 public class TaskRunnerUtils
@@ -87,6 +96,22 @@ public class TaskRunnerUtils
            .addData("listener", listener.toString())
            .emit();
       }
+    }
+  }
+
+  public static URL makeWorkerURL(Worker worker, String pathFormat, String... pathParams)
+  {
+    Preconditions.checkArgument(pathFormat.startsWith("/"), "path must start with '/': %s", pathFormat);
+    final String path = StringUtils.format(
+        pathFormat,
+        Arrays.stream(pathParams).map(StringUtils::urlEncode).toArray()
+    );
+
+    try {
+      return new URI(StringUtils.format("%s://%s%s", worker.getScheme(), worker.getHost(), path)).toURL();
+    }
+    catch (URISyntaxException | MalformedURLException e) {
+      throw Throwables.propagate(e);
     }
   }
 }

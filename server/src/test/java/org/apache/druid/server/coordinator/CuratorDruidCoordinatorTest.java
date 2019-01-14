@@ -25,6 +25,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidServer;
@@ -47,26 +50,27 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.utils.ZKPaths;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * This tests zookeeper specific coordinator/load queue/historical interactions, such as moving segments by the balancer
@@ -97,8 +101,13 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
   private BatchServerInventoryView baseView;
   private CoordinatorServerView serverView;
   private CountDownLatch segmentViewInitLatch;
-  private CountDownLatch segmentAddedLatch;
-  private CountDownLatch segmentRemovedLatch;
+  /**
+   * The following two fields are changed during {@link #testMoveSegment()}, the change might not be visible from the
+   * thread, that runs the callback, registered in {@link #setupView()}. volatile modificator doesn't guarantee
+   * visibility either, but somewhat increases the chances.
+   */
+  private volatile CountDownLatch segmentAddedLatch;
+  private volatile CountDownLatch segmentRemovedLatch;
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
 
@@ -181,7 +190,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         Execs.singleThreaded("coordinator_test_load_queue_peon_dest-%d"),
         druidCoordinatorConfig
     );
-    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
+    druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = (corePoolSize, nameFormat) -> Executors.newSingleThreadScheduledExecutor();
     leaderAnnouncerLatch = new CountDownLatch(1);
@@ -240,7 +249,10 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     tearDownServerAndCurator();
   }
 
-  @Test(timeout = 60_000L)
+  @Rule
+  public final TestRule timeout = new DeadlockDetectingTimeout(60, TimeUnit.SECONDS);
+
+  @Test
   public void testMoveSegment() throws Exception
   {
     segmentViewInitLatch = new CountDownLatch(1);
@@ -293,15 +305,14 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     DataSegment segmentToMove = sourceSegments.get(2);
 
-    List<String> sourceSegKeys = Lists.newArrayList();
-    List<String> destSegKeys = Lists.newArrayList();
+    List<String> sourceSegKeys = new ArrayList<>();
 
     for (DataSegment segment : sourceSegments) {
       sourceSegKeys.add(announceBatchSegmentsForServer(source, ImmutableSet.of(segment), zkPathsConfig, jsonMapper));
     }
 
     for (DataSegment segment : destinationSegments) {
-      destSegKeys.add(announceBatchSegmentsForServer(dest, ImmutableSet.of(segment), zkPathsConfig, jsonMapper));
+      announceBatchSegmentsForServer(dest, ImmutableSet.of(segment), zkPathsConfig, jsonMapper);
     }
 
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
@@ -371,7 +382,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     // clean up drop from load queue
     curator.delete().guaranteed().forPath(ZKPaths.makePath(SOURCE_LOAD_PATH, segmentToMove.getIdentifier()));
 
-    List<DruidServer> servers = serverView.getInventory().stream().collect(Collectors.toList());
+    List<DruidServer> servers = new ArrayList<>(serverView.getInventory());
 
     Assert.assertEquals(2, servers.get(0).getSegments().size());
     Assert.assertEquals(2, servers.get(1).getSegments().size());
@@ -429,7 +440,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       public void registerSegmentCallback(Executor exec, final SegmentCallback callback)
       {
         super.registerSegmentCallback(
-            exec, new SegmentCallback()
+            exec,
+            new SegmentCallback()
             {
               @Override
               public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)

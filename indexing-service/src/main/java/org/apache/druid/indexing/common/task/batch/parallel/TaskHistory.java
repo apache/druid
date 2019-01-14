@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Preconditions;
@@ -39,10 +40,10 @@ class TaskHistory<T extends Task>
   {
     attemptHistory.forEach(status -> {
       Preconditions.checkState(
-          status.getState() == TaskState.SUCCESS || status.getState() == TaskState.FAILED,
+          status.getStatusCode() == TaskState.SUCCESS || status.getStatusCode() == TaskState.FAILED,
           "Complete tasks should be recorded, but the state of task[%s] is [%s]",
           status.getId(),
-          status.getState()
+          status.getStatusCode()
       );
     });
     this.spec = spec;

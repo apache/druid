@@ -22,12 +22,12 @@ package org.apache.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.segment.DimensionSelector;
-import it.unimi.dsi.fastutil.ints.Int2IntMap;
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -76,7 +76,8 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
             @Override
             public boolean apply(@Nullable String input)
             {
-              return compiledRegex.matcher(NullHandling.nullToEmptyIfNeeded(input)).matches();
+              String val = NullHandling.nullToEmptyIfNeeded(input);
+              return val == null ? false : compiledRegex.matcher(val).matches();
             }
           }
       );

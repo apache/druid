@@ -49,7 +49,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -109,25 +109,25 @@ public class TimeFilteringTest extends BaseFilterTest
   public void testTimeFilterAsLong()
   {
     assertFilterMatches(
-        new SelectorDimFilter(Column.TIME_COLUMN_NAME, "0", null),
+        new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "0", null),
         ImmutableList.of("0")
     );
     assertFilterMatches(
-        new SelectorDimFilter(Column.TIME_COLUMN_NAME, "9000", null),
+        new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "9000", null),
         ImmutableList.of()
     );
 
     assertFilterMatches(
-        new BoundDimFilter(Column.TIME_COLUMN_NAME, "0", "4", false, false, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "0", "4", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.of("0", "1", "2", "3", "4")
     );
     assertFilterMatches(
-        new BoundDimFilter(Column.TIME_COLUMN_NAME, "0", "4", true, true, null, null, StringComparators.NUMERIC),
+        new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "0", "4", true, true, null, null, StringComparators.NUMERIC),
         ImmutableList.of("1", "2", "3")
     );
 
     assertFilterMatches(
-        new InDimFilter(Column.TIME_COLUMN_NAME, Arrays.asList("2", "4", "8"), null),
+        new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, Arrays.asList("2", "4", "8"), null),
         ImmutableList.of("2", "4")
     );
 
@@ -137,23 +137,23 @@ public class TimeFilteringTest extends BaseFilterTest
       infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatches(
-        new InDimFilter(Column.TIME_COLUMN_NAME, infilterValues, null),
+        new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, infilterValues, null),
         ImmutableList.of("0", "2", "4")
     );
 
     String jsFn = "function(x) { return(x === 3 || x === 5) }";
     assertFilterMatches(
-        new JavaScriptDimFilter(Column.TIME_COLUMN_NAME, jsFn, null, JavaScriptConfig.getEnabledInstance()),
+        new JavaScriptDimFilter(ColumnHolder.TIME_COLUMN_NAME, jsFn, null, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.of("3", "5")
     );
 
     assertFilterMatches(
-        new RegexDimFilter(Column.TIME_COLUMN_NAME, "4", null),
+        new RegexDimFilter(ColumnHolder.TIME_COLUMN_NAME, "4", null),
         ImmutableList.of("4")
     );
 
     assertFilterMatches(
-        new SearchQueryDimFilter(Column.TIME_COLUMN_NAME, new ContainsSearchQuerySpec("2", true), null),
+        new SearchQueryDimFilter(ColumnHolder.TIME_COLUMN_NAME, new ContainsSearchQuerySpec("2", true), null),
         ImmutableList.of("2")
     );
   }
@@ -172,25 +172,25 @@ public class TimeFilteringTest extends BaseFilterTest
     LookupExtractionFn exfn = new LookupExtractionFn(mapExtractor, false, "UNKNOWN", false, true);
 
     assertFilterMatches(
-        new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Monday", exfn),
+        new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Monday", exfn),
         ImmutableList.of("0")
     );
     assertFilterMatches(
-        new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Notaday", exfn),
+        new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Notaday", exfn),
         ImmutableList.of()
     );
 
     assertFilterMatches(
-        new BoundDimFilter(Column.TIME_COLUMN_NAME, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC),
+        new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC),
         ImmutableList.of("4")
     );
     assertFilterMatches(
-        new BoundDimFilter(Column.TIME_COLUMN_NAME, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC),
+        new BoundDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC),
         ImmutableList.of()
     );
 
     assertFilterMatches(
-        new InDimFilter(Column.TIME_COLUMN_NAME, Arrays.asList("Caturday", "Saturday", "Tuesday"), exfn),
+        new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, Arrays.asList("Caturday", "Saturday", "Tuesday"), exfn),
         ImmutableList.of("1", "5")
     );
 
@@ -201,23 +201,23 @@ public class TimeFilteringTest extends BaseFilterTest
         "Hello", "World", "1", "2", "3", "4", "5", "6", "7"
     );
     assertFilterMatches(
-        new InDimFilter(Column.TIME_COLUMN_NAME, bigList, exfn),
+        new InDimFilter(ColumnHolder.TIME_COLUMN_NAME, bigList, exfn),
         ImmutableList.of("1", "5")
     );
 
     String jsFn = "function(x) { return(x === 'Wednesday' || x === 'Thursday') }";
     assertFilterMatches(
-        new JavaScriptDimFilter(Column.TIME_COLUMN_NAME, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
+        new JavaScriptDimFilter(ColumnHolder.TIME_COLUMN_NAME, jsFn, exfn, JavaScriptConfig.getEnabledInstance()),
         ImmutableList.of("2", "3")
     );
 
     assertFilterMatches(
-        new RegexDimFilter(Column.TIME_COLUMN_NAME, ".*day", exfn),
+        new RegexDimFilter(ColumnHolder.TIME_COLUMN_NAME, ".*day", exfn),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
 
     assertFilterMatches(
-        new SearchQueryDimFilter(Column.TIME_COLUMN_NAME, new ContainsSearchQuerySpec("s", true), exfn),
+        new SearchQueryDimFilter(ColumnHolder.TIME_COLUMN_NAME, new ContainsSearchQuerySpec("s", true), exfn),
         ImmutableList.of("1", "2", "3")
     );
   }
@@ -233,7 +233,7 @@ public class TimeFilteringTest extends BaseFilterTest
         false
     );
     assertFilterMatches(
-        new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Wednesday", exfn),
+        new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "Wednesday", exfn),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
   }
@@ -243,7 +243,7 @@ public class TimeFilteringTest extends BaseFilterTest
   {
     assertFilterMatches(
         new IntervalDimFilter(
-            Column.TIME_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME,
             Collections.singletonList(Intervals.of("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
@@ -252,7 +252,7 @@ public class TimeFilteringTest extends BaseFilterTest
 
     assertFilterMatches(
         new IntervalDimFilter(
-            Column.TIME_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME,
             Arrays.asList(
                 Intervals.of("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.003Z"),
                 Intervals.of("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.006Z")
@@ -264,7 +264,7 @@ public class TimeFilteringTest extends BaseFilterTest
 
     assertFilterMatches(
         new IntervalDimFilter(
-            Column.TIME_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME,
             Arrays.asList(
                 Intervals.of("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.001Z"),
                 Intervals.of("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.006Z"),
@@ -280,7 +280,7 @@ public class TimeFilteringTest extends BaseFilterTest
     ExtractionFn exFn = new JavaScriptExtractionFn(timeBoosterJsFn, true, JavaScriptConfig.getEnabledInstance());
     assertFilterMatches(
         new IntervalDimFilter(
-            Column.TIME_COLUMN_NAME,
+            ColumnHolder.TIME_COLUMN_NAME,
             Collections.singletonList(Intervals.of("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),

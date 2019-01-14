@@ -28,7 +28,7 @@ import java.util.function.IntConsumer;
 /**
  * Get a int an index (array or list lookup abstraction without boxing).
  *
- * Doesn't extend {@link Iterable} (or {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidential
+ * Doesn't extend {@link Iterable} (or {@link it.unimi.dsi.fastutil.ints.IntIterable} to avoid accidental
  * for-each iteration with boxing.
  */
 @PublicApi

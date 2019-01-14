@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "Hadoop-based Batch Ingestion"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # Hadoop-based Batch Ingestion
 
@@ -101,7 +121,7 @@ This field is required.
 |-----|----|-----------|--------|
 |type|String|This should always be 'hadoop'.|yes|
 |inputSpec|Object|A specification of where to pull the data in from. See below.|yes|
-|segmentOutputPath|String|The path to dump segments into.|yes|
+|segmentOutputPath|String|The path to dump segments into.|Only used by the [CLI Hadoop Indexer](../ingestion/command-line-hadoop-indexer.html). This field must be null otherwise.|
 |metadataUpdateSpec|Object|A specification of how to update the metadata for the druid cluster these segments belong to.|Only used by the [CLI Hadoop Indexer](../ingestion/command-line-hadoop-indexer.html). This field must be null otherwise.|
 
 ### InputSpec specification
@@ -166,7 +186,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |leaveIntermediate|Boolean|Leave behind intermediate files (for debugging) in the workingPath when a job completes, whether it passes or fails.|no (default == false)|
 |cleanupOnFailure|Boolean|Clean up intermediate files when a job fails (unless leaveIntermediate is on).|no (default == true)|
 |overwriteFiles|Boolean|Override existing files found during indexing.|no (default == false)|
-|ignoreInvalidRows|Boolean|Ignore rows found to have problems.|no (default == false)|
+|ignoreInvalidRows|Boolean|DEPRECATED. Ignore rows found to have problems. If false, any exception encountered during parsing will be thrown and will halt ingestion; if true, unparseable rows and fields will be skipped. If `maxParseExceptions` is defined, this property is ignored.|no (default == false)|
 |combineText|Boolean|Use CombineTextInputFormat to combine multiple files into a file split. This can speed up Hadoop jobs when processing a large number of small files.|no (default == false)|
 |useCombiner|Boolean|Use Hadoop combiner to merge rows at mapper if possible.|no (default == false)|
 |jobProperties|Object|A map of properties to add to the Hadoop job configuration, see below for details.|no (default == null)|
@@ -174,6 +194,8 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 |forceExtendableShardSpecs|Boolean|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|no (default = false)|
 |useExplicitVersion|Boolean|Forces HadoopIndexTask to use version.|no (default = false)|
+|logParseExceptions|Boolean|If true, log an error message when a parsing exception occurs, containing information about the row where the error occurred.|false|no|
+|maxParseExceptions|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Overrides `ignoreInvalidRows` if `maxParseExceptions` is defined.|unlimited|no|
 
 ### jobProperties field of TuningConfig
 
@@ -337,4 +359,3 @@ Druid works out of the box with many Hadoop distributions.
 If you are having dependency conflicts between Druid and your version of Hadoop, you can try
 searching for a solution in the [Druid user groups](https://groups.google.com/forum/#!forum/druid-
 user), or reading the Druid [Different Hadoop Versions](../operations/other-hadoop.html) documentation.
-

@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import javax.validation.constraints.NotNull;
 
@@ -40,6 +40,10 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   @NotNull
   private String feed = null;
 
+  @JsonProperty
+  @NotNull
+  private RequestLogEventBuilderFactory requestLogEventBuilderFactory = null;
+
   @JacksonInject
   @NotNull
   private ServiceEmitter emitter = null;
@@ -52,7 +56,7 @@ public class EmittingRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    EmittingRequestLogger logger = new EmittingRequestLogger(emitter, feed);
+    EmittingRequestLogger logger = new EmittingRequestLogger(emitter, feed, requestLogEventBuilderFactory);
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }

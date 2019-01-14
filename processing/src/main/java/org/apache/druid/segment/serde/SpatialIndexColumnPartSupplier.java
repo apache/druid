@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;

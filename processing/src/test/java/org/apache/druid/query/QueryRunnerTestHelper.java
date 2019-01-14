@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MergeSequence;
@@ -76,11 +76,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ *
  */
 public class QueryRunnerTestHelper
 {
 
-  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
+  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {
+  };
 
   public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
@@ -168,10 +170,11 @@ public class QueryRunnerTestHelper
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   public static final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   public static final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");
-  public static final ArithmeticPostAggregator addRowsIndexConstant =
-      new ArithmeticPostAggregator(
-          addRowsIndexConstantMetric, "+", Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
-      );
+  public static final ArithmeticPostAggregator addRowsIndexConstant = new ArithmeticPostAggregator(
+      addRowsIndexConstantMetric,
+      "+",
+      Lists.newArrayList(constant, rowsPostAgg, indexPostAgg)
+  );
   // dependent on AddRowsIndexContact postAgg
   public static final ArithmeticPostAggregator dependentPostAgg = new ArithmeticPostAggregator(
       dependentPostAggMetric,
@@ -262,17 +265,7 @@ public class QueryRunnerTestHelper
 
   public static Iterable<Object[]> transformToConstructionFeeder(Iterable<?> in)
   {
-    return Iterables.transform(
-        in, new Function<Object, Object[]>()
-        {
-          @Nullable
-          @Override
-          public Object[] apply(@Nullable Object input)
-          {
-            return new Object[]{input};
-          }
-        }
-    );
+    return Iterables.transform(in, (Function<Object, Object[]>) input -> new Object[]{input});
   }
 
   // simple cartesian iterable
@@ -408,10 +401,7 @@ public class QueryRunnerTestHelper
   )
   {
     return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     )
     {
@@ -429,15 +419,10 @@ public class QueryRunnerTestHelper
       final String runnerName
   )
   {
-    final QueryRunner<T> qr = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
-        .create(
-            new UnionQueryRunner<T>(
-                new BySegmentQueryRunner<T>(
-                    segmentId, adapter.getDataInterval().getStart(),
-                    factory.createRunner(adapter)
-                )
-            )
-        )
+    BySegmentQueryRunner<T> bySegmentQueryRunner =
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter));
+    final QueryRunner<T> runner = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
+        .create(new UnionQueryRunner<>(bySegmentQueryRunner))
         .mergeResults()
         .applyPostMergeDecoration();
 
@@ -446,7 +431,7 @@ public class QueryRunnerTestHelper
       @Override
       public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
       {
-        return qr.run(queryPlus, responseContext);
+        return runner.run(queryPlus, responseContext);
       }
 
       @Override
@@ -462,7 +447,6 @@ public class QueryRunnerTestHelper
       final QueryRunnerFactory<T, Query<T>> factory
   )
   {
-
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
     return new FluentQueryRunnerBuilder<T>(toolChest)
         .create(
@@ -472,11 +456,11 @@ public class QueryRunnerTestHelper
               public Sequence<T> run(QueryPlus<T> queryPlus, Map<String, Object> responseContext)
               {
                 Query<T> query = queryPlus.getQuery();
-                List<TimelineObjectHolder> segments = Lists.newArrayList();
+                List<TimelineObjectHolder> segments = new ArrayList<>();
                 for (Interval interval : query.getIntervals()) {
                   segments.addAll(timeline.lookup(interval));
                 }
-                List<Sequence<T>> sequences = Lists.newArrayList();
+                List<Sequence<T>> sequences = new ArrayList<>();
                 for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
                   Segment segment = holder.getObject().getChunk(0).getObject();
                   QueryPlus queryPlusRunning = queryPlus.withQuerySegmentSpec(
@@ -524,7 +508,7 @@ public class QueryRunnerTestHelper
   public static IntervalChunkingQueryRunnerDecorator sameThreadIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter())
     );

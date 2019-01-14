@@ -26,6 +26,8 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.Releaser;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -45,8 +47,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -261,9 +261,10 @@ public class ParallelCombiner<KeyType>
     throw new ISE(
         "Cannot find a proper leaf combine degree for the combining tree. "
         + "Each node of the combining tree requires a buffer of [%d] bytes. "
-        + "Try increasing druid.processing.buffer.sizeBytes for larger buffer or "
+        + "Try increasing druid.processing.buffer.sizeBytes (currently [%d] bytes) for larger buffer or "
         + "druid.query.groupBy.intermediateCombineDegree for a smaller tree",
-        requiredMinimumBufferCapacity
+        requiredMinimumBufferCapacity,
+        combineBuffer.capacity()
     );
   }
 

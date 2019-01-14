@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "Metadata Storage"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # Metadata Storage
 
@@ -31,6 +51,19 @@ See [mysql-metadata-storage extension documentation](../development/extensions-c
 ## PostgreSQL 
 
 See [postgresql-metadata-storage](../development/extensions-core/postgresql.html). 
+
+## Adding custom dbcp properties
+
+NOTE: These properties are not settable through the druid.metadata.storage.connector.dbcp properties : username, password, connectURI, validationQuery, testOnBorrow. These must be set through druid.metadata.storage.connector properties.
+
+Example supported properties:
+
+```properties
+druid.metadata.storage.connector.dbcp.maxConnLifetimeMillis=1200000
+druid.metadata.storage.connector.dbcp.defaultQueryTimeout=30000
+```
+
+See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-dbcp/configuration.html) for full list.
 
 ## Metadata Storage Tables
 

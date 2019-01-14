@@ -21,7 +21,6 @@ package org.apache.druid.server;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.guice.PropertiesModule;
@@ -32,6 +31,7 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,7 +70,7 @@ public class StatusResourceTest
     Injector injector = Guice.createInjector(Collections.singletonList(new PropertiesModule(Collections.singletonList(
         "status.resource.test.runtime.properties"))));
     Map<String, String> returnedProperties = injector.getInstance(StatusResource.class).getProperties();
-    Set<String> hiddenProperties = Sets.newHashSet();
+    Set<String> hiddenProperties = new HashSet<>();
     Splitter.on(",").split(returnedProperties.get("druid.server.hiddenProperties")).forEach(hiddenProperties::add);
     hiddenProperties.forEach((property) -> Assert.assertNull(returnedProperties.get(property)));
   }

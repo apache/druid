@@ -16,15 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.avro.AvroParsers;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
-import org.apache.avro.generic.GenericRecord;
 
 import java.util.List;
 
@@ -33,6 +35,7 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
   private final ParseSpec parseSpec;
   private final boolean fromPigAvroStorage;
   private final ObjectFlattener<GenericRecord> avroFlattener;
+  private final MapInputRowParser mapParser;
 
   @JsonCreator
   public AvroHadoopInputRowParser(
@@ -43,12 +46,13 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
     this.parseSpec = parseSpec;
     this.fromPigAvroStorage = fromPigAvroStorage == null ? false : fromPigAvroStorage;
     this.avroFlattener = AvroParsers.makeFlattener(parseSpec, this.fromPigAvroStorage, false);
+    this.mapParser = new MapInputRowParser(parseSpec);
   }
 
   @Override
   public List<InputRow> parseBatch(GenericRecord record)
   {
-    return AvroParsers.parseGenericRecord(record, parseSpec, avroFlattener);
+    return AvroParsers.parseGenericRecord(record, mapParser, avroFlattener);
   }
 
   @JsonProperty

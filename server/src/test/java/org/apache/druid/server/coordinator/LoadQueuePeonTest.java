@@ -24,6 +24,11 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -35,11 +40,6 @@ import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.utils.ZKPaths;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
@@ -176,9 +176,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
         new PathChildrenCacheListener()
         {
           @Override
-          public void childEvent(
-              CuratorFramework client, PathChildrenCacheEvent event
-          ) throws Exception
+          public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
           {
             if (event.getType() == PathChildrenCacheEvent.Type.CHILD_ADDED) {
               DataSegmentChangeRequest request = jsonMapper.readValue(
@@ -194,7 +192,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     for (DataSegment segment : segmentToDrop) {
       loadQueuePeon.dropSegment(
-          segment, new LoadPeonCallback()
+          segment,
+          new LoadPeonCallback()
           {
             @Override
             public void execute()
@@ -207,7 +206,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     for (DataSegment segment : segmentToLoad) {
       loadQueuePeon.loadSegment(
-          segment, new LoadPeonCallback()
+          segment,
+          new LoadPeonCallback()
           {
             @Override
             public void execute()
@@ -260,12 +260,10 @@ public class LoadQueuePeonTest extends CuratorTestBase
       Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestSignal[requestSignalIdx.get()]));
       Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));
       Assert.assertEquals(
-          segment, ((SegmentChangeRequestLoad) jsonMapper.readValue(
-              curator.getData()
-                     .decompressed()
-                     .forPath(loadRequestPath),
-              DataSegmentChangeRequest.class
-          )).getSegment()
+          segment,
+          ((SegmentChangeRequestLoad) jsonMapper
+              .readValue(curator.getData().decompressed().forPath(loadRequestPath), DataSegmentChangeRequest.class))
+              .getSegment()
       );
 
       requestSignalIdx.incrementAndGet();
@@ -305,9 +303,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
         new PathChildrenCacheListener()
         {
           @Override
-          public void childEvent(
-              CuratorFramework client, PathChildrenCacheEvent event
-          )
+          public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
           {
             if (event.getType() == PathChildrenCacheEvent.Type.CHILD_ADDED) {
               loadRequestSignal.countDown();
@@ -318,7 +314,8 @@ public class LoadQueuePeonTest extends CuratorTestBase
     loadQueueCache.start();
 
     loadQueuePeon.loadSegment(
-        segment, new LoadPeonCallback()
+        segment,
+        new LoadPeonCallback()
         {
           @Override
           public void execute()
@@ -332,12 +329,10 @@ public class LoadQueuePeonTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestSignal));
     Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));
     Assert.assertEquals(
-        segment, ((SegmentChangeRequestLoad) jsonMapper.readValue(
-            curator.getData()
-                   .decompressed()
-                   .forPath(loadRequestPath),
-            DataSegmentChangeRequest.class
-        )).getSegment()
+        segment,
+        ((SegmentChangeRequestLoad) jsonMapper
+            .readValue(curator.getData().decompressed().forPath(loadRequestPath), DataSegmentChangeRequest.class))
+            .getSegment()
     );
 
     // don't simulate completion of load request here

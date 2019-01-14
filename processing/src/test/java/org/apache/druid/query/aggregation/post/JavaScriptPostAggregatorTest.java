@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.post;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.js.JavaScriptConfig;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -40,7 +39,7 @@ public class JavaScriptPostAggregatorTest
   {
     JavaScriptPostAggregator javaScriptPostAggregator;
 
-    Map<String, Object> metricValues = Maps.newHashMap();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put("delta", -10.0);
     metricValues.put("total", 100.0);
 

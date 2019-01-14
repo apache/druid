@@ -22,14 +22,15 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.client.indexing.IndexingServiceSelectorConfig;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.java.util.http.client.HttpClient;
 
 /**
  */
@@ -64,7 +65,7 @@ public class IndexingServiceDiscoveryModule implements Module
     return new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
+        NodeType.OVERLORD,
         "/druid/indexer/v1/leader",
         serverDiscoverySelector
     );

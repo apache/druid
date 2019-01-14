@@ -24,8 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
@@ -73,6 +71,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -82,7 +81,9 @@ public abstract class BaseFilterTest
 {
   private static final VirtualColumns VIRTUAL_COLUMNS = VirtualColumns.create(
       ImmutableList.of(
-          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE)
+          new ExpressionVirtualColumn("expr", "1.0 + 0.1", ValueType.FLOAT, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("exprDouble", "1.0 + 1.1", ValueType.DOUBLE, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("exprLong", "1 + 2", ValueType.LONG, TestExprMacroTable.INSTANCE)
       )
   );
 
@@ -165,7 +166,7 @@ public abstract class BaseFilterTest
 
   public static Collection<Object[]> makeConstructors()
   {
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
 
     final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.of(
         "concise", new ConciseBitmapSerdeFactory(),
@@ -178,62 +179,20 @@ public abstract class BaseFilterTest
     );
 
     final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers = ImmutableMap.of(
-        "incremental", new Function<IndexBuilder, Pair<StorageAdapter, Closeable>>()
-        {
-          @Override
-          public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
-          {
-            final IncrementalIndex index = input.buildIncrementalIndex();
-            return Pair.of(
-                new IncrementalIndexStorageAdapter(index),
-                new Closeable()
-                {
-                  @Override
-                  public void close()
-                  {
-                    index.close();
-                  }
-                }
-            );
-          }
+        "incremental",
+        input -> {
+          final IncrementalIndex index = input.buildIncrementalIndex();
+          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
         },
-        "mmapped", new Function<IndexBuilder, Pair<StorageAdapter, Closeable>>()
-        {
-          @Override
-          public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
-          {
-            final QueryableIndex index = input.buildMMappedIndex();
-            return Pair.of(
-                new QueryableIndexStorageAdapter(index),
-                new Closeable()
-                {
-                  @Override
-                  public void close()
-                  {
-                    index.close();
-                  }
-                }
-            );
-          }
+        "mmapped",
+        input -> {
+          final QueryableIndex index = input.buildMMappedIndex();
+          return Pair.of(new QueryableIndexStorageAdapter(index), index);
         },
-        "mmappedMerged", new Function<IndexBuilder, Pair<StorageAdapter, Closeable>>()
-        {
-          @Override
-          public Pair<StorageAdapter, Closeable> apply(IndexBuilder input)
-          {
-            final QueryableIndex index = input.buildMMappedMergedIndex();
-            return Pair.of(
-                new QueryableIndexStorageAdapter(index),
-                new Closeable()
-                {
-                  @Override
-                  public void close()
-                  {
-                    index.close();
-                  }
-                }
-            );
-          }
+        "mmappedMerged",
+        input -> {
+          final QueryableIndex index = input.buildMMappedMergedIndex();
+          return Pair.of(new QueryableIndexStorageAdapter(index), index);
         }
     );
 
@@ -314,7 +273,7 @@ public abstract class BaseFilterTest
                 .getColumnSelectorFactory()
                 .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-            final List<String> values = Lists.newArrayList();
+            final List<String> values = new ArrayList<>();
 
             while (!input.isDone()) {
               IndexedInts row = selector.getRow();
@@ -383,9 +342,7 @@ public abstract class BaseFilterTest
       }
 
       @Override
-      public boolean supportsSelectivityEstimation(
-          ColumnSelector columnSelector, BitmapIndexSelector indexSelector
-      )
+      public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
       {
         return false;
       }
@@ -409,7 +366,7 @@ public abstract class BaseFilterTest
                 .getColumnSelectorFactory()
                 .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-            final List<String> values = Lists.newArrayList();
+            final List<String> values = new ArrayList<>();
 
             while (!input.isDone()) {
               IndexedInts row = selector.getRow();
@@ -431,7 +388,7 @@ public abstract class BaseFilterTest
   )
   {
     // Generate rowType
-    final Map<String, ValueType> rowSignature = Maps.newHashMap();
+    final Map<String, ValueType> rowSignature = new HashMap<>();
     for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
       rowSignature.put(columnName, adapter.getColumnCapabilities(columnName).getType());
     }
@@ -441,7 +398,7 @@ public abstract class BaseFilterTest
     final ValueMatcher matcher = makeFilter(filter).makeMatcher(
         VIRTUAL_COLUMNS.wrap(RowBasedColumnSelectorFactory.create(rowSupplier, rowSignature))
     );
-    final List<String> values = Lists.newArrayList();
+    final List<String> values = new ArrayList<>();
     for (InputRow row : rows) {
       rowSupplier.set(row);
       if (matcher.matches()) {
@@ -457,22 +414,22 @@ public abstract class BaseFilterTest
   )
   {
     Assert.assertEquals(
-        "Cursor: " + filter.toString(),
+        "Cursor: " + filter,
         expectedRows,
         selectColumnValuesMatchingFilter(filter, "dim0")
     );
     Assert.assertEquals(
-        "Cursor with postFiltering: " + filter.toString(),
+        "Cursor with postFiltering: " + filter,
         expectedRows,
         selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
     );
     Assert.assertEquals(
-        "Filtered aggregator: " + filter.toString(),
+        "Filtered aggregator: " + filter,
         expectedRows.size(),
         selectCountUsingFilteredAggregator(filter)
     );
     Assert.assertEquals(
-        "RowBasedColumnSelectorFactory: " + filter.toString(),
+        "RowBasedColumnSelectorFactory: " + filter,
         expectedRows,
         selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
     );

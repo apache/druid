@@ -19,6 +19,12 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import org.apache.calcite.avatica.util.TimeUnitRange;
+import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -27,15 +33,9 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
-import org.apache.calcite.avatica.util.TimeUnitRange;
-import org.apache.calcite.rex.RexCall;
-import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 
-import java.util.Arrays;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CeilOperatorConversion implements SqlOperatorConversion
 {
@@ -80,14 +80,17 @@ public class CeilOperatorConversion implements SqlOperatorConversion
       // So there is no simple extraction for this operator.
       return DruidExpression.fromFunctionCall(
           "timestamp_ceil",
-          Arrays.asList(
-              druidExpression.getExpression(),
-              DruidExpression.stringLiteral(granularity.getPeriod().toString()),
-              DruidExpression.numberLiteral(
-                  granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
-              ),
-              DruidExpression.stringLiteral(granularity.getTimeZone().toString())
-          ).stream().map(DruidExpression::fromExpression).collect(Collectors.toList())
+          Stream
+              .of(
+                  druidExpression.getExpression(),
+                  DruidExpression.stringLiteral(granularity.getPeriod().toString()),
+                  DruidExpression.numberLiteral(
+                      granularity.getOrigin() == null ? null : granularity.getOrigin().getMillis()
+                  ),
+                  DruidExpression.stringLiteral(granularity.getTimeZone().toString())
+              )
+              .map(DruidExpression::fromExpression)
+              .collect(Collectors.toList())
       );
     } else {
       // WTF? CEIL with 3 arguments?

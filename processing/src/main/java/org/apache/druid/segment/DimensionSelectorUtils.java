@@ -21,9 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.IndexedInts;
@@ -46,7 +44,7 @@ public final class DimensionSelectorUtils
    * {@code makeValueMatcher()} to this method, but encouraged to implement {@code makeValueMatcher()} themselves,
    * bypassing the {@link IndexedInts} abstraction.
    */
-  public static ValueMatcher makeValueMatcherGeneric(DimensionSelector selector, String value)
+  public static ValueMatcher makeValueMatcherGeneric(DimensionSelector selector, @Nullable String value)
   {
     IdLookup idLookup = selector.idLookup();
     if (idLookup != null) {
@@ -118,7 +116,7 @@ public final class DimensionSelectorUtils
 
   private static ValueMatcher makeNonDictionaryEncodedValueMatcherGeneric(
       final DimensionSelector selector,
-      final String value
+      final @Nullable String value
   )
   {
     return new ValueMatcher()
@@ -265,33 +263,4 @@ public final class DimensionSelectorUtils
     }
     return valueIds;
   }
-
-  public static DimensionSelector constantSelector(@Nullable final String value)
-  {
-    if (NullHandling.isNullOrEquivalent(value)) {
-      return NullDimensionSelector.instance();
-    } else {
-      return new ConstantDimensionSelector(value);
-    }
-  }
-
-  public static DimensionSelector constantSelector(
-      @Nullable final String value,
-      @Nullable final ExtractionFn extractionFn
-  )
-  {
-    if (extractionFn == null) {
-      return constantSelector(value);
-    } else {
-      return constantSelector(extractionFn.apply(value));
-    }
-  }
-
-  public static boolean isNilSelector(final DimensionSelector selector)
-  {
-    return selector.nameLookupPossibleInAdvance()
-           && selector.getValueCardinality() == 1
-           && selector.lookupName(0) == null;
-  }
-
 }

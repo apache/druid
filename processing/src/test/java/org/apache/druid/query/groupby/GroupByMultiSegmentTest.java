@@ -24,10 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
@@ -74,7 +73,6 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.commons.io.FileUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -82,6 +80,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -99,8 +98,8 @@ public class GroupByMultiSegmentTest
 
   private File tmpDir;
   private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
-  private List<IncrementalIndex> incrementalIndices = Lists.newArrayList();
-  private List<QueryableIndex> groupByIndices = Lists.newArrayList();
+  private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
+  private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
   private Closer resourceCloser;
 
@@ -114,7 +113,6 @@ public class GroupByMultiSegmentTest
     );
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -343,7 +341,7 @@ public class GroupByMultiSegmentTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Row expectedRow = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -358,7 +356,7 @@ public class GroupByMultiSegmentTest
 
   private List<QueryRunner<Row>> makeGroupByMultiRunners()
   {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    List<QueryRunner<Row>> runners = new ArrayList<>();
 
     for (QueryableIndex qindex : groupByIndices) {
       QueryRunner<Row> runner = makeQueryRunner(
@@ -405,11 +403,8 @@ public class GroupByMultiSegmentTest
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+    return new FinalizeResultsQueryRunner<>(
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }

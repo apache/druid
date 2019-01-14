@@ -20,7 +20,6 @@
 package org.apache.druid.server.emitter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import org.apache.druid.metadata.PasswordProvider;
 
 /**

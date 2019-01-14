@@ -21,7 +21,6 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -125,11 +124,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       final boolean concurrentEventAdd
   )
   {
-    selectors = Maps.newHashMap();
+    selectors = new HashMap<>();
     for (AggregatorFactory agg : metrics) {
       selectors.put(
           agg.getName(),
-          new ObjectCachingColumnSelectorFactory(
+          new CachingColumnSelectorFactory(
               makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics),
               concurrentEventAdd
           )
@@ -385,16 +384,17 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
-  // Caches references to selector objects for each column instead of creating a new object each time in order to save heap space.
-  // In general the selectorFactory need not to thread-safe.
-  // If required, set concurrentEventAdd to true to use concurrent hash map instead of vanilla hash map for thread-safe
-  // operations.
-  static class ObjectCachingColumnSelectorFactory implements ColumnSelectorFactory
+  /**
+   * Caches references to selector objects for each column instead of creating a new object each time in order to save
+   * heap space. In general the selectorFactory need not to thread-safe. If required, set concurrentEventAdd to true to
+   * use concurrent hash map instead of vanilla hash map for thread-safe operations.
+   */
+  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
   {
     private final Map<String, ColumnValueSelector<?>> columnSelectorMap;
     private final ColumnSelectorFactory delegate;
 
-    public ObjectCachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
+    public CachingColumnSelectorFactory(ColumnSelectorFactory delegate, boolean concurrentEventAdd)
     {
       this.delegate = delegate;
 

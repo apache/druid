@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -34,6 +32,10 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import org.apache.calcite.avatica.AvaticaClientRuntimeException;
+import org.apache.calcite.avatica.Meta;
+import org.apache.calcite.avatica.MissingResultsException;
+import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.DateTimes;
@@ -52,14 +54,11 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
-import org.apache.calcite.avatica.AvaticaClientRuntimeException;
-import org.apache.calcite.avatica.Meta;
-import org.apache.calcite.avatica.MissingResultsException;
-import org.apache.calcite.avatica.NoSuchStatementException;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -86,6 +85,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -153,6 +153,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
 
@@ -177,6 +178,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     druidMeta = new DruidMeta(
         new PlannerFactory(
             druidSchema,
+            systemSchema,
             CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,
             macroTable,
@@ -189,7 +191,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         druidMeta,
-        new DruidNode("dummy", "dummy", 1, null, true, false),
+        new DruidNode("dummy", "dummy", false, 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = ThreadLocalRandom.current().nextInt(9999) + 10000;
@@ -344,7 +346,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = client.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(Pair.of("TABLE_CAT", ""))
+            ROW(Pair.of("TABLE_CAT", "druid"))
         ),
         getRows(metaData.getCatalogs())
     );
@@ -356,7 +358,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = client.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(Pair.of("TABLE_CATALOG", ""), Pair.of("TABLE_SCHEM", "druid"))
+            ROW(Pair.of("TABLE_CATALOG", "druid"), Pair.of("TABLE_SCHEM", "druid"))
         ),
         getRows(metaData.getSchemas(null, "druid"))
     );
@@ -369,13 +371,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     Assert.assertEquals(
         ImmutableList.of(
             ROW(
-                Pair.of("TABLE_CAT", ""),
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
             ROW(
-                Pair.of("TABLE_CAT", ""),
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", "foo2"),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -395,19 +397,19 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     Assert.assertEquals(
         ImmutableList.of(
             ROW(
-                Pair.of("TABLE_CAT", ""),
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE1),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
             ROW(
-                Pair.of("TABLE_CAT", ""),
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE2),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
             ROW(
-                Pair.of("TABLE_CAT", ""),
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -454,6 +456,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim2"),
+                Pair.of("DATA_TYPE", Types.VARCHAR),
+                Pair.of("TYPE_NAME", "VARCHAR"),
+                Pair.of("IS_NULLABLE", "YES")
+            ),
+            ROW(
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_NAME", "foo"),
+                Pair.of("COLUMN_NAME", "dim3"),
                 Pair.of("DATA_TYPE", Types.VARCHAR),
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
@@ -752,12 +762,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     final List<Meta.Frame> frames = new ArrayList<>();
     DruidMeta smallFrameDruidMeta = new DruidMeta(
         new PlannerFactory(
             druidSchema,
+            systemSchema,
             CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,
             macroTable,
@@ -785,7 +797,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     final DruidAvaticaHandler handler = new DruidAvaticaHandler(
         smallFrameDruidMeta,
-        new DruidNode("dummy", "dummy", 1, null, true, false),
+        new DruidNode("dummy", "dummy", false, 1, null, true, false),
         new AvaticaMonitor()
     );
     final int port = ThreadLocalRandom.current().nextInt(9999) + 20000;
@@ -827,9 +839,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     try {
       final ResultSetMetaData metaData = resultSet.getMetaData();
-      final List<Map<String, Object>> rows = Lists.newArrayList();
+      final List<Map<String, Object>> rows = new ArrayList<>();
       while (resultSet.next()) {
-        final Map<String, Object> row = Maps.newHashMap();
+        final Map<String, Object> row = new HashMap<>();
         for (int i = 0; i < metaData.getColumnCount(); i++) {
           if (returnKeys == null || returnKeys.contains(metaData.getColumnLabel(i + 1))) {
             row.put(metaData.getColumnLabel(i + 1), resultSet.getObject(i + 1));
@@ -846,7 +858,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
   private static Map<String, Object> ROW(final Pair<String, ?>... entries)
   {
-    final Map<String, Object> m = Maps.newHashMap();
+    final Map<String, Object> m = new HashMap<>();
     for (Pair<String, ?> entry : entries) {
       m.put(entry.lhs, entry.rhs);
     }

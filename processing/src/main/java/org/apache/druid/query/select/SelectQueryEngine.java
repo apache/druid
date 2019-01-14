@@ -46,8 +46,8 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
@@ -56,6 +56,7 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +70,8 @@ public class SelectQueryEngine
   {
     @Override
     public SelectColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities, ColumnValueSelector selector
+        ColumnCapabilities capabilities,
+        ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();
@@ -235,7 +237,7 @@ public class SelectQueryEngine
             );
 
             final BaseLongColumnValueSelector timestampColumnSelector =
-                cursor.getColumnSelectorFactory().makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+                cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
 
             final List<ColumnSelectorPlus<SelectColumnSelectorStrategy>> selectorPlusList = Arrays.asList(
                 DimensionHandlerUtils.createColumnSelectorPluses(
@@ -249,7 +251,7 @@ public class SelectQueryEngine
               builder.addDimension(dimSpec.getOutputName());
             }
 
-            final Map<String, BaseObjectColumnValueSelector<?>> metSelectors = Maps.newHashMap();
+            final Map<String, BaseObjectColumnValueSelector<?>> metSelectors = new HashMap<>();
             for (String metric : metrics) {
               final BaseObjectColumnValueSelector<?> metricSelector =
                   cursor.getColumnSelectorFactory().makeColumnValueSelector(metric);

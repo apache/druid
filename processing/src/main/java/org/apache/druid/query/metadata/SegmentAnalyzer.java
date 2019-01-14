@@ -22,8 +22,6 @@ package org.apache.druid.query.metadata;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -40,9 +38,9 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BitmapIndex;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -53,8 +51,10 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 public class SegmentAnalyzer
 {
@@ -92,16 +92,16 @@ public class SegmentAnalyzer
 
     // get length and column names from storageAdapter
     final int length = storageAdapter.getNumRows();
-    final Set<String> columnNames = Sets.newHashSet();
+    final Set<String> columnNames = new HashSet<>();
     Iterables.addAll(columnNames, storageAdapter.getAvailableDimensions());
     Iterables.addAll(columnNames, storageAdapter.getAvailableMetrics());
 
-    Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
+    Map<String, ColumnAnalysis> columns = new TreeMap<>();
 
     for (String columnName : columnNames) {
-      final Column column = index == null ? null : index.getColumn(columnName);
-      final ColumnCapabilities capabilities = column != null
-                                              ? column.getCapabilities()
+      final ColumnHolder columnHolder = index == null ? null : index.getColumnHolder(columnName);
+      final ColumnCapabilities capabilities = columnHolder != null
+                                              ? columnHolder.getCapabilities()
                                               : storageAdapter.getColumnCapabilities(columnName);
 
       final ColumnAnalysis analysis;
@@ -118,13 +118,13 @@ public class SegmentAnalyzer
           break;
         case STRING:
           if (index != null) {
-            analysis = analyzeStringColumn(capabilities, column);
+            analysis = analyzeStringColumn(capabilities, columnHolder);
           } else {
             analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
           }
           break;
         case COMPLEX:
-          analysis = analyzeComplexColumn(capabilities, column, storageAdapter.getColumnTypeName(columnName));
+          analysis = analyzeComplexColumn(capabilities, columnHolder, storageAdapter.getColumnTypeName(columnName));
           break;
         default:
           log.warn("Unknown column type[%s].", type);
@@ -135,12 +135,12 @@ public class SegmentAnalyzer
     }
 
     // Add time column too
-    ColumnCapabilities timeCapabilities = storageAdapter.getColumnCapabilities(Column.TIME_COLUMN_NAME);
+    ColumnCapabilities timeCapabilities = storageAdapter.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME);
     if (timeCapabilities == null) {
       timeCapabilities = new ColumnCapabilitiesImpl().setType(ValueType.LONG).setHasMultipleValues(false);
     }
     columns.put(
-        Column.TIME_COLUMN_NAME,
+        ColumnHolder.TIME_COLUMN_NAME,
         analyzeNumericColumn(timeCapabilities, length, NUM_BYTES_IN_TIMESTAMP)
     );
 
@@ -191,7 +191,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      final Column column
+      final ColumnHolder columnHolder
   )
   {
     long size = 0;
@@ -203,7 +203,7 @@ public class SegmentAnalyzer
       return ColumnAnalysis.error("string_no_bitmap");
     }
 
-    final BitmapIndex bitmapIndex = column.getBitmapIndex();
+    final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
     final int cardinality = bitmapIndex.getCardinality();
 
     if (analyzingSize()) {
@@ -310,11 +310,11 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeComplexColumn(
       @Nullable final ColumnCapabilities capabilities,
-      @Nullable final Column column,
+      @Nullable final ColumnHolder columnHolder,
       final String typeName
   )
   {
-    try (final ComplexColumn complexColumn = column != null ? column.getComplexColumn() : null) {
+    try (final ComplexColumn complexColumn = columnHolder != null ? (ComplexColumn) columnHolder.getColumn() : null) {
       final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues();
       long size = 0;
 

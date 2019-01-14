@@ -21,12 +21,6 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.calcite.rel.QueryMaker;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -41,6 +35,13 @@ import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.sql.calcite.rel.QueryMaker;
+import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 
 import java.util.Map;
 import java.util.Properties;
@@ -57,6 +58,7 @@ public class PlannerFactory
       .build();
 
   private final DruidSchema druidSchema;
+  private final SystemSchema systemSchema;
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final DruidOperatorTable operatorTable;
   private final ExprMacroTable macroTable;
@@ -67,6 +69,7 @@ public class PlannerFactory
   @Inject
   public PlannerFactory(
       final DruidSchema druidSchema,
+      final SystemSchema systemSchema,
       final QueryLifecycleFactory queryLifecycleFactory,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
@@ -76,6 +79,7 @@ public class PlannerFactory
   )
   {
     this.druidSchema = druidSchema;
+    this.systemSchema = systemSchema;
     this.queryLifecycleFactory = queryLifecycleFactory;
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
@@ -86,7 +90,11 @@ public class PlannerFactory
 
   public DruidPlanner createPlanner(final Map<String, Object> queryContext)
   {
-    final SchemaPlus rootSchema = Calcites.createRootSchema(druidSchema, authorizerMapper);
+    final SchemaPlus rootSchema = Calcites.createRootSchema(
+        druidSchema,
+        systemSchema,
+        authorizerMapper
+    );
     final PlannerContext plannerContext = PlannerContext.create(
         operatorTable,
         macroTable,

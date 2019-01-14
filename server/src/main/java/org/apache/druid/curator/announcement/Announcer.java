@@ -21,16 +21,6 @@ package org.apache.druid.curator.announcement;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import org.apache.druid.curator.cache.PathChildrenCacheFactory;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorTransaction;
 import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
@@ -39,10 +29,19 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.druid.curator.cache.PathChildrenCacheFactory;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.CloseQuietly;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -65,8 +64,8 @@ public class Announcer
   private final PathChildrenCacheFactory factory;
   private final ExecutorService pathChildrenCacheExecutor;
 
-  private final List<Announceable> toAnnounce = Lists.newArrayList();
-  private final List<Announceable> toUpdate = Lists.newArrayList();
+  private final List<Announceable> toAnnounce = new ArrayList<>();
+  private final List<Announceable> toUpdate = new ArrayList<>();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new ConcurrentHashMap<>();
   private final List<String> parentsIBuilt = new CopyOnWriteArrayList<String>();
@@ -258,7 +257,7 @@ public class Announcer
                       // an adversary in the system, they could also delete the ephemeral node before the cache sees
                       // it.  This does not protect from that case, so don't have adversaries.
 
-                      Set<String> pathsToReinstate = Sets.newHashSet();
+                      Set<String> pathsToReinstate = new HashSet<>();
                       for (String node : finalSubPaths.keySet()) {
                         String path = ZKPaths.makePath(parentPath, node);
                         log.info("Node[%s] is added to reinstate.", path);

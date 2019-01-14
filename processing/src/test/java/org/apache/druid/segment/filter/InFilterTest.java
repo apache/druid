@@ -48,6 +48,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -92,6 +93,11 @@ public class InFilterTest extends BaseFilterTest
   @Test
   public void testSingleValueStringColumnWithoutNulls()
   {
+    assertFilterMatches(
+        toInFilter("dim0"),
+        ImmutableList.of()
+    );
+
     assertFilterMatches(
         toInFilter("dim0", null),
         ImmutableList.of()
@@ -340,6 +346,12 @@ public class InFilterTest extends BaseFilterTest
     assertFilterMatches(toInFilterWithFn("dim0", lookupFn3, null, "c"), ImmutableList.of("a", "b", "d", "e", "f"));
     assertFilterMatches(toInFilterWithFn("dim0", lookupFn3, "e"), ImmutableList.of());
 
+  }
+
+  private DimFilter toInFilter(String dim)
+  {
+    List<String> emptyList = new ArrayList<>();
+    return new InDimFilter(dim, emptyList, null);
   }
 
   private DimFilter toInFilter(String dim, String value, String... values)

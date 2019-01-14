@@ -23,6 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -39,13 +41,10 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
 
 import java.util.List;
 import java.util.Map;
@@ -71,7 +70,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
   {
     @Override
     public SearchColumnSelectorStrategy makeColumnSelectorStrategy(
-        ColumnCapabilities capabilities, ColumnValueSelector selector
+        ColumnCapabilities capabilities,
+        ColumnValueSelector selector
     )
     {
       ValueType type = capabilities.getType();
@@ -126,7 +126,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Object2IntRBTreeMap<SearchHit> set
     )
     {
-      if (selector != null && !DimensionSelectorUtils.isNilSelector(selector)) {
+      if (!DimensionSelector.isNilSelector(selector)) {
         final IndexedInts row = selector.getRow();
         for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
           final String dimVal = selector.lookupName(row.get(i));

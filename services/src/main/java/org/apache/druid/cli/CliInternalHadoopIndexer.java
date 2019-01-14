@@ -23,12 +23,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
-
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import org.apache.druid.guice.LazySingleton;
@@ -50,6 +48,7 @@ import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -120,7 +119,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
           )
       );
 
-      List<Jobby> jobs = Lists.newArrayList();
+      List<Jobby> jobs = new ArrayList<>();
       jobs.add(new HadoopDruidDetermineConfigurationJob(config));
       jobs.add(new HadoopDruidIndexerJob(config, injector.getInstance(MetadataStorageUpdaterJobHandler.class)));
       JobHelper.runJobs(jobs, config);

@@ -35,8 +35,6 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -46,6 +44,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -182,7 +181,7 @@ public class S3DataSegmentMoverTest
 
   private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
-    Map<String, Set<String>> storage = Maps.newHashMap();
+    Map<String, Set<String>> storage = new HashMap<>();
     boolean copied = false;
     boolean deletedOld = false;
 
@@ -271,7 +270,7 @@ public class S3DataSegmentMoverTest
     public PutObjectResult putObject(String bucketName, String key, File file)
     {
       if (!storage.containsKey(bucketName)) {
-        storage.put(bucketName, Sets.newHashSet());
+        storage.put(bucketName, new HashSet<>());
       }
       storage.get(bucketName).add(key);
       return new PutObjectResult();

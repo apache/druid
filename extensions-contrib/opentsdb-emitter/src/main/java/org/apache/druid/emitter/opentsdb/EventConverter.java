@@ -22,9 +22,9 @@ package org.apache.druid.emitter.opentsdb;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,8 +39,6 @@ public class EventConverter
 {
   private static final Logger log = new Logger(EventConverter.class);
   private static final Pattern WHITESPACE = Pattern.compile("[\\s]+");
-  private static final String COLON = ":";
-  private static final String DEFAULT_COLON_REPLACEMENT = "_";
 
   private final Map<String, Set<String>> metricMap;
 
@@ -51,7 +49,7 @@ public class EventConverter
 
   protected String sanitize(String metric)
   {
-    return WHITESPACE.matcher(metric.trim()).replaceAll("_").replaceAll("/", ".");
+    return WHITESPACE.matcher(metric.trim()).replaceAll("_").replace('/', '.');
   }
 
   /**
@@ -74,8 +72,8 @@ public class EventConverter
     Number value = serviceMetricEvent.getValue();
 
     Map<String, Object> tags = new HashMap<>();
-    String service = serviceMetricEvent.getService().replaceAll(COLON, DEFAULT_COLON_REPLACEMENT);
-    String host = serviceMetricEvent.getHost().replaceAll(COLON, DEFAULT_COLON_REPLACEMENT);
+    String service = serviceMetricEvent.getService().replace(':', '_');
+    String host = serviceMetricEvent.getHost().replace(':', '_');
     tags.put("service", service);
     tags.put("host", host);
 
@@ -84,7 +82,7 @@ public class EventConverter
       if (userDims.containsKey(dim)) {
         Object dimValue = userDims.get(dim);
         if (dimValue instanceof String) {
-          dimValue = ((String) dimValue).replaceAll(COLON, DEFAULT_COLON_REPLACEMENT);
+          dimValue = ((String) dimValue).replace(':', '_');
         }
         tags.put(dim, dimValue);
       }
@@ -104,7 +102,7 @@ public class EventConverter
         log.info("Using default metric map located at [%s]", metricMapPath);
         is = new FileInputStream(new File(metricMapPath));
       }
-      return mapper.reader(new TypeReference<Map<String, Set<String>>>()
+      return mapper.readerFor(new TypeReference<Map<String, Set<String>>>()
       {
       }).readValue(is);
     }

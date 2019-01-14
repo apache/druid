@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
@@ -42,25 +42,26 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   private final List<String> columnNames;
   private final Indexed<String> availableDimensions;
   private final BitmapFactory bitmapFactory;
-  private final Map<String, Column> columns;
+  private final Map<String, ColumnHolder> columns;
   private final SmooshedFileMapper fileMapper;
   @Nullable
   private final Metadata metadata;
   private final Map<String, DimensionHandler> dimensionHandlers;
 
   public SimpleQueryableIndex(
-      Interval dataInterval, Indexed<String> dimNames,
+      Interval dataInterval,
+      Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
-      Map<String, Column> columns,
+      Map<String, ColumnHolder> columns,
       SmooshedFileMapper fileMapper,
       @Nullable Metadata metadata
   )
   {
-    Preconditions.checkNotNull(columns.get(Column.TIME_COLUMN_NAME));
+    Preconditions.checkNotNull(columns.get(ColumnHolder.TIME_COLUMN_NAME));
     this.dataInterval = Preconditions.checkNotNull(dataInterval, "dataInterval");
     ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
     for (String column : columns.keySet()) {
-      if (!Column.TIME_COLUMN_NAME.equals(column)) {
+      if (!ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
         columnNamesBuilder.add(column);
       }
     }
@@ -80,7 +81,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
       List<String> columnNames,
       Indexed<String> availableDimensions,
       BitmapFactory bitmapFactory,
-      Map<String, Column> columns,
+      Map<String, ColumnHolder> columns,
       SmooshedFileMapper fileMapper,
       @Nullable Metadata metadata,
       Map<String, DimensionHandler> dimensionHandlers
@@ -105,7 +106,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   @Override
   public int getNumRows()
   {
-    return columns.get(Column.TIME_COLUMN_NAME).getLength();
+    return columns.get(ColumnHolder.TIME_COLUMN_NAME).getLength();
   }
 
   @Override
@@ -134,13 +135,13 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
 
   @Nullable
   @Override
-  public Column getColumn(String columnName)
+  public ColumnHolder getColumnHolder(String columnName)
   {
     return columns.get(columnName);
   }
 
   @VisibleForTesting
-  public Map<String, Column> getColumns()
+  public Map<String, ColumnHolder> getColumns()
   {
     return columns;
   }
@@ -172,7 +173,7 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   private void initDimensionHandlers()
   {
     for (String dim : availableDimensions) {
-      ColumnCapabilities capabilities = getColumn(dim).getCapabilities();
+      ColumnCapabilities capabilities = getColumnHolder(dim).getCapabilities();
       DimensionHandler handler = DimensionHandlerUtils.getHandlerFromCapabilities(dim, capabilities, null);
       dimensionHandlers.put(dim, handler);
     }

@@ -225,6 +225,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     return reportMillisTimeMetric("query/segmentAndCache/time", timeNs);
   }
 
+  @Deprecated
   @Override
   public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
   {
@@ -241,6 +242,13 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs)
   {
     return reportMillisTimeMetric("query/node/ttfb", timeNs);
+  }
+
+  @Override
+  public QueryMetrics<QueryType> reportBackPressureTime(long timeNs)
+  {
+    // Don't emit by default.
+    return this;
   }
 
   @Override

@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.indexer.hadoop.DatasourceInputSplit;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
@@ -36,7 +37,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -141,7 +141,7 @@ public class HadoopConverterJob
 
   public static Path getJobClassPathDir(String jobName, Path workingDirectory)
   {
-    return new Path(workingDirectory, jobName.replace(":", ""));
+    return new Path(workingDirectory, StringUtils.removeChar(jobName, ':'));
   }
 
   public static void cleanup(Job job) throws IOException
@@ -302,7 +302,8 @@ public class HadoopConverterJob
       }
       final List<DataSegment> returnList = ImmutableList.copyOf(
           Lists.transform(
-              goodPaths, new Function<Path, DataSegment>()
+              goodPaths,
+              new Function<Path, DataSegment>()
               {
                 @Nullable
                 @Override
@@ -486,10 +487,7 @@ public class HadoopConverterJob
     private static final String TMP_FILE_LOC_KEY = "org.apache.druid.indexer.updater.converter.reducer.tmpDir";
 
     @Override
-    protected void map(
-        String key, String value,
-        final Context context
-    ) throws IOException, InterruptedException
+    protected void map(String key, String value, final Context context) throws IOException, InterruptedException
     {
       final InputSplit split = context.getInputSplit();
       if (!(split instanceof DatasourceInputSplit)) {
@@ -623,7 +621,8 @@ public class HadoopConverterJob
         throw new IOException("Bad config, missing segments");
       }
       return Lists.transform(
-          segments, new Function<DataSegment, InputSplit>()
+          segments,
+          new Function<DataSegment, InputSplit>()
           {
             @Nullable
             @Override
@@ -637,7 +636,8 @@ public class HadoopConverterJob
 
     @Override
     public RecordReader<String, String> createRecordReader(
-        final InputSplit inputSplit, final TaskAttemptContext taskAttemptContext
+        final InputSplit inputSplit,
+        final TaskAttemptContext taskAttemptContext
     )
     {
       return new RecordReader<String, String>()

@@ -25,7 +25,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.ObjectArrays;
 import com.google.common.collect.Sets;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -53,7 +52,7 @@ import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
@@ -63,6 +62,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -113,9 +113,11 @@ public class SelectQueryRunnerTest
 
   private static final boolean DEFAULT_FROM_NEXT = true;
   private static final SelectQueryConfig config = new SelectQueryConfig(true);
-  {
+
+  static {
     config.setEnableFromNextDefault(DEFAULT_FROM_NEXT);
   }
+
   private static final Supplier<SelectQueryConfig> configSupplier = Suppliers.ofInstance(config);
 
   private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
@@ -411,7 +413,7 @@ public class SelectQueryRunnerTest
         .pagingSpec(new PagingSpec(toPagingIdentifier(3, descending), 3))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
@@ -562,10 +564,10 @@ public class SelectQueryRunnerTest
         .metrics(Collections.singletonList(QueryRunnerTestHelper.indexMetric))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
     Iterable<Result<SelectResultValue>> resultsOptimize = toolChest
         .postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)))
-        .run(QueryPlus.wrap(query), Maps.newHashMap())
+        .run(QueryPlus.wrap(query), new HashMap<>())
         .toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
@@ -616,7 +618,7 @@ public class SelectQueryRunnerTest
         )
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
 
     List<Result<SelectResultValue>> expectedResults = Collections.singletonList(
         new Result<SelectResultValue>(
@@ -644,7 +646,7 @@ public class SelectQueryRunnerTest
                     "indexFloat",
                     "indexMaxFloat"
                 ),
-                Lists.newArrayList()
+                new ArrayList<>()
             )
         )
     );
@@ -661,7 +663,7 @@ public class SelectQueryRunnerTest
         .metrics(Collections.singletonList("foo2"))
         .build();
 
-    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), Maps.newHashMap()).toList();
+    Iterable<Result<SelectResultValue>> results = runner.run(QueryPlus.wrap(query), new HashMap<>()).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
@@ -688,12 +690,12 @@ public class SelectQueryRunnerTest
   {
     List<DimensionSpec> dimSpecs = Arrays.asList(
         new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", ValueType.FLOAT),
-        new DefaultDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", ValueType.LONG)
+        new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "longTime", ValueType.LONG)
     );
 
     SelectQuery query = newTestQuery()
         .dimensionSpecs(dimSpecs)
-        .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
+        .metrics(Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, "index"))
         .intervals(I_0112_0114)
         .build();
 
@@ -716,7 +718,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     ),
                     new EventHolder(
@@ -727,7 +729,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     ),
                     new EventHolder(
@@ -738,7 +740,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294790400000L)
                             .put("floatIndex", 100.0f)
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     )
                 )
@@ -762,7 +764,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 1564.6177f)
                             .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     ),
                     new EventHolder(
@@ -773,7 +775,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 826.0602f)
                             .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     ),
                     new EventHolder(
@@ -784,7 +786,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", 1294876800000L)
                             .put("floatIndex", 1689.0128f)
                             .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     )
                 )
@@ -803,12 +805,12 @@ public class SelectQueryRunnerTest
 
     List<DimensionSpec> dimSpecs = Arrays.asList(
         new ExtractionDimensionSpec(QueryRunnerTestHelper.indexMetric, "floatIndex", jsExtractionFn),
-        new ExtractionDimensionSpec(Column.TIME_COLUMN_NAME, "longTime", jsExtractionFn)
+        new ExtractionDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "longTime", jsExtractionFn)
     );
 
     SelectQuery query = newTestQuery()
         .dimensionSpecs(dimSpecs)
-        .metrics(Arrays.asList(Column.TIME_COLUMN_NAME, "index"))
+        .metrics(Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, "index"))
         .intervals(I_0112_0114)
         .build();
 
@@ -831,7 +833,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     ),
                     new EventHolder(
@@ -842,7 +844,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     ),
                     new EventHolder(
@@ -853,7 +855,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294790400000")
                             .put("floatIndex", "super-100")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .put(Column.TIME_COLUMN_NAME, 1294790400000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294790400000L)
                             .build()
                     )
                 )
@@ -877,7 +879,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-1564.617729")
                             .put(QueryRunnerTestHelper.indexMetric, 1564.6177f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     ),
                     new EventHolder(
@@ -888,7 +890,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-826.060182")
                             .put(QueryRunnerTestHelper.indexMetric, 826.0602f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     ),
                     new EventHolder(
@@ -899,7 +901,7 @@ public class SelectQueryRunnerTest
                             .put("longTime", "super-1294876800000")
                             .put("floatIndex", "super-1689.012875")
                             .put(QueryRunnerTestHelper.indexMetric, 1689.0128f)
-                            .put(Column.TIME_COLUMN_NAME, 1294876800000L)
+                            .put(ColumnHolder.TIME_COLUMN_NAME, 1294876800000L)
                             .build()
                     )
                 )
@@ -935,7 +937,7 @@ public class SelectQueryRunnerTest
 
   private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
   {
-    List<List<Map<String, Object>>> events = Lists.newArrayList();
+    List<List<Map<String, Object>>> events = new ArrayList<>();
     for (String[] values : valueSet) {
       events.add(
           Lists.newArrayList(
@@ -945,7 +947,7 @@ public class SelectQueryRunnerTest
                     @Override
                     public Map<String, Object> apply(String input)
                     {
-                      Map<String, Object> event = Maps.newHashMap();
+                      Map<String, Object> event = new HashMap<>();
                       String[] values = input.split("\\t");
                       for (int i = 0; i < dimSpecs.length; i++) {
                         if (dimSpecs[i] == null || i >= dimSpecs.length || i >= values.length) {

@@ -20,13 +20,11 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
-
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.ISE;
-
 import org.apache.zookeeper.ZooKeeper;
 import org.joda.time.Period;
 import org.junit.After;
@@ -103,19 +101,19 @@ public class RemoteTaskRunnerRunPendingTasksConcurrencyTest
 
     if (remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[2].getId())
         && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[3].getId())) {
-      remoteTaskRunner.shutdown("task4");
+      remoteTaskRunner.shutdown("task4", "test");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[3], tasks[2]);
       Assert.assertEquals(TaskState.SUCCESS, results[3].get().getStatusCode());
       Assert.assertEquals(TaskState.SUCCESS, results[2].get().getStatusCode());
     } else if (remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[3].getId())
                && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[4].getId())) {
-      remoteTaskRunner.shutdown("task2");
+      remoteTaskRunner.shutdown("task2", "test");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[4], tasks[3]);
       Assert.assertEquals(TaskState.SUCCESS, results[4].get().getStatusCode());
       Assert.assertEquals(TaskState.SUCCESS, results[3].get().getStatusCode());
     } else if (remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[4].getId())
                && remoteTaskRunner.getWorkersWithUnacknowledgedTask().containsValue(tasks[2].getId())) {
-      remoteTaskRunner.shutdown("task3");
+      remoteTaskRunner.shutdown("task3", "test");
       mockWorkerRunningAndCompletionSuccessfulTasks(tasks[4], tasks[2]);
       Assert.assertEquals(TaskState.SUCCESS, results[4].get().getStatusCode());
       Assert.assertEquals(TaskState.SUCCESS, results[2].get().getStatusCode());

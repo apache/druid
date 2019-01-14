@@ -34,13 +34,12 @@ public interface IndexingServiceClient
 
   int killPendingSegments(String dataSource, DateTime end);
 
-  void upgradeSegment(DataSegment dataSegment);
-
   void mergeSegments(List<DataSegment> segments);
 
   String compactSegments(
       List<DataSegment> segments,
       boolean keepSegmentGranularity,
+      @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
       @Nullable ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
@@ -62,4 +61,7 @@ public interface IndexingServiceClient
 
   @Nullable
   TaskStatusPlus getLastCompleteTask();
+
+  @Nullable
+  TaskPayloadResponse getTaskPayload(String taskId);
 }

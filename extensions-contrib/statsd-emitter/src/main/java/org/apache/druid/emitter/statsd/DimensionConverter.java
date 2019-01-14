@@ -22,11 +22,11 @@ package org.apache.druid.emitter.statsd;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
-
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -46,11 +46,12 @@ public class DimensionConverter
     metricMap = readMap(mapper, dimensionMapPath);
   }
 
+  @Nullable
   public StatsDMetric addFilteredUserDims(
       String service,
       String metric,
       Map<String, Object> userDims,
-      ImmutableList.Builder<String> builder
+      ImmutableMap.Builder<String, String> builder
   )
   {
      /*
@@ -66,7 +67,7 @@ public class DimensionConverter
     if (statsDMetric != null) {
       for (String dim : statsDMetric.dimensions) {
         if (userDims.containsKey(dim)) {
-          builder.add(userDims.get(dim).toString());
+          builder.put(dim, userDims.get(dim).toString());
         }
       }
       return statsDMetric;
@@ -86,7 +87,7 @@ public class DimensionConverter
         log.info("Using metric dimensions at types at [%s]", dimensionMapPath);
         is = new FileInputStream(new File(dimensionMapPath));
       }
-      return mapper.reader(new TypeReference<Map<String, StatsDMetric>>()
+      return mapper.readerFor(new TypeReference<Map<String, StatsDMetric>>()
       {
       }).readValue(is);
     }

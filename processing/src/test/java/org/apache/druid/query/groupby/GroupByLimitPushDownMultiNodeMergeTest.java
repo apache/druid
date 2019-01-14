@@ -26,10 +26,9 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.data.input.InputRow;
@@ -78,14 +77,13 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.After;
@@ -95,6 +93,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -114,8 +113,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
   private File tmpDir;
   private QueryRunnerFactory<Row, GroupByQuery> groupByFactory;
   private QueryRunnerFactory<Row, GroupByQuery> groupByFactory2;
-  private List<IncrementalIndex> incrementalIndices = Lists.newArrayList();
-  private List<QueryableIndex> groupByIndices = Lists.newArrayList();
+  private List<IncrementalIndex> incrementalIndices = new ArrayList<>();
+  private List<QueryableIndex> groupByIndices = new ArrayList<>();
   private ExecutorService executorService;
   private Closer resourceCloser;
 
@@ -129,7 +128,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     );
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         new ColumnConfig()
         {
           @Override
@@ -550,7 +548,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -641,7 +639,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setDimensions(
             new DefaultDimensionSpec("dimA", "dimA"),
             new ExtractionDimensionSpec(
-                Column.TIME_COLUMN_NAME,
+                ColumnHolder.TIME_COLUMN_NAME,
                 "hour",
                 ValueType.LONG,
                 new TimeFormatExtractionFn(
@@ -671,7 +669,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         .setGranularity(Granularities.ALL)
         .build();
 
-    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    Sequence<Row> queryResult = finalRunner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
 
     Row expectedRow0 = GroupByQueryRunnerTestHelper.createExpectedRow(
@@ -708,7 +706,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
 
   private List<QueryRunner<Row>> getRunner1(int qIndexNumber)
   {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryableIndex index = groupByIndices.get(qIndexNumber);
     QueryRunner<Row> runner = makeQueryRunner(
         groupByFactory,
@@ -721,7 +719,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
 
   private List<QueryRunner<Row>> getRunner2(int qIndexNumber)
   {
-    List<QueryRunner<Row>> runners = Lists.newArrayList();
+    List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryableIndex index2 = groupByIndices.get(qIndexNumber);
     QueryRunner<Row> tooSmallRunner = makeQueryRunner(
         groupByFactory2,
@@ -766,11 +764,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
-            factory.createRunner(adapter)
-        ),
+    return new FinalizeResultsQueryRunner<>(
+        new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }

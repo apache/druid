@@ -35,7 +35,7 @@ public class HadoopKerberosConfigTest
     HadoopKerberosConfig hadoopKerberosConfig = new HadoopKerberosConfig("principal", "keytab");
     Assert.assertEquals(
         hadoopKerberosConfig,
-        mapper.reader(HadoopKerberosConfig.class).readValue(mapper.writeValueAsString(hadoopKerberosConfig))
+        mapper.readerFor(HadoopKerberosConfig.class).readValue(mapper.writeValueAsString(hadoopKerberosConfig))
     );
   }
 }

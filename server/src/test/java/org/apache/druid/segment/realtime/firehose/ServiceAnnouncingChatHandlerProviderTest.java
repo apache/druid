@@ -88,6 +88,7 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
     Capture<DruidNode> captured = Capture.newInstance();
 
     EasyMock.expect(node.getHost()).andReturn(TEST_HOST);
+    EasyMock.expect(node.isBindOnHost()).andReturn(false);
     EasyMock.expect(node.getPlaintextPort()).andReturn(TEST_PORT);
     EasyMock.expect(node.isEnablePlaintextPort()).andReturn(true);
     EasyMock.expect(node.isEnableTlsPort()).andReturn(false);
@@ -116,6 +117,7 @@ public class ServiceAnnouncingChatHandlerProviderTest extends EasyMockSupport
     captured.reset();
     resetAll();
     EasyMock.expect(node.getHost()).andReturn(TEST_HOST);
+    EasyMock.expect(node.isBindOnHost()).andReturn(false);
     EasyMock.expect(node.getPlaintextPort()).andReturn(TEST_PORT);
     EasyMock.expect(node.isEnablePlaintextPort()).andReturn(true);
     EasyMock.expect(node.getTlsPort()).andReturn(-1);

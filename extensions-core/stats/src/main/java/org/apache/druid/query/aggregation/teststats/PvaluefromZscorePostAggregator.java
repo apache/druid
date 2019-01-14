@@ -24,17 +24,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
+import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.PostAggregatorIds;
 import org.apache.druid.query.cache.CacheKeyBuilder;
-import org.apache.commons.math3.distribution.NormalDistribution;
 
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -65,7 +65,7 @@ public class PvaluefromZscorePostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    Set<String> dependentFields = Sets.newHashSet();
+    Set<String> dependentFields = new HashSet<>();
 
     dependentFields.addAll(zScore.getDependentFields());
 

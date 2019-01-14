@@ -26,7 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -55,7 +55,6 @@ import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -64,6 +63,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -419,7 +419,7 @@ public class BatchDeltaIngestionTest
         null
     );
 
-    List<InputRow> rows = Lists.newArrayList();
+    List<InputRow> rows = new ArrayList<>();
     while (firehose.hasMore()) {
       rows.add(firehose.nextRow());
     }
@@ -462,9 +462,7 @@ public class BatchDeltaIngestionTest
                     new LongSumAggregatorFactory("visited_sum", "visited_num"),
                     new HyperUniquesAggregatorFactory("unique_hosts", "host2")
                 },
-                new UniformGranularitySpec(
-                    Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)
-                ),
+                new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)),
                 null,
                 MAPPER
             ),

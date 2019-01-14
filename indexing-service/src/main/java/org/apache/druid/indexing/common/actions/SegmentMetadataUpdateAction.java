@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentUtils;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -63,9 +64,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
   }
 
   @Override
-  public Void perform(
-      Task task, TaskActionToolbox toolbox
-  )
+  public Void perform(Task task, TaskActionToolbox toolbox)
   {
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
@@ -116,7 +115,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
   public String toString()
   {
     return "SegmentMetadataUpdateAction{" +
-           "segments=" + segments +
+           "segments=" + DataSegmentUtils.getIdentifiersString(segments) +
            '}';
   }
 }

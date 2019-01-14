@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicates;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -31,7 +30,6 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -57,6 +55,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * This is mostly a test of the validator
@@ -106,9 +105,7 @@ public class IndexIOTest
         "dim1", "dim10"
     );
 
-    final List<Map<String, Object>> maps = ImmutableList.of(
-        map, map00, map10, map0null, map1null, mapAll
-    );
+    final List<Map<String, Object>> maps = ImmutableList.of(map, map00, map10, map0null, map1null, mapAll);
 
     return Iterables.concat(
         // First iterable tests permutations of the maps which are expected to be equal
@@ -233,17 +230,7 @@ public class IndexIOTest
 
   public static List<Map> filterNullValues(List<Map<String, Object>> mapList)
   {
-    return Lists.transform(
-        mapList, new Function<Map, Map>()
-        {
-          @Nullable
-          @Override
-          public Map apply(@Nullable Map input)
-          {
-            return Maps.filterValues(input, Predicates.notNull());
-          }
-        }
-    );
+    return Lists.transform(mapList, (Function<Map, Map>) input -> Maps.filterValues(input, Objects::nonNull));
   }
 
   private final Collection<Map<String, Object>> events1;
@@ -329,7 +316,7 @@ public class IndexIOTest
   {
     Exception ex = null;
     try {
-      TestHelper.getTestIndexIO(OffHeapMemorySegmentWriteOutMediumFactory.instance()).validateTwoSegments(adapter1, adapter2);
+      TestHelper.getTestIndexIO().validateTwoSegments(adapter1, adapter2);
     }
     catch (Exception e) {
       ex = e;

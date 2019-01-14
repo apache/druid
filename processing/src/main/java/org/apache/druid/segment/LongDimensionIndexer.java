@@ -25,7 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexRowHolder;
 
@@ -61,7 +61,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
-  public Indexed<Long> getSortedIndexedValues()
+  public CloseableIndexed<Long> getSortedIndexedValues()
   {
     throw new UnsupportedOperationException("Numeric columns do not support value dictionaries.");
   }
@@ -167,7 +167,7 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
   }
 
   @Override
-  public Object convertUnsortedEncodedKeyComponentToActualArrayOrList(Long key, boolean asList)
+  public Object convertUnsortedEncodedKeyComponentToActualList(Long key)
   {
     return key;
   }
@@ -180,7 +180,10 @@ public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 
   @Override
   public void fillBitmapsFromUnsortedEncodedKeyComponent(
-      Long key, int rowNum, MutableBitmap[] bitmapIndexes, BitmapFactory factory
+      Long key,
+      int rowNum,
+      MutableBitmap[] bitmapIndexes,
+      BitmapFactory factory
   )
   {
     throw new UnsupportedOperationException("Numeric columns do not support bitmaps.");

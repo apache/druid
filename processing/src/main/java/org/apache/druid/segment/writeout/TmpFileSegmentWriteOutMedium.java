@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.writeout;
 
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.java.util.common.io.Closer;
 
 import java.io.File;
 import java.io.IOException;

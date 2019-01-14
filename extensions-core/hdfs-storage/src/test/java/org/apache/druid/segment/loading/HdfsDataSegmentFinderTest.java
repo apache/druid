@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -30,8 +32,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.storage.hdfs.HdfsDataSegmentFinder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -306,13 +306,13 @@ public class HdfsDataSegmentFinderTest
   private String getDescriptorPath(DataSegment segment)
   {
     final Path indexzip = new Path(String.valueOf(segment.getLoadSpec().get("path")));
-    return indexzip.getParent().toString() + "/" + DESCRIPTOR_JSON;
+    return indexzip.getParent() + "/" + DESCRIPTOR_JSON;
   }
 
   private String getDescriptorPathWithPartitionNum(DataSegment segment, int partitionNum)
   {
     final Path indexzip = new Path(String.valueOf(segment.getLoadSpec().get("path")));
-    return indexzip.getParent().toString() + "/" + partitionNum + "_" + DESCRIPTOR_JSON;
+    return indexzip.getParent() + "/" + partitionNum + "_" + DESCRIPTOR_JSON;
   }
 
   private String readContent(Path descriptor) throws IOException

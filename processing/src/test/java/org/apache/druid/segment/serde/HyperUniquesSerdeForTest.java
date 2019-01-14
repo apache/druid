@@ -19,32 +19,25 @@
 
 package org.apache.druid.segment.serde;
 
-import com.google.common.collect.Ordering;
 import com.google.common.hash.HashFunction;
-import org.apache.druid.java.util.common.StringUtils;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
+import java.util.Comparator;
 import java.util.List;
 
 public class HyperUniquesSerdeForTest extends ComplexMetricSerde
 {
-  private static Ordering<HyperLogLogCollector> comparator = new Ordering<HyperLogLogCollector>()
-  {
-    @Override
-    public int compare(
-        HyperLogLogCollector arg1, HyperLogLogCollector arg2
-    )
-    {
-      return arg1.toByteBuffer().compareTo(arg2.toByteBuffer());
-    }
-  }.nullsFirst();
+  private static Comparator<HyperLogLogCollector> comparator =
+      Comparator.nullsFirst(Comparator.comparing(HyperLogLogCollector::toByteBuffer));
 
   private final HashFunction hashFn;
 
@@ -98,9 +91,7 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(
-      ByteBuffer byteBuffer, ColumnBuilder columnBuilder
-  )
+  public void deserializeColumn(ByteBuffer byteBuffer, ColumnBuilder columnBuilder)
   {
     final GenericIndexed column;
     if (columnBuilder.getFileMapper() == null) {
@@ -109,7 +100,7 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
       column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
     }
 
-    columnBuilder.setComplexColumn(new ComplexColumnPartSupplier(getTypeName(), column));
+    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   @Override
@@ -135,7 +126,7 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
       public byte[] toBytes(HyperLogLogCollector collector)
       {
         if (collector == null) {
-          return new byte[]{};
+          return ByteArrays.EMPTY_ARRAY;
         }
         ByteBuffer val = collector.toByteBuffer();
         byte[] retVal = new byte[val.remaining()];

@@ -21,11 +21,11 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
-import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -50,20 +50,15 @@ import static org.easymock.EasyMock.reset;
 
 public class LookupReferencesManagerTest
 {
-  LookupReferencesManager lookupReferencesManager;
-
-  private DruidLeaderClient druidLeaderClient;
-
-  private LookupListeningAnnouncerConfig config;
-
   private static final String LOOKUP_TIER = "lookupTier";
-
-  LookupExtractorFactory lookupExtractorFactory;
-
-  LookupExtractorFactoryContainer container;
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  LookupReferencesManager lookupReferencesManager;
+  LookupExtractorFactory lookupExtractorFactory;
+  LookupExtractorFactoryContainer container;
   ObjectMapper mapper = new DefaultObjectMapper();
+  private DruidLeaderClient druidLeaderClient;
+  private LookupListeningAnnouncerConfig config;
 
   @Before
   public void setUp() throws IOException
@@ -85,7 +80,9 @@ public class LookupReferencesManagerTest
     String temporaryPath = temporaryFolder.newFolder().getAbsolutePath();
     lookupReferencesManager = new LookupReferencesManager(
         new LookupConfig(temporaryFolder.newFolder().getAbsolutePath()),
-        mapper, druidLeaderClient, config,
+        mapper,
+        druidLeaderClient,
+        config,
         true
     );
   }
@@ -104,7 +101,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -165,7 +165,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -203,7 +206,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -234,7 +240,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -262,7 +271,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -292,7 +304,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -326,7 +341,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -354,7 +372,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -405,7 +426,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -447,7 +471,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -523,7 +550,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -543,13 +573,31 @@ public class LookupReferencesManagerTest
   @Test
   public void testLoadLookupOnCoordinatorFailure() throws Exception
   {
+    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFolder().getAbsolutePath())
+    {
+      @Override
+      public int getCoordinatorRetryDelay()
+      {
+        return 10;
+      }
+    };
+    lookupReferencesManager = new LookupReferencesManager(
+        lookupConfig,
+        mapper,
+        druidLeaderClient,
+        config
+    );
+
     Map<String, Object> lookupMap = new HashMap<>();
     lookupMap.put("testMockForLoadLookupOnCoordinatorFailure", container);
     String strResult = mapper.writeValueAsString(lookupMap);
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request)
         .anyTimes();
     FullResponseHolder responseHolder = new FullResponseHolder(
@@ -564,16 +612,30 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.add("testMockForLoadLookupOnCoordinatorFailure", container);
     lookupReferencesManager.handlePendingNotices();
     lookupReferencesManager.stop();
+    lookupConfig = new LookupConfig(lookupReferencesManager.lookupSnapshotTaker.getPersistFile(LOOKUP_TIER).getParent())
+    {
+      @Override
+      public int getCoordinatorRetryDelay()
+      {
+        return 10;
+      }
+    };
+
     lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig(lookupReferencesManager.lookupSnapshotTaker.getPersistFile(LOOKUP_TIER).getParent()),
-        mapper, druidLeaderClient, config,
+        lookupConfig,
+        mapper,
+        druidLeaderClient,
+        config,
         true
     );
     reset(config);
     reset(druidLeaderClient);
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request)
         .anyTimes();
     expect(druidLeaderClient.go(request)).andThrow(new IllegalStateException()).anyTimes();
@@ -585,9 +647,19 @@ public class LookupReferencesManagerTest
   @Test
   public void testDisableLookupSync() throws Exception
   {
+    LookupConfig lookupConfig = new LookupConfig(null)
+    {
+      @Override
+      public boolean getEnableLookupSyncOnStartup()
+      {
+        return false;
+      }
+    };
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
-        new LookupConfig(null),
-        mapper, druidLeaderClient, config
+        lookupConfig,
+        mapper,
+        druidLeaderClient,
+        config
     );
     Map<String, Object> lookupMap = new HashMap<>();
     lookupMap.put("testMockForDisableLookupSync", container);
@@ -595,7 +667,10 @@ public class LookupReferencesManagerTest
     Request request = new Request(HttpMethod.GET, new URL("http://localhost:1234/xx"));
     expect(config.getLookupTier()).andReturn(LOOKUP_TIER).anyTimes();
     replay(config);
-    expect(druidLeaderClient.makeRequest(HttpMethod.GET, "/druid/coordinator/v1/lookups/lookupTier?detailed=true"))
+    expect(druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+        "/druid/coordinator/v1/lookups/config/lookupTier?detailed=true"
+    ))
         .andReturn(request);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -607,5 +682,4 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.start();
     Assert.assertNull(lookupReferencesManager.get("testMockForDisableLookupSync"));
   }
-
 }

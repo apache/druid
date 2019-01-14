@@ -36,8 +36,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,8 +46,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -354,7 +353,7 @@ public class S3DataSegmentFinderTest
   private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
   {
     private final File baseDir;
-    private final Map<String, Map<String, ObjectMetadata>> storage = Maps.newHashMap();
+    private final Map<String, Map<String, ObjectMetadata>> storage = new HashMap<>();
 
     public MockAmazonS3Client(File baseDir)
     {

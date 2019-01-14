@@ -23,6 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.calcite.plan.RelOptPlanner;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -34,9 +37,6 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
-import org.apache.calcite.plan.RelOptPlanner;
-import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.ISODateTimeFormat;
 
@@ -45,13 +45,12 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.List;
 
 @Path("/druid/v2/sql/")
@@ -93,14 +92,12 @@ public class SqlResource
       final boolean[] timeColumns = new boolean[fieldList.size()];
       final boolean[] dateColumns = new boolean[fieldList.size()];
       final String[] columnNames = new String[fieldList.size()];
-      final String[] columnTypes = new String[fieldList.size()];
 
       for (int i = 0; i < fieldList.size(); i++) {
         final SqlTypeName sqlTypeName = fieldList.get(i).getType().getSqlTypeName();
         timeColumns[i] = sqlTypeName == SqlTypeName.TIMESTAMP;
         dateColumns[i] = sqlTypeName == SqlTypeName.DATE;
         columnNames[i] = fieldList.get(i).getName();
-        columnTypes[i] = sqlTypeName.getName();
       }
 
       final Yielder<Object[]> yielder0 = Yielders.each(plannerResult.run());
@@ -108,51 +105,48 @@ public class SqlResource
       try {
         return Response
             .ok(
-                new StreamingOutput()
-                {
-                  @Override
-                  public void write(final OutputStream outputStream) throws IOException, WebApplicationException
-                  {
-                    Yielder<Object[]> yielder = yielder0;
+                (StreamingOutput) outputStream -> {
+                  Yielder<Object[]> yielder = yielder0;
 
-                    try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
-                                                                    .createFormatter(outputStream, jsonMapper)) {
-                      writer.writeResponseStart();
+                  try (final ResultFormat.Writer writer = sqlQuery.getResultFormat()
+                                                                  .createFormatter(outputStream, jsonMapper)) {
+                    writer.writeResponseStart();
 
-                      while (!yielder.isDone()) {
-                        final Object[] row = yielder.get();
-                        writer.writeRowStart();
-                        for (int i = 0; i < fieldList.size(); i++) {
-                          final Object value;
+                    if (sqlQuery.includeHeader()) {
+                      writer.writeHeader(Arrays.asList(columnNames));
+                    }
 
-                          if (timeColumns[i]) {
-                            value = ISODateTimeFormat.dateTime().print(
-                                Calcites.calciteTimestampToJoda((long) row[i], timeZone)
-                            );
-                          } else if (dateColumns[i]) {
-                            value = ISODateTimeFormat.dateTime().print(
-                                Calcites.calciteDateToJoda((int) row[i], timeZone)
-                            );
-                          } else {
-                            value = row[i];
-                          }
+                    while (!yielder.isDone()) {
+                      final Object[] row = yielder.get();
+                      writer.writeRowStart();
+                      for (int i = 0; i < fieldList.size(); i++) {
+                        final Object value;
 
-                          writer.writeRowField(fieldList.get(i).getName(), value);
+                        if (timeColumns[i]) {
+                          value = ISODateTimeFormat.dateTime().print(
+                              Calcites.calciteTimestampToJoda((long) row[i], timeZone)
+                          );
+                        } else if (dateColumns[i]) {
+                          value = ISODateTimeFormat.dateTime().print(
+                              Calcites.calciteDateToJoda((int) row[i], timeZone)
+                          );
+                        } else {
+                          value = row[i];
                         }
-                        writer.writeRowEnd();
-                        yielder = yielder.next(null);
-                      }
 
-                      writer.writeResponseEnd();
+                        writer.writeRowField(fieldList.get(i).getName(), value);
+                      }
+                      writer.writeRowEnd();
+                      yielder = yielder.next(null);
                     }
-                    finally {
-                      yielder.close();
-                    }
+
+                    writer.writeResponseEnd();
+                  }
+                  finally {
+                    yielder.close();
                   }
                 }
             )
-            .header("X-Druid-Column-Names", jsonMapper.writeValueAsString(columnNames))
-            .header("X-Druid-Column-Types", jsonMapper.writeValueAsString(columnTypes))
             .build();
       }
       catch (Throwable e) {

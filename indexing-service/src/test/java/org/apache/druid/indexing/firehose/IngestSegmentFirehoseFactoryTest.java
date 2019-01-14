@@ -26,8 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -47,6 +45,7 @@ import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -71,7 +70,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentArchiver;
@@ -110,6 +109,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -173,8 +173,7 @@ public class IngestSegmentFirehoseFactoryTest
 
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
     {
-      private final Set<DataSegment> published = Sets.newHashSet();
-      private final Set<DataSegment> nuked = Sets.newHashSet();
+      private final Set<DataSegment> published = new HashSet<>();
 
       @Override
       public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
@@ -197,7 +196,7 @@ public class IngestSegmentFirehoseFactoryTest
       @Override
       public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
       {
-        Set<DataSegment> added = Sets.newHashSet();
+        Set<DataSegment> added = new HashSet<>();
         for (final DataSegment segment : segments) {
           if (published.add(segment)) {
             added.add(segment);
@@ -210,7 +209,7 @@ public class IngestSegmentFirehoseFactoryTest
       @Override
       public void deleteSegments(Set<DataSegment> segments)
       {
-        nuked.addAll(segments);
+        // do nothing
       }
     };
     final LocalTaskActionClientFactory tac = new LocalTaskActionClientFactory(
@@ -222,7 +221,8 @@ public class IngestSegmentFirehoseFactoryTest
             newMockEmitter(),
             EasyMock.createMock(SupervisorManager.class),
             new Counters()
-        )
+        ),
+        new TaskAuditLogConfig(false)
     );
     SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     EasyMock.replay(notifierFactory);
@@ -232,7 +232,7 @@ public class IngestSegmentFirehoseFactoryTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
     };
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
@@ -380,10 +380,12 @@ public class IngestSegmentFirehoseFactoryTest
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
     objectMapper.setAnnotationIntrospectors(
         new AnnotationIntrospectorPair(
-            guiceIntrospector, objectMapper.getSerializationConfig().getAnnotationIntrospector()
+            guiceIntrospector,
+            objectMapper.getSerializationConfig().getAnnotationIntrospector()
         ),
         new AnnotationIntrospectorPair(
-            guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
+            guiceIntrospector,
+            objectMapper.getDeserializationConfig().getAnnotationIntrospector()
         )
     );
     objectMapper.setInjectableValues(
@@ -557,7 +559,7 @@ public class IngestSegmentFirehoseFactoryTest
     Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), segmentSet.size());
     Integer rowcount = 0;
     final TransformSpec transformSpec = new TransformSpec(
-        new SelectorDimFilter(Column.TIME_COLUMN_NAME, "1", null),
+        new SelectorDimFilter(ColumnHolder.TIME_COLUMN_NAME, "1", null),
         ImmutableList.of(
             new ExpressionTransform(METRIC_FLOAT_NAME, METRIC_FLOAT_NAME + " * 10", ExprMacroTable.nil())
         )
@@ -593,7 +595,6 @@ public class IngestSegmentFirehoseFactoryTest
     final int numSegmentsPerPartitionChunk = 5;
     final int numPartitionChunksPerTimelineObject = 10;
     final int numSegments = numSegmentsPerPartitionChunk * numPartitionChunksPerTimelineObject;
-    final List<DataSegment> segments = new ArrayList<>(numSegments);
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final String version = "1";
 
@@ -618,7 +619,6 @@ public class IngestSegmentFirehoseFactoryTest
             1,
             1
         );
-        segments.add(segment);
 
         final PartitionChunk<DataSegment> partitionChunk = new NumberedPartitionChunk<>(
             i,

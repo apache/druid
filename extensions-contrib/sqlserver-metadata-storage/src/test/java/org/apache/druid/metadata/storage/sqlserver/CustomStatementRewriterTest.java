@@ -16,17 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.metadata.storage.sqlserver;
 
+import junit.framework.Assert;
+import org.apache.druid.metadata.storage.sqlserver.SQLServerConnector.CustomStatementRewriter;
 import org.junit.Before;
 import org.junit.Test;
 import org.skife.jdbi.v2.Binding;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.exceptions.UnableToCreateStatementException;
 import org.skife.jdbi.v2.tweak.RewrittenStatement;
-
-import org.apache.druid.metadata.storage.sqlserver.SQLServerConnector.CustomStatementRewriter;
-import junit.framework.Assert;
 
 @SuppressWarnings("nls")
 public class CustomStatementRewriterTest

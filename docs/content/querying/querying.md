@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "Querying"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # Querying
 
@@ -11,11 +31,19 @@ REST query interface. For normal Druid operations, queries should be issued to t
 to the queryable nodes like this -
 
  ```bash
- curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -d @<query_json_file>
+ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
  ```
  
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different 
 [client libraries](../development/libraries.html) in other languages to query Druid. 
+
+The Content-Type/Accept Headers can also take 'application/x-jackson-smile'.
+
+ ```bash
+ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/x-jackson-smile' -d @<query_json_file>
+ ```
+
+Note: If Accept header is not provided, it defaults to value of 'Content-Type' header.
 
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries 
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build 

@@ -23,7 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -50,12 +55,6 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
-import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.utils.ZKPaths;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
@@ -65,6 +64,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -160,7 +160,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidCoordinatorConfig
     );
     loadQueuePeon.start();
-    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
+    druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = new ScheduledExecutorFactory()
     {
@@ -367,9 +367,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new PathChildrenCacheListener()
         {
           @Override
-          public void childEvent(
-              CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
-          )
+          public void childEvent(CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent)
           {
             if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
               if (assignSegmentLatch.getCount() > 0) {
@@ -449,7 +447,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
         druidCoordinatorConfig
     );
     final PathChildrenCache pathChildrenCacheCold = new PathChildrenCache(
-        curator, loadPathCold, true, true, Execs.singleThreaded("coordinator_test_path_children_cache_cold-%d")
+        curator,
+        loadPathCold,
+        true,
+        true,
+        Execs.singleThreaded("coordinator_test_path_children_cache_cold-%d")
     );
     loadManagementPeons.putAll(ImmutableMap.of("hot", loadQueuePeon, "cold", loadQueuePeonCold));
 
@@ -577,8 +579,15 @@ public class DruidCoordinatorTest extends CuratorTestBase
   {
     // Not using EasyMock as it hampers the performance of multithreads.
     DataSegment segment = new DataSegment(
-        dataSource, interval, "dummy_version", new ConcurrentHashMap<>(),
-        Lists.newArrayList(), Lists.newArrayList(), null, 0, 0L
+        dataSource,
+        interval,
+        "dummy_version",
+        new ConcurrentHashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        null,
+        0,
+        0L
     );
     return segment;
   }

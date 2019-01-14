@@ -21,10 +21,10 @@ package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.data.ColumnarLongsSerializer;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
@@ -33,7 +33,7 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Unsafe for concurrent use from multiple threads.
  */
-public class LongColumnSerializer implements GenericColumnSerializer
+public class LongColumnSerializer implements GenericColumnSerializer<Object>
 {
   public static LongColumnSerializer create(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -81,7 +81,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
   }
 
   @Override
-  public void serialize(ColumnValueSelector selector) throws IOException
+  public void serialize(ColumnValueSelector<?> selector) throws IOException
   {
     writer.add(selector.getLong());
   }

@@ -73,7 +73,7 @@ public class BitmapBenchmark
     conciseCount++;
     final ByteBuffer buf = ByteBuffer.allocateDirect(bytes.length).put(bytes);
     buf.rewind();
-    return new ImmutableConciseSet(buf);
+    return new ImmutableConciseSet(buf.asIntBuffer());
   }
 
   protected static ImmutableRoaringBitmap writeImmutable(MutableRoaringBitmap r, ByteBuffer buf) throws IOException
@@ -100,9 +100,9 @@ public class BitmapBenchmark
 
   protected static void printSizeStats(double density, String name)
   {
-    System.out.println("");
+    System.out.println();
     System.out.println("## " + name);
-    System.out.println("");
+    System.out.println();
     System.out.printf(Locale.ENGLISH, " d = %06.5f | Concise | Roaring%n", density);
     System.out.println("-------------|---------|---------");
     System.out.printf(Locale.ENGLISH, "Count        |   %5d |   %5d %n", conciseCount, roaringCount);

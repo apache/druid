@@ -21,7 +21,6 @@ package org.apache.druid.curator.discovery;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -32,6 +31,20 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.CloseableExecutorService;
+import org.apache.curator.utils.ZKPaths;
+import org.apache.curator.x.discovery.DownInstancePolicy;
+import org.apache.curator.x.discovery.InstanceFilter;
+import org.apache.curator.x.discovery.ProviderStrategy;
+import org.apache.curator.x.discovery.ServiceCache;
+import org.apache.curator.x.discovery.ServiceCacheBuilder;
+import org.apache.curator.x.discovery.ServiceDiscovery;
+import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceProvider;
+import org.apache.curator.x.discovery.ServiceProviderBuilder;
+import org.apache.curator.x.discovery.details.ServiceCacheListener;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -48,22 +61,9 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.CloseableExecutorService;
-import org.apache.curator.utils.ZKPaths;
-import org.apache.curator.x.discovery.DownInstancePolicy;
-import org.apache.curator.x.discovery.InstanceFilter;
-import org.apache.curator.x.discovery.ProviderStrategy;
-import org.apache.curator.x.discovery.ServiceCache;
-import org.apache.curator.x.discovery.ServiceCacheBuilder;
-import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
-import org.apache.curator.x.discovery.ServiceProviderBuilder;
-import org.apache.curator.x.discovery.details.ServiceCacheListener;
 
 import java.lang.annotation.Annotation;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -161,20 +161,27 @@ public class DiscoveryModule implements Module
           .in(LazySingleton.class);
 
     // internal discovery bindings.
+    PolyBind.createChoiceWithDefault(binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeAnnouncer.class), CURATOR_KEY);
+
     PolyBind.createChoiceWithDefault(
-        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeAnnouncer.class), CURATOR_KEY
+        binder,
+        INTERNAL_DISCOVERY_PROP,
+        Key.get(DruidNodeDiscoveryProvider.class),
+        CURATOR_KEY
     );
 
     PolyBind.createChoiceWithDefault(
-        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidNodeDiscoveryProvider.class), CURATOR_KEY
+        binder,
+        INTERNAL_DISCOVERY_PROP,
+        Key.get(DruidLeaderSelector.class, Coordinator.class),
+        CURATOR_KEY
     );
 
     PolyBind.createChoiceWithDefault(
-        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidLeaderSelector.class, () -> Coordinator.class), CURATOR_KEY
-    );
-
-    PolyBind.createChoiceWithDefault(
-        binder, INTERNAL_DISCOVERY_PROP, Key.get(DruidLeaderSelector.class, () -> IndexingService.class), CURATOR_KEY
+        binder,
+        INTERNAL_DISCOVERY_PROP,
+        Key.get(DruidLeaderSelector.class, IndexingService.class),
+        CURATOR_KEY
     );
 
     PolyBind.optionBinder(binder, Key.get(DruidNodeDiscoveryProvider.class))
@@ -196,8 +203,10 @@ public class DiscoveryModule implements Module
 
     PolyBind.optionBinder(binder, Key.get(DruidLeaderSelector.class, IndexingService.class))
             .addBinding(CURATOR_KEY)
-            .toProvider(new DruidLeaderSelectorProvider(
-                (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getOverlordPath(), "_OVERLORD"))
+            .toProvider(
+                new DruidLeaderSelectorProvider(
+                    (zkPathsConfig) -> ZKPaths.makePath(zkPathsConfig.getOverlordPath(), "_OVERLORD")
+                )
             )
             .in(LazySingleton.class);
   }
@@ -221,7 +230,7 @@ public class DiscoveryModule implements Module
           public void start()
           {
             if (nodes == null) {
-              nodes = Lists.newArrayList();
+              nodes = new ArrayList<>();
               for (KeyHolder<DruidNode> holder : nodesToAnnounce) {
                 nodes.add(injector.getInstance(holder.getKey()));
               }

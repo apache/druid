@@ -29,18 +29,18 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-SNAPSHOT</version>
+    <version>0.13.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
   <properties>
-    <apache.kafka.version>0.10.2.0</apache.kafka.version>
+    <apache.kafka.version>0.10.2.2</apache.kafka.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
-      <artifactId>druid-api</artifactId>
+      <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
@@ -80,7 +80,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.11</artifactId>
+      <artifactId>kafka_2.12</artifactId>
       <version>${apache.kafka.version}</version>
       <scope>test</scope>
     </dependency>

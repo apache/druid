@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -27,6 +28,11 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.druid.data.input.avro.AvroExtensionsModule;
 import org.apache.druid.data.input.avro.AvroParseSpec;
 import org.apache.druid.data.input.avro.SchemaRepoBasedAvroBytesDecoder;
@@ -37,11 +43,6 @@ import org.apache.druid.data.input.schemarepo.Avro1124SubjectAndIdConverter;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.avro.io.DatumWriter;
-import org.apache.avro.io.EncoderFactory;
-import org.apache.avro.specific.SpecificDatumWriter;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Before;
@@ -64,6 +65,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 
@@ -88,6 +90,7 @@ public class AvroStreamInputRowParserTest
       "someStringArray",
       "someIntArray",
       "someFloat",
+      "someUnion",
       EVENT_TYPE,
       ID,
       "someBytes",
@@ -148,6 +151,8 @@ public class AvroStreamInputRowParserTest
   );
   public static final String SOME_UNION_VALUE = "string as union";
   public static final ByteBuffer SOME_BYTES_VALUE = ByteBuffer.allocate(8);
+
+  private static final Pattern BRACES_AND_SPACE = Pattern.compile("[{} ]");
 
   private final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -216,7 +221,7 @@ public class AvroStreamInputRowParserTest
 
     InputRow inputRow = parser2.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
 
-    assertInputRowCorrect(inputRow, DIMENSIONS);
+    assertInputRowCorrect(inputRow, DIMENSIONS, false);
   }
 
   @Test
@@ -257,16 +262,16 @@ public class AvroStreamInputRowParserTest
 
     InputRow inputRow = parser2.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
 
-    assertInputRowCorrect(inputRow, DIMENSIONS_SCHEMALESS);
+    assertInputRowCorrect(inputRow, DIMENSIONS_SCHEMALESS, false);
   }
 
-  public static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions)
+  public static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions, boolean isFromPigAvro)
   {
     assertEquals(expectedDimensions, inputRow.getDimensions());
     assertEquals(1543698L, inputRow.getTimestampFromEpoch());
 
     // test dimensions
-    assertEquals(Collections.singletonList(String.valueOf(EVENT_TYPE_VALUE)), inputRow.getDimension(EVENT_TYPE));
+    assertEquals(Collections.singletonList(EVENT_TYPE_VALUE), inputRow.getDimension(EVENT_TYPE));
     assertEquals(Collections.singletonList(String.valueOf(ID_VALUE)), inputRow.getDimension(ID));
     assertEquals(Collections.singletonList(String.valueOf(SOME_OTHER_ID_VALUE)), inputRow.getDimension(SOME_OTHER_ID));
     assertEquals(Collections.singletonList(String.valueOf(true)), inputRow.getDimension(IS_VALID));
@@ -281,11 +286,13 @@ public class AvroStreamInputRowParserTest
     // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
     assertEquals(1, inputRow.getDimension("someIntValueMap").size());
     assertEquals(
-        SOME_INT_VALUE_MAP_VALUE, new HashMap<CharSequence, Integer>(
+        SOME_INT_VALUE_MAP_VALUE,
+        new HashMap<CharSequence, Integer>(
             Maps.transformValues(
-                Splitter.on(",")
-                        .withKeyValueSeparator("=")
-                        .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", "")),
+                Splitter
+                    .on(",")
+                    .withKeyValueSeparator("=")
+                    .split(BRACES_AND_SPACE.matcher(inputRow.getDimension("someIntValueMap").get(0)).replaceAll("")),
                 new Function<String, Integer>()
                 {
                   @Nullable
@@ -299,18 +306,22 @@ public class AvroStreamInputRowParserTest
         )
     );
     assertEquals(
-        SOME_STRING_VALUE_MAP_VALUE, new HashMap<CharSequence, CharSequence>(
-            Splitter.on(",")
-                    .withKeyValueSeparator("=")
-                    .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", ""))
+        SOME_STRING_VALUE_MAP_VALUE,
+        new HashMap<CharSequence, CharSequence>(
+            Splitter
+                .on(",")
+                .withKeyValueSeparator("=")
+                .split(BRACES_AND_SPACE.matcher(inputRow.getDimension("someIntValueMap").get(0)).replaceAll(""))
         )
     );
     assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));
     assertEquals(Collections.emptyList(), inputRow.getDimension("someNull"));
-    assertEquals(Collections.singletonList(String.valueOf(SOME_FIXED_VALUE)), inputRow.getDimension("someFixed"));
+    if (isFromPigAvro) {
+      assertEquals(String.valueOf(SOME_FIXED_VALUE), Arrays.toString((byte[]) inputRow.getRaw("someFixed")));
+    }
     assertEquals(
-        Collections.singletonList(Arrays.toString(SOME_BYTES_VALUE.array())),
-        inputRow.getDimension("someBytes")
+        Arrays.toString(SOME_BYTES_VALUE.array()),
+        Arrays.toString((byte[]) (inputRow.getRaw("someBytes")))
     );
     assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
     assertEquals(Collections.singletonList(String.valueOf(SOME_RECORD_VALUE)), inputRow.getDimension("someRecord"));

@@ -1,13 +1,32 @@
 ---
 layout: doc_page
+title: "Stream Pull Ingestion"
 ---
 
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 <div class="note info">
-NOTE: Realtime nodes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead. 
+NOTE: Realtime nodes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead.
 </div>
 
-Stream Pull Ingestion
-=====================
+# Stream Pull Ingestion
 
 If you have an external service that you want to pull data from, you have two options. The simplest
 option is to set up a "copying" service that reads from the data source and writes to Druid using
@@ -15,7 +34,7 @@ the [stream push method](stream-push.html).
 
 Another option is *stream pull*. With this approach, a Druid Realtime Node ingests data from a
 [Firehose](../ingestion/firehose.html) connected to the data you want to
-read. The Druid quickstart and tutorials do not include information about how to set up standalone realtime nodes, but 
+read. The Druid quickstart and tutorials do not include information about how to set up standalone realtime nodes, but
 they can be used in place for Tranquility server and the indexing service. Please note that Realtime nodes have different properties and roles than the indexing service.
 
 ## Realtime Node Ingestion
@@ -159,11 +178,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |reportParseExceptions|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion. If false, unparseable rows and fields will be skipped. If an entire row is skipped, the "unparseable" counter will be incremented. If some fields in a row were parseable and some were not, the parseable fields will be indexed and the "unparseable" counter will not be incremented.|no (default == false)|
 |handoffConditionTimeout|long|Milliseconds to wait for segment handoff. It must be >= 0, where 0 means to wait forever.|no (default == 0)|
 |alertTimeout|long|Milliseconds timeout after which an alert is created if the task isn't finished by then. This allows users to monitor tasks that are failing to finish and give up the worker slot for any unexpected errors.|no (default == 0)|
-|segmentWriteOutMediumFactory|String|Segment write-out medium to use when creating segments. See [Indexing Service Configuration](../configuration/indexing-service.html) page, "SegmentWriteOutMediumFactory" section for explanation and available options.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory` is used)|
+|segmentWriteOutMediumFactory|Object|Segment write-out medium to use when creating segments. See below for more information.|no (not specified by default, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used)|
 |dedupColumn|String|the column to judge whether this row is already in this segment, if so, throw away this row. If it is String type column, to reduce heap cost, use long type hashcode of this column's value to judge whether this row is already ingested, so there maybe very small chance to throw away a row that is not ingested before.|no (default == null)|
 |indexSpec|Object|Tune how data is indexed. See below for more information.|no|
 
-Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/apache/incubator-druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`. 
+Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/apache/incubator-druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`.
 
 #### Rejection Policy
 
@@ -172,6 +191,12 @@ The following policies are available:
 * `serverTime` &ndash; The recommended policy for "current time" data, it is optimal for current data that is generated and ingested in real time. Uses `windowPeriod` to accept only those events that are inside the window looking forward and back.
 * `messageTime` &ndash; Can be used for non-"current time" as long as that data is relatively in sequence. Events are rejected if they are less than `windowPeriod` from the event with the latest timestamp. Hand off only occurs if an event is seen after the segmentGranularity and `windowPeriod` (hand off will not periodically occur unless you have a constant stream of data).
 * `none` &ndash; All events are accepted. Never hands off data unless shutdown() is called on the configured firehose.
+
+#### SegmentWriteOutMediumFactory
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|See [Additional Peon Configuration: SegmentWriteOutMediumFactory](../configuration/index.html#segmentwriteoutmediumfactory) for explanation and available options.|yes|
 
 #### IndexSpec
 
@@ -229,7 +254,7 @@ Configure `linear` under `schema`:
         "partitionNum": 0
     }
 ```
-            
+
 
 ##### Numbered
 
@@ -244,7 +269,7 @@ Configure `numbered` under `schema`:
         "partitions": 2
     }
 ```
-     
+
 
 ##### Scale and Redundancy
 
@@ -258,7 +283,7 @@ For example, if RealTimeNode1 has:
         "partitionNum": 0
     }
 ```
-            
+
 and RealTimeNode2 has:
 
 ```json
@@ -304,48 +329,48 @@ The normal, expected use cases have the following overall constraints: `intermed
 
 Standalone realtime nodes use the Kafka high level consumer, which imposes a few restrictions.
 
-Druid replicates segment such that logically equivalent data segments are concurrently hosted on N nodes. If N–1 nodes go down, 
-the data will still be available for querying. On real-time nodes, this process depends on maintaining logically equivalent 
-data segments on each of the N nodes, which is not possible with standard Kafka consumer groups if your Kafka topic requires more than one consumer 
+Druid replicates segment such that logically equivalent data segments are concurrently hosted on N nodes. If N–1 nodes go down,
+the data will still be available for querying. On real-time nodes, this process depends on maintaining logically equivalent
+data segments on each of the N nodes, which is not possible with standard Kafka consumer groups if your Kafka topic requires more than one consumer
 (because consumers in different consumer groups will split up the data differently).
 
-For example, let's say your topic is split across Kafka partitions 1, 2, & 3 and you have 2 real-time nodes with linear shard specs 1 & 2. 
-Both of the real-time nodes are in the same consumer group. Real-time node 1 may consume data from partitions 1 & 3, and real-time node 2 may consume data from partition 2. 
+For example, let's say your topic is split across Kafka partitions 1, 2, & 3 and you have 2 real-time nodes with linear shard specs 1 & 2.
+Both of the real-time nodes are in the same consumer group. Real-time node 1 may consume data from partitions 1 & 3, and real-time node 2 may consume data from partition 2.
 Querying for your data through the broker will yield correct results.
 
-The problem arises if you want to replicate your data by creating real-time nodes 3 & 4. These new real-time nodes also 
-have linear shard specs 1 & 2, and they will consume data from Kafka using a different consumer group. In this case, 
-real-time node 3 may consume data from partitions 1 & 2, and real-time node 4 may consume data from partition 2. 
-From Druid's perspective, the segments hosted by real-time nodes 1 and 3 are the same, and the data hosted by real-time nodes 
-2 and 4 are the same, although they are reading from different Kafka partitions. Querying for the data will yield inconsistent 
+The problem arises if you want to replicate your data by creating real-time nodes 3 & 4. These new real-time nodes also
+have linear shard specs 1 & 2, and they will consume data from Kafka using a different consumer group. In this case,
+real-time node 3 may consume data from partitions 1 & 2, and real-time node 4 may consume data from partition 2.
+From Druid's perspective, the segments hosted by real-time nodes 1 and 3 are the same, and the data hosted by real-time nodes
+2 and 4 are the same, although they are reading from different Kafka partitions. Querying for the data will yield inconsistent
 results.
 
-Is this always a problem? No. If your data is small enough to fit on a single Kafka partition, you can replicate without issues. 
+Is this always a problem? No. If your data is small enough to fit on a single Kafka partition, you can replicate without issues.
 Otherwise, you can run real-time nodes without replication.
 
 Please note that druid will skip over event that failed its checksum and it is corrupt.
 
 ### Locking
 
-Using stream pull ingestion with Realtime nodes together batch ingestion may introduce data override issues. For example, if you 
-are generating hourly segments for the current day, and run a daily batch job for the current day's data, the segments created by 
-the batch job will have a more recent version than most of the segments generated by realtime ingestion. If your batch job is indexing 
-data that isn't yet complete for the day, the daily segment created by the batch job can override recent segments created by 
+Using stream pull ingestion with Realtime nodes together batch ingestion may introduce data override issues. For example, if you
+are generating hourly segments for the current day, and run a daily batch job for the current day's data, the segments created by
+the batch job will have a more recent version than most of the segments generated by realtime ingestion. If your batch job is indexing
+data that isn't yet complete for the day, the daily segment created by the batch job can override recent segments created by
 realtime nodes. A portion of data will appear to be lost in this case.
 
 ### Schema changes
 
-Standalone realtime nodes require stopping a node to update a schema, and starting it up again for the schema to take effect. 
+Standalone realtime nodes require stopping a node to update a schema, and starting it up again for the schema to take effect.
 This can be difficult to manage at scale, especially with multiple partitions.
 
 ### Log management
 
-Each standalone realtime node has its own set of logs. Diagnosing errors across many partitions across many servers may be 
+Each standalone realtime node has its own set of logs. Diagnosing errors across many partitions across many servers may be
 difficult to manage and track at scale.
 
 ## Deployment Notes
 
 Stream ingestion may generate a large number of small segments because it's difficult to optimize the segment size at
-ingestion time. The number of segments will increase over time, and this might cause the query performance issue. 
+ingestion time. The number of segments will increase over time, and this might cause the query performance issue.
 
 Details on how to optimize the segment size can be found on [Segment size optimization](../operations/segment-optimization.html).

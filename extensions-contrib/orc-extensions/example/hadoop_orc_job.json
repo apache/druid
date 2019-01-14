@@ -29,6 +29,7 @@
           },
           "dimensionsSpec": {
             "dimensions": [
+              "timestamp",
               "col1",
               "col2"
             ],

@@ -21,6 +21,7 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -32,7 +33,6 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -139,8 +139,11 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     String segmentZkPath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName(), segment.getIdentifier());
 
-    curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
-        segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestLoad(segment)));
+    curator
+        .create()
+        .creatingParentsIfNeeded()
+        .withMode(CreateMode.EPHEMERAL)
+        .forPath(segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestLoad(segment)));
 
     loadLatch.await();
 
@@ -148,8 +151,11 @@ public class ZkCoordinatorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    curator.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
-        segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestDrop(segment)));
+    curator
+        .create()
+        .creatingParentsIfNeeded()
+        .withMode(CreateMode.EPHEMERAL)
+        .forPath(segmentZkPath, jsonMapper.writeValueAsBytes(new SegmentChangeRequestDrop(segment)));
 
     dropLatch.await();
 

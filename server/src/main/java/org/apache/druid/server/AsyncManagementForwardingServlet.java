@@ -20,7 +20,6 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -33,7 +32,6 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.proxy.AsyncProxyServlet;
@@ -42,7 +40,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.concurrent.TimeUnit;
 
 public class AsyncManagementForwardingServlet extends AsyncProxyServlet
@@ -101,12 +98,14 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     } else if (requestURI.startsWith(ARBITRARY_COORDINATOR_BASE_PATH)) {
       currentLeader = coordLeaderSelector.getCurrentLeader();
       request.setAttribute(
-          MODIFIED_PATH_ATTRIBUTE, request.getRequestURI().substring(ARBITRARY_COORDINATOR_BASE_PATH.length())
+          MODIFIED_PATH_ATTRIBUTE,
+          request.getRequestURI().substring(ARBITRARY_COORDINATOR_BASE_PATH.length())
       );
     } else if (requestURI.startsWith(ARBITRARY_OVERLORD_BASE_PATH)) {
       currentLeader = overlordLeaderSelector.getCurrentLeader();
       request.setAttribute(
-          MODIFIED_PATH_ATTRIBUTE, request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
+          MODIFIED_PATH_ATTRIBUTE,
+          request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
       );
     } else {
       handleBadRequest(response, StringUtils.format("Unsupported proxy destination [%s]", request.getRequestURI()));
@@ -129,7 +128,9 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
 
   @Override
   protected void sendProxyRequest(
-      HttpServletRequest clientRequest, HttpServletResponse proxyResponse, Request proxyRequest
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Request proxyRequest
   )
   {
     proxyRequest.timeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);
@@ -143,18 +144,15 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   @Override
   protected String rewriteTarget(HttpServletRequest request)
   {
-    try {
-      return new URIBuilder((String) request.getAttribute(BASE_URI_ATTRIBUTE))
-          .setPath(request.getAttribute(MODIFIED_PATH_ATTRIBUTE) != null ?
-                   (String) request.getAttribute(MODIFIED_PATH_ATTRIBUTE) : request.getRequestURI())
-          .setQuery(request.getQueryString()) // No need to encode-decode queryString, it is already encoded
-          .build()
-          .toString();
-    }
-    catch (URISyntaxException e) {
-      log.error(e, "Unable to rewrite URI [%s]", e.getMessage());
-      throw Throwables.propagate(e);
-    }
+    final String encodedPath = request.getAttribute(MODIFIED_PATH_ATTRIBUTE) != null
+                               ? (String) request.getAttribute(MODIFIED_PATH_ATTRIBUTE)
+                               : request.getRequestURI();
+
+    return JettyUtils.concatenateForRewrite(
+        (String) request.getAttribute(BASE_URI_ATTRIBUTE),
+        encodedPath,
+        request.getQueryString()
+    );
   }
 
   @Override

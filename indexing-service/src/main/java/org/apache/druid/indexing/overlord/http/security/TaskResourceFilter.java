@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.http.security;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
@@ -31,8 +30,8 @@ import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
 import org.apache.druid.server.security.Access;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -41,7 +40,6 @@ import org.apache.druid.server.security.ResourceType;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
-import java.util.List;
 
 /**
  * Use this ResourceFilter when the datasource information is present after "task" segment in the request Path
@@ -109,17 +107,5 @@ public class TaskResourceFilter extends AbstractResourceFilter
     }
 
     return request;
-  }
-
-  @Override
-  public boolean isApplicable(String requestPath)
-  {
-    List<String> applicablePaths = ImmutableList.of("druid/indexer/v1/task/");
-    for (String path : applicablePaths) {
-      if (requestPath.startsWith(path) && !requestPath.equals(path)) {
-        return true;
-      }
-    }
-    return false;
   }
 }

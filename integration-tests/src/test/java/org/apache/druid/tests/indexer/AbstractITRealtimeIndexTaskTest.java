@@ -16,10 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.tests.indexer;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -29,11 +31,11 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.apache.druid.testing.utils.RetryUtil;
-import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.io.Closeable;
 import java.io.InputStream;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -80,7 +82,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   void doTest()
   {
     LOG.info("Starting test: ITRealtimeIndexTaskTest");
-    try {
+    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
       // the task will run for 3 minutes and then shutdown itself
       String task = setShutOffTime(
           getTaskAsString(getTaskResource()),
@@ -99,24 +101,24 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       TimeUnit.SECONDS.sleep(5);
 
       // put the timestamps into the query structure
-      String query_response_template = null;
+      String query_response_template;
       InputStream is = ITRealtimeIndexTaskTest.class.getResourceAsStream(getQueriesResource());
       if (null == is) {
         throw new ISE("could not open query file: %s", getQueriesResource());
       }
       query_response_template = IOUtils.toString(is, "UTF-8");
 
-      String queryStr = query_response_template
-          .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-          .replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
-          .replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
-          .replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
-          .replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)))
-          .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-          .replace("%%POST_AG_REQUEST_START%%", INTERVAL_FMT.print(dtFirst))
-          .replace("%%POST_AG_REQUEST_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)))
-          .replace("%%POST_AG_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtGroupBy.withSecondOfMinute(0))
-          );
+      String queryStr = query_response_template;
+      queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast));
+      queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)));
+      queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%POST_AG_REQUEST_START%%", INTERVAL_FMT.print(dtFirst));
+      queryStr = StringUtils.replace(queryStr, "%%POST_AG_REQUEST_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)));
+      String postAgResponseTimestamp = TIMESTAMP_FMT.print(dtGroupBy.withSecondOfMinute(0));
+      queryStr = StringUtils.replace(queryStr, "%%POST_AG_RESPONSE_TIMESTAMP%%", postAgResponseTimestamp);
 
       // should hit the queries all on realtime task or some on realtime task
       // and some on historical.  Which it is depends on where in the minute we were
@@ -153,14 +155,11 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
-    finally {
-      unloadAndKillData(INDEX_DATASOURCE);
-    }
   }
 
   String setShutOffTime(String taskAsString, DateTime time)
   {
-    return taskAsString.replace("#SHUTOFFTIME", time.toString());
+    return StringUtils.replace(taskAsString, "#SHUTOFFTIME", time.toString());
   }
 
   String getRouterURL()

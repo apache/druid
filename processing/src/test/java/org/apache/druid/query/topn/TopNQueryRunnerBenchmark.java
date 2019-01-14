@@ -24,7 +24,6 @@ import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -80,7 +79,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
       )
       .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
       .build();
-  private static final Map<TestCases, QueryRunner> testCaseMap = Maps.newHashMap();
+  private static final Map<TestCases, QueryRunner> testCaseMap = new HashMap<>();
 
   @BeforeClass
   public static void setUp()

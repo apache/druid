@@ -20,9 +20,7 @@
 package org.apache.druid.collections.bitmap;
 
 import com.google.common.collect.Sets;
-
 import org.apache.druid.collections.IntSetTestUtility;
-
 import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;
@@ -30,6 +28,7 @@ import org.roaringbitmap.IntIterator;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.BitSet;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -150,7 +149,7 @@ public class WrappedBitSetBitmapBitSetTest
   {
     WrappedBitSetBitmap bitSet = defaultBitSet();
     WrappedBitSetBitmap bitSet2 = defaultBitSet();
-    Set<Integer> defaultBitSet = Sets.newHashSet();
+    Set<Integer> defaultBitSet = new HashSet<>();
     bitSet.remove(1);
     bitSet2.remove(2);
 

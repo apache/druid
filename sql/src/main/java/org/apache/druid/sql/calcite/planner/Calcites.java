@@ -22,6 +22,19 @@ package org.apache.druid.sql.calcite.planner;
 import com.google.common.base.Preconditions;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import org.apache.calcite.jdbc.CalciteSchema;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexLiteral;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlCollation;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.ConversionUtil;
+import org.apache.calcite.util.DateString;
+import org.apache.calcite.util.TimeString;
+import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -32,20 +45,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.InformationSchema;
-import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rex.RexLiteral;
-import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.schema.Schema;
-import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.sql.SqlCollation;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.ConversionUtil;
-import org.apache.calcite.util.DateString;
-import org.apache.calcite.util.TimeString;
-import org.apache.calcite.util.TimestampString;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
@@ -56,6 +56,7 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import java.nio.charset.Charset;
 import java.util.NavigableSet;
+import java.util.regex.Pattern;
 
 /**
  * Utility functions for Calcite.
@@ -76,6 +77,8 @@ public class Calcites
   private static final DateTimeFormatter CALCITE_TIMESTAMP_PRINTER = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.S");
 
   private static final Charset DEFAULT_CHARSET = Charset.forName(ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
+
+  private static final Pattern TRAILING_ZEROS = Pattern.compile("\\.?0+$");
 
   private Calcites()
   {
@@ -98,11 +101,16 @@ public class Calcites
     return DEFAULT_CHARSET;
   }
 
-  public static SchemaPlus createRootSchema(final Schema druidSchema, final AuthorizerMapper authorizerMapper)
+  public static SchemaPlus createRootSchema(
+      final DruidSchema druidSchema,
+      final SystemSchema systemSchema,
+      final AuthorizerMapper authorizerMapper
+  )
   {
     final SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
     rootSchema.add(DruidSchema.NAME, druidSchema);
     rootSchema.add(InformationSchema.NAME, new InformationSchema(rootSchema, authorizerMapper));
+    rootSchema.add(SystemSchema.NAME, systemSchema);
     return rootSchema;
   }
 
@@ -124,7 +132,7 @@ public class Calcites
       }
     }
     builder.append("'");
-    return isPlainAscii ? builder.toString() : "U&" + builder.toString();
+    return isPlainAscii ? builder.toString() : "U&" + builder;
 
   }
 
@@ -243,7 +251,10 @@ public class Calcites
   public static TimestampString jodaToCalciteTimestampString(final DateTime dateTime, final DateTimeZone timeZone)
   {
     // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
-    return new TimestampString(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(timeZone)).replaceAll("\\.?0+$", ""));
+    String timestampString = TRAILING_ZEROS
+        .matcher(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(timeZone)))
+        .replaceAll("");
+    return new TimestampString(timestampString);
   }
 
   /**
@@ -257,7 +268,10 @@ public class Calcites
   public static TimeString jodaToCalciteTimeString(final DateTime dateTime, final DateTimeZone timeZone)
   {
     // The replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
-    return new TimeString(CALCITE_TIME_PRINTER.print(dateTime.withZone(timeZone)).replaceAll("\\.?0+$", ""));
+    String timeString = TRAILING_ZEROS
+        .matcher(CALCITE_TIME_PRINTER.print(dateTime.withZone(timeZone)))
+        .replaceAll("");
+    return new TimeString(timeString);
   }
 
   /**

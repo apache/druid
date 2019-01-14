@@ -20,17 +20,20 @@
 package org.apache.druid.segment;
 
 /**
- * This interface is convenient for implementation of "object-sourcing" {@link ColumnValueSelector}s, it provides
- * default implementations for all {@link ColumnValueSelector}'s methods except {@link #getObject()} and {@link
+ * This class is convenient for implementation of "object-sourcing" {@link ColumnValueSelector}s, it provides default
+ * implementations for all {@link ColumnValueSelector}'s methods except {@link #getObject()} and {@link
  * #classOfObject()}.
  *
- * This interface should appear ONLY in "implements" clause or anonymous class creation, but NOT in "user" code, where
+ * This class should appear ONLY in "extends" clause or anonymous class creation, but NOT in "user" code, where
  * {@link BaseObjectColumnValueSelector} must be used instead.
+ *
+ * This is a class rather than an interface unlike {@link LongColumnSelector}, {@link FloatColumnSelector} and {@link
+ * DoubleColumnSelector} solely in order to make {@link #isNull()} method final.
  */
 public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
 {
   /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -46,7 +49,7 @@ public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */
@@ -62,7 +65,7 @@ public abstract class ObjectColumnSelector<T> implements ColumnValueSelector<T>
   }
 
   /**
-   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidential
+   * @deprecated This method is marked as deprecated in ObjectColumnSelector to minimize the probability of accidental
    * calling. "Polymorphism" of ObjectColumnSelector should be used only when operating on {@link ColumnValueSelector}
    * objects.
    */

@@ -25,6 +25,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -34,7 +35,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -43,6 +43,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
@@ -55,8 +56,8 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   private long rowNum;
   private Row currRow;
 
-  private List<QueryableIndex> indexes = Lists.newArrayList();
-  private List<File> tmpSegmentDirs = Lists.newArrayList();
+  private List<QueryableIndex> indexes = new ArrayList<>();
+  private List<File> tmpSegmentDirs = new ArrayList<>();
   private long numRows;
 
   @Override

@@ -21,7 +21,8 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import org.apache.commons.dbcp2.BasicDataSource;
+import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -33,8 +34,6 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
-import org.apache.commons.dbcp2.BasicDataSource;
-import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -73,8 +72,8 @@ public class SqlFirehoseFactoryTest
           new TimestampSpec("timestamp", "auto", null),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
-              Lists.newArrayList(),
-              Lists.newArrayList()
+              new ArrayList<>(),
+              new ArrayList<>()
           )
       )
   );

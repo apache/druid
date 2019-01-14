@@ -23,14 +23,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-public class ClientCompactQuery
+public class ClientCompactQuery implements ClientQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
   private final boolean keepSegmentGranularity;
+  @Nullable
+  private final Long targetCompactionSizeBytes;
   private final ClientCompactQueryTuningConfig tuningConfig;
   private final Map<String, Object> context;
 
@@ -39,6 +42,7 @@ public class ClientCompactQuery
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,
+      @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
   )
@@ -46,17 +50,20 @@ public class ClientCompactQuery
     this.dataSource = dataSource;
     this.segments = segments;
     this.keepSegmentGranularity = keepSegmentGranularity;
+    this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
     this.context = context;
   }
 
   @JsonProperty
+  @Override
   public String getType()
   {
     return "compact";
   }
 
   @JsonProperty
+  @Override
   public String getDataSource()
   {
     return dataSource;
@@ -75,6 +82,13 @@ public class ClientCompactQuery
   }
 
   @JsonProperty
+  @Nullable
+  public Long getTargetCompactionSizeBytes()
+  {
+    return targetCompactionSizeBytes;
+  }
+
+  @JsonProperty
   public ClientCompactQueryTuningConfig getTuningConfig()
   {
     return tuningConfig;
@@ -84,16 +98,5 @@ public class ClientCompactQuery
   public Map<String, Object> getContext()
   {
     return context;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "ClientCompactQuery{" +
-           "dataSource=" + dataSource + "'" +
-           ", segments=" + segments +
-           ", tuningConfig=" + tuningConfig +
-           ", contexts=" + context +
-           "}";
   }
 }

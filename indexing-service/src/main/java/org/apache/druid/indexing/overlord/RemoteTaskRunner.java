@@ -42,6 +42,12 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.commons.lang.mutable.MutableInt;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.curator.cache.PathChildrenCacheFactory;
@@ -75,12 +81,6 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.apache.commons.lang.mutable.MutableInt;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -91,7 +91,6 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -542,8 +541,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
    * @param taskId - task id to shutdown
    */
   @Override
-  public void shutdown(final String taskId)
+  public void shutdown(final String taskId, String reason)
   {
+    log.info("Shutdown [%s] because: [%s]", taskId, reason);
     if (!lifecycleLock.awaitStarted(1, TimeUnit.SECONDS)) {
       log.info("This TaskRunner is stopped or not yet started. Ignoring shutdown command for task: %s", taskId);
     } else if (pendingTasks.remove(taskId) != null) {
@@ -560,7 +560,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
       URL url = null;
       try {
-        url = makeWorkerURL(zkWorker.getWorker(), StringUtils.format("/task/%s/shutdown", taskId));
+        url = TaskRunnerUtils.makeWorkerURL(zkWorker.getWorker(), "/druid/worker/v1/task/%s/shutdown", taskId);
         final StatusResponseHolder response = httpClient.go(
             new Request(HttpMethod.POST, url),
             RESPONSE_HANDLER,
@@ -598,7 +598,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return Optional.absent();
     } else {
       // Worker is still running this task
-      final URL url = makeWorkerURL(zkWorker.getWorker(), StringUtils.format("/task/%s/log?offset=%d", taskId, offset));
+      final URL url = TaskRunnerUtils.makeWorkerURL(
+          zkWorker.getWorker(),
+          "/druid/worker/v1/task/%s/log?offset=%s",
+          taskId,
+          Long.toString(offset)
+      );
       return Optional.of(
           new ByteSource()
           {
@@ -622,18 +627,6 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             }
           }
       );
-    }
-  }
-
-  private URL makeWorkerURL(Worker worker, String path)
-  {
-    Preconditions.checkArgument(path.startsWith("/"), "path must start with '/': %s", path);
-
-    try {
-      return new URL(StringUtils.format("%s://%s/druid/worker/v1%s", worker.getScheme(), worker.getHost(), path));
-    }
-    catch (MalformedURLException e) {
-      throw Throwables.propagate(e);
     }
   }
 
@@ -788,7 +781,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               ImmutableMap.copyOf(
                   Maps.transformEntries(
                       Maps.filterEntries(
-                          zkWorkers, new Predicate<Map.Entry<String, ZkWorker>>()
+                          zkWorkers,
+                          new Predicate<Map.Entry<String, ZkWorker>>()
                           {
                             @Override
                             public boolean apply(Map.Entry<String, ZkWorker> input)
@@ -799,16 +793,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                             }
                           }
                       ),
-                      new Maps.EntryTransformer<String, ZkWorker, ImmutableWorkerInfo>()
-                      {
-                        @Override
-                        public ImmutableWorkerInfo transformEntry(
-                            String key, ZkWorker value
-                        )
-                        {
-                          return value.toImmutable();
-                        }
-                      }
+                      (String key, ZkWorker value) -> value.toImmutable()
                   )
               ),
               task
@@ -816,7 +801,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
           if (immutableZkWorker != null &&
               workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.getWorker().getHost(), task.getId())
-                == null) {
+              == null) {
             assignedWorker = zkWorkers.get(immutableZkWorker.getWorker().getHost());
           }
         }

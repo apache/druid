@@ -1,6 +1,27 @@
 ---
 layout: doc_page
+title: "SQL"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 # SQL
 
 <div class="note caution">
@@ -137,9 +158,10 @@ String functions accept strings, and return a type appropriate to the function.
 |`STRLEN(expr)`|Synonym for `LENGTH`.|
 |`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.html).|
 |`LOWER(expr)`|Returns expr in all lowercase.|
+|`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
-|`STRPOS(haystack, needle)`|Returns the index of needle within haystack, starting from 1. If the needle is not found, returns 0.|
+|`STRPOS(haystack, needle)`|Returns the index of needle within haystack, with indexes starting from 1. If the needle is not found, returns 0.|
 |`SUBSTRING(expr, index, [length])`|Returns a substring of expr starting at index, with a max length, both measured in UTF-16 code units.|
 |`SUBSTR(expr, index, [length])`|Synonym for SUBSTRING.|
 |`TRIM([BOTH \| LEADING \| TRAILING] [<chars> FROM] expr)`|Returns expr with characters removed from the leading, trailing, or both ends of "expr" if they are in "chars". If "chars" is not provided, it defaults to " " (a space). If the directional argument is not provided, it defaults to "BOTH".|
@@ -213,7 +235,7 @@ over the connection time zone.
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-
+|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in the base64 serialized bloom filter. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.
 ### Unsupported features
 
 Druid does not support all SQL features, including:
@@ -369,12 +391,7 @@ Metadata is available over the HTTP API by querying [system tables](#retrieving-
 
 #### Responses
 
-All Druid SQL HTTP responses include a "X-Druid-Column-Names" header with a JSON-encoded array of columns that
-will appear in the result rows and an "X-Druid-Column-Types" header with a JSON-encoded array of
-[types](#data-types-and-casts).
-
-For the result rows themselves, Druid SQL supports a variety of result formats. You can
-specify these by adding a "resultFormat" parameter, like:
+Druid SQL supports a variety of result formats. You can specify these by adding a "resultFormat" parameter, like:
 
 ```json
 {
@@ -392,6 +409,20 @@ The supported result formats are:
 |`objectLines`|Like "object", but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
 |`arrayLines`|Like "array", but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/plain|
 |`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|text/csv|
+
+You can additionally request a header by setting "header" to true in your request, like:
+
+```json
+{
+  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
+  "resultFormat" : "arrayLines",
+  "header" : true
+}
+```
+
+In this case, the first result returned will be a header. For the `csv`, `array`, and `arrayLines` formats, the header
+will be a list of column names. For the `object` and `objectLines` formats, the header will be an object where the
+keys are column names, and the values are null.
 
 Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
 same format as [native Druid query errors](../querying/querying.html#query-errors). If an error occurs while the response body is
@@ -468,6 +499,11 @@ plan SQL queries. This metadata is cached on broker startup and also updated per
 [SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
+Druid exposes system information through special system tables. There are two such schemas available: Information Schema and Sys Schema.
+Information schema provides details about table and column types. The "sys" schema provides information about Druid internals like segments/tasks/servers.
+
+## INFORMATION SCHEMA
+
 You can access table and column metadata through JDBC using `connection.getMetaData()`, or through the
 INFORMATION_SCHEMA tables described below. For example, to retrieve metadata for the Druid
 datasource "foo", use the query:
@@ -519,6 +555,101 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 |COLLATION_NAME||
 |JDBC_TYPE|Type code from java.sql.Types (Druid extension)|
 
+## SYSTEM SCHEMA
+
+The "sys" schema provides visibility into Druid segments, servers and tasks.
+For example to retrieve all segments for datasource "wikipedia", use the query:
+```sql
+SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
+```
+
+### SEGMENTS table
+Segments table provides details on all Druid segments, whether they are published yet or not.
+
+
+|Column|Notes|
+|------|-----|
+|segment_id|Unique segment identifier|
+|datasource|Name of datasource|
+|start|Interval start time (in ISO 8601 format)|
+|end|Interval end time (in ISO 8601 format)|
+|size|Size of segment in bytes|
+|version|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
+|partition_num|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
+|num_replicas|Number of replicas of this segment currently being served|
+|num_rows|Number of rows in current segment, this value could be null if unkown to broker at query time|
+|is_published|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store|
+|is_available|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any server(historical or realtime)|
+|is_realtime|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
+|payload|JSON-serialized data segment payload|
+
+### SERVERS table
+Servers table lists all data servers(any server that hosts a segment). It includes both historicals and peons.
+
+|Column|Notes|
+|------|-----|
+|server|Server name in the form host:port|
+|host|Hostname of the server|
+|plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|tls_port|TLS port of the server, or -1 if TLS is disabled|
+|server_type|Type of Druid service. Possible values include: historical, realtime and indexer_executor(peon).|
+|tier|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
+|current_size|Current size of segments in bytes on this server|
+|max_size|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
+
+To retrieve information about all servers, use the query:
+```sql
+SELECT * FROM sys.servers;
+```
+
+### SERVER_SEGMENTS table
+
+SERVER_SEGMENTS is used to join servers with segments table
+
+|Column|Notes|
+|------|-----|
+|server|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
+|segment_id|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
+
+JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource, 
+grouped by server, example query:
+```sql
+SELECT count(segments.segment_id) as num_segments from sys.segments as segments 
+INNER JOIN sys.server_segments as server_segments 
+ON segments.segment_id  = server_segments.segment_id 
+INNER JOIN sys.servers as servers 
+ON servers.server = server_segments.server
+WHERE segments.datasource = 'wikipedia' 
+GROUP BY servers.server;
+```
+
+### TASKS table
+
+The tasks table provides information about active and recently-completed indexing tasks. For more information 
+check out [ingestion tasks](#../ingestion/tasks.html)
+
+|Column|Notes|
+|------|-----|
+|task_id|Unique task identifier|
+|type|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.md)|
+|datasource|Datasource name being indexed|
+|created_time|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to 1970-01-01T00:00:00Z|
+|queue_insertion_time|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the overlord|
+|status|Status of a task can be RUNNING, FAILED, SUCCESS|
+|runner_status|Runner status of a completed task would be NONE, for in-progress tasks this can be RUNNING, WAITING, PENDING|
+|duration|Time it took to finish the task in milliseconds, this value is present only for completed tasks|
+|location|Server name where this task is running in the format host:port, this information is present only for RUNNING tasks|
+|host|Hostname of the server where task is running|
+|plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|tls_port|TLS port of the server, or -1 if TLS is disabled|
+|error_msg|Detailed error message in case of FAILED tasks|
+
+For example, to retrieve tasks information filtered by status, use the query
+```sql
+SELECT * FROM sys.tasks where status='FAILED';
+```
+
+
 ## Server configuration
 
 The Druid SQL server is configured through the following properties on the broker.
@@ -527,9 +658,9 @@ The Druid SQL server is configured through the following properties on the broke
 |--------|-----------|-------|
 |`druid.sql.enable`|Whether to enable SQL at all, including background metadata fetching. If false, this overrides all other SQL-related properties and disables SQL metadata, serving, and planning completely.|false|
 |`druid.sql.avatica.enable`|Whether to enable JDBC querying at `/druid/v2/sql/avatica/`.|true|
-|`druid.sql.avatica.maxConnections`|Maximum number of open connections for the Avatica server. These are not HTTP connections, but are logical client connections that may span multiple HTTP connections.|50|
+|`druid.sql.avatica.maxConnections`|Maximum number of open connections for the Avatica server. These are not HTTP connections, but are logical client connections that may span multiple HTTP connections.|25|
 |`druid.sql.avatica.maxRowsPerFrame`|Maximum number of rows to return in a single JDBC frame. Setting this property to -1 indicates that no row limit should be applied. Clients can optionally specify a row limit in their requests; if a client specifies a row limit, the lesser value of the client-provided limit and `maxRowsPerFrame` will be used.|5,000|
-|`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|1|
+|`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|4|
 |`druid.sql.avatica.connectionIdleTimeout`|Avatica client connection idle timeout.|PT5M|
 |`druid.sql.http.enable`|Whether to enable JSON over HTTP querying at `/druid/v2/sql/`.|true|
 |`druid.sql.planner.maxQueryCount`|Maximum number of queries to issue, including nested queries. Set to 1 to disable sub-queries, or set to 0 for unlimited.|8|

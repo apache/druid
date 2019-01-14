@@ -80,7 +80,10 @@ public class WorkerBehaviorConfigTest
         {
           @Override
           public Object findInjectableValue(
-              Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
+              Object valueId,
+              DeserializationContext ctxt,
+              BeanProperty forProperty,
+              Object beanInstance
           )
           {
             return null;

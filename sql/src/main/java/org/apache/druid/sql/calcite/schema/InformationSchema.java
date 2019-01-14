@@ -28,13 +28,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.linq4j.Enumerable;
@@ -52,6 +45,13 @@ import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -63,7 +63,7 @@ public class InformationSchema extends AbstractSchema
 {
   public static final String NAME = "INFORMATION_SCHEMA";
 
-  private static final String EMPTY_CATALOG = "";
+  private static final String CATALOG_NAME = "druid";
   private static final String SCHEMATA_TABLE = "SCHEMATA";
   private static final String TABLES_TABLE = "TABLES";
   private static final String COLUMNS_TABLE = "COLUMNS";
@@ -149,7 +149,7 @@ public class InformationSchema extends AbstractSchema
                 {
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
                   return new Object[]{
-                      EMPTY_CATALOG, // CATALOG_NAME
+                      CATALOG_NAME, // CATALOG_NAME
                       subSchema.getName(), // SCHEMA_NAME
                       null, // SCHEMA_OWNER
                       null, // DEFAULT_CHARACTER_SET_CATALOG
@@ -220,7 +220,7 @@ public class InformationSchema extends AbstractSchema
                                 public Object[] apply(final String tableName)
                                 {
                                   return new Object[]{
-                                      EMPTY_CATALOG, // TABLE_CATALOG
+                                      CATALOG_NAME, // TABLE_CATALOG
                                       schemaName, // TABLE_SCHEMA
                                       tableName, // TABLE_NAME
                                       subSchema.getTable(tableName).getJdbcTableType().toString() // TABLE_TYPE
@@ -236,7 +236,7 @@ public class InformationSchema extends AbstractSchema
                                 {
                                   if (getView(subSchema, functionName) != null) {
                                     return new Object[]{
-                                        EMPTY_CATALOG, // TABLE_CATALOG
+                                        CATALOG_NAME, // TABLE_CATALOG
                                         schemaName, // TABLE_SCHEMA
                                         functionName, // TABLE_NAME
                                         "VIEW" // TABLE_TYPE
@@ -397,7 +397,7 @@ public class InformationSchema extends AbstractSchema
                   boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(type.getSqlTypeName());
                   boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(type.getSqlTypeName());
                   return new Object[]{
-                      EMPTY_CATALOG, // TABLE_CATALOG
+                      CATALOG_NAME, // TABLE_CATALOG
                       schemaName, // TABLE_SCHEMA
                       tableName, // TABLE_NAME
                       field.getName(), // COLUMN_NAME
@@ -413,7 +413,7 @@ public class InformationSchema extends AbstractSchema
                       isDateTime ? String.valueOf(type.getPrecision()) : null, // DATETIME_PRECISION
                       isCharacter ? type.getCharset().name() : null, // CHARACTER_SET_NAME
                       isCharacter ? type.getCollation().getCollationName() : null, // COLLATION_NAME
-                      type.getSqlTypeName().getJdbcOrdinal() // JDBC_TYPE (Druid extension)
+                      Long.valueOf(type.getSqlTypeName().getJdbcOrdinal()) // JDBC_TYPE (Druid extension)
                   };
                 }
               }

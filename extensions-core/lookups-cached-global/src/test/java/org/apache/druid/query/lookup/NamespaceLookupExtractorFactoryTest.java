@@ -91,7 +91,10 @@ public class NamespaceLookupExtractorFactoryTest
         {
           @Override
           public Object findInjectableValue(
-              Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
+              Object valueId,
+              DeserializationContext ctxt,
+              BeanProperty forProperty,
+              Object beanInstance
           )
           {
             if (CacheScheduler.class.getName().equals(valueId)) {
@@ -524,7 +527,9 @@ public class NamespaceLookupExtractorFactoryTest
               public void configure(Binder binder)
               {
                 JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null, null, true, false)
+                    binder,
+                    Key.get(DruidNode.class, Self.class),
+                    new DruidNode("test-inject", null, false, null, null, true, false)
                 );
               }
             }

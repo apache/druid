@@ -1,6 +1,27 @@
 ---
 layout: doc_page
+title: "Cached Lookup Module"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 # Cached Lookup Module
 
 <div class="note info">Please note that this is an experimental module and the development/testing still at early stage. Feel free to try it and give us your feedback.</div>
@@ -32,7 +53,7 @@ The current implementation provides 2 type of poll cache, the first is onheap (u
 User can also implement a different lookup polling cache by implementing `PollingCacheFactory` and `PollingCache` interfaces. 
 
 #### Loading lookup
-Loading cache strategy will load the key\value pair upon request on the key it self, the general algorithm is load key if absent.
+Loading cache strategy will load the key/value pair upon request on the key it self, the general algorithm is load key if absent.
 Once the key/value  pair is loaded eviction will occur according to the cache eviction policy.
 This module comes with two loading lookup implementation, the first is onheap backed by a Guava cache implementation, the second is MapDB offheap implementation.
 Both implementations offer various eviction strategies.

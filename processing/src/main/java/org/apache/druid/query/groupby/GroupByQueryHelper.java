@@ -48,6 +48,7 @@ import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -106,7 +107,7 @@ public class GroupByQueryHelper
     final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
 
     // All groupBy dimensions are strings, for now.
-    final List<DimensionSchema> dimensionSchemas = Lists.newArrayList();
+    final List<DimensionSchema> dimensionSchemas = new ArrayList<>();
     for (DimensionSpec dimension : query.getDimensions()) {
       dimensionSchemas.add(new StringDimensionSchema(dimension.getOutputName()));
     }

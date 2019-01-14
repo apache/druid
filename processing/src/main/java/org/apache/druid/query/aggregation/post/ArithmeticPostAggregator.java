@@ -22,8 +22,6 @@ package org.apache.druid.query.aggregation.post;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.Queries;
@@ -32,6 +30,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +93,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   @Override
   public Set<String> getDependentFields()
   {
-    Set<String> dependentFields = Sets.newHashSet();
+    Set<String> dependentFields = new HashSet<>();
     for (PostAggregator field : fields) {
       dependentFields.addAll(field.getDependentFields());
     }
@@ -241,7 +241,7 @@ public class ArithmeticPostAggregator implements PostAggregator
       }
     };
 
-    private static final Map<String, Ops> lookupMap = Maps.newHashMap();
+    private static final Map<String, Ops> lookupMap = new HashMap<>();
 
     static {
       for (Ops op : Ops.values()) {

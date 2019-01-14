@@ -19,14 +19,13 @@
 
 package org.apache.druid.emitter.ambari.metrics;
 
-import com.google.common.collect.Maps;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -39,6 +38,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 
 
 @RunWith(JUnitParamsRunner.class)
@@ -60,7 +60,7 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
     EasyMock.expect(event.getHost()).andReturn(hostname).anyTimes();
     EasyMock.expect(event.getService()).andReturn(serviceName).anyTimes();
     EasyMock.expect(event.getCreatedTime()).andReturn(createdTime).anyTimes();
-    EasyMock.expect(event.getUserDims()).andReturn(Maps.newHashMap()).anyTimes();
+    EasyMock.expect(event.getUserDims()).andReturn(new HashMap<>()).anyTimes();
     EasyMock.expect(event.getValue()).andReturn(10).anyTimes();
     EasyMock.expect(event.getFeed()).andReturn("metrics").anyTimes();
   }

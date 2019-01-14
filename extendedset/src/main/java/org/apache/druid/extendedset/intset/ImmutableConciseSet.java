@@ -216,7 +216,7 @@ public class ImmutableConciseSet
     int endIndex = length - 1;
 
     int wordsWalked = 0;
-    int last = 0;
+    int last;
 
     WordIterator iter = set.newWordIterator();
 
@@ -792,13 +792,6 @@ public class ImmutableConciseSet
     this.words = null;
     this.lastWordIndex = -1;
     this.size = 0;
-  }
-
-  public ImmutableConciseSet(ByteBuffer byteBuffer)
-  {
-    this.words = byteBuffer.asIntBuffer();
-    this.lastWordIndex = words.capacity() - 1;
-    this.size = calcSize();
   }
 
   public ImmutableConciseSet(IntBuffer buffer)

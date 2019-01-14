@@ -319,7 +319,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             rMultiValuedColumn,
             columnConfig.columnCacheSizeBytes()
         );
-        builder.setHasMultipleValues(hasMultipleValues).setDictionaryEncodedColumn(dictionaryEncodedColumnSupplier);
+        builder
+            .setHasMultipleValues(hasMultipleValues)
+            .setDictionaryEncodedColumnSupplier(dictionaryEncodedColumnSupplier);
 
         if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
           GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
@@ -357,9 +359,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         }
       }
 
-      private WritableSupplier<ColumnarMultiInts> readMultiValuedColumn(
-          VERSION version, ByteBuffer buffer, int flags
-      )
+      private WritableSupplier<ColumnarMultiInts> readMultiValuedColumn(VERSION version, ByteBuffer buffer, int flags)
       {
         switch (version) {
           case UNCOMPRESSED_MULTI_VALUE: {

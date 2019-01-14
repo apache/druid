@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.Firehose;
@@ -45,10 +44,10 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -57,6 +56,7 @@ import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -80,6 +80,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -139,6 +140,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -441,11 +443,11 @@ public class TaskLifecycleTest
       {
         return new SegmentHandoffNotifier()
         {
-
-
           @Override
           public boolean registerSegmentHandoffCallback(
-              SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+              SegmentDescriptor descriptor,
+              Executor exec,
+              Runnable handOffRunnable
           )
           {
             handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));
@@ -538,7 +540,8 @@ public class TaskLifecycleTest
             emitter,
             EasyMock.createMock(SupervisorManager.class),
             new Counters()
-        )
+        ),
+        new TaskAuditLogConfig(true)
     );
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
@@ -548,7 +551,7 @@ public class TaskLifecycleTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
     };
     return new TaskToolboxFactory(
@@ -608,7 +611,7 @@ public class TaskLifecycleTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
-        MoreExecutors.sameThreadExecutor(), // query executor service
+        Execs.directExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
             new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, new DefaultObjectMapper())
@@ -636,7 +639,7 @@ public class TaskLifecycleTest
         tb,
         taskConfig,
         emitter,
-        new DruidNode("dummy", "dummy", 10000, null, true, false),
+        new DruidNode("dummy", "dummy", false, 10000, null, true, false),
         new ServerConfig()
     );
   }
@@ -684,8 +687,10 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -764,8 +769,10 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,
@@ -850,7 +857,7 @@ public class TaskLifecycleTest
     mdc.setUnusedSegments(expectedUnusedSegments);
 
     // manually create local segments files
-    List<File> segmentFiles = Lists.newArrayList();
+    List<File> segmentFiles = new ArrayList<>();
     for (DataSegment segment : mdc.getUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       file.mkdirs();
@@ -1151,8 +1158,10 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
+                null,
                 null,
                 null,
                 null,

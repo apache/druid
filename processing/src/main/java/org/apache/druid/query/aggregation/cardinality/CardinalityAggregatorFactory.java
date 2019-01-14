@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ColumnSelectorPlus;
@@ -43,7 +44,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -142,7 +142,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     if (selectorPluses.length == 0) {
       return NoopAggregator.instance();
     }
-    return new CardinalityAggregator(name, selectorPluses, byRow);
+    return new CardinalityAggregator(selectorPluses, byRow);
   }
 
 

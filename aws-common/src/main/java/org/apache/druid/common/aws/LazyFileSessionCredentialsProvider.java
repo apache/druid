@@ -21,27 +21,43 @@ package org.apache.druid.common.aws;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 public class LazyFileSessionCredentialsProvider implements AWSCredentialsProvider
 {
-  private AWSCredentialsConfig config;
-  private FileSessionCredentialsProvider provider;
+  private final AWSCredentialsConfig config;
+
+  /**
+   * The field is declared volatile in order to ensure safe publication of the object
+   * in {@link #getUnderlyingProvider()} without worrying about final modifiers
+   * on the fields of the created object
+   *
+   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
+   */
+  @MonotonicNonNull
+  private volatile FileSessionCredentialsProvider provider;
 
   public LazyFileSessionCredentialsProvider(AWSCredentialsConfig config)
   {
     this.config = config;
   }
 
+  @EnsuresNonNull("provider")
   private FileSessionCredentialsProvider getUnderlyingProvider()
   {
-    if (provider == null) {
+    FileSessionCredentialsProvider syncedProvider = provider;
+    if (syncedProvider == null) {
       synchronized (config) {
-        if (provider == null) {
-          provider = new FileSessionCredentialsProvider(config.getFileSessionCredentials());
+        syncedProvider = provider;
+        if (syncedProvider == null) {
+          syncedProvider = new FileSessionCredentialsProvider(config.getFileSessionCredentials());
+          provider = syncedProvider;
         }
       }
     }
-    return provider;
+    return syncedProvider;
   }
 
   @Override

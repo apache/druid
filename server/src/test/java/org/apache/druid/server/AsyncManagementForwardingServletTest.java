@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.GuiceInjectors;
@@ -37,7 +38,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.commons.io.IOUtils;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -124,7 +124,9 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   {
     return Initialization.makeInjectorWithModules(GuiceInjectors.makeStartupInjector(), ImmutableList.of((binder) -> {
       JsonConfigProvider.bindInstance(
-          binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null, null, true, false)
+          binder,
+          Key.get(DruidNode.class, Self.class),
+          new DruidNode("test", "localhost", false, null, null, true, false)
       );
       binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
       LifecycleModule.register(binder, Server.class);
@@ -302,7 +304,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     overlordExpectedRequest.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
 
     HttpURLConnection connection = ((HttpURLConnection)
-        new URL(StringUtils.format("http://localhost:%d/proxy/overlord/%s", port, overlordExpectedRequest.path))
+        new URL(StringUtils.format("http://localhost:%d/proxy/overlord%s", port, overlordExpectedRequest.path))
             .openConnection());
     connection.setRequestMethod(overlordExpectedRequest.method);
 

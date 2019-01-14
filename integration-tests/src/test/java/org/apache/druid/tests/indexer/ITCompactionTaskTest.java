@@ -20,12 +20,14 @@
 package org.apache.druid.tests.indexer;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.RetryUtil;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import java.io.Closeable;
 import java.util.List;
 
 @Guice(moduleFactory = DruidTestModuleFactory.class)
@@ -47,7 +49,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     if (intervalsBeforeCompaction.contains(compactedInterval)) {
       throw new ISE("Containing a segment for the compacted interval[%s] before compaction", compactedInterval);
     }
-    try {
+    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
       queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
       compactData(false);
 
@@ -59,9 +61,6 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       intervalsBeforeCompaction.sort(null);
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
-    finally {
-      unloadAndKillData(INDEX_DATASOURCE);
-    }
   }
 
   @Test
@@ -70,7 +69,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
     loadData();
     final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(INDEX_DATASOURCE);
     intervalsBeforeCompaction.sort(null);
-    try {
+    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
       queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
       compactData(true);
 
@@ -79,9 +78,6 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       queryHelper.testQueriesFromFile(INDEX_QUERIES_RESOURCE, 2);
 
       checkCompactionIntervals(intervalsBeforeCompaction);
-    }
-    finally {
-      unloadAndKillData(INDEX_DATASOURCE);
     }
   }
 
@@ -100,7 +96,8 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   private void compactData(boolean keepSegmentGranularity) throws Exception
   {
     final String template = getTaskAsString(COMPACTION_TASK);
-    final String taskSpec = template.replace("${KEEP_SEGMENT_GRANULARITY}", Boolean.toString(keepSegmentGranularity));
+    final String taskSpec =
+        StringUtils.replace(template, "${KEEP_SEGMENT_GRANULARITY}", Boolean.toString(keepSegmentGranularity));
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for compaction task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);

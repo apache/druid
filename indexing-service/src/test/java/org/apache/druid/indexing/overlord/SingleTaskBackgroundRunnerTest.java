@@ -21,9 +21,9 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskReportFileWriter;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
@@ -68,7 +68,7 @@ public class SingleTaskBackgroundRunnerTest
   public void setup() throws IOException
   {
     final TestUtils utils = new TestUtils();
-    final DruidNode node = new DruidNode("testServer", "testHost", 1000, null, true, false);
+    final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
     final TaskConfig taskConfig = new TaskConfig(
         temporaryFolder.newFile().toString(),
         null,

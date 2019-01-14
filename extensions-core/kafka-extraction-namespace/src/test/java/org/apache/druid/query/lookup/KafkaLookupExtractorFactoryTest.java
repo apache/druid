@@ -27,14 +27,14 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Bytes;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
-import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.consumer.TopicFilter;
 import kafka.javaapi.consumer.ConsumerConnector;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.lookup.namespace.cache.CacheHandler;
+import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.Assert;
@@ -95,7 +95,10 @@ public class KafkaLookupExtractorFactoryTest
     {
       @Override
       public Object findInjectableValue(
-          Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
+          Object valueId,
+          DeserializationContext ctxt,
+          BeanProperty forProperty,
+          Object beanInstance
       )
       {
         if ("org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager".equals(valueId)) {

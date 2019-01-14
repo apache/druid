@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
@@ -34,8 +33,8 @@ import org.apache.druid.client.cache.CacheMonitor;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
@@ -51,7 +50,6 @@ import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
-import org.apache.druid.server.coordination.broker.DruidBroker;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.MetricsModule;
@@ -94,7 +92,7 @@ public class CliBroker extends ServerRunnable
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
-          binder.bind(BrokerServerView.class).in(LazySingleton.class);
+          LifecycleModule.register(binder, BrokerServerView.class);
           binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
           JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
@@ -117,7 +115,6 @@ public class CliBroker extends ServerRunnable
           Jerseys.addResource(binder, ClientInfoResource.class);
 
           LifecycleModule.register(binder, BrokerQueryResource.class);
-          LifecycleModule.register(binder, DruidBroker.class);
 
           Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
@@ -125,13 +122,14 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
 
-          binder.bind(DiscoverySideEffectsProvider.Child.class).toProvider(
-              new DiscoverySideEffectsProvider(
-                  DruidNodeDiscoveryProvider.NODE_TYPE_BROKER,
-                  ImmutableList.of(LookupNodeService.class)
-              )
-          ).in(LazySingleton.class);
-          LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+
+          bindAnnouncer(
+              binder,
+              DiscoverySideEffectsProvider.builder(NodeType.BROKER)
+                                          .serviceClasses(ImmutableList.of(LookupNodeService.class))
+                                          .useLegacyAnnouncer(true)
+                                          .build()
+          );
         },
         new LookupModule(),
         new SqlModule()

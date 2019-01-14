@@ -21,17 +21,18 @@ package org.apache.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -39,7 +40,10 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
+ * This class is deprecated and will removed in the future.
+ * See https://github.com/apache/incubator-druid/pull/4004#issuecomment-284171911 for details about deprecation.
  */
+@Deprecated
 public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;
@@ -50,8 +54,11 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
   private final ServiceEmitter emitter;
 
   public IntervalChunkingQueryRunner(
-      QueryRunner<T> baseRunner, QueryToolChest<T, Query<T>> toolChest,
-      ExecutorService executor, QueryWatcher queryWatcher, ServiceEmitter emitter
+      QueryRunner<T> baseRunner,
+      QueryToolChest<T, Query<T>> toolChest,
+      ExecutorService executor,
+      QueryWatcher queryWatcher,
+      ServiceEmitter emitter
   )
   {
     this.baseRunner = baseRunner;
@@ -129,7 +136,7 @@ public class IntervalChunkingQueryRunner<T> implements QueryRunner<T>
       return Collections.singletonList(interval);
     }
 
-    List<Interval> intervals = Lists.newArrayList();
+    List<Interval> intervals = new ArrayList<>();
     Iterator<Interval> timestamps = new PeriodGranularity(period, null, null).getIterable(interval).iterator();
 
     DateTime start = DateTimes.max(timestamps.next().getStart(), interval.getStart());

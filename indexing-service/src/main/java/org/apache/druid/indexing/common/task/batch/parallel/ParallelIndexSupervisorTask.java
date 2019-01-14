@@ -290,12 +290,14 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
   {
     return new IndexTuningConfig(
-        tuningConfig.getTargetPartitionSize(),
+        null,
+        tuningConfig.getMaxRowsPerSegment(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemory(),
         tuningConfig.getMaxTotalRows(),
         null,
         tuningConfig.getNumShards(),
+        null,
         tuningConfig.getIndexSpec(),
         tuningConfig.getMaxPendingPersists(),
         true,

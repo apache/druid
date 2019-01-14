@@ -21,8 +21,8 @@ package org.apache.druid.client;
 
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -31,13 +31,9 @@ public class ResultLevelCacheUtil
 {
   private static final Logger log = new Logger(ResultLevelCacheUtil.class);
 
-  public static Cache.NamedKey computeResultLevelCacheKey(
-      String resultLevelCacheIdentifier
-  )
+  public static Cache.NamedKey computeResultLevelCacheKey(String resultLevelCacheIdentifier)
   {
-    return new Cache.NamedKey(
-        resultLevelCacheIdentifier, StringUtils.toUtf8(resultLevelCacheIdentifier)
-    );
+    return new Cache.NamedKey(resultLevelCacheIdentifier, StringUtils.toUtf8(resultLevelCacheIdentifier));
   }
 
   public static void populate(

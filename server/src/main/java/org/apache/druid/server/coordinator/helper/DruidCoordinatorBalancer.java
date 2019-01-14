@@ -201,11 +201,11 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
               unmoved++;
             }
           } else {
-            log.info("Segment [%s] is 'optimally' placed.", segmentToMove.getIdentifier());
+            log.debug("Segment [%s] is 'optimally' placed.", segmentToMove.getIdentifier());
             unmoved++;
           }
         } else {
-          log.info(
+          log.debug(
               "No valid movement destinations for segment [%s].",
               segmentToMove.getIdentifier()
           );
@@ -238,7 +238,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
         (toServer.getSegment(segmentName) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-      log.info("Moving [%s] from [%s] to [%s]", segmentName, fromServer.getName(), toServer.getName());
+      log.debug("Moving [%s] from [%s] to [%s]", segmentName, fromServer.getName(), toServer.getName());
 
       LoadPeonCallback callback = null;
       try {

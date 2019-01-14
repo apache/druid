@@ -28,8 +28,8 @@ import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.select.SelectQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -113,5 +113,15 @@ public interface Query<T>
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
     return this;
+  }
+
+  default List<Interval> getIntervalsOfInnerMostQuery()
+  {
+    if (getDataSource() instanceof QueryDataSource) {
+      //noinspection unchecked
+      return ((QueryDataSource) getDataSource()).getQuery().getIntervalsOfInnerMostQuery();
+    } else {
+      return getIntervals();
+    }
   }
 }

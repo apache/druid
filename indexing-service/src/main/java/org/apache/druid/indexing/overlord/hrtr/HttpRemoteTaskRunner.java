@@ -36,10 +36,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -64,7 +66,6 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -75,7 +76,6 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.KeeperException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Period;
@@ -107,12 +107,12 @@ import java.util.stream.Collectors;
  * A Remote TaskRunner to manage tasks on Middle Manager nodes using internal-discovery({@link DruidNodeDiscoveryProvider})
  * to discover them and Http.
  * Middle Managers expose 3 HTTP endpoints
- *  1. POST request for assigning a task
- *  2. POST request for shutting down a task
- *  3. GET request for getting list of assigned, running, completed tasks on Middle Manager and its enable/disable status.
- *    This endpoint is implemented to support long poll and holds the request till there is a change. This class
- *    sends the next request immediately as the previous finishes to keep the state up-to-date.
- *
+ * 1. POST request for assigning a task
+ * 2. POST request for shutting down a task
+ * 3. GET request for getting list of assigned, running, completed tasks on Middle Manager and its enable/disable status.
+ * This endpoint is implemented to support long poll and holds the request till there is a change. This class
+ * sends the next request immediately as the previous finishes to keep the state up-to-date.
+ * <p>
  * ZK_CLEANUP_TODO : As of 0.11.1, it is required to cleanup task status paths from ZK which are created by the
  * workers to support deprecated RemoteTaskRunner. So a method "scheduleCompletedTaskStatusCleanupFromZk()" is added'
  * which should be removed in the release that removes RemoteTaskRunner legacy ZK updation WorkerTaskMonitor class.
@@ -329,7 +329,8 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         ImmutableMap.copyOf(
             Maps.transformEntries(
                 Maps.filterEntries(
-                    workers, new Predicate<Map.Entry<String, WorkerHolder>>()
+                    workers,
+                    new Predicate<Map.Entry<String, WorkerHolder>>()
                     {
                       @Override
                       public boolean apply(Map.Entry<String, WorkerHolder> input)
@@ -340,16 +341,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       }
                     }
                 ),
-                new Maps.EntryTransformer<String, WorkerHolder, ImmutableWorkerInfo>()
-                {
-                  @Override
-                  public ImmutableWorkerInfo transformEntry(
-                      String key, WorkerHolder value
-                  )
-                  {
-                    return value.toImmutable();
-                  }
-                }
+                (String key, WorkerHolder value) -> value.toImmutable()
             )
         ),
         task
@@ -446,23 +438,27 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private void startWorkersHandling() throws InterruptedException
   {
     final CountDownLatch workerViewInitialized = new CountDownLatch(1);
-    DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(DruidNodeDiscoveryProvider.NODE_TYPE_MM);
+    DruidNodeDiscovery druidNodeDiscovery = druidNodeDiscoveryProvider.getForNodeType(NodeType.MIDDLE_MANAGER);
     druidNodeDiscovery.registerListener(
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
-            nodes.stream().forEach(node -> addWorker(toWorker(node)));
-
-            //CountDownLatch.countDown() does nothing when count has already reached 0.
-            workerViewInitialized.countDown();
+            nodes.forEach(node -> addWorker(toWorker(node)));
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
-            nodes.stream().forEach(node -> removeWorker(toWorker(node)));
+            nodes.forEach(node -> removeWorker(toWorker(node)));
+          }
+
+          @Override
+          public void nodeViewInitialized()
+          {
+            //CountDownLatch.countDown() does nothing when count has already reached 0.
+            workerViewInitialized.countDown();
           }
         }
     );
@@ -778,9 +774,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> markWorkersLazy(
-      Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers
-  )
+  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
   {
     synchronized (statusLock) {
       Iterator<String> iterator = workers.keySet().iterator();
@@ -858,7 +852,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return Optional.absent();
     } else {
       // Worker is still running this task
-      final URL url = WorkerHolder.makeWorkerURL(worker, StringUtils.format("/druid/worker/v1/task/%s/log?offset=%d", taskId, offset));
+      final URL url = TaskRunnerUtils.makeWorkerURL(
+          worker,
+          "/druid/worker/v1/task/%s/log?offset=%s",
+          taskId,
+          Long.toString(offset)
+      );
       return Optional.of(
           new ByteSource()
           {
@@ -968,7 +967,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     pendingTasksExec.execute(
         () -> {
           while (!Thread.interrupted() && lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-            ImmutableWorkerInfo immutableWorker = null;
+            ImmutableWorkerInfo immutableWorker;
             HttpRemoteTaskRunnerWorkItem taskItem = null;
             try {
               synchronized (statusLock) {
@@ -1046,7 +1045,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public void shutdown(String taskId)
+  public void shutdown(String taskId, String reason)
   {
     if (!lifecycleLock.awaitStarted(1, TimeUnit.SECONDS)) {
       log.info("This TaskRunner is stopped or not yet started. Ignoring shutdown command for task: %s", taskId);
@@ -1055,6 +1054,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
     WorkerHolder workerHolderRunningTask = null;
     synchronized (statusLock) {
+      log.info("Shutdown [%s] because: [%s]", taskId, reason);
       HttpRemoteTaskRunnerWorkItem taskRunnerWorkItem = tasks.remove(taskId);
       if (taskRunnerWorkItem != null) {
         if (taskRunnerWorkItem.getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {

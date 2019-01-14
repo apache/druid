@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -32,8 +34,6 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.segment.TestHelper;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -47,24 +47,20 @@ import java.util.Map;
 public class LookupDimensionSpecTest
 {
   private static final Map<String, String> STRING_MAP = ImmutableMap.of("key", "value", "key2", "value2");
-  private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(
-      STRING_MAP, true);
+  private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(STRING_MAP, true);
 
   private static final LookupReferencesManager LOOKUP_REF_MANAGER = EasyMock.createMock(LookupReferencesManager.class);
 
   static {
-    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(
-        new LookupExtractorFactoryContainer(
-            "v0",
-            new MapLookupExtractorFactory(STRING_MAP, false)
-        )
-    ).anyTimes();
+    EasyMock
+        .expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName")))
+        .andReturn(new LookupExtractorFactoryContainer("v0", new MapLookupExtractorFactory(STRING_MAP, false)))
+        .anyTimes();
     EasyMock.replay(LOOKUP_REF_MANAGER);
   }
 
-  private final DimensionSpec lookupDimSpec = new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null,
-                                                                      true
-  );
+  private final DimensionSpec lookupDimSpec =
+      new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, null, null, null, true);
 
 
   @Parameters
@@ -78,7 +74,7 @@ public class LookupDimensionSpecTest
         LOOKUP_REF_MANAGER
     );
     String serLookup = mapper.writeValueAsString(lookupDimSpec);
-    Assert.assertEquals(lookupDimSpec, mapper.reader(DimensionSpec.class).with(injectableValues).readValue(serLookup));
+    Assert.assertEquals(lookupDimSpec, mapper.readerFor(DimensionSpec.class).with(injectableValues).readValue(serLookup));
   }
 
   private Object[] parametersForTestSerDesr()

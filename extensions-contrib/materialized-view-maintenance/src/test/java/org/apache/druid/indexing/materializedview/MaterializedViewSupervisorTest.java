@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -46,25 +45,24 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import static org.easymock.EasyMock.expect;
-
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
 import static org.easymock.EasyMock.createMock;
-import org.junit.rules.ExpectedException;
+import static org.easymock.EasyMock.expect;
 
 public class MaterializedViewSupervisorTest
 {
@@ -85,7 +83,7 @@ public class MaterializedViewSupervisorTest
   private ObjectMapper objectMapper = TestHelper.makeJsonMapper();
   
   @Before
-  public void setUp() throws IOException 
+  public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
@@ -158,7 +156,7 @@ public class MaterializedViewSupervisorTest
     expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     Pair<SortedMap<Interval, String>, Map<Interval, List<DataSegment>>> toBuildInterval = supervisor.checkSegments();
-    Map<Interval, List<DataSegment>> expectedSegments = Maps.newHashMap();
+    Map<Interval, List<DataSegment>> expectedSegments = new HashMap<>();
     expectedSegments.put(
         Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
         Collections.singletonList(
@@ -180,7 +178,7 @@ public class MaterializedViewSupervisorTest
 
 
   @Test
-  public void testSuspendedDoesntRun() throws IOException
+  public void testSuspendedDoesntRun()
   {
     MaterializedViewSupervisorSpec suspended = new MaterializedViewSupervisorSpec(
         "base",
@@ -208,10 +206,12 @@ public class MaterializedViewSupervisorTest
     // mock IndexerSQLMetadataStorageCoordinator to ensure that getDataSourceMetadata is not called
     // which will be true if truly suspended, since this is the first operation of the 'run' method otherwise
     IndexerSQLMetadataStorageCoordinator mock = createMock(IndexerSQLMetadataStorageCoordinator.class);
-    expect(mock.getDataSourceMetadata(suspended.getDataSourceName())).andAnswer((IAnswer) () -> {
-      Assert.fail();
-      return null;
-    }).anyTimes();
+    expect(mock.getDataSourceMetadata(suspended.getDataSourceName()))
+        .andAnswer(() -> {
+          Assert.fail();
+          return null;
+        })
+        .anyTimes();
 
     EasyMock.replay(mock);
     supervisor.run();

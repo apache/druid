@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
@@ -119,7 +118,8 @@ public class TimeseriesQueryRunnerTest
   private final List<AggregatorFactory> aggregatorFactoryList;
 
   public TimeseriesQueryRunnerTest(
-      QueryRunner runner, boolean descending,
+      QueryRunner runner,
+      boolean descending,
       List<AggregatorFactory> aggregatorFactoryList
   )
   {
@@ -145,7 +145,7 @@ public class TimeseriesQueryRunnerTest
                                   )
                                   .descending(descending)
                                   .build();
-    Map<String, Object> resultMap = Maps.newHashMap();
+    Map<String, Object> resultMap = new HashMap<>();
     resultMap.put("rows", 0L);
     resultMap.put("index", NullHandling.defaultDoubleValue());
     resultMap.put("first", NullHandling.defaultDoubleValue());
@@ -804,11 +804,11 @@ public class TimeseriesQueryRunnerTest
                                    .descending(descending)
                                    .build();
 
-    List<Result<TimeseriesResultValue>> lotsOfZeroes = Lists.newArrayList();
+    List<Result<TimeseriesResultValue>> lotsOfZeroes = new ArrayList<>();
     final Iterable<Interval> iterable = Granularities.HOUR.getIterable(
         new Interval(DateTimes.of("2011-04-14T01"), DateTimes.of("2011-04-15"))
     );
-    Map noRowsResult = Maps.newHashMap();
+    Map noRowsResult = new HashMap<>();
     noRowsResult.put("rows", 0L);
     noRowsResult.put("idx", NullHandling.defaultLongValue());
     for (Interval interval : iterable) {
@@ -1521,7 +1521,7 @@ public class TimeseriesQueryRunnerTest
                                   .descending(descending)
                                   .build();
 
-    Map<String, Object> resultMap = Maps.newHashMap();
+    Map<String, Object> resultMap = new HashMap<>();
     resultMap.put("rows", 0L);
     resultMap.put("index", NullHandling.defaultDoubleValue());
     resultMap.put("addRowsIndexConstant", NullHandling.replaceWithDefault() ? 1.0 : null);
@@ -1662,7 +1662,7 @@ public class TimeseriesQueryRunnerTest
                                   .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
                                   .descending(descending)
                                   .build();
-    Map<String, Object> resultMap = Maps.newHashMap();
+    Map<String, Object> resultMap = new HashMap<>();
     resultMap.put("rows", 0L);
     resultMap.put("index", NullHandling.defaultDoubleValue());
     resultMap.put("addRowsIndexConstant", NullHandling.replaceWithDefault() ? 1.0 : null);
@@ -1703,7 +1703,7 @@ public class TimeseriesQueryRunnerTest
                                   .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
                                   .descending(descending)
                                   .build();
-    Map<String, Object> resultMap = Maps.newHashMap();
+    Map<String, Object> resultMap = new HashMap<>();
     resultMap.put("rows", 0L);
     resultMap.put("index", NullHandling.defaultDoubleValue());
     resultMap.put("addRowsIndexConstant", NullHandling.replaceWithDefault() ? 1.0 : null);

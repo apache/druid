@@ -40,7 +40,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 
@@ -48,7 +48,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-
 
 /**
  */
@@ -72,7 +71,8 @@ public class TimeBoundaryQueryRunnerFactory
 
   @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> mergeRunners(
-      ExecutorService queryExecutor, Iterable<QueryRunner<Result<TimeBoundaryResultValue>>> queryRunners
+      ExecutorService queryExecutor,
+      Iterable<QueryRunner<Result<TimeBoundaryResultValue>>> queryRunners
   )
   {
     return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
@@ -102,7 +102,7 @@ public class TimeBoundaryQueryRunnerFactory
             return null;
           }
           final BaseLongColumnValueSelector timestampColumnSelector =
-              cursor.getColumnSelectorFactory().makeColumnValueSelector(Column.TIME_COLUMN_NAME);
+              cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
           final DateTime timestamp = DateTimes.utc(timestampColumnSelector.getLong());
           return new Result<>(adapter.getInterval().getStart(), timestamp);
         }

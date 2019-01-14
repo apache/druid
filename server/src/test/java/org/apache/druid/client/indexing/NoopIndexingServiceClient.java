@@ -43,12 +43,6 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void upgradeSegment(DataSegment dataSegment)
-  {
-
-  }
-
-  @Override
   public void mergeSegments(List<DataSegment> segments)
   {
     
@@ -58,6 +52,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   public String compactSegments(
       List<DataSegment> segments,
       boolean keepSegmentGranularity,
+      @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
       @Nullable ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
@@ -111,6 +106,12 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   @Nullable
   @Override
   public TaskStatusPlus getLastCompleteTask()
+  {
+    return null;
+  }
+
+  @Override
+  public TaskPayloadResponse getTaskPayload(String taskId)
   {
     return null;
   }

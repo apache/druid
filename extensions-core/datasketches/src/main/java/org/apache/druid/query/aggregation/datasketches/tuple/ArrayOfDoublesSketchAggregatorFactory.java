@@ -19,18 +19,13 @@
 
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-
-import javax.annotation.Nullable;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-
+import com.yahoo.sketches.Util;
+import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
+import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
+import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -45,13 +40,14 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.NilColumnValueSelector;
 
-import com.yahoo.sketches.Util;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 
 public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
 {
@@ -104,7 +100,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     // input is raw data (key and array of values), use build aggregator
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
-    if (DimensionSelectorUtils.isNilSelector(keySelector)) {
+    if (DimensionSelector.isNilSelector(keySelector)) {
       return new ArrayOfDoublesSketchNoOpAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();
@@ -134,7 +130,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
     // input is raw data (key and array of values), use build aggregator
     final DimensionSelector keySelector = metricFactory
         .makeDimensionSelector(new DefaultDimensionSpec(fieldName, fieldName));
-    if (DimensionSelectorUtils.isNilSelector(keySelector)) {
+    if (DimensionSelector.isNilSelector(keySelector)) {
       return new ArrayOfDoublesSketchNoOpBufferAggregator(numberOfValues);
     }
     final List<BaseDoubleColumnValueSelector> valueSelectors = new ArrayList<>();

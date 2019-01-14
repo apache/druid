@@ -25,18 +25,18 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,14 +76,14 @@ public class VirtualColumns implements Cacheable
     if (virtualColumns == null || virtualColumns.isEmpty()) {
       return EMPTY;
     }
-    Map<String, VirtualColumn> withDotSupport = Maps.newHashMap();
-    Map<String, VirtualColumn> withoutDotSupport = Maps.newHashMap();
+    Map<String, VirtualColumn> withDotSupport = new HashMap<>();
+    Map<String, VirtualColumn> withoutDotSupport = new HashMap<>();
     for (VirtualColumn vc : virtualColumns) {
       if (Strings.isNullOrEmpty(vc.getOutputName())) {
         throw new IAE("Empty or null virtualColumn name");
       }
 
-      if (vc.getOutputName().equals(Column.TIME_COLUMN_NAME)) {
+      if (vc.getOutputName().equals(ColumnHolder.TIME_COLUMN_NAME)) {
         throw new IAE("virtualColumn name[%s] not allowed", vc.getOutputName());
       }
 

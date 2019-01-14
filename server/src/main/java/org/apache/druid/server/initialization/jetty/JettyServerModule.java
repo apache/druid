@@ -60,6 +60,8 @@ import org.apache.druid.server.initialization.TLSServerConfig;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.server.metrics.MonitorsConfig;
+import org.apache.druid.server.security.CustomCheckX509TrustManager;
+import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -75,10 +77,14 @@ import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedTrustManager;
 import java.security.KeyStore;
+import java.security.cert.CRL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -159,7 +165,8 @@ public class JettyServerModule extends JerseyServletModule
         node,
         config,
         TLSServerConfig,
-        injector.getExistingBinding(Key.get(SslContextFactory.class))
+        injector.getExistingBinding(Key.get(SslContextFactory.class)),
+        injector.getInstance(TLSCertificateChecker.class)
     );
   }
 
@@ -187,7 +194,8 @@ public class JettyServerModule extends JerseyServletModule
       DruidNode node,
       ServerConfig config,
       TLSServerConfig tlsServerConfig,
-      Binding<SslContextFactory> sslContextFactoryBinding
+      Binding<SslContextFactory> sslContextFactoryBinding,
+      TLSCertificateChecker certificateChecker
   )
   {
     // adjusting to make config.getNumThreads() mean, "number of threads
@@ -223,6 +231,9 @@ public class JettyServerModule extends JerseyServletModule
       HttpConfiguration httpConfiguration = new HttpConfiguration();
       httpConfiguration.setRequestHeaderSize(config.getMaxRequestHeaderSize());
       final ServerConnector connector = new ServerConnector(server, new HttpConnectionFactory(httpConfiguration));
+      if (node.isBindOnHost()) {
+        connector.setHost(node.getHost());
+      }
       connector.setPort(node.getPlaintextPort());
       serverConnectors.add(connector);
     }
@@ -232,7 +243,7 @@ public class JettyServerModule extends JerseyServletModule
       log.info("Creating https connector with port [%d]", node.getTlsPort());
       if (sslContextFactoryBinding == null) {
         // Never trust all certificates by default
-        sslContextFactory = new SslContextFactory(false);
+        sslContextFactory = new IdentityCheckOverrideSslContextFactory(tlsServerConfig, certificateChecker);
 
         sslContextFactory.setKeyStorePath(tlsServerConfig.getKeyStorePath());
         sslContextFactory.setKeyStoreType(tlsServerConfig.getKeyStoreType());
@@ -304,6 +315,9 @@ public class JettyServerModule extends JerseyServletModule
           new SslConnectionFactory(sslContextFactory, HTTP_1_1_STRING),
           new HttpConnectionFactory(httpsConfiguration)
       );
+      if (node.isBindOnHost()) {
+        connector.setHost(node.getHost());
+      }
       connector.setPort(node.getTlsPort());
       serverConnectors.add(connector);
     } else {
@@ -442,9 +456,7 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @Singleton
-  public JettyMonitor getJettyMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder
-  )
+  public JettyMonitor getJettyMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
   {
     return new JettyMonitor(dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId());
   }
@@ -462,11 +474,50 @@ public class JettyServerModule extends JerseyServletModule
     public boolean doMonitor(ServiceEmitter emitter)
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-      MonitorUtils.addDimensionsToBuilder(
-          builder, dimensions
-      );
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       emitter.emit(builder.build("jetty/numOpenConnections", activeConnections.get()));
       return true;
+    }
+  }
+
+  private static class IdentityCheckOverrideSslContextFactory extends SslContextFactory
+  {
+    private final TLSServerConfig tlsServerConfig;
+    private final TLSCertificateChecker certificateChecker;
+
+    public IdentityCheckOverrideSslContextFactory(
+        TLSServerConfig tlsServerConfig,
+        TLSCertificateChecker certificateChecker
+    )
+    {
+      super(false);
+      this.tlsServerConfig = tlsServerConfig;
+      this.certificateChecker = certificateChecker;
+    }
+
+    @Override
+    protected TrustManager[] getTrustManagers(
+        KeyStore trustStore,
+        Collection<? extends CRL> crls
+    ) throws Exception
+    {
+      TrustManager[] trustManagers = super.getTrustManagers(trustStore, crls);
+      TrustManager[] newTrustManagers = new TrustManager[trustManagers.length];
+
+      for (int i = 0; i < trustManagers.length; i++) {
+        if (trustManagers[i] instanceof X509ExtendedTrustManager) {
+          newTrustManagers[i] = new CustomCheckX509TrustManager(
+              (X509ExtendedTrustManager) trustManagers[i],
+              certificateChecker,
+              tlsServerConfig.isValidateHostnames()
+          );
+        } else {
+          newTrustManagers[i] = trustManagers[i];
+          log.info("Encountered non-X509ExtendedTrustManager: " + trustManagers[i].getClass());
+        }
+      }
+
+      return newTrustManagers;
     }
   }
 }

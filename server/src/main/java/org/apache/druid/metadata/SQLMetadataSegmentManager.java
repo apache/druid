@@ -25,8 +25,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
@@ -82,7 +80,6 @@ import java.util.stream.Collectors;
 @ManageLifecycle
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
 {
-  private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
 
   /**
@@ -232,7 +229,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                       .iterator(),
                   payload -> {
                     try {
-                      return DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(payload, DataSegment.class));
+                      return jsonMapper.readValue(payload, DataSegment.class);
                     }
                     catch (IOException e) {
                       throw new RuntimeException(e);
@@ -243,7 +240,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           )
       );
 
-      final List<DataSegment> segments = Lists.newArrayList();
+      final List<DataSegment> segments = new ArrayList<>();
       List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
           Intervals.of("0000-01-01/3000-01-01")
       );
@@ -466,10 +463,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                             throws SQLException
                         {
                           try {
-                            return DATA_SEGMENT_INTERNER.intern(jsonMapper.readValue(
-                                r.getBytes("payload"),
-                                DataSegment.class
-                            ));
+                            return replaceWithExistingSegmentIfPresent(
+                                jsonMapper.readValue(r.getBytes("payload"), DataSegment.class)
+                            );
                           }
                           catch (IOException e) {
                             log.makeAlert(e, "Failed to read segment from db.").emit();
@@ -488,9 +484,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         return;
       }
 
-      final Collection<DataSegment> segmentsFinal = Collections2.filter(
-          segments, Predicates.notNull()
-      );
+      final Collection<DataSegment> segmentsFinal = Collections2.filter(segments, Predicates.notNull());
 
       log.info("Polled and found %,d segments in the database", segments.size());
 
@@ -533,6 +527,25 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     catch (Exception e) {
       log.makeAlert(e, "Problem polling DB.").emit();
     }
+  }
+
+  /**
+   * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
+   * (i. e. promoted to old generation), try to keep them alive. In {@link #poll()}, we fetch and deserialize all
+   * existing segments each time, and then replace them in {@link #dataSourcesRef}. This method allows to use already
+   * existing (old) segments when possible, effectively interning them a-la {@link String#intern} or {@link
+   * com.google.common.collect.Interner}, aiming to make the majority of {@link DataSegment} objects garbage soon after
+   * they are deserialized and to die in young generation. It allows to avoid fragmentation of the old generation and
+   * full GCs.
+   */
+  private DataSegment replaceWithExistingSegmentIfPresent(DataSegment segment)
+  {
+    DruidDataSource dataSource = dataSourcesRef.get().get(segment.getDataSource());
+    if (dataSource == null) {
+      return segment;
+    }
+    DataSegment alreadyExistingSegment = dataSource.getSegment(segment.getIdentifier());
+    return alreadyExistingSegment != null ? alreadyExistingSegment : segment;
   }
 
   private String getSegmentsTable()

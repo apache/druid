@@ -23,7 +23,7 @@ package org.apache.druid.collections.bitmap;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.roaringbitmap.IntIterator;
 
-import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 public class WrappedImmutableConciseBitmap implements ImmutableBitmap
 {
@@ -32,9 +32,9 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
    */
   private final ImmutableConciseSet bitmap;
 
-  public WrappedImmutableConciseBitmap(ByteBuffer byteBuffer)
+  public WrappedImmutableConciseBitmap(IntBuffer buffer)
   {
-    this.bitmap = new ImmutableConciseSet(byteBuffer);
+    this.bitmap = new ImmutableConciseSet(buffer);
   }
 
   /**
@@ -67,7 +67,7 @@ public class WrappedImmutableConciseBitmap implements ImmutableBitmap
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + bitmap.toString();
+    return getClass().getSimpleName() + bitmap;
   }
 
   @Override

@@ -26,7 +26,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -65,9 +64,9 @@ import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.Column;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -83,6 +82,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -190,6 +190,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
               return extractor.extractedClass();
             }
 
+            @Nullable
             @Override
             public Object getObject()
             {
@@ -231,7 +232,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
-  private final boolean reportParseExceptions;
+  private final boolean reportParseExceptions; // only used by OffHeapIncrementalIndex
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -276,7 +277,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.reportParseExceptions = reportParseExceptions;
 
-    this.columnCapabilities = Maps.newHashMap();
+    this.columnCapabilities = new HashMap<>();
     this.metadata = new Metadata(
         null,
         getCombiningAggregators(metrics),
@@ -320,7 +321,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     //__time capabilities
     ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl();
     timeCapabilities.setType(ValueType.LONG);
-    columnCapabilities.put(Column.TIME_COLUMN_NAME, timeCapabilities);
+    columnCapabilities.put(ColumnHolder.TIME_COLUMN_NAME, timeCapabilities);
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
@@ -688,7 +689,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
         if (wasNewDim) {
           if (overflow == null) {
-            overflow = Lists.newArrayList();
+            overflow = new ArrayList<>();
           }
           overflow.add(dimsKey);
         } else if (desc.getIndex() > dims.length || dims[desc.getIndex()] != null) {
@@ -823,6 +824,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
+  @Nullable
   public DimensionDesc getDimension(String dimension)
   {
     synchronized (dimensionDescs) {
@@ -1006,7 +1008,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
                   continue;
                 }
                 final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualArrayOrList(dim, DimensionIndexer.LIST);
+                Object rowVals = indexer.convertUnsortedEncodedKeyComponentToActualList(dim);
                 theVals.put(dimensionName, rowVals);
               }
 

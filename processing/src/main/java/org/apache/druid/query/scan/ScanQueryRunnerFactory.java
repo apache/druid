@@ -16,12 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.scan;
 
 import com.google.common.base.Function;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Query;
@@ -113,9 +114,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     }
 
     @Override
-    public Sequence<ScanResultValue> run(
-        QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext
-    )
+    public Sequence<ScanResultValue> run(QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext)
     {
       Query<ScanResultValue> query = queryPlus.getQuery();
       if (!(query instanceof ScanQuery)) {
