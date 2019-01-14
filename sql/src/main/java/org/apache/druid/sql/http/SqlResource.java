@@ -20,7 +20,6 @@
 package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.io.CountingOutputStream;
@@ -62,7 +61,6 @@ import java.util.List;
 public class SqlResource
 {
   private static final Logger log = new Logger(SqlResource.class);
-  private static final Joiner joiner = Joiner.on(",");
 
   private final ObjectMapper jsonMapper;
   private final SqlLifecycleFactory sqlLifecycleFactory;
@@ -91,8 +89,7 @@ public class SqlResource
     final String currThreadName = Thread.currentThread().getName();
 
     try {
-      Thread.currentThread()
-            .setName(StringUtils.format("sql[%s]", sqlQueryId));
+      Thread.currentThread().setName(StringUtils.format("sql[%s]", sqlQueryId));
 
       final PlannerContext plannerContext = lifecycle.planAndAuthorize(req);
       final DateTimeZone timeZone = plannerContext.getTimeZone();
@@ -172,7 +169,6 @@ public class SqlResource
                 }
             )
             .header("X-Druid-SQL-Query-Id", sqlQueryId)
-            .header("X-Druid-Native-Query-Ids", joiner.join(plannerContext.getNativeQueryIds()))
             .build();
       }
       catch (Throwable e) {

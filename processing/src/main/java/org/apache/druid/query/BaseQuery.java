@@ -34,6 +34,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -234,6 +235,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
   }
 
+  @Nullable
   @Override
   public String getSqlQueryId()
   {

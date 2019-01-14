@@ -52,10 +52,11 @@ public class DruidViewMacro implements TableMacro
   public TranslatableTable apply(final List<Object> arguments)
   {
     final RelDataType rowType;
+    // Using an escalator here is a hack, but it's currently needed to get the row type. Ideally, some
+    // later refactoring would make this unnecessary, since there is no actual query going out herem.
     final AuthenticationResult authenticationResult = escalator.createEscalatedAuthenticationResult();
     try (final DruidPlanner planner = plannerFactory.createPlanner(null, authenticationResult)) {
-      // Using an escalator here is a hack, but it's currently needed to get the row type. Ideally, some
-      // later refactoring would make this unnecessary, since there is no actual query going out herem.
+
       rowType = planner.plan(viewSql).rowType();
     }
     catch (Exception e) {

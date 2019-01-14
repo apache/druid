@@ -50,14 +50,27 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.http.SqlQuery;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.ThreadSafe;
 import javax.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-@ThreadSafe
+/**
+ * Similar to {@link org.apache.druid.server.QueryLifecycle}, this class manages the lifecycle of a SQL query.
+ * It ensures that a SQL query goes through the following stages, in the proper order:
+ *
+ * <ol>
+ * <li>Initialization ({@link #initialize(SqlQuery)} or {@link #initialize(String, Map)})</li>
+ * <li>Planning ({@link #plan(HttpServletRequest)} or {@link #plan(AuthenticationResult)})</li>
+ * <li>Authorization ({@link #authorize()})</li>
+ * <li>Execution ({@link #execute()})</li>
+ * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)})</li>
+ * </ol>
+ *
+ * <p>Unlike QueryLifecycle, this class is designed to be <b>thread safe</b> so that it can be used in multi-threaded
+ * scenario (JDBC) without external synchronization.
+ */
 public class SqlLifecycle
 {
   private static final Logger log = new Logger(SqlLifecycle.class);
@@ -75,7 +88,7 @@ public class SqlLifecycle
   private String sql;
   private Map<String, Object> queryContext;
   // init during plan
-  private HttpServletRequest req; // may be null
+  @Nullable private HttpServletRequest req;
   private PlannerContext plannerContext;
   private PlannerResult plannerResult;
 
@@ -135,7 +148,7 @@ public class SqlLifecycle
       throws ValidationException, RelConversionException, SqlParseException
   {
     synchronized (lock) {
-      transition(State.INITIALIZED, State.PLANED);
+      transition(State.INITIALIZED, State.PLANNED);
       try (DruidPlanner planner = plannerFactory.createPlanner(queryContext, authenticationResult)) {
         this.plannerContext = planner.getPlannerContext();
         this.plannerResult = planner.plan(sql);
@@ -157,7 +170,7 @@ public class SqlLifecycle
   {
     synchronized (lock) {
       Preconditions.checkState(plannerResult != null,
-                               "must be call after sql has been planned");
+                               "must be called after sql has been planned");
       return plannerResult.rowType();
     }
   }
@@ -165,11 +178,10 @@ public class SqlLifecycle
   public Access authorize()
   {
     synchronized (lock) {
-      transition(State.PLANED, State.AUTHORIZING);
+      transition(State.PLANNED, State.AUTHORIZING);
 
       if (req != null) {
         return doAuthorize(
-            plannerContext.getAuthenticationResult(),
             AuthorizationUtils.authorizeAllResourceActions(
                 req,
                 Iterables.transform(
@@ -182,7 +194,6 @@ public class SqlLifecycle
       }
 
       return doAuthorize(
-          plannerContext.getAuthenticationResult(),
           AuthorizationUtils.authorizeAllResourceActions(
               plannerContext.getAuthenticationResult(),
               Iterables.transform(plannerResult.datasourceNames(), AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR),
@@ -192,7 +203,7 @@ public class SqlLifecycle
     }
   }
 
-  private Access doAuthorize(final AuthenticationResult authenticationResult, final Access authorizationResult)
+  private Access doAuthorize(final Access authorizationResult)
   {
     if (!authorizationResult.isAllowed()) {
       // Not authorized; go straight to Jail, do not pass Go.
@@ -326,6 +337,7 @@ public class SqlLifecycle
         requestLogger.logSqlQuery(
             RequestLogLine.forSql(
                 sql,
+                queryContext,
                 DateTimes.utc(startMs),
                 remoteAddress,
                 new QueryStats(statsMap)
@@ -341,7 +353,7 @@ public class SqlLifecycle
   private void transition(final State from, final State to)
   {
     if (state != from) {
-      throw new ISE("Cannot transition from[%s] to[%s].", from, to);
+      throw new ISE("Cannot transition from[%s] to[%s] because current state[%s] is not [%s].", from, to, state, from);
     }
 
     state = to;
@@ -351,7 +363,7 @@ public class SqlLifecycle
   {
     NEW,
     INITIALIZED,
-    PLANED,
+    PLANNED,
     AUTHORIZING,
     AUTHORIZED,
     EXECUTING,

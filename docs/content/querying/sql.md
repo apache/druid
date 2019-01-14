@@ -462,8 +462,7 @@ All other context parameters you provide will be attached to Druid queries and c
 [Query context](query-context.html) for details on the possible options.
 
 Note that to specify an unique identifier for SQL query, use `sqlQueryId` instead of `queryId`. Setting `queryId` for a SQL
-request has no effect, all native queries underlying SQL will use auto-generated queryId, which will be returned to
-users in `X-Druid-Native-Query-Ids` header if HTTP is used.
+request has no effect, all native queries underlying SQL will use auto-generated queryId.
 
 Connection context can be specified as JDBC connection properties or as a "context" object in the JSON API.
 
