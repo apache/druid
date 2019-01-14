@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.helper;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.indexing.ClientCompactQuery;
+import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -179,14 +180,13 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
       if (segmentsToCompact.size() > 1) {
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
-        // Currently set keepSegmentGranularity to false because it breaks the algorithm of CompactionSegmentIterator to
-        // find segments to be compacted.
+        // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
             config.isKeepSegmentGranularity(),
             config.getTargetCompactionSizeBytes(),
             config.getTaskPriority(),
-            config.getTuningConfig(),
+            ClientCompactQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             config.getTaskContext()
         );
         LOG.info(

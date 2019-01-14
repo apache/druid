@@ -58,7 +58,7 @@ public class KafkaIndexTaskTuningConfigTest
 
     Assert.assertNotNull(config.getBasePersistDirectory());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
-    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment());
+    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(null, config.getMaxTotalRows());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
@@ -94,7 +94,7 @@ public class KafkaIndexTaskTuningConfigTest
 
     Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
-    Assert.assertEquals(100, config.getMaxRowsPerSegment());
+    Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
     Assert.assertNotEquals(null, config.getMaxTotalRows());
     Assert.assertEquals(1000, config.getMaxTotalRows().longValue());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
@@ -134,7 +134,7 @@ public class KafkaIndexTaskTuningConfigTest
     KafkaIndexTaskTuningConfig copy = (KafkaIndexTaskTuningConfig) original.convertToTaskTuningConfig();
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
-    Assert.assertEquals(2, copy.getMaxRowsPerSegment());
+    Assert.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
     Assert.assertNotEquals(null, copy.getMaxTotalRows());
     Assert.assertEquals(10L, copy.getMaxTotalRows().longValue());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
