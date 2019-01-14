@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import org.roaringbitmap.BatchIterator;
 import org.roaringbitmap.IntIterator;
 
-public class BatchIteratorAdapter implements BatchIterator
+public final class BatchIteratorAdapter implements BatchIterator
 {
   private final IntIterator iterator;
 
@@ -47,5 +47,12 @@ public class BatchIteratorAdapter implements BatchIterator
   public boolean hasNext()
   {
     return iterator.hasNext();
+  }
+
+  @Override
+  public BatchIterator clone()
+  {
+    // It's okay to make a "new BatchIteratorAdapter" instead of calling super.clone(), since this class is final.
+    return new BatchIteratorAdapter(iterator.clone());
   }
 }
