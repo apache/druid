@@ -523,7 +523,9 @@ public class CoordinatorDynamicConfig
           ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
           : maxSegmentsInNodeLoadingQueue,
           maintenanceList,
-          maintenanceModeSegmentsPriority == null ? DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY : maintenanceModeSegmentsPriority
+          maintenanceModeSegmentsPriority == null
+          ? DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY
+          : maintenanceModeSegmentsPriority
       );
     }
 

@@ -997,6 +997,7 @@ public class LoadRuleTest
   }
 
   private static final AtomicInteger serverId = new AtomicInteger();
+
   private static DruidServer createServer(String tier)
   {
     int serverId = LoadRuleTest.serverId.incrementAndGet();
