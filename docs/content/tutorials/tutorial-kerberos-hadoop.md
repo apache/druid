@@ -85,7 +85,7 @@ Find the hadoop version using command, `hadoop version`
 
 In case there are other softwares used with hadoop, like WanDisco, ensure that 
 1. the necessary libraries are available
-2. add the requisite extensions to `druid.etensions.loadlist` in `conf/druid/_common/common.runtime.properties`
+2. add the requisite extensions to `druid.extensions.loadlist` in `conf/druid/_common/common.runtime.properties`
 
 ### Kerberos setup
 
