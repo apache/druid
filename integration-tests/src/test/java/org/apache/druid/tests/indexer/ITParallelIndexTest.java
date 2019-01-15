@@ -35,7 +35,7 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
   @Test
   public void testIndexData() throws Exception
   {
-    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
+    try (final Closeable closeable = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())) {
       doIndexTestTest(
           INDEX_DATASOURCE,
           INDEX_TASK,

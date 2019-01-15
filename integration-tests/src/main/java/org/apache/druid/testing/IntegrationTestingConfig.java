@@ -82,4 +82,6 @@ public interface IntegrationTestingConfig
   Map<String, String> getProperties();
 
   boolean manageKafkaTopic();
+
+  String getExtraDatasourceNameSuffix();
 }

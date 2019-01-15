@@ -21,6 +21,7 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 
 import javax.ws.rs.Path;
@@ -49,7 +50,7 @@ public class ChatHandlerResource
   {
     if (taskId != null) {
       List<String> requestTaskId = headers.getRequestHeader(TASK_ID_HEADER);
-      if (requestTaskId != null && !requestTaskId.contains(taskId)) {
+      if (requestTaskId != null && !requestTaskId.contains(StringUtils.urlEncode(taskId))) {
         return null;
       }
     }

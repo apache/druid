@@ -64,7 +64,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    final String taskId = Preconditions.checkNotNull(
+    String taskId = Preconditions.checkNotNull(
         request.getPathSegments()
                .get(
                    Iterables.indexOf(
@@ -80,6 +80,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
                    ) + 1
                ).getPath()
     );
+    taskId = StringUtils.urlDecode(taskId);
 
     Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
     if (!taskOptional.isPresent()) {
