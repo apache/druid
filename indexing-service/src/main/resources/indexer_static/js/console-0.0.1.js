@@ -123,7 +123,7 @@ $(document).ready(function() {
        '<span style="color:#FF6000">suspended</span>' :
        '<span style="color:#08B157">running</span>';
       data[i] = {
-        "dataSource" : supervisorId,
+        "dataSource" : dataList[i].id,
         "more" :
           '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '">payload</a>' +
           '<a href="/druid/indexer/v1/supervisor/' + supervisorId + '/status">status</a>' +

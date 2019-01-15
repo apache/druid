@@ -54,7 +54,7 @@ public class CoordinatorClient
               HttpMethod.GET,
               StringUtils.format(
                   "/druid/coordinator/v1/datasources/%s/handoffComplete?interval=%s&partitionNumber=%d&version=%s",
-                  dataSource,
+                  StringUtils.urlEncode(dataSource),
                   descriptor.getInterval(),
                   descriptor.getPartitionNumber(),
                   descriptor.getVersion()

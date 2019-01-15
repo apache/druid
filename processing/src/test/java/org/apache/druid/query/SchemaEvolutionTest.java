@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -32,6 +31,7 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -106,7 +106,7 @@ public class SchemaEvolutionTest
     final Sequence<T> results = new FinalizeResultsQueryRunner<>(
         factory.getToolchest().mergeResults(
             factory.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 FunctionalIterable
                     .create(indexes)
                     .transform(

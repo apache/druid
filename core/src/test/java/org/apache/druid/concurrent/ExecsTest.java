@@ -118,4 +118,10 @@ public class ExecsTest
     blockingExecutor.shutdown();
     producer.shutdown();
   }
+
+  @Test
+  public void testDirectExecutorFactory()
+  {
+    Assert.assertNotNull(Execs.directExecutor());
+  }
 }

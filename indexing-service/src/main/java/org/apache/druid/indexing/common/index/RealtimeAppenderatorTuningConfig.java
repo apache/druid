@@ -149,7 +149,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   @Override
   @JsonProperty
-  public int getMaxRowsPerSegment()
+  public Integer getMaxRowsPerSegment()
   {
     return maxRowsPerSegment;
   }
