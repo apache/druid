@@ -37,7 +37,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.net.URL;
@@ -51,25 +53,16 @@ import static org.easymock.EasyMock.replay;
 
 public class RemoteTaskActionClientTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   private DruidLeaderClient druidLeaderClient;
-  List<TaskLock> result = null;
   private ObjectMapper objectMapper = new DefaultObjectMapper();
 
   @Before
   public void setUp()
   {
     druidLeaderClient = EasyMock.createMock(DruidLeaderClient.class);
-
-    long now = System.currentTimeMillis();
-
-    result = Collections.singletonList(new TaskLock(
-        TaskLockType.SHARED,
-        "groupId",
-        "dataSource",
-        Intervals.utc(now - 30 * 1000, now),
-        "version",
-        0
-    ));
   }
 
   @Test
@@ -81,7 +74,15 @@ public class RemoteTaskActionClientTest
 
     // return status code 200 and a list with size equals 1
     Map<String, Object> responseBody = new HashMap<String, Object>();
-    responseBody.put("result", result);
+    final List<TaskLock> expectedLocks = Collections.singletonList(new TaskLock(
+        TaskLockType.SHARED,
+        "groupId",
+        "dataSource",
+        Intervals.of("2019/2020"),
+        "version",
+        0
+    ));
+    responseBody.put("result", expectedLocks);
     String strResult = objectMapper.writeValueAsString(responseBody);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.OK,
@@ -93,7 +94,6 @@ public class RemoteTaskActionClientTest
     expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     replay(druidLeaderClient);
 
-
     Task task = new NoopTask("id", null, 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
         task,
@@ -101,18 +101,13 @@ public class RemoteTaskActionClientTest
         new RetryPolicyFactory(new RetryPolicyConfig()),
         objectMapper
     );
-    try {
-      result = client.submit(new LockListAction());
-    }
-    catch (IOException e) {
-      Assert.fail("unexpected IOException");
-    }
+    final List<TaskLock> locks = client.submit(new LockListAction());
 
-    Assert.assertEquals(1, result.size());
+    Assert.assertEquals(expectedLocks, locks);
     EasyMock.verify(druidLeaderClient);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testSubmitWithIllegalStatusCode() throws Exception
   {
     // return status code 400 and a list with size equals 1
@@ -121,19 +116,15 @@ public class RemoteTaskActionClientTest
         .andReturn(request);
 
     // return status code 200 and a list with size equals 1
-    Map<String, Object> responseBody = new HashMap<String, Object>();
-    responseBody.put("result", result);
-    String strResult = objectMapper.writeValueAsString(responseBody);
     FullResponseHolder responseHolder = new FullResponseHolder(
         HttpResponseStatus.BAD_REQUEST,
         EasyMock.createNiceMock(HttpResponse.class),
-        new StringBuilder().append(strResult)
+        new StringBuilder().append("testSubmitWithIllegalStatusCode")
     );
 
     // set up mocks
     expect(druidLeaderClient.go(request)).andReturn(responseHolder);
     replay(druidLeaderClient);
-
 
     Task task = new NoopTask("id", null, 0, 0, null, null, null);
     RemoteTaskActionClient client = new RemoteTaskActionClient(
@@ -142,6 +133,11 @@ public class RemoteTaskActionClientTest
         new RetryPolicyFactory(objectMapper.readValue("{\"maxRetryCount\":0}", RetryPolicyConfig.class)),
         objectMapper
     );
-    result = client.submit(new LockListAction());
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage(
+        "Error with status[400 Bad Request] and message[testSubmitWithIllegalStatusCode]. "
+        + "Check overlord logs for details."
+    );
+    client.submit(new LockListAction());
   }
 }

@@ -188,61 +188,29 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
+    if (!super.equals(o)) {
+      return false;
+    }
     KinesisIndexTaskTuningConfig that = (KinesisIndexTaskTuningConfig) o;
-    return getMaxRowsInMemory() == that.getMaxRowsInMemory() &&
-           getMaxBytesInMemory() == that.getMaxBytesInMemory() &&
-           getMaxRowsPerSegment() == that.getMaxRowsPerSegment() &&
-           getMaxPendingPersists() == that.getMaxPendingPersists() &&
-           getBuildV9Directly() == that.getBuildV9Directly() &&
-           isReportParseExceptions() == that.isReportParseExceptions() &&
-           getHandoffConditionTimeout() == that.getHandoffConditionTimeout() &&
-           isResetOffsetAutomatically() == that.isResetOffsetAutomatically() &&
-           isSkipSequenceNumberAvailabilityCheck() == that.isSkipSequenceNumberAvailabilityCheck() &&
-           getRecordBufferSize() == that.getRecordBufferSize() &&
-           getRecordBufferOfferTimeout() == that.getRecordBufferOfferTimeout() &&
-           getRecordBufferFullWait() == that.getRecordBufferFullWait() &&
-           getFetchSequenceNumberTimeout() == that.getFetchSequenceNumberTimeout() &&
-           isLogParseExceptions() == that.isLogParseExceptions() &&
-           getMaxParseExceptions() == that.getMaxParseExceptions() &&
-           getMaxSavedParseExceptions() == that.getMaxSavedParseExceptions() &&
-           getMaxRecordsPerPoll() == that.getMaxRecordsPerPoll() &&
-           Objects.equals(getIntermediatePersistPeriod(), that.getIntermediatePersistPeriod()) &&
-           Objects.equals(getBasePersistDirectory(), that.getBasePersistDirectory()) &&
-           Objects.equals(getIndexSpec(), that.getIndexSpec()) &&
-           Objects.equals(getFetchThreads(), that.getFetchThreads()) &&
-           Objects.equals(getSegmentWriteOutMediumFactory(), that.getSegmentWriteOutMediumFactory()) &&
-           Objects.equals(getMaxTotalRows(), that.getMaxTotalRows()) &&
-           Objects.equals(getIntermediateHandoffPeriod(), that.getIntermediateHandoffPeriod());
+    return recordBufferSize == that.recordBufferSize &&
+           recordBufferOfferTimeout == that.recordBufferOfferTimeout &&
+           recordBufferFullWait == that.recordBufferFullWait &&
+           fetchSequenceNumberTimeout == that.fetchSequenceNumberTimeout &&
+           maxRecordsPerPoll == that.maxRecordsPerPoll &&
+           Objects.equals(fetchThreads, that.fetchThreads);
   }
 
   @Override
   public int hashCode()
   {
     return Objects.hash(
-        getMaxRowsInMemory(),
-        getMaxBytesInMemory(),
-        getMaxRowsPerSegment(),
-        getMaxTotalRows(),
-        getIntermediatePersistPeriod(),
-        getBasePersistDirectory(),
-        getMaxPendingPersists(),
-        getIndexSpec(),
-        true,
-        isReportParseExceptions(),
-        getHandoffConditionTimeout(),
-        isResetOffsetAutomatically(),
-        isSkipSequenceNumberAvailabilityCheck(),
-        getRecordBufferSize(),
-        getRecordBufferOfferTimeout(),
-        getRecordBufferFullWait(),
-        getFetchSequenceNumberTimeout(),
-        getFetchThreads(),
-        getSegmentWriteOutMediumFactory(),
-        isLogParseExceptions(),
-        getMaxParseExceptions(),
-        getMaxSavedParseExceptions(),
-        getMaxRecordsPerPoll(),
-        getIntermediateHandoffPeriod()
+        super.hashCode(),
+        recordBufferSize,
+        recordBufferOfferTimeout,
+        recordBufferFullWait,
+        fetchSequenceNumberTimeout,
+        fetchThreads,
+        maxRecordsPerPoll
     );
   }
 

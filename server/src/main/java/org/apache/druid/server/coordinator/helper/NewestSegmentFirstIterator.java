@@ -303,7 +303,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             segmentsToCompact.clear();
             log.warn(
                 "The number of segments[%d] for dataSource[%s] and interval[%s] is larger than "
-                + "numTargetCompactSegments[%d]. If you see lots of shards are being skipped due to too many "
+                + "maxNumSegmentsToCompact[%d]. If you see lots of shards are being skipped due to too many "
                 + "segments, consider increasing 'numTargetCompactionSegments' and "
                 + "'druid.indexer.runner.maxZnodeBytes'. Continue to the next shard.",
                 chunks.size(),

@@ -64,7 +64,7 @@
         },
         "tuningConfig": {
             "type": "index",
-            "targetPartitionSize": 3
+            "maxRowsPerSegment": 3
         }
     }
 }

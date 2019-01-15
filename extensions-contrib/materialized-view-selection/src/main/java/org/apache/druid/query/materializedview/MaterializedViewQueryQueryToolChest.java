@@ -74,6 +74,13 @@ public class MaterializedViewQueryQueryToolChest extends QueryToolChest
   }
 
   @Override
+  public Function makePostComputeManipulatorFn(Query query, MetricManipulationFn fn)
+  {
+    Query realQuery = getRealQuery(query);
+    return warehouse.getToolChest(realQuery).makePostComputeManipulatorFn(realQuery, fn);
+  }
+
+  @Override
   public TypeReference getResultTypeReference()
   {
     return null;

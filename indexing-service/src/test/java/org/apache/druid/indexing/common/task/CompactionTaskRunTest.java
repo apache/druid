@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -120,23 +121,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     runIndexTask();
 
-    final CompactionTask compactionTask = new CompactionTask(
-        null,
-        null,
+    final Builder builder = new Builder(
         DATA_SOURCE,
-        Intervals.of("2014-01-01/2014-01-02"),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory
     );
+
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .build();
 
     final Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask);
 
@@ -156,23 +151,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     runIndexTask();
 
-    final CompactionTask compactionTask1 = new CompactionTask(
-        null,
-        null,
+    final Builder builder = new Builder(
         DATA_SOURCE,
-        Intervals.of("2014-01-01/2014-01-02"),
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        null,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory
     );
+
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .keepSegmentGranularity(false)
+        .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
 
@@ -184,23 +174,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
 
-    final CompactionTask compactionTask2 = new CompactionTask(
-        null,
-        null,
-        DATA_SOURCE,
-        Intervals.of("2014-01-01/2014-01-02"),
-        null,
-        null,
-        false,
-        null,
-        null,
-        null,
-        null,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory
-    );
+    final CompactionTask compactionTask2 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .keepSegmentGranularity(false)
+        .build();
 
     resultPair = runTask(compactionTask2);
 
@@ -218,23 +195,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     runIndexTask();
 
-    final CompactionTask compactionTask1 = new CompactionTask(
-        null,
-        null,
+    final Builder builder = new Builder(
         DATA_SOURCE,
-        Intervals.of("2014-01-01/2014-01-02"),
-        null,
-        null,
-        true,
-        null,
-        null,
-        null,
-        null,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory
     );
+
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .keepSegmentGranularity(true)
+        .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
 
@@ -248,23 +220,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
       Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
     }
 
-    final CompactionTask compactionTask2 = new CompactionTask(
-        null,
-        null,
-        DATA_SOURCE,
-        Intervals.of("2014-01-01/2014-01-02"),
-        null,
-        null,
-        true,
-        null,
-        null,
-        null,
-        null,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory
-    );
+    final CompactionTask compactionTask2 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .keepSegmentGranularity(true)
+        .build();
 
     resultPair = runTask(compactionTask2);
 
@@ -284,24 +243,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
   {
     runIndexTask();
 
-    // day segmentGranularity
-    final CompactionTask compactionTask1 = new CompactionTask(
-        null,
-        null,
+    final Builder builder = new Builder(
         DATA_SOURCE,
-        Intervals.of("2014-01-01/2014-01-02"),
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        null,
-        null,
-        null,
         getObjectMapper(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         null,
         rowIngestionMetersFactory
     );
+
+    // day segmentGranularity
+    final CompactionTask compactionTask1 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .segmentGranularity(Granularities.DAY)
+        .build();
 
     Pair<TaskStatus, List<DataSegment>> resultPair = runTask(compactionTask1);
 
@@ -315,23 +269,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(0).getShardSpec());
 
     // hour segmentGranularity
-    final CompactionTask compactionTask2 = new CompactionTask(
-        null,
-        null,
-        DATA_SOURCE,
-        Intervals.of("2014-01-01/2014-01-02"),
-        null,
-        null,
-        null,
-        Granularities.HOUR,
-        null,
-        null,
-        null,
-        getObjectMapper(),
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        null,
-        rowIngestionMetersFactory
-    );
+    final CompactionTask compactionTask2 = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .segmentGranularity(Granularities.HOUR)
+        .build();
 
     resultPair = runTask(compactionTask2);
 
