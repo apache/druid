@@ -38,16 +38,29 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Random;
-import java.util.function.Predicate;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 
 /**
+ *
  */
 public class HyperLogLogCollectorTest
 {
   private static final Logger log = new Logger(HyperLogLogCollectorTest.class);
 
   private final HashFunction fn = Hashing.murmur3_128();
+
+  private static void fillBuckets(HyperLogLogCollector collector, byte startOffset, byte endOffset)
+  {
+    byte offset = startOffset;
+    while (offset <= endOffset) {
+      // fill buckets to shift registerOffset
+      for (short bucket = 0; bucket < 2048; ++bucket) {
+        collector.add(bucket, offset);
+      }
+      offset++;
+    }
+  }
 
   @Test
   public void testFolding()
@@ -82,14 +95,13 @@ public class HyperLogLogCollectorTest
     }
   }
 
-
   /**
    * This is a very long running test, disabled by default.
    * It is meant to catch issues when combining a large numer of HLL objects.
-   *
+   * <p>
    * It compares adding all the values to one HLL vs.
    * splitting up values into HLLs of 100 values each, and folding those HLLs into a single main HLL.
-   *
+   * <p>
    * When reaching very large cardinalities (>> 50,000,000), offsets are mismatched between the main HLL and the ones
    * with 100 values, requiring  a floating max as described in
    * http://druid.io/blog/2014/02/18/hyperloglog-optimizations-for-real-world-systems.html
@@ -816,19 +828,6 @@ public class HyperLogLogCollectorTest
     collector.fold(other);
     Assert.assertEquals(47, collector.getMaxOverflowRegister());
     Assert.assertEquals(67, collector.getMaxOverflowValue());
-  }
-
-
-  private static void fillBuckets(HyperLogLogCollector collector, byte startOffset, byte endOffset)
-  {
-    byte offset = startOffset;
-    while (offset <= endOffset) {
-      // fill buckets to shift registerOffset
-      for (short bucket = 0; bucket < 2048; ++bucket) {
-        collector.add(bucket, offset);
-      }
-      offset++;
-    }
   }
 
   @Test
