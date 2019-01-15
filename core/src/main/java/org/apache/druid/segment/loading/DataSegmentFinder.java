@@ -61,7 +61,9 @@ public interface DataSegmentFinder
    * @param segmentModifiedAt   segment modified timestamp
    */
   static void putInMapRetainingNewest(
-      Map<String, Pair<DataSegment, Long>> timestampedSegments, DataSegment dataSegment, long segmentModifiedAt
+      Map<String, Pair<DataSegment, Long>> timestampedSegments,
+      DataSegment dataSegment,
+      long segmentModifiedAt
   )
   {
     timestampedSegments.merge(

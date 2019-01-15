@@ -46,9 +46,7 @@ public class MultiplePathSpec implements PathSpec
   }
 
   @Override
-  public Job addInputPaths(
-      HadoopDruidIndexerConfig config, Job job
-  ) throws IOException
+  public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
     for (PathSpec spec : children) {
       spec.addInputPaths(config, job);

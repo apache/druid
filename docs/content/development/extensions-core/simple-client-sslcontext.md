@@ -1,8 +1,28 @@
 ---
 layout: doc_page
+title: "Simple SSLContext Provider Module"
 ---
 
-## Simple SSLContext Provider Module
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+# Simple SSLContext Provider Module
 
 This module contains a simple implementation of [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html)
 that will be injected to be used with HttpClient that Druid nodes use internally to communicate with each other. To learn more about
@@ -28,6 +48,7 @@ The following table contains optional parameters for supporting client certifica
 |`druid.client.https.keyStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Store.|none|no|
 |`druid.client.https.keyManagerFactoryAlgorithm`|Algorithm to use for creating KeyManager, more details [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jsse/JSSERefGuide.html#KeyManager).|`javax.net.ssl.KeyManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.client.https.keyManagerPassword`|The [Password Provider](../operations/password-provider.html) or String password for the Key Manager.|none|no|
+|`druid.client.https.validateHostnames`|Validate the hostname of the server. This should not be disabled unless you are using [custom TLS certificate checks](../../operations/tls-support.html#custom-tls-certificate-checks) and know that standard hostname validation is not needed.|true|no|
 
 This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.

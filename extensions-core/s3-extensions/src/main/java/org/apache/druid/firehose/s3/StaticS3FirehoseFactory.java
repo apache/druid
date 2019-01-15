@@ -288,9 +288,7 @@ public class StaticS3FirehoseFactory extends PrefetchableTextFilesFirehoseFactor
     final String authority = originalAuthority.endsWith("/") ?
                              originalAuthority.substring(0, originalAuthority.length() - 1) :
                              originalAuthority;
-    final String path = originalPath.startsWith("/") ?
-                        originalPath.substring(1, originalPath.length()) :
-                        originalPath;
+    final String path = originalPath.startsWith("/") ? originalPath.substring(1) : originalPath;
 
     return URI.create(StringUtils.format("s3://%s/%s", authority, path));
   }

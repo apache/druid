@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.data;
 
-import com.google.common.collect.Maps;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -70,9 +69,7 @@ public class GenericIndexedTest
     final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"};
 
     GenericIndexed<String> deserialized = serializeAndDeserialize(
-        GenericIndexed.fromArray(
-            strings, GenericIndexed.STRING_STRATEGY
-        )
+        GenericIndexed.fromArray(strings, GenericIndexed.STRING_STRATEGY)
     );
 
     checkBasicAPIs(strings, deserialized, true);
@@ -88,9 +85,7 @@ public class GenericIndexedTest
     final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "k", "j", "l"};
 
     GenericIndexed<String> deserialized = serializeAndDeserialize(
-        GenericIndexed.fromArray(
-            strings, GenericIndexed.STRING_STRATEGY
-        )
+        GenericIndexed.fromArray(strings, GenericIndexed.STRING_STRATEGY)
     );
     checkBasicAPIs(strings, deserialized, false);
   }
@@ -103,7 +98,7 @@ public class GenericIndexedTest
     }
 
     if (allowReverseLookup) {
-      HashMap<String, Integer> mixedUp = Maps.newHashMap();
+      HashMap<String, Integer> mixedUp = new HashMap<>();
       for (int i = 0; i < strings.length; i++) {
         mixedUp.put(strings[i], i);
       }
@@ -130,9 +125,7 @@ public class GenericIndexedTest
 
     final ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
     Assert.assertEquals(indexed.getSerializedSize(), byteBuffer.remaining());
-    GenericIndexed<String> deserialized = GenericIndexed.read(
-        byteBuffer, GenericIndexed.STRING_STRATEGY
-    );
+    GenericIndexed<String> deserialized = GenericIndexed.read(byteBuffer, GenericIndexed.STRING_STRATEGY);
     Assert.assertEquals(0, byteBuffer.remaining());
     return deserialized;
   }

@@ -22,8 +22,6 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.CuratorUtils;
@@ -31,6 +29,7 @@ import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -38,6 +37,7 @@ import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -77,7 +77,7 @@ public class WorkerCuratorCoordinator
     this.curatorFramework = curatorFramework;
     this.worker = worker;
 
-    this.announcer = new Announcer(curatorFramework, MoreExecutors.sameThreadExecutor());
+    this.announcer = new Announcer(curatorFramework, Execs.directExecutor());
 
     this.baseAnnouncementsPath = getPath(Arrays.asList(indexerZkConfig.getAnnouncementsPath(), worker.getHost()));
     this.baseTaskPath = getPath(Arrays.asList(indexerZkConfig.getTasksPath(), worker.getHost()));
@@ -198,7 +198,7 @@ public class WorkerCuratorCoordinator
 
   public List<TaskAnnouncement> getAnnouncements() throws Exception
   {
-    final List<TaskAnnouncement> announcements = Lists.newArrayList();
+    final List<TaskAnnouncement> announcements = new ArrayList<>();
 
     for (String id : curatorFramework.getChildren().forPath(getStatusPathForWorker())) {
       announcements.add(

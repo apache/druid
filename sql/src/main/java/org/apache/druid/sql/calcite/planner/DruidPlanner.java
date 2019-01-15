@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.interpreter.BindableConvention;
@@ -58,6 +57,7 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -193,7 +193,7 @@ public class DruidPlanner implements Closeable
       );
     }
 
-    final Set<String> datasourceNames = Sets.newHashSet();
+    final Set<String> datasourceNames = new HashSet<>();
     bindableRel.childrenAccept(
         new RelVisitor()
         {

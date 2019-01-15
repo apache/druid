@@ -26,6 +26,7 @@ import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class SketchHolderObjectStrategy implements ObjectStrategy<SketchHolder>
 {
@@ -49,7 +50,7 @@ public class SketchHolderObjectStrategy implements ObjectStrategy<SketchHolder>
       return SketchHolder.EMPTY;
     }
 
-    return SketchHolder.of(Memory.wrap(buffer).region(buffer.position(), numBytes));
+    return SketchHolder.of(Memory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes));
   }
 
   @Override

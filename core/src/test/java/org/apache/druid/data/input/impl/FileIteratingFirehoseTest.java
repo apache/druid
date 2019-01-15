@@ -21,7 +21,6 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.data.input.InputRow;
 import org.junit.Assert;
@@ -92,7 +91,8 @@ public class FileIteratingFirehoseTest
     this.expectedResults = inputs.stream()
         .map(input -> input.split("\n"))
         .flatMap(lines -> {
-          final List<String> filteredLines = Arrays.asList(lines).stream()
+          final List<String> filteredLines = Arrays
+              .stream(lines)
               .filter(line -> line.length() > 0)
               .map(line -> line.split(",")[1])
               .collect(Collectors.toList());
@@ -112,7 +112,7 @@ public class FileIteratingFirehoseTest
         .collect(Collectors.toList());
 
     try (final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser)) {
-      final List<String> results = Lists.newArrayList();
+      final List<String> results = new ArrayList<>();
 
       while (firehose.hasMore()) {
         final InputRow inputRow = firehose.nextRow();

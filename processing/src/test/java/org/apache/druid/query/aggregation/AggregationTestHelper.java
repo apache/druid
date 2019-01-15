@@ -31,9 +31,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.collections.CloseableStupidPool;
@@ -43,6 +41,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -94,6 +93,7 @@ import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -607,7 +607,7 @@ public class AggregationTestHelper implements Closeable
             toolChest.mergeResults(
                 toolChest.preMergeQueryDecoration(
                     factory.mergeRunners(
-                        MoreExecutors.sameThreadExecutor(),
+                        Execs.directExecutor(),
                         Lists.transform(
                             segments,
                             new Function<Segment, QueryRunner>()
@@ -635,7 +635,7 @@ public class AggregationTestHelper implements Closeable
         toolChest
     );
 
-    return baseRunner.run(QueryPlus.wrap(query), Maps.newHashMap());
+    return baseRunner.run(QueryPlus.wrap(query), new HashMap<>());
   }
 
   public QueryRunner<Row> makeStringSerdeQueryRunner(
@@ -650,7 +650,7 @@ public class AggregationTestHelper implements Closeable
       public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> map)
       {
         try {
-          Sequence<Row> resultSeq = baseRunner.run(queryPlus, Maps.newHashMap());
+          Sequence<Row> resultSeq = baseRunner.run(queryPlus, new HashMap<>());
           final Yielder yielder = resultSeq.toYielder(
               null,
               new YieldingAccumulator()

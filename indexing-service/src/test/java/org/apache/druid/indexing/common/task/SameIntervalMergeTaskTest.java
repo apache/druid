@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -53,6 +52,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -138,7 +138,7 @@ public class SameIntervalMergeTaskTest
     });
     // ensure LockTryAcquireAction is submitted
     Assert.assertTrue(isReady);
-    final List<DataSegment> segments = Lists.newArrayList();
+    final List<DataSegment> segments = new ArrayList<>();
 
     mergeTask.run(
         new TaskToolbox(

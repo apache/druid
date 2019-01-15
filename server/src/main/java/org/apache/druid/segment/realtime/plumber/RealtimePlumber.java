@@ -28,7 +28,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
@@ -36,7 +35,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.common.guava.ThreadRenamingCallable;
 import org.apache.druid.common.guava.ThreadRenamingRunnable;
-import org.apache.druid.common.utils.VMUtils;
 import org.apache.druid.concurrent.TaskThreadPriority;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -77,6 +75,7 @@ import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -86,6 +85,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -280,7 +280,7 @@ public class RealtimePlumber implements Plumber
   @Override
   public void persist(final Committer committer)
   {
-    final List<Pair<FireHydrant, Interval>> indexesToPersist = Lists.newArrayList();
+    final List<Pair<FireHydrant, Interval>> indexesToPersist = new ArrayList<>();
     for (Sink sink : sinks.values()) {
       if (sink.swappable()) {
         indexesToPersist.add(Pair.of(sink.swap(), sink.getInterval()));
@@ -331,13 +331,11 @@ public class RealtimePlumber implements Plumber
             handed off instead of individual segments being handed off (that is, if one of the set succeeds in handing
             off and the others fail, the real-time would believe that it needs to re-ingest the data).
              */
-            long persistThreadCpuTime = VMUtils.safeGetThreadCpuTime();
+            long persistThreadCpuTime = JvmUtils.safeGetThreadCpuTime();
             try {
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(
-                    persistHydrant(
-                        pair.lhs, schema, pair.rhs, metadataElems
-                    )
+                    persistHydrant(pair.lhs, schema, pair.rhs, metadataElems)
                 );
               }
               committer.run();
@@ -347,7 +345,7 @@ public class RealtimePlumber implements Plumber
               throw e;
             }
             finally {
-              metrics.incrementPersistCpuTime(VMUtils.safeGetThreadCpuTime() - persistThreadCpuTime);
+              metrics.incrementPersistCpuTime(JvmUtils.safeGetThreadCpuTime() - persistThreadCpuTime);
               metrics.incrementNumPersists();
               metrics.incrementPersistTimeMillis(persistStopwatch.elapsed(TimeUnit.MILLISECONDS));
               persistStopwatch.stop();
@@ -417,11 +415,11 @@ public class RealtimePlumber implements Plumber
                   }
                 }
               }
-              final long mergeThreadCpuTime = VMUtils.safeGetThreadCpuTime();
+              final long mergeThreadCpuTime = JvmUtils.safeGetThreadCpuTime();
               mergeStopwatch = Stopwatch.createStarted();
 
               final File mergedFile;
-              List<QueryableIndex> indexes = Lists.newArrayList();
+              List<QueryableIndex> indexes = new ArrayList<>();
               Closer closer = Closer.create();
               try {
                 for (FireHydrant fireHydrant : sink) {
@@ -449,7 +447,7 @@ public class RealtimePlumber implements Plumber
               }
 
               // emit merge metrics before publishing segment
-              metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
+              metrics.incrementMergeCpuTime(JvmUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
               metrics.incrementMergeTimeMillis(mergeStopwatch.elapsed(TimeUnit.MILLISECONDS));
 
               log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
@@ -627,7 +625,7 @@ public class RealtimePlumber implements Plumber
     Object metadata = null;
     long latestCommitTime = 0;
     for (File sinkDir : files) {
-      final Interval sinkInterval = Intervals.of(sinkDir.getName().replace("_", "/"));
+      final Interval sinkInterval = Intervals.of(sinkDir.getName().replace('_', '/'));
 
       //final File[] sinkFiles = sinkDir.listFiles();
       // To avoid reading and listing of "merged" dir
@@ -659,7 +657,7 @@ public class RealtimePlumber implements Plumber
           }
       );
       boolean isCorrupted = false;
-      List<FireHydrant> hydrants = Lists.newArrayList();
+      List<FireHydrant> hydrants = new ArrayList<>();
       for (File segmentDir : sinkFiles) {
         log.info("Loading previously persisted segment at [%s]", segmentDir);
 
@@ -853,7 +851,7 @@ public class RealtimePlumber implements Plumber
         minTimestampAsDate
     );
 
-    List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
+    List<Map.Entry<Long, Sink>> sinksToPush = new ArrayList<>();
     for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
       final Long intervalStart = entry.getKey();
       if (intervalStart < minTimestamp) {
@@ -923,14 +921,17 @@ public class RealtimePlumber implements Plumber
   protected File computeCorruptedFileDumpDir(File persistDir, DataSchema schema)
   {
     return new File(
-        persistDir.getAbsolutePath()
-                  .replace(schema.getDataSource(), "corrupted" + File.pathSeparator + schema.getDataSource())
+        StringUtils.replace(
+            persistDir.getAbsolutePath(),
+            schema.getDataSource(),
+            "corrupted" + File.pathSeparator + schema.getDataSource()
+        )
     );
   }
 
   protected File computePersistDir(DataSchema schema, Interval interval)
   {
-    return new File(computeBaseDir(schema), interval.toString().replace("/", "_"));
+    return new File(computeBaseDir(schema), interval.toString().replace('/', '_'));
   }
 
   /**

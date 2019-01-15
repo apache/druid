@@ -68,7 +68,7 @@ public class UtilsTest
     @Override
     public Object apply(Object input)
     {
-      return input.toString() + DUMMY_STRING;
+      return input + DUMMY_STRING;
     }
   }
 

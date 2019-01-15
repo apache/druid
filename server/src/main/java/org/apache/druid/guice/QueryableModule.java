@@ -30,9 +30,10 @@ import org.apache.druid.server.log.EmittingRequestLoggerProvider;
 import org.apache.druid.server.log.FileRequestLoggerProvider;
 import org.apache.druid.server.log.FilteredRequestLoggerProvider;
 import org.apache.druid.server.log.LoggingRequestLoggerProvider;
-import org.apache.druid.server.log.SwitchingRequestLoggerProvider;
+import org.apache.druid.server.log.NoopRequestLoggerProvider;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.RequestLoggerProvider;
+import org.apache.druid.server.log.SwitchingRequestLoggerProvider;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +46,12 @@ public class QueryableModule implements DruidModule
   public void configure(Binder binder)
   {
     binder.bind(RequestLogger.class).toProvider(RequestLoggerProvider.class).in(ManageLifecycle.class);
-    JsonConfigProvider.bind(binder, "druid.request.logging", RequestLoggerProvider.class);
+    JsonConfigProvider.bindWithDefault(
+        binder,
+        "druid.request.logging",
+        RequestLoggerProvider.class,
+        NoopRequestLoggerProvider.class
+    );
 
     binder.bind(QueryRunnerFactoryConglomerate.class)
           .to(DefaultQueryRunnerFactoryConglomerate.class)

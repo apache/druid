@@ -70,7 +70,10 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
             {
               connector.createRulesTable();
               SQLMetadataRuleManager.createDefaultRule(
-                  dbi, dbTables.getRulesTable(), config.getDefaultRule(), jsonMapper
+                  dbi,
+                  dbTables.getRulesTable(),
+                  config.getDefaultRule(),
+                  jsonMapper
               );
             }
 

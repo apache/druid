@@ -22,6 +22,7 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -33,34 +34,60 @@ public class ClientCompactQueryTuningConfig
   private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
-  private static final long DEFAULT_PUBLISH_TIMEOUT = 0;
+  private static final long DEFAULT_PUSH_TIMEOUT = 0;
 
+  @Nullable
+  private final Integer maxRowsPerSegment;
   private final int maxRowsInMemory;
   private final int maxTotalRows;
   private final IndexSpec indexSpec;
   private final int maxPendingPersists;
-  private final long publishTimeout;
+  private final long pushTimeout;
+
+  public static ClientCompactQueryTuningConfig from(
+      @Nullable UserCompactTuningConfig userCompactTuningConfig,
+      @Nullable Integer maxRowsPerSegment
+  )
+  {
+    return new ClientCompactQueryTuningConfig(
+        maxRowsPerSegment,
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxRowsInMemory(),
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxTotalRows(),
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getIndexSpec(),
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxPendingPersists(),
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getPushTimeout()
+    );
+  }
 
   @JsonCreator
   public ClientCompactQueryTuningConfig(
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-      @JsonProperty("publishTimeout") @Nullable Long publishTimeout
+      @JsonProperty("pushTimeout") @Nullable Long pushTimeout
   )
   {
+    this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
     this.maxTotalRows = maxTotalRows == null ? DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-    this.publishTimeout = publishTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : publishTimeout;
+    this.pushTimeout = pushTimeout == null ? DEFAULT_PUSH_TIMEOUT : pushTimeout;
   }
 
   @JsonProperty
   public String getType()
   {
     return "index";
+  }
+
+  @JsonProperty
+  @Nullable
+  public Integer getMaxRowsPerSegment()
+  {
+    return maxRowsPerSegment;
   }
 
   @JsonProperty
@@ -88,9 +115,9 @@ public class ClientCompactQueryTuningConfig
   }
 
   @JsonProperty
-  public long getPublishTimeout()
+  public long getPushTimeout()
   {
-    return publishTimeout;
+    return pushTimeout;
   }
 
   @Override
@@ -99,47 +126,41 @@ public class ClientCompactQueryTuningConfig
     if (this == o) {
       return true;
     }
-
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final ClientCompactQueryTuningConfig that = (ClientCompactQueryTuningConfig) o;
-
-    if (maxRowsInMemory != that.maxRowsInMemory) {
-      return false;
-    }
-
-    if (maxTotalRows != that.maxTotalRows) {
-      return false;
-    }
-
-    if (!indexSpec.equals(that.indexSpec)) {
-      return false;
-    }
-
-    if (maxPendingPersists != that.maxPendingPersists) {
-      return false;
-    }
-
-    return publishTimeout == that.publishTimeout;
+    ClientCompactQueryTuningConfig that = (ClientCompactQueryTuningConfig) o;
+    return maxRowsInMemory == that.maxRowsInMemory &&
+           maxTotalRows == that.maxTotalRows &&
+           maxPendingPersists == that.maxPendingPersists &&
+           pushTimeout == that.pushTimeout &&
+           Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
+           Objects.equals(indexSpec, that.indexSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, publishTimeout);
+    return Objects.hash(
+        maxRowsPerSegment,
+        maxRowsInMemory,
+        maxTotalRows,
+        indexSpec,
+        maxPendingPersists,
+        pushTimeout
+    );
   }
 
   @Override
   public String toString()
   {
     return "ClientCompactQueryTuningConfig{" +
-           "maxRowsInMemory='" + maxRowsInMemory +
-           ", maxTotalRows='" + maxTotalRows +
-           ", indexSpec='" + indexSpec +
-           ", maxPendingPersists='" + maxPendingPersists +
-           ", publishTimeout='" + publishTimeout +
-           "}";
+           "maxRowsPerSegment=" + maxRowsPerSegment +
+           ", maxRowsInMemory=" + maxRowsInMemory +
+           ", maxTotalRows=" + maxTotalRows +
+           ", indexSpec=" + indexSpec +
+           ", maxPendingPersists=" + maxPendingPersists +
+           ", pushTimeout=" + pushTimeout +
+           '}';
   }
 }

@@ -35,6 +35,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -70,8 +71,8 @@ public class ParseSpecTest
         ),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "b", "a")),
-            Lists.newArrayList(),
-            Lists.newArrayList()
+            new ArrayList<>(),
+            new ArrayList<>()
         ),
         ",",
         " ",
@@ -94,7 +95,7 @@ public class ParseSpecTest
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Arrays.asList("a", "B")),
             Collections.singletonList("B"),
-            Lists.newArrayList()
+            new ArrayList<>()
         ),
         ",",
         null,
@@ -117,7 +118,7 @@ public class ParseSpecTest
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Collections.singletonList("a")),
             Lists.newArrayList("B", "B"),
-            Lists.newArrayList()
+            new ArrayList<>()
         ),
         ",",
         null,
@@ -138,7 +139,7 @@ public class ParseSpecTest
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(Collections.singletonList("a")),
             Lists.newArrayList("B", "B"),
-            Lists.newArrayList()
+            new ArrayList<>()
         ),
         ",",
         null,

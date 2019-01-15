@@ -21,13 +21,11 @@ package org.apache.druid.sql.calcite.util;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -55,15 +53,17 @@ import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, Closeable
 {
   private final QueryRunnerFactoryConglomerate conglomerate;
-  private final Map<String, VersionedIntervalTimeline<String, Segment>> timelines = Maps.newHashMap();
-  private final List<Closeable> closeables = Lists.newArrayList();
-  private final List<DataSegment> segments = Lists.newArrayList();
+  private final Map<String, VersionedIntervalTimeline<String, Segment>> timelines = new HashMap<>();
+  private final List<Closeable> closeables = new ArrayList<>();
+  private final List<DataSegment> segments = new ArrayList<>();
 
   public SpecificSegmentsQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate)
   {
@@ -224,7 +224,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     return new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 FunctionalIterable
                     .create(specs)
                     .transformCat(

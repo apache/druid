@@ -19,9 +19,9 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -87,9 +87,7 @@ public class QueryResourceTest
   public static final QuerySegmentWalker testSegmentWalker = new QuerySegmentWalker()
   {
     @Override
-    public <T> QueryRunner<T> getQueryRunnerForIntervals(
-        Query<T> query, Iterable<Interval> intervals
-    )
+    public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
     {
       return new QueryRunner<T>()
       {
@@ -102,9 +100,7 @@ public class QueryResourceTest
     }
 
     @Override
-    public <T> QueryRunner<T> getQueryRunnerForSegments(
-        Query<T> query, Iterable<SegmentDescriptor> specs
-    )
+    public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
     {
       return getQueryRunnerForIntervals(null, null);
     }

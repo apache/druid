@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.TestObjectMapper;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.DateTimes;
@@ -45,13 +44,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  */
 public class DataSegmentTest
 {
   private static final ObjectMapper mapper = new TestObjectMapper();
-  private static final int TEST_VERSION = 0x7;
+  private static final int TEST_VERSION = 0x9;
 
   private static ShardSpec getShardSpec(final int partitionNum)
   {
@@ -241,7 +241,7 @@ public class DataSegmentTest
     List<DataSegment> shuffled = new ArrayList<>(Arrays.asList(sortedOrder));
     Collections.shuffle(shuffled);
 
-    Set<DataSegment> theSet = Sets.newTreeSet(DataSegment.bucketMonthComparator());
+    Set<DataSegment> theSet = new TreeSet<>(DataSegment.bucketMonthComparator());
     theSet.addAll(shuffled);
 
     int index = 0;

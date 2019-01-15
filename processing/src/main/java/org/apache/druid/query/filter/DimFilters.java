@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -63,18 +62,7 @@ public class DimFilters
 
   public static List<DimFilter> optimize(List<DimFilter> filters)
   {
-    return filterNulls(
-        Lists.transform(
-            filters, new Function<DimFilter, DimFilter>()
-            {
-              @Override
-              public DimFilter apply(DimFilter input)
-              {
-                return input.optimize();
-              }
-            }
-        )
-    );
+    return filterNulls(Lists.transform(filters, DimFilter::optimize));
   }
 
   public static List<DimFilter> filterNulls(List<DimFilter> optimized)

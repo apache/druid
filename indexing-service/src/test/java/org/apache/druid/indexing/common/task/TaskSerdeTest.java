@@ -45,10 +45,7 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
-import org.apache.druid.segment.realtime.plumber.Plumber;
-import org.apache.druid.segment.realtime.plumber.PlumberSchool;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -108,7 +105,7 @@ public class TaskSerdeTest
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
     Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
     Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNull(tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
   }
 
   @Test
@@ -119,7 +116,22 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
+    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
+    Assert.assertNull(tuningConfig.getNumShards());
+
+    tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\"}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+
+    tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\", \"maxRowsPerSegment\":10}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
     Assert.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
@@ -127,7 +139,7 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
@@ -135,7 +147,7 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
@@ -144,7 +156,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
+    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1}",
@@ -152,7 +164,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNull(tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
   }
 
   @Test
@@ -187,6 +199,7 @@ public class TaskSerdeTest
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
@@ -244,7 +257,7 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getMaxPendingPersists(), task2TuningConfig.getMaxPendingPersists());
     Assert.assertEquals(taskTuningConfig.getMaxRowsInMemory(), task2TuningConfig.getMaxRowsInMemory());
     Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
-    Assert.assertEquals(taskTuningConfig.getTargetPartitionSize(), task2TuningConfig.getTargetPartitionSize());
+    Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(
         taskTuningConfig.isForceExtendableShardSpecs(),
         task2TuningConfig.isForceExtendableShardSpecs()
@@ -273,6 +286,7 @@ public class TaskSerdeTest
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
@@ -468,16 +482,8 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new RealtimeIOConfig(
-                new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
-                {
-                  @Override
-                  public Plumber findPlumber(
-                      DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
-                  )
-                  {
-                    return null;
-                  }
-                },
+                new LocalFirehoseFactory(new File("lol"), "rofl", null),
+                (schema, config, metrics) -> null,
                 null
             ),
 

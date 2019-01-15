@@ -276,12 +276,7 @@ public class JdbcExtractionNamespaceTest
         }
     );
 
-    Closeable closeable = () -> {
-      if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
-        throw new IOException("Unable to stop future");
-      }
-    };
-    try (final Closeable c = closeable) {
+    try (final Closeable ignore = () -> setupFuture.cancel(true)) {
       handleRef = setupFuture.get(10, TimeUnit.SECONDS);
     }
     Assert.assertNotNull(handleRef);
@@ -519,7 +514,7 @@ public class JdbcExtractionNamespaceTest
   private void waitForUpdates(long timeout, long numUpdates) throws InterruptedException
   {
     long startTime = System.currentTimeMillis();
-    long pre = 0L;
+    long pre;
     updateLock.lockInterruptibly();
     try {
       pre = updates.get();
@@ -527,7 +522,7 @@ public class JdbcExtractionNamespaceTest
     finally {
       updateLock.unlock();
     }
-    long post = 0L;
+    long post;
     do {
       // Sleep to spare a few cpu cycles
       Thread.sleep(5);

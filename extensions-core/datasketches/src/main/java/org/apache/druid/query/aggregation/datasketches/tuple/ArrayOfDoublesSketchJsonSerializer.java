@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
@@ -35,7 +34,7 @@ public class ArrayOfDoublesSketchJsonSerializer extends JsonSerializer<ArrayOfDo
       final ArrayOfDoublesSketch sketch,
       final JsonGenerator generator,
       final SerializerProvider provider
-  ) throws IOException, JsonProcessingException
+  ) throws IOException
   {
     generator.writeBinary(sketch.toByteArray());
   }

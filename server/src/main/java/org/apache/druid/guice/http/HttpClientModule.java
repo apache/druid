@@ -19,7 +19,7 @@
 
 package org.apache.druid.guice.http;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Module;
@@ -51,9 +51,8 @@ public class HttpClientModule implements Module
     return new HttpClientModule("druid.global.http", EscalatedGlobal.class);
   }
 
-  private static Set<Class<? extends Annotation>> ESCALATING_ANNOTATIONS = Sets.newHashSet(
-      EscalatedGlobal.class, EscalatedClient.class
-  );
+  private static final Set<Class<? extends Annotation>> ESCALATING_ANNOTATIONS =
+      ImmutableSet.of(EscalatedGlobal.class, EscalatedClient.class);
 
   private final String propertyPrefix;
   private Annotation annotation = null;

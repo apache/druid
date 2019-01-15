@@ -19,10 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.yahoo.sketches.hll.Union;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
-
+import com.yahoo.sketches.hll.Union;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 

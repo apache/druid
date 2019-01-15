@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -38,6 +37,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 
 /**
  */
@@ -207,7 +207,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
       final Map<String, Object> overrides
   )
   {
-    Map<String, Object> overridden = Maps.newTreeMap();
+    Map<String, Object> overridden = new TreeMap<>();
     if (context != null) {
       overridden.putAll(context);
     }

@@ -98,12 +98,14 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     } else if (requestURI.startsWith(ARBITRARY_COORDINATOR_BASE_PATH)) {
       currentLeader = coordLeaderSelector.getCurrentLeader();
       request.setAttribute(
-          MODIFIED_PATH_ATTRIBUTE, request.getRequestURI().substring(ARBITRARY_COORDINATOR_BASE_PATH.length())
+          MODIFIED_PATH_ATTRIBUTE,
+          request.getRequestURI().substring(ARBITRARY_COORDINATOR_BASE_PATH.length())
       );
     } else if (requestURI.startsWith(ARBITRARY_OVERLORD_BASE_PATH)) {
       currentLeader = overlordLeaderSelector.getCurrentLeader();
       request.setAttribute(
-          MODIFIED_PATH_ATTRIBUTE, request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
+          MODIFIED_PATH_ATTRIBUTE,
+          request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
       );
     } else {
       handleBadRequest(response, StringUtils.format("Unsupported proxy destination [%s]", request.getRequestURI()));
@@ -126,7 +128,9 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
 
   @Override
   protected void sendProxyRequest(
-      HttpServletRequest clientRequest, HttpServletResponse proxyResponse, Request proxyRequest
+      HttpServletRequest clientRequest,
+      HttpServletResponse proxyResponse,
+      Request proxyRequest
   )
   {
     proxyRequest.timeout(httpClientConfig.getReadTimeout().getMillis(), TimeUnit.MILLISECONDS);

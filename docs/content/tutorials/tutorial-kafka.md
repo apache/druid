@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "Tutorial: Load streaming data from Kafka"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # Tutorial: Load streaming data from Kafka
 
@@ -15,13 +35,13 @@ don't need to have loaded any data yet.
 ## Download and start Kafka
 
 [Apache Kafka](http://kafka.apache.org/) is a high throughput message bus that works well with
-Druid.  For this tutorial, we will use Kafka 0.10.2.0. To download Kafka, issue the following
+Druid.  For this tutorial, we will use Kafka 0.10.2.2. To download Kafka, issue the following
 commands in your terminal:
 
 ```bash
-curl -O https://archive.apache.org/dist/kafka/0.10.2.0/kafka_2.11-0.10.2.0.tgz
-tar -xzf kafka_2.11-0.10.2.0.tgz
-cd kafka_2.11-0.10.2.0
+curl -O https://archive.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz
+tar -xzf kafka_2.12-0.10.2.2.tgz
+cd kafka_2.12-0.10.2.2
 ```
 
 Start a Kafka broker by running the following command in a new terminal:
@@ -57,7 +77,7 @@ Let's launch a console producer for our topic and send some data!
 In your Druid directory, run the following command:
 
 ```bash
-cd quickstart
+cd quickstart/tutorial
 gunzip -k wikiticker-2015-09-12-sampled.json.gz
 ```
 
@@ -65,7 +85,7 @@ In your Kafka directory, run the following command, where {PATH_TO_DRUID} is rep
 
 ```bash
 export KAFKA_OPTS="-Dfile.encoding=UTF-8"
-./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic wikipedia < {PATH_TO_DRUID}/quickstart/wikiticker-2015-09-12-sampled.json
+./bin/kafka-console-producer.sh --broker-list localhost:9092 --topic wikipedia < {PATH_TO_DRUID}/quickstart/tutorial/wikiticker-2015-09-12-sampled.json
 ```
 
 The previous command posted sample events to the *wikipedia* Kafka topic which were then ingested into Druid by the Kafka indexing service. You're now ready to run some queries!

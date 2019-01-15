@@ -345,9 +345,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   }
 
   @Override
-  protected Response.Listener newProxyResponseListener(
-      HttpServletRequest request, HttpServletResponse response
-  )
+  protected Response.Listener newProxyResponseListener(HttpServletRequest request, HttpServletResponse response)
   {
     final Query query = (Query) request.getAttribute(QUERY_ATTRIBUTE);
     if (query != null) {

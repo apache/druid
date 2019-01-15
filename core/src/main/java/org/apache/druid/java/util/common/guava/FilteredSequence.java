@@ -48,9 +48,8 @@ public class FilteredSequence<T> implements Sequence<T>
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
-    final FilteringYieldingAccumulator<OutType, T> filteringAccumulator = new FilteringYieldingAccumulator<>(
-        pred, accumulator
-    );
+    final FilteringYieldingAccumulator<OutType, T> filteringAccumulator =
+        new FilteringYieldingAccumulator<>(pred, accumulator);
 
     return wrapYielder(baseSequence.toYielder(initValue, filteringAccumulator), filteringAccumulator);
   }

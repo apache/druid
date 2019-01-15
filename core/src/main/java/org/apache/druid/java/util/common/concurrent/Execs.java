@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.concurrent;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import javax.annotation.Nullable;
@@ -38,9 +39,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class Execs
 {
+
   /**
    * Returns an ExecutorService which is terminated and shutdown from the beginning and not able to accept any tasks.
    */
@@ -131,7 +134,12 @@ public class Execs
       queue = new SynchronousQueue<>();
     }
     return new ThreadPoolExecutor(
-        1, 1, 0L, TimeUnit.MILLISECONDS, queue, makeThreadFactory(nameFormat, priority),
+        1,
+        1,
+        0L,
+        TimeUnit.MILLISECONDS,
+        queue,
+        makeThreadFactory(nameFormat, priority),
         new RejectedExecutionHandler()
         {
           @Override
@@ -146,5 +154,10 @@ public class Execs
           }
         }
     );
+  }
+
+  public static ListeningExecutorService directExecutor()
+  {
+    return new DirectExecutorService();
   }
 }

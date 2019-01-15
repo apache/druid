@@ -143,6 +143,20 @@ public class StringComparatorsTest
   }
 
   @Test
+  public void testVersionComparator()
+  {
+    commonTest(StringComparators.VERSION);
+
+    Assert.assertTrue(StringComparators.VERSION.compare("02", "002") == 0);
+    Assert.assertTrue(StringComparators.VERSION.compare("1.0", "2.0") < 0);
+    Assert.assertTrue(StringComparators.VERSION.compare("9.1", "10.0") < 0);
+    Assert.assertTrue(StringComparators.VERSION.compare("1.1.1", "2.0") < 0);
+    Assert.assertTrue(StringComparators.VERSION.compare("1.0-SNAPSHOT", "1.0") < 0);
+    Assert.assertTrue(StringComparators.VERSION.compare("2.0.1-xyz-1", "2.0.1-1-xyz") < 0);
+    Assert.assertTrue(StringComparators.VERSION.compare("1.0-SNAPSHOT", "1.0-Final") < 0);
+  }
+
+  @Test
   public void testLexicographicComparatorSerdeTest() throws IOException
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();

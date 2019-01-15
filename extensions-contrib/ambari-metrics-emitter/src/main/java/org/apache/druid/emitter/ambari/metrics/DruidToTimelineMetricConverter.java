@@ -30,7 +30,6 @@ import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
     @JsonSubTypes.Type(name = "all", value = SendAllTimelineEventConverter.class),
     @JsonSubTypes.Type(name = "whiteList", value = WhiteListBasedDruidToTimelineEventConverter.class)
 })
-
 public interface DruidToTimelineMetricConverter
 {
   /**

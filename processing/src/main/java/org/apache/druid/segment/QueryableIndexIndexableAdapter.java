@@ -243,7 +243,6 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           offset::getOffset
       );
 
-
       markedDimensionValueSelectors = dimensionHandlers
           .stream()
           .map(DimensionHandler::makeNewSettableEncodedValueSelector)

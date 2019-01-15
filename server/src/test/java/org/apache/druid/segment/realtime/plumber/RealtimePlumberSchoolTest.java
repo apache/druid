@@ -23,9 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
@@ -39,6 +37,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -73,12 +72,14 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class RealtimePlumberSchoolTest
@@ -91,7 +92,7 @@ public class RealtimePlumberSchoolTest
         new MessageTimeRejectionPolicyFactory()
     };
 
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
     for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
       constructors.add(new Object[]{rejectionPolicy, OffHeapMemorySegmentWriteOutMediumFactory.instance()});
       constructors.add(new Object[]{rejectionPolicy, TmpFileSegmentWriteOutMediumFactory.instance()});
@@ -115,7 +116,10 @@ public class RealtimePlumberSchoolTest
   private FireDepartmentMetrics metrics;
   private File tmpDir;
 
-  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  public RealtimePlumberSchoolTest(
+      RejectionPolicyFactory rejectionPolicy,
+      SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
+  )
   {
     this.rejectionPolicy = rejectionPolicy;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
@@ -214,12 +218,12 @@ public class RealtimePlumberSchoolTest
 
     realtimePlumberSchool = new RealtimePlumberSchool(
         emitter,
-        new DefaultQueryRunnerFactoryConglomerate(Maps.newHashMap()),
+        new DefaultQueryRunnerFactoryConglomerate(new HashMap<>()),
         dataSegmentPusher,
         announcer,
         segmentPublisher,
         handoffNotifierFactory,
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         TestHelper.getTestIndexMergerV9(segmentWriteOutMediumFactory),
         TestHelper.getTestIndexIO(),
         MapCache.create(0),
@@ -588,7 +592,7 @@ public class RealtimePlumberSchoolTest
       @Override
       public List<String> getDimensions()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
 
       @Override
@@ -606,7 +610,7 @@ public class RealtimePlumberSchoolTest
       @Override
       public List<String> getDimension(String dimension)
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
 
       @Override

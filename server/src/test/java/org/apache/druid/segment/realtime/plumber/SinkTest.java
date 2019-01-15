@@ -22,7 +22,6 @@ package org.apache.druid.segment.realtime.plumber;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
@@ -43,6 +42,7 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -100,7 +100,7 @@ public class SinkTest
           @Override
           public List<String> getDimensions()
           {
-            return Lists.newArrayList();
+            return new ArrayList<>();
           }
 
           @Override
@@ -118,7 +118,7 @@ public class SinkTest
           @Override
           public List<String> getDimension(String dimension)
           {
-            return Lists.newArrayList();
+            return new ArrayList<>();
           }
 
           @Override
@@ -154,7 +154,7 @@ public class SinkTest
           @Override
           public List<String> getDimensions()
           {
-            return Lists.newArrayList();
+            return new ArrayList<>();
           }
 
           @Override
@@ -172,7 +172,7 @@ public class SinkTest
           @Override
           public List<String> getDimension(String dimension)
           {
-            return Lists.newArrayList();
+            return new ArrayList<>();
           }
 
           @Override

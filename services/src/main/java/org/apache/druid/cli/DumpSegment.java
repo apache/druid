@@ -25,10 +25,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -49,6 +47,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -90,7 +89,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -142,7 +143,7 @@ public class DumpSegment extends GuiceRunnable
       title = "column",
       description = "Column to include, specify multiple times for multiple columns, or omit to include all columns.",
       required = false)
-  public List<String> columnNamesFromCli = Lists.newArrayList();
+  public List<String> columnNamesFromCli = new ArrayList<>();
 
   @Option(
       name = "--time-iso8601",
@@ -342,50 +343,49 @@ public class DumpSegment extends GuiceRunnable
           @Override
           public Object apply(final OutputStream out)
           {
-            try {
-              final JsonGenerator jg = objectMapper.getFactory().createGenerator(out);
-
+            try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
               jg.writeStartObject();
-              jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
-              jg.writeFieldName("bitmaps");
-              jg.writeStartObject();
+              {
+                jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
+                jg.writeFieldName("bitmaps");
+                jg.writeStartObject();
+                {
+                  for (final String columnName : columnNames) {
+                    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                    final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
 
-              for (final String columnName : columnNames) {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-                final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-
-                if (bitmapIndex == null) {
-                  jg.writeNullField(columnName);
-                } else {
-                  jg.writeFieldName(columnName);
-                  jg.writeStartObject();
-                  for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                    String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
-                    if (val != null) {
-                      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-                      if (decompressBitmaps) {
-                        jg.writeStartArray();
-                        final IntIterator iterator = bitmap.iterator();
-                        while (iterator.hasNext()) {
-                          final int rowNum = iterator.next();
-                          jg.writeNumber(rowNum);
-                        }
-                        jg.writeEndArray();
-                      } else {
-                        byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
-                        if (bytes != null) {
-                          jg.writeBinary(bytes);
+                    if (bitmapIndex == null) {
+                      jg.writeNullField(columnName);
+                    } else {
+                      jg.writeFieldName(columnName);
+                      jg.writeStartObject();
+                      for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
+                        String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
+                        if (val != null) {
+                          final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                          if (decompressBitmaps) {
+                            jg.writeStartArray();
+                            final IntIterator iterator = bitmap.iterator();
+                            while (iterator.hasNext()) {
+                              final int rowNum = iterator.next();
+                              jg.writeNumber(rowNum);
+                            }
+                            jg.writeEndArray();
+                          } else {
+                            byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                            if (bytes != null) {
+                              jg.writeBinary(bytes);
+                            }
+                          }
                         }
                       }
+                      jg.writeEndObject();
                     }
                   }
-                  jg.writeEndObject();
                 }
+                jg.writeEndObject();
               }
-
               jg.writeEndObject();
-              jg.writeEndObject();
-              jg.close();
             }
             catch (IOException e) {
               throw Throwables.propagate(e);
@@ -485,8 +485,8 @@ public class DumpSegment extends GuiceRunnable
     final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
     return factory
         .getToolchest()
-        .mergeResults(factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner)))
-        .run(QueryPlus.wrap(query), Maps.newHashMap());
+        .mergeResults(factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner)))
+        .run(QueryPlus.wrap(query), new HashMap<>());
   }
 
   private static <T> void evaluateSequenceForSideEffects(final Sequence<T> sequence)

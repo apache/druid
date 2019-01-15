@@ -82,12 +82,11 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
 
   @Override
   public QueryRunner<Result<TopNResultValue>> mergeRunners(
-      ExecutorService queryExecutor, Iterable<QueryRunner<Result<TopNResultValue>>> queryRunners
+      ExecutorService queryExecutor,
+      Iterable<QueryRunner<Result<TopNResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<>(
-        queryExecutor, queryWatcher, queryRunners
-    );
+    return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
   }
 
   @Override

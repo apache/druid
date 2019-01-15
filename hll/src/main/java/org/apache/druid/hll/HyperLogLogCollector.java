@@ -358,7 +358,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     short numNonZeroRegisters = addNibbleRegister(bucket, (byte) ((0xff & positionOf1) - registerOffset));
     setNumNonZeroRegisters(numNonZeroRegisters);
     if (numNonZeroRegisters == NUM_BUCKETS) {
-      setRegisterOffset(++registerOffset);
+      setRegisterOffset((byte) (registerOffset + 1));
       setNumNonZeroRegisters(decrementBuckets());
     }
   }
@@ -421,7 +421,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
         }
         if (numNonZero == NUM_BUCKETS) {
           numNonZero = decrementBuckets();
-          setRegisterOffset(++myOffset);
+          setRegisterOffset((byte) (myOffset + 1));
           setNumNonZeroRegisters(numNonZero);
         }
       } else { // dense
@@ -437,7 +437,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
         }
         if (numNonZero == NUM_BUCKETS) {
           numNonZero = decrementBuckets();
-          setRegisterOffset(++myOffset);
+          setRegisterOffset((byte) (myOffset + 1));
           setNumNonZeroRegisters(numNonZero);
         }
       }

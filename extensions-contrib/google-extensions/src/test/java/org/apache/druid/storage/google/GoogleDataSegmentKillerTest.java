@@ -40,7 +40,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 {
   private static final String bucket = "bucket";
   private static final String indexPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
-  private static final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf("/")) + "/descriptor.json";
+  private static final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf('/')) + "/descriptor.json";
 
   private static final DataSegment dataSegment = new DataSegment(
       "test",

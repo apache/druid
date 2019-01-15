@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -32,6 +31,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -64,6 +64,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ *
  */
 public class HttpServerInventoryViewTest
 {
@@ -197,22 +198,18 @@ public class HttpServerInventoryViewTest
     );
 
     httpServerInventoryView.registerSegmentCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         new ServerView.SegmentCallback()
         {
           @Override
-          public ServerView.CallbackAction segmentAdded(
-              DruidServerMetadata server, DataSegment segment
-          )
+          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
             segmentAddLathces.get(segment.getIdentifier()).countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
 
           @Override
-          public ServerView.CallbackAction segmentRemoved(
-              DruidServerMetadata server, DataSegment segment
-          )
+          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
             segmentDropLatches.get(segment.getIdentifier()).countDown();
             return ServerView.CallbackAction.CONTINUE;
@@ -229,7 +226,7 @@ public class HttpServerInventoryViewTest
 
     final CountDownLatch serverRemovedCalled = new CountDownLatch(1);
     httpServerInventoryView.registerServerRemovedCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         new ServerView.ServerRemovedCallback()
         {
           @Override
@@ -258,8 +255,10 @@ public class HttpServerInventoryViewTest
     segmentDropLatches.get(segment2.getIdentifier()).await();
 
     DruidServer druidServer = httpServerInventoryView.getInventoryValue("host:8080");
-    Assert.assertEquals(ImmutableMap.of(segment3.getIdentifier(), segment3, segment4.getIdentifier(), segment4),
-                        druidServer.getSegments());
+    Assert.assertEquals(
+        ImmutableMap.of(segment3.getIdentifier(), segment3, segment4.getIdentifier(), segment4),
+        druidServer.getSegments()
+    );
 
     druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));
 
@@ -285,6 +284,7 @@ public class HttpServerInventoryViewTest
     public void registerListener(Listener listener)
     {
       listener.nodesAdded(ImmutableList.of());
+      listener.nodeViewInitialized();
       this.listener = listener;
     }
   }
@@ -302,7 +302,8 @@ public class HttpServerInventoryViewTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler
     )
     {
       throw new UnsupportedOperationException("Not Implemented.");
@@ -310,7 +311,9 @@ public class HttpServerInventoryViewTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler, Duration duration
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+        Duration duration
     )
     {
       if (requestNum.getAndIncrement() == 0) {
@@ -320,7 +323,10 @@ public class HttpServerInventoryViewTest
 
       if (requestNum.get() == 2) {
         //fail scenario where request is sent to server but we got an unexpected response.
-        HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        HttpResponse httpResponse = new DefaultHttpResponse(
+            HttpVersion.HTTP_1_1,
+            HttpResponseStatus.INTERNAL_SERVER_ERROR
+        );
         httpResponse.setContent(ChannelBuffers.buffer(0));
         httpResponseHandler.handleResponse(httpResponse, null);
         return Futures.immediateFailedFuture(new RuntimeException("server error"));

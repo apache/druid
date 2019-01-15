@@ -21,7 +21,6 @@ package org.apache.druid.sql;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.tools.RelConversionException;
@@ -47,10 +46,10 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
-import org.apache.druid.sql.http.SqlQuery;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -61,7 +60,7 @@ import java.util.concurrent.TimeUnit;
  * It ensures that a SQL query goes through the following stages, in the proper order:
  *
  * <ol>
- * <li>Initialization ({@link #initialize(SqlQuery)} or {@link #initialize(String, Map)})</li>
+ * <li>Initialization ({@link #initialize(String, Map)})</li>
  * <li>Planning ({@link #plan(HttpServletRequest)} or {@link #plan(AuthenticationResult)})</li>
  * <li>Authorization ({@link #authorize()})</li>
  * <li>Execution ({@link #execute()})</li>
@@ -107,16 +106,6 @@ public class SqlLifecycle
     this.startNs = startNs;
   }
 
-  public String initialize(SqlQuery sqlQuery)
-  {
-    synchronized (lock) {
-      transition(State.NEW, State.INITIALIZED);
-      this.sql = sqlQuery.getQuery();
-      this.queryContext = contextWithSqlId(sqlQuery.getContext());
-      return sqlQueryId();
-    }
-  }
-
   public String initialize(String sql, Map<String, Object> queryContext)
   {
     synchronized (lock) {
@@ -129,7 +118,7 @@ public class SqlLifecycle
 
   private Map<String, Object> contextWithSqlId(Map<String, Object> queryContext)
   {
-    Map<String, Object> newContext = Maps.newHashMap();
+    Map<String, Object> newContext = new HashMap<>();
     if (queryContext != null) {
       newContext.putAll(queryContext);
     }

@@ -24,16 +24,35 @@ import org.apache.druid.server.RequestLogLine;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TestRequestLogger implements RequestLogger
 {
   private final List<RequestLogLine> nativeQuerylogs;
   private final List<RequestLogLine> sqlQueryLogs;
+  private final AtomicBoolean started = new AtomicBoolean();
 
   public TestRequestLogger()
   {
     this.nativeQuerylogs = new ArrayList<>();
     this.sqlQueryLogs = new ArrayList<>();
+  }
+
+  @Override
+  public void start()
+  {
+    started.set(true);
+  }
+
+  @Override
+  public void stop()
+  {
+    started.set(false);
+  }
+
+  public boolean isStarted()
+  {
+    return started.get();
   }
 
   @Override

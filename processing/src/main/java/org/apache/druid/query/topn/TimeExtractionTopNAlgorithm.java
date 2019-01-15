@@ -19,13 +19,13 @@
 
 package org.apache.druid.query.topn;
 
-import com.google.common.collect.Maps;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<String, Aggregator[]>, TopNParams>
@@ -65,13 +65,11 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
   @Override
   protected Map<String, Aggregator[]> makeDimValAggregateStore(TopNParams params)
   {
-    return Maps.newHashMap();
+    return new HashMap<>();
   }
 
   @Override
-  protected long scanAndAggregate(
-      TopNParams params, int[] dimValSelector, Map<String, Aggregator[]> aggregatesStore
-  )
+  protected long scanAndAggregate(TopNParams params, int[] dimValSelector, Map<String, Aggregator[]> aggregatesStore)
   {
     if (params.getCardinality() < 0) {
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");

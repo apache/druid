@@ -60,26 +60,6 @@ public class Comparators
   }
 
   /**
-   * This is a "reverse" comparator.  Positive becomes negative, negative becomes positive and 0 (equal) stays the same.
-   * This was poorly named as "inverse" as it's not really inverting a true/false relationship
-   *
-   * @param baseComp
-   * @param <T>
-   * @return
-   */
-  public static <T> Comparator<T> inverse(final Comparator<T> baseComp)
-  {
-    return new Comparator<T>()
-    {
-      @Override
-      public int compare(T t, T t1)
-      {
-        return baseComp.compare(t1, t);
-      }
-    };
-  }
-
-  /**
    * Use Guava Ordering.natural() instead
    *
    * @param <T>

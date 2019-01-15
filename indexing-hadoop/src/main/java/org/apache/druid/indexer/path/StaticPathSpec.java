@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -35,6 +34,7 @@ import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 
@@ -113,7 +113,7 @@ public class StaticPathSpec implements PathSpec
     // MultipleInputs.addInputPath(job, path, inputFormatClassToUse)
     // but have to handle hadoop glob path ourselves correctly
     // This change and HadoopGlobPathSplitter.java can be removed once the hadoop issue is fixed
-    Set<String> pathStrings = Sets.newLinkedHashSet();
+    Set<String> pathStrings = new LinkedHashSet<>();
     for (String path : paths) {
       Iterables.addAll(pathStrings, HadoopGlobPathSplitter.splitGlob(path));
     }

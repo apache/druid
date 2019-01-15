@@ -88,8 +88,8 @@ public class TopNQueryBuilder
     querySegmentSpec = null;
     dimFilter = null;
     granularity = Granularities.ALL;
-    aggregatorSpecs = Lists.newArrayList();
-    postAggregatorSpecs = Lists.newArrayList();
+    aggregatorSpecs = new ArrayList<>();
+    postAggregatorSpecs = new ArrayList<>();
     context = null;
   }
 

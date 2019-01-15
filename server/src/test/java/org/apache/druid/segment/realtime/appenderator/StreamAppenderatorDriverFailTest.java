@@ -468,7 +468,9 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
     @Override
     public ListenableFuture<SegmentsAndMetadata> push(
-        Collection<SegmentIdentifier> identifiers, Committer committer, boolean useUniquePath
+        Collection<SegmentIdentifier> identifiers,
+        Committer committer,
+        boolean useUniquePath
     )
     {
       if (pushEnabled) {
@@ -527,17 +529,13 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
 
     @Override
-    public <T> QueryRunner<T> getQueryRunnerForIntervals(
-        Query<T> query, Iterable<Interval> intervals
-    )
+    public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public <T> QueryRunner<T> getQueryRunnerForSegments(
-        Query<T> query, Iterable<SegmentDescriptor> specs
-    )
+    public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
     {
       throw new UnsupportedOperationException();
     }

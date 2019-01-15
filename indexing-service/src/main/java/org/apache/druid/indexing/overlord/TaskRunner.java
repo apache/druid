@@ -27,6 +27,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -81,8 +82,14 @@ public interface TaskRunner
    * currently-running tasks.
    *
    * @param taskid task ID to clean up resources for
+   * @param reason reason to kill this task
    */
-  void shutdown(String taskid);
+  void shutdown(String taskid, String reason);
+
+  default void shutdown(String taskid, String reasonFormat, Object... args)
+  {
+    shutdown(taskid, StringUtils.format(reasonFormat, args));
+  }
 
   /**
    * Stop this task runner. This may block until currently-running tasks can be gracefully stopped. After calling

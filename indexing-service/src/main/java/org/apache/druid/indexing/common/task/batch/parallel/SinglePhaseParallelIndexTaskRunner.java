@@ -390,10 +390,11 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
         .stream()
         .flatMap(report -> report.getSegments().stream())
         .collect(Collectors.toSet());
-    final boolean published = publisher.publishSegments(segmentsToPublish, null).isSuccess();
+    final boolean published = segmentsToPublish.isEmpty()
+                              || publisher.publishSegments(segmentsToPublish, null).isSuccess();
 
     if (published) {
-      log.info("Published segments");
+      log.info("Published [%d] segments", segmentsToPublish.size());
     } else {
       log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
       final Set<SegmentIdentifier> segmentsIdentifiers = segmentsMap

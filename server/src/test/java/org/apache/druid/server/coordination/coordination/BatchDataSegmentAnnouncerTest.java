@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -35,6 +34,7 @@ import org.apache.curator.test.TestingCluster;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
@@ -51,12 +51,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ *
  */
 public class BatchDataSegmentAnnouncerTest
 {
@@ -96,7 +98,7 @@ public class BatchDataSegmentAnnouncerTest
 
     announcer = new Announcer(
         cf,
-        MoreExecutors.sameThreadExecutor()
+        Execs.directExecutor()
     );
     announcer.start();
 
@@ -151,7 +153,7 @@ public class BatchDataSegmentAnnouncerTest
         jsonMapper
     );
 
-    testSegments = Sets.newHashSet();
+    testSegments = new HashSet<>();
     for (int i = 0; i < 100; i++) {
       testSegments.add(makeSegment(i));
     }
@@ -305,7 +307,7 @@ public class BatchDataSegmentAnnouncerTest
 
     Assert.assertEquals(2, zNodes.size());
 
-    Set<DataSegment> allSegments = Sets.newHashSet();
+    Set<DataSegment> allSegments = new HashSet<>();
     for (String zNode : zNodes) {
       allSegments.addAll(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
     }
@@ -391,7 +393,7 @@ public class BatchDataSegmentAnnouncerTest
         throw Throwables.propagate(e);
       }
 
-      return Sets.newHashSet();
+      return new HashSet<>();
     }
   }
 }

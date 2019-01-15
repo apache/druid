@@ -173,11 +173,12 @@ public class CliPeon extends GuiceRunnable
                 Key.get(RowIngestionMetersFactory.class),
                 Key.get(DropwizardRowIngestionMetersFactory.class)
             );
-            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
-                binder, Key.get(RowIngestionMetersFactory.class)
-            );
-            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
-                                 .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder =
+                PolyBind.optionBinder(binder, Key.get(RowIngestionMetersFactory.class));
+            rowIngestionMetersHandlerProviderBinder
+                .addBinding("dropwizard")
+                .to(DropwizardRowIngestionMetersFactory.class)
+                .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             PolyBind.createChoice(
@@ -186,13 +187,16 @@ public class CliPeon extends GuiceRunnable
                 Key.get(ChatHandlerProvider.class),
                 Key.get(ServiceAnnouncingChatHandlerProvider.class)
             );
-            final MapBinder<String, ChatHandlerProvider> handlerProviderBinder = PolyBind.optionBinder(
-                binder, Key.get(ChatHandlerProvider.class)
-            );
-            handlerProviderBinder.addBinding("announce")
-                                 .to(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
-            handlerProviderBinder.addBinding("noop")
-                                 .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
+            final MapBinder<String, ChatHandlerProvider> handlerProviderBinder =
+                PolyBind.optionBinder(binder, Key.get(ChatHandlerProvider.class));
+            handlerProviderBinder
+                .addBinding("announce")
+                .to(ServiceAnnouncingChatHandlerProvider.class)
+                .in(LazySingleton.class);
+            handlerProviderBinder
+                .addBinding("noop")
+                .to(NoopChatHandlerProvider.class)
+                .in(LazySingleton.class);
             binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
 
             binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
@@ -272,21 +276,23 @@ public class CliPeon extends GuiceRunnable
                 Key.get(TaskActionClientFactory.class),
                 Key.get(RemoteTaskActionClientFactory.class)
             );
-            final MapBinder<String, TaskActionClientFactory> taskActionBinder = PolyBind.optionBinder(
-                binder, Key.get(TaskActionClientFactory.class)
-            );
-            taskActionBinder.addBinding("local")
-                            .to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
+            final MapBinder<String, TaskActionClientFactory> taskActionBinder =
+                PolyBind.optionBinder(binder, Key.get(TaskActionClientFactory.class));
+            taskActionBinder
+                .addBinding("local")
+                .to(LocalTaskActionClientFactory.class)
+                .in(LazySingleton.class);
             // all of these bindings are so that we can run the peon in local mode
             JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
             binder.bind(TaskStorage.class).to(HeapMemoryTaskStorage.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-            binder.bind(IndexerMetadataStorageCoordinator.class).to(IndexerSQLMetadataStorageCoordinator.class).in(
-                LazySingleton.class
-            );
-            taskActionBinder.addBinding("remote")
-                            .to(RemoteTaskActionClientFactory.class).in(LazySingleton.class);
-
+            binder.bind(IndexerMetadataStorageCoordinator.class)
+                  .to(IndexerSQLMetadataStorageCoordinator.class)
+                  .in(LazySingleton.class);
+            taskActionBinder
+                .addBinding("remote")
+                .to(RemoteTaskActionClientFactory.class)
+                .in(LazySingleton.class);
           }
 
           @Provides

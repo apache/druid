@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -27,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.calcite.DataContext;
@@ -67,6 +69,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -81,14 +84,13 @@ import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
-
   public static final String NAME = "sys";
   private static final String SEGMENTS_TABLE = "segments";
   private static final String SERVERS_TABLE = "servers";
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
 
-  private static final RowSignature SEGMENTS_SIGNATURE = RowSignature
+  static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
       .add("segment_id", ValueType.STRING)
       .add("datasource", ValueType.STRING)
@@ -96,7 +98,7 @@ public class SystemSchema extends AbstractSchema
       .add("end", ValueType.STRING)
       .add("size", ValueType.LONG)
       .add("version", ValueType.STRING)
-      .add("partition_num", ValueType.STRING)
+      .add("partition_num", ValueType.LONG)
       .add("num_replicas", ValueType.LONG)
       .add("num_rows", ValueType.LONG)
       .add("is_published", ValueType.LONG)
@@ -105,25 +107,25 @@ public class SystemSchema extends AbstractSchema
       .add("payload", ValueType.STRING)
       .build();
 
-  private static final RowSignature SERVERS_SIGNATURE = RowSignature
+  static final RowSignature SERVERS_SIGNATURE = RowSignature
       .builder()
       .add("server", ValueType.STRING)
       .add("host", ValueType.STRING)
-      .add("plaintext_port", ValueType.STRING)
-      .add("tls_port", ValueType.STRING)
+      .add("plaintext_port", ValueType.LONG)
+      .add("tls_port", ValueType.LONG)
       .add("server_type", ValueType.STRING)
       .add("tier", ValueType.STRING)
       .add("curr_size", ValueType.LONG)
       .add("max_size", ValueType.LONG)
       .build();
 
-  private static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
+  static final RowSignature SERVER_SEGMENTS_SIGNATURE = RowSignature
       .builder()
       .add("server", ValueType.STRING)
       .add("segment_id", ValueType.STRING)
       .build();
 
-  private static final RowSignature TASKS_SIGNATURE = RowSignature
+  static final RowSignature TASKS_SIGNATURE = RowSignature
       .builder()
       .add("task_id", ValueType.STRING)
       .add("type", ValueType.STRING)
@@ -135,8 +137,8 @@ public class SystemSchema extends AbstractSchema
       .add("duration", ValueType.LONG)
       .add("location", ValueType.STRING)
       .add("host", ValueType.STRING)
-      .add("plaintext_port", ValueType.STRING)
-      .add("tls_port", ValueType.STRING)
+      .add("plaintext_port", ValueType.LONG)
+      .add("tls_port", ValueType.LONG)
       .add("error_msg", ValueType.STRING)
       .build();
 
@@ -154,12 +156,24 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
-    this.tableMap = ImmutableMap.of(
-        SEGMENTS_TABLE, new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper),
-        SERVERS_TABLE, new ServersTable(serverView, authorizerMapper),
-        SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
-        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
-    );
+    this.tableMap = ImmutableMap.<String, Table>builder()
+        .put(
+            SEGMENTS_TABLE,
+            new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
+        )
+        .put(
+            SERVERS_TABLE,
+            new ServersTable(serverView, authorizerMapper)
+        )
+        .put(
+            SERVER_SEGMENTS_TABLE,
+            new ServerSegmentsTable(serverView, authorizerMapper)
+        )
+        .put(
+            TASKS_TABLE,
+            new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
+        )
+        .build();
   }
 
   @Override
@@ -236,7 +250,7 @@ public class SystemSchema extends AbstractSchema
             try {
               segmentsAlreadySeen.add(val.getIdentifier());
               final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getIdentifier());
-              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 1L;
+              long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
               if (partialSegmentData != null) {
                 numReplicas = partialSegmentData.getNumReplicas();
                 numRows = partialSegmentData.getNumRows();
@@ -246,11 +260,11 @@ public class SystemSchema extends AbstractSchema
               return new Object[]{
                   val.getIdentifier(),
                   val.getDataSource(),
-                  val.getInterval().getStart(),
-                  val.getInterval().getEnd(),
+                  val.getInterval().getStart().toString(),
+                  val.getInterval().getEnd().toString(),
                   val.getSize(),
                   val.getVersion(),
-                  val.getShardSpec().getPartitionNum(),
+                  Long.valueOf(val.getShardSpec().getPartitionNum()),
                   numReplicas,
                   numRows,
                   1L, //is_published is true for published segments
@@ -274,16 +288,17 @@ public class SystemSchema extends AbstractSchema
               if (segmentsAlreadySeen.contains(val.getKey().getIdentifier())) {
                 return null;
               }
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey().getIdentifier());
+              final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
               return new Object[]{
                   val.getKey().getIdentifier(),
                   val.getKey().getDataSource(),
-                  val.getKey().getInterval().getStart(),
-                  val.getKey().getInterval().getEnd(),
+                  val.getKey().getInterval().getStart().toString(),
+                  val.getKey().getInterval().getEnd().toString(),
                   val.getKey().getSize(),
                   val.getKey().getVersion(),
-                  val.getKey().getShardSpec().getPartitionNum(),
-                  partialSegmentDataMap.get(val.getKey().getIdentifier()) == null ? 0L
-                    : partialSegmentDataMap.get(val.getKey().getIdentifier()).getNumReplicas(),
+                  Long.valueOf(val.getKey().getShardSpec().getPartitionNum()),
+                  numReplicas,
                   val.getValue().getNumRows(),
                   val.getValue().isPublished(),
                   val.getValue().isAvailable(),
@@ -315,8 +330,13 @@ public class SystemSchema extends AbstractSchema
       Function<Entry<DataSegment, SegmentMetadataHolder>, Iterable<ResourceAction>> raGenerator = segment -> Collections
           .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource()));
 
-      final Iterable<Entry<DataSegment, SegmentMetadataHolder>> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult, () -> availableSegmentEntries, raGenerator, authorizerMapper);
+      final Iterable<Entry<DataSegment, SegmentMetadataHolder>> authorizedSegments =
+          AuthorizationUtils.filterAuthorizedResources(
+              authenticationResult,
+              () -> availableSegmentEntries,
+              raGenerator,
+              authorizerMapper
+          );
 
       return authorizedSegments.iterator();
     }
@@ -333,7 +353,11 @@ public class SystemSchema extends AbstractSchema
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
 
       final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult, () -> it, raGenerator, authorizerMapper);
+          authenticationResult,
+          () -> it,
+          raGenerator,
+          authorizerMapper
+      );
 
       return wrap(authorizedSegments.iterator(), it);
     }
@@ -393,7 +417,8 @@ public class SystemSchema extends AbstractSchema
     try {
       request = coordinatorClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/coordinator/v1/metadata/segments")
+          StringUtils.format("/druid/coordinator/v1/metadata/segments"),
+          false
       );
     }
     catch (IOException e) {
@@ -403,6 +428,7 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
+
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
     {
     });
@@ -412,7 +438,8 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper
+        jsonMapper,
+        responseHandler
     );
   }
 
@@ -451,16 +478,16 @@ public class SystemSchema extends AbstractSchema
           authorizerMapper
       );
       if (!access.isAllowed()) {
-        throw new ForbiddenException("Insufficient permission to view servers :" + access.toString());
+        throw new ForbiddenException("Insufficient permission to view servers :" + access);
       }
       final FluentIterable<Object[]> results = FluentIterable
           .from(druidServers)
           .transform(val -> new Object[]{
               val.getHost(),
-              val.getHost().split(":")[0],
-              val.getHostAndPort() == null ? -1 : val.getHostAndPort().split(":")[1],
-              val.getHostAndTlsPort() == null ? -1 : val.getHostAndTlsPort().split(":")[1],
-              val.getType(),
+              extractHost(val.getHost()),
+              (long) extractPort(val.getHostAndPort()),
+              (long) extractPort(val.getHostAndTlsPort()),
+              toStringOrNull(val.getType()),
               val.getTier(),
               val.getCurrSize(),
               val.getMaxSize()
@@ -569,24 +596,33 @@ public class SystemSchema extends AbstractSchema
             @Override
             public Object[] current()
             {
-              TaskStatusPlus task = it.next();
-              return new Object[]{task.getId(),
-                                  task.getType(),
-                                  task.getDataSource(),
-                                  task.getCreatedTime(),
-                                  task.getQueueInsertionTime(),
-                                  task.getStatusCode(),
-                                  task.getRunnerStatusCode(),
-                                  task.getDuration(),
-                                  task.getLocation().getHost() + ":" + (task.getLocation().getTlsPort()
-                                                                          == -1
-                                                                          ? task.getLocation()
-                                                                                .getPort()
-                                                                          : task.getLocation().getTlsPort()),
-                                  task.getLocation().getHost(),
-                                  task.getLocation().getPort(),
-                                  task.getLocation().getTlsPort(),
-                                  task.getErrorMsg()};
+              final TaskStatusPlus task = it.next();
+              final String hostAndPort;
+
+              if (task.getLocation().getHost() == null) {
+                hostAndPort = null;
+              } else {
+                final int port = task.getLocation().getTlsPort() >= 0
+                                 ? task.getLocation().getTlsPort()
+                                 : task.getLocation().getPort();
+
+                hostAndPort = HostAndPort.fromParts(task.getLocation().getHost(), port).toString();
+              }
+              return new Object[]{
+                  task.getId(),
+                  task.getType(),
+                  task.getDataSource(),
+                  toStringOrNull(task.getCreatedTime()),
+                  toStringOrNull(task.getQueueInsertionTime()),
+                  toStringOrNull(task.getStatusCode()),
+                  toStringOrNull(task.getRunnerStatusCode()),
+                  task.getDuration() == null ? 0L : task.getDuration(),
+                  hostAndPort,
+                  task.getLocation().getHost(),
+                  (long) task.getLocation().getPort(),
+                  (long) task.getLocation().getTlsPort(),
+                  task.getErrorMsg()
+              };
             }
 
             @Override
@@ -618,7 +654,10 @@ public class SystemSchema extends AbstractSchema
       return new TasksEnumerable(getTasks(druidLeaderClient, jsonMapper, responseHandler));
     }
 
-    private CloseableIterator<TaskStatusPlus> getAuthorizedTasks(JsonParserIterator<TaskStatusPlus> it, DataContext root)
+    private CloseableIterator<TaskStatusPlus> getAuthorizedTasks(
+        JsonParserIterator<TaskStatusPlus> it,
+        DataContext root
+    )
     {
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
@@ -627,7 +666,11 @@ public class SystemSchema extends AbstractSchema
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(task.getDataSource()));
 
       final Iterable<TaskStatusPlus> authorizedTasks = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult, () -> it, raGenerator, authorizerMapper);
+          authenticationResult,
+          () -> it,
+          raGenerator,
+          authorizerMapper
+      );
 
       return wrap(authorizedTasks.iterator(), it);
     }
@@ -646,7 +689,8 @@ public class SystemSchema extends AbstractSchema
     try {
       request = indexingServiceClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/indexer/v1/tasks")
+          StringUtils.format("/druid/indexer/v1/tasks"),
+          false
       );
     }
     catch (IOException e) {
@@ -656,6 +700,7 @@ public class SystemSchema extends AbstractSchema
         request,
         responseHandler
     );
+
     final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<TaskStatusPlus>()
     {
     });
@@ -665,7 +710,8 @@ public class SystemSchema extends AbstractSchema
         request.getUrl().toString(),
         null,
         request.getUrl().getHost(),
-        jsonMapper
+        jsonMapper,
+        responseHandler
     );
   }
 
@@ -702,4 +748,32 @@ public class SystemSchema extends AbstractSchema
     };
   }
 
+  @Nullable
+  private static String extractHost(@Nullable final String hostAndPort)
+  {
+    if (hostAndPort == null) {
+      return null;
+    }
+
+    return HostAndPort.fromString(hostAndPort).getHostText();
+  }
+
+  private static int extractPort(@Nullable final String hostAndPort)
+  {
+    if (hostAndPort == null) {
+      return -1;
+    }
+
+    return HostAndPort.fromString(hostAndPort).getPortOrDefault(-1);
+  }
+
+  @Nullable
+  private static String toStringOrNull(@Nullable final Object object)
+  {
+    if (object == null) {
+      return null;
+    }
+
+    return object.toString();
+  }
 }

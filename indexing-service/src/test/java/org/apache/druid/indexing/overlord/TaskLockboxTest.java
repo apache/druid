@@ -23,13 +23,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.TaskLockbox.TaskLockPosse;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -343,6 +349,46 @@ public class TaskLockboxTest
   }
 
   @Test
+  public void testSyncWithUnknownTaskTypesFromModuleNotLoaded() throws Exception
+  {
+    // ensure that if we don't know how to deserialize a task it won't explode the lockbox
+    // (or anything else that uses taskStorage.getActiveTasks() and doesn't expect null which is most things)
+    final TestDerbyConnector derbyConnector = derby.getConnector();
+    ObjectMapper loadedMapper = new DefaultObjectMapper().registerModule(new TheModule());
+    TaskStorage loadedTaskStorage = new MetadataTaskStorage(
+        derbyConnector,
+        new TaskStorageConfig(null),
+        new DerbyMetadataStorageActionHandlerFactory(
+            derbyConnector,
+            derby.metadataTablesConfigSupplier().get(),
+            loadedMapper
+        )
+    );
+
+    TaskLockbox theBox = new TaskLockbox(taskStorage);
+    TaskLockbox loadedBox = new TaskLockbox(loadedTaskStorage);
+
+    Task aTask = NoopTask.create();
+    taskStorage.insert(aTask, TaskStatus.running(aTask.getId()));
+    theBox.add(aTask);
+    loadedBox.add(aTask);
+
+    Task theTask = new MyModuleIsntLoadedTask("1", "yey", null, "foo");
+    loadedTaskStorage.insert(theTask, TaskStatus.running(theTask.getId()));
+    theBox.add(theTask);
+    loadedBox.add(theTask);
+
+    List<Task> tasks = taskStorage.getActiveTasks();
+    List<Task> tasksFromLoaded = loadedTaskStorage.getActiveTasks();
+
+    theBox.syncFromStorage();
+    loadedBox.syncFromStorage();
+
+    Assert.assertEquals(1, tasks.size());
+    Assert.assertEquals(2, tasksFromLoaded.size());
+  }
+
+  @Test
   public void testRevokedLockSyncFromStorage() throws EntryExistsException
   {
     final TaskLockbox originalBox = new TaskLockbox(taskStorage);
@@ -579,6 +625,48 @@ public class TaskLockboxTest
     Assert.assertTrue(lockbox.getAllLocks().isEmpty());
   }
 
+  @Test
+  public void testFindLockPosseAfterRevokeWithDifferentLockIntervals() throws EntryExistsException
+  {
+    final Task lowPriorityTask = NoopTask.create(0);
+    final Task highPriorityTask = NoopTask.create(10);
+
+    taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
+    taskStorage.insert(highPriorityTask, TaskStatus.running(highPriorityTask.getId()));
+    lockbox.add(lowPriorityTask);
+    lockbox.add(highPriorityTask);
+
+    Assert.assertTrue(
+        lockbox.tryLock(
+            TaskLockType.EXCLUSIVE,
+            lowPriorityTask, Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
+        ).isOk()
+    );
+
+    Assert.assertTrue(
+        lockbox.tryLock(
+            TaskLockType.EXCLUSIVE,
+            highPriorityTask, Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
+        ).isOk()
+    );
+
+    final TaskLockPosse highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+        highPriorityTask,
+        Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
+    );
+
+    Assert.assertTrue(highLockPosse.containsTask(highPriorityTask));
+    Assert.assertFalse(highLockPosse.getTaskLock().isRevoked());
+
+    final TaskLockPosse lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+        lowPriorityTask,
+        Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
+    );
+
+    Assert.assertTrue(lowLockPosse.containsTask(lowPriorityTask));
+    Assert.assertTrue(lowLockPosse.getTaskLock().isRevoked());
+  }
+
   private Set<TaskLock> getAllLocks(List<Task> tasks)
   {
     return tasks.stream()
@@ -646,6 +734,57 @@ public class TaskLockboxTest
     public boolean isRevoked()
     {
       return super.isRevoked();
+    }
+  }
+
+  private static String TASK_NAME = "myModuleIsntLoadedTask";
+
+  private static class TheModule extends SimpleModule
+  {
+    public TheModule()
+    {
+      registerSubtypes(new NamedType(MyModuleIsntLoadedTask.class, TASK_NAME));
+    }
+  }
+
+  private static class MyModuleIsntLoadedTask extends AbstractTask
+  {
+    private String someProp;
+
+    @JsonCreator
+    protected MyModuleIsntLoadedTask(
+        @JsonProperty("id") String id,
+        @JsonProperty("dataSource") String dataSource,
+        @JsonProperty("context") Map<String, Object> context,
+        @JsonProperty("someProp") String someProp
+    )
+    {
+      super(id, dataSource, context);
+      this.someProp = someProp;
+    }
+
+    @JsonProperty
+    public String getSomeProp()
+    {
+      return someProp;
+    }
+
+    @Override
+    public String getType()
+    {
+      return TASK_NAME;
+    }
+
+    @Override
+    public boolean isReady(TaskActionClient taskActionClient)
+    {
+      return true;
+    }
+
+    @Override
+    public TaskStatus run(TaskToolbox toolbox)
+    {
+      return TaskStatus.failure("how?");
     }
   }
 }

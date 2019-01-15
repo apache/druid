@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -137,8 +136,8 @@ public class IndexTaskTest
       ),
       new DimensionsSpec(
           DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")),
-          Lists.newArrayList(),
-          Lists.newArrayList()
+          new ArrayList<>(),
+          new ArrayList<>()
       ),
       null,
       Arrays.asList("ts", "dim", "val"),
@@ -243,7 +242,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfigWithTargetPartitionSize(2, false, true),
+            createTuningConfigWithMaxRowsPerSegment(2, false, true),
             false
         ),
         null,
@@ -289,7 +288,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfigWithTargetPartitionSize(2, true, true),
+            createTuningConfigWithMaxRowsPerSegment(2, true, true),
             false
         ),
         null,
@@ -341,7 +340,7 @@ public class IndexTaskTest
                 )
             ),
             null,
-            createTuningConfigWithTargetPartitionSize(2, true, false),
+            createTuningConfigWithMaxRowsPerSegment(2, true, false),
             false
         ),
         null,
@@ -385,7 +384,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
             ),
-            createTuningConfigWithTargetPartitionSize(10, false, true),
+            createTuningConfigWithMaxRowsPerSegment(10, false, true),
             false
         ),
         null,
@@ -422,7 +421,7 @@ public class IndexTaskTest
                 Granularities.HOUR,
                 Collections.singletonList(Intervals.of("2014-01-01T08:00:00Z/2014-01-01T09:00:00Z"))
             ),
-            createTuningConfigWithTargetPartitionSize(50, false, true),
+            createTuningConfigWithMaxRowsPerSegment(50, false, true),
             false
         ),
         null,
@@ -568,7 +567,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfigWithTargetPartitionSize(2, false, false),
+            createTuningConfigWithMaxRowsPerSegment(2, false, false),
             true
         ),
         null,
@@ -618,7 +617,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfigWithTargetPartitionSize(2, false, true),
+            createTuningConfigWithMaxRowsPerSegment(2, false, true),
             false
         ),
         null,
@@ -672,8 +671,8 @@ public class IndexTaskTest
                 ),
                 new DimensionsSpec(
                     null,
-                    Lists.newArrayList(),
-                    Lists.newArrayList()
+                    new ArrayList<>(),
+                    new ArrayList<>()
                 ),
                 null,
                 null,
@@ -681,7 +680,7 @@ public class IndexTaskTest
                 0
             ),
             null,
-            createTuningConfigWithTargetPartitionSize(2, false, true),
+            createTuningConfigWithMaxRowsPerSegment(2, false, true),
             false
         ),
         null,
@@ -724,8 +723,8 @@ public class IndexTaskTest
                 ),
                 new DimensionsSpec(
                     null,
-                    Lists.newArrayList(),
-                    Lists.newArrayList()
+                    new ArrayList<>(),
+                    new ArrayList<>()
                 ),
                 null,
                 Arrays.asList("time", "dim", "val"),
@@ -733,7 +732,7 @@ public class IndexTaskTest
                 0
             ),
             null,
-            createTuningConfigWithTargetPartitionSize(2, false, true),
+            createTuningConfigWithMaxRowsPerSegment(2, false, true),
             false
         ),
         null,
@@ -933,8 +932,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "dim", "val"),
@@ -986,8 +985,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "dim", "val"),
@@ -1043,6 +1042,7 @@ public class IndexTaskTest
     }
 
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
+        null,
         2,
         null,
         null,
@@ -1078,8 +1078,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             null
@@ -1165,6 +1165,7 @@ public class IndexTaskTest
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
+        null,
         2,
         null,
         null,
@@ -1200,8 +1201,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
@@ -1280,6 +1281,7 @@ public class IndexTaskTest
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
+        null,
         2,
         null,
         null,
@@ -1315,8 +1317,8 @@ public class IndexTaskTest
                     new LongDimensionSchema("dimLong"),
                     new FloatDimensionSchema("dimFloat")
                 ),
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "dim", "dimLong", "dimFloat", "val"),
@@ -1484,8 +1486,8 @@ public class IndexTaskTest
             ),
             new DimensionsSpec(
                 null,
-                Lists.newArrayList(),
-                Lists.newArrayList()
+                new ArrayList<>(),
+                new ArrayList<>()
             ),
             null,
             Arrays.asList("time", "", ""),
@@ -1551,7 +1553,8 @@ public class IndexTaskTest
 
         if (taskAction instanceof LockAcquireAction) {
           return (RetType) new TaskLock(
-              TaskLockType.EXCLUSIVE, "groupId",
+              TaskLockType.EXCLUSIVE,
+              "groupId",
               "test",
               ((LockAcquireAction) taskAction).getInterval(),
               DateTimes.nowUtc().toString(),
@@ -1700,14 +1703,14 @@ public class IndexTaskTest
     );
   }
 
-  private static IndexTuningConfig createTuningConfigWithTargetPartitionSize(
-      int targetPartitionSize,
+  private static IndexTuningConfig createTuningConfigWithMaxRowsPerSegment(
+      int maxRowsPerSegment,
       boolean forceExtendableShardSpecs,
       boolean forceGuaranteedRollup
   )
   {
     return createTuningConfig(
-        targetPartitionSize,
+        maxRowsPerSegment,
         1,
         null,
         null,
@@ -1739,8 +1742,8 @@ public class IndexTaskTest
     );
   }
 
-  private static IndexTuningConfig createTuningConfig(
-      @Nullable Integer targetPartitionSize,
+  static IndexTuningConfig createTuningConfig(
+      @Nullable Integer maxRowsPerSegment,
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
       @Nullable Long maxTotalRows,
@@ -1752,7 +1755,8 @@ public class IndexTaskTest
   )
   {
     return new IndexTask.IndexTuningConfig(
-        targetPartitionSize,
+        null,
+        maxRowsPerSegment,
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,

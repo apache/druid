@@ -71,6 +71,30 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
       this.sqlQueryTimeThresholdMs = sqlQueryTimeThresholdMs;
     }
 
+    public long getQueryTimeThresholdMs()
+    {
+      return queryTimeThresholdMs;
+    }
+
+    public RequestLogger getDelegate()
+    {
+      return logger;
+    }
+
+    @LifecycleStart
+    @Override
+    public void start() throws Exception
+    {
+      logger.start();
+    }
+
+    @LifecycleStop
+    @Override
+    public void stop()
+    {
+      logger.stop();
+    }
+
     @Override
     public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
     {
@@ -87,20 +111,6 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
       if (sqlQueryTime != null && ((Number) sqlQueryTime).longValue() >= sqlQueryTimeThresholdMs) {
         logger.logSqlQuery(requestLogLine);
       }
-    }
-
-    @LifecycleStart
-    @Override
-    public void start() throws Exception
-    {
-      logger.start();
-    }
-
-    @LifecycleStop
-    @Override
-    public void stop()
-    {
-      logger.stop();
     }
 
     @Override

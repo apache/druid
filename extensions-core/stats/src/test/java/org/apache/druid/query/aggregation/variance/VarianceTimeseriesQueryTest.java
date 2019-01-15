@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -59,13 +60,13 @@ public class VarianceTimeseriesQueryTest
   public void testTimeseriesWithNullFilterOnNonExistentDimension()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(VarianceTestHelper.dataSource)
-                                  .granularity(VarianceTestHelper.dayGran)
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters("bobby", null)
-                                  .intervals(VarianceTestHelper.firstToThird)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(VarianceTestHelper.commonPlusVarAggregators)
                                   .postAggregators(
-                                      VarianceTestHelper.addRowsIndexConstant,
+                                      QueryRunnerTestHelper.addRowsIndexConstant,
                                       VarianceTestHelper.stddevOfIndexPostAggr
                                   )
                                   .descending(descending)
@@ -75,11 +76,11 @@ public class VarianceTimeseriesQueryTest
         new Result<>(
             DateTimes.of("2011-04-01"),
             new TimeseriesResultValue(
-                VarianceTestHelper.of(
+                QueryRunnerTestHelper.of(
                     "rows", 13L,
                     "index", 6626.151596069336,
                     "addRowsIndexConstant", 6640.151596069336,
-                    "uniques", VarianceTestHelper.UNIQUES_9,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9,
                     "index_var", descending ? 368885.6897238851 : 368885.689155086,
                     "index_stddev", descending ? 607.3596049490657 : 607.35960448081
                 )
@@ -88,11 +89,11 @@ public class VarianceTimeseriesQueryTest
         new Result<>(
             DateTimes.of("2011-04-02"),
             new TimeseriesResultValue(
-                VarianceTestHelper.of(
+                QueryRunnerTestHelper.of(
                     "rows", 13L,
                     "index", 5833.2095947265625,
                     "addRowsIndexConstant", 5847.2095947265625,
-                    "uniques", VarianceTestHelper.UNIQUES_9,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9,
                     "index_var", descending ? 259061.6037088883 : 259061.60216419376,
                     "index_stddev", descending ? 508.9809463122252 : 508.98094479478675
                 )

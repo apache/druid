@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.collect.Utils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -93,7 +94,7 @@ public class RegexParser implements Parser<String, Object>
         throw new ParseException("Incorrect Regex: %s . No match found.", pattern);
       }
 
-      List<String> values = Lists.newArrayList();
+      List<String> values = new ArrayList<>();
       for (int i = 1; i <= matcher.groupCount(); i++) {
         values.add(matcher.group(i));
       }

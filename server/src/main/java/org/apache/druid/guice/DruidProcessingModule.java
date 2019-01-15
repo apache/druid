@@ -34,7 +34,6 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
-import org.apache.druid.common.utils.VMUtils;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Processing;
@@ -49,6 +48,7 @@ import org.apache.druid.query.ExecutorServiceMonitor;
 import org.apache.druid.query.MetricsEmittingExecutorService;
 import org.apache.druid.query.PrioritizedExecutorService;
 import org.apache.druid.server.metrics.MetricsModule;
+import org.apache.druid.utils.JvmUtils;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
@@ -138,7 +138,7 @@ public class DruidProcessingModule implements Module
   private void verifyDirectMemory(DruidProcessingConfig config)
   {
     try {
-      final long maxDirectMemory = VMUtils.getMaxDirectMemory();
+      final long maxDirectMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
       final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
                                 (config.getNumMergeBuffers() + config.getNumThreads() + 1);
 

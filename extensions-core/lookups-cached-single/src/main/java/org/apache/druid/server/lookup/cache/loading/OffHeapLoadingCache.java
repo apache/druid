@@ -192,7 +192,7 @@ public class OffHeapLoadingCache<K, V> implements LoadingCache<K, V>
   public void close()
   {
     if (!closed.getAndSet(true)) {
-      DB.delete(String.valueOf(name));
+      DB.delete(name);
     }
   }
 

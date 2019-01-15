@@ -97,8 +97,7 @@ public class StaticCloudFilesFirehoseFactory extends PrefetchableTextFilesFireho
     log.info("Retrieving file from region[%s], container[%s] and path [%s]",
              region, container, path
     );
-    CloudFilesObjectApiProxy objectApi = new CloudFilesObjectApiProxy(
-        cloudFilesApi, region, container);
+    CloudFilesObjectApiProxy objectApi = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
     return new CloudFilesByteSource(objectApi, path);
   }
 

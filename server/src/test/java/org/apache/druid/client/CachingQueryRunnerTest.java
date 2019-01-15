@@ -72,6 +72,7 @@ import org.junit.runners.Parameterized;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -253,6 +254,11 @@ public class CachingQueryRunnerTest
       }
 
       @Override
+      public void close() throws IOException
+      {
+      }
+
+      @Override
       public CacheStats getStats()
       {
         return null;
@@ -400,12 +406,12 @@ public class CachingQueryRunnerTest
 
   private List<Result> makeTopNResults(boolean cachedResults, Object... objects)
   {
-    List<Result> retVal = Lists.newArrayList();
+    List<Result> retVal = new ArrayList<>();
     int index = 0;
     while (index < objects.length) {
       DateTime timestamp = (DateTime) objects[index++];
 
-      List<Map<String, Object>> values = Lists.newArrayList();
+      List<Map<String, Object>> values = new ArrayList<>();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
         if (objects.length - index < 3) {
           throw new ISE(

@@ -67,6 +67,7 @@ ADD client_tls client_tls
 # - 8083, 8283: HTTP, HTTPS (historical)
 # - 8090, 8290: HTTP, HTTPS (overlord)
 # - 8091, 8291: HTTP, HTTPS (middlemanager)
+# - 8888-8891, 9088-9091: HTTP, HTTPS (routers)
 # - 3306: MySQL
 # - 2181 2888 3888: ZooKeeper
 # - 8100 8101 8102 8103 8104 8105 : peon ports

@@ -22,8 +22,8 @@ package org.apache.druid.server.router;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
@@ -35,10 +35,12 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.http.RulesResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,7 +71,7 @@ public class CoordinatorRuleManager
   public CoordinatorRuleManager(
       @Json ObjectMapper jsonMapper,
       Supplier<TieredBrokerConfig> config,
-      DruidLeaderClient druidLeaderClient
+      @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
     this.jsonMapper = jsonMapper;
@@ -135,7 +137,7 @@ public class CoordinatorRuleManager
   {
     try {
       FullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, config.get().getRulesEndpoint())
+          druidLeaderClient.makeRequest(HttpMethod.GET, RulesResource.RULES_ENDPOINT)
       );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -154,7 +156,7 @@ public class CoordinatorRuleManager
           )
       );
 
-      log.info("Got [%,d] rules", newRules.size());
+      log.debug("Got [%,d] rules", newRules.size());
 
       rules.set(newRules);
     }
@@ -165,7 +167,7 @@ public class CoordinatorRuleManager
 
   public List<Rule> getRulesWithDefault(final String dataSource)
   {
-    List<Rule> retVal = Lists.newArrayList();
+    List<Rule> retVal = new ArrayList<>();
     Map<String, List<Rule>> theRules = rules.get();
     if (theRules.get(dataSource) != null) {
       retVal.addAll(theRules.get(dataSource));

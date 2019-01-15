@@ -29,15 +29,15 @@ public class CloudFilesBlob
 {
   @JsonProperty
   @NotNull
-  private String container = null;
+  private String container;
 
   @JsonProperty
   @NotNull
-  private String path = null;
+  private String path;
 
   @JsonProperty
   @NotNull
-  private String region = null;
+  private String region;
 
   @JsonCreator
   public CloudFilesBlob(

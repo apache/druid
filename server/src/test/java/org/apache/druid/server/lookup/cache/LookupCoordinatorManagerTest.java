@@ -1030,91 +1030,74 @@ public class LookupCoordinatorManagerTest
   public void testLookupManagementLoop() throws Exception
   {
     Map<String, LookupExtractorFactoryMapContainer> lookup1 = ImmutableMap.of(
-        "lookup1", new LookupExtractorFactoryMapContainer(
-            "v1", ImmutableMap.of("k1", "v1")
-        )
+        "lookup1", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k1", "v1"))
     );
 
-    Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups =
-        ImmutableMap.of(
-            "tier1",
-            lookup1
-        );
+    Map<String, Map<String, LookupExtractorFactoryMapContainer>> configuredLookups = ImmutableMap.of("tier1", lookup1);
     EasyMock.reset(configManager);
-    EasyMock.expect(configManager.watch(
-                        EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
-                        EasyMock.<TypeReference>anyObject(),
-                        EasyMock.<AtomicReference>isNull()
-                    )).andReturn(
-        new AtomicReference<>(configuredLookups)).once();
+    EasyMock
+        .expect(
+            configManager.watch(
+                EasyMock.eq(LookupCoordinatorManager.LOOKUP_CONFIG_KEY),
+                EasyMock.<TypeReference>anyObject(),
+                EasyMock.<AtomicReference>isNull()
+            )
+        )
+        .andReturn(new AtomicReference<>(configuredLookups))
+        .once();
     EasyMock.replay(configManager);
 
     HostAndPortWithScheme host1 = HostAndPortWithScheme.fromParts("http", "host1", 1234);
     HostAndPortWithScheme host2 = HostAndPortWithScheme.fromParts("http", "host2", 3456);
 
     EasyMock.reset(lookupNodeDiscovery);
-    EasyMock.expect(
-        lookupNodeDiscovery.getNodesInTier("tier1")
-    ).andReturn(ImmutableList.of(host1, host2)).anyTimes();
+    EasyMock
+        .expect(lookupNodeDiscovery.getNodesInTier("tier1"))
+        .andReturn(ImmutableList.of(host1, host2))
+        .anyTimes();
     EasyMock.replay(lookupNodeDiscovery);
 
-    LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator = EasyMock.createMock(LookupCoordinatorManager.LookupsCommunicator.class);
-    EasyMock.expect(
-        lookupsCommunicator.getLookupStateForNode(
-            host1
-        )
-    ).andReturn(
-        new LookupsState<>(
-            ImmutableMap.of("lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0"))), null, null
-        )
-    ).once();
-
-    LookupsState<LookupExtractorFactoryMapContainer> host1UpdatedState = new LookupsState<>(
-        lookup1, null, null
-    );
-
-    EasyMock.expect(
-        lookupsCommunicator.updateNode(
-            host1,
+    LookupCoordinatorManager.LookupsCommunicator lookupsCommunicator =
+        EasyMock.createMock(LookupCoordinatorManager.LookupsCommunicator.class);
+    EasyMock
+        .expect(lookupsCommunicator.getLookupStateForNode(host1))
+        .andReturn(
             new LookupsState<>(
+                ImmutableMap.of("lookup0", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0"))),
                 null,
-                lookup1,
-                ImmutableSet.of("lookup0")
+                null
             )
         )
-    ).andReturn(
-        host1UpdatedState
-    ).once();
+        .once();
+
+    LookupsState<LookupExtractorFactoryMapContainer> host1UpdatedState = new LookupsState<>(lookup1, null, null);
+
+    EasyMock
+        .expect(lookupsCommunicator.updateNode(host1, new LookupsState<>(null, lookup1, ImmutableSet.of("lookup0"))))
+        .andReturn(host1UpdatedState)
+        .once();
 
 
-    EasyMock.expect(
-        lookupsCommunicator.getLookupStateForNode(
-            host2
-        )
-    ).andReturn(
-        new LookupsState<>(
-            ImmutableMap.of("lookup3", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
-                            "lookup1", new LookupExtractorFactoryMapContainer("v0", ImmutableMap.of("k0", "v0"))),
-            null, null
-        )
-    ).once();
-
-    LookupsState<LookupExtractorFactoryMapContainer> host2UpdatedState = new LookupsState<>(
-        null, lookup1, null
-    );
-
-    EasyMock.expect(
-        lookupsCommunicator.updateNode(
-            host2,
+    EasyMock
+        .expect(lookupsCommunicator.getLookupStateForNode(host2))
+        .andReturn(
             new LookupsState<>(
+                ImmutableMap.of(
+                    "lookup3", new LookupExtractorFactoryMapContainer("v1", ImmutableMap.of("k0", "v0")),
+                    "lookup1", new LookupExtractorFactoryMapContainer("v0", ImmutableMap.of("k0", "v0"))
+                ),
                 null,
-                lookup1,
-                ImmutableSet.of("lookup3")
+                null
             )
         )
-    ).andReturn(
-        host2UpdatedState
-    ).once();
+        .once();
+
+    LookupsState<LookupExtractorFactoryMapContainer> host2UpdatedState = new LookupsState<>(null, lookup1, null);
+
+    EasyMock
+        .expect(lookupsCommunicator.updateNode(host2, new LookupsState<>(null, lookup1, ImmutableSet.of("lookup3"))))
+        .andReturn(host2UpdatedState)
+        .once();
 
     EasyMock.replay(lookupsCommunicator);
 

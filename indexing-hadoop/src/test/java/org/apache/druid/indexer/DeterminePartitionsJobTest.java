@@ -237,7 +237,9 @@ public class DeterminePartitionsJobTest
                 ),
                 new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
                 new UniformGranularitySpec(
-                    Granularities.DAY, Granularities.NONE, ImmutableList.of(Intervals.of(interval))
+                    Granularities.DAY,
+                    Granularities.NONE,
+                    ImmutableList.of(Intervals.of(interval))
                 ),
                 null,
                 HadoopDruidIndexerConfig.JSON_MAPPER

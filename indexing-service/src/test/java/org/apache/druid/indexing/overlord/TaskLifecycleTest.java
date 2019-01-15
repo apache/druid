@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.Firehose;
@@ -81,6 +80,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -140,6 +140,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -442,11 +443,11 @@ public class TaskLifecycleTest
       {
         return new SegmentHandoffNotifier()
         {
-
-
           @Override
           public boolean registerSegmentHandoffCallback(
-              SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+              SegmentDescriptor descriptor,
+              Executor exec,
+              Runnable handOffRunnable
           )
           {
             handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));
@@ -550,7 +551,7 @@ public class TaskLifecycleTest
       @Override
       public List<StorageLocationConfig> getLocations()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
     };
     return new TaskToolboxFactory(
@@ -610,7 +611,7 @@ public class TaskLifecycleTest
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
-        MoreExecutors.sameThreadExecutor(), // query executor service
+        Execs.directExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
         new SegmentLoaderFactory(
             new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, new DefaultObjectMapper())
@@ -686,6 +687,7 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
@@ -767,6 +769,7 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockExceptionalFirehoseFactory(), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
@@ -854,7 +857,7 @@ public class TaskLifecycleTest
     mdc.setUnusedSegments(expectedUnusedSegments);
 
     // manually create local segments files
-    List<File> segmentFiles = Lists.newArrayList();
+    List<File> segmentFiles = new ArrayList<>();
     for (DataSegment segment : mdc.getUnusedSegmentsForInterval("test_kill_task", Intervals.of("2011-04-01/P4D"))) {
       File file = new File((String) segment.getLoadSpec().get("path"));
       file.mkdirs();
@@ -1155,6 +1158,7 @@ public class TaskLifecycleTest
             ),
             new IndexIOConfig(new MockFirehoseFactory(false), false),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,

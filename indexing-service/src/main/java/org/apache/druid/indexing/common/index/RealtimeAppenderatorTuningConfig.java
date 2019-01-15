@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.common.index;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -148,7 +149,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   @Override
   @JsonProperty
-  public int getMaxRowsPerSegment()
+  public Integer getMaxRowsPerSegment()
   {
     return maxRowsPerSegment;
   }
