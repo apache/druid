@@ -19,20 +19,19 @@
 
 package org.apache.druid.testing.clients;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.Query;
+import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 
-public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Query>
+public class SqlResourceTestClient extends AbstractQueryResourceTestClient<SqlQuery>
 {
 
   @Inject
-  QueryResourceTestClient(
+  SqlResourceTestClient(
       ObjectMapper jsonMapper,
       @TestClient HttpClient httpClient,
       IntegrationTestingConfig config
@@ -45,7 +44,7 @@ public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Que
   public String getBrokerURL()
   {
     return StringUtils.format(
-        "%s/druid/v2/",
+        "%s/druid/v2/sql/",
         routerUrl
     );
   }

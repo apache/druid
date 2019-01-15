@@ -17,37 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.testing.clients;
+package org.apache.druid.testing.utils;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.sql.http.SqlQuery;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.Query;
-import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.guice.TestClient;
+import java.util.List;
+import java.util.Map;
 
-public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Query>
+public class SqlQueryWithResults extends AbstractQueryWithResults<SqlQuery>
 {
 
-  @Inject
-  QueryResourceTestClient(
-      ObjectMapper jsonMapper,
-      @TestClient HttpClient httpClient,
-      IntegrationTestingConfig config
+  @JsonCreator
+  public SqlQueryWithResults(
+      SqlQuery query,
+      List<Map<String, Object>> expectedResults
   )
   {
-    super(jsonMapper, httpClient, config);
-  }
-
-  @Override
-  public String getBrokerURL()
-  {
-    return StringUtils.format(
-        "%s/druid/v2/",
-        routerUrl
-    );
+    super(query, expectedResults);
   }
 
 }

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
 import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.junit.Assert;
 
 import java.io.IOException;
@@ -39,6 +40,8 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
 
   @Inject
   IntegrationTestingConfig config;
+  @Inject
+  protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
@@ -128,6 +131,22 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
           "2013-08-31T00:00:00.000Z/2013-09-10T00:00:00.000Z"
       );
       Assert.assertFalse("dimensions : " + dimensions, dimensions.contains("robot"));
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error while testing");
+      throw new RuntimeException(e);
+    }
+  }
+
+  void doIndexTestSqlTest(
+      String dataSource,
+      String indexTaskFilePath,
+      String queryFilePath
+  )
+  {
+    submitTaskAndWait(indexTaskFilePath, dataSource);
+    try {
+      sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");

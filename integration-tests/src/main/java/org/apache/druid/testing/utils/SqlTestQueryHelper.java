@@ -17,37 +17,39 @@
  * under the License.
  */
 
-package org.apache.druid.testing.clients;
-
+package org.apache.druid.testing.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.Query;
 import org.apache.druid.testing.IntegrationTestingConfig;
-import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.testing.clients.SqlResourceTestClient;
 
-public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Query>
+public class SqlTestQueryHelper extends AbstractTestQueryHelper<SqlQueryWithResults>
 {
 
   @Inject
-  QueryResourceTestClient(
+  public SqlTestQueryHelper(
       ObjectMapper jsonMapper,
-      @TestClient HttpClient httpClient,
+      SqlResourceTestClient sqlClient,
       IntegrationTestingConfig config
   )
   {
-    super(jsonMapper, httpClient, config);
+    super(jsonMapper, sqlClient, config);
   }
 
   @Override
-  public String getBrokerURL()
+  public void testQueriesFromFile(String filePath, int timesToRun) throws Exception
   {
-    return StringUtils.format(
-        "%s/druid/v2/",
-        routerUrl
-    );
+    testQueriesFromFile(getQueryURL(broker), filePath, timesToRun);
+    testQueriesFromFile(getQueryURL(brokerTLS), filePath, timesToRun);
+    testQueriesFromFile(getQueryURL(router), filePath, timesToRun);
+    testQueriesFromFile(getQueryURL(routerTLS), filePath, timesToRun);
   }
 
+  @Override
+  protected String getQueryURL(String schemeAndHost)
+  {
+    return StringUtils.format("%s/druid/v2/sql", schemeAndHost);
+  }
 }
