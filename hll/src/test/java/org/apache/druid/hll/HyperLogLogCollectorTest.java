@@ -774,7 +774,7 @@ public class HyperLogLogCollectorTest
       final ByteBuffer bb = ByteBuffer.wrap(fn.hashInt(i).asBytes()).order(ByteOrder.LITTLE_ENDIAN);
       return (bb.getInt() % 100) == 43;
     };
-    final long loopLimit = 1_000_000L;
+    final long loopLimit = 1_000_000_000L;
     do {
       final int rnd = random.nextInt();
       if (!pass.test(rnd)) {
@@ -783,8 +783,7 @@ public class HyperLogLogCollectorTest
       final Hasher hasher = fn.newHasher();
       hasher.putInt(rnd);
       hyperLogLogCollector.add(hasher.hash().asBytes());
-      loops++;
-    } while (hyperLogLogCollector.getNumNonZeroRegisters() > 0 && loops < loopLimit);
+    } while (hyperLogLogCollector.getNumNonZeroRegisters() > 0 && ++loops < loopLimit);
     Assert.assertNotEquals(loopLimit, loops);
     Assert.assertEquals(hyperLogLogCollector.getNumHeaderBytes(), hyperLogLogCollector.toByteBuffer().remaining());
     log.info("Filled up registers after %s random numbers", loops);
