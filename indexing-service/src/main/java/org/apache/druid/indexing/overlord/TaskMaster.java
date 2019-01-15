@@ -120,7 +120,7 @@ public class TaskMaster implements TaskCountStatsProvider
           );
 
           // Sensible order to start stuff:
-          final Lifecycle leaderLifecycle = new Lifecycle();
+          final Lifecycle leaderLifecycle = new Lifecycle("task-master");
           if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
             log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
                .emit();

@@ -25,7 +25,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import org.apache.druid.common.config.Log4jShutdown;
-import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.ManageLifecycleInit;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -84,7 +84,7 @@ public class Log4jShutterDownerModule implements Module
   }
 
 
-  @ManageLifecycle
+  @ManageLifecycleInit
   @Provides
   public Log4jShutterDowner getShutterDowner(
       Log4jShutdown log4jShutdown
