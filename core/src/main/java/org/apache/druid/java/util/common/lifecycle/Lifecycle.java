@@ -332,7 +332,7 @@ public class Lifecycle
     // a simple variable. State change before startStopLock.lock() is needed for the new state visibility during the
     // check in addMaybeStartHandler() marked by (*).
     if (!state.compareAndSet(State.RUNNING, State.STOP)) {
-      log.info("Lifecycle [%s] Already stopped and stop was called. Silently skipping", name);
+      log.info("Lifecycle [%s] already stopped and stop was called. Silently skipping", name);
       return;
     }
     startStopLock.lock();
@@ -346,7 +346,7 @@ public class Lifecycle
             handler.stop();
           }
           catch (RuntimeException e) {
-            log.warn(e, "Lifecycle [%s] exception thrown when stopping %s", name, handler);
+            log.warn(e, "Lifecycle [%s] encountered exception while stopping %s", name, handler);
             if (thrown == null) {
               thrown = e;
             }
@@ -373,7 +373,7 @@ public class Lifecycle
                 @Override
                 public void run()
                 {
-                  log.info("Lifecycle [%s] Running shutdown hook", name);
+                  log.info("Lifecycle [%s] running shutdown hook", name);
                   stop();
                 }
               }
