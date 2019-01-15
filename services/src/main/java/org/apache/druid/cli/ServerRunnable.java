@@ -212,9 +212,9 @@ public abstract class ServerRunnable extends GuiceRunnable
               }
 
               LOG.info(
-                  "\n%s\n%s node has joined the Apache Druid (incubating) cluster!\n",
+                  "\n%s\n'%s' has joined the Apache Druid (incubating) cluster!\n",
                   ANNOUNCED_BANNER,
-                  nodeType
+                  nodeType.getJsonName()
               );
             }
 
