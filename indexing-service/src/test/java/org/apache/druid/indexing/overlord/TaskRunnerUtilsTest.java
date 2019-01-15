@@ -35,8 +35,8 @@ public class TaskRunnerUtilsTest
         "/druid/worker/v1/task/%s/log",
         "foo bar&"
     );
-    Assert.assertEquals("https://1.2.3.4:8290/druid/worker/v1/task/foo+bar%26/log", url.toString());
+    Assert.assertEquals("https://1.2.3.4:8290/druid/worker/v1/task/foo%20bar%26/log", url.toString());
     Assert.assertEquals("1.2.3.4:8290", url.getAuthority());
-    Assert.assertEquals("/druid/worker/v1/task/foo+bar%26/log", url.getPath());
+    Assert.assertEquals("/druid/worker/v1/task/foo%20bar%26/log", url.getPath());
   }
 }
