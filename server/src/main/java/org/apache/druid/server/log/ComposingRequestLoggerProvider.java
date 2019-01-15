@@ -125,6 +125,7 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
 
     private interface RequestLogLineConsumer
     {
+      //noinspection RedundantThrows
       void accept(RequestLogger requestLogger, RequestLogLine requestLogLine) throws IOException;
     }
   }

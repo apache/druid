@@ -207,6 +207,7 @@ public interface QueryMetrics<QueryType extends Query<?>>
   /**
    * Sets {@link Query#getSqlQueryId()} of the given query as dimension
    */
+  @PublicApi
   void sqlQueryId(QueryType query);
 
   /**
