@@ -46,30 +46,6 @@ import java.util.List;
  */
 public abstract class ServerRunnable extends GuiceRunnable
 {
-  private static final String ANNOUNCED_BANNER =
-      "\n"
-      + "              .''''''''''''''''''''.                                                                                            \n"
-      + "             'kkkkkkkkkkkkkkkkkkkkkkkdl;.                                                                                       \n"
-      + "                                   ..,:dkxc.                            ;O,                               .xo                oO.\n"
-      + "                                        .;dko.                          dM;                               .l;               .WW.\n"
-      + " ,:::::.  .;:::::::::::::::::::;,'.        ckk'                         xM'                                                 'M0 \n"
-      + " :ccccc,  .cccccccccccccccccccclldkxl'      :kd              .cdOXXKkd; KX   .xk;oOXXO' 'O;         oO.   oO.     'lx0XXKko':MO \n"
-      + "                                  .,dkc      ok,           'OWk;.....:0NWO   'MMWl...,. xM,        ,MX.   KM'   ;KNo'....'cKNMl \n"
-      + "                                    .kk.     ck;          ;NN'         xMd   :MM:       OM'        lMO   .NK   cWK.        .NMc \n"
-      + "                                     xk'     ok,          KM;          lMl   lMx       .XX         oMx   .Mo  .WN.         .WM' \n"
-      + "                                    ,kx.    .xk.         .WM'          kM,   kMc       .Mx         0M;   :Ml  .M0          'MW. \n"
-      + "                                   ;kk,     lkl           kMk         oMK    OM'       'MK        ,NM'   lM'  .NMd        .OMk  \n"
-      + "                               ..:dko'     ckx.           .xNKo,..';oKKMK   .WW.        oW0c''',ckXMX    xM'   .OW0:'..':xXXMl  \n"
-      + "       ,llllllllllllllllllllodxkxo:.     .oko.              .;okOOxoc..d:   .dc          .cxOOOdc,.oc    cl      .cdOOOxo;.,d'  \n"
-      + "        ',,,,,,,,,,,,,,,,,,,,..        'okkc                                                                                    \n"
-      + "                                    .,okxc.                                                                                     \n"
-      + "               ......   ......'':coxkdc.                                                                                        \n"
-      + "              'kkkkkk;  dkkkkkxdlc;'.                                                                                           \n"
-      + "               ......    .....                                                                                                  \n"
-      + "\n";
-
-  private static final Logger LOG = new Logger(ServerRunnable.class);
-
   public ServerRunnable(Logger log)
   {
     super(log);
@@ -210,12 +186,6 @@ public abstract class ServerRunnable extends GuiceRunnable
               if (useLegacyAnnouncer) {
                 legacyAnnouncer.announce(discoveryDruidNode.getDruidNode());
               }
-
-              LOG.info(
-                  "\n%s\n'%s' has joined the Apache Druid (incubating) cluster!\n",
-                  ANNOUNCED_BANNER,
-                  nodeType.getJsonName()
-              );
             }
 
             @Override
