@@ -86,7 +86,8 @@ public class TaskMaster implements TaskCountStatsProvider
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
       final OverlordHelperManager overlordHelperManager,
-      @IndexingService final DruidLeaderSelector overlordLeaderSelector
+      @IndexingService final DruidLeaderSelector overlordLeaderSelector,
+      Lifecycle lifecycle
   )
   {
     this.supervisorManager = supervisorManager;
@@ -175,6 +176,24 @@ public class TaskMaster implements TaskCountStatsProvider
         }
       }
     };
+
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start() throws Exception
+          {
+            // nothing to do, only start when becoming leader
+          }
+
+          @Override
+          public void stop()
+          {
+            leadershipListener.stopBeingLeader();
+          }
+        },
+        Lifecycle.Stage.LAST
+    );
   }
 
   /**
