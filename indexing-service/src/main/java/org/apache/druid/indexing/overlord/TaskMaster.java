@@ -86,8 +86,7 @@ public class TaskMaster implements TaskCountStatsProvider
       final ServiceEmitter emitter,
       final SupervisorManager supervisorManager,
       final OverlordHelperManager overlordHelperManager,
-      @IndexingService final DruidLeaderSelector overlordLeaderSelector,
-      Lifecycle lifecycle
+      @IndexingService final DruidLeaderSelector overlordLeaderSelector
   )
   {
     this.supervisorManager = supervisorManager;
@@ -176,24 +175,6 @@ public class TaskMaster implements TaskCountStatsProvider
         }
       }
     };
-
-    lifecycle.addHandler(
-        new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
-          {
-            // nothing to do, only start when becoming leader
-          }
-
-          @Override
-          public void stop()
-          {
-            leadershipListener.stopBeingLeader();
-          }
-        },
-        Lifecycle.Stage.LAST
-    );
   }
 
   /**
@@ -222,6 +203,9 @@ public class TaskMaster implements TaskCountStatsProvider
     giant.lock();
 
     try {
+      if (isLeader()) {
+        leadershipListener.stopBeingLeader();
+      }
       overlordLeaderSelector.unregisterListener();
     }
     finally {

@@ -195,8 +195,7 @@ public class OverlordTest
         serviceEmitter,
         supervisorManager,
         EasyMock.createNiceMock(OverlordHelperManager.class),
-        new TestDruidLeaderSelector(),
-        new Lifecycle()
+        new TestDruidLeaderSelector()
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
