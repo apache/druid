@@ -387,6 +387,13 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
       storageBuffer.duplicate().put(other.storageBuffer.asReadOnlyBuffer());
 
+      if (other.storageBuffer.remaining() != other.getNumBytesForDenseStorage()) {
+        // The other buffer was sparse, densify it
+        final int newLImit = storageBuffer.position() + other.storageBuffer.remaining();
+        storageBuffer.limit(newLImit);
+        convertToDenseStorage();
+      }
+
       other = HyperLogLogCollector.makeCollector(tmpBuffer);
     }
 
