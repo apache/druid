@@ -142,7 +142,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath
-  ) throws IOException
+  )
   {
     submitTaskAndWait(indexTaskFilePath, dataSource);
     try {
