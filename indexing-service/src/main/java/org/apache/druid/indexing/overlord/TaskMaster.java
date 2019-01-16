@@ -166,6 +166,7 @@ public class TaskMaster implements TaskCountStatsProvider
         try {
           initialized = false;
           final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
+
           if (leaderLifecycle != null) {
             leaderLifecycle.stop();
           }

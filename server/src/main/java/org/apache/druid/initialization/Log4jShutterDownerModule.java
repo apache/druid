@@ -41,8 +41,8 @@ public class Log4jShutterDownerModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    // Instantiate eagerly so that we get everything registered and put into the Lifecycle
-    // This makes the shutdown run pretty darn near last.
+    // Instantiate eagerly so that we get everything registered and put into the Lifecycle as early as possible
+    // Lifecycle scope is INIT to ensure stop runs in the last phase of lifecycle stop.
 
     try {
       ClassLoader loader = Thread.currentThread().getContextClassLoader();

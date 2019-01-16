@@ -37,6 +37,8 @@ import java.util.Set;
  */
 public class LifecycleModule implements Module
 {
+  // this scope includes final logging shutdown, so all other handlers in this lifecycle scope should avoid logging in
+  // the 'stop' method, either failing silently or failing violently and throwing an exception causing an ungraceful exit
   private final LifecycleScope initScope = new LifecycleScope(Lifecycle.Stage.INIT);
   private final LifecycleScope scope = new LifecycleScope(Lifecycle.Stage.NORMAL);
   private final LifecycleScope lastScope = new LifecycleScope(Lifecycle.Stage.LAST);
