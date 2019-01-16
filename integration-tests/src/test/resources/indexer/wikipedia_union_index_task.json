@@ -2,7 +2,7 @@
   "type": "index_realtime",
   "spec": {
     "dataSchema": {
-      "dataSource": "wikipedia_index_test",
+      "dataSource": "%%DATASOURCE%%",
       "metricsSpec": [
         {
           "type": "count",

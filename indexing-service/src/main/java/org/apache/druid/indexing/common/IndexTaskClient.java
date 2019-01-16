@@ -291,7 +291,7 @@ public abstract class IndexTaskClient implements AutoCloseable
 
     final Request request = new Request(method, serviceUrl);
     // used to validate that we are talking to the correct worker
-    request.addHeader(ChatHandlerResource.TASK_ID_HEADER, taskId);
+    request.addHeader(ChatHandlerResource.TASK_ID_HEADER, StringUtils.urlEncode(taskId));
     if (content.length > 0) {
       request.setContent(Preconditions.checkNotNull(mediaType, "mediaType"), content);
     }
@@ -369,7 +369,9 @@ public abstract class IndexTaskClient implements AutoCloseable
 
         final Duration delay;
         if (response != null && response.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
-          String headerId = response.getResponse().headers().get(ChatHandlerResource.TASK_ID_HEADER);
+          String headerId = StringUtils.urlDecode(
+              response.getResponse().headers().get(ChatHandlerResource.TASK_ID_HEADER)
+          );
           if (headerId != null && !headerId.equals(taskId)) {
             log.warn(
                 "Expected worker to have taskId [%s] but has taskId [%s], will retry in [%d]s",

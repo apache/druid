@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.sql.SqlLifecycleFactory;
 
 import javax.annotation.concurrent.GuardedBy;
 import java.util.HashMap;
@@ -66,7 +67,7 @@ public class DruidConnection
     this.statements = new HashMap<>();
   }
 
-  public DruidStatement createStatement()
+  public DruidStatement createStatement(SqlLifecycleFactory sqlLifecycleFactory)
   {
     final int statementId = statementCounter.incrementAndGet();
 
@@ -92,6 +93,7 @@ public class DruidConnection
           connectionId,
           statementId,
           ImmutableSortedMap.copyOf(sanitizedContext),
+          sqlLifecycleFactory.factorize(),
           () -> {
             // onClose function for the statement
             synchronized (statements) {
