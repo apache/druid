@@ -20,7 +20,6 @@
 package org.apache.druid.query.search;
 
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharSource;
 import org.apache.druid.java.util.common.DateTimes;
