@@ -204,9 +204,7 @@ public class TaskMaster implements TaskCountStatsProvider
     giant.lock();
 
     try {
-      if (isLeader()) {
-        leadershipListener.stopBeingLeader();
-      }
+      gracefulStopLeaderLifecycle();
       overlordLeaderSelector.unregisterListener();
     }
     finally {
@@ -324,6 +322,18 @@ public class TaskMaster implements TaskCountStatsProvider
       return taskQueue.get().getWaitingTaskCount();
     } else {
       return null;
+    }
+  }
+
+  private void gracefulStopLeaderLifecycle()
+  {
+    try {
+      if (isLeader()) {
+        leadershipListener.stopBeingLeader();
+      }
+    }
+    catch (Exception ex) {
+      // fail silently since we are stopping anyway
     }
   }
 }
