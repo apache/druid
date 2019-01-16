@@ -223,7 +223,6 @@ public class DetermineHashedPartitionsJobTest
   public void testDetermineHashedPartitions()
   {
     DetermineHashedPartitionsJob determineHashedPartitionsJob = new DetermineHashedPartitionsJob(indexerConfig);
-    String jobId = determineHashedPartitionsJob.submitAndGetHadoopJobId();
     determineHashedPartitionsJob.run();
     Map<Long, List<HadoopyShardSpec>> shardSpecs = indexerConfig.getSchema().getTuningConfig().getShardSpecs();
     Assert.assertEquals(

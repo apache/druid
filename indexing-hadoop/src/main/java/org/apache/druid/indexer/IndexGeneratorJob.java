@@ -97,6 +97,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
+ *
  */
 public class IndexGeneratorJob implements Jobby
 {
@@ -156,7 +157,7 @@ public class IndexGeneratorJob implements Jobby
   }
 
   @Override
-  public String submitAndGetHadoopJobId()
+  public boolean run()
   {
     try {
       job = Job.getInstance(
@@ -207,17 +208,11 @@ public class IndexGeneratorJob implements Jobby
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
 
-      return job.getJobID().toString();
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
+      // Store the jobId in the file
+      if (job.getJobID() != null) {
+        JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), job.getJobID().toString());
+      }
 
-  @Override
-  public boolean run()
-  {
-    try {
       boolean success = job.waitForCompletion(true);
 
       Counters counters = job.getCounters();

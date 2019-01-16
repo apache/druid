@@ -96,7 +96,6 @@ public class HadoopDruidIndexerConfig
   public static final HadoopKerberosConfig HADOOP_KERBEROS_CONFIG;
   public static final DataSegmentPusher DATA_SEGMENT_PUSHER;
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
-  private String hadoopJobIdFileName;
 
 
 
@@ -213,6 +212,7 @@ public class HadoopDruidIndexerConfig
 
   private HadoopIngestionSpec schema;
   private PathSpec pathSpec;
+  private String hadoopJobIdFileName;
   private final Map<Long, ShardSpecLookup> shardSpecLookups = new HashMap<>();
   private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = new HashMap<>();
   private final Granularity rollupGran;

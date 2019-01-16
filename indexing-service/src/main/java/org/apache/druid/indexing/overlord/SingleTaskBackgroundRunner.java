@@ -178,13 +178,11 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     if (runningItem != null) {
       final Task task = runningItem.getTask();
       final long start = System.currentTimeMillis();
-      final boolean graceful;
       final long elapsed;
       boolean error = false;
 
       // stopGracefully for resource cleaning, independent of the fact whether the task is restorable or not
       // Attempt graceful shutdown.
-      graceful = true;
       log.info("Starting graceful shutdown of task[%s].", task.getId());
       task.stopGracefully();
 
@@ -223,7 +221,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           .builder()
           .setDimension("task", task.getId())
           .setDimension("dataSource", task.getDataSource())
-          .setDimension("graceful", String.valueOf(graceful))
+          .setDimension("graceful", "true") // for backword compatibility
           .setDimension("error", String.valueOf(error));
 
       emitter.emit(metricBuilder.build("task/interrupt/count", 1L));

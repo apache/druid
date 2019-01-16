@@ -20,7 +20,6 @@
 package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -350,24 +349,26 @@ public class JobHelper
     }
   }
 
-  public static boolean runSingleJob(Jobby job, HadoopDruidIndexerConfig config)
+  public static void writeJobIdToFile(String hadoopJobIdFileName, String hadoopJobId)
   {
-    String hadoopJobId = job.submitAndGetHadoopJobId();
-    ObjectMapper objectMapper = new ObjectMapper();
-    String hadoopJobIdFileName = config.getHadoopJobIdFileName();
-
-    if (hadoopJobIdFileName != null) {
+    if (hadoopJobId != null && hadoopJobIdFileName != null) {
       try {
-        objectMapper.writeValue(new OutputStreamWriter(
-            new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
-            hadoopJobId);
-        log.info("MR job id: %s is written to the file: %s", hadoopJobId, hadoopJobIdFileName);
+        HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
+            new OutputStreamWriter(new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
+            hadoopJobId
+        );
+        log.info("MR job id [%s] is written to the file [%s]", hadoopJobId, hadoopJobIdFileName);
       }
       catch (IOException e) {
-        log.error(e, "Error writing job id: %s to the file: %s.", hadoopJobId, hadoopJobIdFileName);
+        log.warn(e, "Error writing job id [%s] to the file [%s]", hadoopJobId, hadoopJobIdFileName);
       }
+    } else {
+      log.info("Either job Id or File Name is null for the submitted job. Skipping writing the file [%s]", hadoopJobIdFileName);
     }
+  }
 
+  public static boolean runSingleJob(Jobby job, HadoopDruidIndexerConfig config)
+  {
     boolean succeeded = job.run();
 
     if (!config.getSchema().getTuningConfig().isLeaveIntermediate()) {
@@ -391,23 +392,7 @@ public class JobHelper
   public static boolean runJobs(List<Jobby> jobs, HadoopDruidIndexerConfig config)
   {
     boolean succeeded = true;
-    ObjectMapper objectMapper = new ObjectMapper();
-
     for (Jobby job : jobs) {
-      String hadoopJobId = job.submitAndGetHadoopJobId();
-      String hadoopJobIdFileName = config.getHadoopJobIdFileName();
-
-      if (hadoopJobIdFileName != null) {
-        try {
-          objectMapper.writeValue(new OutputStreamWriter(
-                  new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
-              hadoopJobId);
-          log.info("MR job id: %s is written to the file: %s", hadoopJobId, hadoopJobIdFileName);
-        }
-        catch (IOException e) {
-          log.error(e, "Error writing job id: %s to the file: %s.", hadoopJobId, hadoopJobIdFileName);
-        }
-      }
       if (!job.run()) {
         succeeded = false;
         break;

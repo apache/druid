@@ -85,7 +85,7 @@ public class DetermineHashedPartitionsJob implements Jobby
   }
 
   @Override
-  public String submitAndGetHadoopJobId()
+  public boolean run()
   {
     try {
       /*
@@ -126,17 +126,10 @@ public class DetermineHashedPartitionsJob implements Jobby
       groupByJob.submit();
       log.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
 
-      return groupByJob.getJobID().toString();
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  @Override
-  public boolean run()
-  {
-    try {
+      // Store the jobId in the file
+      if (groupByJob.getJobID() != null) {
+        JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), groupByJob.getJobID().toString());
+      }
 
       if (!groupByJob.waitForCompletion(true)) {
         log.error("Job failed: %s", groupByJob.getJobID());

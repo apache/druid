@@ -84,6 +84,7 @@ import java.util.SortedSet;
 public class HadoopIndexTask extends HadoopTask implements ChatHandler
 {
   private static final Logger log = new Logger(HadoopIndexTask.class);
+  private static final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
   private TaskConfig taskConfig = null;
 
   private static String getTheDataSource(HadoopIngestionSpec spec)
@@ -225,11 +226,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   public String getHadoopJobIdFileName()
   {
-    final String HADOOP_JOB_ID_FILENAME = "mapReduceJobId.json";
-    StringBuilder fileName = new StringBuilder(taskConfig.getTaskDir(getId()).toString());
-    fileName.append("/");
-    fileName.append(HADOOP_JOB_ID_FILENAME);
-    return fileName.toString();
+    return new File(taskConfig.getTaskDir(getId()), HADOOP_JOB_ID_FILENAME).getAbsolutePath();
   }
 
   @Override
@@ -434,18 +431,16 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public void stopGracefully()
   {
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-    ObjectMapper objectMapper = new ObjectMapper();
     File hadoopJobIdFile = new File(getHadoopJobIdFileName());
     String jobId = null;
 
     try {
       if (hadoopJobIdFile.exists()) {
-        jobId = objectMapper.readValue(hadoopJobIdFile, String.class);
+        jobId = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(hadoopJobIdFile, String.class);
       }
     }
     catch (Exception e) {
-      log.info("Exeption while reading json file from path: " + hadoopJobIdFile);
-      log.error(Throwables.getStackTraceAsString(e));
+      log.warn(e, "Exeption while reading Hadoop Job ID from: %s", hadoopJobIdFile);
     }
 
     try {
@@ -453,8 +448,10 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
         ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
             taskConfig.getDefaultHadoopCoordinates());
 
-        Object killMRJobInnerProcessingRunner = getForeignClassloaderObject("org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
-            loader);
+        Object killMRJobInnerProcessingRunner = getForeignClassloaderObject(
+            "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
+            loader
+        );
         String[] buildKillJobInput = new String[]{
             "-kill",
             jobId
