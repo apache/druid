@@ -72,8 +72,8 @@ public class UseIndexesStrategy extends SearchStrategy
     final List<DimensionSpec> searchDims = getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions());
 
     if (index != null) {
-      final Pair<List<DimensionSpec>, List<DimensionSpec>> pair = // pair of bitmap dims and non-bitmap dims
-          partitionDimensionList(adapter, searchDims);
+      // pair of bitmap dims and non-bitmap dims
+      final Pair<List<DimensionSpec>, List<DimensionSpec>> pair = partitionDimensionList(adapter, searchDims);
       final List<DimensionSpec> bitmapSuppDims = pair.lhs;
       final List<DimensionSpec> nonBitmapSuppDims = pair.rhs;
 
@@ -134,10 +134,7 @@ public class UseIndexesStrategy extends SearchStrategy
       }
     }
 
-    return new Pair<List<DimensionSpec>, List<DimensionSpec>>(
-        ImmutableList.copyOf(bitmapDims),
-        ImmutableList.copyOf(nonBitmapDims)
-    );
+    return new Pair<>(bitmapDims, nonBitmapDims);
   }
 
   static ImmutableBitmap makeTimeFilteredBitmap(
