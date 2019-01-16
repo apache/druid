@@ -126,6 +126,14 @@ Memcached client metrics are reported as per the following. These metrics come d
 |`query/cache/memcached/total`|Cache metrics unique to memcached (only if `druid.cache.type=memcached`) as their actual values|Variable|N/A|
 |`query/cache/memcached/delta`|Cache metrics unique to memcached (only if `druid.cache.type=memcached`) as their delta from the prior event emission|Variable|N/A|
 
+## SQL Metrics
+
+If SQL is enabled, broker will emit the following metrics for SQL.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`sqlQuery/time`|Milliseconds taken to complete a SQL.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
+|`sqlQuery/bytes`|number of bytes returned in SQL response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
 
 ## Ingestion Metrics
 
@@ -264,3 +272,4 @@ These metrics are only available if the SysMonitor module is included.
 |`sys/mem/max`|Memory max.||Varies.|
 |`sys/storage/used`|Disk space used.|fsDirName.|Varies.|
 |`sys/cpu`|CPU used.|cpuName, cpuTime.|Varies.|
+

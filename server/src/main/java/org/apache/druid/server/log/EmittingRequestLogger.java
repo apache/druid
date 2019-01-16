@@ -40,7 +40,13 @@ public class EmittingRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(final RequestLogLine requestLogLine)
+  public void logNativeQuery(RequestLogLine requestLogLine)
+  {
+    emitter.emit(requestLogEventBuilderFactory.createRequestLogEventBuilder(feed, requestLogLine));
+  }
+
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine)
   {
     emitter.emit(requestLogEventBuilderFactory.createRequestLogEventBuilder(feed, requestLogLine));
   }
