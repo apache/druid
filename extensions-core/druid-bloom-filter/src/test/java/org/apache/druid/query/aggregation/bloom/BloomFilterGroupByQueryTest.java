@@ -20,10 +20,8 @@
 package org.apache.druid.query.aggregation.bloom;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.guice.BloomFilterExtensionModule;
@@ -31,11 +29,9 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
-import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
-import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.TestHelper;
 import org.junit.After;
 import org.junit.Assert;
@@ -55,12 +51,13 @@ public class BloomFilterGroupByQueryTest
 {
   private static final BloomFilterExtensionModule module = new BloomFilterExtensionModule();
 
-  private static final Injector injector = Guice.createInjector(
-      binder -> {
-        binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
-      },
-      module
-  );
+  static {
+    // throwaway, just using to properly initialize jackson modules
+    Guice.createInjector(
+        binder -> binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper()),
+        module
+    );
+  }
   private AggregationTestHelper helper;
 
   @Rule

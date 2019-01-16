@@ -51,7 +51,8 @@ public class BloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator
       buf.position(position);
       selectorPlus.getColumnSelectorStrategy().bufferAdd(selectorPlus.getSelector(), buf);
       buf.position(oldPosition);
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }

@@ -48,7 +48,8 @@ public class BloomFilterMergeBufferAggregator extends BaseBloomFilterBufferAggre
       ByteBuffer other = selector.getObject();
       BloomKFilter.mergeBloomFilterByteBuffers(buf, position, other, other.position());
       buf.position(oldPosition);
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }

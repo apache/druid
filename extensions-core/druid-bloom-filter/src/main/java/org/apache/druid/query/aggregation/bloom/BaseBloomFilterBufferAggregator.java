@@ -61,7 +61,8 @@ public abstract class BaseBloomFilterBufferAggregator implements BufferAggregato
       int sizeBytes = 1 + Integer.BYTES + (buf.getInt(position + 1) * Long.BYTES);
       mutationBuffer.limit(position + sizeBytes);
       return mutationBuffer.slice();
-    } finally {
+    }
+    finally {
       lock.unlock();
     }
   }
