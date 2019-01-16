@@ -320,6 +320,7 @@ public class Lifecycle
           handler.start();
         }
       }
+      log.info("Successfully started lifecycle [%s]", name);
     }
     finally {
       startStopLock.unlock();
