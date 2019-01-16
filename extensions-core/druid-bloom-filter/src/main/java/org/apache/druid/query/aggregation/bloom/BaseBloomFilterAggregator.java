@@ -28,9 +28,9 @@ public abstract class BaseBloomFilterAggregator implements Aggregator
 {
   protected final BloomKFilter collector;
 
-  public BaseBloomFilterAggregator(BloomKFilter filter)
+  public BaseBloomFilterAggregator(BloomKFilter collector)
   {
-    this.collector = filter;
+    this.collector = collector;
   }
 
   @Nullable

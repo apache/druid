@@ -40,8 +40,6 @@ public class BloomFilterExtensionModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    if (binder != null) {
-      SqlBindings.addOperatorConversion(binder, BloomFilterOperatorConversion.class);
-    }
+    SqlBindings.addOperatorConversion(binder, BloomFilterOperatorConversion.class);
   }
 }

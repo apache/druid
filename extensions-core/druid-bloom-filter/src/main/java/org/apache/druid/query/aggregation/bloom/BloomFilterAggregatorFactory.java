@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.bloom;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.primitives.Ints;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.java.util.common.RE;
@@ -98,22 +97,22 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return (Comparator<Object>) (o1, o2) -> {
+    return Comparator.nullsFirst((o1, o2) -> {
       if (o1 instanceof ByteBuffer && o2 instanceof ByteBuffer) {
         ByteBuffer buf1 = (ByteBuffer) o1;
         ByteBuffer buf2 = (ByteBuffer) o2;
-        return Ints.compare(
+        return Integer.compare(
             BloomKFilter.getNumSetBits(buf1, buf1.position()),
             BloomKFilter.getNumSetBits(buf2, buf2.position())
         );
       } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
         BloomKFilter o1f = (BloomKFilter) o1;
         BloomKFilter o2f = (BloomKFilter) o2;
-        return Ints.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
+        return Integer.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
       } else {
         throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());
       }
-    };
+    });
   }
 
   @Override
