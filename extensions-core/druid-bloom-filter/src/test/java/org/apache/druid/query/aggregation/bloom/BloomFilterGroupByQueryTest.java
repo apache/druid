@@ -58,6 +58,7 @@ public class BloomFilterGroupByQueryTest
         module
     );
   }
+
   private AggregationTestHelper helper;
 
   @Rule
