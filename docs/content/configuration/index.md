@@ -1242,6 +1242,8 @@ Druid uses Jetty to serve HTTP requests.
 Druid Brokers use an HTTP client to communicate with with data servers (historical servers and real-time tasks). This
 client has the following configuration options.
 
+|Property|Description|Default|
+|--------|-----------|-------|
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to historical and real-time processes. If there are more queries than this number that all need to speak to the same node, then they will queue up.|20|
 |`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with historical and real-time processes. May be "gzip" or "identity".|gzip|
 |`druid.broker.http.readTimeout`|The timeout for data reads from historical servers and real-time tasks.|PT15M|
