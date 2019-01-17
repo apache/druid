@@ -99,8 +99,7 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
     "tuningConfig" : {
       "type" : "index",
       "maxRowsPerSegment" : 5000000,
-      "maxRowsInMemory" : 25000,
-      "forceExtendableShardSpecs" : true
+      "maxRowsInMemory" : 25000
     }
   }
 }

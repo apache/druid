@@ -301,7 +301,6 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
         tuningConfig.getIndexSpec(),
         tuningConfig.getMaxPendingPersists(),
         true,
-        tuningConfig.isForceExtendableShardSpecs(),
         false,
         tuningConfig.isReportParseExceptions(),
         null,

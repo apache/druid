@@ -28,7 +28,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegment.Builder;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,11 +48,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testNoMerges()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .version("2")
+                                       .size(80);
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-02/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).build()
     );
 
     Assert.assertEquals(
@@ -61,11 +68,15 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testMergeAtStart()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .version("2");
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(20).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("2").size(20).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("2").size(90).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).size(20).build(),
+        builder.interval(Intervals.of("2012-01-02/P1D")).size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).size(20).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).size(90).build()
     );
 
     Assert.assertEquals(
@@ -78,11 +89,15 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testMergeAtEnd()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .version("2");
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("2").size(20).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).size(80).build(),
+        builder.interval(Intervals.of("2012-01-02/P1D")).size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).size(80).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).size(20).build()
     );
 
     Assert.assertEquals(
@@ -95,11 +110,15 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testMergeInMiddle()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .version("2");
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("2").size(10).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("2").size(20).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).size(80).build(),
+        builder.interval(Intervals.of("2012-01-02/P1D")).size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).size(10).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).size(20).build()
     );
 
     Assert.assertEquals(
@@ -112,10 +131,15 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testMergeNoncontiguous()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .version("2")
+                                       .size(10);
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(10).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("2").size(10).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("2").size(10).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).build()
     );
 
     Assert.assertEquals(
@@ -128,13 +152,18 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testMergeSeriesByteLimited()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .version("2")
+                                       .size(40);
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(40).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P1D")).version("2").size(40).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("2").size(40).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("2").size(40).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("2").size(40).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(40).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-02/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).build()
     );
 
     Assert.assertEquals(
@@ -149,17 +178,22 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testMergeSeriesSegmentLimited()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .version("2")
+                                       .size(1);
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-07/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-08/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-09/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-10/P1D")).version("2").size(1).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-02/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-07/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-08/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-09/P1D")).build(),
+        builder.interval(Intervals.of("2012-01-10/P1D")).build()
     );
 
     Assert.assertEquals(
@@ -182,14 +216,18 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMergeWithBacktracking()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance())
+                                       .size(20);
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(20).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P1D")).version("2").size(20).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P4D")).version("2").size(20).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("3").size(20).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("4").size(20).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("3").size(20).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-07/P1D")).version("2").size(20).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").build(),
+        builder.interval(Intervals.of("2012-01-02/P1D")).version("2").build(),
+        builder.interval(Intervals.of("2012-01-03/P4D")).version("2").build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("3").build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("4").build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("3").build(),
+        builder.interval(Intervals.of("2012-01-07/P1D")).version("2").build()
     );
 
     Assert.assertEquals(
@@ -203,11 +241,14 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMergeWithGapsAlignedStart()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P8D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("3").size(8).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("3").size(8).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-09/P1D")).version("3").size(8).build()
+        builder.interval(Intervals.of("2012-01-01/P8D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("3").size(8).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("3").size(8).build(),
+        builder.interval(Intervals.of("2012-01-09/P1D")).version("3").size(8).build()
     );
 
     Assert.assertEquals(
@@ -220,11 +261,14 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMergeWithGapsNonalignedStart()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P8D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P1D")).version("3").size(8).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("3").size(8).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-09/P1D")).version("3").size(8).build()
+        builder.interval(Intervals.of("2012-01-01/P8D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-02/P1D")).version("3").size(8).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("3").size(8).build(),
+        builder.interval(Intervals.of("2012-01-09/P1D")).version("3").size(8).build()
     );
 
     Assert.assertEquals(
@@ -237,13 +281,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMerge1()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("3").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("1").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("3").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).version("3").size(25).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("1").size(25).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("3").size(25).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
     );
 
     Assert.assertEquals(
@@ -254,13 +301,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMerge2()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(15).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("3").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("4").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("3").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").size(15).build(),
+        builder.interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).version("3").size(25).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("4").size(25).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("3").size(25).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
     );
 
     Assert.assertEquals(
@@ -273,13 +323,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMerge3()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("3").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("1").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("3").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).version("3").size(1).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("1").size(1).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("3").size(1).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
     );
 
     Assert.assertEquals(
@@ -292,13 +345,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMerge4()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("3").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("4").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("3").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).version("3").size(1).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("4").size(1).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("3").size(1).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
     );
 
     Assert.assertEquals(
@@ -311,13 +367,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMerge5()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("3").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("1").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("3").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").size(1).build(),
+        builder.interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).version("3").size(25).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("1").size(25).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("3").size(25).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
     );
 
     Assert.assertEquals(
@@ -328,13 +387,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMerge6()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("3").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("4").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("3").size(25).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").size(1).build(),
+        builder.interval(Intervals.of("2012-01-02/P4D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).version("3").size(25).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("4").size(25).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("3").size(25).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
     );
 
     Assert.assertEquals(
@@ -347,13 +409,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMerge7()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P4D")).version("2").size(120).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("3").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("4").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("3").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-02/P4D")).version("2").size(120).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).version("3").size(1).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("4").size(1).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("3").size(1).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
     );
 
     Assert.assertEquals(
@@ -366,13 +431,16 @@ public class DruidCoordinatorSegmentMergerTest
   @Test
   public void testOverlappingMerge8()
   {
+    final Builder builder = DataSegment.builder()
+                                       .dataSource("foo")
+                                       .shardSpec(NoneShardSpec.instance());
     final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-02/P4D")).version("2").size(120).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-03/P1D")).version("3").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-04/P1D")).version("1").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-05/P1D")).version("3").size(1).build(),
-        DataSegment.builder().dataSource("foo").interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
+        builder.interval(Intervals.of("2012-01-01/P1D")).version("2").size(80).build(),
+        builder.interval(Intervals.of("2012-01-02/P4D")).version("2").size(120).build(),
+        builder.interval(Intervals.of("2012-01-03/P1D")).version("3").size(1).build(),
+        builder.interval(Intervals.of("2012-01-04/P1D")).version("1").size(1).build(),
+        builder.interval(Intervals.of("2012-01-05/P1D")).version("3").size(1).build(),
+        builder.interval(Intervals.of("2012-01-06/P1D")).version("2").size(80).build()
     );
 
     Assert.assertEquals(ImmutableList.of(ImmutableList.of(segments.get(4), segments.get(5))), merge(segments));
@@ -394,7 +462,8 @@ public class DruidCoordinatorSegmentMergerTest
                    .version("1")
                    .shardSpec(new LinearShardSpec(7))
                    .build(),
-        DataSegment.builder().dataSource("foo")
+        DataSegment.builder()
+                   .dataSource("foo")
                    .interval(Intervals.of("2012-01-03/P1D"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(1500))
@@ -415,23 +484,30 @@ public class DruidCoordinatorSegmentMergerTest
                    .dataSource("foo")
                    .interval(Intervals.of("2012-01-01/P1D"))
                    .version("1")
+                   .shardSpec(NoneShardSpec.instance())
                    .build(),
         DataSegment.builder()
                    .dataSource("foo")
                    .interval(Intervals.of("2012-01-02/P1D"))
                    .version("1")
+                   .shardSpec(NoneShardSpec.instance())
                    .build(),
-        DataSegment.builder().dataSource("foo")
+        DataSegment.builder()
+                   .dataSource("foo")
                    .interval(Intervals.of("2012-01-03/P1D"))
                    .version("1")
                    .shardSpec(new LinearShardSpec(1500))
                    .build(),
-        DataSegment.builder().dataSource("foo")
+        DataSegment.builder()
+                   .dataSource("foo")
                    .interval(Intervals.of("2012-01-04/P1D"))
+                   .shardSpec(NoneShardSpec.instance())
                    .version("1")
                    .build(),
-        DataSegment.builder().dataSource("foo")
+        DataSegment.builder()
+                   .dataSource("foo")
                    .interval(Intervals.of("2012-01-05/P1D"))
+                   .shardSpec(NoneShardSpec.instance())
                    .version("1")
                    .build()
     );

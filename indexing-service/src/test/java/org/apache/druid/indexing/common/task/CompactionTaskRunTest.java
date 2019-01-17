@@ -315,7 +315,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, false, true),
+            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
             false
         ),
         null,

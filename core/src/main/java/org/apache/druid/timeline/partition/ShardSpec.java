@@ -33,8 +33,12 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-                  @JsonSubTypes.Type(name = "none", value = NoneShardSpec.class),
-              })
+    @JsonSubTypes.Type(name = "none", value = NoneShardSpec.class),
+    @JsonSubTypes.Type(name = "single", value = SingleDimensionShardSpec.class),
+    @JsonSubTypes.Type(name = "linear", value = LinearShardSpec.class),
+    @JsonSubTypes.Type(name = "numbered", value = NumberedShardSpec.class),
+    @JsonSubTypes.Type(name = "hashed", value = HashBasedNumberedShardSpec.class)
+})
 public interface ShardSpec
 {
   <T> PartitionChunk<T> createChunk(T obj);

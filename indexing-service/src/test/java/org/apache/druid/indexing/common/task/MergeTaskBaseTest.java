@@ -24,6 +24,7 @@ import com.google.common.hash.Hashing;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,7 +37,8 @@ public class MergeTaskBaseTest
 {
   private final DataSegment.Builder segmentBuilder = DataSegment.builder()
                                                                 .dataSource("foo")
-                                                                .version("V1");
+                                                                .version("V1")
+                                                                .shardSpec(NoneShardSpec.instance());
 
   final List<DataSegment> segments = ImmutableList.<DataSegment>builder()
           .add(segmentBuilder.interval(Intervals.of("2012-01-04/2012-01-06")).build())

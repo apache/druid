@@ -98,7 +98,6 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertFalse(tuningConfig.isForceExtendableShardSpecs());
     Assert.assertFalse(tuningConfig.isReportParseExceptions());
     Assert.assertEquals(new IndexSpec(), tuningConfig.getIndexSpec());
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
@@ -210,7 +209,6 @@ public class TaskSerdeTest
                 indexSpec,
                 3,
                 true,
-                true,
                 false,
                 null,
                 null,
@@ -258,10 +256,6 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getMaxRowsInMemory(), task2TuningConfig.getMaxRowsInMemory());
     Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
     Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
-    Assert.assertEquals(
-        taskTuningConfig.isForceExtendableShardSpecs(),
-        task2TuningConfig.isForceExtendableShardSpecs()
-    );
     Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
   }
 
@@ -296,7 +290,6 @@ public class TaskSerdeTest
                 null,
                 indexSpec,
                 3,
-                true,
                 true,
                 false,
                 null,
@@ -344,6 +337,7 @@ public class TaskSerdeTest
                    .dataSource("foo")
                    .interval(Intervals.of("2010-01-01/P1D"))
                    .version("1234")
+                   .shardSpec(NoneShardSpec.instance())
                    .build()
     );
     final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
@@ -553,11 +547,13 @@ public class TaskSerdeTest
                    .dataSource("foo")
                    .interval(Intervals.of("2010-01-01/P1D"))
                    .version("1234")
+                   .shardSpec(NoneShardSpec.instance())
                    .build(),
         DataSegment.builder()
                    .dataSource("foo")
                    .interval(Intervals.of("2010-01-02/P1D"))
                    .version("5678")
+                   .shardSpec(NoneShardSpec.instance())
                    .build()
     );
     final AppendTask task = new AppendTask(

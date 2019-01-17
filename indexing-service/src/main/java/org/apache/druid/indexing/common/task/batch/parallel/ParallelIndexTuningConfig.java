@@ -70,7 +70,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
-        null,
         null
     );
   }
@@ -85,7 +84,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("numShards") @Nullable Integer numShards,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-      @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
       @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
       @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
@@ -112,7 +110,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         indexSpec,
         maxPendingPersists,
         null,
-        forceExtendableShardSpecs,
         forceGuaranteedRollup,
         reportParseExceptions,
         null,

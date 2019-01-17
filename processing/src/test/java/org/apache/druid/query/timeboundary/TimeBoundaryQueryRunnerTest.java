@@ -135,7 +135,7 @@ public class TimeBoundaryQueryRunnerTest
         interval.getStart(),
         interval.getEnd(),
         version,
-        new NoneShardSpec()
+        NoneShardSpec.instance()
     );
   }
 
