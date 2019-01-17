@@ -75,7 +75,7 @@ Note that even though `min(sum of worker capacity * slotRatio, maxSlots)` = 0, a
 if the compaction is enabled for a dataSource.
 See [Compaction Configuration API](../operations/api-reference.html#compaction-configuration) and [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) to enable the compaction.
 
-Compaction tasks might fail due to some reasons.
+Compaction tasks might fail due to the following reasons.
 
 - If the input segments of a compaction task are removed or overshadowed before it starts, that compaction task fails immediately.
 - If a task of a higher priority acquires a lock for an interval overlapping with the interval of a compaction task, the compaction task fails.
@@ -103,7 +103,7 @@ This is because the total segment size to compact would be greater than `inputSe
 The search start point can be changed by setting [skipOffsetFromLatest](../configuration/index.html#compaction-dynamic-configuration).
 If this is set, this policy will ignore the segments falling into the interval of (the end time of the very latest segment - `skipOffsetFromLatest`).
 This is to avoid conflicts between compaction tasks and realtime tasks.
-Note that realtime tasks have a higher priority than compaction tasks by default. They would revoke compaction tasks if their intervals overlap each other.
+Note that realtime tasks have a higher priority than compaction tasks by default. Realtime tasks will revoke the locks of compaction tasks if their intervals overlap, resulting in the termination of the compaction task.
 
 <div class="note caution">
 This policy currently cannot handle the situation when there are a lot of small segments which have the same interval,
