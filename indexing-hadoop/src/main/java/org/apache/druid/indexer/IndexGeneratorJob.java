@@ -97,6 +97,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
+ *
  */
 public class IndexGeneratorJob implements Jobby
 {
@@ -240,7 +241,8 @@ public class IndexGeneratorJob implements Jobby
 
       Map<String, Object> metrics = TaskMetricsUtils.makeIngestionRowMetrics(
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).getValue(),
-          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER)
+                     .getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER).getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).getValue()
       );
@@ -345,7 +347,9 @@ public class IndexGeneratorJob implements Jobby
         throw new ISE("WTF?! No bucket found for row: %s", inputRow);
       }
 
-      final long truncatedTimestamp = granularitySpec.getQueryGranularity().bucketStart(inputRow.getTimestamp()).getMillis();
+      final long truncatedTimestamp = granularitySpec.getQueryGranularity()
+                                                     .bucketStart(inputRow.getTimestamp())
+                                                     .getMillis();
       final byte[] hashedDimensions = hashFunction.hashBytes(
           HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
               Rows.toGroupKey(
@@ -359,17 +363,17 @@ public class IndexGeneratorJob implements Jobby
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
       InputRowSerde.SerializeResult serializeResult = inputRow instanceof SegmentInputRow ?
-                                                 InputRowSerde.toBytes(
-                                                     typeHelperMap,
-                                                     inputRow,
-                                                     aggsForSerializingSegmentInputRow
-                                                 )
-                                                                                     :
-                                                 InputRowSerde.toBytes(
-                                                     typeHelperMap,
-                                                     inputRow,
-                                                     aggregators
-                                                 );
+                                                      InputRowSerde.toBytes(
+                                                          typeHelperMap,
+                                                          inputRow,
+                                                          aggsForSerializingSegmentInputRow
+                                                      )
+                                                                                          :
+                                                      InputRowSerde.toBytes(
+                                                          typeHelperMap,
+                                                          inputRow,
+                                                          aggregators
+                                                      );
 
       context.write(
           new SortableBytes(
@@ -678,7 +682,7 @@ public class IndexGeneratorJob implements Jobby
           );
           persistExecutor = MoreExecutors.listeningDecorator(executorService);
         } else {
-          persistExecutor = MoreExecutors.sameThreadExecutor();
+          persistExecutor = Execs.directExecutor();
         }
 
         for (final BytesWritable bw : values) {
@@ -786,7 +790,10 @@ public class IndexGeneratorJob implements Jobby
         // ShardSpec to be published.
         final ShardSpec shardSpecForPublishing;
         if (config.isForceExtendableShardSpecs()) {
-          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(), config.getShardSpecCount(bucket));
+          shardSpecForPublishing = new NumberedShardSpec(
+              shardSpecForPartitioning.getPartitionNum(),
+              config.getShardSpecCount(bucket)
+          );
         } else {
           shardSpecForPublishing = shardSpecForPartitioning;
         }

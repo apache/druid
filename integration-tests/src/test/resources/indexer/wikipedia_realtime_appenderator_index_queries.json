@@ -3,7 +3,7 @@
    "description": "timeBoundary",
    "query": {
       "queryType":"timeBoundary",
-      "dataSource":"wikipedia_index_test"
+      "dataSource":"%%DATASOURCE%%"
    },
    "expectedResults":[
       {
@@ -19,7 +19,7 @@
    "description": "timeseries",
    "query": {
       "queryType": "timeseries",
-      "dataSource": "wikipedia_index_test",
+      "dataSource": "%%DATASOURCE%%",
       "intervals": [ "%%TIMESERIES_QUERY_START%%/%%TIMESERIES_QUERY_END%%" ],
       "granularity": "all",
       "aggregations": [
@@ -41,7 +41,7 @@
      "description":"having spec on post aggregation",
      "query":{ 
      "queryType":"groupBy",
-     "dataSource":"wikipedia_index_test",
+     "dataSource":"%%DATASOURCE%%",
      "granularity":"minute",
      "dimensions":[
           "page"

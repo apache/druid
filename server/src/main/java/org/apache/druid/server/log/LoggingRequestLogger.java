@@ -22,6 +22,7 @@ package org.apache.druid.server.log;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
@@ -55,7 +56,7 @@ public class LoggingRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(RequestLogLine requestLogLine) throws IOException
+  public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
   {
     final Map mdc = MDC.getCopyOfContextMap();
     // MDC must be set during the `LOG.info` call at the end of the try block.
@@ -64,6 +65,7 @@ public class LoggingRequestLogger implements RequestLogger
         try {
           final Query query = requestLogLine.getQuery();
           MDC.put("queryId", query.getId());
+          MDC.put("sqlQueryId", StringUtils.nullToEmptyNonDruidDataString(query.getSqlQueryId()));
           MDC.put("dataSource", findInnerDatasource(query).toString());
           MDC.put("queryType", query.getType());
           MDC.put("isNested", String.valueOf(!(query.getDataSource() instanceof TableDataSource)));
@@ -84,7 +86,7 @@ public class LoggingRequestLogger implements RequestLogger
           LOG.error(re, "Error preparing MDC");
         }
       }
-      final String line = requestLogLine.getLine(mapper);
+      final String line = requestLogLine.getNativeQueryLine(mapper);
 
       // MDC must be set here
       LOG.info("%s", line);
@@ -98,6 +100,13 @@ public class LoggingRequestLogger implements RequestLogger
         }
       }
     }
+  }
+
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+  {
+    final String line = requestLogLine.getSqlQueryLine(mapper);
+    LOG.info("%s", line);
   }
 
   public boolean isSetMDC()

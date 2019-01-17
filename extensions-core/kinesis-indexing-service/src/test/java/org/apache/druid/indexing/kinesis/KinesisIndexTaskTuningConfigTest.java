@@ -65,7 +65,7 @@ public class KinesisIndexTaskTuningConfigTest
 
     Assert.assertNotNull(config.getBasePersistDirectory());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
-    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment());
+    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
@@ -115,7 +115,7 @@ public class KinesisIndexTaskTuningConfigTest
 
     Assert.assertEquals(new File("/tmp/xxx"), config.getBasePersistDirectory());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
-    Assert.assertEquals(100, config.getMaxRowsPerSegment());
+    Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertTrue(config.getBuildV9Directly());
@@ -197,7 +197,7 @@ public class KinesisIndexTaskTuningConfigTest
 
     Assert.assertEquals(1, copy.getMaxRowsInMemory());
     Assert.assertEquals(3, copy.getMaxBytesInMemory());
-    Assert.assertEquals(2, copy.getMaxRowsPerSegment());
+    Assert.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(100L, (long) copy.getMaxTotalRows());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());

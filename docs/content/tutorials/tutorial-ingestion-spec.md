@@ -564,7 +564,7 @@ As an example, let's add a `tuningConfig` that sets a target segment size for th
 ```json
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000
+      "maxRowsPerSegment" : 5000000
     }
 ```
 
@@ -623,7 +623,7 @@ We've finished defining the ingestion spec, it should now look like the followin
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000
+      "maxRowsPerSegment" : 5000000
     }
   }
 }

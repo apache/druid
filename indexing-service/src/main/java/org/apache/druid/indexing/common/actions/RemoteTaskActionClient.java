@@ -90,8 +90,9 @@ public class RemoteTaskActionClient implements TaskActionClient
         } else {
           // Want to retry, so throw an IOException.
           throw new IOE(
-              "Scary HTTP status returned: %s. Check your overlord logs for exceptions.",
-              fullResponseHolder.getStatus()
+              "Error with status[%s] and message[%s]. Check overlord logs for details.",
+              fullResponseHolder.getStatus(),
+              fullResponseHolder.getContent()
           );
         }
       }

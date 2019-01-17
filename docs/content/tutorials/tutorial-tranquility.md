@@ -39,9 +39,9 @@ don't need to have loaded any data yet.
 In the Druid package root, run the following commands:
 
 ```bash
-curl http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.2.tgz -o tranquility-distribution-0.8.2.tgz
-tar -xzf tranquility-distribution-0.8.2.tgz
-mv tranquility-distribution-0.8.2 tranquility
+curl http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.3.tgz -o tranquility-distribution-0.8.3.tgz
+tar -xzf tranquility-distribution-0.8.3.tgz
+mv tranquility-distribution-0.8.3 tranquility
 ```
 
 The startup scripts for the tutorial will expect the contents of the Tranquility tarball to be located at `tranquility` under the apache-druid-#{DRUIDVERSION} package root.

@@ -70,13 +70,15 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
 
   @JsonCreator
   public ParallelIndexTuningConfig(
-      @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
+      @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
@@ -100,6 +102,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   {
     super(
         targetPartitionSize,
+        maxRowsPerSegment,
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,

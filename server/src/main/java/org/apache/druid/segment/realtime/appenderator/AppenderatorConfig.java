@@ -45,7 +45,8 @@ public interface AppenderatorConfig
   /**
    * Maximum number of rows in a single segment before pushing to deep storage
    */
-  default int getMaxRowsPerSegment()
+  @Nullable
+  default Integer getMaxRowsPerSegment()
   {
     return Integer.MAX_VALUE;
   }

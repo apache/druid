@@ -72,12 +72,12 @@ public class CoordinatorResourceTestClient
 
   private String getMetadataSegmentsURL(String dataSource)
   {
-    return StringUtils.format("%smetadata/datasources/%s/segments", getCoordinatorURL(), dataSource);
+    return StringUtils.format("%smetadata/datasources/%s/segments", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
   private String getIntervalsURL(String dataSource)
   {
-    return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), dataSource);
+    return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
   private String getLoadStatusURL()
@@ -150,7 +150,7 @@ public class CoordinatorResourceTestClient
   public void unloadSegmentsForDataSource(String dataSource)
   {
     try {
-      makeRequest(HttpMethod.DELETE, StringUtils.format("%sdatasources/%s", getCoordinatorURL(), dataSource));
+      makeRequest(HttpMethod.DELETE, StringUtils.format("%sdatasources/%s", getCoordinatorURL(), StringUtils.urlEncode(dataSource)));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -165,7 +165,7 @@ public class CoordinatorResourceTestClient
           StringUtils.format(
               "%sdatasources/%s/intervals/%s",
               getCoordinatorURL(),
-              dataSource,
+              StringUtils.urlEncode(dataSource),
               interval.toString().replace('/', '_')
           )
       );

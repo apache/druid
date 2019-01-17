@@ -187,6 +187,24 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
   }
 
+  @Test
+  public void testPublishEmptySegments() throws Exception
+  {
+    final ParallelIndexSupervisorTask task = newTask(
+        Intervals.of("2020/2021"),
+        new ParallelIndexIOConfig(
+            new LocalFirehoseFactory(inputDir, "test_*", null),
+            false
+        )
+    );
+    actionClient = createActionClient(task);
+    toolbox = createTaskToolbox(task);
+
+    prepareTaskForLocking(task);
+    Assert.assertTrue(task.isReady(actionClient));
+    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
+  }
+
   private ParallelIndexSupervisorTask newTask(
       Interval interval,
       ParallelIndexIOConfig ioConfig
@@ -216,6 +234,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
         ),
         ioConfig,
         new ParallelIndexTuningConfig(
+            null,
             null,
             null,
             null,
