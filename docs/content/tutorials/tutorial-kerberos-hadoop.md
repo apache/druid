@@ -16,10 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
 -->
----
-layout: doc_page
----
-
 # Tutorial: Configuring Druid to use a Kerberized Hadoop as Deep Storage
 
 
