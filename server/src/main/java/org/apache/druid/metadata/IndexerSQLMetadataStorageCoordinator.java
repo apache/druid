@@ -21,7 +21,6 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -774,34 +773,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
   }
 
-  @VisibleForTesting
-  public boolean announceHistoricalSegment(
-      String segmentId,
-      String dataSource,
-      String createdDate,
-      String start,
-      String end,
-      boolean partitioned,
-      String version,
-      boolean used,
-      byte[] payload
-  )
-  {
-    return connector.getDBI().withHandle(handle -> announceHistoricalSegment(
-        handle,
-        segmentId,
-        dataSource,
-        createdDate,
-        start,
-        end,
-        partitioned,
-        version,
-        used,
-        payload
-    ));
-  }
-
-
   /**
    * Attempts to insert a single segment to the database. If the segment already exists, will do nothing; although,
    * this checking is imperfect and callers must be prepared to retry their entire transaction on exceptions.
@@ -820,61 +791,35 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         return false;
       }
 
-      return announceHistoricalSegment(
-          handle,
-          segment.getIdentifier(),
-          segment.getDataSource(),
-          DateTimes.nowUtc().toString(),
-          segment.getInterval().getStart().toString(),
-          segment.getInterval().getEnd().toString(),
-          (segment.getShardSpec() instanceof NoneShardSpec) ? false : true,
-          segment.getVersion(),
-          used,
-          jsonMapper.writeValueAsBytes(segment)
-      );
+      // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
+      // Avoiding ON DUPLICATE KEY since it's not portable.
+      // Avoiding try/catch since it may cause inadvertent transaction-splitting.
+      handle.createStatement(
+          StringUtils.format(
+              "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+              dbTables.getSegmentsTable(),
+              connector.getQuoteString()
+          )
+      )
+            .bind("id", segment.getIdentifier())
+            .bind("dataSource", segment.getDataSource())
+            .bind("created_date", DateTimes.nowUtc().toString())
+            .bind("start", segment.getInterval().getStart().toString())
+            .bind("end", segment.getInterval().getEnd().toString())
+            .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+            .bind("version", segment.getVersion())
+            .bind("used", used)
+            .bind("payload", jsonMapper.writeValueAsBytes(segment))
+            .execute();
+
+      log.info("Published segment [%s] to DB with used flag [%s]", segment.getIdentifier(), used);
     }
     catch (Exception e) {
       log.error(e, "Exception inserting segment [%s] with used flag [%s] into DB", segment.getIdentifier(), used);
       throw e;
     }
-  }
 
-  private boolean announceHistoricalSegment(
-      Handle handle,
-      String segmentId,
-      String dataSource,
-      String createdDate,
-      String start,
-      String end,
-      boolean partitioned,
-      String version,
-      boolean used,
-      byte[] payload
-  )
-  {
-    // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
-    // Avoiding ON DUPLICATE KEY since it's not portable.
-    // Avoiding try/catch since it may cause inadvertent transaction-splitting.
-    handle.createStatement(
-        StringUtils.format(
-            "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version, used, payload) "
-            + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-            dbTables.getSegmentsTable(),
-            connector.getQuoteString()
-        )
-    )
-          .bind("id", segmentId)
-          .bind("dataSource", dataSource)
-          .bind("created_date", createdDate)
-          .bind("start", start)
-          .bind("end", end)
-          .bind("partitioned", partitioned)
-          .bind("version", version)
-          .bind("used", used)
-          .bind("payload", payload)
-          .execute();
-
-    log.info("Published segment [%s] to DB with used flag [%s]", segmentId, used);
     return true;
   }
 
