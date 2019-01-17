@@ -139,9 +139,9 @@ An example aggregator spec is shown below:
 
 The outlier handling mode specifies what should be done with values outside of the histogram's range. There are three supported modes:
 
-`ignore`: Throw away outlier values.
-`overflow`: A count of outlier values will be tracked by the histogram, available in the `lowerOutlierCount` and `upperOutlierCount` fields.
-`clip`: Outlier values will be clipped to the `lowerLimit` or the `upperLimit` and included in the histogram.
+- `ignore`: Throw away outlier values.
+- `overflow`: A count of outlier values will be tracked by the histogram, available in the `lowerOutlierCount` and `upperOutlierCount` fields.
+- `clip`: Outlier values will be clipped to the `lowerLimit` or the `upperLimit` and included in the histogram.
 
 If you don't care about outliers, `ignore` is the cheapest option performance-wise. There is currently no difference in storage size among the modes.
 
@@ -149,17 +149,17 @@ If you don't care about outliers, `ignore` is the cheapest option performance-wi
 
 The histogram aggregator's output object has the following fields:
 
-`lowerLimit`: Lower limit of the histogram
-`upperLimit`: Upper limit of the histogram
-`numBuckets`: Number of histogram buckets
-`outlierHandlingMode`: Outlier handling mode
-`count`: Total number of values contained in the histgram, excluding outliers
-`lowerOutlierCount`: Count of outlier values below `lowerLimit`. Only used if the outlier mode is `overflow`.
-`upperOutlierCount`: Count of outlier values above `upperLimit`. Only used if the outlier mode is `overflow`.
-`missingValueCount`: Count of null values seen by the histogram.
-`max`: Max value seen by the histogram. This does not include outlier values.
-`min`: Min value seen by the histogram. This does not include outlier values.
-`histogram`: An array of longs with size `numBuckets`, containing the bucket counts
+- `lowerLimit`: Lower limit of the histogram
+- `upperLimit`: Upper limit of the histogram
+- `numBuckets`: Number of histogram buckets
+- `outlierHandlingMode`: Outlier handling mode
+- `count`: Total number of values contained in the histgram, excluding outliers
+- `lowerOutlierCount`: Count of outlier values below `lowerLimit`. Only used if the outlier mode is `overflow`.
+- `upperOutlierCount`: Count of outlier values above `upperLimit`. Only used if the outlier mode is `overflow`.
+- `missingValueCount`: Count of null values seen by the histogram.
+- `max`: Max value seen by the histogram. This does not include outlier values.
+- `min`: Min value seen by the histogram. This does not include outlier values.
+- `histogram`: An array of longs with size `numBuckets`, containing the bucket counts
 
 ### Ingesting existing histograms 
 
