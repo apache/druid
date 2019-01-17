@@ -108,7 +108,10 @@ public class UseIndexesStrategy extends SearchStrategy
     return builder.build();
   }
 
-  // Split dimension list into bitmap-supporting list and non-bitmap supporting list
+  /**
+   * Split the given dimensions list into bitmap-supporting dimensions and non-bitmap supporting ones.
+   * Note that the returned lists are free to modify.
+   */
   private static Pair<List<DimensionSpec>, List<DimensionSpec>> partitionDimensionList(
       StorageAdapter adapter,
       List<DimensionSpec> dimensions
