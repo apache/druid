@@ -74,6 +74,7 @@ layout: toc
   * [Timeseries](/docs/VERSION/querying/timeseriesquery.html)
   * [TopN](/docs/VERSION/querying/topnquery.html)
   * [GroupBy](/docs/VERSION/querying/groupbyquery.html)
+  * [SQL](/docs/VERSION/querying/sql.html)
   * [Time Boundary](/docs/VERSION/querying/timeboundaryquery.html)
   * [Segment Metadata](/docs/VERSION/querying/segmentmetadataquery.html)
   * [DataSource Metadata](/docs/VERSION/querying/datasourcemetadataquery.html)
