@@ -90,16 +90,6 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-common</artifactId>
-        <version>${hadoop.compile.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-mapreduce-client-core</artifactId>
-        <version>${hadoop.compile.version}</version>
-      </dependency>
     </dependencies>
 
     <build>
