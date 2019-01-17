@@ -33,6 +33,7 @@ import javax.annotation.concurrent.GuardedBy;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -52,11 +53,11 @@ public class DruidConnection
   private final ImmutableMap<String, Object> context;
   private final AtomicInteger statementCounter = new AtomicInteger();
   private final AtomicReference<Future<?>> timeoutFuture = new AtomicReference<>();
-  private final Map<Integer, DruidStatement> statements;
 
-  // Use another object(connectionLock) as a lock instead of statements, the statements should not be accessed synchronized.
-  // Because in one case: the onClose function passed into DruidStatement contained by the map,
-  // synchronized access to statements will causes deadlock. see https://github.com/apache/incubator-druid/issues/6867.
+  // Typically synchronized by connectionLock, except in one case: the onClose function passed
+  // into DruidStatements contained by the map.
+  private final ConcurrentMap<Integer, DruidStatement> statements;
+
   @GuardedBy("connectionLock")
   private final Object connectionLock = new Object();
 
@@ -101,7 +102,7 @@ public class DruidConnection
           () -> {
             // onClose function for the statement
             log.debug("Connection[%s] closed statement[%s].", connectionId, statementId);
-            // statements will be accessed unsynchronized to aviod deadlock
+            // statements will be accessed unsynchronized to avoid deadlock
             statements.remove(statementId);
           }
       );
