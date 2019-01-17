@@ -41,10 +41,6 @@ public class NoneShardSpec implements ShardSpec
     return INSTANCE;
   }
 
-  /**
-   * @deprecated use {@link #instance()} instead
-   */
-  @Deprecated
   private NoneShardSpec()
   {
     // empty
