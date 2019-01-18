@@ -31,7 +31,7 @@ public class TimestampSpecTest
   @Test
   public void testExtractTimestamp()
   {
-    TimestampSpec spec = new TimestampSpec("TIMEstamp", "yyyy-MM-dd", null);
+    TimestampSpec spec = new TimestampSpec("TIMEstamp", "yyyy-MM-dd", null, null);
     Assert.assertEquals(
         DateTimes.of("2014-03-01"),
         spec.extractTimestamp(ImmutableMap.of("TIMEstamp", "2014-03-01"))
@@ -41,7 +41,7 @@ public class TimestampSpecTest
   @Test
   public void testExtractTimestampWithMissingTimestampColumn()
   {
-    TimestampSpec spec = new TimestampSpec(null, null, DateTimes.EPOCH);
+    TimestampSpec spec = new TimestampSpec(null, null, DateTimes.EPOCH, null);
     Assert.assertEquals(
         DateTimes.of("1970-01-01"),
         spec.extractTimestamp(ImmutableMap.of("dim", "foo"))
@@ -59,9 +59,9 @@ public class TimestampSpecTest
         "2000-01-01T05:00:02",
         "2000-01-01T05:00:03",
         };
-    TimestampSpec spec = new TimestampSpec("TIMEstamp", DATE_FORMAT, null);
+    TimestampSpec spec = new TimestampSpec("TIMEstamp", DATE_FORMAT, null, null);
 
-    DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(ISODateTimeFormat.dateHourMinuteSecond());
+    DateTimes.UtcFormatter formatter = DateTimes.wrapUtcFormatter(ISODateTimeFormat.dateHourMinuteSecond());
 
     for (String date : dates) {
       DateTime dateTime = spec.extractTimestamp(ImmutableMap.of("TIMEstamp", date));
@@ -69,4 +69,30 @@ public class TimestampSpecTest
       Assert.assertEquals(expectedDateTime, dateTime);
     }
   }
+
+  @Test
+  public void testExtractTimestampWithTimezone()
+  {
+    String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+    String timeZone = "Asia/Shanghai";
+    String[] dates = new String[]{
+        "2000-01-01 00:00:00",
+        "2000-01-01 08:00:00",
+        "2000-01-01 12:00:01",
+        "2000-01-01 23:59:59",
+        };
+    TimestampSpec spec = new TimestampSpec("log_time", DATE_FORMAT, null, timeZone);
+
+    DateTimes.Formatter expectedFormatter = DateTimes.wrapFormatter(DATE_FORMAT, timeZone);
+
+    for (String date : dates) {
+      DateTime actualDateTime = spec.extractTimestamp(ImmutableMap.<String, Object>of(
+          "log_time", date,
+          "dim1", "value1"
+      ));
+      long expectedTs = expectedFormatter.parse(date).getMillis();
+      Assert.assertEquals(expectedTs, actualDateTime.getMillis());
+    }
+  }
+
 }

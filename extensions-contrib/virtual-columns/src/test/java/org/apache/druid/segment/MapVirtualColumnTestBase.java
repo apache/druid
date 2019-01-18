@@ -45,7 +45,7 @@ public class MapVirtualColumnTestBase
 
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(
-            new TimestampSpec("ts", "auto", null),
+            new TimestampSpec("ts", "auto", null, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim", "keys", "values")), null, null),
             "\t",
             ",",

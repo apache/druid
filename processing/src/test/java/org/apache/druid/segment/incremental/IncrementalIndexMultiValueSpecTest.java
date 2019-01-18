@@ -53,7 +53,7 @@ public class IncrementalIndexMultiValueSpecTest
     );
     IncrementalIndexSchema schema = new IncrementalIndexSchema(
         0,
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ds", "auto", null, null),
         Granularities.ALL,
         VirtualColumns.EMPTY,
         dimensionsSpec,

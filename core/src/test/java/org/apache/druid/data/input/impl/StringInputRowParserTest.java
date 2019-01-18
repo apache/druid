@@ -35,7 +35,7 @@ public class StringInputRowParserTest
   public void testDisableJavaScript()
   {
     final JavaScriptParseSpec parseSpec = new JavaScriptParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
+        new TimestampSpec("timestamp", "auto", null, null),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(
                 ImmutableList.of(
@@ -61,7 +61,7 @@ public class StringInputRowParserTest
   public void testDisableJavaScript2()
   {
     final JavaScriptParseSpec parseSpec = new JavaScriptParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
+        new TimestampSpec("timestamp", "auto", null, null),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(
                 ImmutableList.of(

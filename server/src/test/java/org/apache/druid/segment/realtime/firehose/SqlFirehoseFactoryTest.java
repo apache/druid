@@ -69,7 +69,7 @@ public class SqlFirehoseFactoryTest
 
   private final MapInputRowParser parser = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec("timestamp", "auto", null),
+          new TimestampSpec("timestamp", "auto", null, null),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(Arrays.asList("timestamp", "a", "b")),
               new ArrayList<>(),

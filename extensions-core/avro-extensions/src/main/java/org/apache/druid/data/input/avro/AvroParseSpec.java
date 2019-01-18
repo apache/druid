@@ -38,7 +38,7 @@ public class AvroParseSpec extends NestedDataParseSpec<JSONPathSpec>
   )
   {
     super(
-        timestampSpec != null ? timestampSpec : new TimestampSpec(null, null, null),
+        timestampSpec != null ? timestampSpec : new TimestampSpec(null, null, null, null),
         dimensionsSpec != null ? dimensionsSpec : DimensionsSpec.EMPTY,
         flattenSpec != null ? flattenSpec : JSONPathSpec.DEFAULT
     );

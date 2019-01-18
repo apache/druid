@@ -40,7 +40,7 @@ public class InfluxParseSpec extends ParseSpec
   )
   {
     super(
-        new TimestampSpec(InfluxParser.TIMESTAMP_KEY, "millis", null),
+        new TimestampSpec(InfluxParser.TIMESTAMP_KEY, "millis", null, null),
         dimensionsSpec != null ? dimensionsSpec : new DimensionsSpec(null, null, null)
     );
     this.measurementWhitelist = measurementWhitelist;

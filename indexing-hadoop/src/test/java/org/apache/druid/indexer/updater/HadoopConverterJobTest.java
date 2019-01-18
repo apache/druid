@@ -161,7 +161,7 @@ public class HadoopConverterJobTest
                 HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new DelimitedParseSpec(
-                            new TimestampSpec("ts", "iso", null),
+                            new TimestampSpec("ts", "iso", null, null),
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(TestIndex.DIMENSIONS)), null, null),
                             "\t",
                             "\u0001",

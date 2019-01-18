@@ -224,7 +224,7 @@ public class DeterminePartitionsJobTest
                 HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null, null),
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num"),

@@ -835,7 +835,7 @@ interface Function
         if (format.type() != ExprType.STRING) {
           throw new IAE("second argument should be string type but got %s type", format.type());
         }
-        formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format.asString()));
+        formatter = DateTimes.wrapUtcFormatter(DateTimeFormat.forPattern(format.asString()));
       }
       DateTime date;
       try {

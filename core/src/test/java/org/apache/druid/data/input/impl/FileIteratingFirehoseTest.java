@@ -77,7 +77,7 @@ public class FileIteratingFirehoseTest
   {
     parser = new StringInputRowParser(
         new CSVParseSpec(
-            new TimestampSpec("ts", "auto", null),
+            new TimestampSpec("ts", "auto", null, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
             ",",
             ImmutableList.of("ts", "x"),

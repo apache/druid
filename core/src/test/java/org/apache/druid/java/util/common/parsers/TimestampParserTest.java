@@ -58,7 +58,7 @@ public class TimestampParserTest
   @Test
   public void testAuto()
   {
-    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto", null);
     Assert.assertEquals(DateTimes.of("2009-02-13T23:31:30Z"), parser.apply("1234567890000"));
     Assert.assertEquals(DateTimes.of("2009-02-13T23:31:30Z"), parser.apply("2009-02-13T23:31:30Z"));
     Assert.assertEquals(DateTimes.of("2009-02-13T23:31:30-08:00"), parser.apply("2009-02-13T23:31:30-08:00"));
@@ -78,7 +78,7 @@ public class TimestampParserTest
   @Test
   public void testAutoNull()
   {
-    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto", null);
 
     expectedException.expect(NullPointerException.class);
     parser.apply(null);
@@ -87,7 +87,7 @@ public class TimestampParserTest
   @Test
   public void testAutoInvalid()
   {
-    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto");
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("auto", null);
 
     expectedException.expect(IllegalArgumentException.class);
     parser.apply("asdf");
@@ -96,7 +96,7 @@ public class TimestampParserTest
   @Test
   public void testRuby()
   {
-    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("ruby");
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("ruby", null);
     Assert.assertEquals(DateTimes.of("2013-01-16T14:41:47.435Z"), parser.apply("1358347307.435447"));
     Assert.assertEquals(DateTimes.of("2013-01-16T14:41:47.435Z"), parser.apply(1358347307.435447D));
   }
@@ -106,7 +106,7 @@ public class TimestampParserTest
   {
     String timeNsStr = "1427504794977098494";
     DateTime expectedDt = DateTimes.of("2015-3-28T01:06:34.977Z");
-    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("nano");
+    final Function<Object, DateTime> parser = TimestampParser.createObjectTimestampParser("nano", null);
     Assert.assertEquals("Incorrect truncation of nanoseconds -> milliseconds",
         expectedDt, parser.apply(timeNsStr));
 
@@ -122,7 +122,7 @@ public class TimestampParserTest
   public void testTimeStampParserWithQuotes()
   {
     DateTime d = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8));
-    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss z yyyy");
+    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss z yyyy", null);
     Assert.assertEquals(d.getMillis(), parser.apply(" \" Wed Nov 9 04:00:00 PST 1994 \"  ").getMillis());
   }
 
@@ -130,7 +130,7 @@ public class TimestampParserTest
   public void testTimeStampParserWithShortTimeZone()
   {
     DateTime d = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8));
-    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss z yyyy");
+    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss z yyyy", null);
     Assert.assertEquals(d.getMillis(), parser.apply("Wed Nov 9 04:00:00 PST 1994").getMillis());
   }
 
@@ -141,13 +141,13 @@ public class TimestampParserTest
     long millis1 = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8)).getMillis();
     long millis2 = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-6)).getMillis();
 
-    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss zZ z yyyy");
+    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss zZ z yyyy", null);
     Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 GMT-0800 PST 1994").getMillis());
     Assert.assertEquals(millis2, parser.apply("Wed Nov 9 04:00:00 GMT-0600 CST 1994").getMillis());
     Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 UTC-0800 PST 1994").getMillis());
     Assert.assertEquals(millis2, parser.apply("Wed Nov 9 04:00:00 UTC-0600 CST 1994").getMillis());
 
-    parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss zZ yyyy");
+    parser = TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss zZ yyyy", null);
     Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 GMT-0800 1994").getMillis());
     Assert.assertEquals(millis2, parser.apply("Wed Nov 9 04:00:00 GMT-0600 1994").getMillis());
     Assert.assertEquals(millis1, parser.apply("Wed Nov 9 04:00:00 UTC-0800 1994").getMillis());
@@ -157,11 +157,11 @@ public class TimestampParserTest
   @Test
   public void testTimeZoneAtExtremeLocations()
   {
-    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd yy HH:mm:ss zZ z");
+    Function<String, DateTime> parser = TimestampParser.createTimestampParser("EEE MMM dd yy HH:mm:ss zZ z", null);
     Assert.assertEquals(new DateTime(2005, 1, 22, 13, 0, DateTimeZone.forOffsetHours(-6)).getMillis(),
                         parser.apply("Sat Jan 22 05 13:00:00 GMT-0600 CST").getMillis());
 
-    parser = TimestampParser.createTimestampParser("zZ z EEE MMM dd yy HH:mm:ss");
+    parser = TimestampParser.createTimestampParser("zZ z EEE MMM dd yy HH:mm:ss", null);
     Assert.assertEquals(new DateTime(2005, 1, 22, 13, 0, DateTimeZone.forOffsetHours(-6)).getMillis(),
                         parser.apply("GMT-0600 CST Sat Jan 22 05 13:00:00").getMillis());
   }
@@ -171,12 +171,12 @@ public class TimestampParserTest
   {
     DateTime d = new DateTime(1994, 11, 9, 4, 0, DateTimeZone.forOffsetHours(-8));
     Assert.assertEquals(d.getMillis(),
-                        TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss z yyyy 'helloz'")
+                        TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss z yyyy 'helloz'", null)
                                    .apply("Wed Nov 9 04:00:00 PST 1994 helloz")
                                    .getMillis()
     );
     Assert.assertEquals(d.getMillis(),
-                        TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss 'helloz' z yyyy 'hello'")
+                        TimestampParser.createTimestampParser("EEE MMM dd HH:mm:ss 'helloz' z yyyy 'hello'", null)
                                    .apply("Wed Nov 9 04:00:00 helloz PST 1994 hello")
                                    .getMillis()
     );

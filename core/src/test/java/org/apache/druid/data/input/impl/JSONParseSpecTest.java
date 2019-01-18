@@ -44,7 +44,7 @@ public class JSONParseSpecTest
   public void testParseRow()
   {
     final JSONParseSpec parseSpec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "iso", null),
+        new TimestampSpec("timestamp", "iso", null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
         new JSONPathSpec(
             true,
@@ -85,7 +85,7 @@ public class JSONParseSpecTest
   public void testParseRowWithConditional()
   {
     final JSONParseSpec parseSpec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "iso", null),
+        new TimestampSpec("timestamp", "iso", null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo")), null, null),
         new JSONPathSpec(
             true,
@@ -116,7 +116,7 @@ public class JSONParseSpecTest
     HashMap<String, Boolean> feature = new HashMap<String, Boolean>();
     feature.put("ALLOW_UNQUOTED_CONTROL_CHARS", true);
     JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "iso", null),
+        new TimestampSpec("timestamp", "iso", null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")), null, null),
         null,
         feature

@@ -121,7 +121,7 @@ public class MultiValuedDimensionTest
 
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
-            new TimestampSpec("timestamp", "iso", null),
+            new TimestampSpec("timestamp", "iso", null, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags")), null, null),
             "\t",
             ImmutableList.of("timestamp", "product", "tags"),

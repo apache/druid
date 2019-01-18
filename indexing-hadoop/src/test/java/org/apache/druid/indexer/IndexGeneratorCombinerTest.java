@@ -69,7 +69,7 @@ public class IndexGeneratorCombinerTest
                 HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new TimeAndDimsParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null, null),
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "keywords")), null, null)
                         ),
                         null

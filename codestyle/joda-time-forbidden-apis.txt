@@ -60,7 +60,7 @@ org.joda.time.MutableInterval#parse(java.lang.String)
 
 org.joda.time.DateTimeZone#forID(java.lang.String) @ Use DateTimes.inferTzFromString() instead
 
-@defaultMessage Uses default time zone, use DateTimes.UtcFormatter to parse.
+@defaultMessage Uses default time zone, use DateTimes.Formatter or DateTimes.UtcFormatter to parse.
 org.joda.time.format.DateTimeFormatter#parseInto(org.joda.time.ReadWritableInstant, java.lang.String, int)
 org.joda.time.format.DateTimeFormatter#parseDateTime(java.lang.String)
 org.joda.time.format.DateTimeFormatter#parseMutableDateTime(java.lang.String)

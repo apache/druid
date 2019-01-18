@@ -146,7 +146,7 @@ public class DetermineHashedPartitionsJobTest
             HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                 new StringInputRowParser(
                     new DelimitedParseSpec(
-                        new TimestampSpec("ts", null, null),
+                        new TimestampSpec("ts", null, null, null),
                         new DimensionsSpec(
                             DimensionsSpec.getDefaultSchemas(ImmutableList.of(
                                 "market",

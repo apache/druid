@@ -132,7 +132,7 @@ public class IncrementalIndexSchema
           && parser.getParseSpec().getTimestampSpec() != null) {
         this.timestampSpec = parser.getParseSpec().getTimestampSpec();
       } else {
-        this.timestampSpec = new TimestampSpec(null, null, null);
+        this.timestampSpec = new TimestampSpec(null, null, null, null);
       }
       return this;
     }

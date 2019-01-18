@@ -62,7 +62,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
     final DateTimes.UtcFormatter formatter =
         formatString == null
         ? createDefaultParser(timeZone)
-        : DateTimes.wrapFormatter(DateTimeFormat.forPattern(formatString).withZone(timeZone));
+        : DateTimes.wrapUtcFormatter(DateTimeFormat.forPattern(formatString).withZone(timeZone));
 
     class TimestampParseExpr implements Expr
     {
@@ -118,7 +118,7 @@ public class TimestampParseExprMacro implements ExprMacroTable.ExprMacro
         .appendOptional(offsetElement.getParser())
         .toParser();
 
-    return DateTimes.wrapFormatter(
+    return DateTimes.wrapUtcFormatter(
         new DateTimeFormatterBuilder()
             .append(ISODateTimeFormat.dateElementParser())
             .appendOptional(timeOrOffset)

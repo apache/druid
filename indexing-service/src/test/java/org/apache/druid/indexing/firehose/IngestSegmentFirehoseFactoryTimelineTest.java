@@ -99,7 +99,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = TransformSpec.NONE.decorate(
       new MapInputRowParser(
           new JSONParseSpec(
-              new TimestampSpec(TIME_COLUMN, "auto", null),
+              new TimestampSpec(TIME_COLUMN, "auto", null, null),
               new DimensionsSpec(
                   DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)),
                   null,

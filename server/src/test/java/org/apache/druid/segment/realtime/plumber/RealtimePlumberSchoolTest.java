@@ -137,7 +137,7 @@ public class RealtimePlumberSchoolTest
         jsonMapper.convertValue(
             new StringInputRowParser(
                 new JSONParseSpec(
-                    new TimestampSpec("timestamp", "auto", null),
+                    new TimestampSpec("timestamp", "auto", null, null),
                     new DimensionsSpec(null, null, null),
                     null,
                     null
@@ -157,7 +157,7 @@ public class RealtimePlumberSchoolTest
         jsonMapper.convertValue(
             new StringInputRowParser(
                 new JSONParseSpec(
-                    new TimestampSpec("timestamp", "auto", null),
+                    new TimestampSpec("timestamp", "auto", null, null),
                     new DimensionsSpec(null, null, null),
                     null,
                     null

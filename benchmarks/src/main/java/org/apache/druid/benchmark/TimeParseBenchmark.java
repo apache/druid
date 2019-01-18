@@ -53,7 +53,7 @@ public class TimeParseBenchmark
 
   static final String DATA_FORMAT = "MM/dd/yyyy HH:mm:ss Z";
 
-  static Function<String, DateTime> timeFn = TimestampParser.createTimestampParser(DATA_FORMAT);
+  static Function<String, DateTime> timeFn = TimestampParser.createTimestampParser(DATA_FORMAT, null);
 
   private String[] rows;
 

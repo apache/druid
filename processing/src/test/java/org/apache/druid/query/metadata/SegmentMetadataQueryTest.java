@@ -719,7 +719,7 @@ public class SegmentMetadataQueryTest
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null,
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ds", "auto", null, null),
         null,
         null
     );

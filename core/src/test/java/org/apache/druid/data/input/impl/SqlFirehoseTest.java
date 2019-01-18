@@ -81,7 +81,7 @@ public class SqlFirehoseTest
     this.fileList = testFile;
     parser = new MapInputRowParser(
         new TimeAndDimsParseSpec(
-            new TimestampSpec("timestamp", "auto", null),
+            new TimestampSpec("timestamp", "auto", null, null),
             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null)
         )
     );

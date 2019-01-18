@@ -65,8 +65,8 @@ public class TimeDimExtractionFn extends DimExtractionFn
   private Supplier<Function<String, String>> makeFunctionSupplier()
   {
     if (joda) {
-      final DateTimes.UtcFormatter parser = DateTimes.wrapFormatter(DateTimeFormat.forPattern(timeFormat));
-      final DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(resultFormat));
+      final DateTimes.UtcFormatter parser = DateTimes.wrapUtcFormatter(DateTimeFormat.forPattern(timeFormat));
+      final DateTimes.UtcFormatter formatter = DateTimes.wrapUtcFormatter(DateTimeFormat.forPattern(resultFormat));
 
       final Function<String, String> fn = value -> {
         DateTime date;

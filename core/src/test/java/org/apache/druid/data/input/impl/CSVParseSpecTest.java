@@ -35,6 +35,7 @@ public class CSVParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
+            null,
             null
         ),
         new DimensionsSpec(
@@ -57,6 +58,7 @@ public class CSVParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
+            null,
             null
         ),
         new DimensionsSpec(

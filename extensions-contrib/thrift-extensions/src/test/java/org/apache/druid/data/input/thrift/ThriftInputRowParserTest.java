@@ -59,7 +59,7 @@ public class ThriftInputRowParserTest
   @Before
   public void setUp()
   {
-    parseSpec = new JSONParseSpec(new TimestampSpec("date", "auto", null),
+    parseSpec = new JSONParseSpec(new TimestampSpec("date", "auto", null, null),
                                   new DimensionsSpec(Lists.newArrayList(
                                       new StringDimensionSchema("title"),
                                       new StringDimensionSchema("lastName")
@@ -121,7 +121,7 @@ public class ThriftInputRowParserTest
   public void testDisableJavaScript()
   {
     final JavaScriptParseSpec parseSpec = new JavaScriptParseSpec(
-        new TimestampSpec("timestamp", "auto", null),
+        new TimestampSpec("timestamp", "auto", null, null),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(
                 ImmutableList.of(

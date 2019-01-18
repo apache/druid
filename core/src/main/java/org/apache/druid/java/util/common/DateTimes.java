@@ -20,10 +20,12 @@
 package org.apache.druid.java.util.common;
 
 import io.netty.util.SuppressForbidden;
+import org.apache.commons.lang3.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
@@ -35,10 +37,11 @@ public final class DateTimes
   public static final DateTime EPOCH = utc(0);
   public static final DateTime MAX = utc(JodaUtils.MAX_INSTANT);
   public static final DateTime MIN = utc(JodaUtils.MIN_INSTANT);
+  public static final String UTC_TIMEZONE = DateTimeZone.UTC.getID();
 
-  public static final UtcFormatter ISO_DATE_TIME = wrapFormatter(ISODateTimeFormat.dateTime());
-  public static final UtcFormatter ISO_DATE_OPTIONAL_TIME = wrapFormatter(ISODateTimeFormat.dateOptionalTimeParser());
-  public static final UtcFormatter ISO_DATE_OR_TIME_WITH_OFFSET = wrapFormatter(
+  public static final UtcFormatter ISO_DATE_TIME = wrapUtcFormatter(ISODateTimeFormat.dateTime());
+  public static final UtcFormatter ISO_DATE_OPTIONAL_TIME = wrapUtcFormatter(ISODateTimeFormat.dateOptionalTimeParser());
+  public static final UtcFormatter ISO_DATE_OR_TIME_WITH_OFFSET = wrapUtcFormatter(
       ISODateTimeFormat.dateTimeParser().withOffsetParsed()
   );
 
@@ -64,18 +67,19 @@ public final class DateTimes
     }
   }
 
-  /**
-   * Simple wrapper class to enforce UTC Chronology in formatter. Specifically, it will use
-   * {@link DateTimeFormatter#withChronology(Chronology)} to set the chronology to
-   * {@link ISOChronology#getInstanceUTC()} on the wrapped {@link DateTimeFormatter}.
-   */
-  public static class UtcFormatter
+  public static class Formatter
   {
-    private final DateTimeFormatter innerFormatter;
+    private DateTimeFormatter innerFormatter;
 
-    private UtcFormatter(final DateTimeFormatter innerFormatter)
+    public Formatter(DateTimeFormatter innerFormatter)
     {
-      this.innerFormatter = innerFormatter.withChronology(ISOChronology.getInstanceUTC());
+      this.innerFormatter = innerFormatter;
+    }
+
+    public Formatter(String format, String timezone)
+    {
+      this.innerFormatter = DateTimeFormat.forPattern(format)
+                                          .withChronology(ISOChronology.getInstance(inferTzfromString(timezone)));
     }
 
     @SuppressForbidden(reason = "DateTimeFormatter#parseDateTime")
@@ -91,11 +95,38 @@ public final class DateTimes
   }
 
   /**
+   * Simple wrapper class to enforce UTC Chronology in formatter. Specifically, it will use
+   * {@link DateTimeFormatter#withChronology(Chronology)} to set the chronology to
+   * {@link ISOChronology#getInstanceUTC()} on the wrapped {@link DateTimeFormatter}.
+   */
+  public static class UtcFormatter extends Formatter
+  {
+    private UtcFormatter(final DateTimeFormatter innerFormatter)
+    {
+      super(innerFormatter.withChronology(ISOChronology.getInstanceUTC()));
+    }
+  }
+
+  /**
+   * Create a  {@link Formatter} by args
+   *
+   * @param format
+   * @param timeZone
+   *
+   * @return
+   */
+  public static Formatter wrapFormatter(String format, String timeZone)
+  {
+    timeZone = StringUtils.isNotBlank(timeZone) ? timeZone : DateTimeZone.UTC.getID();
+    return new Formatter(format, timeZone);
+  }
+
+  /**
    * Creates a {@link UtcFormatter} that wraps around a {@link DateTimeFormatter}.
    *
    * @param formatter inner {@link DateTimeFormatter} used to parse {@link String}
    */
-  public static UtcFormatter wrapFormatter(final DateTimeFormatter formatter)
+  public static UtcFormatter wrapUtcFormatter(final DateTimeFormatter formatter)
   {
     return new UtcFormatter(formatter);
   }

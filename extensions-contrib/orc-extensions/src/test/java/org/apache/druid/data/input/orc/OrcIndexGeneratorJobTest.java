@@ -132,7 +132,7 @@ public class OrcIndexGeneratorJobTest
   };
   private final InputRowParser inputRowParser = new OrcHadoopInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec("timestamp", "yyyyMMddHH", null),
+          new TimestampSpec("timestamp", "yyyyMMddHH", null, null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null)
       ),
       "struct<timestamp:string,host:string,visited_num:int>",

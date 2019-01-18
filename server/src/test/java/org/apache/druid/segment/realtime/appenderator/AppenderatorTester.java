@@ -121,7 +121,7 @@ public class AppenderatorTester implements AutoCloseable
     final Map<String, Object> parserMap = objectMapper.convertValue(
         new MapInputRowParser(
             new JSONParseSpec(
-                new TimestampSpec("ts", "auto", null),
+                new TimestampSpec("ts", "auto", null, null),
                 new DimensionsSpec(null, null, null),
                 null,
                 null

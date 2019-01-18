@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.DateTimeFormatterBuilder;
 import org.joda.time.format.DateTimeParser;
@@ -37,12 +36,13 @@ import java.util.concurrent.TimeUnit;
 public class TimestampParser
 {
   public static Function<String, DateTime> createTimestampParser(
-      final String format
+      final String format,
+      final String userTimeZone
   )
   {
     if ("auto".equalsIgnoreCase(format)) {
       // Could be iso or millis
-      final DateTimes.UtcFormatter parser = DateTimes.wrapFormatter(createAutoParser());
+      final DateTimes.UtcFormatter parser = DateTimes.wrapUtcFormatter(createAutoParser());
       return (String input) -> {
         Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
 
@@ -87,7 +87,7 @@ public class TimestampParser
       };
     } else {
       try {
-        final DateTimes.UtcFormatter formatter = DateTimes.wrapFormatter(DateTimeFormat.forPattern(format));
+        final DateTimes.Formatter formatter = DateTimes.wrapFormatter(format, userTimeZone);
         return input -> {
           Preconditions.checkArgument(!Strings.isNullOrEmpty(input), "null timestamp");
           return formatter.parse(ParserUtils.stripQuotes(input));
@@ -117,10 +117,11 @@ public class TimestampParser
   }
 
   public static Function<Object, DateTime> createObjectTimestampParser(
-      final String format
+      final String format,
+      final String timeZone
   )
   {
-    final Function<String, DateTime> stringFun = createTimestampParser(format);
+    final Function<String, DateTime> stringFun = createTimestampParser(format, timeZone);
     final Function<Number, DateTime> numericFun = createNumericTimestampParser(format);
 
     return o -> {

@@ -81,7 +81,7 @@ public class MetadataTest
     final Metadata m1 = new Metadata(
         Collections.singletonMap("k", "v"),
         aggs,
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ds", "auto", null, null),
         Granularities.ALL,
         Boolean.FALSE
     );
@@ -89,7 +89,7 @@ public class MetadataTest
     final Metadata m2 = new Metadata(
         Collections.singletonMap("k", "v"),
         aggs,
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ds", "auto", null, null),
         Granularities.ALL,
         Boolean.FALSE
     );
@@ -97,7 +97,7 @@ public class MetadataTest
     final Metadata m3 = new Metadata(
         Collections.singletonMap("k", "v"),
         aggs,
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ds", "auto", null, null),
         Granularities.ALL,
         Boolean.TRUE
     );
@@ -107,7 +107,7 @@ public class MetadataTest
         new AggregatorFactory[]{
             new LongMaxAggregatorFactory("n", "n")
         },
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ds", "auto", null, null),
         Granularities.ALL,
         Boolean.FALSE
     );
@@ -138,7 +138,7 @@ public class MetadataTest
     final Metadata merged4 = new Metadata(
         Collections.singletonMap("k", "v"),
         explicitAggs,
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ds", "auto", null, null),
         Granularities.ALL,
         null
     );

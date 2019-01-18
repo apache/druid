@@ -44,7 +44,7 @@ public class TransformSpecTest
 {
   private static final MapInputRowParser PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec("t", "auto", DateTimes.of("2000-01-01")),
+          new TimestampSpec("t", "auto", DateTimes.of("2000-01-01"), null),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(ImmutableList.of("f", "x", "y")),
               null,

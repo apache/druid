@@ -132,6 +132,7 @@ public class IndexTaskTest
       new TimestampSpec(
           "ts",
           "auto",
+          null,
           null
       ),
       new DimensionsSpec(
@@ -667,6 +668,7 @@ public class IndexTaskTest
                 new TimestampSpec(
                     "time",
                     "auto",
+                    null,
                     null
                 ),
                 new DimensionsSpec(
@@ -719,6 +721,7 @@ public class IndexTaskTest
                 new TimestampSpec(
                     "time",
                     "auto",
+                    null,
                     null
                 ),
                 new DimensionsSpec(
@@ -928,6 +931,7 @@ public class IndexTaskTest
             new TimestampSpec(
                 "time",
                 "auto",
+                null,
                 null
             ),
             new DimensionsSpec(
@@ -981,6 +985,7 @@ public class IndexTaskTest
             new TimestampSpec(
                 "time",
                 "auto",
+                null,
                 null
             ),
             new DimensionsSpec(
@@ -1070,6 +1075,7 @@ public class IndexTaskTest
             new TimestampSpec(
                 "time",
                 "auto",
+                null,
                 null
             ),
             new DimensionsSpec(
@@ -1193,6 +1199,7 @@ public class IndexTaskTest
             new TimestampSpec(
                 "time",
                 "auto",
+                null,
                 null
             ),
             new DimensionsSpec(
@@ -1309,6 +1316,7 @@ public class IndexTaskTest
             new TimestampSpec(
                 "time",
                 "auto",
+                null,
                 null
             ),
             new DimensionsSpec(
@@ -1412,6 +1420,7 @@ public class IndexTaskTest
             new TimestampSpec(
                 "time",
                 "auto",
+                null,
                 null
             ),
             new DimensionsSpec(
@@ -1482,6 +1491,7 @@ public class IndexTaskTest
             new TimestampSpec(
                 "time",
                 "auto",
+                null,
                 null
             ),
             new DimensionsSpec(

@@ -447,7 +447,7 @@ public class BatchDeltaIngestionTest
                 MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null, null),
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "host2", "visited_num"),

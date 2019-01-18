@@ -1378,7 +1378,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         TestHelper.makeJsonMapper().convertValue(
             new MapInputRowParser(
                 new TimeAndDimsParseSpec(
-                    new TimestampSpec("t", "auto", null),
+                    new TimestampSpec("t", "auto", null, null),
                     new DimensionsSpec(
                         ImmutableList.of(
                             new StringDimensionSchema("dim1"),

@@ -74,6 +74,7 @@ public class EventReceiverFirehoseIdleTest
                 new TimestampSpec(
                     "timestamp",
                     "auto",
+                    null,
                     null
                 ), new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("d1")), null, null),
                 null,

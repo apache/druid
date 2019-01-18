@@ -79,7 +79,7 @@ public class SchemaEvolutionTest
   {
     final MapInputRowParser parser = new MapInputRowParser(
         new TimeAndDimsParseSpec(
-            new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+            new TimestampSpec(TIMESTAMP_COLUMN, "iso", null, null),
             new DimensionsSpec(
                 DimensionsSpec.getDefaultSchemas(dimensions),
                 dimensions.isEmpty() ? ImmutableList.of("t", "c1", "c2") : null,

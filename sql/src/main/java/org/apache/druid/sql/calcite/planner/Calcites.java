@@ -63,8 +63,8 @@ import java.util.regex.Pattern;
  */
 public class Calcites
 {
-  private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
-  private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
+  private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapUtcFormatter(ISODateTimeFormat.dateParser());
+  private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapUtcFormatter(
       new DateTimeFormatterBuilder()
           .append(ISODateTimeFormat.dateParser())
           .appendLiteral(' ')

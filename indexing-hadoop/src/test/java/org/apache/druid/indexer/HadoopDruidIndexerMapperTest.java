@@ -64,7 +64,7 @@ public class HadoopDruidIndexerMapperTest
       JSON_MAPPER.convertValue(
           new HadoopyStringInputRowParser(
               new JSONParseSpec(
-                  new TimestampSpec("t", "auto", null),
+                  new TimestampSpec("t", "auto", null, null),
                   new DimensionsSpec(
                       DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2")),
                       null,

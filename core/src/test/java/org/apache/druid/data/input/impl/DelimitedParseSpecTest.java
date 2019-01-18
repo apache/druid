@@ -37,7 +37,7 @@ public class DelimitedParseSpecTest
   public void testSerde() throws IOException
   {
     DelimitedParseSpec spec = new DelimitedParseSpec(
-        new TimestampSpec("abc", "iso", null),
+        new TimestampSpec("abc", "iso", null, null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Collections.singletonList("abc")), null, null),
         "\u0001",
         "\u0002",
@@ -66,6 +66,7 @@ public class DelimitedParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
+            null,
             null
         ),
         new DimensionsSpec(
@@ -89,6 +90,7 @@ public class DelimitedParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
+            null,
             null
         ),
         new DimensionsSpec(
@@ -112,6 +114,7 @@ public class DelimitedParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
+            null,
             null
         ),
         new DimensionsSpec(
