@@ -59,7 +59,6 @@ Edit common.runtime.properties at conf/druid/_common/common.runtime.properties t
 # Deep storage
 #
 # For HDFS:
-properties
  druid.storage.type=hdfs
  druid.storage.storageDirectory=/druid/segments
 # OR
@@ -78,7 +77,7 @@ druid.indexer.logs.directory=/druid/indexing-logs
 
 Note: Comment out Local storage and S3 Storage parameters in the file
 
-Also include hdfs-storage core extension to conf/druid/_common/common.runtime.properties
+Also include hdfs-storage core extension to conf/druid/_common/common.runtime.
 
 ```properties
 #
