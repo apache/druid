@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter;
 
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.hive.common.util.Murmur3;
 
@@ -283,7 +282,7 @@ public class BloomKFilter
       return new BloomKFilter(data, numHashFunc);
     }
     catch (RuntimeException e) {
-      throw new IOE(e, "Unable to deserialize BloomKFilter");
+      throw new IOException("Unable to deserialize BloomKFilter", e);
     }
   }
 
