@@ -20,7 +20,9 @@ title: "Configuring Druid to use a Kerberized Hadoop as Deep Storage"
   - KIND, either express or implied.  See the License for the
   - specific language governing permissions and limitations
   - under the License.
-  -->
+  --> 
+# Configuring Druid to use a Kerberized Hadoop as Deep Storage
+
 ## Hadoop Setup
 
 Following are the configurations files required to be copied over to Druid conf folders:
