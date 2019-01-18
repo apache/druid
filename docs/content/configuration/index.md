@@ -48,39 +48,43 @@ This page documents all of the configuration properties for each Druid service t
     * [Announcing Segments](#announcing-segments)
     * [JavaScript](#javascript)
     * [Double Column Storage](#double-column-storage)
-  * [Coordinator](#coordinator)
-    * [Static Configuration](#static-configuration)
-        * [Node Config](#coordinator-node-config)
-        * [Coordinator Operation](#coordinator-operation)
-        * [Segment Management](#segment-management)
-        * [Metadata Retrieval](#metadata-retrieval)
-    * [Dynamic Configuration](#dynamic-configuration)
-        * [Lookups](#lookups-dynamic-configuration)
-        * [Compaction](#compaction-dynamic-configuration)
-  * [Overlord](#overlord)
-    * [Node Config](#overlord-node-config)
-    * [Static Configuration](#overlord-static-configuration)
-    * [Dynamic Configuration](#overlord-dynamic-configuration)
-        * [Worker Select Strategy](#worker-select-strategy)
-        * [Autoscaler](#autoscaler)
-  * [MiddleManager & Peons](#middlemanager-and-peons)
-    * [Node Config](#middlemanager-node-config)
-    * [MiddleManager Configuration](#middlemanager-configuration)
-    * [Peon Processing](#peon-processing)
-    * [Peon Query Configuration](#peon-query-configuration)
-    * [Caching](#peon-caching)
-    * [Additional Peon Configuration](#additional-peon-configuration)
-  * [Broker](#broker)
-    * [Node Config](#broker-node-configs)
-    * [Query Configuration](#broker-query-configuration)
-    * [SQL](#sql)
-    * [Caching](#broker-caching)
-    * [Segment Discovery](#segment-discovery)
-  * [Historical](#historical)
-    * [Node Configuration](#historical-node-config)
-    * [General Configuration](#historical-general-configuration)
-    * [Query Configs](#historical-query-configs)
-    * [Caching](#historical-caching)
+  * [Master Server](#master-server)
+    * [Coordinator](#coordinator)
+        * [Static Configuration](#static-configuration)
+            * [Node Config](#coordinator-node-config)
+            * [Coordinator Operation](#coordinator-operation)
+            * [Segment Management](#segment-management)
+            * [Metadata Retrieval](#metadata-retrieval)
+        * [Dynamic Configuration](#dynamic-configuration)
+            * [Lookups](#lookups-dynamic-configuration)
+            * [Compaction](#compaction-dynamic-configuration)
+    * [Overlord](#overlord)
+        * [Static Configuration](#overlord-static-configuration)
+            * [Node Config](#overlord-node-config)
+            * [Overlord Operations](#overlord-operations)
+        * [Dynamic Configuration](#overlord-dynamic-configuration)
+            * [Worker Select Strategy](#worker-select-strategy)
+            * [Autoscaler](#autoscaler)
+  * [Data Server](#data-server)
+    * [MiddleManager & Peons](#middlemanager-and-peons)
+        * [Node Config](#middlemanager-node-config)
+        * [MiddleManager Configuration](#middlemanager-configuration)
+        * [Peon Processing](#peon-processing)
+        * [Peon Query Configuration](#peon-query-configuration)
+        * [Caching](#peon-caching)
+        * [Additional Peon Configuration](#additional-peon-configuration)
+    * [Historical](#historical)
+        * [Node Configuration](#historical-node-config)
+        * [General Configuration](#historical-general-configuration)
+        * [Query Configs](#historical-query-configs)
+        * [Caching](#historical-caching)
+  * [Query Server](#query-server)
+    * [Broker](#broker)
+        * [Node Config](#broker-node-configs)
+        * [Query Configuration](#broker-query-configuration)
+        * [SQL](#sql)
+        * [Caching](#broker-caching)
+        * [Segment Discovery](#segment-discovery)
   * [Caching](#cache-configuration)
   * [General Query Configuration](#general-query-configuration)
   * [Realtime nodes (Deprecated)](#realtime-nodes)
@@ -94,31 +98,40 @@ $ ls -R conf
 druid       tranquility
 
 conf/druid:
-_common       broker        coordinator   historical    middleManager overlord
+_common data    master  query
 
 conf/druid/_common:
 common.runtime.properties log4j2.xml
 
-conf/druid/broker:
+conf/druid/data:
+historical    middleManager
+
+conf/druid/data/historical:
 jvm.config         runtime.properties
 
-conf/druid/coordinator:
+conf/druid/data/middleManager:
 jvm.config         runtime.properties
 
-conf/druid/historical:
+conf/druid/master:
+coordinator overlord
+
+conf/druid/master/coordinator:
 jvm.config         runtime.properties
 
-conf/druid/middleManager:
+conf/druid/master/overlord:
 jvm.config         runtime.properties
 
-conf/druid/overlord:
+conf/druid/query:
+broker
+
+conf/druid/query/broker:
 jvm.config         runtime.properties
 
 conf/tranquility:
 kafka.json  server.json
 ```
 
-Each directory has a `runtime.properties` file containing configuration properties for the specific Druid service correponding to the directory (e.g., `historical`).
+Each directory has a `runtime.properties` file containing configuration properties for the specific Druid process correponding to the directory (e.g., `historical`).
 
 The `jvm.config` files contain JVM flags such as heap sizing properties for each service.
 
@@ -684,15 +697,19 @@ Support for 64-bit floating point columns was released in Druid 0.11.0, so if yo
 |--------|-----------|-------|
 |`druid.indexing.doubleStorage`|Set to "float" to use 32-bit double representation for double columns.|double|
 
-## Coordinator
+## Master Server
+
+This section contains the configuration options for the processes that reside on master servers (coordinators and overlords).
+
+### Coordinator
 
 For general Coordinator Node information, see [here](../design/coordinator.html).
 
-### Static Configuration
+#### Static Configuration
 
 These coordinator static configurations can be defined in the `coordinator/runtime.properties` file.
 
-#### Coordinator Node Config
+##### Coordinator Node Config
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -702,7 +719,7 @@ These coordinator static configurations can be defined in the `coordinator/runti
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8281|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/coordinator|
 
-#### Coordinator Operation
+##### Coordinator Operation
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -721,18 +738,18 @@ These coordinator static configurations can be defined in the `coordinator/runti
 |`druid.coordinator.asOverlord.enabled`|Boolean value for whether this coordinator node should act like an overlord as well. This configuration allows users to simplify a druid cluster by not having to deploy any standalone overlord nodes. If set to true, then overlord console is available at `http://coordinator-host:port/console.html` and be sure to set `druid.coordinator.asOverlord.overlordService` also. See next.|false|
 |`druid.coordinator.asOverlord.overlordService`| Required, if `druid.coordinator.asOverlord.enabled` is `true`. This must be same value as `druid.service` on standalone Overlord nodes and `druid.selectors.indexing.serviceName` on Middle Managers.|NULL|
 
-#### Segment Management
+##### Segment Management
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of zookeeper.|batch|
 |`druid.coordinator.loadqueuepeon.type`|curator or http|Whether to use "http" or "curator" implementation to assign segment loads/drops to historical|curator|
 
-##### Additional config when "http" loadqueuepeon is used
+###### Additional config when "http" loadqueuepeon is used
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.coordinator.loadqueuepeon.http.batchSize`|Number of segment load/drop requests to batch in one HTTP request. Note that it must be smaller than `druid.segmentCache.numLoadingThreads` config on historical node.|1|
 
-#### Metadata Retrieval
+##### Metadata Retrieval
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -742,7 +759,7 @@ These coordinator static configurations can be defined in the `coordinator/runti
 |`druid.manager.rules.defaultTier`|The default tier from which default rules will be loaded from.|_default|
 |`druid.manager.rules.alertThreshold`|The duration after a failed poll upon which an alert should be emitted.|PT10M|
 
-### Dynamic Configuration
+#### Dynamic Configuration
 
 The coordinator has dynamic configuration to change certain behaviour on the fly. The coordinator uses a JSON spec object from the Druid [metadata storage](../dependencies/metadata-storage.html) config table. This object is detailed below:
 
@@ -805,7 +822,7 @@ To view last <n> entries of the audit history of coordinator dynamic config issu
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 ```
 
-#### Lookups Dynamic Configuration (EXPERIMENTAL)<a id="lookups-dynamic-configuration"></a>
+##### Lookups Dynamic Configuration (EXPERIMENTAL)<a id="lookups-dynamic-configuration"></a>
 These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.html)
 
 |Property|Description|Default|
@@ -817,7 +834,7 @@ These configuration options control the behavior of the Lookup dynamic configura
 |`druid.manager.lookups.threadPoolSize`|How many nodes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
 |`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|
 
-#### Compaction Dynamic Configuration
+##### Compaction Dynamic Configuration
 
 Compaction configurations can also be set or updated dynamically without restarting coordinators. For segment compaction,
 please see [Compacting Segments](../design/coordinator.html#compacting-segments).
@@ -847,7 +864,7 @@ An example of compaction config is:
 
 For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large value to avoid frequent compact task failures.
 
-##### Compaction TuningConfig
+###### Compaction TuningConfig
 
 |Property|Description|Required|
 |--------|-----------|--------|
@@ -857,15 +874,15 @@ For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some
 |`maxPendingPersists`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 0 (meaning one persist can be running concurrently with ingestion, and none can be queued up))|
 |`pushTimeout`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 0)|
 
-## Overlord
+### Overlord
 
 For general Overlord Node information, see [here](../design/indexing-service.html).
 
-### Overlord Static Configuration
+#### Overlord Static Configuration
 
 These overlord static configurations can be defined in the `overlord/runtime.properties` file.
 
-#### Overlord Node Configs
+##### Overlord Node Configs
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -875,7 +892,7 @@ These overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/overlord|
 
-#### Overlord Operations
+##### Overlord Operations
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -919,7 +936,7 @@ There are additional configs for autoscaling (if it is enabled):
 |`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
 |`druid.indexer.autoscale.workerPort`|The port that middle managers will run on.|8080|
 
-### Overlord Dynamic Configuration
+#### Overlord Dynamic Configuration
 
 The overlord can dynamically change worker behavior.
 
@@ -995,11 +1012,11 @@ To view last <n> entries of the audit history of worker config issue a GET reque
 http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
 ```
 
-#### Worker Select Strategy
+##### Worker Select Strategy
 
 Worker select strategies control how Druid assigns tasks to middleManagers.
 
-##### Equal Distribution
+###### Equal Distribution
 
 Tasks are assigned to the middleManager with the most available capacity at the time the task begins running. This is
 useful if you want work evenly distributed across your middleManagers.
@@ -1009,7 +1026,7 @@ useful if you want work evenly distributed across your middleManagers.
 |`type`|`equalDistribution`.|required; must be `equalDistribution`|
 |`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
 
-##### Fill Capacity
+###### Fill Capacity
 
 Tasks are assigned to the worker with the most currently-running tasks at the time the task begins running. This is
 useful in situations where you are elastically auto-scaling middleManagers, since it will tend to pack some full and
@@ -1023,7 +1040,7 @@ middleManagers up to capacity simultaneously, rather than a single middleManager
 |`type`|`fillCapacity`.|required; must be `fillCapacity`|
 |`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
 
-##### Javascript
+###### Javascript
 
 Allows defining arbitrary logic for selecting workers to run task using a JavaScript function.
 The function is passed remoteTaskRunnerConfig, map of workerId to available workers and task to be executed and returns the workerId on which the task should be run or null if the task cannot be run.
@@ -1049,7 +1066,7 @@ Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2
 JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 </div>
 
-##### Affinity
+###### Affinity
 
 Affinity configs can be provided to the _equalDistribution_ and _fillCapacity_ strategies using the "affinityConfig"
 field. If not provided, the default is to not use affinity at all.
@@ -1059,7 +1076,7 @@ field. If not provided, the default is to not use affinity at all.
 |`affinity`|JSON object mapping a datasource String name to a list of indexing service middleManager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middleManager and what the middleManager announces itself as (examine the Overlord logs to see what your middleManager announces itself as).|{}|
 |`strong`|With weak affinity (the default), tasks for a dataSource may be assigned to other middleManagers if their affinity-mapped middleManagers are not able to run all pending tasks in the queue for that dataSource. With strong affinity, tasks for a dataSource will only ever be assigned to their affinity-mapped middleManagers, and will wait in the pending queue if necessary.|false|
 
-#### Autoscaler
+##### Autoscaler
 
 Amazon's EC2 is currently the only supported autoscaler.
 
@@ -1071,11 +1088,15 @@ Amazon's EC2 is currently the only supported autoscaler.
 |`nodeData`|A JSON object that describes how to launch new nodes.|none; required|
 |`userData`|A JSON object that describes how to configure new nodes. If you have set druid.indexer.autoscale.workerVersion, this must have a versionReplacementString. Otherwise, a versionReplacementString is not necessary.|none; optional|
 
-## MiddleManager and Peons
+## Data Server
+
+This section contains the configuration options for the processes that reside on data servers (middle managers/peons and historicals).
+
+### MiddleManager and Peons
 
 These MiddleManager and Peon configurations can be defined in the `middleManager/runtime.properties` file.
 
-### MiddleManager Node Config
+#### MiddleManager Node Config
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1085,7 +1106,7 @@ These MiddleManager and Peon configurations can be defined in the `middleManager
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/middlemanager|
 
-### MiddleManager Configuration
+#### MiddleManager Configuration
 
 Middle managers pass their configurations down to their child peons. The middle manager requires the following configs:
 
@@ -1105,7 +1126,7 @@ Middle managers pass their configurations down to their child peons. The middle 
 |`druid.worker.version`|Version identifier for the middle manager.|0|
 |`druid.worker.capacity`|Maximum number of tasks the middle manager can accept.|Number of available processors - 1|
 
-### Peon Processing
+#### Peon Processing
 
 Processing properties set on the Middlemanager will be passed through to Peons.
 
@@ -1125,11 +1146,11 @@ The amount of direct memory needed by Druid is at least
 ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` in
 `druid.indexer.runner.javaOptsArray` as documented above.
 
-### Peon Query Configuration
+#### Peon Query Configuration
 
 See [general query configuration](#general-query-configuration).
 
-### Peon Caching
+#### Peon Caching
 
 You can optionally configure caching to be enabled on the peons by setting caching configs here.
 
@@ -1142,7 +1163,7 @@ You can optionally configure caching to be enabled on the peons by setting cachi
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
 
-### Additional Peon Configuration
+#### Additional Peon Configuration
 Although peons inherit the configurations of their parent middle managers, explicit child peon configs in middle manager can be set by prefixing them with:
 
 ```
@@ -1171,7 +1192,7 @@ If the peon is running in remote mode, there must be an overlord up and running.
 |`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT1M|
 |`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|60|
 
-#### SegmentWriteOutMediumFactory
+##### SegmentWriteOutMediumFactory
 
 When new segments are created, Druid temporarily stores some pre-processed data in some buffers. Currently two types of
 *medium* exist for those buffers: *temporary files* and *off-heap memory*.
@@ -1194,13 +1215,107 @@ then the value from the configuration below is used:
 |--------|-----------|-------|
 |`druid.peon.defaultSegmentWriteOutMediumFactory.type`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|
 
-## Broker
+### Historical
+
+For general Historical Node information, see [here](../design/historical.html).
+
+These Historical configurations can be defined in the `historical/runtime.properties` file.
+
+#### Historical Node Configuration
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
+|`druid.bindOnHost`|Indicating whether the node's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
+|`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
+|`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
+|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/historical|
+
+
+#### Historical General Configuration
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.server.maxSize`|The maximum number of bytes-worth of segments that the node wants assigned to it. This is not a limit that Historical nodes actually enforces, just a value published to the Coordinator node so it can plan accordingly.|0|
+|`druid.server.tier`| A string to name the distribution tier that the storage node belongs to. Many of the [rules Coordinator nodes use](../operations/rule-configuration.html) to manage segments can be keyed on tiers. |  `_default_tier` |
+|`druid.server.priority`|In a tiered architecture, the priority of the tier, thus allowing control over which nodes are queried. Higher numbers mean higher priority. The default (no priority) works for architecture with no cross replication (tiers that have no data-storage overlap). Data centers typically have equal priority. | 0 |
+
+#### Storing Segments
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.segmentCache.locations`|Segments assigned to a Historical node are first stored on the local file system (in a disk cache) and then served by the Historical node. These locations define where that local cache resides. This value cannot be NULL or EMPTY. Here is an example `druid.segmentCache.locations=[{"path": "/mnt/druidSegments", "maxSize": 10000, "freeSpacePercent": 1.0}]`. "freeSpacePercent" is optional, if provided then enforces that much of free disk partition space while storing segments. But, it depends on File.getTotalSpace() and File.getFreeSpace() methods, so enable if only if they work for your File System.| none |
+|`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a node is no longer serving a segment.|true|
+|`druid.segmentCache.dropSegmentDelayMillis`|How long a node delays before completely dropping segment.|30000 (30 seconds)|
+|`druid.segmentCache.infoDir`|Historical nodes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
+|`druid.segmentCache.announceIntervalMillis`|How frequently to announce segments while segments are loading from cache. Set this value to zero to wait for all segments to be loaded before announcing.|5000 (5 seconds)|
+|`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from from deep storage.|10|
+|`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently from local storage at startup.|Same as numLoadingThreads|
+
+In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
+
+#### Historical Query Configs
+
+##### Concurrent Requests
+
+Druid uses Jetty to serve HTTP requests.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.server.http.numThreads`|Number of threads for HTTP requests.|max(10, (Number of cores * 17) / 16 + 2) + 30|
+|`druid.server.http.queueSize`|Size of the worker queue used by Jetty server to temporarily store incoming client connections. If this value is set and a request is rejected by jetty because queue is full then client would observe request failure with TCP connection being closed immediately with a completely empty response from server.|Unbounded|
+|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5M|
+|`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
+|`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
+|`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete.|`PT0S` (do not wait)|
+|`druid.server.http.unannouncePropagationDelay`|How long to wait for zookeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
+|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
+|`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
+
+##### Processing
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|auto (max 1GB)|
+|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
+|`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
+|`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy v2) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
+|`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
+|`druid.processing.columnCache.sizeBytes`|Maximum size in bytes for the dimension value lookup cache. Any value greater than `0` enables the cache. It is currently disabled by default. Enabling the lookup cache can significantly improve the performance of aggregators operating on dimension values, such as the JavaScript aggregator, or cardinality aggregator, but can slow things down if the cache hit rate is low (i.e. dimensions with few repeating values). Enabling it may also require additional garbage collection tuning to avoid long GC pauses.|`0` (disabled)|
+|`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`false`|
+|`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
+
+The amount of direct memory needed by Druid is at least
+`druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
+ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
+line.
+
+##### Historical Query Configuration
+
+See [general query configuration](#general-query-configuration).
+
+#### Historical Caching
+
+You can optionally only configure caching to be enabled on the historical by setting caching configs here.
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.historical.cache.useCache`|true, false|Enable the cache on the historical.|false|
+|`druid.historical.cache.populateCache`|true, false|Populate the cache on the historical.|false|
+|`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+
+See [cache configuration](#cache-configuration) for how to configure cache settings.
+
+## Query Server
+
+This section contains the configuration options for the processes that reside on query servers (brokers).
+
+### Broker
 
 For general Broker Node information, see [here](../design/broker.html).
 
 These Broker configurations can be defined in the `broker/runtime.properties` file.
 
-### Broker Node Configs
+#### Broker Node Configs
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1210,9 +1325,9 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8282|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/broker|
 
-### Query Configuration
+#### Query Configuration
 
-#### Query Prioritization
+##### Query Prioritization
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
@@ -1220,7 +1335,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.broker.select.tier`|`highestPriority`, `lowestPriority`, `custom`|If segments are cross-replicated across tiers in a cluster, you can tell the broker to prefer to select segments in a tier with a certain priority.|`highestPriority`|
 |`druid.broker.select.tier.custom.priorities`|`An array of integer priorities.`|Select servers in tiers with a custom priority list.|None|
 
-#### Server Configuration
+##### Server Configuration
 
 Druid uses Jetty to serve HTTP requests.
 
@@ -1237,7 +1352,7 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
 |`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks. |8 * 1024|
 
-#### Client Configuration
+##### Client Configuration
 
 Druid Brokers use an HTTP client to communicate with with data servers (historical servers and real-time tasks). This
 client has the following configuration options.
@@ -1250,7 +1365,7 @@ client has the following configuration options.
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting backpressure on the channel to the data server. Similar to `druid.server.http.maxScatterGatherBytes`, except unlike that configuration, this one will trigger backpressure rather than query failure. Zero means disabled. Can be overridden by the ["maxQueuedBytes" query context parameter](../querying/query-context.html).|0 (disabled)|
 
-#### Retry Policy
+##### Retry Policy
 
 Druid broker can optionally retry queries internally for transient errors.
 
@@ -1258,7 +1373,7 @@ Druid broker can optionally retry queries internally for transient errors.
 |--------|-----------|-------|
 |`druid.broker.retryPolicy.numTries`|Number of tries.|1|
 
-#### Processing
+##### Processing
 
 The broker uses processing configs for nested groupBy queries. And, if you use groupBy v1, long-interval queries (of any type) can be broken into shorter interval queries and processed in parallel inside this thread pool. For more details, see "chunkPeriod" in [Query Context](../querying/query-context.html) doc.
 
@@ -1278,11 +1393,11 @@ The amount of direct memory needed by Druid is at least
 ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
 line.
 
-#### Broker Query Configuration
+##### Broker Query Configuration
 
 See [general query configuration](#general-query-configuration).
 
-### SQL
+#### SQL
 
 The Druid SQL server is configured through the following properties on the broker.
 
@@ -1307,7 +1422,7 @@ The Druid SQL server is configured through the following properties on the broke
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries wihout filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
 
-### Broker Caching
+#### Broker Caching
 
 You can optionally only configure caching to be enabled on the broker by setting caching configs here.
 
@@ -1323,7 +1438,7 @@ You can optionally only configure caching to be enabled on the broker by setting
 
 See [cache configuration](#cache-configuration) for how to configure cache settings.
 
-### Segment Discovery
+#### Segment Discovery
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
 |`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of zookeeper.|batch|
@@ -1331,101 +1446,11 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 |`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from nodes serving segments to build cache of which node is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|
 |`druid.broker.segment.awaitInitializationOnStart`|Boolean|Whether the the Broker will wait for its view of segments to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.sql.planner.awaitInitializationOnStart`, a related setting.|true|
 
-## Historical
-
-For general Historical Node information, see [here](../design/historical.html).
-
-These Historical configurations can be defined in the `historical/runtime.properties` file.
-
-### Historical Node Configuration
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
-|`druid.bindOnHost`|Indicating whether the node's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
-|`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
-|`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
-|`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/historical|
-
-
-### Historical General Configuration
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.server.maxSize`|The maximum number of bytes-worth of segments that the node wants assigned to it. This is not a limit that Historical nodes actually enforces, just a value published to the Coordinator node so it can plan accordingly.|0|
-|`druid.server.tier`| A string to name the distribution tier that the storage node belongs to. Many of the [rules Coordinator nodes use](../operations/rule-configuration.html) to manage segments can be keyed on tiers. |  `_default_tier` |
-|`druid.server.priority`|In a tiered architecture, the priority of the tier, thus allowing control over which nodes are queried. Higher numbers mean higher priority. The default (no priority) works for architecture with no cross replication (tiers that have no data-storage overlap). Data centers typically have equal priority. | 0 |
-
-### Storing Segments
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.segmentCache.locations`|Segments assigned to a Historical node are first stored on the local file system (in a disk cache) and then served by the Historical node. These locations define where that local cache resides. This value cannot be NULL or EMPTY. Here is an example `druid.segmentCache.locations=[{"path": "/mnt/druidSegments", "maxSize": 10000, "freeSpacePercent": 1.0}]`. "freeSpacePercent" is optional, if provided then enforces that much of free disk partition space while storing segments. But, it depends on File.getTotalSpace() and File.getFreeSpace() methods, so enable if only if they work for your File System.| none |
-|`druid.segmentCache.deleteOnRemove`|Delete segment files from cache once a node is no longer serving a segment.|true|
-|`druid.segmentCache.dropSegmentDelayMillis`|How long a node delays before completely dropping segment.|30000 (30 seconds)|
-|`druid.segmentCache.infoDir`|Historical nodes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
-|`druid.segmentCache.announceIntervalMillis`|How frequently to announce segments while segments are loading from cache. Set this value to zero to wait for all segments to be loaded before announcing.|5000 (5 seconds)|
-|`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from from deep storage.|10|
-|`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently from local storage at startup.|Same as numLoadingThreads|
-
-In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
-
-### Historical Query Configs
-
-#### Concurrent Requests
-
-Druid uses Jetty to serve HTTP requests.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.server.http.numThreads`|Number of threads for HTTP requests.|max(10, (Number of cores * 17) / 16 + 2) + 30|
-|`druid.server.http.queueSize`|Size of the worker queue used by Jetty server to temporarily store incoming client connections. If this value is set and a request is rejected by jetty because queue is full then client would observe request failure with TCP connection being closed immediately with a completely empty response from server.|Unbounded|
-|`druid.server.http.maxIdleTime`|The Jetty max idle time for a connection.|PT5M|
-|`druid.server.http.enableRequestLimit`|If enabled, no requests would be queued in jetty queue and "HTTP 429 Too Many Requests" error response would be sent. |false|
-|`druid.server.http.defaultQueryTimeout`|Query timeout in millis, beyond which unfinished queries will be cancelled|300000|
-|`druid.server.http.gracefulShutdownTimeout`|The maximum amount of time Jetty waits after receiving shutdown signal. After this timeout the threads will be forcefully shutdown. This allows any queries that are executing to complete.|`PT0S` (do not wait)|
-|`druid.server.http.unannouncePropagationDelay`|How long to wait for zookeeper unannouncements to propagate before shutting down Jetty. This is a minimum and `druid.server.http.gracefulShutdownTimeout` does not start counting down until after this period elapses.|`PT0S` (do not wait)|
-|`druid.server.http.maxQueryTimeout`|Maximum allowed value (in milliseconds) for `timeout` parameter. See [query-context](../querying/query-context.html) to know more about `timeout`. Query is rejected if the query context `timeout` is greater than this value. |Long.MAX_VALUE|
-|`druid.server.http.maxRequestHeaderSize`|Maximum size of a request header in bytes. Larger headers consume more memory and can make a server more vulnerable to denial of service attacks.|8 * 1024|
-
-#### Processing
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|auto (max 1GB)|
-|`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
-|`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
-|`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy v2) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
-|`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
-|`druid.processing.columnCache.sizeBytes`|Maximum size in bytes for the dimension value lookup cache. Any value greater than `0` enables the cache. It is currently disabled by default. Enabling the lookup cache can significantly improve the performance of aggregators operating on dimension values, such as the JavaScript aggregator, or cardinality aggregator, but can slow things down if the cache hit rate is low (i.e. dimensions with few repeating values). Enabling it may also require additional garbage collection tuning to avoid long GC pauses.|`0` (disabled)|
-|`druid.processing.fifo`|If the processing queue should treat tasks of equal priority in a FIFO manner|`false`|
-|`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
-
-The amount of direct memory needed by Druid is at least
-`druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
-ensure at least this amount of direct memory is available by providing `-XX:MaxDirectMemorySize=<VALUE>` at the command
-line.
-
-#### Historical Query Configuration
-
-See [general query configuration](#general-query-configuration).
-
-### Historical Caching
-
-You can optionally only configure caching to be enabled on the historical by setting caching configs here.
-
-|Property|Possible Values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.historical.cache.useCache`|true, false|Enable the cache on the historical.|false|
-|`druid.historical.cache.populateCache`|true, false|Populate the cache on the historical.|false|
-|`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
-
-See [cache configuration](#cache-configuration) for how to configure cache settings.
-
 ## Cache Configuration
 
-This section describes caching configuration that is common to broker, historical, and middleManager/peon nodes.
+This section describes caching configuration that is common to broker, historical, and middleManager/peon processes.
  
-Caching can optionally be enabled on the broker, historical, and middleManager/peon nodes. See [broker](#broker-caching), 
+Caching can optionally be enabled on the broker, historical, and middleManager/peon processses. See [broker](#broker-caching), 
 [historical](#historical-caching), and [peon](#peon-caching) configuration options for how to enable it for different processes.
 
 Druid uses a local in-memory cache by default, unless a diffrent type of cache is specified.

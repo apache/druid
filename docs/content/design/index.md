@@ -93,46 +93,99 @@ Druid has a multi-process, distributed architecture that is designed to be cloud
 Druid process type can be configured and scaled independently, giving you maximum flexibility over your cluster. This
 design also provides enhanced fault tolerance: an outage of one component will not immediately affect other components.
 
-Druid's process types are:
+## Server Types
 
-* [**Historical**](../design/historical.html) processes are the workhorses that handle storage and querying on "historical" data
-(including any streaming data that has been in the system long enough to be committed). Historical processes
-download segments from deep storage and respond to queries about these segments. They don't accept writes.
-* [**MiddleManager**](../design/middlemanager.html) processes handle ingestion of new data into the cluster. They are responsible
-for reading from external data sources and publishing new Druid segments.
-* [**Broker**](../design/broker.html) processes receive queries from external clients and forward those queries to Historicals and
-MiddleManagers. When Brokers receive results from those subqueries, they merge those results and return them to the
-caller. End users typically query Brokers rather than querying Historicals or MiddleManagers directly.
-* [**Coordinator**](../design/coordinator.html) processes watch over the Historical processes. They are responsible for assigning
-segments to specific servers, and for ensuring segments are well-balanced across Historicals.
-* [**Overlord**](../design/overlord.html) processes watch over the MiddleManager processes and are the controllers of data ingestion
-into Druid. They are responsible for assigning ingestion tasks to MiddleManagers and for coordinating segment
-publishing.
-* [**Router**](../development/router.html) processes are _optional_ processes that provide a unified API gateway in front of Druid Brokers,
+A Druid cluster is organized into 3 server types:
+
+### Master server
+
+A master server manages data ingestion and storage: it is responsible for starting new ingestion jobs and coordinating availability of data on the "Data servers" described below.
+
+Within a master server, functionality is split between two processes, the coordinator and overlord.
+
+#### Coordinator process
+
+[**Coordinator**](../design/coordinator.html) processes watch over the Historical processes on the Data servers. They are responsible for assigning segments to specific servers, and for ensuring segments are well-balanced across Historicals.
+
+#### Overlord process
+
+[**Overlord**](../design/overlord.html) processes watch over the MiddleManager processes on the Data servers and are the controllers of data ingestion into Druid. They are responsible for assigning ingestion tasks to MiddleManagers and for coordinating segment publishing.
+
+### Query server
+
+A query server provides the endpoints that users and client applications interact with, routing queries to data servers or other query servers (and optionally proxied master server requests as well).
+
+Within a query server, functionality is split between two processes, the broker and router.
+
+#### Broker process
+
+[**Broker**](../design/broker.html) processes receive queries from external clients and forward those queries to Data servers. When Brokers receive results from those subqueries, they merge those results and return them to the
+caller. End users typically query Brokers rather than querying Historicals or MiddleManagers processes on Data servers directly.
+
+#### Router process (optional)
+
+[**Router**](../development/router.html) processes are _optional_ processes that provide a unified API gateway in front of Druid Brokers,
 Overlords, and Coordinators. They are optional since you can also simply contact the Druid Brokers, Overlords, and
 Coordinators directly.
 
-Druid processes can be deployed individually (one per physical server, virtual server, or container) or can be colocated
-on shared servers. One common colocation plan is a three-type plan:
+### Data server
 
-1. "Data" servers run Historical and MiddleManager processes.
-2. "Query" servers run Broker and (optionally) Router processes.
-3. "Master" servers run Coordinator and Overlord processes. They may run ZooKeeper as well.
+A data server executes ingestion jobs and stores queryable data.
 
-In addition to these process types, Druid also has three external dependencies. These are intended to be able to
+Within a data server, functionality is split between two processes, the historical and middle manager.
+
+#### Historical process
+
+[**Historical**](../design/historical.html) processes are the workhorses that handle storage and querying on "historical" data
+(including any streaming data that has been in the system long enough to be committed). Historical processes
+download segments from deep storage and respond to queries about these segments. They don't accept writes.
+
+#### Middle Manager process
+
+[**MiddleManager**](../design/middlemanager.html) processes handle ingestion of new data into the cluster. They are responsible
+for reading from external data sources and publishing new Druid segments.
+
+### Colocation
+
+While Druid processes are typically organized and colocated based on the server types described above, it is possible to deploy the processes separately.
+
+Please see [process colocation](../operations/process-colocation.html) for details.
+
+### External dependencies
+
+In addition to these server and process types, Druid also has three external dependencies. These are intended to be able to
 leverage existing infrastructure, where present.
 
-* [**Deep storage**](#deep-storage), shared file storage accessible by every Druid server. This is typically going to
+#### Deep storage
+Shared file storage accessible by every Druid server. This is typically going to
 be a distributed object store like S3 or HDFS, or a network mounted filesystem. Druid uses this to store any data that
 has been ingested into the system.
-* [**Metadata store**](#metadata-storage), shared metadata storage. This is typically going to be a traditional RDBMS
-like PostgreSQL or MySQL.
-* [**ZooKeeper**](#zookeeper) is used for internal service discovery, coordination, and leader election.
+
+Druid uses deep storage only as a backup of your data and as a way to transfer data in the background between
+Druid processes. To respond to queries, Historical processes do not read from deep storage, but instead read pre-fetched
+segments from their local disks before any queries are served. This means that Druid never needs to access deep storage
+during a query, helping it offer the best query latencies possible. It also means that you must have enough disk space
+both in deep storage and across your Historical processes for the data you plan to load.
+
+For more details, please see [Deep storage dependency](../dependencies/deep-storage.html).
+
+#### Metadata storage
+The metadata storage holds various shared system metadata such as segment availability information and task information. This is typically going to be a traditional RDBMS
+like PostgreSQL or MySQL. 
+
+For more details, please see [Metadata storage dependency](../dependencies/metadata-storage.html)
+
+#### Zookeeper
+Used for internal service discovery, coordination, and leader election.
+
+For more details, please see [Zookeeper dependency](../dependencies/zookeeper.html).
 
 The idea behind this architecture is to make a Druid cluster simple to operate in production at scale. For example, the
 separation of deep storage and the metadata store from the rest of the cluster means that Druid processes are radically
 fault tolerant: even if every single Druid server fails, you can still relaunch your cluster from data stored in deep
 storage and the metadata store.
+
+### Architecture diagram
 
 The following diagram shows how queries and data flow through this architecture:
 
@@ -187,28 +240,3 @@ So Druid uses three different techniques to maximize query performance:
 - Pruning which segments are accessed for each query.
 - Within each segment, using indexes to identify which rows must be accessed.
 - Within each segment, only reading the specific rows and columns that are relevant to a particular query.
-
-
-# External Dependencies
-
-## Deep storage
-
-Druid uses deep storage only as a backup of your data and as a way to transfer data in the background between
-Druid processes. To respond to queries, Historical processes do not read from deep storage, but instead read pre-fetched
-segments from their local disks before any queries are served. This means that Druid never needs to access deep storage
-during a query, helping it offer the best query latencies possible. It also means that you must have enough disk space
-both in deep storage and across your Historical processes for the data you plan to load.
-
-For more details, please see [Deep storage dependency](../dependencies/deep-storage.html).
-
-## Metadata storage
-
-The metadata storage holds various system metadata such as segment availability information and task information.
-
-For more details, please see [Metadata storage dependency](../dependencies/metadata-storage.html)
-
-## Zookeeper
-
-Druid uses [ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of current cluster state.
-
-For more details, please see [Zookeeper dependency](../dependencies/zookeeper.html).

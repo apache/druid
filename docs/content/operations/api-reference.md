@@ -28,12 +28,15 @@ This page documents all of the API endpoints for each Druid service type.
 
 ## Table of Contents
   * [Common](#common)
-  * [Coordinator](#coordinator)
-  * [Overlord](#overlord)
-  * [MiddleManager](#middlemanager)
-  * [Peon](#peon)
-  * [Broker](#broker)
-  * [Historical](#historical)
+  * [Master Server](#master-server)
+    * [Coordinator](#coordinator)
+    * [Overlord](#overlord)
+  * [Data Server](#data-server)
+    * [MiddleManager](#middlemanager)
+    * [Peon](#peon)
+    * [Historical](#historical)
+  * [Query Server](#query-server)
+    * [Broker](#broker)
 
 ## Common
 
@@ -55,11 +58,15 @@ An endpoint that always returns a boolean "true" value with a 200 OK response, u
 
 Returns the current configuration properties of the node.
 
-## Coordinator
+## Master Server
 
-### Leadership
+This section documents the API endpoints for the processes that reside on master servers (coordinators and overlords).
 
-#### GET
+### Coordinator
+
+#### Leadership
+
+##### GET
 
 * `/druid/coordinator/v1/leader`
 
@@ -69,9 +76,9 @@ Returns the current leader coordinator of the cluster.
 
 Returns true if the coordinator receiving the request is the current leader.
 
-### Segment Loading
+#### Segment Loading
 
-#### GET
+##### GET
 
 Returns a JSON object with field "leader", either true or false, indicating if this server is the current leader
 coordinator of the cluster. In addition, returns HTTP 200 if the server is the current leader and HTTP 404 if not.
@@ -102,9 +109,9 @@ Returns the number of segments to load and drop, as well as the total segment lo
 
 Returns the serialized JSON of segments to load and drop for each historical node.
 
-### Metadata store information
+#### Metadata store information
 
-#### GET
+##### GET
 
 * `/druid/coordinator/v1/metadata/datasources`
 
@@ -134,7 +141,7 @@ Returns a list of all segments for a datasource with the full segment metadata a
 
 Returns full segment metadata for a specific segment as stored in the metadata store.
 
-#### POST
+##### POST
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
 
@@ -144,10 +151,9 @@ Returns a list of all segments, overlapping with any of given intervals,  for a 
 
 Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
 
+#### Datasources
 
-### Datasources
-
-#### GET
+##### GET
 
 * `/druid/coordinator/v1/datasources`
 
@@ -213,7 +219,7 @@ Returns full segment metadata for a specific segment in the cluster.
 
 Return the tiers that a datasource exists in.
 
-#### POST
+##### POST
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
@@ -223,7 +229,7 @@ Enables all segments of datasource which are not overshadowed by others.
 
 Enables a segment of a datasource.
 
-#### DELETE<a name="coordinator-delete"></a>
+##### DELETE<a name="coordinator-delete"></a>
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
@@ -240,9 +246,9 @@ Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2
 
 Disables a segment.
 
-### Retention Rules
+#### Retention Rules
 
-#### GET
+##### GET
 
 * `/druid/coordinator/v1/rules`
 
@@ -273,7 +279,7 @@ Returns all rules for a specified datasource and includes default datasource.
 
  Returns last <n> entries of audit history of rules for a specified datasource.
  
-#### POST
+##### POST
 
 * `/druid/coordinator/v1/rules/{dataSourceName}`
 
@@ -286,9 +292,9 @@ Optional Header Parameters for auditing the config change can also be specified.
 |`X-Druid-Author`| author making the config change|""|
 |`X-Druid-Comment`| comment describing the change being done|""|
 
-### Intervals
+#### Intervals
 
-#### GET
+##### GET
 
 Note that {interval} parameters are delimited by a `_` instead of a `/` (e.g., 2016-06-27_2016-06-28).
 
@@ -308,9 +314,9 @@ Returns total size and count for each interval within given isointerval.
 
 Returns total size and count for each datasource for each interval within given isointerval.
 
-### Compaction Configuration
+#### Compaction Configuration
 
-#### GET
+##### GET
 
 * `/druid/coordinator/v1/config/compaction`
 
@@ -320,7 +326,7 @@ Returns all compaction configs.
 
 Returns a compaction config of a dataSource.
 
-#### POST
+##### POST
 
 * `/druid/coordinator/v1/config/compaction/taskslots?ratio={someRatio}&max={someMaxSlots}`
 
@@ -334,15 +340,15 @@ will be set for them.
 
 Creates or updates the compaction config for a dataSource. See [Compaction Configuration](../configuration/index.html#compaction-dynamic-configuration) for configuration details.
 
-#### DELETE
+##### DELETE
 
 * `/druid/coordinator/v1/config/compaction/{dataSource}`
 
 Removes the compaction config for a dataSource.
 
-### Server Information
+#### Server Information
 
-#### GET
+##### GET
 
 * `/druid/coordinator/v1/servers`
 
@@ -360,11 +366,11 @@ Returns a list of server data objects in which each object has the following key
 - `priority`
 - `tier`
 
-## Overlord
+### Overlord
 
-### Leadership
+#### Leadership
 
-#### GET
+##### GET
 
 * `/druid/indexer/v1/leader` 
 
@@ -376,9 +382,9 @@ This returns a JSON object with field "leader", either true or false. In additio
 server is the current leader and HTTP 404 if not. This is suitable for use as a load balancer status check if you
 only want the active leader to be considered in-service at the load balancer.
 
-### Tasks<a name="overlord-tasks"></a> 
+#### Tasks<a name="overlord-tasks"></a> 
 
-#### GET
+##### GET
 
 * `/druid/indexer/v1/task/{taskId}/status`
 
@@ -396,7 +402,7 @@ This API is deprecated and will be removed in future releases.
 
 Retrieve a [task completion report](../ingestion/reports.html) for a task. Only works for completed tasks.
 
-#### POST
+##### POST
 
 * `/druid/indexer/v1/task` 
 
@@ -410,9 +416,9 @@ Shuts down a task.
 
 Shuts down all tasks for a dataSource.
 
-### Supervisors
+#### Supervisors
 
-#### GET
+##### GET
 
 * `/druid/indexer/v1/supervisor`
 
@@ -443,7 +449,7 @@ Returns an audit history of specs for all supervisors (current and past).
 
 Returns an audit history of specs for the supervisor with the provided ID.
 
-#### POST
+##### POST
 
 * `/druid/indexer/v1/supervisor`
 
@@ -486,11 +492,15 @@ This API is deprecated and will be removed in future releases.
 Please use the equivalent 'terminate' instead.
 </div>
 
-## MiddleManager
+## Data Server
+
+This section documents the API endpoints for the processes that reside on data servers (middle managers/peons and historicals).
+
+### MiddleManager
 
 The MiddleManager does not have any API endpoints beyond the [common endpoints](#common).
 
-## Peon
+### Peon
 
 #### GET
 
@@ -502,12 +512,33 @@ Retrieve a live row stats report from a peon. See [task reports](../ingestion/re
 
 Retrieve an unparseable events report from a peon. See [task reports](../ingestion/reports.html) for more details.
 
+### Historical
 
-## Broker
+#### Segment Loading
 
-### Datasource Information
+##### GET
 
-#### GET
+* `/druid/historical/v1/loadstatus`
+
+Returns JSON of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all
+segments in the local cache have been loaded. This can be used to know when a historical node is ready
+to be queried after a restart.
+
+* `/druid/historical/v1/readiness`
+
+Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with a flag, responses 200 OK if segments
+in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.
+
+
+## Query Server
+
+This section documents the API endpoints for the processes that reside on query servers (brokers).
+
+### Broker
+
+#### Datasource Information
+
+##### GET
 
 * `/druid/v2/datasources`
 
@@ -545,18 +576,17 @@ if you're using SQL.
 
 Returns segment information lists including server locations for the given datasource and intervals. If "numCandidates" is not specified, it will return all servers for each interval.
 
-### Load Status
+#### Load Status
 
-#### GET
+##### GET
 
 * `/druid/broker/v1/loadstatus`
 
 Returns a flag indicating if the broker knows about all segments in Zookeeper. This can be used to know when a broker node is ready to be queried after a restart.
 
+#### Queries
 
-### Queries
-
-#### POST
+##### POST
 
 * `/druid/v2/`
 
@@ -566,20 +596,3 @@ The endpoint for submitting queries. Accepts an option `?pretty` that pretty pri
 
 Returns segment information lists including server locations for the given query..
 
-
-## Historical
-
-### Segment Loading
-
-#### GET
-
-* `/druid/historical/v1/loadstatus`
-
-Returns JSON of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all
-segments in the local cache have been loaded. This can be used to know when a historical node is ready
-to be queried after a restart.
-
-* `/druid/historical/v1/readiness`
-
-Similar to `/druid/historical/v1/loadstatus`, but instead of returning JSON with a flag, responses 200 OK if segments
-in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven't.
