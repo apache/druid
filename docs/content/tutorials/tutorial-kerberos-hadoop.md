@@ -112,7 +112,7 @@ druid.hadoop.security.kerberos.keytab
 For example
 
 ```properties
-druid.hadoop.security.kerberos.principal=hdfs-vpimply@IMPLY.IO
+druid.hadoop.security.kerberos.principal=hdfs-test@EXAMPLE.IO
 druid.hadoop.security.kerberos.keytab=/etc/security/keytabs/hdfs.headless.keytab
 ```
 
