@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 public abstract class BaseBloomFilterBufferAggregator implements BufferAggregator
 {
   private final int maxNumEntries;
-  
+
   public BaseBloomFilterBufferAggregator(int maxNumEntries)
   {
     this.maxNumEntries = maxNumEntries;
