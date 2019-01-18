@@ -16,8 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
 -->
-# Tutorial: Configuring Druid to use a Kerberized Hadoop as Deep Storage
 
+---
+layout: doc_page
+title: "Tutorial: Configuring Druid to use a Kerberized Hadoop as Deep Storage"
+--- 
 
 ## Hadoop Setup
 
@@ -25,7 +28,6 @@ Following are the configurations files required to be copied over to Druid conf 
 
 1. For HDFS as a deep storage, hdfs-site.xml, core-site.xml
 2. For ingestion, mapred-site.xml, yarn-site.xml
-
 
 ### HDFS Folders and permissions
 
@@ -35,8 +37,7 @@ Following are the configurations files required to be copied over to Druid conf 
 OR
 `hdfs dfs -mkdir /apps/druid`
 
-3. Give appropriate permissions for the druid processes to access this folder. This would ensure that druid is able to 
-create necessary folders like data and indexing_log in HDFS.
+3. Give druid processes appropriate permissions for the druid processes to access this folder. This would ensure that druid is able to create necessary folders like data and indexing_log in HDFS.
 For example, if druid processes run as user 'root', then
 
     `hdfs dfs -chown root:root /apps/druid`
@@ -45,33 +46,32 @@ For example, if druid processes run as user 'root', then
 
     `hdfs dfs -chmod 777 /apps/druid`
 
-Druid creates necessary sub-folders to store  data and index under this newly created folder.
+Druid creates necessary sub-folders to store data and index under this newly created folder.
 
 ## Druid Setup
 
-Edit druid common_runtime_properties to include the HDFS properties. Folders used for the location are same as the ones 
-used for example above.
+Edit common.runtime.properties at conf/druid/_common/common.runtime.properties to include the HDFS properties. Folders used for the location are same as the ones used for example above.
 
 ### common_runtime_properties
 
-```#
+
 # Deep storage
 #
 # For HDFS:
-druid.storage.type=hdfs
-druid.storage.storageDirectory=/druid/segments
+properties
+ druid.storage.type=hdfs
+ druid.storage.storageDirectory=/druid/segments
 # OR
 # druid.storage.storageDirectory=/apps/druid/segments
-
 
 #
 # Indexing service logs
 #
 
-
 # For HDFS:
-druid.indexer.logs.type=hdfs
-druid.indexer.logs.directory=/druid/indexing-logs
+properties
+ druid.indexer.logs.type=hdfs
+ druid.indexer.logs.directory=/druid/indexing-logs
 # OR
 # druid.storage.storageDirectory=/apps/druid/indexing-logs
 ```
