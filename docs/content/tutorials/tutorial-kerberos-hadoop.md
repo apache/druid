@@ -19,7 +19,7 @@
 
 ---
 layout: doc_page
-title: "Tutorial: Configuring Druid to use a Kerberized Hadoop as Deep Storage"
+title: "Configuring Druid to use a Kerberized Hadoop as Deep Storage"
 --- 
 
 ## Hadoop Setup
@@ -54,7 +54,7 @@ Edit common.runtime.properties at conf/druid/_common/common.runtime.properties t
 
 ### common_runtime_properties
 
-
+```properties
 # Deep storage
 #
 # For HDFS:
@@ -69,9 +69,8 @@ properties
 #
 
 # For HDFS:
-properties
- druid.indexer.logs.type=hdfs
- druid.indexer.logs.directory=/druid/indexing-logs
+druid.indexer.logs.type=hdfs
+druid.indexer.logs.directory=/druid/indexing-logs
 # OR
 # druid.storage.storageDirectory=/apps/druid/indexing-logs
 ```
@@ -80,7 +79,7 @@ Note: Comment out Local storage and S3 Storage parameters in the file
 
 Also include hdfs-storage core extension to conf/druid/_common/common.runtime.properties
 
-```
+```properties
 #
 # Extensions
 #
@@ -88,7 +87,7 @@ Also include hdfs-storage core extension to conf/druid/_common/common.runtime.pr
 druid.extensions.directory=dist/druid/extensions
 druid.extensions.hadoopDependenciesDir=dist/druid/hadoop-dependencies
 druid.extensions.loadList=["druid-parser-route", "mysql-metadata-storage", "druid-hdfs-storage", "druid-kerberos"]
-
+```
 ### Hadoop Jars
 
 Ensure that Druid has necessary jars to support the Hadoop version.
@@ -105,14 +104,14 @@ Create a headless keytab which would have access to the druid data and index.
 
 Edit conf/druid/_common/common.runtime.properties and add the following properties:
 
-```
+```properties
 druid.hadoop.security.kerberos.principal
 druid.hadoop.security.kerberos.keytab
 ```
 
 For example
 
-```
+```properties
 druid.hadoop.security.kerberos.principal=hdfs-vpimply@IMPLY.IO
 druid.hadoop.security.kerberos.keytab=/etc/security/keytabs/hdfs.headless.keytab
 ```
