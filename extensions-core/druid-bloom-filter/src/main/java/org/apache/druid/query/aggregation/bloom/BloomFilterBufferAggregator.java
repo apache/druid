@@ -24,7 +24,6 @@ import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColum
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.locks.Lock;
 
 
 public class BloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator
@@ -43,18 +42,10 @@ public class BloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    int index = (System.identityHashCode(buf) + 31 * position) & 63;
-    Lock lock = striped.getAt(index).writeLock();
-    lock.lock();
-    try {
-      final int oldPosition = buf.position();
-      buf.position(position);
-      selectorPlus.getColumnSelectorStrategy().bufferAdd(selectorPlus.getSelector(), buf);
-      buf.position(oldPosition);
-    }
-    finally {
-      lock.unlock();
-    }
+    final int oldPosition = buf.position();
+    buf.position(position);
+    selectorPlus.getColumnSelectorStrategy().bufferAdd(selectorPlus.getSelector(), buf);
+    buf.position(oldPosition);
   }
 
   @Override

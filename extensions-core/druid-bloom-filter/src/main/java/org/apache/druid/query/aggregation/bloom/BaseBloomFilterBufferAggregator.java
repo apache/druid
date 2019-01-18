@@ -19,21 +19,15 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import com.google.common.util.concurrent.Striped;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.filter.BloomKFilter;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 
 public abstract class BaseBloomFilterBufferAggregator implements BufferAggregator
 {
-  private static final int NUM_STRIPES = 64; // for locking per buffer position
-
   private final int maxNumEntries;
-  protected final Striped<ReadWriteLock> striped = Striped.readWriteLock(NUM_STRIPES);
-
+  
   public BaseBloomFilterBufferAggregator(int maxNumEntries)
   {
     this.maxNumEntries = maxNumEntries;
@@ -51,20 +45,12 @@ public abstract class BaseBloomFilterBufferAggregator implements BufferAggregato
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    int index = (System.identityHashCode(buf) + 31 * position) & 63;
-    Lock lock = striped.getAt(index).readLock();
-    lock.lock();
-    try {
-      ByteBuffer mutationBuffer = buf.duplicate();
-      mutationBuffer.position(position);
-      // | k (byte) | numLongs (int) | bitset (long[numLongs]) |
-      int sizeBytes = 1 + Integer.BYTES + (buf.getInt(position + 1) * Long.BYTES);
-      mutationBuffer.limit(position + sizeBytes);
-      return mutationBuffer.slice();
-    }
-    finally {
-      lock.unlock();
-    }
+    ByteBuffer mutationBuffer = buf.duplicate();
+    mutationBuffer.position(position);
+    // | k (byte) | numLongs (int) | bitset (long[numLongs]) |
+    int sizeBytes = 1 + Integer.BYTES + (buf.getInt(position + 1) * Long.BYTES);
+    mutationBuffer.limit(position + sizeBytes);
+    return mutationBuffer.slice();
   }
 
   @Override
