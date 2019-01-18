@@ -208,6 +208,7 @@ handle all formatting decisions on their own, without using the ParseSpec.
 |-------|------|-------------|----------|
 | column | String | The column of the timestamp. | yes |
 | format | String | iso, posix, millis, micro, nano, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto' |
+| timeZone | String | Specify timeZone of the timestamp. e.g. "timestampSpec": {"format": "yyyy-MM-dd HH:mm:ss","column": "logTime","timestamp": "America/Los_Angeles"} | no (default == 'UTC') |
 
 <a name="dimensions" />
 
