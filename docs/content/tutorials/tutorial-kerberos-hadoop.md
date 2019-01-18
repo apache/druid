@@ -17,10 +17,7 @@
  * under the License.
 -->
 
----
-layout: doc_page
 title: "Configuring Druid to use a Kerberized Hadoop as Deep Storage"
---- 
 
 ## Hadoop Setup
 
