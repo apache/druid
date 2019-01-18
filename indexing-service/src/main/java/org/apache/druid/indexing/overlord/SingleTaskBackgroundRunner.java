@@ -181,10 +181,9 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       final long elapsed;
       boolean error = false;
 
-      // stopGracefully for resource cleaning, independent of the fact whether the task is restorable or not
-      // Attempt graceful shutdown.
+      // stopGracefully for resource cleaning
       log.info("Starting graceful shutdown of task[%s].", task.getId());
-      task.stopGracefully();
+      task.stopGracefully(taskConfig);
 
       if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
         try {
@@ -221,7 +220,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           .builder()
           .setDimension("task", task.getId())
           .setDimension("dataSource", task.getDataSource())
-          .setDimension("graceful", "true") // for backword compatibility
+          .setDimension("graceful", "true") // for backward compatibility
           .setDimension("error", String.valueOf(error));
 
       emitter.emit(metricBuilder.build("task/interrupt/count", 1L));

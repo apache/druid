@@ -363,7 +363,7 @@ public class JobHelper
         log.warn(e, "Error writing job id [%s] to the file [%s]", hadoopJobId, hadoopJobIdFileName);
       }
     } else {
-      log.info("Either job Id or File Name is null for the submitted job. Skipping writing the file [%s]", hadoopJobIdFileName);
+      log.info("Either job id or file name is null for the submitted job. Skipping writing the file [%s]", hadoopJobIdFileName);
     }
   }
 

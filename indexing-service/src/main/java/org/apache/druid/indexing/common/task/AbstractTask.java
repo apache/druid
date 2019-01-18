@@ -28,6 +28,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -154,11 +155,11 @@ public abstract class AbstractTask implements Task
   }
 
   /**
-   * Should be called independent of canRestore so that Resource cleaning can be achieved.
+   * Should be called independent of canRestore so that resource cleaning can be achieved.
    * If resource cleaning is required, concrete class should override this method
    */
   @Override
-  public void stopGracefully()
+  public void stopGracefully(TaskConfig taskConfig)
   {
     // Do nothing and let the concrete class handle it
   }

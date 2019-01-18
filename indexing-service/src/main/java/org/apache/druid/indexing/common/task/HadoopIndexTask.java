@@ -428,7 +428,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
   @Override
-  public void stopGracefully()
+  public void stopGracefully(TaskConfig taskConfig)
   {
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
     File hadoopJobIdFile = new File(getHadoopJobIdFileName());
@@ -440,7 +440,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       }
     }
     catch (Exception e) {
-      log.warn(e, "Exeption while reading Hadoop Job ID from: %s", hadoopJobIdFile);
+      log.warn(e, "exeption while reading Hadoop Job ID from: %s", hadoopJobIdFile);
     }
 
     try {
