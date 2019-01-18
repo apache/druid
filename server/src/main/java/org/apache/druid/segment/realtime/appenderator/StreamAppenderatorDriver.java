@@ -26,12 +26,12 @@ import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -209,7 +209,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Persist all data indexed through this driver so far. Blocks until complete.
-   *
+   * <p>
    * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
@@ -235,7 +235,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Persist all data indexed through this driver so far. Returns a future of persisted commitMetadata.
-   *
+   * <p>
    * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
@@ -331,7 +331,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                 segmentIdentifier.getVersion(),
                 segmentIdentifier.getShardSpec().getPartitionNum()
             ),
-            MoreExecutors.sameThreadExecutor(),
+            Execs.directExecutor(),
             () -> {
               log.info("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
               metrics.incrementHandOffCount();

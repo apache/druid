@@ -348,6 +348,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       {
         return Boolean.valueOf(props.getOrDefault("manageKafkaTopic", "true"));
       }
+
+      @Override
+      public String getExtraDatasourceNameSuffix()
+      {
+        return "";
+      }
     };
   }
 }

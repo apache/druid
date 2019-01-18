@@ -51,8 +51,8 @@ public class TestServerInventoryView implements TimelineServerView
       0
   );
   private static final DruidServerMetadata DUMMY_SERVER_REALTIME = new DruidServerMetadata(
-      "dummy",
-      "dummy",
+      "dummy2",
+      "dummy2",
       null,
       0,
       ServerType.REALTIME,

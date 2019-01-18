@@ -229,7 +229,7 @@ public class SystemSchema extends AbstractSchema
       final Map<String, PartialSegmentData> partialSegmentDataMap = availableSegmentMetadata.values().stream().collect(
           Collectors.toMap(
               SegmentMetadataHolder::getSegmentId,
-              h -> new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(), h.getNumRows())
+              h -> new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(h.getSegmentId()), h.getNumRows())
           ));
 
       //get published segments from coordinator

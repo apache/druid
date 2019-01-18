@@ -199,7 +199,6 @@ public class SystemSchemaTest extends CalciteTestBase
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
         .add(segment1, index1)
         .add(segment2, index2)
-        .add(segment2, index2)
         .add(segment3, index2);
 
     druidSchema = new DruidSchema(
@@ -282,7 +281,7 @@ public class SystemSchemaTest extends CalciteTestBase
       DataSegment.PruneLoadSpecHolder.DEFAULT
   );
 
-  final List<DataSegment> realtimeSegments = ImmutableList.of(segment4, segment5);
+  final List<DataSegment> realtimeSegments = ImmutableList.of(segment2, segment4, segment5);
 
   private final ImmutableDruidServer druidServer1 = new ImmutableDruidServer(
       new DruidServerMetadata("server1", "localhost:0000", null, 5L, ServerType.REALTIME, DruidServer.DEFAULT_TIER, 0),
@@ -478,6 +477,7 @@ public class SystemSchemaTest extends CalciteTestBase
     // segments test1, test2  are published and available
     // segment test3 is served by historical but unpublished or unused
     // segments test4, test5 are not published but available (realtime segments)
+    // segment test2 is both published and served by a realtime server.
 
     Assert.assertEquals(8, rows.size());
 
@@ -556,7 +556,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals(100L, row4[4]);
     Assert.assertEquals("version2", row4[5]);
     Assert.assertEquals(0L, row4[6]); //partition_num
-    Assert.assertEquals(2L, row4[7]); //segment test2 is served by 2 servers, so num_replicas=2
+    Assert.assertEquals(2L, row4[7]); //segment test2 is served by historical and realtime servers
     Assert.assertEquals(3L, row4[8]); //numRows = 3
     Assert.assertEquals(1L, row4[9]); //is_published
     Assert.assertEquals(1L, row4[10]); //is_available

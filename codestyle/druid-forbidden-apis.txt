@@ -20,6 +20,9 @@ com.google.common.collect.Sets#newHashSet() @ Create java.util.HashSet directly
 com.google.common.collect.Sets#newLinkedHashSet() @ Create java.util.LinkedHashSet directly
 com.google.common.collect.Sets#newTreeSet() @ Create java.util.TreeSet directly
 com.google.common.collect.Sets#newTreeSet(java.util.Comparator) @ Create java.util.TreeSet directly
+com.google.common.util.concurrent.MoreExecutors#sameThreadExecutor() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
+com.google.common.util.concurrent.MoreExecutors#newDirectExecutorService() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
+com.google.common.util.concurrent.MoreExecutors#directExecutor() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
 com.google.common.util.concurrent.Futures#transform(com.google.common.util.concurrent.ListenableFuture, com.google.common.util.concurrent.AsyncFunction) @ Use org.apache.druid.java.util.common.concurrent.ListenableFutures#transformAsync
 java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
 java.lang.String#matches(java.lang.String) @ Use startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
