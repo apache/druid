@@ -19,22 +19,25 @@
 
 package org.apache.druid.java.util.metrics;
 
+import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import org.apache.druid.java.util.common.logger.Logger;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Method;
-import java.util.Map;
 import java.util.Optional;
 
 class AllocationMetricCollector
 {
   private static final Logger log = new Logger(AllocationMetricCollector.class);
+
+  private static final int NO_DATA = -1;
+
   private static Method getThreadAllocatedBytes;
   private static ThreadMXBean threadMXBean;
-
-  private Map<Long, Long> previousResults;
   private static boolean initialized = false;
+
+  private Long2LongMap previousResults;
 
   static {
     try {
@@ -55,6 +58,7 @@ class AllocationMetricCollector
     try {
       if (initialized) {
         previousResults = new Long2LongOpenHashMap();
+        previousResults.defaultReturnValue(NO_DATA);
       }
     }
     catch (Exception e) {
@@ -81,16 +85,17 @@ class AllocationMetricCollector
       // the call time depends on number of threads, for 500 threads the estimated time is 4 ms
       long[] bytes = (long[]) getThreadAllocatedBytes.invoke(threadMXBean, (Object) allThreadIds);
       long sum = 0;
-      Map<Long, Long> newResults = new Long2LongOpenHashMap();
+      Long2LongMap newResults = new Long2LongOpenHashMap();
+      newResults.defaultReturnValue(NO_DATA);
       for (int i = 0; i < allThreadIds.length; i++) {
         long threadId = allThreadIds[i];
-        Long previous = previousResults.get(threadId);
-        Long current = bytes[i];
+        long previous = previousResults.get(threadId);
+        long current = bytes[i];
         newResults.put(threadId, current);
         // a) some threads can be terminated and their ids won't be present
         // b) if new threads ids can collide with terminated threads ids then the current allocation can be lesser than
         // before
-        if (previous == null || previous > current) {
+        if (previous == NO_DATA || previous > current) {
           sum += current;
         } else {
           sum += current - previous;
