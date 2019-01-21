@@ -114,7 +114,7 @@ public class CardinalityBufferAggregator implements BufferAggregator
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     for (int i = 0; i < selectorPluses.length; i++) {
-      inspector.visit(StringUtils.format("selector-%d", i) , selectorPluses[i].getSelector());
+      inspector.visit(StringUtils.format("selector-%d", i), selectorPluses[i].getSelector());
     }
   }
 }
