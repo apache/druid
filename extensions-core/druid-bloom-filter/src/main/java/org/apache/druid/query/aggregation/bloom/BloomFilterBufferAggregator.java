@@ -51,6 +51,6 @@ public class BloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    inspector.visit("selectorPlus", selectorPlus);
+    inspector.visit("selector", selectorPlus.getSelector());
   }
 }

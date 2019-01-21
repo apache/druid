@@ -49,7 +49,25 @@ import java.util.Objects;
 public class BloomFilterAggregatorFactory extends AggregatorFactory
 {
   private static final int DEFAULT_NUM_ENTRIES = 1500;
-  protected static final BloomFilterAggregatorColumnSelectorStrategyFactory STRATEGY_FACTORY =
+
+  private static final Comparator COMPARATOR = Comparator.nullsFirst((o1, o2) -> {
+    if (o1 instanceof ByteBuffer && o2 instanceof ByteBuffer) {
+      ByteBuffer buf1 = (ByteBuffer) o1;
+      ByteBuffer buf2 = (ByteBuffer) o2;
+      return Integer.compare(
+          BloomKFilter.getNumSetBits(buf1, buf1.position()),
+          BloomKFilter.getNumSetBits(buf2, buf2.position())
+      );
+    } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
+      BloomKFilter o1f = (BloomKFilter) o1;
+      BloomKFilter o2f = (BloomKFilter) o2;
+      return Integer.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
+    } else {
+      throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());
+    }
+  });
+
+  private static final BloomFilterAggregatorColumnSelectorStrategyFactory STRATEGY_FACTORY =
       new BloomFilterAggregatorColumnSelectorStrategyFactory();
 
   private final String name;
@@ -97,22 +115,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return Comparator.nullsFirst((o1, o2) -> {
-      if (o1 instanceof ByteBuffer && o2 instanceof ByteBuffer) {
-        ByteBuffer buf1 = (ByteBuffer) o1;
-        ByteBuffer buf2 = (ByteBuffer) o2;
-        return Integer.compare(
-            BloomKFilter.getNumSetBits(buf1, buf1.position()),
-            BloomKFilter.getNumSetBits(buf2, buf2.position())
-        );
-      } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
-        BloomKFilter o1f = (BloomKFilter) o1;
-        BloomKFilter o2f = (BloomKFilter) o2;
-        return Integer.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
-      } else {
-        throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());
-      }
-    });
+    return COMPARATOR;
   }
 
   @Override
@@ -170,7 +173,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
       }
     }
     catch (IOException ioe) {
-      throw new RuntimeException("Failed to deserialize BloomKFilter");
+      throw new RuntimeException("Failed to deserialize BloomKFilter", ioe);
     }
   }
 
