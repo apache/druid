@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -30,16 +31,31 @@ import java.util.Set;
  */
 public class SegmentMetadataHolder
 {
+  public static Builder builder(
+      SegmentId segmentId,
+      long isPublished,
+      long isAvailable,
+      long isRealtime,
+      Map<SegmentId, Set<String>> segmentServerMap
+  )
+  {
+    return new Builder(segmentId, isPublished, isAvailable, isRealtime, segmentServerMap);
+  }
 
+  public static Builder from(SegmentMetadataHolder h)
+  {
+    return new Builder(h.getSegmentId(), h.isPublished(), h.isAvailable(), h.isRealtime(), h.getReplicas());
+  }
+
+  private final SegmentId segmentId;
   // Booleans represented as long type, where 1 = true and 0 = false
   // to make it easy to count number of segments which are
   // published, available or realtime etc.
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-  private final String segmentId;
   //segmentId -> set of servers that contain the segment
-  private final Map<String, Set<String>> segmentServerMap;
+  private final Map<SegmentId, Set<String>> segmentServerMap;
   private final long numRows;
   @Nullable
   private final RowSignature rowSignature;
@@ -70,17 +86,17 @@ public class SegmentMetadataHolder
     return isRealtime;
   }
 
-  public String getSegmentId()
+  public SegmentId getSegmentId()
   {
     return segmentId;
   }
 
-  public Map<String, Set<String>> getReplicas()
+  public Map<SegmentId, Set<String>> getReplicas()
   {
     return segmentServerMap;
   }
 
-  public long getNumReplicas(String segmentId)
+  public long getNumReplicas(SegmentId segmentId)
   {
     return segmentServerMap.get(segmentId).size();
   }
@@ -98,22 +114,22 @@ public class SegmentMetadataHolder
 
   public static class Builder
   {
-    private final String segmentId;
+    private final SegmentId segmentId;
     private final long isPublished;
     private final long isAvailable;
     private final long isRealtime;
 
-    private Map<String, Set<String>> segmentServerMap;
+    private Map<SegmentId, Set<String>> segmentServerMap;
     @Nullable
     private RowSignature rowSignature;
     private long numRows;
 
-    public Builder(
-        String segmentId,
+    private Builder(
+        SegmentId segmentId,
         long isPublished,
         long isAvailable,
         long isRealtime,
-        Map<String, Set<String>> segmentServerMap
+        Map<SegmentId, Set<String>> segmentServerMap
     )
     {
       this.segmentId = segmentId;
@@ -135,7 +151,7 @@ public class SegmentMetadataHolder
       return this;
     }
 
-    public Builder withReplicas(Map<String, Set<String>> segmentServerMap)
+    public Builder withReplicas(Map<SegmentId, Set<String>> segmentServerMap)
     {
       this.segmentServerMap = segmentServerMap;
       return this;

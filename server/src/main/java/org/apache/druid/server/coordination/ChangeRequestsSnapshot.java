@@ -26,17 +26,28 @@ import com.google.common.base.Preconditions;
 import java.util.List;
 
 /**
- * Return type of SegmentChangeRequestHistory.getRequestsSince(counter).
+ * Return type of {@link ChangeRequestHistory#getRequestsSince}.
  */
-public class ChangeRequestsSnapshot<T>
+public final class ChangeRequestsSnapshot<T>
 {
-  //if true, that means caller should reset the counter and request again.
+
+  public static <T> ChangeRequestsSnapshot<T> success(ChangeRequestHistory.Counter counter, List<T> requests)
+  {
+    return new ChangeRequestsSnapshot<>(false, null, counter, requests);
+  }
+
+  public static <T> ChangeRequestsSnapshot<T> fail(String resetCause)
+  {
+    return new ChangeRequestsSnapshot<>(true, resetCause, null, null);
+  }
+
+  /** if true, that means caller should reset the counter and request again. */
   private final boolean resetCounter;
 
-  //cause for reset if resetCounter is true
+  /** cause for reset if {@link #resetCounter} is true */
   private final String resetCause;
 
-  //segments requests delta since counter, if resetCounter if false
+  /** segments requests delta since counter, if {@link #resetCounter} if false */
   private final ChangeRequestHistory.Counter counter;
   private final List<T> requests;
 
@@ -57,17 +68,6 @@ public class ChangeRequestsSnapshot<T>
 
     this.counter = counter;
     this.requests = requests;
-  }
-
-  public static <T> ChangeRequestsSnapshot<T> success(ChangeRequestHistory.Counter counter,
-                                               List<T> requests)
-  {
-    return new ChangeRequestsSnapshot(false, null, counter, requests);
-  }
-
-  public static <T> ChangeRequestsSnapshot<T> fail(String resetCause)
-  {
-    return new ChangeRequestsSnapshot(true, resetCause, null, null);
   }
 
   @JsonProperty

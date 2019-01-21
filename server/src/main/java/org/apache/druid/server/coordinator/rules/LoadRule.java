@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ReplicationThrottler;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -70,7 +71,7 @@ public abstract class LoadRule implements Rule
     try {
       // get the "snapshots" of targetReplicants and currentReplicants for assignments.
       targetReplicants.putAll(getTieredReplicants());
-      currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier()));
+      currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getId()));
 
       final CoordinatorStats stats = new CoordinatorStats();
 
@@ -99,7 +100,7 @@ public abstract class LoadRule implements Rule
   )
   {
     // if primary replica already exists or is loading
-    final int loading = params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier());
+    final int loading = params.getSegmentReplicantLookup().getTotalReplicants(segment.getId());
     if (!currentReplicants.isEmpty() || loading > 0) {
       assignReplicas(params, segment, stats, null);
     } else {
@@ -178,7 +179,7 @@ public abstract class LoadRule implements Rule
       String noAvailability = StringUtils.format(
           "No available [%s] servers or node capacity to assign primary segment[%s]! Expected Replicants[%d]",
           tier,
-          segment.getIdentifier(),
+          segment.getId(),
           targetReplicantsInTier
       );
 
@@ -211,7 +212,7 @@ public abstract class LoadRule implements Rule
       strategyCache.remove(topCandidate.getServer().getTier());
       log.info(
           "Assigning 'primary' for segment [%s] to server [%s] in tier [%s]",
-          segment.getIdentifier(),
+          segment.getId(),
           topCandidate.getServer().getName(),
           topCandidate.getServer().getTier()
       );
@@ -242,7 +243,7 @@ public abstract class LoadRule implements Rule
       final int numAssigned = assignReplicasForTier(
           tier,
           entry.getIntValue(),
-          params.getSegmentReplicantLookup().getTotalReplicants(segment.getIdentifier(), tier),
+          params.getSegmentReplicantLookup().getTotalReplicants(segment.getId(), tier),
           params,
           createLoadQueueSizeLimitingPredicate(params),
           segment
@@ -272,7 +273,7 @@ public abstract class LoadRule implements Rule
     String noAvailability = StringUtils.format(
         "No available [%s] servers or node capacity to assign segment[%s]! Expected Replicants[%d]",
         tier,
-        segment.getIdentifier(),
+        segment.getId(),
         targetReplicantsInTier
     );
 
@@ -286,7 +287,7 @@ public abstract class LoadRule implements Rule
     final ReplicationThrottler throttler = params.getReplicationManager();
     for (int numAssigned = 0; numAssigned < numToAssign; numAssigned++) {
       if (!throttler.canCreateReplicant(tier)) {
-        log.info("Throttling replication for segment [%s] in tier [%s]", segment.getIdentifier(), tier);
+        log.info("Throttling replication for segment [%s] in tier [%s]", segment.getId(), tier);
         return numAssigned;
       }
 
@@ -303,16 +304,16 @@ public abstract class LoadRule implements Rule
       }
       holders.remove(holder);
 
-      final String segmentId = segment.getIdentifier();
+      final SegmentId segmentId = segment.getId();
       final String holderHost = holder.getServer().getHost();
       throttler.registerReplicantCreation(tier, segmentId, holderHost);
       log.info(
           "Assigning 'replica' for segment [%s] to server [%s] in tier [%s]",
-          segment.getIdentifier(),
+          segment.getId(),
           holder.getServer().getName(),
           holder.getServer().getTier()
       );
-      holder.getPeon().loadSegment(segment, () -> throttler.unregisterReplicantCreation(tier, segmentId, holderHost));
+      holder.getPeon().loadSegment(segment, () -> throttler.unregisterReplicantCreation(tier, segmentId));
     }
 
     return numToAssign;
@@ -390,7 +391,7 @@ public abstract class LoadRule implements Rule
 
     while (numDropped < numToDrop) {
       if (!iterator.hasNext()) {
-        log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getIdentifier());
+        log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getId());
         break;
       }
 
@@ -399,7 +400,7 @@ public abstract class LoadRule implements Rule
       if (holder.isServingSegment(segment)) {
         log.info(
             "Dropping segment [%s] on server [%s] in tier [%s]",
-            segment.getIdentifier(),
+            segment.getId(),
             holder.getServer().getName(),
             holder.getServer().getTier()
         );
@@ -409,7 +410,7 @@ public abstract class LoadRule implements Rule
         log.warn(
             "Server [%s] is no longer serving segment [%s], skipping drop.",
             holder.getServer().getName(),
-            segment.getIdentifier()
+            segment.getId()
         );
       }
     }

@@ -37,7 +37,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.MonitorE
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
@@ -397,11 +397,11 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
       log.info("Published [%d] segments", segmentsToPublish.size());
     } else {
       log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
-      final Set<SegmentIdentifier> segmentsIdentifiers = segmentsMap
+      final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsMap
           .values()
           .stream()
           .flatMap(report -> report.getSegments().stream())
-          .map(SegmentIdentifier::fromDataSegment)
+          .map(SegmentIdWithShardSpec::fromDataSegment)
           .collect(Collectors.toSet());
       if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
                             .equals(segmentsToPublish)) {

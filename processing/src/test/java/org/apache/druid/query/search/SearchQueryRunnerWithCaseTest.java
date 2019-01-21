@@ -25,6 +25,7 @@ import com.google.common.io.CharSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Druids.SearchQueryBuilder;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.Result;
@@ -33,6 +34,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,7 +54,7 @@ import static org.apache.druid.query.QueryRunnerTestHelper.NOOP_QUERYWATCHER;
 import static org.apache.druid.query.QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator;
 import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
 import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
-import static org.apache.druid.query.QueryRunnerTestHelper.fullOnInterval;
+import static org.apache.druid.query.QueryRunnerTestHelper.fullOnIntervalSpec;
 import static org.apache.druid.query.QueryRunnerTestHelper.makeQueryRunner;
 import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
 import static org.apache.druid.query.QueryRunnerTestHelper.placementDimension;
@@ -94,26 +96,26 @@ public class SearchQueryRunnerWithCaseTest
       runners.addAll(Arrays.asList(
           makeQueryRunner(
               makeRunnerFactory(config),
-              "index1",
-              new IncrementalIndexSegment(index1, "index1"),
+              SegmentId.dummy("index1"),
+              new IncrementalIndexSegment(index1, SegmentId.dummy("index1")),
               "index1"
           ),
           makeQueryRunner(
               makeRunnerFactory(config),
-              "index2",
-              new IncrementalIndexSegment(index2, "index2"),
+              SegmentId.dummy("index2"),
+              new IncrementalIndexSegment(index2, SegmentId.dummy("index2")),
               "index2"
           ),
           makeQueryRunner(
               makeRunnerFactory(config),
-              "index3",
-              new QueryableIndexSegment("index3", index3),
+              SegmentId.dummy("index3"),
+              new QueryableIndexSegment(index3, SegmentId.dummy("index3")),
               "index3"
           ),
           makeQueryRunner(
               makeRunnerFactory(config),
-              "index4",
-              new QueryableIndexSegment("index4", index4),
+              SegmentId.dummy("index4"),
+              new QueryableIndexSegment(index4, SegmentId.dummy("index4")),
               "index4"
           )
       ));
@@ -148,7 +150,7 @@ public class SearchQueryRunnerWithCaseTest
     return Druids.newSearchQueryBuilder()
                  .dataSource(dataSource)
                  .granularity(allGran)
-                 .intervals(fullOnInterval);
+                 .intervals(fullOnIntervalSpec);
   }
 
   @Test
@@ -232,6 +234,23 @@ public class SearchQueryRunnerWithCaseTest
     searchQuery = builder.fragments(Arrays.asList("auto", "ve"), true).build();
     expectedResults.put(qualityDimension, Sets.newHashSet("automotive"));
     checkSearchQuery(searchQuery, expectedResults);
+  }
+
+  @Test
+  public void testFallbackToCursorBasedPlan()
+  {
+    final SearchQueryBuilder builder = testBuilder();
+    final SearchQuery query = builder.filters("qualityLong", "1000").build();
+    final Map<String, Set<String>> expectedResults = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    expectedResults.put("qualityLong", Sets.newHashSet("1000"));
+    expectedResults.put("qualityDouble", Sets.newHashSet("10000.0"));
+    expectedResults.put("qualityFloat", Sets.newHashSet("10000.0"));
+    expectedResults.put("qualityNumericString", Sets.newHashSet("100000"));
+    expectedResults.put("quality", Sets.newHashSet("AutoMotive", "automotive"));
+    expectedResults.put("placement", Sets.newHashSet("PREFERRED", "preferred"));
+    expectedResults.put("placementish", Sets.newHashSet("a", "preferred"));
+    expectedResults.put("market", Sets.newHashSet("spot"));
+    checkSearchQuery(query, expectedResults);
   }
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)

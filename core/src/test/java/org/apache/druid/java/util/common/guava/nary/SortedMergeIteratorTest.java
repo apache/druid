@@ -20,11 +20,11 @@
 package org.apache.druid.java.util.common.guava.nary;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Comparator;
 
 /**
  */
@@ -36,7 +36,7 @@ public class SortedMergeIteratorTest
     SortedMergeIterator<Integer, Integer> iter = SortedMergeIterator.create(
         Arrays.asList(1, 4, 5, 7, 9).iterator(),
         Arrays.asList(1, 2, 3, 6, 7, 8, 9, 10, 11).iterator(),
-        Comparators.comparable(),
+        Comparator.naturalOrder(),
         new BinaryFn<Integer, Integer, Integer>()
         {
           @Override

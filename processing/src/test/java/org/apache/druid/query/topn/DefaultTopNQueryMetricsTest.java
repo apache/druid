@@ -62,7 +62,7 @@ public class DefaultTopNQueryMetricsTest
             null
         ))
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null))
@@ -78,7 +78,7 @@ public class DefaultTopNQueryMetricsTest
     Assert.assertEquals("", actualEvent.get("service"));
     Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnInterval.getIntervals();
+    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));

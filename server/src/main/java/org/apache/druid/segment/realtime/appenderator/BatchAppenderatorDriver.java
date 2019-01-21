@@ -129,7 +129,7 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       long pushAndClearTimeoutMs
   ) throws InterruptedException, ExecutionException, TimeoutException
   {
-    final Map<SegmentIdentifier, SegmentWithState> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames)
+    final Map<SegmentIdWithShardSpec, SegmentWithState> requestedSegmentIdsForSequences = getAppendingSegments(sequenceNames)
         .collect(Collectors.toMap(SegmentWithState::getSegmentIdentifier, Function.identity()));
 
     final ListenableFuture<SegmentsAndMetadata> future = ListenableFutures.transformAsync(
@@ -142,10 +142,10 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                                                     future.get(pushAndClearTimeoutMs, TimeUnit.MILLISECONDS);
 
     // Sanity check
-    final Map<SegmentIdentifier, DataSegment> pushedSegmentIdToSegmentMap = segmentsAndMetadata
+    final Map<SegmentIdWithShardSpec, DataSegment> pushedSegmentIdToSegmentMap = segmentsAndMetadata
         .getSegments()
         .stream()
-        .collect(Collectors.toMap(SegmentIdentifier::fromDataSegment, Function.identity()));
+        .collect(Collectors.toMap(SegmentIdWithShardSpec::fromDataSegment, Function.identity()));
 
     if (!pushedSegmentIdToSegmentMap.keySet().equals(requestedSegmentIdsForSequences.keySet())) {
       throw new ISE(

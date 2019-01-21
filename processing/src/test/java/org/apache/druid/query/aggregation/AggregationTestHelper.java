@@ -82,6 +82,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.Closeable;
@@ -581,7 +582,7 @@ public class AggregationTestHelper implements Closeable
           public Segment apply(File segmentDir)
           {
             try {
-              return new QueryableIndexSegment("", indexIO.loadIndex(segmentDir));
+              return new QueryableIndexSegment(indexIO.loadIndex(segmentDir), SegmentId.dummy(""));
             }
             catch (IOException ex) {
               throw Throwables.propagate(ex);

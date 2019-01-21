@@ -141,7 +141,7 @@ public class ScanQueryRunnerTest
     return ScanQuery.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                     .columns(Collections.emptyList())
-                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                     .limit(3)
                     .legacy(legacy);
   }
@@ -647,13 +647,7 @@ public class ScanQueryRunnerTest
         end = group.size();
       }
       events.addAll(group.subList(offset, end));
-      expected.add(
-          new ScanResultValue(
-              QueryRunnerTestHelper.segmentId,
-              columns,
-              events
-          )
-      );
+      expected.add(new ScanResultValue(QueryRunnerTestHelper.segmentId.toString(), columns, events));
     }
     return expected;
   }

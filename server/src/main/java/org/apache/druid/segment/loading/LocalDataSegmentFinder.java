@@ -26,6 +26,7 @@ import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +52,7 @@ public class LocalDataSegmentFinder implements DataSegmentFinder
   @Override
   public Set<DataSegment> findSegments(String workingDirPath, boolean updateDescriptor) throws SegmentLoadingException
   {
-    final Map<String, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
+    final Map<SegmentId, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
 
     final File workingDir = new File(workingDirPath);
     if (!workingDir.isDirectory()) {
@@ -63,7 +64,9 @@ public class LocalDataSegmentFinder implements DataSegmentFinder
   }
 
   private void recursiveSearchSegments(
-      Map<String, Pair<DataSegment, Long>> timestampedSegments, File workingDir, boolean updateDescriptor
+      Map<SegmentId, Pair<DataSegment, Long>> timestampedSegments,
+      File workingDir,
+      boolean updateDescriptor
   ) throws SegmentLoadingException
   {
     for (File file : workingDir.listFiles()) {
@@ -74,7 +77,7 @@ public class LocalDataSegmentFinder implements DataSegmentFinder
         if (indexZip.exists()) {
           try {
             final DataSegment dataSegment = mapper.readValue(FileUtils.readFileToString(file), DataSegment.class);
-            log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip.getAbsoluteFile());
+            log.info("Found segment [%s] located at [%s]", dataSegment.getId(), indexZip.getAbsoluteFile());
             final Map<String, Object> loadSpec = dataSegment.getLoadSpec();
             if (!loadSpec.get("type").equals(LocalDataStorageDruidModule.SCHEME) || !loadSpec.get("path")
                                                                                              .equals(indexZip.getAbsoluteFile())) {

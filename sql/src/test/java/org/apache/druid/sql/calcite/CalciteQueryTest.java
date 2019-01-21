@@ -87,6 +87,7 @@ import java.util.List;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
+
   @Test
   public void testSelectConstantExpression() throws Exception
   {
@@ -5996,7 +5997,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
-                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzfromString(LOS_ANGELES)))
+                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
                   .build()
@@ -6027,7 +6028,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
-                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzfromString(LOS_ANGELES)))
+                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -6217,7 +6218,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
-                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzfromString(LOS_ANGELES)))
+                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -6248,7 +6249,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
-                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzfromString(LOS_ANGELES)))
+                  .granularity(new PeriodGranularity(Period.months(1), null, DateTimes.inferTzFromString(LOS_ANGELES)))
                   .aggregators(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                   .context(TIMESERIES_CONTEXT_LOS_ANGELES)
                   .build()

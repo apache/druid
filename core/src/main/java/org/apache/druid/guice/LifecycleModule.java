@@ -37,6 +37,9 @@ import java.util.Set;
  */
 public class LifecycleModule implements Module
 {
+  // this scope includes final logging shutdown, so all other handlers in this lifecycle scope should avoid logging in
+  // the 'stop' method, either failing silently or failing violently and throwing an exception causing an ungraceful exit
+  private final LifecycleScope initScope = new LifecycleScope(Lifecycle.Stage.INIT);
   private final LifecycleScope scope = new LifecycleScope(Lifecycle.Stage.NORMAL);
   private final LifecycleScope lastScope = new LifecycleScope(Lifecycle.Stage.LAST);
 
@@ -113,6 +116,7 @@ public class LifecycleModule implements Module
   {
     getEagerBinder(binder); // Load up the eager binder so that it will inject the empty set at a minimum.
 
+    binder.bindScope(ManageLifecycleInit.class, initScope);
     binder.bindScope(ManageLifecycle.class, scope);
     binder.bindScope(ManageLifecycleLast.class, lastScope);
   }
@@ -123,7 +127,7 @@ public class LifecycleModule implements Module
     final Key<Set<KeyHolder>> keyHolderKey = Key.get(new TypeLiteral<Set<KeyHolder>>(){}, Names.named("lifecycle"));
     final Set<KeyHolder> eagerClasses = injector.getInstance(keyHolderKey);
 
-    Lifecycle lifecycle = new Lifecycle()
+    Lifecycle lifecycle = new Lifecycle("module")
     {
       @Override
       public void start() throws Exception
@@ -134,6 +138,7 @@ public class LifecycleModule implements Module
         super.start();
       }
     };
+    initScope.setLifecycle(lifecycle);
     scope.setLifecycle(lifecycle);
     lastScope.setLifecycle(lifecycle);
 

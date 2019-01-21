@@ -199,7 +199,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(gran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       QueryRunnerTestHelper.rowsCount,
                                       QueryRunnerTestHelper.indexDoubleSum,
@@ -306,7 +306,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(gran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .descending(descending)
                                   .context(makeContext())
                                   .build();
@@ -340,7 +340,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(Granularities.ALL)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       Arrays.asList(
                                           new DoubleMaxAggregatorFactory("maxIndex", "index"),
@@ -377,7 +377,7 @@ public class TimeseriesQueryRunnerTest
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(QueryRunnerTestHelper.marketDimension, "upfront")
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,
@@ -678,7 +678,7 @@ public class TimeseriesQueryRunnerTest
                                       new PeriodGranularity(
                                           new Period("P1D"),
                                           null,
-                                          DateTimes.inferTzfromString("America/Los_Angeles")
+                                          DateTimes.inferTzFromString("America/Los_Angeles")
                                       )
                                   )
                                   .descending(descending)
@@ -687,13 +687,13 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
         new Result<>(
-            new DateTime("2011-03-31", DateTimes.inferTzfromString("America/Los_Angeles")),
+            new DateTime("2011-03-31", DateTimes.inferTzFromString("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.of("rows", 13L, "idx", 6619L)
             )
         ),
         new Result<>(
-            new DateTime("2011-04-01T", DateTimes.inferTzfromString("America/Los_Angeles")),
+            new DateTime("2011-04-01T", DateTimes.inferTzFromString("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.of("rows", 13L, "idx", 5827L)
             )
@@ -786,7 +786,7 @@ public class TimeseriesQueryRunnerTest
                                        new PeriodGranularity(
                                            new Period("P7D"),
                                            null,
-                                           DateTimes.inferTzfromString("America/Los_Angeles")
+                                           DateTimes.inferTzFromString("America/Los_Angeles")
                                        )
                                    )
                                    .intervals(
@@ -809,13 +809,13 @@ public class TimeseriesQueryRunnerTest
 
     List<Result<TimeseriesResultValue>> expectedResults1 = Arrays.asList(
         new Result<>(
-            new DateTime("2011-01-06T00:00:00.000-08:00", DateTimes.inferTzfromString("America/Los_Angeles")),
+            new DateTime("2011-01-06T00:00:00.000-08:00", DateTimes.inferTzFromString("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.of("rows", 13L, "idx", 6071L)
             )
         ),
         new Result<>(
-            new DateTime("2011-01-13T00:00:00.000-08:00", DateTimes.inferTzfromString("America/Los_Angeles")),
+            new DateTime("2011-01-13T00:00:00.000-08:00", DateTimes.inferTzFromString("America/Los_Angeles")),
             new TimeseriesResultValue(
                 ImmutableMap.of("rows", 91L, "idx", 33382L)
             )
@@ -1889,7 +1889,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.monthGran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       ImmutableList.of(
                                           new DoubleFirstAggregatorFactory("first", "index"),
@@ -2552,7 +2552,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       Arrays.asList(
                                           QueryRunnerTestHelper.rowsCount,

@@ -238,7 +238,7 @@ public class BatchServerInventoryViewTest
     waitForSync(batchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(batchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments().values());
+    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -252,7 +252,7 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments().values()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
 
     segmentAnnouncer.unannounceSegment(segment1);
     segmentAnnouncer.unannounceSegment(segment2);
@@ -261,7 +261,7 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments().values()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
   }
 
   @Test
@@ -272,7 +272,7 @@ public class BatchServerInventoryViewTest
     waitForSync(filteredBatchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(filteredBatchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments().values());
+    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
 
     Assert.assertEquals(testSegments, segments);
     int prevUpdateCount = inventoryUpdateCounter.get();
@@ -284,7 +284,7 @@ public class BatchServerInventoryViewTest
     waitForUpdateEvents(prevUpdateCount + 1);
     Assert.assertNull(
         Iterables.getOnlyElement(filteredBatchServerInventoryView.getInventory())
-                 .getSegment(segment1.getIdentifier())
+                 .getSegment(segment1.getId())
     );
   }
 
@@ -298,7 +298,7 @@ public class BatchServerInventoryViewTest
     waitForSync(filteredBatchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(filteredBatchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments().values());
+    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -394,7 +394,8 @@ public class BatchServerInventoryViewTest
     final Timing forWaitingTiming = timing.forWaiting();
     Stopwatch stopwatch = Stopwatch.createStarted();
     while (Iterables.isEmpty(batchServerInventoryView.getInventory())
-           || Iterables.get(batchServerInventoryView.getInventory(), 0).getSegments().size() != testSegments.size()) {
+           || Iterables.size(Iterables.get(batchServerInventoryView.getInventory(), 0).getSegments()) !=
+              testSegments.size()) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > forWaitingTiming.milliseconds()) {
         throw new ISE("BatchServerInventoryView is not updating");
@@ -430,7 +431,7 @@ public class BatchServerInventoryViewTest
     waitForSync(batchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(batchServerInventoryView.getInventory(), 0);
-    final Set<DataSegment> segments = Sets.newHashSet(server.getSegments().values());
+    final Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -498,7 +499,7 @@ public class BatchServerInventoryViewTest
     Assert.assertEquals(INITIAL_SEGMENTS * 2, testSegments.size());
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments().values()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
 
     for (int i = 0; i < INITIAL_SEGMENTS; ++i) {
       final DataSegment segment = makeSegment(100 + i);
@@ -508,6 +509,6 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments().values()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
   }
 }

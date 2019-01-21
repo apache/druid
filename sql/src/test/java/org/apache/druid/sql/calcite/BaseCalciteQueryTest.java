@@ -156,7 +156,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     @Override
     public DateTimeZone getSqlTimeZone()
     {
-      return DateTimes.inferTzfromString("America/Los_Angeles");
+      return DateTimes.inferTzFromString("America/Los_Angeles");
     }
   };
   public static final PlannerConfig PLANNER_CONFIG_SEMI_JOIN_ROWS_LIMIT = new PlannerConfig()
@@ -248,7 +248,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   // Generate timestamps for expected results
   public static long T(final String timeString, final String timeZoneString)
   {
-    final DateTimeZone timeZone = DateTimes.inferTzfromString(timeZoneString);
+    final DateTimeZone timeZone = DateTimes.inferTzFromString(timeZoneString);
     return Calcites.jodaToCalciteTimestamp(new DateTime(timeString, timeZone), timeZone);
   }
 

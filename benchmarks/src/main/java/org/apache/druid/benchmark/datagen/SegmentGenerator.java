@@ -48,6 +48,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -116,14 +117,14 @@ public class SegmentGenerator implements Closeable
 
     final String dataHash = Hashing.sha256()
                                    .newHasher()
-                                   .putString(dataSegment.getIdentifier(), StandardCharsets.UTF_8)
+                                   .putString(dataSegment.getId().toString(), StandardCharsets.UTF_8)
                                    .putString(schemaInfo.toString(), StandardCharsets.UTF_8)
                                    .putString(granularity.toString(), StandardCharsets.UTF_8)
                                    .putInt(numRows)
                                    .hash()
                                    .toString();
 
-    final File outDir = new File(getSegmentDir(dataSegment.getIdentifier(), dataHash), "merged");
+    final File outDir = new File(getSegmentDir(dataSegment.getId(), dataHash), "merged");
 
     if (outDir.exists()) {
       try {
@@ -139,7 +140,7 @@ public class SegmentGenerator implements Closeable
 
     final BenchmarkDataGenerator dataGenerator = new BenchmarkDataGenerator(
         schemaInfo.getColumnSchemas(),
-        dataSegment.getIdentifier().hashCode(), /* Use segment identifier hashCode as seed */
+        dataSegment.getId().hashCode(), /* Use segment identifier hashCode as seed */
         schemaInfo.getDataInterval(),
         numRows
     );
@@ -185,7 +186,7 @@ public class SegmentGenerator implements Closeable
       }
 
       if (rows.size() % MAX_ROWS_IN_MEMORY == 0) {
-        indexes.add(makeIndex(dataSegment.getIdentifier(), dataHash, indexes.size(), rows, indexSchema));
+        indexes.add(makeIndex(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema));
         rows.clear();
       }
     }
@@ -193,7 +194,7 @@ public class SegmentGenerator implements Closeable
     log.info("%,d/%,d rows generated for[%s].", numRows, numRows, dataSegment);
 
     if (rows.size() > 0) {
-      indexes.add(makeIndex(dataSegment.getIdentifier(), dataHash, indexes.size(), rows, indexSchema));
+      indexes.add(makeIndex(dataSegment.getId(), dataHash, indexes.size(), rows, indexSchema));
       rows.clear();
     }
 
@@ -242,7 +243,7 @@ public class SegmentGenerator implements Closeable
   }
 
   private QueryableIndex makeIndex(
-      final String identifier,
+      final SegmentId identifier,
       final String dataHash,
       final int indexNumber,
       final List<InputRow> rows,
@@ -258,7 +259,7 @@ public class SegmentGenerator implements Closeable
         .buildMMappedIndex();
   }
 
-  private File getSegmentDir(final String identifier, final String dataHash)
+  private File getSegmentDir(final SegmentId identifier, final String dataHash)
   {
     return new File(cacheDir, StringUtils.format("%s_%s", identifier, dataHash));
   }

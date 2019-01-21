@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
+import org.apache.druid.timeline.SegmentId;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,8 +45,8 @@ public class AppenderatorDriverMetadata
       @JsonProperty("lastSegmentIds") Map<String, String> lastSegmentIds,
       @JsonProperty("callerMetadata") Object callerMetadata,
       // Next two properties are for backwards compatibility, should be removed on versions greater than 0.12.x
-      @JsonProperty("activeSegments") Map<String, List<SegmentIdentifier>> activeSegments,
-      @JsonProperty("publishPendingSegments") Map<String, List<SegmentIdentifier>> publishPendingSegments
+      @JsonProperty("activeSegments") Map<String, List<SegmentIdWithShardSpec>> activeSegments,
+      @JsonProperty("publishPendingSegments") Map<String, List<SegmentIdWithShardSpec>> publishPendingSegments
   )
   {
     Preconditions.checkState(
@@ -59,14 +60,14 @@ public class AppenderatorDriverMetadata
     if (segments == null) {
       // convert old metadata to new one
       final Map<String, List<SegmentWithState>> newMetadata = new HashMap<>();
-      final Set<String> activeSegmentsAlreadySeen = new HashSet<>(); // temp data structure
+      final Set<SegmentId> activeSegmentsAlreadySeen = new HashSet<>(); // temp data structure
 
-      activeSegments.forEach((String sequence, List<SegmentIdentifier> sequenceSegments) -> newMetadata.put(
+      activeSegments.forEach((String sequence, List<SegmentIdWithShardSpec> sequenceSegments) -> newMetadata.put(
           sequence,
           sequenceSegments
               .stream()
               .map(segmentIdentifier -> {
-                activeSegmentsAlreadySeen.add(segmentIdentifier.toString());
+                activeSegmentsAlreadySeen.add(segmentIdentifier.asSegmentId());
                 return SegmentWithState.newSegment(segmentIdentifier);
               })
               .collect(Collectors.toList())
@@ -76,7 +77,7 @@ public class AppenderatorDriverMetadata
         List<SegmentWithState> segmentWithStates = newMetadata.computeIfAbsent(sequence, seq -> new ArrayList<>());
         sequenceSegments
             .stream()
-            .filter(segmentIdentifier -> !activeSegmentsAlreadySeen.contains(segmentIdentifier.toString()))
+            .filter(segmentIdentifier -> !activeSegmentsAlreadySeen.contains(segmentIdentifier.asSegmentId()))
             .map(segmentIdentifier -> SegmentWithState.newSegment(segmentIdentifier, SegmentState.APPEND_FINISHED))
             .forEach(segmentWithStates::add);
       });

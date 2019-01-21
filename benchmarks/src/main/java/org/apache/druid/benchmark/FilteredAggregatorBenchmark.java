@@ -70,6 +70,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -265,8 +266,8 @@ public class FilteredAggregatorBenchmark
   {
     QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "incIndex",
-        new IncrementalIndexSegment(incIndex, "incIndex")
+        SegmentId.dummy("incIndex"),
+        new IncrementalIndexSegment(incIndex, SegmentId.dummy("incIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(
@@ -287,8 +288,8 @@ public class FilteredAggregatorBenchmark
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "qIndex",
-        new QueryableIndexSegment("qIndex", qIndex)
+        SegmentId.dummy("qIndex"),
+        new QueryableIndexSegment(qIndex, SegmentId.dummy("qIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = FilteredAggregatorBenchmark.runQuery(

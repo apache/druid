@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  */
 public class AppenderatorDriverAddResult
 {
-  private final SegmentIdentifier segmentIdentifier;
+  private final SegmentIdWithShardSpec segmentIdentifier;
   private final int numRowsInSegment;
   private final long totalNumRowsInAppenderator;
   private final boolean isPersistRequired;
@@ -39,7 +39,7 @@ public class AppenderatorDriverAddResult
   private final ParseException parseException;
 
   public static AppenderatorDriverAddResult ok(
-      SegmentIdentifier segmentIdentifier,
+      SegmentIdWithShardSpec segmentIdentifier,
       int numRowsInSegment,
       long totalNumRowsInAppenderator,
       boolean isPersistRequired,
@@ -61,7 +61,7 @@ public class AppenderatorDriverAddResult
   }
 
   private AppenderatorDriverAddResult(
-      @Nullable SegmentIdentifier segmentIdentifier,
+      @Nullable SegmentIdWithShardSpec segmentIdentifier,
       int numRowsInSegment,
       long totalNumRowsInAppenderator,
       boolean isPersistRequired,
@@ -80,7 +80,7 @@ public class AppenderatorDriverAddResult
     return segmentIdentifier != null;
   }
 
-  public SegmentIdentifier getSegmentIdentifier()
+  public SegmentIdWithShardSpec getSegmentIdentifier()
   {
     return segmentIdentifier;
   }

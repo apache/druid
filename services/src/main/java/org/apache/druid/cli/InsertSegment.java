@@ -121,12 +121,12 @@ public class InsertSegment extends GuiceRunnable
   {
     final Set<DataSegment> segmentsInserted = indexerMetadataStorageCoordinator.announceHistoricalSegments(segments);
     for (DataSegment dataSegment : segmentsInserted) {
-      log.info("Sucessfully inserted Segment [%s] into metadata storage", dataSegment.getIdentifier());
+      log.info("Sucessfully inserted Segment [%s] into metadata storage", dataSegment.getId());
     }
     final Set<DataSegment> segmentsAlreadyExist = Sets.difference(segments, segmentsInserted);
     if (!segmentsAlreadyExist.isEmpty()) {
       for (DataSegment dataSegment : segmentsAlreadyExist) {
-        log.info("Segment [%s] already exists in metadata storage, updating the payload", dataSegment.getIdentifier());
+        log.info("Segment [%s] already exists in metadata storage, updating the payload", dataSegment.getId());
       }
       indexerMetadataStorageCoordinator.updateSegmentMetadata(segmentsAlreadyExist);
     }
