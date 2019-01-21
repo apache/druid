@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -51,7 +52,7 @@ public class ReferenceCountingSegment extends AbstractSegment
       }
       catch (Exception e) {
         try {
-          log.error(e, "Exception while closing segment[%s]", baseSegment.getIdentifier());
+          log.error(e, "Exception while closing segment[%s]", baseSegment.getId());
         }
         catch (Exception e2) {
           // ignore
@@ -83,9 +84,9 @@ public class ReferenceCountingSegment extends AbstractSegment
   }
 
   @Override
-  public String getIdentifier()
+  public SegmentId getId()
   {
-    return !isClosed() ? baseSegment.getIdentifier() : null;
+    return !isClosed() ? baseSegment.getId() : null;
   }
 
   @Override

@@ -65,6 +65,7 @@
       <option name="ignoreUntypedCollections" value="false" />
     </inspection_tool>
     <inspection_tool class="ForLoopThatDoesntUseLoopVariable" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="Guava" enabled="false" level="WARNING" enabled_by_default="false" />
     <inspection_tool class="HashCodeUsesNonFinalVariable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="ImplicitArrayToString" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IndexOfReplaceableByContains" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -166,6 +167,12 @@
         <constraint name="__context__" target="true" within="" contains="" />
         <constraint name="x" nameOfFormalType="java\.util\.Random" exceptedTypes="java.util.Random" exprTypeWithinHierarchy="true" formalTypeWithinHierarchy="true" within="" contains="" />
         <constraint name="a" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="Use ZKPaths.makePath() with many arguments" created="1537504371779" text="org.apache.curator.utils.ZKPaths.makePath(org.apache.curator.utils.ZKPaths.makePath($x$, $y$), $z$)" recursive="false" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="z" within="" contains="" />
       </searchConfiguration>
       <searchConfiguration name="Use RE (a Druid's class)" created="1539352150701" text="new $E$(org.apache.druid.java.util.common.StringUtils.format($x$))" recursive="false" caseInsensitive="true" type="JAVA">
         <constraint name="__context__" target="true" within="" contains="" />

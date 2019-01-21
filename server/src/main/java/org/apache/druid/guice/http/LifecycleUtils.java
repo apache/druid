@@ -26,7 +26,7 @@ public class LifecycleUtils
 {
   public static Lifecycle asMmxLifecycle(Lifecycle lifecycle)
   {
-    final Lifecycle metamxLifecycle = new Lifecycle();
+    final Lifecycle metamxLifecycle = new Lifecycle("http-client");
     try {
       lifecycle.addMaybeStartHandler(new Lifecycle.Handler()
       {

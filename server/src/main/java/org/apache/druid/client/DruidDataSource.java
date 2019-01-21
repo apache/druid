@@ -22,29 +22,39 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
+ * A mutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
+ *
+ * Concurrency: could be updated concurrently via {@link #addSegment} and {@link #removeSegment}, and accessed
+ * concurrently (e. g. via {@link #getSegments}) as well.
+ *
+ * @see ImmutableDruidDataSource - an immutable counterpart of this class
  */
 public class DruidDataSource
 {
   private final String name;
   private final Map<String, String> properties;
-  private final ConcurrentSkipListMap<String, DataSegment> idToSegmentMap;
+  /**
+   * This map needs to be concurrent because it should be possible to iterate the segments of the data source
+   * (indirectly via {@link #getSegments} or in {@link #toString}) concurrently updates via {@link #addSegment} or
+   * {@link #removeSegment}. Concurrent updates are also supported incidentally, though this is not needed for the use
+   * cases of DruidDataSource.
+   */
+  private final ConcurrentMap<SegmentId, DataSegment> idToSegmentMap = new ConcurrentHashMap<>();
 
-  public DruidDataSource(
-      String name,
-      Map<String, String> properties
-  )
+  public DruidDataSource(String name, Map<String, String> properties)
   {
     this.name = Preconditions.checkNotNull(name);
     this.properties = properties;
-    this.idToSegmentMap = new ConcurrentSkipListMap<>();
   }
 
   @JsonProperty
@@ -59,27 +69,39 @@ public class DruidDataSource
     return properties;
   }
 
+  @Nullable
+  public DataSegment getSegment(SegmentId segmentId)
+  {
+    return idToSegmentMap.get(segmentId);
+  }
+
   public Collection<DataSegment> getSegments()
   {
     return Collections.unmodifiableCollection(idToSegmentMap.values());
   }
 
-  @Nullable
-  public DataSegment getSegment(String segmentId)
-  {
-    return idToSegmentMap.get(segmentId);
-  }
-
   public DruidDataSource addSegment(DataSegment dataSegment)
   {
-    idToSegmentMap.put(dataSegment.getIdentifier(), dataSegment);
+    idToSegmentMap.put(dataSegment.getId(), dataSegment);
     return this;
   }
 
-  public DruidDataSource removePartition(String segmentId)
+  /**
+   * Returns true if the segment was added, false if a segment with the same {@link SegmentId} already existed in this
+   * DruidDataSource.
+   */
+  public boolean addSegmentIfAbsent(DataSegment dataSegment)
   {
-    idToSegmentMap.remove(segmentId);
-    return this;
+    return idToSegmentMap.putIfAbsent(dataSegment.getId(), dataSegment) == null;
+  }
+
+  /**
+   * Returns the removed segment, or null if there was no segment with the given {@link SegmentId} in this
+   * DruidDataSource.
+   */
+  public DataSegment removeSegment(SegmentId segmentId)
+  {
+    return idToSegmentMap.remove(segmentId);
   }
 
   public boolean isEmpty()
@@ -90,14 +112,6 @@ public class DruidDataSource
   public ImmutableDruidDataSource toImmutableDruidDataSource()
   {
     return new ImmutableDruidDataSource(name, properties, idToSegmentMap);
-  }
-
-  // For performance reasons, make sure we check for the existence of a segment using containsSegment(),
-  // which performs a key-based lookup, instead of calling contains() on the collection returned by
-  // dataSource.getSegments(). In Map values collections, the contains() method is a linear scan.
-  public boolean containsSegment(DataSegment segment)
-  {
-    return idToSegmentMap.containsKey(segment.getIdentifier());
   }
 
   @Override

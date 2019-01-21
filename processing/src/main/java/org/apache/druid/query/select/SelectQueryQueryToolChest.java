@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -47,15 +46,14 @@ import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.timeline.DataSegmentUtils;
 import org.apache.druid.timeline.LogicalSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -289,22 +287,22 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             DateTime timestamp = granularity.toDateTime(((Number) resultIter.next()).longValue());
 
             Map<String, Integer> pageIdentifier = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Map<String, Integer>>() {}
-                );
-            Set<String> dimensionSet = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Set<String>>() {}
+                resultIter.next(),
+                new TypeReference<Map<String, Integer>>() {}
             );
-            Set<String> metricSet = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<Set<String>>() {}
-            );
+            Set<String> dimensionSet = jsonMapper.convertValue(resultIter.next(), new TypeReference<Set<String>>() {});
+            Set<String> metricSet = jsonMapper.convertValue(resultIter.next(), new TypeReference<Set<String>>() {});
             List<EventHolder> eventHolders = jsonMapper.convertValue(
-                resultIter.next(), new TypeReference<List<EventHolder>>() {}
-                );
+                resultIter.next(),
+                new TypeReference<List<EventHolder>>() {}
+            );
             // check the condition that outputName of cached result should be updated
             if (resultIter.hasNext()) {
               List<String> cachedOutputNames = (List<String>) resultIter.next();
-              Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
-                  "Cache hit but different number of dimensions??");
+              Preconditions.checkArgument(
+                  cachedOutputNames.size() == dimOutputNames.size(),
+                  "Cache hit but different number of dimensions??"
+              );
               for (int idx = 0; idx < dimOutputNames.size(); idx++) {
                 if (!cachedOutputNames.get(idx).equals(dimOutputNames.get(idx))) {
                   // rename outputName in the EventHolder
@@ -320,12 +318,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
             return new Result<>(
                 timestamp,
-                new SelectResultValue(
-                    pageIdentifier,
-                    dimensionSet,
-                    metricSet,
-                    eventHolders
-                )
+                new SelectResultValue(pageIdentifier, dimensionSet, metricSet, eventHolders)
             );
           }
         };
@@ -369,47 +362,33 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
     final Granularity granularity = query.getGranularity();
 
+    TreeMap<Long, Long> granularThresholds = new TreeMap<>();
+
     // A paged select query using a UnionDataSource will return pagingIdentifiers from segments in more than one
     // dataSource which confuses subsequent queries and causes a failure. To avoid this, filter only the paging keys
     // that are applicable to this dataSource so that each dataSource in a union query gets the appropriate keys.
-    final Iterable<String> filteredPagingKeys = Iterables.filter(
-        paging.keySet(), new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
-          {
-            return DataSegmentUtils.valueOf(dataSource, input) != null;
+    paging
+        .keySet()
+        .stream()
+        .filter(identifier -> SegmentId.tryParse(dataSource, identifier) != null)
+        .map(SegmentId.makeIntervalExtractor(dataSource))
+        .sorted(query.isDescending() ? Comparators.intervalsByEndThenStart()
+                                     : Comparators.intervalsByStartThenEnd())
+        .forEach(interval -> {
+          if (query.isDescending()) {
+            long granularEnd = granularity.bucketStart(interval.getEnd()).getMillis();
+            Long currentEnd = granularThresholds.get(granularEnd);
+            if (currentEnd == null || interval.getEndMillis() > currentEnd) {
+              granularThresholds.put(granularEnd, interval.getEndMillis());
+            }
+          } else {
+            long granularStart = granularity.bucketStart(interval.getStart()).getMillis();
+            Long currentStart = granularThresholds.get(granularStart);
+            if (currentStart == null || interval.getStartMillis() < currentStart) {
+              granularThresholds.put(granularStart, interval.getStartMillis());
+            }
           }
-        }
-    );
-
-    List<Interval> intervals = Lists.newArrayList(
-        Iterables.transform(filteredPagingKeys, DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
-    );
-    Comparator<Interval> comparator;
-    if (query.isDescending()) {
-      comparator = Comparators.intervalsByEndThenStart();
-    } else {
-      comparator = Comparators.intervalsByStartThenEnd();
-    }
-    Collections.sort(intervals, comparator);
-
-    TreeMap<Long, Long> granularThresholds = new TreeMap<>();
-    for (Interval interval : intervals) {
-      if (query.isDescending()) {
-        long granularEnd = granularity.bucketStart(interval.getEnd()).getMillis();
-        Long currentEnd = granularThresholds.get(granularEnd);
-        if (currentEnd == null || interval.getEndMillis() > currentEnd) {
-          granularThresholds.put(granularEnd, interval.getEndMillis());
-        }
-      } else {
-        long granularStart = granularity.bucketStart(interval.getStart()).getMillis();
-        Long currentStart = granularThresholds.get(granularStart);
-        if (currentStart == null || interval.getStartMillis() < currentStart) {
-          granularThresholds.put(granularStart, interval.getStartMillis());
-        }
-      }
-    }
+        });
 
     List<T> queryIntervals = Lists.newArrayList(segments);
 

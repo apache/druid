@@ -113,7 +113,7 @@ public class YeOldePlumberSchool implements PlumberSchool
     );
 
     // Temporary directory to hold spilled segments.
-    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getIdentifier());
+    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getId().toString());
 
     // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = new HashSet<>();
@@ -205,11 +205,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 
           dataSegmentPusher.push(fileToUpload, segmentToUpload, false);
 
-          log.info(
-              "Uploaded segment[%s]",
-              segmentToUpload.getIdentifier()
-          );
-
+          log.info("Uploaded segment[%s]", segmentToUpload.getId());
         }
         catch (Exception e) {
           log.warn(e, "Failed to merge and upload");

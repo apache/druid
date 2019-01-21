@@ -290,7 +290,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1"
     );
 
-    final DateTimeZone timeZone = DateTimes.inferTzfromString("America/Los_Angeles");
+    final DateTimeZone timeZone = DateTimes.inferTzFromString("America/Los_Angeles");
     final DateTime localDateTime = new DateTime("2000-01-01T00Z", timeZone);
 
     final List<Map<String, Object>> resultRows = getRows(resultSet);

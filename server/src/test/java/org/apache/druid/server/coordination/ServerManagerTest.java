@@ -69,6 +69,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -626,9 +627,9 @@ public class ServerManagerTest
     }
 
     @Override
-    public String getIdentifier()
+    public SegmentId getId()
     {
-      return version;
+      return SegmentId.dummy(version);
     }
 
     public boolean isClosed()

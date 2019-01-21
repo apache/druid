@@ -23,6 +23,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.util.Map;
 import java.util.Set;
@@ -61,16 +62,16 @@ public interface DataSegmentFinder
    * @param segmentModifiedAt   segment modified timestamp
    */
   static void putInMapRetainingNewest(
-      Map<String, Pair<DataSegment, Long>> timestampedSegments,
+      Map<SegmentId, Pair<DataSegment, Long>> timestampedSegments,
       DataSegment dataSegment,
       long segmentModifiedAt
   )
   {
     timestampedSegments.merge(
-        dataSegment.getIdentifier(),
+        dataSegment.getId(),
         Pair.of(dataSegment, segmentModifiedAt),
         (previous, current) -> {
-          log.warn("Multiple copies of segmentId [%s] found, using newest version", current.lhs.getIdentifier());
+          log.warn("Multiple copies of segmentId [%s] found, using newest version", current.lhs.getId());
           return previous.rhs > current.rhs ? previous : current;
         }
     );

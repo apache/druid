@@ -30,6 +30,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
@@ -48,6 +49,7 @@ import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -70,6 +72,7 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -79,14 +82,15 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
  */
 @Path("/druid/coordinator/v1/datasources")
-public class DatasourcesResource
+public class DataSourcesResource
 {
-  private static final Logger log = new Logger(DatasourcesResource.class);
+  private static final Logger log = new Logger(DataSourcesResource.class);
 
   private final CoordinatorServerView serverInventoryView;
   private final MetadataSegmentManager databaseSegmentManager;
@@ -96,7 +100,7 @@ public class DatasourcesResource
   private final AuthorizerMapper authorizerMapper;
 
   @Inject
-  public DatasourcesResource(
+  public DataSourcesResource(
       CoordinatorServerView serverInventoryView,
       MetadataSegmentManager databaseSegmentManager,
       MetadataRuleManager databaseRuleManager,
@@ -175,7 +179,7 @@ public class DatasourcesResource
       @PathParam("dataSourceName") final String dataSourceName
   )
   {
-    if (!databaseSegmentManager.enableDatasource(dataSourceName)) {
+    if (!databaseSegmentManager.enableDataSource(dataSourceName)) {
       return Response.noContent().build();
     }
 
@@ -231,7 +235,7 @@ public class DatasourcesResource
                        .build();
       }
     } else {
-      if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
+      if (!databaseSegmentManager.removeDataSource(dataSourceName)) {
         return Response.noContent().build();
       }
     }
@@ -278,58 +282,17 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
-
-    if (dataSource == null) {
-      return Response.noContent().build();
-    }
-
-    final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
-
-    if (full != null) {
-      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
-      for (DataSegment dataSegment : dataSource.getSegments()) {
-        Map<String, Object> segments = retVal.get(dataSegment.getInterval());
-        if (segments == null) {
-          segments = new HashMap<>();
-          retVal.put(dataSegment.getInterval(), segments);
-        }
-
-        Pair<DataSegment, Set<String>> val = getSegment(dataSegment.getIdentifier());
-
-        if (val != null) {
-          segments.put(dataSegment.getIdentifier(), ImmutableMap.of("metadata", val.lhs, "servers", val.rhs));
-        }
+    if (simple == null && full == null) {
+      final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+      if (dataSource == null) {
+        return Response.noContent().build();
       }
-
-      return Response.ok(retVal).build();
+      final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
+      Set<Interval> intervals = new TreeSet<>(comparator);
+      dataSource.getSegments().forEach(segment -> intervals.add(segment.getInterval()));
+      return Response.ok(intervals).build();
     }
-
-    if (simple != null) {
-      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
-      for (DataSegment dataSegment : dataSource.getSegments()) {
-        Map<String, Object> properties = retVal.get(dataSegment.getInterval());
-        if (properties == null) {
-          properties = new HashMap<>();
-          properties.put("size", dataSegment.getSize());
-          properties.put("count", 1);
-
-          retVal.put(dataSegment.getInterval(), properties);
-        } else {
-          properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
-          properties.put("count", MapUtils.getInt(properties, "count", 0) + 1);
-        }
-      }
-
-      return Response.ok(retVal).build();
-    }
-
-    final Set<Interval> intervals = new TreeSet<>(comparator);
-    for (DataSegment dataSegment : dataSource.getSegments()) {
-      intervals.add(dataSegment.getInterval());
-    }
-
-    return Response.ok(intervals).build();
+    return getSegmentDataSourceIntervals(dataSourceName, full != null, interval -> true);
   }
 
   @GET
@@ -343,64 +306,75 @@ public class DatasourcesResource
       @QueryParam("full") String full
   )
   {
-    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
+    if (simple == null && full == null) {
+      final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+      if (dataSource == null) {
+        return Response.noContent().build();
+      }
+      final Set<SegmentId> segmentIds = new TreeSet<>();
+      for (DataSegment dataSegment : dataSource.getSegments()) {
+        if (theInterval.contains(dataSegment.getInterval())) {
+          segmentIds.add(dataSegment.getId());
+        }
+      }
+      return Response.ok(segmentIds).build();
+    }
+    return getSegmentDataSourceIntervals(dataSourceName, full != null, theInterval::contains);
+  }
+
+  /**
+   * The property names belong to the public HTTP JSON API.
+   */
+  @PublicApi
+  enum SimpleProperties
+  {
+    size,
+    count
+  }
+
+  private Response getSegmentDataSourceIntervals(
+      String dataSourceName,
+      boolean full,
+      Predicate<Interval> intervalFilter
+  )
+  {
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
 
     if (dataSource == null) {
       return Response.noContent().build();
     }
 
     final Comparator<Interval> comparator = Comparators.intervalsByStartThenEnd().reversed();
-    if (full != null) {
-      final Map<Interval, Map<String, Object>> retVal = new TreeMap<>(comparator);
-      for (DataSegment dataSegment : dataSource.getSegments()) {
-        if (theInterval.contains(dataSegment.getInterval())) {
-          Map<String, Object> segments = retVal.get(dataSegment.getInterval());
-          if (segments == null) {
-            segments = new HashMap<>();
-            retVal.put(dataSegment.getInterval(), segments);
-          }
 
-          Pair<DataSegment, Set<String>> val = getSegment(dataSegment.getIdentifier());
+    if (full) {
+      final Map<Interval, Map<SegmentId, Object>> retVal = new TreeMap<>(comparator);
+      for (DataSegment dataSegment : dataSource.getSegments()) {
+        if (intervalFilter.test(dataSegment.getInterval())) {
+          Map<SegmentId, Object> segments = retVal.computeIfAbsent(dataSegment.getInterval(), i -> new HashMap<>());
+
+          Pair<DataSegment, Set<String>> val = getServersWhereSegmentIsServed(dataSegment.getId());
 
           if (val != null) {
-            segments.put(dataSegment.getIdentifier(), ImmutableMap.of("metadata", val.lhs, "servers", val.rhs));
+            segments.put(dataSegment.getId(), ImmutableMap.of("metadata", val.lhs, "servers", val.rhs));
           }
         }
       }
 
       return Response.ok(retVal).build();
-    }
-
-    if (simple != null) {
-      final Map<Interval, Map<String, Object>> retVal = new HashMap<>();
+    } else {
+      final Map<Interval, Map<SimpleProperties, Object>> retVal = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
-        if (theInterval.contains(dataSegment.getInterval())) {
-          Map<String, Object> properties = retVal.get(dataSegment.getInterval());
-          if (properties == null) {
-            properties = new HashMap<>();
-            properties.put("size", dataSegment.getSize());
-            properties.put("count", 1);
-
-            retVal.put(dataSegment.getInterval(), properties);
-          } else {
-            properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
-            properties.put("count", MapUtils.getInt(properties, "count", 0) + 1);
-          }
+        if (intervalFilter.test(dataSegment.getInterval())) {
+          Map<SimpleProperties, Object> properties =
+              retVal.computeIfAbsent(dataSegment.getInterval(), i -> new EnumMap<>(SimpleProperties.class));
+          properties.merge(SimpleProperties.size, dataSegment.getSize(), (a, b) -> (Long) a + (Long) b);
+          properties.merge(SimpleProperties.count, 1, (a, b) -> (Integer) a + (Integer) b);
         }
       }
 
       return Response.ok(retVal).build();
     }
-
-    final Set<String> retVal = new TreeSet<>(String.CASE_INSENSITIVE_ORDER.reversed());
-    for (DataSegment dataSegment : dataSource.getSegments()) {
-      if (theInterval.contains(dataSegment.getInterval())) {
-        retVal.add(dataSegment.getIdentifier());
-      }
-    }
-
-    return Response.ok(retVal).build();
   }
 
   @GET
@@ -422,12 +396,7 @@ public class DatasourcesResource
       return builder.entity(dataSource.getSegments()).build();
     }
 
-    return builder.entity(
-        Iterables.transform(
-            dataSource.getSegments(),
-            (DataSegment segment) -> segment.getIdentifier()
-        )
-    ).build();
+    return builder.entity(Iterables.transform(dataSource.getSegments(), DataSegment::getId)).build();
   }
 
   @GET
@@ -444,14 +413,12 @@ public class DatasourcesResource
       return Response.noContent().build();
     }
 
-    Pair<DataSegment, Set<String>> retVal = getSegment(segmentId);
-
-    if (retVal != null) {
-      return Response.ok(
-          ImmutableMap.of("metadata", retVal.lhs, "servers", retVal.rhs)
-      ).build();
+    for (SegmentId possibleSegmentId : SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId)) {
+      Pair<DataSegment, Set<String>> retVal = getServersWhereSegmentIsServed(possibleSegmentId);
+      if (retVal != null) {
+        return Response.ok(ImmutableMap.of("metadata", retVal.lhs, "servers", retVal.rhs)).build();
+      }
     }
-
     return Response.noContent().build();
   }
 
@@ -463,11 +430,10 @@ public class DatasourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
-      return Response.noContent().build();
+    if (databaseSegmentManager.removeSegment(dataSourceName, segmentId)) {
+      return Response.ok().build();
     }
-
-    return Response.ok().build();
+    return Response.noContent().build();
   }
 
   @POST
@@ -490,9 +456,7 @@ public class DatasourcesResource
   @Path("/{dataSourceName}/tiers")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response getSegmentDataSourceTiers(
-      @PathParam("dataSourceName") String dataSourceName
-  )
+  public Response getSegmentDataSourceTiers(@PathParam("dataSourceName") String dataSourceName)
   {
     Set<String> retVal = new HashSet<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
@@ -519,23 +483,24 @@ public class DatasourcesResource
       return null;
     }
 
-    final SortedMap<String, DataSegment> segmentMap = new TreeMap<>();
+    final SortedMap<SegmentId, DataSegment> segmentMap = new TreeMap<>();
     for (ImmutableDruidDataSource dataSource : dataSources) {
       Iterable<DataSegment> segments = dataSource.getSegments();
       for (DataSegment segment : segments) {
-        segmentMap.put(segment.getIdentifier(), segment);
+        segmentMap.put(segment.getId(), segment);
       }
     }
 
     return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap);
   }
 
-  private Pair<DataSegment, Set<String>> getSegment(String segmentId)
+  @Nullable
+  private Pair<DataSegment, Set<String>> getServersWhereSegmentIsServed(SegmentId segmentId)
   {
     DataSegment theSegment = null;
     Set<String> servers = new HashSet<>();
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      DataSegment currSegment = druidServer.getSegments().get(segmentId);
+      DataSegment currSegment = druidServer.getSegment(segmentId);
       if (currSegment != null) {
         theSegment = currSegment;
         servers.add(druidServer.getHost());
@@ -565,7 +530,7 @@ public class DatasourcesResource
         "tiers", tiers,
         "segments", segments
     );
-    Set<String> totalDistinctSegments = new HashSet<>();
+    Set<SegmentId> totalDistinctSegments = new HashSet<>();
     Map<String, HashSet<Object>> tierDistinctSegments = new HashMap<>();
 
     long totalSegmentSize = 0;
@@ -587,14 +552,13 @@ public class DatasourcesResource
       long dataSourceSegmentSize = 0;
       for (DataSegment dataSegment : druidDataSource.getSegments()) {
         // tier segments stats
-        if (!tierDistinctSegments.get(tier).contains(dataSegment.getIdentifier())) {
+        if (!tierDistinctSegments.get(tier).contains(dataSegment.getId())) {
           dataSourceSegmentSize += dataSegment.getSize();
-          tierDistinctSegments.get(tier).add(dataSegment.getIdentifier());
+          tierDistinctSegments.get(tier).add(dataSegment.getId());
         }
         // total segments stats
-        if (!totalDistinctSegments.contains(dataSegment.getIdentifier())) {
+        if (totalDistinctSegments.add(dataSegment.getId())) {
           totalSegmentSize += dataSegment.getSize();
-          totalDistinctSegments.add(dataSegment.getIdentifier());
 
           minTime = DateTimes.min(minTime, dataSegment.getInterval().getStart());
           maxTime = DateTimes.max(maxTime, dataSegment.getInterval().getEnd());

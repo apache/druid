@@ -181,7 +181,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
         new StringSerializer()
     );
 
-    DateTimeZone zone = DateTimes.inferTzfromString("UTC");
+    DateTimeZone zone = DateTimes.inferTzFromString("UTC");
     // format for putting into events
     DateTimeFormatter event_fmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 

@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.annotation.Nullable;
 import java.util.Set;
@@ -29,14 +30,39 @@ import java.util.Set;
  */
 public class SegmentMetadataHolder
 {
+  public static Builder builder(
+      SegmentId segmentId,
+      long isPublished,
+      long isAvailable,
+      long isRealtime,
+      Set<String> segmentServers,
+      RowSignature rowSignature,
+      long numRows
+  )
+  {
+    return new Builder(segmentId, isPublished, isAvailable, isRealtime, segmentServers, rowSignature, numRows);
+  }
 
+  public static Builder from(SegmentMetadataHolder h)
+  {
+    return new Builder(
+        h.getSegmentId(),
+        h.isPublished(),
+        h.isAvailable(),
+        h.isRealtime(),
+        h.getReplicas(),
+        h.getRowSignature(),
+        h.getNumRows()
+    );
+  }
+
+  private final SegmentId segmentId;
   // Booleans represented as long type, where 1 = true and 0 = false
   // to make it easy to count number of segments which are
   // published, available or realtime etc.
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-  private final String segmentId;
   //set of servers that contain the segment
   private final Set<String> segmentServers;
   private final long numRows;
@@ -69,7 +95,7 @@ public class SegmentMetadataHolder
     return isRealtime;
   }
 
-  public String getSegmentId()
+  public SegmentId getSegmentId()
   {
     return segmentId;
   }
@@ -97,7 +123,7 @@ public class SegmentMetadataHolder
 
   public static class Builder
   {
-    private final String segmentId;
+    private final SegmentId segmentId;
     private final long isPublished;
     private final long isAvailable;
     private final long isRealtime;
@@ -107,8 +133,8 @@ public class SegmentMetadataHolder
     private RowSignature rowSignature;
     private long numRows;
 
-    public Builder(
-        String segmentId,
+    private Builder(
+        SegmentId segmentId,
         long isPublished,
         long isAvailable,
         long isRealtime,

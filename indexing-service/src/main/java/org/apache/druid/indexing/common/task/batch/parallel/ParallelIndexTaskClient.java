@@ -26,7 +26,7 @@ import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
@@ -57,7 +57,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
     return subtaskId;
   }
 
-  public SegmentIdentifier allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
+  public SegmentIdWithShardSpec allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
   {
     final FullResponseHolder response = submitSmileRequest(
         supervisorTaskId,
@@ -77,7 +77,7 @@ public class ParallelIndexTaskClient extends IndexTaskClient
     } else {
       return deserialize(
           response.getContent(),
-          new TypeReference<SegmentIdentifier>()
+          new TypeReference<SegmentIdWithShardSpec>()
           {
           }
       );
