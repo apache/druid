@@ -23,9 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentUtils;
 
 import java.util.Set;
 
@@ -84,7 +84,7 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   public String toString()
   {
     return "SegmentInsertAction{" +
-           "segments=" + DataSegmentUtils.getIdentifiersString(segments) +
+           "segments=" + Iterables.transform(segments, DataSegment::getId) +
            '}';
   }
 }

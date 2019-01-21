@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -40,6 +39,7 @@ import org.joda.time.Period;
 import org.junit.Before;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +53,7 @@ public class DruidCoordinatorBalancerProfiler
   private DruidCoordinator coordinator;
   private ImmutableDruidServer druidServer1;
   private ImmutableDruidServer druidServer2;
-  Map<String, DataSegment> segments = new HashMap<>();
+  List<DataSegment> segments = new ArrayList<>();
   ServiceEmitter emitter;
   MetadataRuleManager manager;
   PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, ImmutableMap.of("normal", 3));
@@ -89,13 +89,11 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
 
-    List<DruidServer> serverList = new ArrayList<>();
     Map<String, LoadQueuePeon> peonMap = new HashMap<>();
     List<ServerHolder> serverHolderList = new ArrayList<>();
-    Map<String, DataSegment> segmentMap = new HashMap<>();
+    List<DataSegment> segments = new ArrayList<>();
     for (int i = 0; i < numSegments; i++) {
-      segmentMap.put(
-          "segment" + i,
+      segments.add(
           new DataSegment(
               "datasource" + i,
               new Interval(DateTimes.of("2012-01-01"), (DateTimes.of("2012-01-01")).plusHours(1)),
@@ -119,9 +117,9 @@ public class DruidCoordinatorBalancerProfiler
       EasyMock.expect(server.getName()).andReturn(Integer.toString(i)).atLeastOnce();
       EasyMock.expect(server.getHost()).andReturn(Integer.toString(i)).anyTimes();
       if (i == 0) {
-        EasyMock.expect(server.getSegments()).andReturn(segmentMap).anyTimes();
+        EasyMock.expect(server.getSegments()).andReturn(segments).anyTimes();
       } else {
-        EasyMock.expect(server.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
+        EasyMock.expect(server.getSegments()).andReturn(Collections.emptyList()).anyTimes();
       }
       EasyMock.expect(server.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
       EasyMock.replay(server);
@@ -151,7 +149,7 @@ public class DruidCoordinatorBalancerProfiler
                                 .withLoadManagementPeons(
                                     peonMap
                                 )
-                                .withAvailableSegments(segmentMap.values())
+                                .withAvailableSegments(segments)
                                 .withDynamicConfigs(
                                     CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
@@ -208,7 +206,7 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer2.getSegments()).andReturn(new HashMap<String, DataSegment>()).anyTimes();
+    EasyMock.expect(druidServer2.getSegments()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
@@ -249,7 +247,7 @@ public class DruidCoordinatorBalancerProfiler
                                         toPeon
                                     )
                                 )
-                                .withAvailableSegments(segments.values())
+                                .withAvailableSegments(segments)
                                 .withDynamicConfigs(
                                     CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE

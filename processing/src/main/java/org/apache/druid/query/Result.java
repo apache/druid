@@ -37,10 +37,7 @@ public class Result<T> implements Comparable<Result<T>>
   private final T value;
 
   @JsonCreator
-  public Result(
-      @JsonProperty("timestamp") DateTime timestamp,
-      @JsonProperty("result") T value
-  )
+  public Result(@JsonProperty("timestamp") DateTime timestamp, @JsonProperty("result") T value)
   {
     this.timestamp = timestamp;
     this.value = value;

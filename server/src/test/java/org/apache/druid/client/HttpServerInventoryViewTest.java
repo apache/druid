@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.discovery.DataNodeService;
@@ -44,6 +45,7 @@ import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -185,16 +187,16 @@ public class HttpServerInventoryViewTest
 
     CountDownLatch initializeCallback1 = new CountDownLatch(1);
 
-    Map<String, CountDownLatch> segmentAddLathces = ImmutableMap.of(
-        segment1.getIdentifier(), new CountDownLatch(1),
-        segment2.getIdentifier(), new CountDownLatch(1),
-        segment3.getIdentifier(), new CountDownLatch(1),
-        segment4.getIdentifier(), new CountDownLatch(1)
+    Map<SegmentId, CountDownLatch> segmentAddLathces = ImmutableMap.of(
+        segment1.getId(), new CountDownLatch(1),
+        segment2.getId(), new CountDownLatch(1),
+        segment3.getId(), new CountDownLatch(1),
+        segment4.getId(), new CountDownLatch(1)
     );
 
-    Map<String, CountDownLatch> segmentDropLatches = ImmutableMap.of(
-        segment1.getIdentifier(), new CountDownLatch(1),
-        segment2.getIdentifier(), new CountDownLatch(1)
+    Map<SegmentId, CountDownLatch> segmentDropLatches = ImmutableMap.of(
+        segment1.getId(), new CountDownLatch(1),
+        segment2.getId(), new CountDownLatch(1)
     );
 
     httpServerInventoryView.registerSegmentCallback(
@@ -204,14 +206,14 @@ public class HttpServerInventoryViewTest
           @Override
           public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
-            segmentAddLathces.get(segment.getIdentifier()).countDown();
+            segmentAddLathces.get(segment.getId()).countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
 
           @Override
           public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
-            segmentDropLatches.get(segment.getIdentifier()).countDown();
+            segmentDropLatches.get(segment.getId()).countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
 
@@ -247,17 +249,17 @@ public class HttpServerInventoryViewTest
     druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode));
 
     initializeCallback1.await();
-    segmentAddLathces.get(segment1.getIdentifier()).await();
-    segmentDropLatches.get(segment1.getIdentifier()).await();
-    segmentAddLathces.get(segment2.getIdentifier()).await();
-    segmentAddLathces.get(segment3.getIdentifier()).await();
-    segmentAddLathces.get(segment4.getIdentifier()).await();
-    segmentDropLatches.get(segment2.getIdentifier()).await();
+    segmentAddLathces.get(segment1.getId()).await();
+    segmentDropLatches.get(segment1.getId()).await();
+    segmentAddLathces.get(segment2.getId()).await();
+    segmentAddLathces.get(segment3.getId()).await();
+    segmentAddLathces.get(segment4.getId()).await();
+    segmentDropLatches.get(segment2.getId()).await();
 
     DruidServer druidServer = httpServerInventoryView.getInventoryValue("host:8080");
     Assert.assertEquals(
-        ImmutableMap.of(segment3.getIdentifier(), segment3, segment4.getIdentifier(), segment4),
-        druidServer.getSegments()
+        ImmutableMap.of(segment3.getId(), segment3, segment4.getId(), segment4),
+        Maps.uniqueIndex(druidServer.getSegments(), DataSegment::getId)
     );
 
     druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));

@@ -127,10 +127,10 @@ public class DruidPlanner implements Closeable
         root.rel
     );
 
-    final Set<String> datasourceNames = ImmutableSet.copyOf(druidRel.getDatasourceNames());
+    final Set<String> dataSourceNames = ImmutableSet.copyOf(druidRel.getDataSourceNames());
 
     if (explain != null) {
-      return planExplanation(druidRel, explain, datasourceNames);
+      return planExplanation(druidRel, explain, dataSourceNames);
     } else {
       final Supplier<Sequence<Object[]>> resultsSupplier = new Supplier<Sequence<Object[]>>()
       {
@@ -160,7 +160,7 @@ public class DruidPlanner implements Closeable
         }
       };
 
-      return new PlannerResult(resultsSupplier, root.validatedRowType, datasourceNames);
+      return new PlannerResult(resultsSupplier, root.validatedRowType, dataSourceNames);
     }
   }
 
@@ -201,7 +201,7 @@ public class DruidPlanner implements Closeable
           public void visit(RelNode node, int ordinal, RelNode parent)
           {
             if (node instanceof DruidRel) {
-              datasourceNames.addAll(((DruidRel) node).getDatasourceNames());
+              datasourceNames.addAll(((DruidRel) node).getDataSourceNames());
             }
             if (node instanceof Bindables.BindableTableScan) {
               Bindables.BindableTableScan bts = (Bindables.BindableTableScan) node;

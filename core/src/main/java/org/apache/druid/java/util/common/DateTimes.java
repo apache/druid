@@ -28,6 +28,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 import java.util.TimeZone;
+import java.util.regex.Pattern;
 
 public final class DateTimes
 {
@@ -41,8 +42,18 @@ public final class DateTimes
       ISODateTimeFormat.dateTimeParser().withOffsetParsed()
   );
 
+  /**
+   * This pattern aims to match strings, produced by {@link DateTime#toString()}. It's not rigorous: it could accept
+   * some strings that couldn't be obtained by calling toString() on any {@link DateTime} object, and also it could
+   * not match some valid DateTime string. Use for heuristic purposes only.
+   */
+  public static final Pattern COMMON_DATE_TIME_PATTERN = Pattern.compile(
+      //year    month     day        hour       minute     second       millis  time zone
+      "[0-9]{4}-[01][0-9]-[0-3][0-9]T[0-2][0-9]:[0-5][0-9]:[0-5][0-9]\\.[0-9]{3}(Z|[+\\-][0-9]{2}(:[0-9]{2}))"
+  );
+
   @SuppressForbidden(reason = "DateTimeZone#forID")
-  public static DateTimeZone inferTzfromString(String tzId)
+  public static DateTimeZone inferTzFromString(String tzId)
   {
     try {
       return DateTimeZone.forID(tzId);

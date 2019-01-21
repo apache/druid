@@ -20,10 +20,8 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -40,6 +38,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -67,11 +66,10 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
@@ -87,17 +85,25 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    * should be synchronized to prevent from being called at the same time if two different threads are calling them.
    * This might be possible if a druid coordinator gets and drops leadership repeatedly in quick succession.
    */
-  private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
-  /** {@link #poll()} and {@link #isStarted()} use readLock. */
-  private final Lock readLock = readWriteLock.readLock();
-  /** {@link #start()} and {@link #stop()} use writeLock. */
-  private final Lock writeLock = readWriteLock.writeLock();
+  private final ReentrantReadWriteLock startStopLock = new ReentrantReadWriteLock();
+
+  /**
+   * Used to ensure that {@link #poll()} is never run concurrently. It should already be so (at least in production
+   * code), where {@link #poll()} is called only from the task created in {@link #createPollTaskForStartOrder} and is
+   * scheduled in a single-threaded {@link #exec}, so this lock is an additional safety net in case there are bugs in
+   * the code, and for tests, where {@link #poll()} is called from the outside code.
+   *
+   * Not using {@link #startStopLock}.writeLock() in order to still be able to run {@link #poll()} concurrently with
+   * {@link #isStarted()}.
+   */
+  private final Object pollLock = new Object();
 
   private final ObjectMapper jsonMapper;
   private final Supplier<MetadataSegmentManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
-  private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSourcesRef;
   private final SQLMetadataConnector connector;
+
+  private ConcurrentHashMap<String, DruidDataSource> dataSources = new ConcurrentHashMap<>();
 
   /** The number of times this SQLMetadataSegmentManager was started. */
   private long startCount = 0;
@@ -126,7 +132,6 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     this.jsonMapper = jsonMapper;
     this.config = config;
     this.dbTables = dbTables;
-    this.dataSourcesRef = new AtomicReference<>(new ConcurrentHashMap<>());
     this.connector = connector;
   }
 
@@ -134,7 +139,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @LifecycleStart
   public void start()
   {
-    writeLock.lock();
+    ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
+    lock.lock();
     try {
       if (isStarted()) {
         return;
@@ -148,68 +154,65 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
       exec.scheduleWithFixedDelay(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              // poll() is synchronized together with start(), stop() and isStarted() to ensure that when stop() exists,
-              // poll() won't actually run anymore after that (it could only enter the syncrhonized section and exit
-              // immediately because the localStartedOrder doesn't match the new currentStartOrder). It's needed
-              // to avoid flakiness in SQLMetadataSegmentManagerTest.
-              // See https://github.com/apache/incubator-druid/issues/6028
-              readLock.lock();
-              try {
-                if (localStartOrder == currentStartOrder) {
-                  poll();
-                }
-              }
-              catch (Exception e) {
-                log.makeAlert(e, "uncaught exception in segment manager polling thread").emit();
-
-              }
-              finally {
-                readLock.unlock();
-              }
-            }
-          },
+          createPollTaskForStartOrder(localStartOrder),
           0,
           delay.getMillis(),
           TimeUnit.MILLISECONDS
       );
     }
     finally {
-      writeLock.unlock();
+      lock.unlock();
     }
+  }
+
+  private Runnable createPollTaskForStartOrder(long startOrder)
+  {
+    return () -> {
+      // poll() is synchronized together with start(), stop() and isStarted() to ensure that when stop() exits, poll()
+      // won't actually run anymore after that (it could only enter the syncrhonized section and exit immediately
+      // because the localStartedOrder doesn't match the new currentStartOrder). It's needed to avoid flakiness in
+      // SQLMetadataSegmentManagerTest. See https://github.com/apache/incubator-druid/issues/6028
+      ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
+      lock.lock();
+      try {
+        if (startOrder == currentStartOrder) {
+          poll();
+        } else {
+          log.debug("startOrder = currentStartOrder = %d, skipping poll()", startOrder);
+        }
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "uncaught exception in segment manager polling thread").emit();
+      }
+      finally {
+        lock.unlock();
+      }
+    };
   }
 
   @Override
   @LifecycleStop
   public void stop()
   {
-    writeLock.lock();
+    ReentrantReadWriteLock.WriteLock lock = startStopLock.writeLock();
+    lock.lock();
     try {
       if (!isStarted()) {
         return;
       }
 
-      final ConcurrentHashMap<String, DruidDataSource> emptyMap = new ConcurrentHashMap<>();
-      ConcurrentHashMap<String, DruidDataSource> current;
-      do {
-        current = dataSourcesRef.get();
-      } while (!dataSourcesRef.compareAndSet(current, emptyMap));
-
+      dataSources = new ConcurrentHashMap<>();
       currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
     }
     finally {
-      writeLock.unlock();
+      lock.unlock();
     }
   }
 
   @Override
-  public boolean enableDatasource(final String ds)
+  public boolean enableDataSource(final String dataSource)
   {
     try {
       final IDBI dbi = connector.getDBI();
@@ -224,7 +227,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                           )
                       )
                       .setFetchSize(connector.getStreamingFetchSize())
-                      .bind("dataSource", ds)
+                      .bind("dataSource", dataSource)
                       .map(ByteArrayMapper.FIRST)
                       .iterator(),
                   payload -> {
@@ -268,7 +271,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                     StringUtils.format(
                         "UPDATE %s SET used=true WHERE id = '%s'",
                         getSegmentsTable(),
-                        segment.getIdentifier()
+                        segment.getId()
                     )
                 );
               }
@@ -280,7 +283,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       );
     }
     catch (Exception e) {
-      log.error(e, "Exception enabling datasource %s", ds);
+      log.error(e, "Exception enabling datasource %s", dataSource);
       return false;
     }
 
@@ -297,9 +300,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             @Override
             public Void withHandle(Handle handle)
             {
-              handle.createStatement(
-                  StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable())
-              )
+              handle.createStatement(StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable()))
                     .bind("id", segmentId)
                     .execute();
               return null;
@@ -316,23 +317,23 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean removeDatasource(final String ds)
+  public boolean removeDataSource(final String dataSource)
   {
     try {
       final int removed = connector.getDBI().withHandle(
           handle -> handle.createStatement(
               StringUtils.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
-          ).bind("dataSource", ds).execute()
+          ).bind("dataSource", dataSource).execute()
       );
 
-      dataSourcesRef.get().remove(ds);
+      dataSources.remove(dataSource);
 
       if (removed == 0) {
         return false;
       }
     }
     catch (Exception e) {
-      log.error(e, "Error removing datasource %s", ds);
+      log.error(e, "Error removing datasource %s", dataSource);
       return false;
     }
 
@@ -340,36 +341,67 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean removeSegment(String ds, final String segmentID)
+  public boolean removeSegment(String dataSourceName, final String segmentId)
   {
     try {
-      final int removed = connector.getDBI().withHandle(
-          handle -> handle.createStatement(
-              StringUtils.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable())
-          ).bind("segmentID", segmentID).execute()
+      final boolean removed = removeSegmentFromTable(segmentId);
+
+      // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
+      // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
+      List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
+      dataSources.computeIfPresent(
+          dataSourceName,
+          (dsName, dataSource) -> {
+            for (SegmentId possibleSegmentId : possibleSegmentIds) {
+              if (dataSource.removeSegment(possibleSegmentId) != null) {
+                break;
+              }
+            }
+            // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+            //noinspection ReturnOfNull
+            return dataSource.isEmpty() ? null : dataSource;
+          }
       );
 
-      ConcurrentHashMap<String, DruidDataSource> dataSourceMap = dataSourcesRef.get();
-
-      DruidDataSource dataSource = dataSourceMap.get(ds);
-      if (dataSource != null) {
-        dataSource.removePartition(segmentID);
-
-        if (dataSource.isEmpty()) {
-          dataSourceMap.remove(ds);
-        }
-      }
-
-      if (removed == 0) {
-        return false;
-      }
+      return removed;
     }
     catch (Exception e) {
       log.error(e, e.toString());
       return false;
     }
+  }
 
-    return true;
+  @Override
+  public boolean removeSegment(SegmentId segmentId)
+  {
+    try {
+      final boolean removed = removeSegmentFromTable(segmentId.toString());
+      dataSources.computeIfPresent(
+          segmentId.getDataSource(),
+          (dsName, dataSource) -> {
+            dataSource.removeSegment(segmentId);
+            // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+            //noinspection ReturnOfNull
+            return dataSource.isEmpty() ? null : dataSource;
+          }
+      );
+      return removed;
+    }
+    catch (Exception e) {
+      log.error(e, e.toString());
+      return false;
+    }
+  }
+
+  private boolean removeSegmentFromTable(String segmentId)
+  {
+    final int removed = connector.getDBI().withHandle(
+        handle -> handle
+            .createStatement(StringUtils.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable()))
+            .bind("segmentID", segmentId)
+            .execute()
+    );
+    return removed > 0;
   }
 
   @Override
@@ -377,35 +409,35 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   {
     // isStarted() is synchronized together with start(), stop() and poll() to ensure that the latest currentStartOrder
     // is always visible. readLock should be used to avoid unexpected performance degradation of DruidCoordinator.
-    readLock.lock();
+    ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
+    lock.lock();
     try {
       return currentStartOrder >= 0;
     }
     finally {
-      readLock.unlock();
+      lock.unlock();
     }
   }
 
   @Override
   @Nullable
-  public ImmutableDruidDataSource getInventoryValue(String key)
+  public ImmutableDruidDataSource getDataSource(String dataSourceName)
   {
-    final DruidDataSource dataSource = dataSourcesRef.get().get(key);
+    final DruidDataSource dataSource = dataSources.get(dataSourceName);
     return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
   }
 
   @Override
-  public Collection<ImmutableDruidDataSource> getInventory()
+  public Collection<ImmutableDruidDataSource> getDataSources()
   {
-    return dataSourcesRef.get()
-                         .values()
-                         .stream()
-                         .map(DruidDataSource::toImmutableDruidDataSource)
-                         .collect(Collectors.toList());
+    return dataSources.values()
+                      .stream()
+                      .map(DruidDataSource::toImmutableDruidDataSource)
+                      .collect(Collectors.toList());
   }
 
   @Override
-  public Collection<String> getAllDatasourceNames()
+  public Collection<String> getAllDataSourceNames()
   {
     return connector.getDBI().withHandle(
         handle -> handle.createQuery(
@@ -436,103 +468,83 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Override
   public void poll()
   {
-    try {
-      ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<>();
+    // See the comment to the pollLock field, explaining this synchronized block
+    synchronized (pollLock) {
+      try {
+        doPoll();
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Problem polling DB.").emit();
+      }
+    }
+  }
 
-      log.debug("Starting polling of segment table");
+  private void doPoll()
+  {
+    log.debug("Starting polling of segment table");
 
-      // some databases such as PostgreSQL require auto-commit turned off
-      // to stream results back, enabling transactions disables auto-commit
-      //
-      // setting connection to read-only will allow some database such as MySQL
-      // to automatically use read-only transaction mode, further optimizing the query
-      final List<DataSegment> segments = connector.inReadOnlyTransaction(
-          new TransactionCallback<List<DataSegment>>()
+    // some databases such as PostgreSQL require auto-commit turned off
+    // to stream results back, enabling transactions disables auto-commit
+    //
+    // setting connection to read-only will allow some database such as MySQL
+    // to automatically use read-only transaction mode, further optimizing the query
+    final List<DataSegment> segments = connector.inReadOnlyTransaction(
+        new TransactionCallback<List<DataSegment>>()
+        {
+          @Override
+          public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
-            @Override
-            public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
-            {
-              return handle
-                  .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
-                  .setFetchSize(connector.getStreamingFetchSize())
-                  .map(
-                      new ResultSetMapper<DataSegment>()
+            return handle
+                .createQuery(StringUtils.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
+                .setFetchSize(connector.getStreamingFetchSize())
+                .map(
+                    new ResultSetMapper<DataSegment>()
+                    {
+                      @Override
+                      public DataSegment map(int index, ResultSet r, StatementContext ctx) throws SQLException
                       {
-                        @Override
-                        public DataSegment map(int index, ResultSet r, StatementContext ctx)
-                            throws SQLException
-                        {
-                          try {
-                            return replaceWithExistingSegmentIfPresent(
-                                jsonMapper.readValue(r.getBytes("payload"), DataSegment.class)
-                            );
-                          }
-                          catch (IOException e) {
-                            log.makeAlert(e, "Failed to read segment from db.").emit();
-                            return null;
-                          }
+                        try {
+                          DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                          return replaceWithExistingSegmentIfPresent(segment);
+                        }
+                        catch (IOException e) {
+                          log.makeAlert(e, "Failed to read segment from db.").emit();
+                          return null;
                         }
                       }
-                  )
-                  .list();
-            }
-          }
-      );
-
-      if (segments == null || segments.isEmpty()) {
-        log.warn("No segments found in the database!");
-        return;
-      }
-
-      final Collection<DataSegment> segmentsFinal = Collections2.filter(segments, Predicates.notNull());
-
-      log.info("Polled and found %,d segments in the database", segments.size());
-
-      for (final DataSegment segment : segmentsFinal) {
-        String datasourceName = segment.getDataSource();
-
-        DruidDataSource dataSource = newDataSources.get(datasourceName);
-        if (dataSource == null) {
-          dataSource = new DruidDataSource(
-              datasourceName,
-              ImmutableMap.of("created", DateTimes.nowUtc().toString())
-          );
-
-          Object shouldBeNull = newDataSources.put(
-              datasourceName,
-              dataSource
-          );
-          if (shouldBeNull != null) {
-            log.warn(
-                "Just put key[%s] into dataSources and what was there wasn't null!?  It was[%s]",
-                datasourceName,
-                shouldBeNull
-            );
+                    }
+                )
+                .list();
           }
         }
+    );
 
-        // For performance reasons, make sure we check for the existence of a segment using containsSegment(),
-        // which performs a key-based lookup, instead of calling contains() on the collection returned by
-        // dataSource.getSegments(). In Map values collections, the contains() method is a linear scan.
-        if (!dataSource.containsSegment(segment)) {
-          dataSource.addSegment(segment);
-        }
-      }
+    if (segments == null || segments.isEmpty()) {
+      log.warn("No segments found in the database!");
+      return;
+    }
 
-      ConcurrentHashMap<String, DruidDataSource> current;
-      do {
-        current = dataSourcesRef.get();
-      } while (!dataSourcesRef.compareAndSet(current, newDataSources));
-    }
-    catch (Exception e) {
-      log.makeAlert(e, "Problem polling DB.").emit();
-    }
+    log.info("Polled and found %,d segments in the database", segments.size());
+
+    ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<>();
+
+    ImmutableMap<String, String> dataSourceProperties = ImmutableMap.of("created", DateTimes.nowUtc().toString());
+    segments
+        .stream()
+        .filter(Objects::nonNull)
+        .forEach(segment -> {
+          newDataSources
+              .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
+              .addSegmentIfAbsent(segment);
+        });
+
+    dataSources = newDataSources;
   }
 
   /**
    * For the garbage collector in Java, it's better to keep new objects short-living, but once they are old enough
    * (i. e. promoted to old generation), try to keep them alive. In {@link #poll()}, we fetch and deserialize all
-   * existing segments each time, and then replace them in {@link #dataSourcesRef}. This method allows to use already
+   * existing segments each time, and then replace them in {@link #dataSources}. This method allows to use already
    * existing (old) segments when possible, effectively interning them a-la {@link String#intern} or {@link
    * com.google.common.collect.Interner}, aiming to make the majority of {@link DataSegment} objects garbage soon after
    * they are deserialized and to die in young generation. It allows to avoid fragmentation of the old generation and
@@ -540,11 +552,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    */
   private DataSegment replaceWithExistingSegmentIfPresent(DataSegment segment)
   {
-    DruidDataSource dataSource = dataSourcesRef.get().get(segment.getDataSource());
+    DruidDataSource dataSource = dataSources.get(segment.getDataSource());
     if (dataSource == null) {
       return segment;
     }
-    DataSegment alreadyExistingSegment = dataSource.getSegment(segment.getIdentifier());
+    DataSegment alreadyExistingSegment = dataSource.getSegment(segment.getId());
     return alreadyExistingSegment != null ? alreadyExistingSegment : segment;
   }
 
