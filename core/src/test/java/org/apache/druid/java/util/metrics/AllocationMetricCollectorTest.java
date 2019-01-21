@@ -42,7 +42,7 @@ public class AllocationMetricCollectorTest
   @Test
   public void testDelta() throws InterruptedException
   {
-    AllocationMetricCollector collector = new AllocationMetricCollectorFactory().getAllocationMetricCollector();
+    AllocationMetricCollector collector = AllocationMetricCollectors.getAllocationMetricCollector();
     if (collector == null) {
       return;
     }

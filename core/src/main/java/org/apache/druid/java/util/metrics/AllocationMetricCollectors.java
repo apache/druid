@@ -20,14 +20,14 @@
 package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.common.logger.Logger;
-
+import javax.annotation.Nullable;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Method;
 
-class AllocationMetricCollectorFactory
+class AllocationMetricCollectors
 {
-  private static final Logger log = new Logger(AllocationMetricCollectorFactory.class);
+  private static final Logger log = new Logger(AllocationMetricCollectors.class);
   private static Method getThreadAllocatedBytes;
   private static ThreadMXBean threadMXBean;
   private static boolean initialized = false;
@@ -46,7 +46,8 @@ class AllocationMetricCollectorFactory
     }
   }
 
-  AllocationMetricCollector getAllocationMetricCollector()
+  @Nullable
+  static AllocationMetricCollector getAllocationMetricCollector()
   {
     if (initialized) {
       return new AllocationMetricCollector(getThreadAllocatedBytes, threadMXBean);

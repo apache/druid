@@ -68,7 +68,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.pid = Preconditions.checkNotNull(pidDiscoverer).getPid();
-    this.collector = new AllocationMetricCollectorFactory().getAllocationMetricCollector();
+    this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
   }
 
   @Override

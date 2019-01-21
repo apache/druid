@@ -32,8 +32,8 @@ class AllocationMetricCollector
 
   private static final int NO_DATA = -1;
 
-  private Method getThreadAllocatedBytes;
-  private ThreadMXBean threadMXBean;
+  private final Method getThreadAllocatedBytes;
+  private final ThreadMXBean threadMXBean;
 
   private Long2LongMap previousResults;
 
