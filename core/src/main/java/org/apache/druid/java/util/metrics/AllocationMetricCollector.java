@@ -22,10 +22,9 @@ package org.apache.druid.java.util.metrics;
 import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
 import org.apache.druid.java.util.common.logger.Logger;
-import java.lang.management.ManagementFactory;
+
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.Method;
-import java.util.Optional;
 
 class AllocationMetricCollector
 {
@@ -33,37 +32,18 @@ class AllocationMetricCollector
 
   private static final int NO_DATA = -1;
 
-  private static Method getThreadAllocatedBytes;
-  private static ThreadMXBean threadMXBean;
-  private static boolean initialized = false;
+  private Method getThreadAllocatedBytes;
+  private ThreadMXBean threadMXBean;
 
   private Long2LongMap previousResults;
 
-  static {
-    try {
-      // classes in the sun.* packages are not part of the public/supported Java API and should not be used directly.
-      threadMXBean = ManagementFactory.getThreadMXBean();
-      getThreadAllocatedBytes = threadMXBean.getClass().getMethod("getThreadAllocatedBytes", long[].class);
-      getThreadAllocatedBytes.setAccessible(true);
-      getThreadAllocatedBytes.invoke(threadMXBean, (Object) threadMXBean.getAllThreadIds());
-      initialized = true;
-    }
-    catch (Exception e) {
-      log.warn(e, "Cannot initialize %s", AllocationMetricCollector.class.getName());
-    }
-  }
-
-  AllocationMetricCollector()
+  AllocationMetricCollector(Method method, ThreadMXBean threadMXBean)
   {
-    try {
-      if (initialized) {
-        previousResults = new Long2LongOpenHashMap();
-        previousResults.defaultReturnValue(NO_DATA);
-      }
-    }
-    catch (Exception e) {
-      log.warn(e, "Cannot initialize %s", AllocationMetricCollector.class.getName());
-    }
+    this.getThreadAllocatedBytes = method;
+    this.threadMXBean = threadMXBean;
+
+    previousResults = new Long2LongOpenHashMap();
+    previousResults.defaultReturnValue(NO_DATA);
   }
 
   /**
@@ -75,11 +55,8 @@ class AllocationMetricCollector
    *
    * @return all threads summed allocated bytes delta
    */
-  public Optional<Long> calculateDelta()
+  long calculateDelta()
   {
-    if (!initialized) {
-      return Optional.empty();
-    }
     try {
       long[] allThreadIds = threadMXBean.getAllThreadIds();
       // the call time depends on number of threads, for 500 threads the estimated time is 4 ms
@@ -102,11 +79,11 @@ class AllocationMetricCollector
         }
       }
       previousResults = newResults;
-      return Optional.of(sum);
+      return sum;
     }
     catch (ReflectiveOperationException e) {
-      log.error(e, "Cannot calculate delta");
+      log.error(e, "Cannot calculate delta"); // it doesn't make sense after initialization is complete
     }
-    return Optional.empty();
+    return 0;
   }
 }

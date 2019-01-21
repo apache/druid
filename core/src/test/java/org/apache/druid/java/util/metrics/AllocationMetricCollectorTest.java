@@ -23,9 +23,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 public class AllocationMetricCollectorTest
@@ -42,26 +42,25 @@ public class AllocationMetricCollectorTest
   @Test
   public void testDelta() throws InterruptedException
   {
-    AllocationMetricCollector allocationMetricCollector = new AllocationMetricCollector();
-    Optional<Long> delta = allocationMetricCollector.calculateDelta();
-    Assert.assertNotNull(delta);
-    if (delta.isPresent()) {
-      Assert.assertTrue(delta.get() > 0);
-      log.info("First delta: %s", delta.get());
-    }
-    int generatedSize2 = generateObjectsConcurrently(1000);
-    Optional<Long> delta2 = allocationMetricCollector.calculateDelta();
-    if (delta.isPresent()) {
-      Assert.assertTrue(delta2.get() > generatedSize2);
-      log.info("Second delta: %s", delta2.get());
+    AllocationMetricCollector collector = new AllocationMetricCollectorFactory().getAllocationMetricCollector();
+    if (collector == null) {
+      return;
     }
 
+    long delta = collector.calculateDelta();
+    Assert.assertNotNull(delta);
+    Assert.assertTrue(delta > 0);
+    log.info("First delta: %s", delta);
+
+    int generatedSize2 = generateObjectsConcurrently(1000);
+    long delta2 = collector.calculateDelta();
+    Assert.assertTrue(delta2 > generatedSize2);
+    log.info("Second delta: %s", delta2);
+
     int generatedSize3 = generateObjectsConcurrently(100000);
-    Optional<Long> delta3 = allocationMetricCollector.calculateDelta();
-    if (delta.isPresent()) {
-      Assert.assertTrue(delta3.get() > generatedSize3);
-      log.info("Third delta: %s", delta3.get());
-    }
+    long delta3 = collector.calculateDelta();
+    Assert.assertTrue(delta3 > generatedSize3);
+    log.info("Third delta: %s", delta3);
   }
 
   private int generateObjectsConcurrently(int countPerThread) throws InterruptedException

@@ -37,7 +37,6 @@ import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public class JvmMonitor extends FeedDefiningMonitor
 {
@@ -46,7 +45,7 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   private final GcCounters gcCounters = new GcCounters();
 
-  private final AllocationMetricCollector collector = new AllocationMetricCollector();
+  private final AllocationMetricCollector collector;
 
   public JvmMonitor()
   {
@@ -69,6 +68,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.pid = Preconditions.checkNotNull(pidDiscoverer).getPid();
+    this.collector = new AllocationMetricCollectorFactory().getAllocationMetricCollector();
   }
 
   @Override
@@ -86,8 +86,10 @@ public class JvmMonitor extends FeedDefiningMonitor
   {
     final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-    Optional<Long> delta = collector.calculateDelta();
-    delta.ifPresent((value) -> emitter.emit(builder.build("jvm/heapAlloc/bytes", value)));
+    if (collector != null) {
+      long delta = collector.calculateDelta();
+      emitter.emit(builder.build("jvm/heapAlloc/bytes", delta));
+    }
   }
 
   /**
