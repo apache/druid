@@ -25,6 +25,7 @@ import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
 import com.yahoo.sketches.hll.Union;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
@@ -120,6 +121,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
+    // nothing to close
   }
 
   @Override
@@ -134,4 +136,9 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
     throw new UnsupportedOperationException("Not implemented");
   }
 
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
+  }
 }

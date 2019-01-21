@@ -26,6 +26,7 @@ import com.yahoo.sketches.hll.TgtHllType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
@@ -181,4 +182,9 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     return hashCode ^ (hashCode >>> 7) ^ (hashCode >>> 4);
   }
 
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
+  }
 }
