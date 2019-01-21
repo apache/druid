@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -67,7 +66,7 @@ public class DruidCoordinatorBalancerTest
   private DataSegment segment2;
   private DataSegment segment3;
   private DataSegment segment4;
-  private Map<String, DataSegment> segments;
+  private List<DataSegment> segments;
   private ListeningExecutorService balancerStrategyExecutor;
   private BalancerStrategy balancerStrategy;
 
@@ -132,11 +131,11 @@ public class DruidCoordinatorBalancerTest
         8L
     );
 
-    segments = new HashMap<>();
-    segments.put("datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z", segment1);
-    segments.put("datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z", segment2);
-    segments.put("datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z", segment3);
-    segments.put("datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z", segment4);
+    segments = new ArrayList<>();
+    segments.add(segment1);
+    segments.add(segment2);
+    segments.add(segment3);
+    segments.add(segment4);
 
     peon1 = new LoadQueuePeonTester();
     peon2 = new LoadQueuePeonTester();
@@ -165,7 +164,7 @@ public class DruidCoordinatorBalancerTest
   public void testMoveToEmptyServerBalancer()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
-    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyMap());
+    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyList());
 
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
@@ -198,7 +197,7 @@ public class DruidCoordinatorBalancerTest
   public void testMoveMaxLoadQueueServerBalancer()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
-    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyMap());
+    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyList());
 
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
@@ -240,7 +239,7 @@ public class DruidCoordinatorBalancerTest
   public void testMoveSameSegmentTwice()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
-    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyMap());
+    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyList());
 
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
@@ -276,7 +275,7 @@ public class DruidCoordinatorBalancerTest
   {
     // Mock some servers of different usages
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
-    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyMap());
+    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyList());
 
     EasyMock.replay(druidServer3);
     EasyMock.replay(druidServer4);
@@ -298,9 +297,9 @@ public class DruidCoordinatorBalancerTest
   {
     // Mock some servers of different usages
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
-    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyMap());
-    mockDruidServer(druidServer3, "3", "normal", 0L, 100L, Collections.emptyMap());
-    mockDruidServer(druidServer4, "4", "normal", 0L, 100L, Collections.emptyMap());
+    mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyList());
+    mockDruidServer(druidServer3, "3", "normal", 0L, 100L, Collections.emptyList());
+    mockDruidServer(druidServer4, "4", "normal", 0L, 100L, Collections.emptyList());
 
     // Mock stuff that the coordinator needs
     mockCoordinator(coordinator);
@@ -340,7 +339,7 @@ public class DruidCoordinatorBalancerTest
                 .boxed()
                 .collect(Collectors.toMap(i -> String.valueOf(i + 1), peons::get))
         )
-        .withAvailableSegments(segments.values())
+        .withAvailableSegments(segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                 MAX_SEGMENTS_TO_MOVE
@@ -356,7 +355,7 @@ public class DruidCoordinatorBalancerTest
       String tier,
       long currentSize,
       long maxSize,
-      Map<String, DataSegment> segments
+      List<DataSegment> segments
   )
   {
     EasyMock.expect(druidServer.getName()).andReturn(name).anyTimes();
@@ -365,8 +364,8 @@ public class DruidCoordinatorBalancerTest
     EasyMock.expect(druidServer.getMaxSize()).andReturn(maxSize).atLeastOnce();
     EasyMock.expect(druidServer.getSegments()).andReturn(segments).anyTimes();
     if (!segments.isEmpty()) {
-      segments.values().forEach(
-          s -> EasyMock.expect(druidServer.getSegment(s.getIdentifier())).andReturn(s).anyTimes()
+      segments.forEach(
+          s -> EasyMock.expect(druidServer.getSegment(s.getId())).andReturn(s).anyTimes()
       );
     } else {
       EasyMock.expect(druidServer.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();

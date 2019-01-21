@@ -36,7 +36,7 @@ public interface SegmentAllocator
    *
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
-  SegmentIdentifier allocate(
+  SegmentIdWithShardSpec allocate(
       InputRow row,
       String sequenceName,
       String previousSegmentId,

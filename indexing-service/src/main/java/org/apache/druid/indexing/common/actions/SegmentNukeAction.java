@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -116,7 +117,7 @@ public class SegmentNukeAction implements TaskAction<Void>
   public String toString()
   {
     return "SegmentNukeAction{" +
-           "segments=" + segments +
+           "segments=" + Iterables.transform(segments, DataSegment::getId) +
            '}';
   }
 }

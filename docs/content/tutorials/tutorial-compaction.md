@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Compacting segments"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Tutorial: Compacting segments
 
@@ -73,7 +74,7 @@ We have included a compaction task spec for this tutorial datasource at `quickst
   "interval": "2015-09-12/2015-09-13",
   "tuningConfig" : {
     "type" : "index",
-    "targetPartitionSize" : 5000000,
+    "maxRowsPerSegment" : 5000000,
     "maxRowsInMemory" : 25000,
     "forceExtendableShardSpecs" : true
   }
@@ -84,7 +85,7 @@ This will compact all segments for the interval `2015-09-12/2015-09-13` in the `
 
 The parameters in the `tuningConfig` control how many segments will be present in the compacted set of segments. 
 
-In this tutorial example, only one compacted segment will be created, as the 39244 rows in the input is less than the 5000000 `targetPartitionSize`.
+In this tutorial example, only one compacted segment will be created, as the 39244 rows in the input is less than the 5000000 `maxRowsPerSegment`.
 
 Let's submit this task now:
 

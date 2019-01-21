@@ -121,7 +121,7 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
   /**
    * Get a list of names of datasources read by this DruidRel
    */
-  public abstract List<String> getDatasourceNames();
+  public abstract List<String> getDataSourceNames();
 
   @Override
   public Class<Object[]> getElementType()

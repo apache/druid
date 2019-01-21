@@ -112,7 +112,7 @@ public class AppenderatorPlumberTest
     
     Assert.assertEquals(1, plumber.getSegmentsView().size());
     
-    SegmentIdentifier si = plumber.getSegmentsView().values().toArray(new SegmentIdentifier[0])[0];
+    SegmentIdWithShardSpec si = plumber.getSegmentsView().values().toArray(new SegmentIdWithShardSpec[0])[0];
     
     Assert.assertEquals(3, appenderator.getRowCount(si));
 

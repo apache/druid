@@ -87,7 +87,7 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -242,7 +242,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfigWithTargetPartitionSize(2, false, true),
+            createTuningConfigWithMaxRowsPerSegment(2, false, true),
             false
         ),
         null,
@@ -288,7 +288,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfigWithTargetPartitionSize(2, true, true),
+            createTuningConfigWithMaxRowsPerSegment(2, true, true),
             false
         ),
         null,
@@ -340,7 +340,7 @@ public class IndexTaskTest
                 )
             ),
             null,
-            createTuningConfigWithTargetPartitionSize(2, true, false),
+            createTuningConfigWithMaxRowsPerSegment(2, true, false),
             false
         ),
         null,
@@ -384,7 +384,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 Collections.singletonList(Intervals.of("2014-01-01/2014-01-02"))
             ),
-            createTuningConfigWithTargetPartitionSize(10, false, true),
+            createTuningConfigWithMaxRowsPerSegment(10, false, true),
             false
         ),
         null,
@@ -421,7 +421,7 @@ public class IndexTaskTest
                 Granularities.HOUR,
                 Collections.singletonList(Intervals.of("2014-01-01T08:00:00Z/2014-01-01T09:00:00Z"))
             ),
-            createTuningConfigWithTargetPartitionSize(50, false, true),
+            createTuningConfigWithMaxRowsPerSegment(50, false, true),
             false
         ),
         null,
@@ -567,7 +567,7 @@ public class IndexTaskTest
             tmpDir,
             null,
             null,
-            createTuningConfigWithTargetPartitionSize(2, false, false),
+            createTuningConfigWithMaxRowsPerSegment(2, false, false),
             true
         ),
         null,
@@ -617,7 +617,7 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfigWithTargetPartitionSize(2, false, true),
+            createTuningConfigWithMaxRowsPerSegment(2, false, true),
             false
         ),
         null,
@@ -680,7 +680,7 @@ public class IndexTaskTest
                 0
             ),
             null,
-            createTuningConfigWithTargetPartitionSize(2, false, true),
+            createTuningConfigWithMaxRowsPerSegment(2, false, true),
             false
         ),
         null,
@@ -732,7 +732,7 @@ public class IndexTaskTest
                 0
             ),
             null,
-            createTuningConfigWithTargetPartitionSize(2, false, true),
+            createTuningConfigWithMaxRowsPerSegment(2, false, true),
             false
         ),
         null,
@@ -1042,6 +1042,7 @@ public class IndexTaskTest
     }
 
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
+        null,
         2,
         null,
         null,
@@ -1164,6 +1165,7 @@ public class IndexTaskTest
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
+        null,
         2,
         null,
         null,
@@ -1279,6 +1281,7 @@ public class IndexTaskTest
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
+        null,
         2,
         null,
         null,
@@ -1581,7 +1584,7 @@ public class IndexTaskTest
           SegmentAllocateAction action = (SegmentAllocateAction) taskAction;
           Interval interval = action.getPreferredSegmentGranularity().bucket(action.getTimestamp());
           ShardSpec shardSpec = new NumberedShardSpec(segmentAllocatePartitionCounter++, 0);
-          return (RetType) new SegmentIdentifier(action.getDataSource(), interval, "latestVersion", shardSpec);
+          return (RetType) new SegmentIdWithShardSpec(action.getDataSource(), interval, "latestVersion", shardSpec);
         }
 
         return null;
@@ -1700,14 +1703,14 @@ public class IndexTaskTest
     );
   }
 
-  private static IndexTuningConfig createTuningConfigWithTargetPartitionSize(
-      int targetPartitionSize,
+  private static IndexTuningConfig createTuningConfigWithMaxRowsPerSegment(
+      int maxRowsPerSegment,
       boolean forceExtendableShardSpecs,
       boolean forceGuaranteedRollup
   )
   {
     return createTuningConfig(
-        targetPartitionSize,
+        maxRowsPerSegment,
         1,
         null,
         null,
@@ -1739,8 +1742,8 @@ public class IndexTaskTest
     );
   }
 
-  private static IndexTuningConfig createTuningConfig(
-      @Nullable Integer targetPartitionSize,
+  static IndexTuningConfig createTuningConfig(
+      @Nullable Integer maxRowsPerSegment,
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
       @Nullable Long maxTotalRows,
@@ -1752,7 +1755,8 @@ public class IndexTaskTest
   )
   {
     return new IndexTask.IndexTuningConfig(
-        targetPartitionSize,
+        null,
+        maxRowsPerSegment,
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,

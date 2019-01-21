@@ -52,6 +52,8 @@ import java.util.List;
 @Path("/druid/coordinator/v1/rules")
 public class RulesResource
 {
+  public static final String RULES_ENDPOINT = "/druid/coordinator/v1/rules";
+
   private final MetadataRuleManager databaseRuleManager;
   private final AuditManager auditManager;
 

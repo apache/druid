@@ -35,12 +35,14 @@ import com.google.inject.spi.Message;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
+import javax.annotation.Nullable;
 import javax.validation.ConstraintViolation;
 import javax.validation.ElementKind;
 import javax.validation.Path;
 import javax.validation.Validator;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -70,7 +72,17 @@ public class JsonConfigurator
 
   public <T> T configurate(Properties props, String propertyPrefix, Class<T> clazz) throws ProvisionException
   {
-    verifyClazzIsConfigurable(jsonMapper, clazz);
+    return configurate(props, propertyPrefix, clazz, null);
+  }
+
+  public <T> T configurate(
+      Properties props,
+      String propertyPrefix,
+      Class<T> clazz,
+      @Nullable Class<? extends T> defaultClass
+  ) throws ProvisionException
+  {
+    verifyClazzIsConfigurable(jsonMapper, clazz, defaultClass);
 
     // Make it end with a period so we only include properties with sub-object thingies.
     final String propertyBase = propertyPrefix.endsWith(".") ? propertyPrefix : propertyPrefix + ".";
@@ -98,11 +110,28 @@ public class JsonConfigurator
 
     final T config;
     try {
-      config = jsonMapper.convertValue(jsonMap, clazz);
+      if (defaultClass != null && jsonMap.isEmpty()) {
+        // No configs were provided. Don't use the jsonMapper; instead create a default instance of the default class
+        // using the no-arg constructor. We know it exists because verifyClazzIsConfigurable checks for it.
+        config = defaultClass.getConstructor().newInstance();
+      } else {
+        config = jsonMapper.convertValue(jsonMap, clazz);
+      }
     }
     catch (IllegalArgumentException e) {
       throw new ProvisionException(
           StringUtils.format("Problem parsing object at prefix[%s]: %s.", propertyPrefix, e.getMessage()), e
+      );
+    }
+    catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+      throw new ProvisionException(
+          StringUtils.format(
+              "Problem instantiating object at prefix[%s]: %s: %s.",
+              propertyPrefix,
+              e.getClass().getSimpleName(),
+              e.getMessage()
+          ),
+          e
       );
     }
 
@@ -205,8 +234,26 @@ public class JsonConfigurator
   }
 
   @VisibleForTesting
-  public static <T> void verifyClazzIsConfigurable(ObjectMapper mapper, Class<T> clazz)
+  public static <T> void verifyClazzIsConfigurable(
+      ObjectMapper mapper,
+      Class<T> clazz,
+      @Nullable Class<? extends T> defaultClass
+  )
   {
+    if (defaultClass != null) {
+      try {
+        defaultClass.getConstructor();
+      }
+      catch (NoSuchMethodException e) {
+        throw new ProvisionException(
+            StringUtils.format(
+                "JsonConfigurator requires default classes to have zero-arg constructors. %s doesn't",
+                defaultClass
+            )
+        );
+      }
+    }
+
     final List<BeanPropertyDefinition> beanDefs = mapper.getSerializationConfig()
                                                         .introspect(mapper.constructType(clazz))
                                                         .findProperties();

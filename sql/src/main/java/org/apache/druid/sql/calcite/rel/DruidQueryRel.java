@@ -137,7 +137,7 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
   }
 
   @Override
-  public List<String> getDatasourceNames()
+  public List<String> getDataSourceNames()
   {
     return druidTable.getDataSource().getNames();
   }

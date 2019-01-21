@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Versioning Druid"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Versioning Druid
+
 This page discusses how we do versioning and provides information on our stable releases.
 
 Versioning Strategy

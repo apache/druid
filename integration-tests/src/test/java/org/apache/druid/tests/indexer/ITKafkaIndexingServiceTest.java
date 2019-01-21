@@ -44,6 +44,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -64,6 +65,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
   private static final String QUERIES_FILE = "/indexer/kafka_index_queries.json";
   private static final String DATASOURCE = "kafka_indexing_service_test";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
+
   private static final int NUM_EVENTS_TO_SEND = 60;
   private static final long WAIT_TIME_MILLIS = 2 * 60 * 1000L;
   public static final String testPropertyPrefix = "kafka.test.property.";
@@ -105,6 +107,14 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
   @Inject
   private IntegrationTestingConfig config;
 
+  private String fullDatasourceName;
+
+  @BeforeSuite
+  public void setFullDatasourceName()
+  {
+    fullDatasourceName = DATASOURCE + config.getExtraDatasourceNameSuffix();
+  }
+
   @Test
   public void testKafka()
   {
@@ -143,7 +153,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       addFilteredProperties(consumerProperties);
 
       spec = getTaskAsString(INDEXER_FILE);
-      spec = StringUtils.replace(spec, "%%DATASOURCE%%", DATASOURCE);
+      spec = StringUtils.replace(spec, "%%DATASOURCE%%", fullDatasourceName);
       spec = StringUtils.replace(spec, "%%TOPIC%%", TOPIC_NAME);
       spec = StringUtils.replace(spec, "%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
       LOG.info("supervisorSpec: [%s]\n", spec);
@@ -171,7 +181,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
         new StringSerializer()
     );
 
-    DateTimeZone zone = DateTimes.inferTzfromString("UTC");
+    DateTimeZone zone = DateTimes.inferTzFromString("UTC");
     // format for putting into events
     DateTimeFormatter event_fmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
@@ -228,7 +238,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
     }
 
     String queryStr = query_response_template;
-    queryStr = StringUtils.replace(queryStr, "%%DATASOURCE%%", DATASOURCE);
+    queryStr = StringUtils.replace(queryStr, "%%DATASOURCE%%", fullDatasourceName);
     queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
     queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast));
     queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst));
@@ -271,7 +281,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
             @Override
             public Boolean call()
             {
-              return coordinator.areSegmentsLoaded(DATASOURCE);
+              return coordinator.areSegmentsLoaded(fullDatasourceName);
             }
           },
           true,
@@ -306,7 +316,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
 
     // remove segments
     if (segmentsExist) {
-      unloadAndKillData(DATASOURCE);
+      unloadAndKillData(fullDatasourceName);
     }
   }
 

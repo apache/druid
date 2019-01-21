@@ -312,7 +312,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -384,7 +384,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("nonexistentColumn", "alias"))
         .metric("rows")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("rows")))
         .build();
 
@@ -410,7 +410,7 @@ public class TopNQueryRunnerTest
         .dimension(new ExtractionDimensionSpec("nonexistentColumn", "alias", new StringFormatExtractionFn("theValue")))
         .metric("rows")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("rows")))
         .build();
 
@@ -439,7 +439,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.addRowsIndexConstantMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -502,7 +502,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric("dimPostAgg")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -574,7 +574,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -637,7 +637,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Collections.<AggregatorFactory>singletonList(new HyperUniquesAggregatorFactory("uniques", "missingUniques"))
         )
@@ -676,7 +676,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Collections.<AggregatorFactory>singletonList(QueryRunnerTestHelper.qualityUniques)
         )
@@ -724,7 +724,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Collections.<AggregatorFactory>singletonList(QueryRunnerTestHelper.qualityUniques)
         )
@@ -780,7 +780,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Collections.<AggregatorFactory>singletonList(QueryRunnerTestHelper.qualityUniquesRounded)
         )
@@ -830,7 +830,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric("last")
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Arrays.asList(
                 new LongFirstAggregatorFactory("first", "index"),
@@ -941,7 +941,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric("last")
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Arrays.asList(
                 new LongFirstAggregatorFactory("first", "index"),
@@ -1055,7 +1055,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric("last")
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Arrays.asList(
                 new FloatFirstAggregatorFactory("first", "index"),
@@ -1166,7 +1166,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric("last")
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Arrays.asList(
                 new FloatFirstAggregatorFactory("first", "indexFloat"),
@@ -2337,7 +2337,7 @@ public class TopNQueryRunnerTest
         )
         .metric("rows")
         .threshold(10)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(commonAggregators)
         .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
@@ -2379,7 +2379,7 @@ public class TopNQueryRunnerTest
         )
         .metric("index")
         .threshold(2)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -3625,7 +3625,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -3709,7 +3709,7 @@ public class TopNQueryRunnerTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -3765,17 +3765,12 @@ public class TopNQueryRunnerTest
     );
 
     @SuppressWarnings("unused") // TODO: fix this test
-    List<Result<BySegmentResultValueClass>> expectedResults = Collections.singletonList(
-        new Result<BySegmentResultValueClass>(
+    List<Result<BySegmentResultValueClass<Result<TopNResultValue>>>> expectedResults = Collections.singletonList(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new BySegmentResultValueClass(
-                Collections.singletonList(
-                    new Result<TopNResultValue>(
-                        DateTimes.of("2011-01-12T00:00:00.000Z"),
-                        topNResult
-                    )
-                ),
-                QueryRunnerTestHelper.segmentId,
+            new BySegmentResultValueClass<>(
+                Collections.singletonList(new Result<>(DateTimes.of("2011-01-12T00:00:00.000Z"), topNResult)),
+                QueryRunnerTestHelper.segmentId.toString(),
                 Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z")
             )
         )
@@ -3859,7 +3854,7 @@ public class TopNQueryRunnerTest
         )
         .metric("index")
         .threshold(2)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -3902,7 +3897,7 @@ public class TopNQueryRunnerTest
         .dimension("null_column")
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -3950,7 +3945,7 @@ public class TopNQueryRunnerTest
         )
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4236,7 +4231,7 @@ public class TopNQueryRunnerTest
         .dimension("null_column")
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4316,7 +4311,7 @@ public class TopNQueryRunnerTest
         .dimension("null_column")
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(Lists.newArrayList(Iterables.concat(commonAggregators, Lists.newArrayList(
             new FilteredAggregatorFactory(new DoubleMaxAggregatorFactory("maxIndex", "index"),
                                           extractionFilter),
@@ -4360,7 +4355,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec(QueryRunnerTestHelper.indexMetric, "index_alias", ValueType.FLOAT))
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4435,7 +4430,7 @@ public class TopNQueryRunnerTest
         .dimension(new ExtractionDimensionSpec(QueryRunnerTestHelper.indexMetric, "index_alias", jsExtractionFn))
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4507,7 +4502,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("qualityFloat", "qf_alias"))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4579,7 +4574,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("qualityLong", "ql_alias", ValueType.LONG))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4651,7 +4646,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("ql_expr", "ql_alias", ValueType.LONG))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4782,7 +4777,7 @@ public class TopNQueryRunnerTest
         .dimension(new ExtractionDimensionSpec("qualityLong", "ql_alias", jsExtractionFn))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4854,7 +4849,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("qualityLong", "ql_alias"))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4926,7 +4921,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("qualityNumericString", "qns_alias", ValueType.LONG))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -4998,7 +4993,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("qualityNumericString", "qns_alias", ValueType.FLOAT))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -5070,7 +5065,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "time_alias", ValueType.LONG))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -5142,7 +5137,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.LONG))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -5178,7 +5173,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("__time", "__time_alias", ValueType.LONG))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -5214,7 +5209,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("market", "alias", ValueType.DOUBLE))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .build();
 
     final Map<String, Object> nullAliasMap = new HashMap<>();
@@ -5238,7 +5233,7 @@ public class TopNQueryRunnerTest
         .dimension(new DefaultDimensionSpec("index", "index_alias", ValueType.DOUBLE))
         .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
@@ -5277,7 +5272,7 @@ public class TopNQueryRunnerTest
         .dimension(new ExtractionDimensionSpec(ColumnHolder.TIME_COLUMN_NAME, "time_alias", jsExtractionFn))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -5356,7 +5351,7 @@ public class TopNQueryRunnerTest
         ))
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -5404,7 +5399,7 @@ public class TopNQueryRunnerTest
         .dimension(new ExtractionDimensionSpec(QueryRunnerTestHelper.qualityDimension, "alias", ValueType.LONG, strlenFn))
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -5482,7 +5477,7 @@ public class TopNQueryRunnerTest
         .dimension(filteredSpec)
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -5551,7 +5546,7 @@ public class TopNQueryRunnerTest
         .dimension(filteredSpec)
         .metric("maxIndex")
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -5661,7 +5656,7 @@ public class TopNQueryRunnerTest
           .granularity(QueryRunnerTestHelper.allGran)
           .dimension(QueryRunnerTestHelper.marketDimension)
           .threshold(4)
-          .intervals(QueryRunnerTestHelper.fullOnInterval)
+          .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
           .aggregators(aggregationCombination.stream().map(agg -> agg.lhs).collect(Collectors.toList()));
       String metric;
       if (hasIndexAggregator) {
@@ -5724,7 +5719,7 @@ public class TopNQueryRunnerTest
         ))
         .metric("Count")
         .threshold(5)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Collections.singletonList(new LongSumAggregatorFactory("Count", "qualityLong"))
         )

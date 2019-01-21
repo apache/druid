@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 /**
@@ -28,21 +29,18 @@ import org.joda.time.Interval;
 public class IncrementalIndexSegment extends AbstractSegment
 {
   private final IncrementalIndex index;
-  private final String segmentIdentifier;
+  private final SegmentId segmentId;
 
-  public IncrementalIndexSegment(
-      IncrementalIndex index,
-      String segmentIdentifier
-  )
+  public IncrementalIndexSegment(IncrementalIndex index, SegmentId segmentId)
   {
     this.index = index;
-    this.segmentIdentifier = segmentIdentifier;
+    this.segmentId = segmentId;
   }
 
   @Override
-  public String getIdentifier()
+  public SegmentId getId()
   {
-    return segmentIdentifier;
+    return segmentId;
   }
 
   @Override

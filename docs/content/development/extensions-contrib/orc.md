@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "ORC"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,17 +22,13 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-# Orc
+# ORC
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-orc-extensions`.
 
-This extension enables Druid to ingest and understand the Apache Orc data format offline.
+This extension enables Druid to ingest and understand the Apache ORC data format offline.
 
-## Orc Hadoop Parser
+## ORC Hadoop Parser
 
 This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inputSpec in ioConfig must be set to `"org.apache.hadoop.hive.ql.io.orc.OrcNewInputFormat"`.
 
@@ -35,7 +36,7 @@ This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inp
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
 |type      | String      | This should say `orc`                                                                  | yes|
 |parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Any parse spec that extends ParseSpec is possible but only their TimestampSpec and DimensionsSpec are used. | yes|
-|typeString| String      | String representation of Orc struct type info. If not specified, auto constructed from parseSpec but all metric columns are dropped | no|
+|typeString| String      | String representation of ORC struct type info. If not specified, auto constructed from parseSpec but all metric columns are dropped | no|
 |mapFieldNameFormat| String | String format for resolving the flatten map fields. Default is `<PARENT>_<CHILD>`. | no |
 
 For example of `typeString`, string column col1 and array of string column col2 is represented by `"struct<col1:string,col2:array<string>>"`.

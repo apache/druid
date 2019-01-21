@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Sorting Orders"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Sorting Orders
+
 These sorting orders are used by the [TopNMetricSpec](./topnmetricspec.html), [SearchQuery](./searchquery.html), GroupByQuery's [LimitSpec](./limitspec.html), and [BoundFilter](./filters.html#bound-filter).
 
 ## Lexicographic
@@ -44,3 +47,8 @@ When comparing two unparseable values (e.g., "hello" and "world"), this ordering
 
 ## Strlen
 Sorts values by the their string lengths. When there is a tie, this comparator falls back to using the String compareTo method.
+
+## Version
+Sorts values as versions, e.g.: "10.0 sorts after 9.0", "1.0.0-SNAPSHOT sorts after 1.0.0".
+
+See https://maven.apache.org/ref/3.6.0/maven-artifact/apidocs/org/apache/maven/artifact/versioning/ComparableVersion.html for more details on how this ordering sorts values.

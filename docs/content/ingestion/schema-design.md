@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Schema Design"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Schema Design
 
@@ -47,7 +48,7 @@ There are performance tradeoffs between string and numeric columns. Numeric colu
 than string columns. But unlike string columns, numeric columns don't have indexes, so they are generally slower to
 filter on.
 
-See [Dimension Schema](../ingestion/index.html#dimension-schema) for more information.
+See [Dimension Schema](../ingestion/ingestion-spec.html#dimension-schema) for more information.
 
 ## High cardinality dimensions (e.g. unique IDs)
 

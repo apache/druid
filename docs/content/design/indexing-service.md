@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Indexing Service"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-Indexing Service
-================
+# Indexing Service
 
 The indexing service is a highly-available, distributed service that runs indexing related tasks. 
 

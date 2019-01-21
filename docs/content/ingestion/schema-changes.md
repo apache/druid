@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Schema Changes"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Schema Changes
 
 Schemas for datasources can change at any time and Druid supports different schemas among segments.

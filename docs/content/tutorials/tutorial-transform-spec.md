@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Transforming input data"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Tutorial: Transforming input data
 
@@ -113,7 +114,7 @@ We will ingest the sample data using the following spec, which demonstrates the 
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000,
+      "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000,
       "forceExtendableShardSpecs" : true
     }

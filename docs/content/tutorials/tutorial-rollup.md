@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Tutorial: Roll-up"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Tutorial: Roll-up
 
@@ -98,7 +99,7 @@ We'll ingest this data using the following ingestion task spec, located at `quic
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000,
+      "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000,
       "forceExtendableShardSpecs" : true
     }

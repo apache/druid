@@ -55,6 +55,7 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
@@ -228,7 +229,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   public void testMoveSegment()
   {
     segment = EasyMock.createNiceMock(DataSegment.class);
-    EasyMock.expect(segment.getIdentifier()).andReturn("dummySegment");
+    EasyMock.expect(segment.getId()).andReturn(SegmentId.dummy("dummySegment"));
     EasyMock.expect(segment.getDataSource()).andReturn("dummyDataSource");
     EasyMock.replay(segment);
 
@@ -248,30 +249,34 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(loadQueuePeon);
 
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
-    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(segment);
+    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(segment);
     EasyMock.replay(druidDataSource);
-    EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
+    EasyMock.expect(databaseSegmentManager.getDataSource(EasyMock.anyString())).andReturn(druidDataSource);
     EasyMock.replay(databaseSegmentManager);
     scheduledExecutorFactory = EasyMock.createNiceMock(ScheduledExecutorFactory.class);
     EasyMock.replay(scheduledExecutorFactory);
     EasyMock.replay(metadataRuleManager);
+    ImmutableDruidDataSource dataSource = EasyMock.createMock(ImmutableDruidDataSource.class);
+    EasyMock.expect(dataSource.getSegments()).andReturn(Collections.singletonList(segment)).anyTimes();
+    EasyMock.replay(dataSource);
     EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
             new DruidServerMetadata("from", null, null, 5L, ServerType.HISTORICAL, null, 0),
             1L,
-            null,
-            ImmutableMap.of("dummySegment", segment)
+            ImmutableMap.of("dummyDataSource", dataSource),
+            1
         )
     ).atLeastOnce();
     EasyMock.replay(druidServer);
 
     druidServer2 = EasyMock.createMock(DruidServer.class);
+
     EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
             new DruidServerMetadata("to", null, null, 5L, ServerType.HISTORICAL, null, 0),
             1L,
-            null,
-            ImmutableMap.of("dummySegment2", segment)
+            ImmutableMap.of("dummyDataSource", dataSource),
+            1
         )
     ).atLeastOnce();
     EasyMock.replay(druidServer2);
@@ -336,7 +341,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     druidDataSources[0].addSegment(dataSegment);
 
     EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
-    EasyMock.expect(databaseSegmentManager.getInventory()).andReturn(
+    EasyMock.expect(databaseSegmentManager.getDataSources()).andReturn(
         ImmutableList.of(druidDataSources[0].toImmutableDruidDataSource())
     ).atLeastOnce();
     EasyMock.replay(databaseSegmentManager);
@@ -391,7 +396,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     coordinatorRunLatch.await();
 
     Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getLoadStatus());
-    curator.delete().guaranteed().forPath(ZKPaths.makePath(LOADPATH, dataSegment.getIdentifier()));
+    curator.delete().guaranteed().forPath(ZKPaths.makePath(LOADPATH, dataSegment.getId().toString()));
 
     Map segmentAvailability = coordinator.getSegmentAvailability();
     Assert.assertEquals(1, segmentAvailability.size());
@@ -465,7 +470,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(hotTier, coldTier)).atLeastOnce();
     EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
-    EasyMock.expect(databaseSegmentManager.getInventory()).andReturn(
+    EasyMock.expect(databaseSegmentManager.getDataSources()).andReturn(
         ImmutableList.of(druidDataSources[0].toImmutableDruidDataSource())
     ).atLeastOnce();
     EasyMock.expect(serverInventoryView.getInventory())
@@ -558,7 +563,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
       dataSource.addSegment(segment);
     }
 
-    EasyMock.expect(databaseSegmentManager.getInventory()).andReturn(
+    EasyMock.expect(databaseSegmentManager.getDataSources()).andReturn(
         ImmutableList.of(dataSource.toImmutableDruidDataSource())
     ).atLeastOnce();
     EasyMock.replay(databaseSegmentManager);

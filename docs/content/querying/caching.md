@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Query Caching"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Query Caching
 
 Druid supports query result caching through an LRU cache. Results are stored as a whole or either on a per segment basis along with the 
