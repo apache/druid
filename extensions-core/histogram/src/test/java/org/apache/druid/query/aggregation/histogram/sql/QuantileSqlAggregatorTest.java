@@ -52,13 +52,14 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.server.security.NoopEscalator;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.sql.SqlLifecycle;
+import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
-import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -78,6 +79,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 public class QuantileSqlAggregatorTest extends CalciteTestBase
 {
@@ -85,6 +87,10 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
+  private static AuthenticationResult authenticationResult = CalciteTests.REGULAR_USER_AUTH_RESULT;
+  private static final Map<String, Object> QUERY_CONTEXT_DEFAULT = ImmutableMap.of(
+      PlannerContext.CTX_SQL_QUERY_ID, "dummy"
+  );
 
   @BeforeClass
   public static void setUpClass()
@@ -108,7 +114,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   public QueryLogHook queryLogHook = QueryLogHook.create();
 
   private SpecificSegmentsQuerySegmentWalker walker;
-  private PlannerFactory plannerFactory;
+  private SqlLifecycleFactory sqlLifecycleFactory;
 
   @Before
   public void setUp() throws Exception
@@ -157,15 +163,17 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
         ImmutableSet.of()
     );
 
-    plannerFactory = new PlannerFactory(
-        druidSchema,
-        systemSchema,
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        operatorTable,
-        CalciteTests.createExprMacroTable(),
-        plannerConfig,
-        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        CalciteTests.getJsonMapper()
+    sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
+      new PlannerFactory(
+          druidSchema,
+          systemSchema,
+          CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+          operatorTable,
+          CalciteTests.createExprMacroTable(),
+          plannerConfig,
+          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+          CalciteTests.getJsonMapper()
+      )
     );
   }
 
@@ -179,7 +187,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   @Test
   public void testQuantileOnFloatAndLongs() throws Exception
   {
-    try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    try {
       final String sql = "SELECT\n"
                          + "APPROX_QUANTILE(m1, 0.01),\n"
                          + "APPROX_QUANTILE(m1, 0.5, 50),\n"
@@ -192,13 +201,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                          + "APPROX_QUANTILE(cnt, 0.5)\n"
                          + "FROM foo";
 
-      final PlannerResult plannerResult = planner.plan(
-          sql,
-          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-      );
-
       // Verify results
-      final List<Object[]> results = plannerResult.run().toList();
+      final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
       final List<Object[]> expectedResults = ImmutableList.of(
           new Object[]{
               1.0,
@@ -256,17 +260,21 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                     new QuantilePostAggregator("a7", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a8", "a8:agg", 0.50f)
                 )
-                .context(ImmutableMap.of("skipEmptyBuckets", true))
+                .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
+    }
+    catch (Exception e) {
+      throw e;
     }
   }
 
   @Test
   public void testQuantileOnComplexColumn() throws Exception
   {
-    try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
+    SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
+    try {
       final String sql = "SELECT\n"
                          + "APPROX_QUANTILE(hist_m1, 0.01),\n"
                          + "APPROX_QUANTILE(hist_m1, 0.5, 50),\n"
@@ -277,13 +285,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                          + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
                          + "FROM foo";
 
-      final PlannerResult plannerResult = planner.plan(
-          sql,
-          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-      );
-
       // Verify results
-      final List<Object[]> results = plannerResult.run().toList();
+      final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
       final List<Object[]> expectedResults = ImmutableList.of(
           new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 6.0, 4.994999885559082, 6.0}
       );
@@ -319,27 +322,26 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                     new QuantilePostAggregator("a5", "a5:agg", 0.999f),
                     new QuantilePostAggregator("a6", "a4:agg", 0.999f)
                 )
-                .context(ImmutableMap.of("skipEmptyBuckets", true))
+                .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
                 .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
+    }
+    catch (Exception e) {
+      throw e;
     }
   }
 
   @Test
   public void testQuantileOnInnerQuery() throws Exception
   {
-    try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    try {
       final String sql = "SELECT AVG(x), APPROX_QUANTILE(x, 0.98)\n"
                          + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
-      final PlannerResult plannerResult = planner.plan(
-          sql,
-          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-      );
-
       // Verify results
-      final List<Object[]> results = plannerResult.run().toList();
+      final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
       final List<Object[]> expectedResults;
       if (NullHandling.replaceWithDefault()) {
         expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
@@ -366,7 +368,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                                   new DoubleSumAggregatorFactory("a0", "m1")
                                               )
                                           )
-                                          .setContext(ImmutableMap.of())
+                                          .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
                                           .build()
                           )
                       )
@@ -394,10 +396,13 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                               new QuantilePostAggregator("_a1", "_a1:agg", 0.98f)
                           )
                       )
-                      .setContext(ImmutableMap.of())
+                      .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
                       .build(),
           Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
       );
+    }
+    catch (Exception e) {
+      throw e;
     }
   }
 }

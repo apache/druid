@@ -20,33 +20,16 @@
 package org.apache.druid.testing.clients;
 
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.java.util.http.client.Request;
-import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
-import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Query;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-
-public class QueryResourceTestClient
+public class QueryResourceTestClient extends AbstractQueryResourceTestClient<Query>
 {
-  private final ObjectMapper jsonMapper;
-  private final HttpClient httpClient;
-  private final String routerUrl;
-  private final StatusResponseHandler responseHandler;
 
   @Inject
   QueryResourceTestClient(
@@ -55,13 +38,11 @@ public class QueryResourceTestClient
       IntegrationTestingConfig config
   )
   {
-    this.jsonMapper = jsonMapper;
-    this.httpClient = httpClient;
-    this.routerUrl = config.getRouterUrl();
-    this.responseHandler = new StatusResponseHandler(StandardCharsets.UTF_8);
+    super(jsonMapper, httpClient, config);
   }
 
-  private String getBrokerURL()
+  @Override
+  public String getBrokerURL()
   {
     return StringUtils.format(
         "%s/druid/v2/",
@@ -69,34 +50,4 @@ public class QueryResourceTestClient
     );
   }
 
-  public List<Map<String, Object>> query(String url, Query query)
-  {
-    try {
-      StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(url)).setContent(
-              "application/json",
-              jsonMapper.writeValueAsBytes(query)
-          ), responseHandler
-
-      ).get();
-
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while querying[%s] status[%s] content[%s]",
-            getBrokerURL(),
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-
-      return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<Map<String, Object>>>()
-          {
-          }
-      );
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-  }
 }

@@ -36,6 +36,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -160,11 +161,10 @@ public class SqlVsNativeBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
-    try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
-      final PlannerResult plannerResult = planner.plan(
-          sqlQuery,
-          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-      );
+    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
+                                                                   .createEscalatedAuthenticationResult();
+    try (final DruidPlanner planner = plannerFactory.createPlanner(null, authenticationResult)) {
+      final PlannerResult plannerResult = planner.plan(sqlQuery);
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);

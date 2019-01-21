@@ -325,11 +325,11 @@ public class QueryLifecycle
           statsMap.put("reason", e.toString());
         }
       }
-      requestLogger.log(
-          new RequestLogLine(
+      requestLogger.logNativeQuery(
+          RequestLogLine.forNative(
+              baseQuery,
               DateTimes.utc(startMs),
               StringUtils.nullToEmptyNonDruidDataString(remoteAddress),
-              baseQuery,
               new QueryStats(statsMap)
           )
       );

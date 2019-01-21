@@ -90,6 +90,12 @@ public final class DefaultRequestLogEvent implements RequestLogEvent
     return request.getQuery();
   }
 
+  @JsonProperty("sql")
+  public String getSql()
+  {
+    return request.getSql();
+  }
+
   @JsonProperty("remoteAddr")
   public String getRemoteAddr()
   {

@@ -2,7 +2,7 @@
     "type": "index_parallel",
     "spec": {
         "dataSchema": {
-            "dataSource": "wikipedia_parallel_index_test",
+            "dataSource": "%%DATASOURCE%%",
             "metricsSpec": [
                 {
                     "type": "count",

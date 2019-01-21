@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
@@ -61,6 +62,7 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -214,11 +216,11 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void querySql(Blackhole blackhole) throws Exception
   {
-    try (final DruidPlanner planner = plannerFactory.createPlanner(ImmutableMap.of("vectorize", vectorize))) {
-      final PlannerResult plannerResult = planner.plan(
-          QUERIES.get(Integer.parseInt(query)),
-          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-      );
+    final Map<String, Object> context = ImmutableMap.of("vectorize", vectorize);
+    final AuthenticationResult authenticationResult = NoopEscalator.getInstance()
+                                                                   .createEscalatedAuthenticationResult();
+    try (final DruidPlanner planner = plannerFactory.createPlanner(context, authenticationResult)) {
+      final PlannerResult plannerResult = planner.plan(QUERIES.get(Integer.parseInt(query)));
       final Sequence<Object[]> resultSequence = plannerResult.run();
       final Object[] lastRow = resultSequence.accumulate(null, (accumulated, in) -> in);
       blackhole.consume(lastRow);

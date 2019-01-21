@@ -148,4 +148,16 @@ public class StringUtilsTest
     Assert.assertEquals("bb", StringUtils.replace("aaaa", "aa", "b"));
     Assert.assertEquals("", StringUtils.replace("aaaa", "aa", ""));
   }
+
+  @Test
+  public void testURLEncodeSpace()
+  {
+    String s1 = StringUtils.urlEncode("aaa bbb");
+    Assert.assertEquals(s1, "aaa%20bbb");
+    Assert.assertEquals("aaa bbb", StringUtils.urlDecode(s1));
+
+    String s2 = StringUtils.urlEncode("fff+ggg");
+    Assert.assertEquals(s2, "fff%2Bggg");
+    Assert.assertEquals("fff+ggg", StringUtils.urlDecode(s2));
+  }
 }

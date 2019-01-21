@@ -51,6 +51,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.router.QueryHostFinder;
 import org.apache.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
@@ -251,7 +252,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         new NoopServiceEmitter(),
-        requestLogLine -> { /* noop */ },
+        new NoopRequestLogger(),
         new DefaultGenericQueryMetricsFactory(jsonMapper),
         new AuthenticatorMapper(ImmutableMap.of())
     )
@@ -343,7 +344,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
-              requestLogLine -> { /* noop */ },
+              new NoopRequestLogger(),
               new DefaultGenericQueryMetricsFactory(jsonMapper),
               new AuthenticatorMapper(ImmutableMap.of())
           )
@@ -374,7 +375,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testRewriteURI() throws Exception
+  public void testRewriteURI()
   {
 
     // test params

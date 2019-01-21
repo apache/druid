@@ -41,6 +41,10 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
   @NotNull
   private File dir = null;
 
+  @JsonProperty
+  @NotNull
+  private String filePattern = "yyyy-MM-dd'.log'";
+
   @JacksonInject
   @NotNull
   private ScheduledExecutorFactory factory = null;
@@ -54,7 +58,7 @@ public class FileRequestLoggerProvider implements RequestLoggerProvider
   @Override
   public RequestLogger get()
   {
-    FileRequestLogger logger = new FileRequestLogger(jsonMapper, factory.create(1, "RequestLogger-%s"), dir);
+    FileRequestLogger logger = new FileRequestLogger(jsonMapper, factory.create(1, "RequestLogger-%s"), dir, filePattern);
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }
