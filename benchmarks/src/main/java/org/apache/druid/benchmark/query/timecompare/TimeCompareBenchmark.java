@@ -75,6 +75,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -346,11 +347,11 @@ public class TimeCompareBenchmark
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = topNFactory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
       QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           topNFactory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          segmentId,
+          new QueryableIndexSegment(qIndexes.get(i), segmentId)
       );
       singleSegmentRunners.add(
           new PerSegmentOptimizingQueryRunner<>(
@@ -372,11 +373,11 @@ public class TimeCompareBenchmark
     List<QueryRunner<Result<TimeseriesResultValue>>> singleSegmentRunnersT = new ArrayList<>();
     QueryToolChest toolChestT = timeseriesFactory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
       QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           timeseriesFactory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          segmentId,
+          new QueryableIndexSegment(qIndexes.get(i), segmentId)
       );
       singleSegmentRunnersT.add(
           new PerSegmentOptimizingQueryRunner<>(

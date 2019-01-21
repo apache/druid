@@ -108,7 +108,7 @@ public class PlannerContext
       }
 
       if (tzParam != null) {
-        timeZone = DateTimes.inferTzfromString(String.valueOf(tzParam));
+        timeZone = DateTimes.inferTzFromString(String.valueOf(tzParam));
       } else {
         timeZone = plannerConfig.getSqlTimeZone();
       }

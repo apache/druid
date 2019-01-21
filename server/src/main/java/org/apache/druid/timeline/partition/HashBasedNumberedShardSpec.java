@@ -82,15 +82,13 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     }
   }
 
+  @VisibleForTesting
   List<Object> getGroupKey(final long timestamp, final InputRow inputRow)
   {
     if (partitionDimensions.isEmpty()) {
       return Rows.toGroupKey(timestamp, inputRow);
     } else {
-      return Lists.transform(
-          partitionDimensions,
-          dim -> inputRow.getDimension(dim)
-      );
+      return Lists.transform(partitionDimensions, inputRow::getDimension);
     }
   }
 

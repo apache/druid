@@ -56,7 +56,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
               throws IOException
           {
             String tzId = jp.getText();
-            return DateTimes.inferTzfromString(tzId);
+            return DateTimes.inferTzFromString(tzId);
           }
         }
     );

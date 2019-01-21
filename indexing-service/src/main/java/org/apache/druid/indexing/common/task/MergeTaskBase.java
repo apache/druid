@@ -27,7 +27,6 @@ import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -47,6 +46,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -58,6 +58,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -151,21 +152,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     try {
       final long startTime = System.currentTimeMillis();
 
-      log.info(
-          "Starting merge of id[%s], segments: %s",
-          getId(),
-          Lists.transform(
-              segments,
-              new Function<DataSegment, String>()
-              {
-                @Override
-                public String apply(DataSegment input)
-                {
-                  return input.getIdentifier();
-                }
-              }
-          )
-      );
+      log.info("Starting merge of id[%s], segments: %s", getId(), Lists.transform(segments, DataSegment::getId));
 
       // download segments to merge
       final Map<DataSegment, File> gettedSegments = toolbox.fetchSegments(segments);
@@ -216,24 +203,16 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     if (!super.isReady(taskActionClient)) {
       return false;
     } else {
-      final Function<DataSegment, String> toIdentifier = new Function<DataSegment, String>()
-      {
-        @Override
-        public String apply(DataSegment dataSegment)
-        {
-          return dataSegment.getIdentifier();
-        }
-      };
 
-      final Set<String> current = ImmutableSet.copyOf(
-          Iterables.transform(
-              taskActionClient.submit(new SegmentListUsedAction(getDataSource(), getInterval(), null)),
-              toIdentifier
-          )
-      );
-      final Set<String> requested = ImmutableSet.copyOf(Iterables.transform(segments, toIdentifier));
+      final Set<SegmentId> current = taskActionClient
+          .submit(new SegmentListUsedAction(getDataSource(), getInterval(), null))
+          .stream()
+          .map(DataSegment::getId)
+          .collect(Collectors.toSet());
 
-      final Set<String> missingFromRequested = Sets.difference(current, requested);
+      final Set<SegmentId> requested = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+
+      final Set<SegmentId> missingFromRequested = Sets.difference(current, requested);
       if (!missingFromRequested.isEmpty()) {
         throw new ISE(
             "Merge is invalid: current segment(s) are not in the requested set: %s",
@@ -241,7 +220,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
         );
       }
 
-      final Set<String> missingFromCurrent = Sets.difference(requested, current);
+      final Set<SegmentId> missingFromCurrent = Sets.difference(requested, current);
       if (!missingFromCurrent.isEmpty()) {
         throw new ISE(
             "Merge is invalid: requested segment(s) are not in the current set: %s",

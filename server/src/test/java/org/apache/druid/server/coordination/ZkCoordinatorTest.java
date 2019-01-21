@@ -112,7 +112,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       @Override
       public void addSegment(DataSegment s, DataSegmentChangeCallback callback)
       {
-        if (segment.getIdentifier().equals(s.getIdentifier())) {
+        if (segment.getId().equals(s.getId())) {
           loadLatch.countDown();
           callback.execute();
         }
@@ -121,7 +121,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       @Override
       public void removeSegment(DataSegment s, DataSegmentChangeCallback callback)
       {
-        if (segment.getIdentifier().equals(s.getIdentifier())) {
+        if (segment.getId().equals(s.getId())) {
           dropLatch.countDown();
           callback.execute();
         }
@@ -137,7 +137,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     );
     zkCoordinator.start();
 
-    String segmentZkPath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName(), segment.getIdentifier());
+    String segmentZkPath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), me.getName(), segment.getId().toString());
 
     curator
         .create()

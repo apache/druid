@@ -34,30 +34,30 @@ public class CommittedTest
 {
   private static final ObjectMapper objectMapper = new DefaultObjectMapper();
 
-  private static final SegmentIdentifier IDENTIFIER_OBJECT1 = new SegmentIdentifier(
+  private static final SegmentIdWithShardSpec IDENTIFIER_OBJECT1 = new SegmentIdWithShardSpec(
       "foo",
       Intervals.of("2000/2001"),
       "2000",
       new LinearShardSpec(1)
   );
 
-  private static final SegmentIdentifier IDENTIFIER_OBJECT2 = new SegmentIdentifier(
+  private static final SegmentIdWithShardSpec IDENTIFIER_OBJECT2 = new SegmentIdWithShardSpec(
       "foo",
       Intervals.of("2001/2002"),
       "2001",
       new LinearShardSpec(1)
   );
 
-  private static final SegmentIdentifier IDENTIFIER_OBJECT3 = new SegmentIdentifier(
+  private static final SegmentIdWithShardSpec IDENTIFIER_OBJECT3 = new SegmentIdWithShardSpec(
       "foo",
       Intervals.of("2001/2002"),
       "2001",
       new LinearShardSpec(2)
   );
 
-  private static final String IDENTIFIER1 = IDENTIFIER_OBJECT1.getIdentifierAsString();
-  private static final String IDENTIFIER2 = IDENTIFIER_OBJECT2.getIdentifierAsString();
-  private static final String IDENTIFIER3 = IDENTIFIER_OBJECT3.getIdentifierAsString();
+  private static final String IDENTIFIER1 = IDENTIFIER_OBJECT1.toString();
+  private static final String IDENTIFIER2 = IDENTIFIER_OBJECT2.toString();
+  private static final String IDENTIFIER3 = IDENTIFIER_OBJECT3.toString();
 
   private static Committed fixedInstance()
   {

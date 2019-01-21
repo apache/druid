@@ -23,7 +23,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 
 import java.io.IOException;
 
@@ -45,7 +45,7 @@ public class ActionBasedSegmentAllocator implements SegmentAllocator
   }
 
   @Override
-  public SegmentIdentifier allocate(
+  public SegmentIdWithShardSpec allocate(
       final InputRow row,
       final String sequenceName,
       final String previousSegmentId,

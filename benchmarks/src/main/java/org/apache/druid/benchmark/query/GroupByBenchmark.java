@@ -81,6 +81,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -557,8 +558,8 @@ public class GroupByBenchmark
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "incIndex",
-        new IncrementalIndexSegment(anIncrementalIndex, "incIndex")
+        SegmentId.dummy("incIndex"),
+        new IncrementalIndexSegment(anIncrementalIndex, SegmentId.dummy("incIndex"))
     );
 
     List<Row> results = GroupByBenchmark.runQuery(factory, runner, query);
@@ -575,8 +576,8 @@ public class GroupByBenchmark
   {
     QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "qIndex",
-        new QueryableIndexSegment("qIndex", queryableIndexes.get(0))
+        SegmentId.dummy("qIndex"),
+        new QueryableIndexSegment(queryableIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     List<Row> results = GroupByBenchmark.runQuery(factory, runner, query);
@@ -665,8 +666,8 @@ public class GroupByBenchmark
       String segmentName = "qIndex" + i;
       QueryRunner<Row> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, queryableIndexes.get(i))
+          SegmentId.dummy(segmentName),
+          new QueryableIndexSegment(queryableIndexes.get(i), SegmentId.dummy(segmentName))
       );
       runners.add(factory.getToolchest().preMergeQueryDecoration(runner));
     }
