@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -103,8 +104,8 @@ public class TaskQueue
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
 
-  private final Map<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
-  private final Map<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
   private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
   private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 

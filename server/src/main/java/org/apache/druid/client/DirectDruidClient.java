@@ -74,6 +74,7 @@ import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -92,7 +93,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
   private static final Logger log = new Logger(DirectDruidClient.class);
 
-  private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap =
+      new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
@@ -113,13 +115,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
   }
 
-  public static Map<String, Object> makeResponseContextForQuery()
+  public static ConcurrentMap<String, Object> makeResponseContextForQuery()
   {
-    final Map<String, Object> responseContext = new ConcurrentHashMap<>();
-    responseContext.put(
-        DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED,
-        new AtomicLong()
-    );
+    final ConcurrentMap<String, Object> responseContext = new ConcurrentHashMap<>();
+    responseContext.put(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
     return responseContext;
   }
 
@@ -159,14 +158,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
     if (types == null) {
-      final TypeFactory typeFactory = objectMapper.getTypeFactory();
-      JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
-      JavaType bySegmentType = typeFactory.constructParametricType(
-          Result.class,
-          typeFactory.constructParametricType(BySegmentResultValueClass.class, baseType)
-      );
-      types = Pair.of(baseType, bySegmentType);
-      typesMap.put(query.getClass(), types);
+      types = typesMap.computeIfAbsent(query.getClass(), queryClass -> {
+        final TypeFactory typeFactory = objectMapper.getTypeFactory();
+        JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
+        JavaType bySegmentType = typeFactory.constructParametricType(
+            Result.class,
+            typeFactory.constructParametricType(BySegmentResultValueClass.class, baseType)
+        );
+        return Pair.of(baseType, bySegmentType);
+      });
     }
 
     final JavaType typeRef;

@@ -78,6 +78,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -227,7 +228,7 @@ public class CachingQueryRunnerTest
     final CountDownLatch cacheMustBePutOnce = new CountDownLatch(1);
     Cache cache = new Cache()
     {
-      private final Map<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
+      private final ConcurrentMap<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
 
       @Override
       public byte[] get(NamedKey key)
@@ -254,7 +255,7 @@ public class CachingQueryRunnerTest
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
       }
 

@@ -22,8 +22,8 @@ package org.apache.druid.query;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -38,7 +38,7 @@ public class ReflectionLoaderThingy<T>
     return new ReflectionLoaderThingy<K>(interfaceClass);
   }
 
-  Map<Class<?>, AtomicReference<T>> toolChestMap = new ConcurrentHashMap<>();
+  ConcurrentMap<Class<?>, AtomicReference<T>> toolChestMap = new ConcurrentHashMap<>();
 
   private final Class<T> interfaceClass;
 

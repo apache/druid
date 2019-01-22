@@ -121,7 +121,7 @@ public class AppenderatorImpl implements Appenderator
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final Cache cache;
-  private final Map<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER
