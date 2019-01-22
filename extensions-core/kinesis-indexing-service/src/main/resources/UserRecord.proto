@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+package kinesisindexingservice;
+
+option java_package = "org.apache.druid.indexing.kinesis.model";
+option java_outer_classname = "UserRecord";
+
+message AggregatedRecord {
+  repeated string partition_key_table     = 1;
+  repeated string explicit_hash_key_table = 2;
+  repeated Record records                 = 3;
+}
+
+message Tag {
+  required string key   = 1;
+  optional string value = 2;
+}
+
+message Record {
+  required uint64 partition_key_index     = 1;
+  optional uint64 explicit_hash_key_index = 2;
+  required bytes  data                    = 3;
+  repeated Tag    tags                    = 4;
+}

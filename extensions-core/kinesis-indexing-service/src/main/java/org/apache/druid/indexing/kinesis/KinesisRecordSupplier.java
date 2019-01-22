@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.indexing.kinesis.model.UserRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -54,9 +55,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -189,19 +187,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             final List<byte[]> data;
 
             if (deaggregate) {
-              if (deaggregateHandle == null || getDataHandle == null) {
-                throw new ISE("deaggregateHandle or getDataHandle is null!");
-              }
-
               data = new ArrayList<>();
-
-              final List userRecords = (List) deaggregateHandle.invokeExact(
-                  Collections.singletonList(kinesisRecord)
-              );
-
+              final List<UserRecord> userRecords = (List<UserRecord>) deaggregateKinesisRecord(kinesisRecord);
               for (Object userRecord : userRecords) {
-                data.add(toByteArray((ByteBuffer) getDataHandle.invoke(userRecord)));
+                data.add(toByteArray((ByteBuffer) userRecord.getData()));
               }
+
             } else {
               data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
             }
@@ -323,10 +314,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
   }
 
-  // used for deaggregate
-  private final MethodHandle deaggregateHandle;
-  private final MethodHandle getDataHandle;
-
   private final AmazonKinesis kinesis;
 
   private final int recordsPerFetch;
@@ -371,32 +358,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     this.maxRecordsPerPoll = maxRecordsPerPoll;
     this.fetchThreads = fetchThreads;
     this.recordBufferSize = recordBufferSize;
-
-    // the deaggregate function is implemented by the amazon-kinesis-client, whose license is not compatible with Apache.
-    // The work around here is to use reflection to find the deaggregate function in the classpath. See details on the
-    // docs page for more information on how to use deaggregation
-    if (deaggregate) {
-      try {
-        Class<?> kclUserRecordclass = Class.forName("com.amazonaws.services.kinesis.clientlibrary.types.UserRecord");
-        MethodHandles.Lookup lookup = MethodHandles.publicLookup();
-
-        Method deaggregateMethod = kclUserRecordclass.getMethod("deaggregate", List.class);
-        Method getDataMethod = kclUserRecordclass.getMethod("getData");
-
-        deaggregateHandle = lookup.unreflect(deaggregateMethod);
-        getDataHandle = lookup.unreflect(getDataMethod);
-      }
-      catch (ClassNotFoundException e) {
-        throw new ISE(e, "cannot find class[com.amazonaws.services.kinesis.clientlibrary.types.UserRecord], "
-                         + "note that when using deaggregate=true, you must provide the Kinesis Client Library jar in the classpath");
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      deaggregateHandle = null;
-      getDataHandle = null;
-    }
 
     log.info(
         "Creating fetch thread pool of size [%d] (Runtime.availableProcessors=%d)",

@@ -27,6 +27,10 @@
     <name>druid-kinesis-indexing-service</name>
     <description>druid-kinesis-indexing-service</description>
 
+    <properties>
+        <protobuf.version>3.6.1</protobuf.version>
+    </properties>
+
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
@@ -66,10 +70,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>amazon-kinesis-client</artifactId>
-            <version>1.9.2</version>
-            <scope>provided</scope>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
         </dependency>
 
         <!-- Tests -->
