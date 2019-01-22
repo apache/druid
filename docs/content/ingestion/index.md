@@ -26,6 +26,7 @@ title: "Ingestion"
 
 ## Overview
 
+<a name="datasources" />
 ### Datasources and segments
 
 Druid data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is
@@ -55,6 +56,8 @@ size, and its location on deep storage. These entries are what the Coordinator u
 available on the cluster.
 
 For details on the segment file format, please see [segment files](../design/segments.html).
+
+For details on modeling your data in Druid, see [schema design](schema-design.html).
 
 #### Segment identifiers
 
