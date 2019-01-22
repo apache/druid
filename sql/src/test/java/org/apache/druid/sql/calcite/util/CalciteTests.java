@@ -31,6 +31,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.curator.x.discovery.ServiceProvider;
+import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
@@ -100,6 +102,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -623,6 +626,12 @@ public class CalciteTests
     };
     final SystemSchema schema = new SystemSchema(
         druidSchema,
+        new MetadataSegmentView(
+            druidLeaderClient,
+            getJsonMapper(),
+            new BytesAccumulatingResponseHandler(),
+            new BrokerSegmentWatcherConfig()
+        ),
         new TestServerInventoryView(walker.getSegments()),
         TEST_AUTHORIZER_MAPPER,
         druidLeaderClient,

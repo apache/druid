@@ -19,7 +19,9 @@
 
 package org.apache.druid.client.selector;
 
+import com.google.common.collect.Interner;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -37,6 +39,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 {
 
+  private static final Interner<DataSegment> DATASEGMENT_INTERNER = DataSegmentInterner.INTERNER;
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers;
 
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> realtimeServers;
@@ -50,7 +53,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
       TierSelectorStrategy strategy
   )
   {
-    this.segment = new AtomicReference<>(segment);
+    this.segment = new AtomicReference<>(DATASEGMENT_INTERNER.intern(segment));
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
