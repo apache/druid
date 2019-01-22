@@ -41,9 +41,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Queues;
+import com.google.common.hash.HashCode;
+import com.google.common.hash.Hashing;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
-import org.apache.druid.indexing.kinesis.model.UserRecord;
+import org.apache.druid.indexing.kinesis.model.AggregatedRecordProtos;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -57,6 +60,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -102,6 +106,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     private volatile String shardIterator;
     private volatile boolean started;
     private volatile boolean stopRequested;
+
+    private final int[] KPL_AGGREGATE_MAGIC_NUMBERS = {0xF3, 0x89, 0x9A, 0xC2};
+    private final int KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES = 16;
 
     PartitionResource(
         StreamPartition<String> streamPartition
@@ -188,11 +195,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
             if (deaggregate) {
               data = new ArrayList<>();
-              final List<UserRecord> userRecords = (List<UserRecord>) deaggregateKinesisRecord(kinesisRecord);
-              for (Object userRecord : userRecords) {
-                data.add(toByteArray((ByteBuffer) userRecord.getData()));
+              // Record is a bad name because it matches the class in the AWS Java SDK but it was
+              // chosen to match the Amazon provided protobuf schema
+              final List<AggregatedRecordProtos.Record> userRecords = deaggregateKinesisRecord(kinesisRecord);
+              for (AggregatedRecordProtos.Record userRecord : userRecords) {
+                data.add(userRecord.getData().toByteArray());
               }
-
             } else {
               data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
             }
@@ -291,6 +299,27 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         }
 
       };
+    }
+
+    @VisibleForTesting
+    List<AggregatedRecordProtos.Record> deaggregateKinesisRecord(Record kinesisRecord) throws InvalidProtocolBufferException {
+      ByteBuffer kinesisRecordData = kinesisRecord.getData();
+      int recordSize = kinesisRecordData.remaining();
+      byte[] magicNumbers = new byte[KPL_AGGREGATE_MAGIC_NUMBERS.length];
+      byte[] checksum = new byte[KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES];
+
+      kinesisRecordData.get(magicNumbers, 0, magicNumbers.length);
+      kinesisRecordData.get(checksum, recordSize - checksum.length, checksum.length);
+      // Validate magic numbers (bytes 0 -> 3)
+      Preconditions.checkArgument(Arrays.equals(magicNumbers, checksum));
+      // Validate MD5 checksum (bytes N -> N + 15)
+      byte[] messageHash = Hashing.md5().hashBytes(checksum).asBytes();
+      Preconditions.checkArgument(Arrays.equals(messageHash, checksum));
+      // Get protobuf message (bytes 4 -> N)
+      byte[] protobufMessage = new byte[recordSize - KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES - KPL_AGGREGATE_MAGIC_NUMBERS.length];
+      kinesisRecordData.get(protobufMessage, KPL_AGGREGATE_MAGIC_NUMBERS.length, protobufMessage.length);
+      AggregatedRecordProtos.AggregatedRecord aggregatedRecord = AggregatedRecordProtos.AggregatedRecord.parseFrom(protobufMessage);
+      return aggregatedRecord.getRecordsList();
     }
 
     private void rescheduleRunnable(long delayMillis)
