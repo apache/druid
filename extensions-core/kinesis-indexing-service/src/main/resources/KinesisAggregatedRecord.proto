@@ -3,7 +3,7 @@ syntax = "proto2";
 package kinesisindexingservice;
 
 option java_package = "org.apache.druid.indexing.kinesis.model";
-option java_outer_classname = "UserRecord";
+option java_outer_classname = "KinesisAggregatedRecord";
 
 message AggregatedRecord {
   repeated string partition_key_table     = 1;
