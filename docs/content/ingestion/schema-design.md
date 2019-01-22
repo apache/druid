@@ -128,6 +128,7 @@ query performance boosts.
 ## General tips and common practices
 
 <a name="partitioning" />
+
 ## Partitioning and sorting
 
 Druid always partitions your data by time, but the segments within a particular time chunk may be
@@ -208,6 +209,7 @@ You should query for the number of ingested rows with:
 ```
 
 <a name="schemaless" />
+
 ## Schema-less dimensions
 
 If the `dimensions` field is left empty in your ingestion spec, Druid will treat every column that is not the timestamp column, 

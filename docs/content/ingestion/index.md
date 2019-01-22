@@ -27,6 +27,7 @@ title: "Ingestion"
 ## Overview
 
 <a name="datasources" />
+
 ### Datasources and segments
 
 Druid data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is

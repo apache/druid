@@ -210,6 +210,7 @@ handle all formatting decisions on their own, without using the ParseSpec.
 | format | String | iso, posix, millis, micro, nano, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto' |
 
 <a name="dimensions" />
+
 ### DimensionsSpec
 
 | Field | Type | Description | Required |
