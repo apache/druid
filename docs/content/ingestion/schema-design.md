@@ -129,7 +129,7 @@ query performance boosts.
 
 <a name="partitioning" />
 
-## Partitioning and sorting
+### Partitioning and sorting
 
 Druid always partitions your data by time, but the segments within a particular time chunk may be
 [partitioned further](index.html#partitioning) using options that vary based on the ingestion method you have chosen.
@@ -141,7 +141,7 @@ data (such as a customer ID) will also tend to improve compression and give you 
 effects will be maximized by putting the partition dimension first in the "dimensions" list of your "dimensionsSpec",
 which also tells Druid to sort data segments by that column.
 
-## Numeric dimensions
+### Numeric dimensions
 
 If the user wishes to ingest a column as a numeric-typed dimension (Long, Double or Float), it is necessary to specify the type of the column in the `dimensions` section of the `dimensionsSpec`. If the type is omitted, Druid will ingest a column as the default String type.
 
@@ -151,7 +151,7 @@ filter on.
 
 See [Dimension Schema](../ingestion/ingestion-spec.html#dimension-schema) for more information.
 
-## High cardinality dimensions (e.g. unique IDs)
+### High cardinality dimensions (e.g. unique IDs)
 
 In practice, we see that exact counts for unique IDs are often not required. Storing unique IDs as a column will kill 
 [roll-up](../ingestion/index.html#rollup), and impact compression. Instead, storing a sketch of the number of the unique IDs seen, and using that 
@@ -159,7 +159,7 @@ sketch as part of aggregations, will greatly improve performance (up to orders o
 Druid's `hyperUnique` aggregator is based off of Hyperloglog and can be used for unique counts on a high cardinality dimension. 
 For more information, see [here](https://www.youtube.com/watch?v=Hpd3f_MLdXo).
 
-## Nested dimensions
+### Nested dimensions
 
 At the time of this writing, Druid does not support nested dimensions. Nested dimensions need to be flattened. For example, 
 if you have data of the following form:
@@ -177,7 +177,7 @@ then before indexing it, you should transform it to:
 Druid is capable of flattening JSON, Avro, or Parquet input data.
 Please read about [flattenSpecs](../ingestion/flatten-json.html) for more details.
 
-## Counting the number of ingested events
+### Counting the number of ingested events
 
 When rollup is enabled, count aggregators at query time do not actually tell you the number of rows that have been
 ingested. They tell you the number of rows in the Druid datasource, which may be smaller than the number of rows
@@ -210,7 +210,7 @@ You should query for the number of ingested rows with:
 
 <a name="schemaless" />
 
-## Schema-less dimensions
+### Schema-less dimensions
 
 If the `dimensions` field is left empty in your ingestion spec, Druid will treat every column that is not the timestamp column, 
 a dimension that has been excluded, or a metric column as a dimension.
