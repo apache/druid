@@ -25,7 +25,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class Counters
 {
-  public static <K> int incrementAndGetInt(ConcurrentHashMap<K, AtomicInteger> counters, K key) {
+  public static <K> int incrementAndGetInt(ConcurrentHashMap<K, AtomicInteger> counters, K key)
+  {
     // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
     AtomicInteger counter = counters.get(key);
     if (counter == null) {
@@ -34,7 +35,8 @@ public final class Counters
     return counter.incrementAndGet();
   }
 
-  public static <K> long incrementAndGetLong(ConcurrentHashMap<K, AtomicLong> counters, K key) {
+  public static <K> long incrementAndGetLong(ConcurrentHashMap<K, AtomicLong> counters, K key)
+  {
     // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
     AtomicLong counter = counters.get(key);
     if (counter == null) {
