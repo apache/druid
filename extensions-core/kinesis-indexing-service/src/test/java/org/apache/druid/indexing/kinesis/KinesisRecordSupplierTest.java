@@ -646,11 +646,110 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         60000,
         5
     );
+
     List<AggregatedRecordProtos.Record> records = recordSupplier.deaggregateKinesisRecord(record);
+
     Assert.assertEquals(100, records.size());
     for (int i = 0; i < 100; i++) {
       Assert.assertEquals(userRecords.get(i), records.get(i));
     }
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testIncorrectMagicNumbers() throws InvalidProtocolBufferException {
+    List<AggregatedRecordProtos.Record> userRecords = new ArrayList<AggregatedRecordProtos.Record>();
+    for (int i = 0; i < 100; i++) {
+      userRecords.add(AggregatedRecordProtos.Record.newBuilder()
+          .setPartitionKeyIndex(i % 2)
+          .setData(ByteString.copyFromUtf8("This is record " + i))
+          .addTags(AggregatedRecordProtos.Tag.newBuilder()
+              .setKey("tagKey1")
+              .setValue("tagValue1")
+              .build())
+          .build());
+    }
+    AggregatedRecordProtos.AggregatedRecord aggregatedRecord =
+        AggregatedRecordProtos.AggregatedRecord.newBuilder()
+            .addPartitionKeyTable("partitionKey1")
+            .addPartitionKeyTable("partitionKey2")
+            .addExplicitHashKeyTable("explicitHashKey1")
+            .addExplicitHashKeyTable("explicitHashKey2")
+            .addAllRecords(userRecords)
+            .build();
+    byte[] aggregatedRecordBytes = aggregatedRecord.toByteArray();
+    //16 bytes for checksum and 4 bytes for magic number
+    ByteBuffer buff = ByteBuffer.allocate(aggregatedRecordBytes.length + 16 + 4);
+    buff.put((byte) 0xF3);
+    buff.put((byte) 0x89);
+    buff.put((byte) 0x9A);
+    buff.put((byte) 0xC3); // This value is mutated
+    buff.put(aggregatedRecordBytes);
+    byte[] messageHash = Hashing.md5().hashBytes(aggregatedRecordBytes).asBytes();
+    buff.put(messageHash);
+    Record record = new Record().withData(buff);
+
+    recordSupplier = new KinesisRecordSupplier(
+        kinesis,
+        recordsPerFetch,
+        0,
+        2,
+        false,
+        100,
+        5000,
+        5000,
+        60000,
+        5
+    );
+    List<AggregatedRecordProtos.Record> records = recordSupplier.deaggregateKinesisRecord(record);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testIncorrectChecksum() throws InvalidProtocolBufferException {
+    List<AggregatedRecordProtos.Record> userRecords = new ArrayList<AggregatedRecordProtos.Record>();
+    for (int i = 0; i < 100; i++) {
+      userRecords.add(AggregatedRecordProtos.Record.newBuilder()
+          .setPartitionKeyIndex(i % 2)
+          .setData(ByteString.copyFromUtf8("This is record " + i))
+          .addTags(AggregatedRecordProtos.Tag.newBuilder()
+              .setKey("tagKey1")
+              .setValue("tagValue1")
+              .build())
+          .build());
+    }
+    AggregatedRecordProtos.AggregatedRecord aggregatedRecord =
+        AggregatedRecordProtos.AggregatedRecord.newBuilder()
+            .addPartitionKeyTable("partitionKey1")
+            .addPartitionKeyTable("partitionKey2")
+            .addExplicitHashKeyTable("explicitHashKey1")
+            .addExplicitHashKeyTable("explicitHashKey2")
+            .addAllRecords(userRecords)
+            .build();
+    byte[] aggregatedRecordBytes = aggregatedRecord.toByteArray();
+    //16 bytes for checksum and 4 bytes for magic number
+    ByteBuffer buff = ByteBuffer.allocate(aggregatedRecordBytes.length + 16 + 4);
+    buff.put((byte) 0xF3);
+    buff.put((byte) 0x89);
+    buff.put((byte) 0x9A);
+    buff.put((byte) 0xC2);
+    buff.put(aggregatedRecordBytes);
+    byte[] messageHash = Hashing.md5().hashBytes(aggregatedRecordBytes).asBytes();
+    messageHash[0] = 0x00; // This checksum value is incorrect
+    buff.put(messageHash);
+    Record record = new Record().withData(buff);
+
+    recordSupplier = new KinesisRecordSupplier(
+        kinesis,
+        recordsPerFetch,
+        0,
+        2,
+        false,
+        100,
+        5000,
+        5000,
+        60000,
+        5
+    );
+    List<AggregatedRecordProtos.Record> records = recordSupplier.deaggregateKinesisRecord(record);
   }
 
   /**
