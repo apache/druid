@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.theta.sql.ThetaSketchSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.Collections;
 import java.util.List;
@@ -54,6 +56,11 @@ public class SketchModule implements DruidModule
 
     if (ComplexMetrics.getSerdeForType(THETA_SKETCH_BUILD_AGG) == null) {
       ComplexMetrics.registerSerde(THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
+    }
+
+    if (binder != null) {
+      // Binder is null in some tests.
+      SqlBindings.addAggregator(binder, ThetaSketchSqlAggregator.class);
     }
   }
 

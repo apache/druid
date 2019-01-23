@@ -25,7 +25,9 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.yahoo.sketches.hll.HllSketch;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.Collections;
 import java.util.List;
@@ -57,6 +59,11 @@ public class HllSketchModule implements DruidModule
     if (ComplexMetrics.getSerdeForType(MERGE_TYPE_NAME) == null) {
       ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
     }
+
+    if (binder != null) {
+      // Binder is null in some tests.
+      SqlBindings.addAggregator(binder, HllSketchSqlAggregator.class);
+    }
   }
 
   @Override
@@ -73,5 +80,4 @@ public class HllSketchModule implements DruidModule
         ).addSerializer(HllSketch.class, new HllSketchJsonSerializer())
     );
   }
-
 }

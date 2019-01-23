@@ -25,7 +25,9 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.Collections;
 import java.util.List;
@@ -47,6 +49,11 @@ public class DoublesSketchModule implements DruidModule
     if (ComplexMetrics.getSerdeForType(DOUBLES_SKETCH) == null) {
       ComplexMetrics.registerSerde(DOUBLES_SKETCH, new DoublesSketchComplexMetricSerde());
     }
+
+    if (binder != null) {
+      // Binder is null in some tests.
+      SqlBindings.addAggregator(binder, DoublesSketchSqlAggregator.class);
+    }
   }
 
   @Override
@@ -64,5 +71,4 @@ public class DoublesSketchModule implements DruidModule
             ).addSerializer(DoublesSketch.class, new DoublesSketchJsonSerializer())
     );
   }
-
 }

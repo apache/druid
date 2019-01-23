@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.histogram.sql.FixedBucketsHistogramQuantileSqlAggregator;
 import org.apache.druid.query.aggregation.histogram.sql.QuantileSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -67,6 +68,7 @@ public class ApproximateHistogramDruidModule implements DruidModule
     if (binder != null) {
       // Binder is null in some tests.
       SqlBindings.addAggregator(binder, QuantileSqlAggregator.class);
+      SqlBindings.addAggregator(binder, FixedBucketsHistogramQuantileSqlAggregator.class);
     }
   }
 }
