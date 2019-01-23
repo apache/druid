@@ -65,7 +65,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
   public void publishSegment(final DataSegment segment) throws IOException
   {
     publishSegment(
-        segment.getIdentifier(),
+        segment.getId().toString(),
         segment.getDataSource(),
         DateTimes.nowUtc().toString(),
         segment.getInterval().getStart().toString(),
@@ -79,7 +79,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
 
   @VisibleForTesting
   void publishSegment(
-      final String identifier,
+      final String segmentId,
       final String dataSource,
       final String createdDate,
       final String start,
@@ -101,14 +101,14 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
               return handle.createQuery(
                   StringUtils.format("SELECT id FROM %s WHERE id=:id", config.getSegmentsTable())
               )
-                           .bind("id", identifier)
+                           .bind("id", segmentId)
                            .list();
             }
           }
       );
 
       if (!exists.isEmpty()) {
-        log.info("Found [%s] in DB, not updating DB", identifier);
+        log.info("Found [%s] in DB, not updating DB", segmentId);
         return;
       }
 
@@ -119,7 +119,7 @@ public class SQLMetadataSegmentPublisher implements MetadataSegmentPublisher
             public Void withHandle(Handle handle)
             {
               handle.createStatement(statement)
-                    .bind("id", identifier)
+                    .bind("id", segmentId)
                     .bind("dataSource", dataSource)
                     .bind("created_date", createdDate)
                     .bind("start", start)

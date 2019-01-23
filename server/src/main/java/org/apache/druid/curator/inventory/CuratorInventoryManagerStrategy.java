@@ -20,6 +20,10 @@
 package org.apache.druid.curator.inventory;
 
 /**
+ * Concurrency guarantees: all calls to {@link #newContainer}, {@link #deadContainer}, {@link #updateContainer} and
+ * {@link #inventoryInitialized} (all done within {@link CuratorInventoryManager#pathChildrenCacheExecutor}) are
+ * linearizable. Calls to {@link #addInventory}, {@link #updateInventory} and {@link #removeInventory} are linearizable
+ * for the each container in independence.
  */
 public interface CuratorInventoryManagerStrategy<ContainerClass, InventoryClass>
 {

@@ -206,9 +206,9 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   }
 
   @Override
-  public List<String> getDatasourceNames()
+  public List<String> getDataSourceNames()
   {
-    return ((DruidRel) sourceRel).getDatasourceNames();
+    return ((DruidRel) sourceRel).getDataSourceNames();
   }
 
   @Override

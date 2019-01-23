@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.LoadPeonCallback;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -53,7 +54,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
   protected final DruidCoordinator coordinator;
 
-  protected final Map<String, ConcurrentHashMap<String, BalancerSegmentHolder>> currentlyMovingSegments =
+  protected final Map<String, ConcurrentHashMap<SegmentId, BalancerSegmentHolder>> currentlyMovingSegments =
       new HashMap<>();
 
   public DruidCoordinatorBalancer(
@@ -69,7 +70,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       holder.reduceLifetime();
       if (holder.getLifetime() <= 0) {
         log.makeAlert("[%s]: Balancer move segments queue has a segment stuck", tier)
-           .addData("segment", holder.getSegment().getIdentifier())
+           .addData("segment", holder.getSegment().getId())
            .addData("server", holder.getFromServer().getMetadata())
            .emit();
       }
@@ -155,20 +156,18 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
             moveSegment(segmentToMoveHolder, destinationHolder.getServer(), params);
             moved++;
           } else {
-            log.debug("Segment [%s] is 'optimally' placed.", segmentToMove.getIdentifier());
+            log.debug("Segment [%s] is 'optimally' placed.", segmentToMove.getId());
             unmoved++;
           }
         } else {
-          log.debug(
-              "No valid movement destinations for segment [%s].",
-              segmentToMove.getIdentifier()
-          );
+          log.debug("No valid movement destinations for segment [%s].", segmentToMove.getId());
           unmoved++;
         }
       }
       if (iter >= maxIterations) {
         log.info(
-            "Unable to select %d remaining candidate segments out of %d total to balance after %d iterations, ending run.",
+            "Unable to select %d remaining candidate segments out of %d total to balance "
+            + "after %d iterations, ending run.",
             (maxSegmentsToMove - moved - unmoved), maxSegmentsToMove, iter
         );
         break;
@@ -202,18 +201,18 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     final ImmutableDruidServer fromServer = segment.getFromServer();
     final DataSegment segmentToMove = segment.getSegment();
-    final String segmentName = segmentToMove.getIdentifier();
+    final SegmentId segmentId = segmentToMove.getId();
 
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
-        (toServer.getSegment(segmentName) == null) &&
+        (toServer.getSegment(segmentId) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
-      log.debug("Moving [%s] from [%s] to [%s]", segmentName, fromServer.getName(), toServer.getName());
+      log.debug("Moving [%s] from [%s] to [%s]", segmentId, fromServer.getName(), toServer.getName());
 
       LoadPeonCallback callback = null;
       try {
-        Map<String, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(toServer.getTier());
-        movingSegments.put(segmentName, segment);
-        callback = () -> movingSegments.remove(segmentName);
+        Map<SegmentId, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(toServer.getTier());
+        movingSegments.put(segmentId, segment);
+        callback = () -> movingSegments.remove(segmentId);
         coordinator.moveSegment(
             fromServer,
             toServer,
@@ -222,7 +221,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         );
       }
       catch (Exception e) {
-        log.makeAlert(e, StringUtils.format("[%s] : Moving exception", segmentName)).emit();
+        log.makeAlert(e, StringUtils.format("[%s] : Moving exception", segmentId)).emit();
         if (callback != null) {
           callback.execute();
         }

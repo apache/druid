@@ -25,12 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -80,7 +79,7 @@ import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -882,14 +881,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
     final SegmentAllocator segmentAllocator;
     if (isGuaranteedRollup) {
       // Overwrite mode, guaranteed rollup: segments are all known in advance and there is one per sequenceName.
-      final Map<String, SegmentIdentifier> lookup = new HashMap<>();
+      final Map<String, SegmentIdWithShardSpec> lookup = new HashMap<>();
 
       for (Map.Entry<Interval, List<ShardSpec>> entry : shardSpecs.getMap().entrySet()) {
         for (ShardSpec shardSpec : entry.getValue()) {
           final String version = findVersion(versions, entry.getKey());
           lookup.put(
               Appenderators.getSequenceName(entry.getKey(), version, shardSpec),
-              new SegmentIdentifier(getDataSource(), entry.getKey(), version, shardSpec)
+              new SegmentIdWithShardSpec(getDataSource(), entry.getKey(), version, shardSpec)
           );
         }
       }
@@ -927,7 +926,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         }
 
         final int partitionNum = counters.computeIfAbsent(interval, x -> new AtomicInteger()).getAndIncrement();
-        return new SegmentIdentifier(
+        return new SegmentIdWithShardSpec(
             getDataSource(),
             interval,
             findVersion(versions, interval),
@@ -1038,14 +1037,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
             buildSegmentsMeters.getUnparseable(),
             buildSegmentsMeters.getThrownAway()
         );
-        log.info(
-            "Published segments[%s]", Joiner.on(", ").join(
-                Iterables.transform(
-                    published.getSegments(),
-                    DataSegment::getIdentifier
-                )
-            )
-        );
+        log.info("Published segments: %s", Lists.transform(published.getSegments(), DataSegment::getId));
 
         toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.success(getId());

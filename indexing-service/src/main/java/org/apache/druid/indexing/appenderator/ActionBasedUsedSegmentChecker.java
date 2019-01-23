@@ -19,12 +19,11 @@
 
 package org.apache.druid.indexing.appenderator;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.UsedSegmentChecker;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -46,11 +45,11 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
   }
 
   @Override
-  public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers) throws IOException
+  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException
   {
     // Group by dataSource
-    final Map<String, Set<SegmentIdentifier>> identifiersByDataSource = new TreeMap<>();
-    for (SegmentIdentifier identifier : identifiers) {
+    final Map<String, Set<SegmentIdWithShardSpec>> identifiersByDataSource = new TreeMap<>();
+    for (SegmentIdWithShardSpec identifier : identifiers) {
       if (!identifiersByDataSource.containsKey(identifier.getDataSource())) {
         identifiersByDataSource.put(identifier.getDataSource(), new HashSet<>());
       }
@@ -59,16 +58,9 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
 
     final Set<DataSegment> retVal = new HashSet<>();
 
-    for (Map.Entry<String, Set<SegmentIdentifier>> entry : identifiersByDataSource.entrySet()) {
+    for (Map.Entry<String, Set<SegmentIdWithShardSpec>> entry : identifiersByDataSource.entrySet()) {
       final List<Interval> intervals = JodaUtils.condenseIntervals(
-          Iterables.transform(entry.getValue(), new Function<SegmentIdentifier, Interval>()
-          {
-            @Override
-            public Interval apply(SegmentIdentifier input)
-            {
-              return input.getInterval();
-            }
-          })
+          Iterables.transform(entry.getValue(), input -> input.getInterval())
       );
 
       final List<DataSegment> usedSegmentsForIntervals = taskActionClient.submit(
@@ -76,7 +68,7 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
       );
 
       for (DataSegment segment : usedSegmentsForIntervals) {
-        if (identifiers.contains(SegmentIdentifier.fromDataSegment(segment))) {
+        if (identifiers.contains(SegmentIdWithShardSpec.fromDataSegment(segment))) {
           retVal.add(segment);
         }
       }

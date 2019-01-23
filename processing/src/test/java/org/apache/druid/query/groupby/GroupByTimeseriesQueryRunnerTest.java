@@ -157,7 +157,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(Granularities.ALL)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       new DoubleMaxAggregatorFactory("maxIndex", "index"),
                                       new DoubleMinAggregatorFactory("minIndex", "index")

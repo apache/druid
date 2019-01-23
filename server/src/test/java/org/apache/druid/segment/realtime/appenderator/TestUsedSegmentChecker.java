@@ -38,7 +38,7 @@ public class TestUsedSegmentChecker implements UsedSegmentChecker
   }
 
   @Override
-  public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers)
+  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
   {
     final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     for (DataSegment dataSegment : appenderatorTester.getPushedSegments()) {
@@ -50,10 +50,10 @@ public class TestUsedSegmentChecker implements UsedSegmentChecker
     }
 
     final Set<DataSegment> retVal = new HashSet<>();
-    for (SegmentIdentifier identifier : identifiers) {
+    for (SegmentIdWithShardSpec identifier : identifiers) {
       for (TimelineObjectHolder<String, DataSegment> holder : timeline.lookup(identifier.getInterval())) {
         for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-          if (identifiers.contains(SegmentIdentifier.fromDataSegment(chunk.getObject()))) {
+          if (identifiers.contains(SegmentIdWithShardSpec.fromDataSegment(chunk.getObject()))) {
             retVal.add(chunk.getObject());
           }
         }

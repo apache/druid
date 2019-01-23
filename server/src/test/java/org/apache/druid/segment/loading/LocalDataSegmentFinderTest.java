@@ -160,15 +160,15 @@ public class LocalDataSegmentFinderTest
     DataSegment updatedSegment4_0 = null;
     DataSegment updatedSegment4_1 = null;
     for (DataSegment dataSegment : segments) {
-      if (dataSegment.getIdentifier().equals(SEGMENT_1.getIdentifier())) {
+      if (dataSegment.getId().equals(SEGMENT_1.getId())) {
         updatedSegment1 = dataSegment;
-      } else if (dataSegment.getIdentifier().equals(SEGMENT_2.getIdentifier())) {
+      } else if (dataSegment.getId().equals(SEGMENT_2.getId())) {
         updatedSegment2 = dataSegment;
-      } else if (dataSegment.getIdentifier().equals(SEGMENT_3.getIdentifier())) {
+      } else if (dataSegment.getId().equals(SEGMENT_3.getId())) {
         updatedSegment3 = dataSegment;
-      } else if (dataSegment.getIdentifier().equals(SEGMENT_4_0.getIdentifier())) {
+      } else if (dataSegment.getId().equals(SEGMENT_4_0.getId())) {
         updatedSegment4_0 = dataSegment;
-      } else if (dataSegment.getIdentifier().equals(SEGMENT_4_1.getIdentifier())) {
+      } else if (dataSegment.getId().equals(SEGMENT_4_1.getId())) {
         updatedSegment4_1 = dataSegment;
       } else {
         Assert.fail("Unexpected segment");

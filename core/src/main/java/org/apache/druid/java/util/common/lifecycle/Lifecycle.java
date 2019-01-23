@@ -19,7 +19,9 @@
 
 package org.apache.druid.java.util.common.lifecycle;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 
@@ -40,10 +42,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * A manager of object Lifecycles.
  * <p/>
  * This object has methods for registering objects that should be started and stopped.  The Lifecycle allows for
- * two stages: Stage.NORMAL and Stage.LAST.
+ * three stages: Stage.INIT, Stage.NORMAL, and Stage.LAST.
  * <p/>
- * Things added at Stage.NORMAL will be started first (in the order that they are added to the Lifecycle instance) and
- * then things added at Stage.LAST will be started.
+ * Things added at Stage.INIT will be started first (in the order that they are added to the Lifecycle instance) and
+ * then things added at Stage.NORMAL, and finally, Stage.LAST will be started.
  * <p/>
  * The close operation goes in reverse order, starting with the last thing added at Stage.LAST and working backwards.
  * <p/>
@@ -57,6 +59,7 @@ public class Lifecycle
 
   public enum Stage
   {
+    INIT,
     NORMAL,
     LAST
   }
@@ -77,9 +80,17 @@ public class Lifecycle
   private final AtomicReference<State> state = new AtomicReference<>(State.NOT_STARTED);
   private Stage currStage = null;
   private final AtomicBoolean shutdownHookRegistered = new AtomicBoolean(false);
+  private final String name;
 
   public Lifecycle()
   {
+    this("anonymous");
+  }
+
+  public Lifecycle(String name)
+  {
+    Preconditions.checkArgument(StringUtils.isNotEmpty(name), "Lifecycle name must not be null or empty");
+    this.name = name;
     handlers = new TreeMap<>();
     for (Stage stage : Stage.values()) {
       handlers.put(stage, new CopyOnWriteArrayList<>());
@@ -307,10 +318,12 @@ public class Lifecycle
       }
       for (Map.Entry<Stage, ? extends List<Handler>> e : handlers.entrySet()) {
         currStage = e.getKey();
+        log.info("Starting lifecycle [%s] stage [%s]", name, currStage.name());
         for (Handler handler : e.getValue()) {
           handler.start();
         }
       }
+      log.info("Successfully started lifecycle [%s]", name);
     }
     finally {
       startStopLock.unlock();
@@ -323,19 +336,21 @@ public class Lifecycle
     // a simple variable. State change before startStopLock.lock() is needed for the new state visibility during the
     // check in addMaybeStartHandler() marked by (*).
     if (!state.compareAndSet(State.RUNNING, State.STOP)) {
-      log.info("Already stopped and stop was called. Silently skipping");
+      log.info("Lifecycle [%s] already stopped and stop was called. Silently skipping", name);
       return;
     }
     startStopLock.lock();
     try {
       RuntimeException thrown = null;
-      for (List<Handler> stageHandlers : handlers.descendingMap().values()) {
-        for (Handler handler : Lists.reverse(stageHandlers)) {
+
+      for (Stage s : handlers.navigableKeySet().descendingSet()) {
+        log.info("Stopping lifecycle [%s] stage [%s]", name, s.name());
+        for (Handler handler : Lists.reverse(handlers.get(s))) {
           try {
             handler.stop();
           }
           catch (RuntimeException e) {
-            log.warn(e, "exception thrown when stopping %s", handler);
+            log.warn(e, "Lifecycle [%s] encountered exception while stopping %s", name, handler);
             if (thrown == null) {
               thrown = e;
             }
@@ -362,7 +377,7 @@ public class Lifecycle
                 @Override
                 public void run()
                 {
-                  log.info("Running shutdown hook");
+                  log.info("Lifecycle [%s] running shutdown hook", name);
                   stop();
                 }
               }

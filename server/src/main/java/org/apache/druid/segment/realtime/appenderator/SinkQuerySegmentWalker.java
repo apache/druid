@@ -55,6 +55,7 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -198,12 +199,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                             }
 
                             final Sink theSink = chunk.getObject();
-                            final String sinkSegmentIdentifier = theSink.getSegment().getIdentifier();
+                            final SegmentId sinkSegmentId = theSink.getSegment().getId();
 
                             return new SpecificSegmentQueryRunner<>(
                                 withPerSinkMetrics(
                                     new BySegmentQueryRunner<>(
-                                        sinkSegmentIdentifier,
+                                        sinkSegmentId,
                                         descriptor.getInterval().getStart(),
                                         factory.mergeRunners(
                                             Execs.directExecutor(),
@@ -262,7 +263,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                                         )
                                     ),
                                     toolChest,
-                                    sinkSegmentIdentifier,
+                                    sinkSegmentId,
                                     cpuTimeAccumulator
                                 ),
                                 new SpecificSegmentSpec(descriptor)
@@ -286,16 +287,15 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private <T> QueryRunner<T> withPerSinkMetrics(
       final QueryRunner<T> sinkRunner,
       final QueryToolChest<T, ? extends Query<T>> queryToolChest,
-      final String sinkSegmentIdentifier,
+      final SegmentId sinkSegmentId,
       final AtomicLong cpuTimeAccumulator
   )
   {
-
     // Note: reportSegmentAndCacheTime and reportSegmentTime are effectively the same here. They don't split apart
     // cache vs. non-cache due to the fact that Sinks may be partially cached and partially uncached. Making this
     // better would need to involve another accumulator like the cpuTimeAccumulator that we could share with the
     // sinkRunner.
-
+    String sinkSegmentIdString = sinkSegmentId.toString();
     return CPUTimeMetricQueryRunner.safeBuild(
         new MetricsEmittingQueryRunner<>(
             emitter,
@@ -305,10 +305,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                 queryToolChest,
                 sinkRunner,
                 QueryMetrics::reportSegmentTime,
-                queryMetrics -> queryMetrics.segment(sinkSegmentIdentifier)
+                queryMetrics -> queryMetrics.segment(sinkSegmentIdString)
             ),
             QueryMetrics::reportSegmentAndCacheTime,
-            queryMetrics -> queryMetrics.segment(sinkSegmentIdentifier)
+            queryMetrics -> queryMetrics.segment(sinkSegmentIdString)
         ).withWaitMeasuredFromNow(),
         queryToolChest,
         emitter,
@@ -319,6 +319,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
   public static String makeHydrantCacheIdentifier(FireHydrant input)
   {
-    return input.getSegmentIdentifier() + "_" + input.getCount();
+    return input.getSegmentId() + "_" + input.getCount();
   }
 }

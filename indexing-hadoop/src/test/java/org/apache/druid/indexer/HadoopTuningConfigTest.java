@@ -24,7 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -69,7 +68,7 @@ public class HadoopTuningConfigTest
     Assert.assertEquals("/tmp/workingpath", actual.getWorkingPath());
     Assert.assertEquals("version", actual.getVersion());
     Assert.assertNotNull(actual.getPartitionsSpec());
-    Assert.assertEquals(ImmutableMap.<DateTime, List<HadoopyShardSpec>>of(), actual.getShardSpecs());
+    Assert.assertEquals(ImmutableMap.<Long, List<HadoopyShardSpec>>of(), actual.getShardSpecs());
     Assert.assertEquals(new IndexSpec(), actual.getIndexSpec());
     Assert.assertEquals(100, actual.getRowFlushBoundary());
     Assert.assertEquals(true, actual.isLeaveIntermediate());

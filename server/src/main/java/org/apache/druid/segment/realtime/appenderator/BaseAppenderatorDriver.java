@@ -192,13 +192,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
       this.lastSegmentId = lastSegmentId;
     }
 
-    void add(SegmentIdentifier identifier)
+    void add(SegmentIdWithShardSpec identifier)
     {
       intervalToSegmentStates.computeIfAbsent(
           identifier.getInterval().getStartMillis(),
           k -> new SegmentsOfInterval(identifier.getInterval())
       ).setAppendingSegment(SegmentWithState.newSegment(identifier));
-      lastSegmentId = identifier.getIdentifierAsString();
+      lastSegmentId = identifier.toString();
     }
 
     Entry<Long, SegmentsOfInterval> floor(long timestamp)
@@ -274,7 +274,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   /**
    * Find a segment in the {@link SegmentState#APPENDING} state for the given timestamp and sequenceName.
    */
-  private SegmentIdentifier getAppendableSegment(final DateTime timestamp, final String sequenceName)
+  private SegmentIdWithShardSpec getAppendableSegment(final DateTime timestamp, final String sequenceName)
   {
     synchronized (segments) {
       final SegmentsForSequence segmentsForSequence = segments.get(sequenceName);
@@ -314,7 +314,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    *
    * @throws IOException if an exception occurs while allocating a segment
    */
-  private SegmentIdentifier getSegment(
+  private SegmentIdWithShardSpec getSegment(
       final InputRow row,
       final String sequenceName,
       final boolean skipSegmentLineageCheck
@@ -322,13 +322,13 @@ public abstract class BaseAppenderatorDriver implements Closeable
   {
     synchronized (segments) {
       final DateTime timestamp = row.getTimestamp();
-      final SegmentIdentifier existing = getAppendableSegment(timestamp, sequenceName);
+      final SegmentIdWithShardSpec existing = getAppendableSegment(timestamp, sequenceName);
       if (existing != null) {
         return existing;
       } else {
         // Allocate new segment.
         final SegmentsForSequence segmentsForSequence = segments.get(sequenceName);
-        final SegmentIdentifier newSegment = segmentAllocator.allocate(
+        final SegmentIdWithShardSpec newSegment = segmentAllocator.allocate(
             row,
             sequenceName,
             segmentsForSequence == null ? null : segmentsForSequence.lastSegmentId,
@@ -339,7 +339,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
         );
 
         if (newSegment != null) {
-          for (SegmentIdentifier identifier : appenderator.getSegments()) {
+          for (SegmentIdWithShardSpec identifier : appenderator.getSegments()) {
             if (identifier.equals(newSegment)) {
               throw new ISE(
                   "WTF?! Allocated segment[%s] which conflicts with existing segment[%s].",
@@ -361,7 +361,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
     }
   }
 
-  private void addSegment(String sequenceName, SegmentIdentifier identifier)
+  private void addSegment(String sequenceName, SegmentIdWithShardSpec identifier)
   {
     synchronized (segments) {
       segments.computeIfAbsent(sequenceName, k -> new SegmentsForSequence())
@@ -396,7 +396,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
     Preconditions.checkNotNull(row, "row");
     Preconditions.checkNotNull(sequenceName, "sequenceName");
 
-    final SegmentIdentifier identifier = getSegment(row, sequenceName, skipSegmentLineageCheck);
+    final SegmentIdWithShardSpec identifier = getSegment(row, sequenceName, skipSegmentLineageCheck);
 
     if (identifier != null) {
       try {
@@ -461,7 +461,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    */
   ListenableFuture<SegmentsAndMetadata> pushInBackground(
       @Nullable final WrappedCommitter wrappedCommitter,
-      final Collection<SegmentIdentifier> segmentIdentifiers,
+      final Collection<SegmentIdWithShardSpec> segmentIdentifiers,
       final boolean useUniquePath
   )
   {
@@ -471,9 +471,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
         appenderator.push(segmentIdentifiers, wrappedCommitter, useUniquePath),
         (Function<SegmentsAndMetadata, SegmentsAndMetadata>) segmentsAndMetadata -> {
           // Sanity check
-          final Set<SegmentIdentifier> pushedSegments = segmentsAndMetadata.getSegments().stream()
-                                                                           .map(SegmentIdentifier::fromDataSegment)
-                                                                           .collect(Collectors.toSet());
+          final Set<SegmentIdWithShardSpec> pushedSegments = segmentsAndMetadata.getSegments().stream()
+                                                                                .map(
+                                                                                    SegmentIdWithShardSpec::fromDataSegment)
+                                                                                .collect(Collectors.toSet());
           if (!pushedSegments.equals(Sets.newHashSet(segmentIdentifiers))) {
             log.warn(
                 "Removing segments from deep storage because sanity check failed: %s", segmentsAndMetadata.getSegments()
@@ -509,7 +510,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
         segmentsAndMetadata
             .getSegments()
             .stream()
-            .map(segment -> appenderator.drop(SegmentIdentifier.fromDataSegment(segment)))
+            .map(segment -> appenderator.drop(SegmentIdWithShardSpec.fromDataSegment(segment)))
             .collect(Collectors.toList())
     );
 
@@ -565,10 +566,10 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
                 segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
 
-                final Set<SegmentIdentifier> segmentsIdentifiers = segmentsAndMetadata
+                final Set<SegmentIdWithShardSpec> segmentsIdentifiers = segmentsAndMetadata
                     .getSegments()
                     .stream()
-                    .map(SegmentIdentifier::fromDataSegment)
+                    .map(SegmentIdWithShardSpec::fromDataSegment)
                     .collect(Collectors.toSet());
 
                 if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)

@@ -36,9 +36,8 @@ import java.util.stream.Collectors;
 
 /**
  */
-public class Rows
+public final class Rows
 {
-
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
    * @param inputRow  input row
@@ -124,4 +123,6 @@ public class Rows
     }
     return metricValueString;
   }
+
+  private Rows() {}
 }

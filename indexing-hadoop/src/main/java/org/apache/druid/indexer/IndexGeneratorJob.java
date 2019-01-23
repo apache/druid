@@ -120,7 +120,7 @@ public class IndexGeneratorJob implements Jobby
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
         final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
         publishedSegmentsBuilder.add(segment);
-        log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
+        log.info("Adding segment %s to the list of published segments", segment.getId());
       }
     }
     catch (FileNotFoundException e) {
