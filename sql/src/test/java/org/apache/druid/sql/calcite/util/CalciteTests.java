@@ -241,12 +241,7 @@ public class CalciteTests
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
-              ImmutableList.<DimensionSchema>builder()
-                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
-                  .add(new DoubleDimensionSchema("d1"))
-                  .add(new FloatDimensionSchema("f1"))
-                  .add(new LongDimensionSchema("l1"))
-                  .build(),
+              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")),
               null,
               null
           )
