@@ -116,3 +116,7 @@ For example
 druid.hadoop.security.kerberos.principal=hdfs-test@EXAMPLE.IO
 druid.hadoop.security.kerberos.keytab=/etc/security/keytabs/hdfs.headless.keytab
 ```
+
+### Restart Druid Services
+
+With the above changes, restart Druid. This would ensure that Druid works with Kerberized Hadoop
