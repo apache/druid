@@ -19,6 +19,25 @@
 # under the License.
 #
 
+# NOTE: this is a 'run' script for the stock tarball
+# It takes 1 required argument (the name of the service,
+# e.g. 'broker', 'historical' etc). Any additional arguments
+# are passed to that service.
+#
+# It accepts 'JAVA_OPTS' as an environment variable
+#
+# Additional env vars:
+# - DRUID_LOG4J -- set the entire log4j.xml verbatim
+# - DRUID_LOG_LEVEL -- override the default log level in default log4j
+# - DRUID_XMX -- set Java Xmx
+# - DRUID_XMS -- set Java Xms
+# - DRUID_MAXNEWSIZE -- set Java max new size
+# - DRUID_NEWSIZE -- set Java new size
+# - DRUID_MAXDIRECTMEMORYSIZE -- set Java max direct memory size
+#
+# - DRUID_CONFIG -- full path to a file for druid 'common' properties
+# - DRUID_CONFIG_${service} -- full path to a file for druid 'service' properties
+
 set -e
 SERVICE="$1"
 
@@ -98,7 +117,7 @@ if [ -n "$DRUID_MAXNEWSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxNewSize -XX:Max
 if [ -n "$DRUID_NEWSIZE" ]; then setJavaKey ${SERVICE} -XX:NewSize -XX:MaxNewSize=${DRUID_NEWSIZE}; fi
 if [ -n "$DRUID_MAXDIRECTMEMORYSIZE" ]; then setJavaKey ${SERVICE} -XX:MaxDirectMemorySize -XX:MaxDirectMemorySize=${DRUID_MAXDIRECTMEMORYSIZE}; fi
 
-JAVA_OPTS="$JAVA_IPTS $(cat /tmp/conf/druid/${SERVICE}/jvm.config | xargs)"
+JAVA_OPTS="$JAVA_OPTS $(cat /tmp/conf/druid/${SERVICE}/jvm.config | xargs)"
 
 if [ -n "$DRUID_LOG_LEVEL" ]
 then
