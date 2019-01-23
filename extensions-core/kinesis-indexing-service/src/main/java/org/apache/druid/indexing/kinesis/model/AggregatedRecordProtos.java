@@ -84,7 +84,7 @@ public final class AggregatedRecordProtos {
   /**
    * Protobuf type {@code kinesisindexingservice.AggregatedRecord}
    */
-  public  static final class AggregatedRecord extends
+  public static final class AggregatedRecord extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:kinesisindexingservice.AggregatedRecord)
       AggregatedRecordOrBuilder {

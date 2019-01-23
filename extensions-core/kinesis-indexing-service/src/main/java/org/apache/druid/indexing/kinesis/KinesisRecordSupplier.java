@@ -41,7 +41,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Queues;
-import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
@@ -106,9 +105,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     private volatile String shardIterator;
     private volatile boolean started;
     private volatile boolean stopRequested;
-
-    private final int[] KPL_AGGREGATE_MAGIC_NUMBERS = {0xF3, 0x89, 0x9A, 0xC2};
-    private final int KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES = 16;
 
     PartitionResource(
         StreamPartition<String> streamPartition
@@ -301,27 +297,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       };
     }
 
-    @VisibleForTesting
-    List<AggregatedRecordProtos.Record> deaggregateKinesisRecord(Record kinesisRecord) throws InvalidProtocolBufferException {
-      ByteBuffer kinesisRecordData = kinesisRecord.getData();
-      int recordSize = kinesisRecordData.remaining();
-      byte[] magicNumbers = new byte[KPL_AGGREGATE_MAGIC_NUMBERS.length];
-      byte[] checksum = new byte[KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES];
-
-      kinesisRecordData.get(magicNumbers, 0, magicNumbers.length);
-      kinesisRecordData.get(checksum, recordSize - checksum.length, checksum.length);
-      // Validate magic numbers (bytes 0 -> 3)
-      Preconditions.checkArgument(Arrays.equals(magicNumbers, checksum));
-      // Validate MD5 checksum (bytes N -> N + 15)
-      byte[] messageHash = Hashing.md5().hashBytes(checksum).asBytes();
-      Preconditions.checkArgument(Arrays.equals(messageHash, checksum));
-      // Get protobuf message (bytes 4 -> N)
-      byte[] protobufMessage = new byte[recordSize - KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES - KPL_AGGREGATE_MAGIC_NUMBERS.length];
-      kinesisRecordData.get(protobufMessage, KPL_AGGREGATE_MAGIC_NUMBERS.length, protobufMessage.length);
-      AggregatedRecordProtos.AggregatedRecord aggregatedRecord = AggregatedRecordProtos.AggregatedRecord.parseFrom(protobufMessage);
-      return aggregatedRecord.getRecordsList();
-    }
-
     private void rescheduleRunnable(long delayMillis)
     {
       if (started && !stopRequested) {
@@ -362,6 +337,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   private volatile boolean checkPartitionsStarted = false;
   private volatile boolean closed = false;
+
+  @VisibleForTesting
+  final byte[] KPL_AGGREGATE_MAGIC_NUMBERS = {(byte) 0xF3, (byte) 0x89, (byte) 0x9A, (byte) 0xC2};
+  @VisibleForTesting
+  final int KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES = 16;
+
 
   public KinesisRecordSupplier(
       AmazonKinesis amazonKinesis,
@@ -735,6 +716,28 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     );
     return null;
 
+  }
+
+  @VisibleForTesting
+  List<AggregatedRecordProtos.Record> deaggregateKinesisRecord(Record kinesisRecord) throws InvalidProtocolBufferException {
+    ByteBuffer kinesisRecordData = kinesisRecord.getData();
+    kinesisRecordData.position(0);
+    int recordSize = kinesisRecordData.remaining();
+    byte[] magicNumbers = new byte[KPL_AGGREGATE_MAGIC_NUMBERS.length];
+    byte[] protobufMessage = new byte[recordSize - KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES - KPL_AGGREGATE_MAGIC_NUMBERS.length];
+    byte[] checksum = new byte[KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES];
+
+    kinesisRecordData.get(magicNumbers, 0, magicNumbers.length);
+    kinesisRecordData.get(protobufMessage, 0, protobufMessage.length);
+    kinesisRecordData.get(checksum, 0, checksum.length);
+
+    // Validate magic numbers (bytes 0 -> 3)
+    Preconditions.checkArgument(Arrays.equals(magicNumbers, KPL_AGGREGATE_MAGIC_NUMBERS));
+    // Validate MD5 checksum (bytes N -> N + 15)
+    byte[] messageHash = Hashing.md5().hashBytes(protobufMessage).asBytes();
+    Preconditions.checkArgument(Arrays.equals(messageHash, checksum));
+    AggregatedRecordProtos.AggregatedRecord aggregatedRecord = AggregatedRecordProtos.AggregatedRecord.parseFrom(protobufMessage);
+    return aggregatedRecord.getRecordsList();
   }
 
   private void checkIfClosed()
