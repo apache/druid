@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -54,7 +55,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -104,8 +104,8 @@ public class TaskQueue
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
 
-  private final ConcurrentMap<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
   private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
   private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 
@@ -521,11 +521,9 @@ public class TaskQueue
                 );
 
                 if (status.isSuccess()) {
-                  totalSuccessfulTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong())
-                                          .incrementAndGet();
+                  Counters.incrementAndGetLong(totalSuccessfulTaskCount, task.getDataSource());
                 } else {
-                  totalFailedTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong())
-                                      .incrementAndGet();
+                  Counters.incrementAndGetLong(totalFailedTaskCount, task.getDataSource());
                 }
               }
             }

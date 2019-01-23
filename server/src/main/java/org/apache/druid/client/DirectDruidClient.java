@@ -156,6 +156,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     boolean isBySegment = QueryContexts.isBySegment(query);
 
+    // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
     Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
     if (types == null) {
       types = typesMap.computeIfAbsent(query.getClass(), queryClass -> {

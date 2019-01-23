@@ -243,6 +243,31 @@
         <constraint name="x" within="" contains="" />
         <constraint name="y" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" exprTypeWithinHierarchy="true" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="A ConcurrentHashMap on which compute() is called should be assinged into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.compute($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="z" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="A ConcurrentHashMap on which computeIfAbsent() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.computeIfAbsent($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="z" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="A ConcurrentHashMap on which computeIfPresent() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.computeIfPresent($y$, $z$)" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="y" within="" contains="" />
+        <constraint name="z" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="A ConcurrentHashMap on which merge() is called should be assigned into variables of ConcurrentHashMap type, not ConcurrentMap" text="$x$.merge($a$, $b$, $c$)" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="x" nameOfExprType="java\.util\.concurrent\.ConcurrentMap" expressionTypes="java.util.concurrent.ConcurrentMap" within="" contains="" />
+        <constraint name="a" within="" contains="" />
+        <constraint name="b" within="" contains="" />
+        <constraint name="c" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">

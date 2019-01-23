@@ -50,7 +50,6 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskReport;
@@ -1524,8 +1523,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         taskStorage,
         mdc,
         emitter,
-        EasyMock.createMock(SupervisorManager.class),
-        new Counters()
+        EasyMock.createMock(SupervisorManager.class)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
