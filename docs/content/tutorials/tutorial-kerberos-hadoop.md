@@ -116,8 +116,3 @@ For example
 druid.hadoop.security.kerberos.principal=hdfs-test@EXAMPLE.IO
 druid.hadoop.security.kerberos.keytab=/etc/security/keytabs/hdfs.headless.keytab
 ```
-
-## SPNEGO Setup
-
-To ensure that you are able to read logs stored in the HDFS from a front end,
-configure an appropriate SPNEGO keytab in the machine which is used to access data via browser.
