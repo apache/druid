@@ -22,13 +22,13 @@ FROM maven:3-jdk-8 as builder
 COPY . /src
 WORKDIR /src
 RUN mvn install -ff -DskipTests -Dforbiddenapis.skip=true -Pdist -Pbundle-contrib-exts
+
 RUN \
- VER=$(mvn -q -Dexec.executable="echo" -Dexec.args='${project.version}' --non-recursive exec:exec) \
+ VER=$(mvn -B org.apache.maven.plugins:maven-help-plugin:3.1.1:evaluate -Dexpression=project.version -q -DforceStdout=true -f pom.xml 2>/dev/null) \
  && tar -zxf ./distribution/target/apache-druid-${VER}-bin.tar.gz -C /opt \
  && ln -s /opt/apache-druid-${VER} /opt/druid
 
-RUN cd /opt/druid/extensions/mysql-metadata-storage \
- && wget -O mysql-connector-java-5.1.38.jar http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar \
+RUN wget -O /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar \
  && sha256sum --ignore-missing -c /src/distribution/docker/sha256sums.txt 
 
 RUN addgroup --gid 1000 druid \

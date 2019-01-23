@@ -110,6 +110,5 @@ then
     echo "$DRUID_LOG4J" > /tmp/conf/druid/_common/log4j2.xml
 fi
 
-cd /opt/druid
 mkdir -p var/tmp var/druid/segments var/druid/indexing-logs var/druid/task var/druid/hadoop-tmp var/druid/segment-cache
 exec java ${JAVA_OPTS} -cp /tmp/conf/druid/_common:/tmp/conf/druid/${SERVICE}:lib/*: org.apache.druid.cli.Main server $@

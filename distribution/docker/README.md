@@ -19,4 +19,4 @@
 
 ## Build
 
-From the root of the repo, run `docker build -t druid:tag -f distribution/docker/Dockerfile .`
+From the root of the repo, run `DOCKER_BUILDKIT=1 docker build -t druid:tag -f distribution/docker/Dockerfile .`

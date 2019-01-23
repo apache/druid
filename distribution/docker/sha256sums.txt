@@ -16,4 +16,4 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-b95bf9fe25cb5428f378a62fc842e177ca004b4ae1f9054968b2a396dcc1ec22  mysql-connector-java-5.1.38.jar
+b95bf9fe25cb5428f378a62fc842e177ca004b4ae1f9054968b2a396dcc1ec22  /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar
