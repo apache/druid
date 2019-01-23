@@ -41,6 +41,7 @@ import org.apache.druid.query.filter.BloomKFilterHolder;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -111,6 +112,36 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testBloomFilterVirtualColumn() throws Exception
+  {
+    BloomKFilter filter = new BloomKFilter(1500);
+    filter.addString("def-foo");
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    String base64 = Base64.encodeBase64String(bytes);
+
+    testQuery(
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim1, '-foo'), '%s')", base64),
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("v0", "concat(\"dim1\",'-foo')", ValueType.STRING))
+                  .filters(
+                      new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
 
   @Test
   public void testBloomFilters() throws Exception

@@ -1013,7 +1013,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
-                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "21", null)))
+                        .setHavingSpec(HAVING(SELECTOR("a0", "21", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -1569,7 +1569,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(AGGS(new DoubleSumAggregatorFactory("a0", "m1")))
-                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "21", null)))
+                        .setHavingSpec(HAVING(SELECTOR("a0", "21", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -1602,7 +1602,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "case_searched("
                                 + "(CAST(timestamp_extract(\"__time\",'DAY','UTC'), 'DOUBLE') == \"m1\"),"
                                 + "'match-m1',"
@@ -1614,7 +1614,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ValueType.STRING
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0")))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0")))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -1643,12 +1643,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "case_searched(((\"m1\" > 1) && (\"m1\" < 5) && (\"cnt\" == 1)),'x',null)",
                                 ValueType.STRING
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0")))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0")))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -1759,12 +1759,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "case_searched(notnull(\"dim2\"),\"dim2\",\"dim1\")",
                                 ValueType.STRING
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.STRING)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -2002,14 +2002,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      EXPRESSION_VIRTUAL_COLUMN(
+                          "v0",
+                          "case_searched((\"dim2\" == 'abc'),'yes',(\"dim2\" == 'def'),'yes'," + DruidExpression.nullLiteral() + ")",
+                          ValueType.STRING
+                      )
+                  )
                   .aggregators(AGGS(
                       new FilteredAggregatorFactory(
                           new CountAggregatorFactory("a0"),
-                          EXPRESSION_FILTER(
-                              "notnull(case_searched((\"dim2\" == 'abc'),'yes',(\"dim2\" == 'def'),'yes',"
-                              + DruidExpression.nullLiteral()
-                              + "))"
-                          )
+                          NOT(SELECTOR("v0", NullHandling.defaultStringValue(), null))
                       )
                   ))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -2279,11 +2282,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN(
+                                "v0",
+                                "floor(CAST(\"dim1\", 'DOUBLE'))",
+                                ValueType.DOUBLE)
+                        )
                         .setDimFilter(
                             OR(
                                 SELECTOR("dim1", "10", null),
                                 AND(
-                                    EXPRESSION_FILTER("(floor(CAST(\"dim1\", 'DOUBLE')) == 10.00)"),
+                                    SELECTOR("v0", "10.00", null),
                                     BOUND("dim1", "9", "10.5", true, false, null, StringComparators.NUMERIC)
                                 )
                             )
@@ -2483,15 +2492,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "SUM(case dim1 when 'abc' then cnt end), "
         + "SUM(case dim1 when 'abc' then null else cnt end), "
         + "SUM(case substring(dim1, 1, 1) when 'a' then cnt end), "
-        + "COUNT(dim2) filter(WHERE dim1 <> '1'), "
+        + "COUNT(dim2) FILTER(WHERE dim1 <> '1'), "
         + "COUNT(CASE WHEN dim1 <> '1' THEN 'dummy' END), "
         + "SUM(CASE WHEN dim1 <> '1' THEN 1 ELSE 0 END), "
-        + "SUM(cnt) filter(WHERE dim2 = 'a'), "
-        + "SUM(case when dim1 <> '1' then cnt end) filter(WHERE dim2 = 'a'), "
+        + "SUM(cnt) FILTER(WHERE dim2 = 'a'), "
+        + "SUM(case when dim1 <> '1' then cnt end) FILTER(WHERE dim2 = 'a'), "
         + "SUM(CASE WHEN dim1 <> '1' THEN cnt ELSE 0 END), "
         + "MAX(CASE WHEN dim1 <> '1' THEN cnt END), "
         + "COUNT(DISTINCT CASE WHEN dim1 <> '1' THEN m1 END), "
-        + "SUM(cnt) filter(WHERE dim2 = 'a' AND dim1 = 'b') "
+        + "SUM(cnt) FILTER(WHERE dim2 = 'a' AND dim1 = 'b') "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -2610,8 +2619,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "COUNT(*) filter(WHERE dim1 NOT IN ('1')),\n"
-        + "COUNT(dim2) filter(WHERE dim1 NOT IN ('1'))\n"
+        + "COUNT(*) FILTER(WHERE dim1 NOT IN ('1')),\n"
+        + "COUNT(dim2) FILTER(WHERE dim1 NOT IN ('1'))\n"
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -2701,16 +2710,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            EXPRESSION_VIRTUAL_COLUMN("d0:v", "(floor((\"m1\" / 2)) * 2)", ValueType.FLOAT)
+                            EXPRESSION_VIRTUAL_COLUMN("v0", "(floor((\"m1\" / 2)) * 2)", ValueType.FLOAT)
                         )
-                        .setDimFilter(EXPRESSION_FILTER("((floor((\"m1\" / 2)) * 2) > -1)"))
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.FLOAT)))
+                        .setDimFilter(BOUND("v0", "-1", null, true, false, null, StringComparators.NUMERIC))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.FLOAT)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.DESCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -2747,18 +2756,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            EXPRESSION_VIRTUAL_COLUMN("d0:v", "((CAST(\"m1\", 'LONG') / 2) * 2)", ValueType.LONG)
+                            EXPRESSION_VIRTUAL_COLUMN("v0", "((CAST(\"m1\", 'LONG') / 2) * 2)", ValueType.LONG)
                         )
                         .setDimFilter(
-                            EXPRESSION_FILTER("(((CAST(\"m1\", 'LONG') / 2) * 2) > -1)")
+                            BOUND("v0", "-1", null, true, false, null, StringComparators.NUMERIC)
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.DESCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -2796,21 +2805,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "(floor((CAST(\"dim1\", 'DOUBLE') / 2)) * 2)",
                                 ValueType.FLOAT
                             )
                         )
                         .setDimFilter(
-                            EXPRESSION_FILTER("((floor((CAST(\"dim1\", 'DOUBLE') / 2)) * 2) > -1)")
+                            BOUND("v0", "-1", null, true, false, null, StringComparators.NUMERIC)
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.FLOAT)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.FLOAT)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.DESCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -3540,7 +3549,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setInterval(QSS(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
                 .setVirtualColumns(
-                    EXPRESSION_VIRTUAL_COLUMN("d0:v", "timestamp_floor(\"cnt\",'P1Y',null,'UTC')", ValueType.LONG)
+                    EXPRESSION_VIRTUAL_COLUMN("v0", "timestamp_floor(\"cnt\",'P1Y',null,'UTC')", ValueType.LONG)
                 )
                 .setDimFilter(
                     BOUND(
@@ -3553,7 +3562,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         StringComparators.NUMERIC
                     )
                 )
-                .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                 .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                 .setContext(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -3610,11 +3619,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            EXPRESSION_VIRTUAL_COLUMN("v0", "strlen(\"dim1\")", ValueType.LONG),
+                            EXPRESSION_VIRTUAL_COLUMN("v1", "CAST(strlen(\"dim1\"), 'STRING')", ValueType.STRING)
+                        )
                         .setDimensions(DIMS(new DefaultDimensionSpec("dim1", "d0")))
                         .setDimFilter(
                             OR(
-                                EXPRESSION_FILTER("(strlen(\"dim1\") == 3)"),
-                                EXPRESSION_FILTER("(CAST(strlen(\"dim1\"), 'STRING') == 3)")
+                                SELECTOR("v0", "3", null),
+                                SELECTOR("v1", "3", null)
                             )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -3993,7 +4006,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
-                      EXPRESSION_VIRTUAL_COLUMN("a4:v", "concat(substring(\"dim2\", 0, 1),'x')", ValueType.STRING)
+                      EXPRESSION_VIRTUAL_COLUMN("v0", "concat(substring(\"dim2\", 0, 1),'x')", ValueType.STRING)
                   )
                   .aggregators(
                       AGGS(
@@ -4032,7 +4045,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           new CardinalityAggregatorFactory(
                               "a4",
                               null,
-                              DIMS(new DefaultDimensionSpec("a4:v", "a4:v", ValueType.STRING)),
+                              DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)),
                               false,
                               true
                           ),
@@ -4091,14 +4104,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "_d0:v",
+                                "v0",
                                 "timestamp_floor(\"a0\",'PT1H',null,'UTC')",
                                 ValueType.LONG
                             )
                         )
                         .setDimensions(DIMS(
-                            new DefaultDimensionSpec("_d0:v", "_d0", ValueType.LONG),
-                            new DefaultDimensionSpec("d1", "_d1", ValueType.STRING)
+                            new DefaultDimensionSpec("v0", "v0", ValueType.LONG),
+                            new DefaultDimensionSpec("d1", "_d0", ValueType.STRING)
                         ))
                         .setAggregatorSpecs(AGGS(
                             new CountAggregatorFactory("_a0")
@@ -4261,12 +4274,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setGranularity(Granularities.ALL)
                                             .setVirtualColumns(
                                                 EXPRESSION_VIRTUAL_COLUMN(
-                                                    "d0:v",
+                                                    "v0",
                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
                                                     ValueType.LONG
                                                 )
                                             )
-                                            .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                                             .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                                             .setContext(QUERY_CONTEXT_DEFAULT)
                                             .build()
@@ -4279,7 +4292,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new LongMinAggregatorFactory("_a1", "a0"),
                             new LongSumAggregatorFactory("_a2:sum", "a0"),
                             new CountAggregatorFactory("_a2:count"),
-                            new LongMaxAggregatorFactory("_a3", "d0"),
+                            new LongMaxAggregatorFactory("_a3", "v0"),
                             new CountAggregatorFactory("_a4")
                         ))
                         .setPostAggregatorSpecs(
@@ -4320,12 +4333,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setGranularity(Granularities.ALL)
                                             .setVirtualColumns(
                                                 EXPRESSION_VIRTUAL_COLUMN(
-                                                    "d0:v",
+                                                    "v0",
                                                     "timestamp_floor(\"__time\",'P1D',null,'UTC')",
                                                     ValueType.LONG
                                                 )
                                             )
-                                            .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                                            .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                                             .setAggregatorSpecs(
                                                 AGGS(
                                                     new CardinalityAggregatorFactory(
@@ -5018,14 +5031,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(QSS(Filtration.eternity()))
                   .filters(NOT(SELECTOR("dim1", "", null)))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("a0:v", "trim(\"dim1\",' ')", ValueType.STRING))
-                  .filters(EXPRESSION_FILTER("(trim(\"dim1\",' ') != '')"))
+                  .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("v0", "trim(\"dim1\",' ')", ValueType.STRING))
+                  .filters(NOT(SELECTOR("v0", NullHandling.defaultStringValue(), null)))
                   .aggregators(
                       AGGS(
                           new CardinalityAggregatorFactory(
                               "a0",
                               null,
-                              DIMS(new DefaultDimensionSpec("a0:v", "a0:v", ValueType.STRING)),
+                              DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)),
                               false,
                               true
                           )
@@ -5055,11 +5068,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(EXPRESSION_VIRTUAL_COLUMN(
-                            "d0:v",
+                            "v0",
                             "(((timestamp_extract(\"__time\",'MONTH','UTC') - 1) / 3) + 1)",
                             ValueType.LONG
                         ))
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -5196,7 +5209,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 4
                             )
                         )
-                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "1", null)))
+                        .setHavingSpec(HAVING(SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
@@ -5428,11 +5441,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      EXPRESSION_VIRTUAL_COLUMN("v0", "timestamp_extract(\"__time\",'YEAR','UTC')", ValueType.LONG),
+                      EXPRESSION_VIRTUAL_COLUMN("v1", "timestamp_extract(\"__time\",'MONTH','UTC')", ValueType.LONG)
+                  )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .filters(
                       AND(
-                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'YEAR','UTC') == 2000)"),
-                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'MONTH','UTC') == 1)")
+                          SELECTOR("v0", "2000", null),
+                          SELECTOR("v1", "1", null)
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -5456,15 +5473,23 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      EXPRESSION_VIRTUAL_COLUMN(
+                          "v0",
+                          "timestamp_extract(\"__time\",'YEAR','UTC')",
+                          ValueType.LONG
+                      ),
+                      EXPRESSION_VIRTUAL_COLUMN(
+                          "v1",
+                          "timestamp_extract(\"__time\",'DAY','UTC')",
+                          ValueType.LONG
+                      )
+                  )
                   .aggregators(AGGS(new CountAggregatorFactory("a0")))
                   .filters(
                       AND(
-                          EXPRESSION_FILTER("(timestamp_extract(\"__time\",'YEAR','UTC') == 2000)"),
-                          OR(
-                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 2)"),
-                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 3)"),
-                              EXPRESSION_FILTER("(timestamp_extract(\"__time\",'DAY','UTC') == 5)")
-                          )
+                          SELECTOR("v0", "2000", null),
+                          IN("v1", ImmutableList.of("2", "3", "5"), null)
                       )
                   )
                   .context(TIMESERIES_CONTEXT_DEFAULT)
@@ -5508,9 +5533,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
-                            EXPRESSION_VIRTUAL_COLUMN("d0:v", "floor(CAST(\"dim1\", 'DOUBLE'))", ValueType.FLOAT)
+                            EXPRESSION_VIRTUAL_COLUMN("v0", "floor(CAST(\"dim1\", 'DOUBLE'))", ValueType.FLOAT)
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.FLOAT)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.FLOAT)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -5536,7 +5561,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "floor(CAST(\"dim1\", 'DOUBLE'))",
                                 ValueType.FLOAT
                             )
@@ -5544,8 +5569,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDimensions(
                             DIMS(
                                 new DefaultDimensionSpec(
-                                    "d0:v",
-                                    "d0",
+                                    "v0",
+                                    "v0",
                                     ValueType.FLOAT
                                 )
                             )
@@ -5555,7 +5580,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.DESCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -5590,15 +5615,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "timestamp_floor(\"__time\",'P1Y',null,'UTC')",
                                 ValueType.LONG
                             )
                         )
                         .setDimensions(
                             DIMS(
-                                new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG),
-                                new DefaultDimensionSpec("dim2", "d1")
+                                new DefaultDimensionSpec("v0", "v0", ValueType.LONG),
+                                new DefaultDimensionSpec("dim2", "d0")
                             )
                         )
                         .setAggregatorSpecs(
@@ -5610,12 +5635,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.ASCENDING,
                                         StringComparators.NUMERIC
                                     ),
                                     new OrderByColumnSpec(
-                                        "d1",
+                                        "d0",
                                         OrderByColumnSpec.Direction.ASCENDING,
                                         StringComparators.LEXICOGRAPHIC
                                     ),
@@ -5660,8 +5685,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(QSS(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(EXPRESSION_VIRTUAL_COLUMN("d0:v", "strlen(\"dim1\")", ValueType.LONG))
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setVirtualColumns(EXPRESSION_VIRTUAL_COLUMN("v0", "strlen(\"dim1\")", ValueType.LONG))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -5950,18 +5975,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "timestamp_floor(timestamp_shift(\"__time\",'P1D',-1),'P1M',null,'UTC')",
                                 ValueType.LONG
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.ASCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -5998,18 +6023,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "timestamp_floor((\"__time\" + -86400000),'P1M',null,'UTC')",
                                 ValueType.LONG
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.ASCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -6275,18 +6300,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "timestamp_extract(\"__time\",'YEAR','UTC')",
                                 ValueType.LONG
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.ASCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -6321,18 +6346,18 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "timestamp_format(\"__time\",'yyyy MM','UTC')",
                                 ValueType.STRING
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.STRING)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.STRING)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(
                             new DefaultLimitSpec(
                                 ImmutableList.of(
                                     new OrderByColumnSpec(
-                                        "d0",
+                                        "v0",
                                         OrderByColumnSpec.Direction.ASCENDING,
                                         StringComparators.LEXICOGRAPHIC
                                     )
@@ -6365,12 +6390,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "timestamp_extract(timestamp_floor(\"__time\",'P1Y',null,'UTC'),'YEAR','UTC')",
                                 ValueType.LONG
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -6400,12 +6425,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d0:v",
+                                "v0",
                                 "timestamp_extract(timestamp_floor(\"__time\",'P1Y',null,'America/Los_Angeles'),'YEAR','America/Los_Angeles')",
                                 ValueType.LONG
                             )
                         )
-                        .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                        .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
                         .setContext(QUERY_CONTEXT_LOS_ANGELES)
                         .build()
@@ -6518,7 +6543,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(
                             EXPRESSION_VIRTUAL_COLUMN(
-                                "d1:v",
+                                "v0",
                                 "timestamp_floor(\"__time\",'P1M',null,'UTC')",
                                 ValueType.LONG
                             )
@@ -6526,7 +6551,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDimensions(
                             DIMS(
                                 new DefaultDimensionSpec("dim2", "d0"),
-                                new DefaultDimensionSpec("d1:v", "d1", ValueType.LONG)
+                                new DefaultDimensionSpec("v0", "v0", ValueType.LONG)
                             )
                         )
                         .setAggregatorSpecs(AGGS(new LongSumAggregatorFactory("a0", "cnt")))
@@ -6535,7 +6560,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 ImmutableList.of(
                                     new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.ASCENDING),
                                     new OrderByColumnSpec(
-                                        "d1",
+                                        "v0",
                                         OrderByColumnSpec.Direction.ASCENDING,
                                         StringComparators.NUMERIC
                                     )
@@ -6630,7 +6655,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "        BindableJoin(condition=[true], joinType=[inner])\n"
         + "          DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[],\"resultFormat\":\"compactedList\",\"batchSize\":20480,\"limit\":9223372036854775807,\"filter\":null,\"columns\":[\"dim1\",\"dim2\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"},\"descending\":false,\"granularity\":{\"type\":\"all\"}}], signature=[{dim1:STRING, dim2:STRING}])\n"
         + "          DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":{\"type\":\"like\",\"dimension\":\"dim1\",\"pattern\":\"%bc\",\"escape\":null,\"extractionFn\":null},\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"skipEmptyBuckets\":true,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"}}], signature=[{a0:LONG}])\n"
-        + "        DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"d1:v\",\"expression\":\"1\",\"outputType\":\"LONG\"}],\"filter\":{\"type\":\"like\",\"dimension\":\"dim1\",\"pattern\":\"%bc\",\"escape\":null,\"extractionFn\":null},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\"},{\"type\":\"default\",\"dimension\":\"d1:v\",\"outputName\":\"d1\",\"outputType\":\"LONG\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"},\"descending\":false}], signature=[{d0:STRING, d1:LONG}])\n";
+        + "        DruidQueryRel(query=[{\"queryType\":\"groupBy\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"1\",\"outputType\":\"LONG\"}],\"filter\":{\"type\":\"like\",\"dimension\":\"dim1\",\"pattern\":\"%bc\",\"escape\":null,\"extractionFn\":null},\"granularity\":{\"type\":\"all\"},\"dimensions\":[{\"type\":\"default\",\"dimension\":\"dim1\",\"outputName\":\"d0\",\"outputType\":\"STRING\"},{\"type\":\"default\",\"dimension\":\"v0\",\"outputName\":\"v0\",\"outputType\":\"LONG\"}],\"aggregations\":[],\"postAggregations\":[],\"having\":null,\"limitSpec\":{\"type\":\"NoopLimitSpec\"},\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\"},\"descending\":false}], signature=[{d0:STRING, v0:LONG}])\n";
 
     final String theQuery = "SELECT dim1, dim2, COUNT(*) FROM druid.foo\n"
                             + "WHERE dim1 = 'xxx' OR dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 LIKE '%bc')\n"
@@ -6684,7 +6709,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             new DefaultDimensionSpec("dim2", "d1")
                         ))
                         .setAggregatorSpecs(AGGS(new CountAggregatorFactory("a0")))
-                        .setHavingSpec(HAVING(NUMERIC_SELECTOR("a0", "1", null)))
+                        .setHavingSpec(HAVING(SELECTOR("a0", "1", null)))
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build(),
             newScanQueryBuilder()
@@ -6835,7 +6860,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .builder()
                 .setDataSource(CalciteTests.DATASOURCE1)
                 .setVirtualColumns(
-                    EXPRESSION_VIRTUAL_COLUMN("d0:v", "timestamp_extract(\"__time\",'MONTH','UTC')", ValueType.LONG)
+                    EXPRESSION_VIRTUAL_COLUMN("v0", "timestamp_extract(\"__time\",'MONTH','UTC')", ValueType.LONG)
                 )
                 .setDimFilter(
                     AND(
@@ -6843,7 +6868,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         SELECTOR("dim2", "abc", null)
                     )
                 )
-                .setDimensions(DIMS(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
+                .setDimensions(DIMS(new DefaultDimensionSpec("v0", "v0", ValueType.LONG)))
                 .setInterval(QSS(Filtration.eternity()))
                 .setGranularity(Granularities.ALL)
                 .setAggregatorSpecs(
@@ -6863,7 +6888,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     new DefaultLimitSpec(
                         ImmutableList.of(
                             new OrderByColumnSpec(
-                                "d0",
+                                "v0",
                                 OrderByColumnSpec.Direction.ASCENDING,
                                 StringComparators.NUMERIC
                             )
