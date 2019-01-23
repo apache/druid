@@ -69,7 +69,6 @@ Note: `org.apache.hive.common.util.BloomKFilter` provides a serialize method whi
 Bloom filters are supported in SQL via the `bloom_filter_test` operator:
 
 ```sql
-SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<dimension>, '<serialized_bytes_for_BloomKFilter>')
+SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
 ```
 
-Expression virtual columns are not currently supported for the `dimension` parameter.
