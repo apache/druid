@@ -821,13 +821,6 @@ public class IndexGeneratorJob implements Jobby
                 JobHelper.INDEX_ZIP,
                 config.DATA_SEGMENT_PUSHER
             ),
-            JobHelper.makeFileNamePath(
-                new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
-                outputFS,
-                segmentTemplate,
-                JobHelper.DESCRIPTOR_JSON,
-                config.DATA_SEGMENT_PUSHER
-            ),
             JobHelper.makeTmpPath(
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,

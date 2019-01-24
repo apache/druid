@@ -228,8 +228,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               {
                 return localDeepStorage;
               }
-            },
-            getObjectMapper()
+            }
         ),
         new DataSegmentKiller()
         {

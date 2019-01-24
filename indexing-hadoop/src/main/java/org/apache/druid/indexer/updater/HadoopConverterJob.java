@@ -563,13 +563,6 @@ public class HadoopConverterJob
               JobHelper.INDEX_ZIP,
               config.DATA_SEGMENT_PUSHER
           ),
-          JobHelper.makeFileNamePath(
-              baseOutputPath,
-              outputFS,
-              finalSegmentTemplate,
-              JobHelper.DESCRIPTOR_JSON,
-              config.DATA_SEGMENT_PUSHER
-          ),
           JobHelper.makeTmpPath(
               baseOutputPath,
               outputFS,

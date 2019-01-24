@@ -2431,7 +2431,7 @@ public class KafkaIndexTaskTest
     };
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
-    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig, objectMapper);
+    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
     SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
     {
       @Override
