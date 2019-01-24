@@ -5031,7 +5031,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
-                  .filters(NOT(SELECTOR("dim1", "", null)))
+                  .filters(NOT(SELECTOR("v0", NullHandling.emptyToNullIfNeeded(""), null)))
                   .granularity(Granularities.ALL)
                   .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("v0", "trim(\"dim1\",' ')", ValueType.STRING))
                   .filters(NOT(SELECTOR("v0", NullHandling.defaultStringValue(), null)))
