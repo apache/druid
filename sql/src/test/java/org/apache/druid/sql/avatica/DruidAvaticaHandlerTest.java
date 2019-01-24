@@ -388,13 +388,19 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             ROW(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", "foo"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE1),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
             ROW(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", "foo2"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE2),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            ROW(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -427,6 +433,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ROW(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            ROW(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
