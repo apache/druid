@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
@@ -58,6 +57,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -108,7 +108,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
-    String base64 = Base64.encodeBase64String(bytes);
+    String base64 = Base64.getEncoder().encodeToString(bytes);
 
     testQuery(
         StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, '%s')", base64),
@@ -140,7 +140,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
       filter.addBytes(null, 0, 0);
     }
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
-    String base64 = Base64.encodeBase64String(bytes);
+    String base64 = Base64.getEncoder().encodeToString(bytes);
 
     testQuery(
         StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s')", base64),
@@ -172,7 +172,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addDouble(20.2);
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
-    String base64 = Base64.encodeBase64String(bytes);
+    String base64 = Base64.getEncoder().encodeToString(bytes);
 
     testQuery(
         StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(2 * CAST(dim1 AS float), '%s')", base64),
@@ -207,8 +207,8 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     filter.addString("abc");
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     byte[] bytes2 = BloomFilterSerializersModule.bloomKFilterToBytes(filter2);
-    String base64 = Base64.encodeBase64String(bytes);
-    String base642 = Base64.encodeBase64String(bytes2);
+    String base64 = Base64.getEncoder().encodeToString(bytes);
+    String base642 = Base64.getEncoder().encodeToString(bytes2);
 
 
     testQuery(

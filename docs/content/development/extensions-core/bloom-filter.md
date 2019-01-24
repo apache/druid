@@ -81,6 +81,6 @@ SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<expr>, '<serialized_byte
 The bloom filter extension also adds a bloom filter [Druid expression](../../misc/math-expr.html) which shares syntax 
 with the SQL operator.
 
-```
-bloom_filter_test(<expr>, "<serialized_bytes_for_BloomKFilter>")
+```sql
+bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
 ```
