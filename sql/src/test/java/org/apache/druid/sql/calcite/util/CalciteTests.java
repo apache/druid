@@ -358,7 +358,8 @@ public class CalciteTests
               .put("dim1", "")
               .put("dim2", ImmutableList.of("a"))
               .put("dim3", ImmutableList.of("a", "b"))
-              .build()
+              .build(),
+          PARSER_NUMERIC_DIMS
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
@@ -371,7 +372,8 @@ public class CalciteTests
               .put("dim1", "10.1")
               .put("dim2", ImmutableList.of())
               .put("dim3", ImmutableList.of("b", "c"))
-              .build()
+              .build(),
+          PARSER_NUMERIC_DIMS
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
@@ -384,7 +386,8 @@ public class CalciteTests
               .put("dim1", "2")
               .put("dim2", ImmutableList.of(""))
               .put("dim3", ImmutableList.of("d"))
-              .build()
+              .build(),
+          PARSER_NUMERIC_DIMS
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
@@ -394,7 +397,8 @@ public class CalciteTests
               .put("dim1", "1")
               .put("dim2", ImmutableList.of("a"))
               .put("dim3", ImmutableList.of(""))
-              .build()
+              .build(),
+          PARSER_NUMERIC_DIMS
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
@@ -404,7 +408,8 @@ public class CalciteTests
               .put("dim1", "def")
               .put("dim2", ImmutableList.of("abc"))
               .put("dim3", ImmutableList.of())
-              .build()
+              .build(),
+          PARSER_NUMERIC_DIMS
       ),
       createRow(
           ImmutableMap.<String, Object>builder()
@@ -412,7 +417,8 @@ public class CalciteTests
               .put("m1", "6.0")
               .put("m2", "6.0")
               .put("dim1", "abc")
-              .build()
+              .build(),
+          PARSER_NUMERIC_DIMS
       )
   );
 
@@ -642,7 +648,7 @@ public class CalciteTests
         forbiddenIndex
     ).add(DataSegment.builder()
                      .dataSource(DATASOURCE3)
-                     .interval(index1.getDataInterval())
+                     .interval(indexNumericDims.getDataInterval())
                      .version("1")
                      .shardSpec(new LinearShardSpec(0))
                      .build(),
@@ -711,6 +717,11 @@ public class CalciteTests
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
     return PARSER.parseBatch((Map<String, Object>) map).get(0);
+  }
+
+  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowParser<Map<String, Object>> parser)
+  {
+    return parser.parseBatch((Map<String, Object>) map).get(0);
   }
 
   public static InputRow createRow(final Object t, final String dim1, final String dim2, final double m1)
