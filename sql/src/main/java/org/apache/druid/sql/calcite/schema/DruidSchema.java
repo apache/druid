@@ -541,15 +541,11 @@ public class DruidSchema extends AbstractSchema
   private void setSegmentMetadataHolder(final DataSegment segment, final SegmentMetadataHolder segmentMetadataHolder)
   {
     synchronized (lock) {
-      final Map<DataSegment, SegmentMetadataHolder> innerMap = segmentMetadataInfo.get(segment.getDataSource());
-      final SegmentMetadataHolder retVal;
-      if (innerMap == null) {
-        retVal = segmentMetadataInfo.computeIfAbsent(segment.getDataSource(), x -> new TreeMap<>(SEGMENT_ORDER))
-                                    .put(segment, segmentMetadataHolder);
-      } else {
-        retVal = innerMap.put(segment, segmentMetadataHolder);
-      }
-      if (retVal == null) {
+      TreeMap<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.computeIfAbsent(
+          segment.getDataSource(),
+          x -> new TreeMap<>(SEGMENT_ORDER)
+      );
+      if (dataSourceSegments.put(segment, segmentMetadataHolder) == null) {
         totalSegments++;
       }
     }
