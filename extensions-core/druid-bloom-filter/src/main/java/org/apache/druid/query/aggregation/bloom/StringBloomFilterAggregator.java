@@ -19,26 +19,36 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.query.ColumnSelectorPlus;
-import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColumnSelectorStrategy;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.segment.DimensionSelector;
 
-public class BloomFilterAggregator extends BaseBloomFilterAggregator
+public final class StringBloomFilterAggregator extends BaseBloomFilterAggregator<DimensionSelector>
 {
-  private final ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus;
-
-  public BloomFilterAggregator(
-      ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selectorPlus,
-      int maxNumEntries
-  )
+  StringBloomFilterAggregator(DimensionSelector selector, BloomKFilter collector)
   {
-    super(new BloomKFilter(maxNumEntries));
-    this.selectorPlus = selectorPlus;
+    super(selector, collector);
   }
 
   @Override
   public void aggregate()
   {
-    selectorPlus.getColumnSelectorStrategy().add(selectorPlus.getSelector(), collector);
+    // note: there might be room for optimization here but behavior must match BloomDimFilter implementation
+    if (selector.getRow().size() > 1) {
+      selector.getRow().forEach(v -> {
+        String value = selector.lookupName(v);
+        if (value == null) {
+          collector.addBytes(null, 0, 0);
+        } else {
+          collector.addString(value);
+        }
+      });
+    } else {
+      String value = (String) selector.getObject();
+      if (value == null) {
+        collector.addBytes(null, 0, 0);
+      } else {
+        collector.addString(value);
+      }
+    }
   }
 }

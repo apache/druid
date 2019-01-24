@@ -19,22 +19,24 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
-import java.nio.ByteBuffer;
-
-public final class BloomFilterMergeBufferAggregator extends BaseBloomFilterBufferAggregator<ColumnValueSelector<ByteBuffer>>
+public final class DoubleBloomFilterAggregator extends BaseBloomFilterAggregator<BaseDoubleColumnValueSelector>
 {
-  public BloomFilterMergeBufferAggregator(ColumnValueSelector<ByteBuffer> selector, int maxNumEntries)
+  DoubleBloomFilterAggregator(BaseDoubleColumnValueSelector selector, BloomKFilter collector)
   {
-    super(selector, maxNumEntries);
+    super(selector, collector);
   }
 
   @Override
-  public void bufferAdd(ByteBuffer buf)
+  public void aggregate()
   {
-    ByteBuffer other = selector.getObject();
-    BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
+    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      collector.addDouble(selector.getDouble());
+    } else {
+      collector.addBytes(null, 0, 0);
+    }
   }
 }

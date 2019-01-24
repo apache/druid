@@ -28,15 +28,9 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.bloom.types.BloomFilterAggregatorColumnSelectorStrategy;
-import org.apache.druid.query.aggregation.bloom.types.DoubleBloomFilterAggregatorColumnSelectorStrategy;
-import org.apache.druid.query.aggregation.bloom.types.FloatBloomFilterAggregatorColumnSelectorStrategy;
-import org.apache.druid.query.aggregation.bloom.types.LongBloomFilterAggregatorColumnValueSelectorStrategy;
-import org.apache.druid.query.aggregation.bloom.types.StringBloomFilterAggregatorColumnSelectorStrategy;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorTest;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -246,15 +240,7 @@ public class BloomFilterAggregatorTest
   public void testAggregateValues() throws IOException
   {
     DimensionSelector dimSelector = new CardinalityAggregatorTest.TestDimensionSelector(values1, null);
-    BloomFilterAggregator agg = new BloomFilterAggregator(
-        new ColumnSelectorPlus<>(
-            dimSpec.getDimension(),
-            dimSpec.getOutputName(),
-            new StringBloomFilterAggregatorColumnSelectorStrategy(),
-            dimSelector
-        ),
-        maxNumValues
-    );
+    StringBloomFilterAggregator agg = new StringBloomFilterAggregator(dimSelector, new BloomKFilter(maxNumValues));
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregateDimension(Collections.singletonList(dimSelector), agg);
@@ -269,15 +255,7 @@ public class BloomFilterAggregatorTest
   public void testAggregateLongValues() throws IOException
   {
     TestLongColumnSelector selector = new TestLongColumnSelector(Arrays.asList(longValues1));
-    BloomFilterAggregator agg = new BloomFilterAggregator(
-        new ColumnSelectorPlus<>(
-            "longColumn",
-            "longlongman",
-            new LongBloomFilterAggregatorColumnValueSelectorStrategy(),
-            selector
-        ),
-        maxNumValues
-    );
+    LongBloomFilterAggregator agg = new LongBloomFilterAggregator(selector, new BloomKFilter(maxNumValues));
 
     for (Long ignored : longValues1) {
       aggregateColumn(Collections.singletonList(selector), agg);
@@ -292,15 +270,7 @@ public class BloomFilterAggregatorTest
   public void testAggregateFloatValues() throws IOException
   {
     TestFloatColumnSelector selector = new TestFloatColumnSelector(Arrays.asList(floatValues1));
-    BloomFilterAggregator agg = new BloomFilterAggregator(
-        new ColumnSelectorPlus<>(
-            "floatColumn",
-            "floatColumn",
-            new FloatBloomFilterAggregatorColumnSelectorStrategy(),
-            selector
-        ),
-        maxNumValues
-    );
+    FloatBloomFilterAggregator agg = new FloatBloomFilterAggregator(selector, new BloomKFilter(maxNumValues));
 
     for (Float ignored : floatValues1) {
       aggregateColumn(Collections.singletonList(selector), agg);
@@ -315,15 +285,7 @@ public class BloomFilterAggregatorTest
   public void testAggregateDoubleValues() throws IOException
   {
     TestDoubleColumnSelector selector = new TestDoubleColumnSelector(Arrays.asList(doubleValues1));
-    BloomFilterAggregator agg = new BloomFilterAggregator(
-        new ColumnSelectorPlus<>(
-            "doubleColumn",
-            "doubleColumn",
-            new DoubleBloomFilterAggregatorColumnSelectorStrategy(),
-            selector
-        ),
-        maxNumValues
-    );
+    DoubleBloomFilterAggregator agg = new DoubleBloomFilterAggregator(selector, new BloomKFilter(maxNumValues));
 
     for (Double ignored : doubleValues1) {
       aggregateColumn(Collections.singletonList(selector), agg);
@@ -335,18 +297,10 @@ public class BloomFilterAggregatorTest
   }
 
   @Test
-  public void testBufferAggregateValues() throws IOException
+  public void testBufferAggregateStringValues() throws IOException
   {
     DimensionSelector dimSelector = new CardinalityAggregatorTest.TestDimensionSelector(values2, null);
-    BloomFilterBufferAggregator agg = new BloomFilterBufferAggregator(
-        new ColumnSelectorPlus<>(
-            dimSpec.getDimension(),
-            dimSpec.getOutputName(),
-            new StringBloomFilterAggregatorColumnSelectorStrategy(),
-            dimSelector
-        ),
-        maxNumValues
-    );
+    StringBloomFilterBufferAggregator agg = new StringBloomFilterBufferAggregator(dimSelector, maxNumValues);
 
     int maxSize = valueAggregatorFactory.getMaxIntermediateSizeWithNulls();
     ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
@@ -364,33 +318,76 @@ public class BloomFilterAggregatorTest
   }
 
   @Test
+  public void testBufferAggregateLongValues() throws IOException
+  {
+    TestLongColumnSelector selector = new TestLongColumnSelector(Arrays.asList(longValues1));
+    LongBloomFilterBufferAggregator agg = new LongBloomFilterBufferAggregator(selector, maxNumValues);
+
+    int maxSize = valueAggregatorFactory.getMaxIntermediateSizeWithNulls();
+    ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
+    int pos = 10;
+    buf.limit(pos + maxSize);
+
+    agg.init(buf, pos);
+
+    for (int i = 0; i < longValues1.length; ++i) {
+      bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos);
+    }
+    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
+    String serialized = filterToString(bloomKFilter);
+    Assert.assertEquals(serializedLongFilter, serialized);
+  }
+
+  @Test
+  public void testBufferAggregateFloatValues() throws IOException
+  {
+    TestFloatColumnSelector selector = new TestFloatColumnSelector(Arrays.asList(floatValues1));
+    FloatBloomFilterBufferAggregator agg = new FloatBloomFilterBufferAggregator(selector, maxNumValues);
+
+    int maxSize = valueAggregatorFactory.getMaxIntermediateSizeWithNulls();
+    ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
+    int pos = 10;
+    buf.limit(pos + maxSize);
+
+    agg.init(buf, pos);
+
+    for (int i = 0; i < floatValues1.length; ++i) {
+      bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos);
+    }
+    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
+    String serialized = filterToString(bloomKFilter);
+    Assert.assertEquals(serializedFloatFilter, serialized);
+  }
+
+  @Test
+  public void testBufferAggregateDoubleValues() throws IOException
+  {
+    TestDoubleColumnSelector selector = new TestDoubleColumnSelector(Arrays.asList(doubleValues1));
+    DoubleBloomFilterBufferAggregator agg = new DoubleBloomFilterBufferAggregator(selector, maxNumValues);
+
+    int maxSize = valueAggregatorFactory.getMaxIntermediateSizeWithNulls();
+    ByteBuffer buf = ByteBuffer.allocate(maxSize + 64);
+    int pos = 10;
+    buf.limit(pos + maxSize);
+
+    agg.init(buf, pos);
+
+    for (int i = 0; i < doubleValues1.length; ++i) {
+      bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos);
+    }
+    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
+    String serialized = filterToString(bloomKFilter);
+    Assert.assertEquals(serializedDoubleFilter, serialized);
+  }
+
+  @Test
   public void testCombineValues() throws IOException
   {
     DimensionSelector dimSelector1 = new CardinalityAggregatorTest.TestDimensionSelector(values1, null);
     DimensionSelector dimSelector2 = new CardinalityAggregatorTest.TestDimensionSelector(values2, null);
 
-    ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selector1 = new ColumnSelectorPlus<>(
-        dimSpec.getDimension(),
-        dimSpec.getOutputName(),
-        new StringBloomFilterAggregatorColumnSelectorStrategy(),
-        dimSelector1
-    );
-
-    ColumnSelectorPlus<BloomFilterAggregatorColumnSelectorStrategy> selector2 = new ColumnSelectorPlus<>(
-        dimSpec.getDimension(),
-        dimSpec.getOutputName(),
-        new StringBloomFilterAggregatorColumnSelectorStrategy(),
-        dimSelector2
-    );
-
-    BloomFilterAggregator agg1 = new BloomFilterAggregator(
-        selector1,
-        maxNumValues
-    );
-    BloomFilterAggregator agg2 = new BloomFilterAggregator(
-        selector2,
-        maxNumValues
-    );
+    StringBloomFilterAggregator agg1 = new StringBloomFilterAggregator(dimSelector1, new BloomKFilter(maxNumValues));
+    StringBloomFilterAggregator agg2 = new StringBloomFilterAggregator(dimSelector2, new BloomKFilter(maxNumValues));
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregateDimension(Collections.singletonList(dimSelector1), agg1);
@@ -416,7 +413,33 @@ public class BloomFilterAggregatorTest
     final TestBloomFilterColumnSelector mergeDim =
         new TestBloomFilterColumnSelector(ImmutableList.of(filter1, filter2));
 
-    BloomFilterMergeAggregator mergeAggregator = new BloomFilterMergeAggregator(mergeDim, maxNumValues);
+    BloomFilterMergeAggregator mergeAggregator =
+        new BloomFilterMergeAggregator(mergeDim, new BloomKFilter(maxNumValues));
+
+    for (int i = 0; i < 2; ++i) {
+      aggregateColumn(Collections.singletonList(mergeDim), mergeAggregator);
+    }
+
+
+    BloomKFilter merged = (BloomKFilter) valueAggregatorFactory.getCombiningFactory()
+                                                               .finalizeComputation(mergeAggregator.get());
+    String serialized = filterToString(merged);
+    Assert.assertEquals(serializedCombinedFilter, serialized);
+  }
+
+  @Test
+  public void testMergeValuesWithBuffersForGroupByV1() throws IOException
+  {
+    final TestBloomFilterColumnSelector mergeDim =
+        new TestBloomFilterColumnSelector(
+            ImmutableList.of(
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter1)),
+                ByteBuffer.wrap(BloomFilterSerializersModule.bloomKFilterToBytes(filter2))
+            )
+        );
+
+    BloomFilterMergeAggregator mergeAggregator =
+        new BloomFilterMergeAggregator(mergeDim, new BloomKFilter(maxNumValues));
 
     for (int i = 0; i < 2; ++i) {
       aggregateColumn(Collections.singletonList(mergeDim), mergeAggregator);
@@ -575,9 +598,9 @@ public class BloomFilterAggregatorTest
     }
   }
 
-  public static class TestBloomFilterColumnSelector extends SteppableSelector<BloomKFilter>
+  public static class TestBloomFilterColumnSelector extends SteppableSelector<Object>
   {
-    public TestBloomFilterColumnSelector(List<BloomKFilter> values)
+    public TestBloomFilterColumnSelector(List<Object> values)
     {
       super(values);
     }

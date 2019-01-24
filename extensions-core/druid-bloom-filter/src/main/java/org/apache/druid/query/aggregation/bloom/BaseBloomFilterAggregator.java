@@ -21,16 +21,19 @@ package org.apache.druid.query.aggregation.bloom;
 
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
 import javax.annotation.Nullable;
 
-public abstract class BaseBloomFilterAggregator implements Aggregator
+public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableColumnValueSelector> implements Aggregator
 {
-  protected final BloomKFilter collector;
+  final BloomKFilter collector;
+  protected final TSelector selector;
 
-  public BaseBloomFilterAggregator(BloomKFilter collector)
+  BaseBloomFilterAggregator(TSelector selector, BloomKFilter collector)
   {
     this.collector = collector;
+    this.selector = selector;
   }
 
   @Nullable

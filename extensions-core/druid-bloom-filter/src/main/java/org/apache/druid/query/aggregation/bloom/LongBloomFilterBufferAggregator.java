@@ -17,34 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.bloom.types;
+package org.apache.druid.query.aggregation.bloom;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public class DoubleBloomFilterAggregatorColumnSelectorStrategy
-    implements BloomFilterAggregatorColumnSelectorStrategy<BaseDoubleColumnValueSelector>
+public final class LongBloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator<BaseLongColumnValueSelector>
 {
-  @Override
-  public void add(BaseDoubleColumnValueSelector selector, BloomKFilter bloomFilter)
+  LongBloomFilterBufferAggregator(BaseLongColumnValueSelector selector, int maxNumEntries)
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      bloomFilter.addDouble(selector.getDouble());
-    } else {
-      bloomFilter.addBytes(null, 0, 0);
-    }
+    super(selector, maxNumEntries);
   }
 
   @Override
-  public void bufferAdd(BaseDoubleColumnValueSelector selector, ByteBuffer buffer)
+  public void bufferAdd(ByteBuffer buf)
   {
     if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      BloomKFilter.addDouble(buffer, selector.getDouble());
+      BloomKFilter.addLong(buf, selector.getLong());
     } else {
-      BloomKFilter.addBytes(buffer, null, 0, 0);
+      BloomKFilter.addBytes(buf, null, 0, 0);
     }
   }
 }

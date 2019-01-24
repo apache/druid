@@ -25,14 +25,11 @@ import org.apache.druid.segment.ColumnValueSelector;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class BloomFilterMergeAggregator extends BaseBloomFilterAggregator
+public final class BloomFilterMergeAggregator extends BaseBloomFilterAggregator<ColumnValueSelector<Object>>
 {
-  private final ColumnValueSelector<BloomKFilter> selector;
-
-  public BloomFilterMergeAggregator(ColumnValueSelector<BloomKFilter> selector, int maxNumEntries)
+  public BloomFilterMergeAggregator(ColumnValueSelector<Object> selector, BloomKFilter collector)
   {
-    super(new BloomKFilter(maxNumEntries));
-    this.selector = selector;
+    super(selector, collector);
   }
 
   @Override
@@ -44,9 +41,9 @@ public class BloomFilterMergeAggregator extends BaseBloomFilterAggregator
         collector.merge((BloomKFilter) other);
       } else if (other instanceof ByteBuffer) {
         // fun fact: because bloom filter agg factory deserialize returns a byte buffer to avoid unnecessary serde,
-        // but group by v1 ends up trying to merge bytebuffers from buffer aggs with this agg instead of the buffer
-        // merge agg. fun! Also, it requires a 'ComplexMetricSerde' to be registered even for query time only aggs, but
-        // then never uses it. also fun!
+        // but GroupByQueryEngine (group by v1) ends up trying to merge ByteBuffers from buffer aggs with this agg
+        // instead of the BloomFilterBufferMergeAggregator. fun! Also, it requires a 'ComplexMetricSerde' to be
+        // registered even for query time only aggs, but then never uses it. also fun!
         try {
           BloomKFilter otherFilter = BloomKFilter.deserialize((ByteBuffer) other);
           collector.merge(otherFilter);

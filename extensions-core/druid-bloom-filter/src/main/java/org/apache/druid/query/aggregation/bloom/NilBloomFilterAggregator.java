@@ -17,34 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.bloom.types;
+package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.NilColumnValueSelector;
 
-import java.nio.ByteBuffer;
-
-public class FloatBloomFilterAggregatorColumnSelectorStrategy
-    implements BloomFilterAggregatorColumnSelectorStrategy<BaseFloatColumnValueSelector>
+public final class NilBloomFilterAggregator extends BaseBloomFilterAggregator<NilColumnValueSelector>
 {
-  @Override
-  public void add(BaseFloatColumnValueSelector selector, BloomKFilter bloomFilter)
+  NilBloomFilterAggregator(NilColumnValueSelector selector, BloomKFilter collector)
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      bloomFilter.addFloat(selector.getFloat());
-    } else {
-      bloomFilter.addBytes(null, 0, 0);
-    }
+    super(selector, collector);
   }
 
   @Override
-  public void bufferAdd(BaseFloatColumnValueSelector selector, ByteBuffer buffer)
+  public void aggregate()
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      BloomKFilter.addFloat(buffer, selector.getFloat());
-    } else {
-      BloomKFilter.addBytes(buffer, null, 0, 0);
-    }
+    // nothing to do
   }
 }

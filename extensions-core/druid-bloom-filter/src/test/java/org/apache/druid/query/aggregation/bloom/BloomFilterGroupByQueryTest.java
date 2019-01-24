@@ -130,8 +130,8 @@ public class BloomFilterGroupByQueryTest
 
     MapBasedRow row = ingestAndQuery(query);
 
+    // a nil column results in a totally empty bloom filter
     BloomKFilter filter = new BloomKFilter(1500);
-    filter.addBytes(null, 0, 0);
 
     Object val = row.getRaw("blooming_quality");
 

@@ -31,8 +31,9 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import java.nio.ByteBuffer;
 
 /**
- * This exists so bloom filter agg has something to register so group by v1 will work, but isn't actually used
- * because bloom filter agg is currently query time only
+ * Dummy {@link ComplexMetricSerde} that exists so {@link BloomFilterAggregatorFactory} has something to register so
+ * {@link org.apache.druid.query.groupby.GroupByQueryEngine} will work, but isn't actually used because bloom filter
+ * aggregators are currently only implemented for use at query time
  */
 public class BloomFilterSerde extends ComplexMetricSerde
 {
@@ -45,24 +46,24 @@ public class BloomFilterSerde extends ComplexMetricSerde
   @Override
   public ComplexMetricExtractor getExtractor()
   {
-    throw new UnsupportedOperationException("How can this be?");
+    throw new UnsupportedOperationException("Bloom filter aggregators are query-time only");
   }
 
   @Override
   public void deserializeColumn(ByteBuffer byteBuffer, ColumnBuilder columnBuilder)
   {
-    throw new UnsupportedOperationException("How can this be?");
+    throw new UnsupportedOperationException("Bloom filter aggregators are query-time only");
   }
 
   @Override
   public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
-    throw new UnsupportedOperationException("How can this be?");
+    throw new UnsupportedOperationException("Bloom filter aggregators are query-time only");
   }
 
   @Override
   public ObjectStrategy<BloomKFilter> getObjectStrategy()
   {
-    throw new UnsupportedOperationException("How can this be?");
+    throw new UnsupportedOperationException("Bloom filter aggregators are query-time only");
   }
 }

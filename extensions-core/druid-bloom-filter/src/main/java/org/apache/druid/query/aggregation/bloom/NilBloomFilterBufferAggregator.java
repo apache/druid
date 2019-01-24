@@ -17,19 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.bloom.types;
+package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.query.dimension.ColumnSelectorStrategy;
-import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.segment.NilColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public interface BloomFilterAggregatorColumnSelectorStrategy<TValueSelector> extends ColumnSelectorStrategy
+public final class NilBloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator<NilColumnValueSelector>
 {
-  /**
-   * Add column value to bloomK filter
-   */
-  void add(TValueSelector selector, BloomKFilter bloomFilter);
+  NilBloomFilterBufferAggregator(NilColumnValueSelector selector, int maxNumEntries)
+  {
+    super(selector, maxNumEntries);
+  }
 
-  void bufferAdd(TValueSelector selector, ByteBuffer buffer);
+  @Override
+  public void bufferAdd(ByteBuffer buf)
+  {
+    // nothing to do
+  }
+
+  @Override
+  public void aggregate(ByteBuffer buf, int position)
+  {
+    // nothing to do
+  }
 }

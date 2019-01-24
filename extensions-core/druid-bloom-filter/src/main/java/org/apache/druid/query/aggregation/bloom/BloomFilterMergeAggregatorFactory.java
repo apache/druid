@@ -26,6 +26,7 @@ import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
@@ -47,11 +48,11 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
   @Override
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
-    final ColumnValueSelector<BloomKFilter> selector = metricFactory.makeColumnValueSelector(fieldName);
+    final BaseNullableColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
       throw new ISE("WTF?! Unexpected NilColumnValueSelector");
     }
-    return new BloomFilterMergeAggregator(selector, getMaxNumEntries());
+    return new BloomFilterMergeAggregator((ColumnValueSelector<Object>) selector, new BloomKFilter(getMaxNumEntries()));
   }
 
   @Override

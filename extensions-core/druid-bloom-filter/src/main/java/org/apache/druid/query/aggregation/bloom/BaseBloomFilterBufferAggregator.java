@@ -21,17 +21,23 @@ package org.apache.druid.query.aggregation.bloom;
 
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public abstract class BaseBloomFilterBufferAggregator implements BufferAggregator
+public abstract class BaseBloomFilterBufferAggregator<TSelector extends BaseNullableColumnValueSelector> implements BufferAggregator
 {
-  private final int maxNumEntries;
+  protected final int maxNumEntries;
+  protected final TSelector selector;
 
-  public BaseBloomFilterBufferAggregator(int maxNumEntries)
+  BaseBloomFilterBufferAggregator(TSelector selector, int maxNumEntries)
   {
+    this.selector = selector;
     this.maxNumEntries = maxNumEntries;
   }
+
+  abstract void bufferAdd(ByteBuffer buf);
 
   @Override
   public void init(ByteBuffer buf, int position)
@@ -41,6 +47,16 @@ public abstract class BaseBloomFilterBufferAggregator implements BufferAggregato
     BloomKFilter filter = new BloomKFilter(maxNumEntries);
     BloomKFilter.serialize(mutationBuffer, filter);
   }
+
+  @Override
+  public void aggregate(ByteBuffer buf, int position)
+  {
+    final int oldPosition = buf.position();
+    buf.position(position);
+    bufferAdd(buf);
+    buf.position(oldPosition);
+  }
+
 
   @Override
   public Object get(ByteBuffer buf, int position)
@@ -75,5 +91,11 @@ public abstract class BaseBloomFilterBufferAggregator implements BufferAggregato
   public void close()
   {
     // nothing to close
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
   }
 }
