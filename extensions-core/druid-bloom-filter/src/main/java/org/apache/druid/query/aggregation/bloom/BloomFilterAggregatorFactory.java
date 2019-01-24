@@ -89,12 +89,12 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   {
     BloomKFilter filter = new BloomKFilter(maxNumEntries);
     ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
-    BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
 
-    if (selector instanceof NilColumnValueSelector) {
-      return new NilBloomFilterAggregator((NilColumnValueSelector) selector, filter);
-    }
     if (capabilities == null) {
+      BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
+      if (selector instanceof NilColumnValueSelector) {
+        return new NilBloomFilterAggregator((NilColumnValueSelector) selector, filter);
+      }
       throw new IAE(
           "Cannot create bloom filter buffer aggregator for column selector type [%s]",
           selector.getClass().getName()
@@ -119,12 +119,12 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnFactory)
   {
     ColumnCapabilities capabilities = columnFactory.getColumnCapabilities(field.getDimension());
-    BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
 
-    if (selector instanceof NilColumnValueSelector) {
-      return new NilBloomFilterBufferAggregator((NilColumnValueSelector) selector, maxNumEntries);
-    }
     if (capabilities == null) {
+      BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
+      if (selector instanceof NilColumnValueSelector) {
+        return new NilBloomFilterBufferAggregator((NilColumnValueSelector) selector, maxNumEntries);
+      }
       throw new IAE(
           "Cannot create bloom filter buffer aggregator for column selector type [%s]",
           selector.getClass().getName()
