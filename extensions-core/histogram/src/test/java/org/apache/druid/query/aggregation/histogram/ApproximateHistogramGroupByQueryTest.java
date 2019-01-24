@@ -174,7 +174,7 @@ public class ApproximateHistogramGroupByQueryTest
             QueryRunnerTestHelper.marketDimension,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
@@ -233,7 +233,7 @@ public class ApproximateHistogramGroupByQueryTest
             QueryRunnerTestHelper.marketDimension,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),

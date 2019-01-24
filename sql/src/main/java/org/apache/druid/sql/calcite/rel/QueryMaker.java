@@ -67,6 +67,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -286,9 +287,15 @@ public class QueryMaker
   }
 
   @SuppressWarnings("unchecked")
-  private <T> Sequence<T> runQuery(final Query<T> query)
+  private <T> Sequence<T> runQuery(Query<T> query)
   {
     Hook.QUERY_PLAN.run(query);
+
+    final String queryId = UUID.randomUUID().toString();
+    plannerContext.addNativeQueryId(queryId);
+    query = query.withId(queryId)
+                 .withSqlQueryId(plannerContext.getSqlQueryId());
+
     final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
     return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
   }

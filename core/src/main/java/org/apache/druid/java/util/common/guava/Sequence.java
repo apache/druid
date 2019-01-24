@@ -81,9 +81,7 @@ public interface Sequence<T>
     return new LimitedSequence<>(this, limit);
   }
 
-  default <R> Sequence<R> flatMap(
-      Function<? super T, ? extends Sequence<? extends R>> mapper
-  )
+  default <R> Sequence<R> flatMap(Function<? super T, ? extends Sequence<? extends R>> mapper)
   {
     return new ConcatSequence<>(this.map(mapper));
   }

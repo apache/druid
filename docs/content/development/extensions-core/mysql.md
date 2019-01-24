@@ -70,8 +70,11 @@ Copy or symlink this file to `extensions/mysql-metadata-storage` under the distr
   -- create a druid database, make sure to use utf8mb4 as encoding
   CREATE DATABASE druid DEFAULT CHARACTER SET utf8mb4;
 
-  -- create a druid user, and grant it all permission on the database we just created
-  GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
+  -- create a druid user
+  CREATE USER 'druid'@'localhost' IDENTIFIED BY 'diurd';
+
+  -- grant the user all the permissions on the database we just created
+  GRANT ALL PRIVILEGES ON druid.* TO 'druid'@'localhost';
   ```
 
 3. Configure your Druid metadata storage extension:

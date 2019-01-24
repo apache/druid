@@ -148,7 +148,7 @@ public class DataSegmentTest
     Assert.assertEquals(segment.getMetrics(), deserializedSegment.getMetrics());
     Assert.assertEquals(segment.getShardSpec(), deserializedSegment.getShardSpec());
     Assert.assertEquals(segment.getSize(), deserializedSegment.getSize());
-    Assert.assertEquals(segment.getIdentifier(), deserializedSegment.getIdentifier());
+    Assert.assertEquals(segment.getId(), deserializedSegment.getId());
 
     deserializedSegment = mapper.readValue(mapper.writeValueAsString(segment), DataSegment.class);
     Assert.assertEquals(0, segment.compareTo(deserializedSegment));
@@ -172,7 +172,7 @@ public class DataSegmentTest
 
     Assert.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z",
-        segment.getIdentifier()
+        segment.getId().toString()
     );
   }
 
@@ -188,7 +188,7 @@ public class DataSegmentTest
 
     Assert.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z",
-        segment.getIdentifier()
+        segment.getId().toString()
     );
   }
 
@@ -204,7 +204,7 @@ public class DataSegmentTest
 
     Assert.assertEquals(
         "foo_2012-01-01T00:00:00.000Z_2012-01-02T00:00:00.000Z_2012-01-01T11:22:33.444Z_7",
-        segment.getIdentifier()
+        segment.getId().toString()
     );
   }
 

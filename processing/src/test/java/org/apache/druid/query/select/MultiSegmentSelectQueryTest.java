@@ -46,7 +46,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -148,33 +148,28 @@ public class MultiSegmentSelectQueryTest
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
     segment_override = new IncrementalIndexSegment(index2, makeIdentifier(index2, "v2"));
 
-    VersionedIntervalTimeline<String, Segment> timeline = new VersionedIntervalTimeline(StringComparators.LEXICOGRAPHIC);
-    timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk(segment0));
-    timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk(segment1));
-    timeline.add(index2.getInterval(), "v2", new SingleElementPartitionChunk(segment_override));
+    VersionedIntervalTimeline<String, Segment> timeline =
+        new VersionedIntervalTimeline<>(StringComparators.LEXICOGRAPHIC);
+    timeline.add(index0.getInterval(), "v1", new SingleElementPartitionChunk<>(segment0));
+    timeline.add(index1.getInterval(), "v1", new SingleElementPartitionChunk<>(segment1));
+    timeline.add(index2.getInterval(), "v2", new SingleElementPartitionChunk<>(segment_override));
 
     segmentIdentifiers = new ArrayList<>();
     for (TimelineObjectHolder<String, ?> holder : timeline.lookup(Intervals.of("2011-01-12/2011-01-14"))) {
-      segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()));
+      segmentIdentifiers.add(makeIdentifier(holder.getInterval(), holder.getVersion()).toString());
     }
 
     runner = QueryRunnerTestHelper.makeFilteringQueryRunner(timeline, factory);
   }
 
-  private static String makeIdentifier(IncrementalIndex index, String version)
+  private static SegmentId makeIdentifier(IncrementalIndex index, String version)
   {
     return makeIdentifier(index.getInterval(), version);
   }
 
-  private static String makeIdentifier(Interval interval, String version)
+  private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return DataSegment.makeDataSegmentIdentifier(
-        QueryRunnerTestHelper.dataSource,
-        interval.getStart(),
-        interval.getEnd(),
-        version,
-        NoneShardSpec.instance()
-    );
+    return SegmentId.of(QueryRunnerTestHelper.dataSource, interval, version, NoneShardSpec.instance());
   }
 
   private static IncrementalIndex newIndex(String minTimeStamp)
@@ -220,7 +215,7 @@ public class MultiSegmentSelectQueryTest
   {
     return Druids.newSelectQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                 .intervals(SelectQueryRunnerTest.I_0112_0114)
+                 .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
                  .granularity(QueryRunnerTestHelper.allGran)
                  .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.dimensions))
                  .pagingSpec(PagingSpec.newSpec(3));
@@ -325,7 +320,7 @@ public class MultiSegmentSelectQueryTest
                 )
             )
         )
-        .intervals(SelectQueryRunnerTest.I_0112_0114)
+        .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.dimensions))
         .pagingSpec(PagingSpec.newSpec(3));

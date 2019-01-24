@@ -66,6 +66,7 @@ import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -135,7 +136,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           @Override
           public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
-            CachingClusteredClient.this.cache.close(segment.getIdentifier());
+            CachingClusteredClient.this.cache.close(segment.getId().toString());
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -384,7 +385,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           hasOnlyHistoricalSegments = false;
           break;
         }
-        hasher.putString(p.getServer().getSegment().getIdentifier(), StandardCharsets.UTF_8);
+        hasher.putString(p.getServer().getSegment().getId().toString(), StandardCharsets.UTF_8);
       }
 
       if (hasOnlyHistoricalSegments) {
@@ -421,8 +422,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
           alreadyCachedResults.add(Pair.of(segmentQueryInterval, cachedValue));
         } else if (populateCache) {
           // otherwise, if populating cache, add segment to list of segments to cache
-          final String segmentIdentifier = segment.getServer().getSegment().getIdentifier();
-          addCachePopulatorKey(segmentCacheKey, segmentIdentifier, segmentQueryInterval);
+          final SegmentId segmentId = segment.getServer().getSegment().getId();
+          addCachePopulatorKey(segmentCacheKey, segmentId, segmentQueryInterval);
         }
       });
       return alreadyCachedResults;
@@ -437,7 +438,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       Map<ServerToSegment, Cache.NamedKey> cacheKeys = Maps.newLinkedHashMap();
       for (ServerToSegment serverToSegment : segments) {
         final Cache.NamedKey segmentCacheKey = CacheUtil.computeSegmentCacheKey(
-            serverToSegment.getServer().getSegment().getIdentifier(),
+            serverToSegment.getServer().getSegment().getId().toString(),
             serverToSegment.getSegmentDescriptor(),
             queryCacheKey
         );
@@ -457,14 +458,11 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
     private void addCachePopulatorKey(
         Cache.NamedKey segmentCacheKey,
-        String segmentIdentifier,
+        SegmentId segmentId,
         Interval segmentQueryInterval
     )
     {
-      cachePopulatorKeyMap.put(
-          StringUtils.format("%s_%s", segmentIdentifier, segmentQueryInterval),
-          segmentCacheKey
-      );
+      cachePopulatorKeyMap.put(StringUtils.format("%s_%s", segmentId, segmentQueryInterval), segmentCacheKey);
     }
 
     @Nullable

@@ -113,7 +113,7 @@ public class BitmapBenchmark
         totalRoaringBytes / roaringCount
     );
     System.out.println("-------------|---------|---------");
-    System.out.println("");
+    System.out.println();
     System.out.flush();
   }
 

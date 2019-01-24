@@ -76,7 +76,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     final File baseStorageDir = config.getStorageDirectory();
     final File outDir = new File(baseStorageDir, this.getStorageDir(segment, useUniquePath));
 
-    log.info("Copying segment[%s] to local filesystem at location[%s]", segment.getIdentifier(), outDir.toString());
+    log.info("Copying segment[%s] to local filesystem at location[%s]", segment.getId(), outDir.toString());
 
     if (dataSegmentFile.equals(outDir)) {
       long size = 0;
@@ -93,7 +93,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
     }
 
     final File tmpOutDir = new File(baseStorageDir, makeIntermediateDir());
-    log.info("Creating intermediate directory[%s] for segment[%s]", tmpOutDir.toString(), segment.getIdentifier());
+    log.info("Creating intermediate directory[%s] for segment[%s]", tmpOutDir.toString(), segment.getId());
     FileUtils.forceMkdir(tmpOutDir);
 
     try {

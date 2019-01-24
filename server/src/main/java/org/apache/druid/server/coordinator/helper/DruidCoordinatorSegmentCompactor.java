@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.indexing.ClientCompactQuery;
@@ -35,7 +36,6 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentUtils;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -190,9 +190,9 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             config.getTaskContext()
         );
         LOG.info(
-            "Submitted a compactTask[%s] for segments[%s]",
+            "Submitted a compactTask[%s] for segments %s",
             taskId,
-            DataSegmentUtils.getIdentifiersString(segmentsToCompact)
+            Iterables.transform(segmentsToCompact, DataSegment::getId)
         );
       } else if (segmentsToCompact.size() == 1) {
         throw new ISE("Found one segments[%s] to compact", segmentsToCompact);

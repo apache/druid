@@ -145,7 +145,7 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
       addSingleInventory(container, segment);
     }
     for (DataSegment segment : Sets.difference(existing, filteredInventory)) {
-      removeSingleInventory(container, segment.getIdentifier());
+      removeSingleInventory(container, segment.getId());
     }
     zNodes.put(inventoryKey, filteredInventory);
 
@@ -164,7 +164,7 @@ public class BatchServerInventoryView extends AbstractCuratorServerInventoryView
     }
 
     for (DataSegment segment : segments) {
-      removeSingleInventory(container, segment.getIdentifier());
+      removeSingleInventory(container, segment.getId());
     }
     return container;
   }

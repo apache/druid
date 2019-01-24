@@ -46,7 +46,7 @@ public class MaterializedViewQueryQueryToolChestTest
     TimeseriesQuery realQuery = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(QueryRunnerTestHelper.dataSource)
                                         .granularity(QueryRunnerTestHelper.dayGran)
-                                        .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                         .aggregators(QueryRunnerTestHelper.rowsCount)
                                         .descending(true)
                                         .build();
@@ -77,9 +77,10 @@ public class MaterializedViewQueryQueryToolChestTest
 
 
 
-    Result<TimeseriesResultValue> result = new Result<>(DateTimes.nowUtc(), new TimeseriesResultValue(ImmutableMap.<String, Object>builder()
-                                                                                                      .put("dim1", "dimvalue1")
-                                                                                                      .build()));
+    Result<TimeseriesResultValue> result = new Result<>(
+        DateTimes.nowUtc(),
+        new TimeseriesResultValue(ImmutableMap.of("dim1", "dimvalue1"))
+    );
 
     Result<TimeseriesResultValue> postResult = (Result<TimeseriesResultValue>) postFn.apply(result);
     Map<String, Object> postResultMap = postResult.getValue().getBaseObject();
