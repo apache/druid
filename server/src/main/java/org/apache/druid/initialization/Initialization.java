@@ -140,11 +140,10 @@ public class Initialization
   {
     // It's not clear whether we should recompute modules even if they have been computed already for the serviceClass,
     // but that's how it used to be an preserving the old behaviour here.
-    Collection<?> modules = extensionsMap.compute(serviceClass, (serviceC, ignored) -> {
-      Collection<?> modulesToLoad = new ServiceLoadingFromExtensions<>(config, serviceC).implsToLoad;
-      extensionsMap.put(serviceClass, modulesToLoad);
-      return modulesToLoad;
-    });
+    Collection<?> modules = extensionsMap.compute(
+        serviceClass,
+        (serviceC, ignored) -> new ServiceLoadingFromExtensions<>(config, serviceC).implsToLoad
+    );
     //noinspection unchecked
     return (Collection<T>) modules;
   }
