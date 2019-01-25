@@ -93,7 +93,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     if (capabilities == null) {
       BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
       if (selector instanceof NilColumnValueSelector) {
-        return new NilBloomFilterAggregator((NilColumnValueSelector) selector, filter);
+        return new EmptyBloomFilterAggregator(filter);
       }
       throw new IAE(
           "Cannot create bloom filter buffer aggregator for column selector type [%s]",
@@ -123,7 +123,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     if (capabilities == null) {
       BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
       if (selector instanceof NilColumnValueSelector) {
-        return new NilBloomFilterBufferAggregator((NilColumnValueSelector) selector, maxNumEntries);
+        return new EmptyBloomFilterBufferAggregator(maxNumEntries);
       }
       throw new IAE(
           "Cannot create bloom filter buffer aggregator for column selector type [%s]",

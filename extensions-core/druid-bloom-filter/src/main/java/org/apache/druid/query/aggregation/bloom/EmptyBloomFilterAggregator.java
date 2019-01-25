@@ -22,11 +22,11 @@ package org.apache.druid.query.aggregation.bloom;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.NilColumnValueSelector;
 
-public final class NilBloomFilterAggregator extends BaseBloomFilterAggregator<NilColumnValueSelector>
+public final class EmptyBloomFilterAggregator extends BaseBloomFilterAggregator<NilColumnValueSelector>
 {
-  NilBloomFilterAggregator(NilColumnValueSelector selector, BloomKFilter collector)
+  EmptyBloomFilterAggregator(BloomKFilter collector)
   {
-    super(selector, collector);
+    super(NilColumnValueSelector.instance(), collector);
   }
 
   @Override

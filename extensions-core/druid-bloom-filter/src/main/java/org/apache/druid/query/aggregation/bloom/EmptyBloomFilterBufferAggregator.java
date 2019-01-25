@@ -23,11 +23,11 @@ import org.apache.druid.segment.NilColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public final class NilBloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator<NilColumnValueSelector>
+public final class EmptyBloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator<NilColumnValueSelector>
 {
-  NilBloomFilterBufferAggregator(NilColumnValueSelector selector, int maxNumEntries)
+  EmptyBloomFilterBufferAggregator(int maxNumEntries)
   {
-    super(selector, maxNumEntries);
+    super(NilColumnValueSelector.instance(), maxNumEntries);
   }
 
   @Override

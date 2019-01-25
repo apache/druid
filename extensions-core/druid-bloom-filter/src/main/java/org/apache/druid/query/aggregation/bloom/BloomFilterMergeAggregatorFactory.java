@@ -49,6 +49,7 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
     final BaseNullableColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    // null columns should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
     if (selector instanceof NilColumnValueSelector) {
       throw new ISE("WTF?! Unexpected NilColumnValueSelector");
     }
@@ -58,11 +59,12 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
-    final ColumnValueSelector<ByteBuffer> selector = metricFactory.makeColumnValueSelector(fieldName);
+    final BaseNullableColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    // null columns should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
     if (selector instanceof NilColumnValueSelector) {
       throw new ISE("WTF?! Unexpected NilColumnValueSelector");
     }
-    return new BloomFilterMergeBufferAggregator(selector, getMaxNumEntries());
+    return new BloomFilterMergeBufferAggregator((ColumnValueSelector<ByteBuffer>) selector, getMaxNumEntries());
   }
 
   @Override
