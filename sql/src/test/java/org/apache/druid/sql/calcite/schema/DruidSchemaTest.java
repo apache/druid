@@ -63,6 +63,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DruidSchemaTest extends CalciteTestBase
 {
@@ -237,4 +238,36 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals("m1", fields.get(2).getName());
     Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
   }
+
+  @Test
+  public void testNullDatasource() throws IOException
+  {
+    Map<DataSegment, SegmentMetadataHolder> segmentsMetadata = schema.getSegmentMetadata();
+    Set<DataSegment> segments = segmentsMetadata.keySet();
+    Assert.assertEquals(segments.size(), 3);
+    final DataSegment segmentToRemove = segments.stream().findFirst().orElse(null);
+    Assert.assertFalse(segmentToRemove == null);
+    schema.removeSegment(segmentToRemove);
+    schema.refreshSegments(segments); // can cause NPE without dataSourceSegments null check in DruidSchema#refreshSegmentsForDataSource
+    segmentsMetadata = schema.getSegmentMetadata();
+    segments = segmentsMetadata.keySet();
+    Assert.assertEquals(segments.size(), 2);
+  }
+
+  @Test
+  public void testNullSegmentMetadataHolder() throws IOException
+  {
+    Map<DataSegment, SegmentMetadataHolder> segmentsMetadata = schema.getSegmentMetadata();
+    Set<DataSegment> segments = segmentsMetadata.keySet();
+    Assert.assertEquals(segments.size(), 3);
+    //remove the 2nd segment with datasource foo
+    final DataSegment segmentToRemove = segments.stream().skip(1).findFirst().orElse(null);
+    Assert.assertFalse(segmentToRemove == null);
+    schema.removeSegment(segmentToRemove);
+    schema.refreshSegments(segments); // can cause NPE without holder null check in SegmentMetadataHolder#from
+    segmentsMetadata = schema.getSegmentMetadata();
+    segments = segmentsMetadata.keySet();
+    Assert.assertEquals(segments.size(), 2);
+  }
+
 }

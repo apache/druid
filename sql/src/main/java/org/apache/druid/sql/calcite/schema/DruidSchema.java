@@ -402,7 +402,7 @@ public class DruidSchema extends AbstractSchema
     }
   }
 
-  private void removeSegment(final DataSegment segment)
+  protected void removeSegment(final DataSegment segment)
   {
     synchronized (lock) {
       log.debug("Segment[%s] is gone.", segment.getId());
@@ -450,7 +450,7 @@ public class DruidSchema extends AbstractSchema
    * Attempt to refresh "segmentSignatures" for a set of segments. Returns the set of segments actually refreshed,
    * which may be a subset of the asked-for set.
    */
-  private Set<DataSegment> refreshSegments(final Set<DataSegment> segments) throws IOException
+  protected Set<DataSegment> refreshSegments(final Set<DataSegment> segments) throws IOException
   {
     final Set<DataSegment> retVal = new HashSet<>();
 
@@ -512,9 +512,8 @@ public class DruidSchema extends AbstractSchema
               SegmentMetadataHolder holder = dataSourceSegments.get(segment);
               if (holder == null) {
                 log.warn(
-                    "No segment[%s] found with datasource[%s], skipping refresh",
-                    segment.getId(),
-                    segment.getDataSource()
+                    "No segment[%s] found, skipping refresh",
+                    segment.getId()
                 );
               } else {
                 SegmentMetadataHolder updatedHolder = SegmentMetadataHolder
@@ -640,7 +639,7 @@ public class DruidSchema extends AbstractSchema
     return rowSignatureBuilder.build();
   }
 
-  public Map<DataSegment, SegmentMetadataHolder> getSegmentMetadata()
+  Map<DataSegment, SegmentMetadataHolder> getSegmentMetadata()
   {
     final Map<DataSegment, SegmentMetadataHolder> segmentMetadata = new HashMap<>();
     synchronized (lock) {
