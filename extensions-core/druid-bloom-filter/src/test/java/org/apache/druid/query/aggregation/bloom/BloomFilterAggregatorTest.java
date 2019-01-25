@@ -53,6 +53,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.IntStream;
 
 public class BloomFilterAggregatorTest
 {
@@ -330,9 +331,8 @@ public class BloomFilterAggregatorTest
 
     agg.init(buf, pos);
 
-    for (int i = 0; i < longValues1.length; ++i) {
-      bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos);
-    }
+    IntStream.range(0, longValues1.length)
+             .forEach(i -> bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos));
     BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedLongFilter, serialized);
@@ -351,9 +351,8 @@ public class BloomFilterAggregatorTest
 
     agg.init(buf, pos);
 
-    for (int i = 0; i < floatValues1.length; ++i) {
-      bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos);
-    }
+    IntStream.range(0, floatValues1.length)
+             .forEach(i -> bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos));
     BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedFloatFilter, serialized);
@@ -372,9 +371,8 @@ public class BloomFilterAggregatorTest
 
     agg.init(buf, pos);
 
-    for (int i = 0; i < doubleValues1.length; ++i) {
-      bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos);
-    }
+    IntStream.range(0, doubleValues1.length)
+             .forEach(i -> bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos));
     BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedDoubleFilter, serialized);
