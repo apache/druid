@@ -21,7 +21,7 @@ syntax = "proto2";
 
 package kinesisindexingservice;
 
-option java_package = "org.apache.druid.indexing.kinesis.model";
+option java_package = "org.apache.druid.indexing.kinesis.protobuf";
 option java_outer_classname = "AggregatedRecordProtos";
 
 message AggregatedRecord {

@@ -37,7 +37,7 @@ import com.google.common.hash.Hashing;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.indexing.kinesis.model.AggregatedRecordProtos;
+import org.apache.druid.indexing.kinesis.protobuf.AggregatedRecordProtos;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;

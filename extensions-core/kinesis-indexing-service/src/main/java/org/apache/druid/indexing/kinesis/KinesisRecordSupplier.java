@@ -45,7 +45,7 @@ import com.google.common.hash.Hashing;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
-import org.apache.druid.indexing.kinesis.model.AggregatedRecordProtos;
+import org.apache.druid.indexing.kinesis.protobuf.AggregatedRecordProtos;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
