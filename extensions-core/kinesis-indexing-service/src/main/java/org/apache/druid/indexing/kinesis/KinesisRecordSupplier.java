@@ -738,7 +738,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         data.add(userRecord.getData().toByteArray());
       }
     } else {
-      data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
+      ByteBuffer kinesisData = kinesisRecord.getData();
+      kinesisData.position(0);
+      data = Collections.singletonList(toByteArray(kinesisData));
     }
     return data;
   }
