@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.guice.annotations.Json;
@@ -90,7 +89,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
-    String base64 = Base64.encodeBase64String(bytes);
+    String base64 = StringUtils.encodeBase64ToString(bytes);
 
     testQuery(
         StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, '%s')", base64),
@@ -121,8 +120,8 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     filter.addString("abc");
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     byte[] bytes2 = BloomFilterSerializersModule.bloomKFilterToBytes(filter2);
-    String base64 = Base64.encodeBase64String(bytes);
-    String base642 = Base64.encodeBase64String(bytes2);
+    String base64 = StringUtils.encodeBase64ToString(bytes);
+    String base642 = StringUtils.encodeBase64ToString(bytes2);
 
 
     testQuery(
