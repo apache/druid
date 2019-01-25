@@ -41,6 +41,8 @@
 set -e
 SERVICE="$1"
 
+echo "$(date -Is) startup service $SERVICE"
+
 # We put all the config in /tmp/conf to allow for a
 # read-only root filesystem
 cp -r /opt/druid/conf /tmp/conf
@@ -77,7 +79,9 @@ if [ -n "${ZOOKEEPER}" ]
 then
     setKey _common druid.zk.service.host "${ZOOKEEPER}"
 fi
-setKey $SERVICE druid.host $(hostname)
+
+setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
+
 
 env |grep ^druid_ | while read evar
 do
