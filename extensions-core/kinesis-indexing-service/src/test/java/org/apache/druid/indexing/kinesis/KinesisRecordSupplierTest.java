@@ -658,8 +658,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   public void testDeaggregationOfKPLAggregatedMessage() throws IOException
   {
     // TODO Make this a relative path
-    InputStreamReader reader = new InputStreamReader(new FileInputStream("/Users/justinborromeo/Work/incubator-druid/" +
-        "extensions-core/kinesis-indexing-service/src/test/resources/base64aggregatedkinesismessage.txt"), Charsets.UTF_8);
+    InputStreamReader reader = new InputStreamReader(
+        new FileInputStream("src/test/resources/base64aggregatedkinesismessage.txt"), Charsets.UTF_8);
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();
     Assert.assertNotNull(base64EncodedMessage);
@@ -690,8 +690,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testDeaggregationOfNonAggregatedMessage() throws IOException
   {
-    InputStreamReader reader = new InputStreamReader(new FileInputStream("/Users/justinborromeo/Work/incubator-druid/" +
-        "extensions-core/kinesis-indexing-service/src/test/resources/base64nonaggregatedkinesismessage.txt"), Charsets.UTF_8);
+    InputStreamReader reader = new InputStreamReader(new FileInputStream
+        ("src/test/resources/base64nonaggregatedkinesismessage.txt"), Charsets.UTF_8);
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();
     Assert.assertNotNull(base64EncodedMessage);
