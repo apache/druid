@@ -88,7 +88,6 @@ public class KinesisIOConfigTest
     Assert.assertEquals(Collections.emptySet(), config.getExclusiveStartSequenceNumberPartitions());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
-    Assert.assertFalse(config.isDeaggregate());
     Assert.assertTrue(config.isSkipOffsetGaps());
   }
 
@@ -110,7 +109,6 @@ public class KinesisIOConfigTest
                      + "  \"exclusiveStartSequenceNumberPartitions\": [\"0\"],\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
                      + "  \"awsExternalId\": \"awsexternalid\",\n"
-                     + "  \"deaggregate\": true\n"
                      + "}";
 
     KinesisIndexTaskIOConfig config = (KinesisIndexTaskIOConfig) mapper.readValue(
@@ -145,7 +143,6 @@ public class KinesisIOConfigTest
     Assert.assertEquals(1000, config.getFetchDelayMillis());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
     Assert.assertEquals("awsexternalid", config.getAwsExternalId());
-    Assert.assertTrue(config.isDeaggregate());
     Assert.assertTrue(config.isSkipOffsetGaps());
   }
 

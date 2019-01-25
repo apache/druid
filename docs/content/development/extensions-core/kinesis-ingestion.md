@@ -205,7 +205,6 @@ For Roaring bitmaps:
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent GetRecords calls to Kinesis. See 'Determining Fetch Settings' below.|no (default == 1000)|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|no|
 |`awsExternalId`|String|The AWS external id to use for additional permissions.|no|
-|`deaggregate`|Boolean|Whether to use the de-aggregate function of the KCL. See below for details.|no|
 
 ## Operations
 
@@ -380,13 +379,7 @@ Internally, each indexing task maintains a buffer that stores the fetched but no
 control this behavior. The number of records that the indexing task fetch from the buffer is controlled by `maxRecordsPerPoll`, which
 determines the number of records to be processed per each ingestion loop in the task.
 
-## Deaggregation
-See [issue](https://github.com/apache/incubator-druid/issues/6714)
+# Deaggregation
 
 The Kinesis indexing service supports de-aggregation of multiple rows packed into a single record by the Kinesis
-Producer Library's aggregate method for more efficient data transfer. Currently, enabling the de-aggregate functionality
-requires the user to manually provide the Kinesis Client Library on the classpath, since this library has a license not
-compatible with Apache projects.
-
-To enable this feature, add the `amazon-kinesis-client` (tested on version `1.9.2`) jar file ([link](https://mvnrepository.com/artifact/com.amazonaws/amazon-kinesis-client/1.9.2)) under `dist/druid/extensions/druid-kinesis-indexing-service/`.
-Then when submitting a supervisor-spec, set `deaggregate` to true.
+Producer Library's aggregate method for more efficient data transfer.

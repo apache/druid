@@ -130,8 +130,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         ioConfig.getFetchDelayMillis(),
         exclusiveStartSequenceNumberPartitions,
         ioConfig.getAwsAssumedRoleArn(),
-        ioConfig.getAwsExternalId(),
-        ioConfig.isDeaggregate()
+        ioConfig.getAwsExternalId()
     );
   }
 
@@ -197,7 +196,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
         1,
-        ioConfig.isDeaggregate(),
         taskTuningConfig.getRecordBufferSize(),
         taskTuningConfig.getRecordBufferOfferTimeout(),
         taskTuningConfig.getRecordBufferFullWait(),

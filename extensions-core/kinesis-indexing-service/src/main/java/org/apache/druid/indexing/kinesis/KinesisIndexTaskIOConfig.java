@@ -40,7 +40,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
 
   private final String awsAssumedRoleArn;
   private final String awsExternalId;
-  private final boolean deaggregate;
 
   @JsonCreator
   public KinesisIndexTaskIOConfig(
@@ -56,8 +55,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<String> exclusiveStartSequenceNumberPartitions,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
-      @JsonProperty("awsExternalId") String awsExternalId,
-      @JsonProperty("deaggregate") boolean deaggregate
+      @JsonProperty("awsExternalId") String awsExternalId
   )
   {
     super(
@@ -81,7 +79,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
-    this.deaggregate = deaggregate;
   }
 
   @JsonProperty
@@ -114,12 +111,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     return awsExternalId;
   }
 
-  @JsonProperty
-  public boolean isDeaggregate()
-  {
-    return deaggregate;
-  }
-
   @Override
   public String toString()
   {
@@ -136,7 +127,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
            ", exclusiveStartSequenceNumberPartitions=" + getExclusiveStartSequenceNumberPartitions() +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
-           ", deaggregate=" + deaggregate +
            '}';
   }
 }

@@ -102,7 +102,6 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String>
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
         fetchThreads,
-        ioConfig.isDeaggregate(),
         tuningConfig.getRecordBufferSize(),
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
