@@ -79,7 +79,7 @@ public class StringEC2UserData implements EC2UserData<StringEC2UserData>
     } else {
       finalData = data;
     }
-    return StringUtils.encodeBase64ToString(StringUtils.toUtf8(finalData));
+    return StringUtils.encodeBase64String(StringUtils.toUtf8(finalData));
   }
 
   @Override

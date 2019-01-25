@@ -78,7 +78,7 @@ public class GalaxyEC2UserData implements EC2UserData<GalaxyEC2UserData>
   public String getUserDataBase64()
   {
     try {
-      return StringUtils.encodeBase64ToString(jsonMapper.writeValueAsBytes(this));
+      return StringUtils.encodeBase64String(jsonMapper.writeValueAsBytes(this));
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

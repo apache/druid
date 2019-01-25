@@ -453,7 +453,7 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
             Assert.assertEquals(
-                "Basic " + StringUtils.encodeBase64ToString(StringUtils.toUtf8("foo:bar")),
+                "Basic " + StringUtils.encodeBase64String(StringUtils.toUtf8("foo:bar")),
                 request.getHeaders().get(HttpHeaders.Names.AUTHORIZATION)
             );
             Assert.assertEquals(

@@ -761,7 +761,7 @@ public class HyperLogLogCollectorTest
 
     List<HyperLogLogCollector> collectors = Lists.transform(
         objects,
-        s -> HyperLogLogCollector.makeCollector(ByteBuffer.wrap(StringUtils.decodeBase64(s)))
+        s -> HyperLogLogCollector.makeCollector(ByteBuffer.wrap(StringUtils.decodeBase64String(s)))
     );
 
     Collection<List<HyperLogLogCollector>> permutations = Collections2.permutations(collectors);

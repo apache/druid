@@ -335,7 +335,7 @@ public class StringUtils
    * @param input The byte array to convert to base64
    * @return the base64 of the input in string form
    */
-  public static String encodeBase64ToString(byte[] input)
+  public static String encodeBase64String(byte[] input)
   {
     return BASE64_ENCODER.encodeToString(input);
   }
@@ -357,7 +357,7 @@ public class StringUtils
    * @param input The string to decode from base64
    * @return a newly-allocated byte array
    */
-  public static byte[] decodeBase64(String input)
+  public static byte[] decodeBase64String(String input)
   {
     return BASE64_DECODER.decode(input);
   }

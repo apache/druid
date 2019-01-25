@@ -390,7 +390,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (hasOnlyHistoricalSegments) {
         hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
 
-        String currEtag = StringUtils.encodeBase64ToString(hasher.hash().asBytes());
+        String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
         responseContext.put(QueryResource.HEADER_ETAG, currEtag);
         return currEtag;
       } else {

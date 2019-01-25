@@ -560,7 +560,7 @@ public class KerberosAuthenticator implements Authenticator
     } else {
       authorization = authorization.substring(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE
                                                   .length()).trim();
-      final byte[] clientToken = StringUtils.decodeBase64(authorization);
+      final byte[] clientToken = StringUtils.decodeBase64String(authorization);
       try {
         DerInputStream ticketStream = new DerInputStream(clientToken);
         DerValue[] values = ticketStream.getSet(clientToken.length, true);

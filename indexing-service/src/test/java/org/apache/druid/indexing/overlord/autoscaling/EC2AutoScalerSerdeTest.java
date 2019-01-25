@@ -128,7 +128,7 @@ public class EC2AutoScalerSerdeTest
         "VERSION=1234\n",
         StringUtils.fromUtf8(
             StringUtils
-                .decodeBase64(autoScaler.getEnvConfig().getUserData().withVersion("1234").getUserDataBase64())
+                .decodeBase64String(autoScaler.getEnvConfig().getUserData().withVersion("1234").getUserDataBase64())
         )
     );
   }

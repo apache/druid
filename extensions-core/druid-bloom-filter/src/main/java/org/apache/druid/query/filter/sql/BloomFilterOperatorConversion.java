@@ -76,7 +76,7 @@ public class BloomFilterOperatorConversion implements SqlOperatorConversion
     }
 
     String base64EncodedBloomKFilter = RexLiteral.stringValue(operands.get(1));
-    final byte[] decoded = StringUtils.decodeBase64(base64EncodedBloomKFilter);
+    final byte[] decoded = StringUtils.decodeBase64String(base64EncodedBloomKFilter);
     BloomKFilter filter;
     BloomKFilterHolder holder;
     try {

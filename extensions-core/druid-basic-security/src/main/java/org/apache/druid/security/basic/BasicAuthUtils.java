@@ -135,7 +135,7 @@ public class BasicAuthUtils
   public static String decodeUserSecret(String encodedUserSecret)
   {
     try {
-      return StringUtils.fromUtf8(StringUtils.decodeBase64(encodedUserSecret));
+      return StringUtils.fromUtf8(StringUtils.decodeBase64String(encodedUserSecret));
     }
     catch (IllegalArgumentException iae) {
       return null;

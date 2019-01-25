@@ -154,7 +154,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
       authorization = authorization
           .substring(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE.length())
           .trim();
-      final byte[] clientToken = StringUtils.decodeBase64(authorization);
+      final byte[] clientToken = StringUtils.decodeBase64String(authorization);
       final String serverName = request.getServerName();
       try {
         token = Subject.doAs(serverSubject, new PrivilegedExceptionAction<AuthenticationToken>()
@@ -182,7 +182,7 @@ public class DruidKerberosAuthenticationHandler extends KerberosAuthenticationHa
               gssContext = gssManager.createContext(gssCreds);
               byte[] serverToken = gssContext.acceptSecContext(clientToken, 0, clientToken.length);
               if (serverToken != null && serverToken.length > 0) {
-                String authenticate = StringUtils.encodeBase64ToString(serverToken);
+                String authenticate = StringUtils.encodeBase64String(serverToken);
                 response.setHeader(
                     org.apache.hadoop.security.authentication.client.KerberosAuthenticator.WWW_AUTHENTICATE,
                     org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE

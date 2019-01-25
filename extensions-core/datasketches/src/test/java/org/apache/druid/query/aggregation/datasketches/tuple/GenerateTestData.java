@@ -56,7 +56,7 @@ class GenerateTestData
         out.write('\t');
         out.write("product_" + (rand.nextInt(10) + 1));
         out.write('\t');
-        out.write(StringUtils.encodeBase64ToString(sketch.compact().toByteArray()));
+        out.write(StringUtils.encodeBase64String(sketch.compact().toByteArray()));
         out.newLine();
       }
     }

@@ -746,7 +746,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
         final String[] parts = config.getBasicAuthentication().split(":", 2);
         final String user = parts[0];
         final String password = parts.length > 1 ? parts[1] : "";
-        String encoded = StringUtils.encodeBase64ToString((user + ':' + password).getBytes(StandardCharsets.UTF_8));
+        String encoded = StringUtils.encodeBase64String((user + ':' + password).getBytes(StandardCharsets.UTF_8));
         request.setHeader(HttpHeaders.Names.AUTHORIZATION, "Basic " + encoded);
       }
 

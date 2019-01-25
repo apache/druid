@@ -63,7 +63,7 @@ public class GenerateTestData
       sketchData.write('\t');
       sketchData.write(Integer.toString(product)); // product dimension
       sketchData.write('\t');
-      sketchData.write(StringUtils.encodeBase64ToString(sketch.toByteArray(true)));
+      sketchData.write(StringUtils.encodeBase64String(sketch.toByteArray(true)));
       sketchData.newLine();
     }
     buildData.close();

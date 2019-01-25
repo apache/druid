@@ -59,7 +59,7 @@ public class PreComputedHyperUniquesSerde extends HyperUniquesSerde
           return HyperLogLogCollector.makeLatestCollector().fold(ByteBuffer.wrap((byte[]) rawValue));
         } else if (rawValue instanceof String) {
           return HyperLogLogCollector.makeLatestCollector()
-                                     .fold(ByteBuffer.wrap(StringUtils.decodeBase64((String) rawValue)));
+                                     .fold(ByteBuffer.wrap(StringUtils.decodeBase64String((String) rawValue)));
         }
 
         throw new ISE("Object is not of a type[%s] that can be deserialized to HyperLogLog.", rawValue.getClass());

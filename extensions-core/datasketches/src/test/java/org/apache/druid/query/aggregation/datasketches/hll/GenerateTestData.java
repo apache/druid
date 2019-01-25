@@ -80,7 +80,7 @@ class GenerateTestData
     out.write("\t");
     out.write(dimension);
     out.write("\t");
-    out.write(StringUtils.encodeBase64ToString(sketch.toCompactByteArray()));
+    out.write(StringUtils.encodeBase64String(sketch.toCompactByteArray()));
     out.newLine();
   }
 
