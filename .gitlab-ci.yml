@@ -15,6 +15,6 @@ build:
   - cp services/target/druid-services-*-selfcontained.jar $ARTIFACT_DIR/services/target
   - cp -ar distribution/target $ARTIFACT_DIR/distribution
   - cp -ar indexing-hadoop/target $ARTIFACT_DIR/indexing-hadoop
-  - for ext in `find extensions*|grep .jar`; do IFS='/' read -r -a tokens <<< $ext; echo mkdir -p $ARTIFACT_DIR/distribution/extensions/${tokens[1]}; echo cp $ext $ARTIFACT_DIR/distribution/extensions/${tokens[1]}/${tokens[3]}; done
+  - for ext in `find extensions*|grep .jar`; do IFS='/' read -r -a tokens <<< $ext; mkdir -p $ARTIFACT_DIR/distribution/extensions/${tokens[1]}; cp $ext $ARTIFACT_DIR/distribution/extensions/${tokens[1]}/${tokens[3]}; done
   - tar -zcvf ${ARTIFACT_DIR}.tar.gz $ARTIFACT_DIR
   - gsutil -m cp ${ARTIFACT_DIR}.tar.gz gs://lqm-artifact/${CI_PROJECT_NAME}/${CI_COMMIT_SHA}
