@@ -1,8 +1,5 @@
 image: eu.gcr.io/ligatus-prod-public-registry/generic-build-agent:latest
 
-variables:
-  ARTIFACT_DIR: "/tmp/druid-artifact"
-
 stages:
   - build
 
@@ -10,11 +7,5 @@ build:
   stage: build
   script:
   - rm -f ~/.m2/settings.xml
-  - mvn clean package -DskipTests --quiet
-  - mkdir -p $ARTIFACT_DIR/services/target $ARTIFACT_DIR/distribution $ARTIFACT_DIR/indexing-hadoop
-  - cp services/target/druid-services-*-selfcontained.jar $ARTIFACT_DIR/services/target
-  - cp -ar distribution/target $ARTIFACT_DIR/distribution
-  - cp -ar indexing-hadoop/target $ARTIFACT_DIR/indexing-hadoop
-  - for ext in `find extensions*|grep .jar`; do IFS='/' read -r -a tokens <<< $ext; mkdir -p $ARTIFACT_DIR/distribution/target/extensions/`echo ${tokens[3]}| perl -ne 'print $1 if /^([\w-]+)-\d/'`; cp $ext $ARTIFACT_DIR/distribution/target/extensions/`echo ${tokens[3]}| perl -ne 'print $1 if /^([\w-]+)-\d/'`/${tokens[3]}; done
-  - tar -zcvf ${ARTIFACT_DIR}.tar.gz $ARTIFACT_DIR
-  - gsutil -m cp ${ARTIFACT_DIR}.tar.gz gs://lqm-artifact/${CI_PROJECT_NAME}/${CI_COMMIT_SHA}
+  - mvn clean install -DskipTests -Pdist,bundle-contrib-exts --quiet
+  - gsutil -m cp distribution/target/*.tar.gz gs://lqm-artifact/${CI_PROJECT_NAME}/${CI_COMMIT_SHA}
