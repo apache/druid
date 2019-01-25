@@ -39,6 +39,9 @@ public class LongValueMatcherColumnSelectorStrategy
       @Override
       public boolean matches()
       {
+        if (selector.isNull()) {
+          return false;
+        }
         return selector.getLong() == matchValLong;
       }
 
