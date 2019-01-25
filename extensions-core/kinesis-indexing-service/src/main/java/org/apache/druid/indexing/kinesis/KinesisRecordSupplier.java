@@ -186,17 +186,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
           // list will come back empty if there are no records
           for (Record kinesisRecord : recordsResult.getRecords()) {
-
             final List<byte[]> data;
 
             if (deaggregate) {
-              data = new ArrayList<>();
               // Record is a bad name because it matches the class in the AWS Java SDK but it was
               // chosen to match the Amazon provided protobuf schema
-              final List<AggregatedRecordProtos.Record> userRecords = deaggregateKinesisRecord(kinesisRecord);
-              for (AggregatedRecordProtos.Record userRecord : userRecords) {
-                data.add(userRecord.getData().toByteArray());
-              }
+              data = deaggregateKinesisRecord(kinesisRecord);
             } else {
               data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
             }
@@ -719,7 +714,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   }
 
   @VisibleForTesting
-  List<AggregatedRecordProtos.Record> deaggregateKinesisRecord(Record kinesisRecord) throws InvalidProtocolBufferException {
+  List<byte[]> deaggregateKinesisRecord(Record kinesisRecord) throws InvalidProtocolBufferException {
     ByteBuffer kinesisRecordData = kinesisRecord.getData();
     kinesisRecordData.position(0);
     int recordSize = kinesisRecordData.remaining();
@@ -730,14 +725,22 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     kinesisRecordData.get(magicNumbers, 0, magicNumbers.length);
     kinesisRecordData.get(protobufMessage, 0, protobufMessage.length);
     kinesisRecordData.get(checksum, 0, checksum.length);
-
-    // Validate magic numbers (bytes 0 -> 3)
-    Preconditions.checkArgument(Arrays.equals(magicNumbers, KPL_AGGREGATE_MAGIC_NUMBERS));
-    // Validate MD5 checksum (bytes N -> N + 15)
     byte[] messageHash = Hashing.md5().hashBytes(protobufMessage).asBytes();
-    Preconditions.checkArgument(Arrays.equals(messageHash, checksum));
-    AggregatedRecordProtos.AggregatedRecord aggregatedRecord = AggregatedRecordProtos.AggregatedRecord.parseFrom(protobufMessage);
-    return aggregatedRecord.getRecordsList();
+
+    //Check magic numbers and checksum value to see if the message is an aggregate
+    boolean validAggregate = Arrays.equals(magicNumbers, KPL_AGGREGATE_MAGIC_NUMBERS)
+        && Arrays.equals(messageHash, checksum);
+
+    List<byte[]> data = new ArrayList<>();
+    if (validAggregate) {
+      AggregatedRecordProtos.AggregatedRecord aggregatedRecord = AggregatedRecordProtos.AggregatedRecord.parseFrom(protobufMessage);
+      for (AggregatedRecordProtos.Record userRecord : aggregatedRecord.getRecordsList()) {
+        data.add(userRecord.getData().toByteArray());
+      }
+    } else {
+      data = Collections.singletonList(toByteArray(kinesisRecord.getData()));
+    }
+    return data;
   }
 
   private void checkIfClosed()

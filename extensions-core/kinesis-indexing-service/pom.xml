@@ -29,6 +29,7 @@
 
     <properties>
         <protobuf.version>3.6.1</protobuf.version>
+        <checkstyle.skip>true</checkstyle.skip>
     </properties>
 
     <parent>
