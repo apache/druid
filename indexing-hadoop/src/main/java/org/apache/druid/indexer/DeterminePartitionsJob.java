@@ -161,6 +161,12 @@ public class DeterminePartitionsJob implements Jobby
         groupByJob.submit();
         log.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
 
+        // Store the jobId in the file
+        if (groupByJob.getJobID() != null) {
+          JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), groupByJob.getJobID().toString());
+        }
+
+
         if (!groupByJob.waitForCompletion(true)) {
           log.error("Job failed: %s", groupByJob.getJobID());
           failureCause = Utils.getFailureMessage(groupByJob, config.JSON_MAPPER);
@@ -217,6 +223,12 @@ public class DeterminePartitionsJob implements Jobby
           dimSelectionJob.getJobName(),
           dimSelectionJob.getTrackingURL()
       );
+
+      // Store the jobId in the file
+      if (dimSelectionJob.getJobID() != null) {
+        JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), dimSelectionJob.getJobID().toString());
+      }
+
 
       if (!dimSelectionJob.waitForCompletion(true)) {
         log.error("Job failed: %s", dimSelectionJob.getJobID().toString());
