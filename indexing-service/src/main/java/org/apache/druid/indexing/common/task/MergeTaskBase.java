@@ -62,6 +62,7 @@ import java.util.stream.Collectors;
 
 /**
  */
+@Deprecated
 public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 {
   private static final EmittingLogger log = new EmittingLogger(MergeTaskBase.class);

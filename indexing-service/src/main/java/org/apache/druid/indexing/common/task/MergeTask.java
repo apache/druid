@@ -42,6 +42,7 @@ import java.util.Map;
 
 /**
  */
+@Deprecated
 public class MergeTask extends MergeTaskBase
 {
   @JsonIgnore

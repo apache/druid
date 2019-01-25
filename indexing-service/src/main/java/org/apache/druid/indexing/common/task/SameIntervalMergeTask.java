@@ -38,6 +38,7 @@ import java.util.Map;
 
 /**
  */
+@Deprecated
 public class SameIntervalMergeTask extends AbstractFixedIntervalTask
 {
   private static final String TYPE = "same_interval_merge";

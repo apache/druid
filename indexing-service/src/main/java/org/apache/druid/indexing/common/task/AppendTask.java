@@ -48,6 +48,7 @@ import java.util.Map;
 
 /**
  */
+@Deprecated
 public class AppendTask extends MergeTaskBase
 {
   private final IndexSpec indexSpec;

@@ -56,6 +56,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
+@Deprecated
 public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
 {
   private static final Logger log = new Logger(DruidCoordinatorSegmentMerger.class);
