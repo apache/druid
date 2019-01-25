@@ -43,7 +43,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 public class HllSketchBuildBufferAggregator implements BufferAggregator
 {
 
-  // for locking per buffer position (power of 2 to make index computation faster)
+  /** for locking per buffer position (power of 2 to make index computation faster) */
   private static final int NUM_STRIPES = 64;
 
   private final ColumnValueSelector<Object> selector;
@@ -74,7 +74,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     putSketchIntoCache(buf, position, new HllSketch(lgK, tgtHllType, mem));
   }
 
-  /*
+  /**
    * This method uses locks because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently
    * See https://github.com/druid-io/druid/pull/3956
@@ -97,7 +97,7 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
     }
   }
 
-  /*
+  /**
    * This method uses locks because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently
    * See https://github.com/druid-io/druid/pull/3956
@@ -186,5 +186,9 @@ public class HllSketchBuildBufferAggregator implements BufferAggregator
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("selector", selector);
+    // lgK should be inspected because different execution paths exist in HllSketch.update() that is called from
+    // @CalledFromHotLoop-annotated aggregate() depending on the lgK.
+    // See https://github.com/apache/incubator-druid/pull/6893#discussion_r250726028
+    inspector.visit("lgK", lgK);
   }
 }
