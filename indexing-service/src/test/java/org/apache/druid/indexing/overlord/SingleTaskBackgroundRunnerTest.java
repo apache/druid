@@ -195,7 +195,7 @@ public class SingleTaskBackgroundRunnerTest
     }
 
     @Override
-    public void stopGracefully()
+    public void stopGracefully(TaskConfig taskConfig)
     {
       gracefullyStopped.set();
     }

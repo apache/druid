@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ColumnSelectorPlus;
@@ -227,7 +226,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
       // Be conservative, don't assume we own this buffer.
       buffer = ((ByteBuffer) object).duplicate();
     } else if (object instanceof String) {
-      buffer = ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
+      buffer = ByteBuffer.wrap(StringUtils.decodeBase64(StringUtils.toUtf8((String) object)));
     } else {
       return object;
     }

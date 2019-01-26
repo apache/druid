@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -149,7 +148,7 @@ public class HistogramAggregatorFactory extends AggregatorFactory
     } else if (object instanceof ByteBuffer) {
       return Histogram.fromBytes((ByteBuffer) object);
     } else if (object instanceof String) {
-      byte[] bytes = Base64.decodeBase64(StringUtils.toUtf8((String) object));
+      byte[] bytes = StringUtils.decodeBase64(StringUtils.toUtf8((String) object));
       return Histogram.fromBytes(bytes);
     }
     return object;

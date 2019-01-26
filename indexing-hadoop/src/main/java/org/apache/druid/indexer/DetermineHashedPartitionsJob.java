@@ -75,6 +75,7 @@ public class DetermineHashedPartitionsJob implements Jobby
   private final HadoopDruidIndexerConfig config;
   private String failureCause;
   private Job groupByJob;
+  private long startTime;
 
   public DetermineHashedPartitionsJob(
       HadoopDruidIndexerConfig config
@@ -91,7 +92,7 @@ public class DetermineHashedPartitionsJob implements Jobby
        * Group by (timestamp, dimensions) so we can correctly count dimension values as they would appear
        * in the final segment.
        */
-      final long startTime = System.currentTimeMillis();
+      startTime = System.currentTimeMillis();
       groupByJob = Job.getInstance(
           new Configuration(),
           StringUtils.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
@@ -124,6 +125,11 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       groupByJob.submit();
       log.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
+
+      // Store the jobId in the file
+      if (groupByJob.getJobID() != null) {
+        JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), groupByJob.getJobID().toString());
+      }
 
       if (!groupByJob.waitForCompletion(true)) {
         log.error("Job failed: %s", groupByJob.getJobID());

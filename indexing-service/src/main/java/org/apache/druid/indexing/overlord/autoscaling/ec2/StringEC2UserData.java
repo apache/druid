@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord.autoscaling.ec2;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -80,7 +79,7 @@ public class StringEC2UserData implements EC2UserData<StringEC2UserData>
     } else {
       finalData = data;
     }
-    return Base64.encodeBase64String(StringUtils.toUtf8(finalData));
+    return StringUtils.encodeBase64String(StringUtils.toUtf8(finalData));
   }
 
   @Override
