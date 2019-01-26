@@ -21,6 +21,7 @@ package org.apache.druid.query.expressions;
 
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -29,7 +30,6 @@ import org.apache.druid.query.filter.BloomKFilter;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
-import java.util.Base64;
 import java.util.List;
 
 public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
@@ -58,7 +58,7 @@ public class BloomFilterExprMacro implements ExprMacroTable.ExprMacro
 
 
     final String serializedFilter = filterExpr.getLiteralValue().toString();
-    final byte[] decoded = Base64.getDecoder().decode(serializedFilter);
+    final byte[] decoded = StringUtils.decodeBase64String(serializedFilter);
     BloomKFilter filter;
     try {
       filter = BloomFilterSerializersModule.bloomKFilterFromBytes(decoded);

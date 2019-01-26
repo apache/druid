@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -136,7 +135,7 @@ public class BasicAuthUtils
   public static String decodeUserSecret(String encodedUserSecret)
   {
     try {
-      return StringUtils.fromUtf8(Base64.getDecoder().decode(encodedUserSecret));
+      return StringUtils.fromUtf8(StringUtils.decodeBase64String(encodedUserSecret));
     }
     catch (IllegalArgumentException iae) {
       return null;

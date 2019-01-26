@@ -42,7 +42,6 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Base64;
 import java.util.List;
 
 public class BloomFilterOperatorConversion extends DirectOperatorConversion
@@ -83,7 +82,7 @@ public class BloomFilterOperatorConversion extends DirectOperatorConversion
     }
 
     String base64EncodedBloomKFilter = RexLiteral.stringValue(operands.get(1));
-    final byte[] decoded = Base64.getDecoder().decode(base64EncodedBloomKFilter);
+    final byte[] decoded = StringUtils.decodeBase64String(base64EncodedBloomKFilter);
     BloomKFilter filter;
     BloomKFilterHolder holder;
     try {

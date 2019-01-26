@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -204,7 +203,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 
       return ah;
     } else if (object instanceof String) {
-      byte[] bytes = Base64.decodeBase64(StringUtils.toUtf8((String) object));
+      byte[] bytes = StringUtils.decodeBase64(StringUtils.toUtf8((String) object));
       final ApproximateHistogram ah = ApproximateHistogram.fromBytes(bytes);
       ah.setLowerLimit(lowerLimit);
       ah.setUpperLimit(upperLimit);
