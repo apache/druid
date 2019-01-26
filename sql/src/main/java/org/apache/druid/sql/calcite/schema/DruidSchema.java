@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
@@ -402,6 +403,7 @@ public class DruidSchema extends AbstractSchema
     }
   }
 
+  @VisibleForTesting
   protected void removeSegment(final DataSegment segment)
   {
     synchronized (lock) {
@@ -450,6 +452,7 @@ public class DruidSchema extends AbstractSchema
    * Attempt to refresh "segmentSignatures" for a set of segments. Returns the set of segments actually refreshed,
    * which may be a subset of the asked-for set.
    */
+  @VisibleForTesting
   protected Set<DataSegment> refreshSegments(final Set<DataSegment> segments) throws IOException
   {
     final Set<DataSegment> retVal = new HashSet<>();
