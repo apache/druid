@@ -23,11 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -221,7 +221,7 @@ public class BloomFilterAggregatorTest
 
   static String filterToString(BloomKFilter bloomKFilter) throws IOException
   {
-    return Base64.encodeBase64String(BloomFilterSerializersModule.bloomKFilterToBytes(bloomKFilter));
+    return StringUtils.encodeBase64String(BloomFilterSerializersModule.bloomKFilterToBytes(bloomKFilter));
   }
 
   private final DimensionSpec dimSpec = new DefaultDimensionSpec("dim1", "dim1");

@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.bloom;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
@@ -194,7 +193,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   public Object deserialize(Object object)
   {
     if (object instanceof String) {
-      return ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
+      return ByteBuffer.wrap(StringUtils.decodeBase64String((String) object));
     } else {
       return object;
     }
