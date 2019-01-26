@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockAcquireAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -494,29 +495,31 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public void stopGracefully()
+  public void stopGracefully(TaskConfig taskConfig)
   {
-    try {
-      synchronized (this) {
-        if (!gracefullyStopped) {
-          gracefullyStopped = true;
-          if (firehose == null) {
-            log.info("stopGracefully: Firehose not started yet, so nothing to stop.");
-          } else if (finishingJob) {
-            log.info("stopGracefully: Interrupting finishJob.");
-            runThread.interrupt();
-          } else if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
-            log.info("stopGracefully: Draining firehose.");
-            firehose.close();
-          } else {
-            log.info("stopGracefully: Cannot drain firehose by closing, interrupting run thread.");
-            runThread.interrupt();
+    if (taskConfig.isRestoreTasksOnRestart()) {
+      try {
+        synchronized (this) {
+          if (!gracefullyStopped) {
+            gracefullyStopped = true;
+            if (firehose == null) {
+              log.info("stopGracefully: Firehose not started yet, so nothing to stop.");
+            } else if (finishingJob) {
+              log.info("stopGracefully: Interrupting finishJob.");
+              runThread.interrupt();
+            } else if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
+              log.info("stopGracefully: Draining firehose.");
+              firehose.close();
+            } else {
+              log.info("stopGracefully: Cannot drain firehose by closing, interrupting run thread.");
+              runThread.interrupt();
+            }
           }
         }
       }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
     }
   }
 
