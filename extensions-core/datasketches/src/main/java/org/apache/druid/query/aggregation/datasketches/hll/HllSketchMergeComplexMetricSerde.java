@@ -21,9 +21,9 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.yahoo.memory.Memory;
 import com.yahoo.sketches.hll.HllSketch;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -89,7 +89,7 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
   static HllSketch deserializeSketch(final Object object)
   {
     if (object instanceof String) {
-      return HllSketch.wrap(Memory.wrap(Base64.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
+      return HllSketch.wrap(Memory.wrap(StringUtils.decodeBase64(((String) object).getBytes(StandardCharsets.UTF_8))));
     } else if (object instanceof byte[]) {
       return HllSketch.wrap(Memory.wrap((byte[]) object));
     } else if (object instanceof HllSketch) {

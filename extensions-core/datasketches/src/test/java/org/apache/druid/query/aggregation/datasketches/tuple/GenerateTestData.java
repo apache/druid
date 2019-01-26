@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.BufferedWriter;
 import java.nio.charset.StandardCharsets;
@@ -56,7 +56,7 @@ class GenerateTestData
         out.write('\t');
         out.write("product_" + (rand.nextInt(10) + 1));
         out.write('\t');
-        out.write(Base64.encodeBase64String(sketch.compact().toByteArray()));
+        out.write(StringUtils.encodeBase64String(sketch.compact().toByteArray()));
         out.newLine();
       }
     }
