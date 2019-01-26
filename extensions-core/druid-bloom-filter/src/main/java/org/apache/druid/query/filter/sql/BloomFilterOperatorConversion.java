@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter.sql;
 
-import com.google.common.io.BaseEncoding;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -28,6 +27,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.guice.BloomFilterSerializersModule;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
@@ -77,7 +77,7 @@ public class BloomFilterOperatorConversion implements SqlOperatorConversion
     }
 
     String base64EncodedBloomKFilter = RexLiteral.stringValue(operands.get(1));
-    final byte[] decoded = BaseEncoding.base64().decode(base64EncodedBloomKFilter);
+    final byte[] decoded = StringUtils.decodeBase64String(base64EncodedBloomKFilter);
     BloomKFilter filter;
     BloomKFilterHolder holder;
     try {
