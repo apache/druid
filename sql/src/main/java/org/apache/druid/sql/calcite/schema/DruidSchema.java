@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
@@ -350,7 +351,8 @@ public class DruidSchema extends AbstractSchema
     return builder.build();
   }
 
-  private void addSegment(final DruidServerMetadata server, final DataSegment segment)
+  @VisibleForTesting
+  protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     synchronized (lock) {
       final Map<DataSegment, SegmentMetadataHolder> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
@@ -538,7 +540,8 @@ public class DruidSchema extends AbstractSchema
     return retVal;
   }
 
-  private void setSegmentMetadataHolder(final DataSegment segment, final SegmentMetadataHolder segmentMetadataHolder)
+  @VisibleForTesting
+  protected void setSegmentMetadataHolder(final DataSegment segment, final SegmentMetadataHolder segmentMetadataHolder)
   {
     synchronized (lock) {
       TreeMap<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.computeIfAbsent(

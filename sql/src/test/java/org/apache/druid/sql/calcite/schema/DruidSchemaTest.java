@@ -27,6 +27,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -40,6 +42,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -63,6 +66,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class DruidSchemaTest extends CalciteTestBase
 {
@@ -82,6 +86,8 @@ public class DruidSchemaTest extends CalciteTestBase
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
+
+  private List<ImmutableDruidServer> druidServers;
 
   @BeforeClass
   public static void setUpClass()
@@ -162,10 +168,12 @@ public class DruidSchemaTest extends CalciteTestBase
         index2
     );
 
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
+    druidServers = serverView.getDruidServers();
 
     schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestServerInventoryView(walker.getSegments()),
+        serverView,
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
         new NoopEscalator()
@@ -237,4 +245,33 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals("m1", fields.get(2).getName());
     Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
   }
+
+  @Test
+  public void testSegmentMetadataHolderNumRows()
+  {
+    Map<DataSegment, SegmentMetadataHolder> segmentsMetadata = schema.getSegmentMetadata();
+    Set<DataSegment> segments = segmentsMetadata.keySet();
+    Assert.assertEquals(segments.size(), 3);
+    DataSegment existingSegment = segments.stream().findFirst().orElse(null);
+    Assert.assertFalse(existingSegment == null);
+    SegmentMetadataHolder existingHolder = segmentsMetadata.get(existingSegment);
+    SegmentMetadataHolder updatedHolder = SegmentMetadataHolder.from(existingHolder).withNumRows(5).build();
+    schema.setSegmentMetadataHolder(existingSegment, updatedHolder);
+    ImmutableDruidServer server = null;
+    for (ImmutableDruidServer druidServer : druidServers) {
+      for (DataSegment segment : druidServer.getSegments()) {
+        if (segment == existingSegment) {
+          server = druidServer;
+        }
+      }
+    }
+    Assert.assertFalse(server == null);
+    final DruidServerMetadata druidServerMetadata = server.getMetadata();
+    schema.addSegment(druidServerMetadata, existingSegment);
+    segmentsMetadata = schema.getSegmentMetadata();
+    existingSegment = segments.stream().findFirst().orElse(null);
+    final SegmentMetadataHolder currentHolder = segmentsMetadata.get(existingSegment);
+    Assert.assertEquals(updatedHolder.getNumRows(), currentHolder.getNumRows());
+  }
+
 }
