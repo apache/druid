@@ -108,7 +108,7 @@ public class KinesisIOConfigTest
                      + "  \"fetchDelayMillis\": 1000,\n"
                      + "  \"exclusiveStartSequenceNumberPartitions\": [\"0\"],\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
-                     + "  \"awsExternalId\": \"awsexternalid\",\n"
+                     + "  \"awsExternalId\": \"awsexternalid\"\n"
                      + "}";
 
     KinesisIndexTaskIOConfig config = (KinesisIndexTaskIOConfig) mapper.readValue(

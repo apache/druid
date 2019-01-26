@@ -95,7 +95,7 @@ public class KinesisSupervisorIOConfigTest
                      + "  \"recordsPerFetch\": 4000,\n"
                      + "  \"fetchDelayMillis\": 1000,\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
-                     + "  \"awsExternalId\": \"awsexternalid\",\n"
+                     + "  \"awsExternalId\": \"awsexternalid\"\n"
                      + "}";
 
     KinesisSupervisorIOConfig config = mapper.readValue(
