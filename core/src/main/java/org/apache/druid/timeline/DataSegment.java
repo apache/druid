@@ -323,6 +323,18 @@ public class DataSegment implements Comparable<DataSegment>
            '}';
   }
 
+  public boolean trueEquals(Object o)
+  {
+    if (!this.equals(o)) {
+      return false;
+    }
+    DataSegment that = (DataSegment) o;
+    return size == that.size &&
+           dimensions.equals(that.dimensions) &&
+           metrics.equals(that.metrics) &&
+           loadSpec.equals(that.loadSpec);
+  }
+
   public static Comparator<DataSegment> bucketMonthComparator()
   {
     return new Comparator<DataSegment>()

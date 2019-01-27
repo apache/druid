@@ -22,7 +22,6 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Interner;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -52,7 +51,6 @@ import java.util.concurrent.TimeUnit;
 public class MetadataSegmentView
 {
 
-  private static final Interner<DataSegment> DATASEGMENT_INTERNER = DataSegmentInterner.INTERNER;
   private static final int DEFAULT_POLL_PERIOD_IN_MS = 60000;
   private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
 
@@ -63,6 +61,7 @@ public class MetadataSegmentView
 
   private final Map<DataSegment, DateTime> publishedSegments = new ConcurrentHashMap<>();
   private ScheduledExecutorService scheduledExec;
+  private final DataSegmentInterner interner;
 
   @Inject
   public MetadataSegmentView(
@@ -76,6 +75,7 @@ public class MetadataSegmentView
     this.jsonMapper = jsonMapper;
     this.responseHandler = responseHandler;
     this.segmentWatcherConfig = segmentWatcherConfig;
+    this.interner = new DataSegmentInterner();
   }
 
   @LifecycleStart
@@ -99,7 +99,7 @@ public class MetadataSegmentView
 
   private void poll()
   {
-    log.debug("Start polling published segments from coordinator");
+    log.info("Start polling published segments from coordinator");
     //get authorized published segments from coordinator
     final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
@@ -109,7 +109,7 @@ public class MetadataSegmentView
 
     final DateTime ts = DateTimes.nowUtc();
     while (metadataSegments.hasNext()) {
-      final DataSegment interned = DATASEGMENT_INTERNER.intern(metadataSegments.next());
+      final DataSegment interned = interner.replaceWithBetterSegmentIfPresent(metadataSegments.next());
       publishedSegments.put(interned, ts);
     }
     // filter the segments from cache which may not be present in subsequent polling
@@ -123,6 +123,7 @@ public class MetadataSegmentView
       publishedSegments.keySet()
                        .removeIf(key -> !segmentWatcherConfig.getWatchedDataSources().contains(key.getDataSource()));
     }
+    log.info("Done polling published segments");
   }
 
   public Iterator<DataSegment> getPublishedSegments()
