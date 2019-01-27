@@ -23,7 +23,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.junit.Assert;
@@ -762,7 +761,7 @@ public class HyperLogLogCollectorTest
 
     List<HyperLogLogCollector> collectors = Lists.transform(
         objects,
-        s -> HyperLogLogCollector.makeCollector(ByteBuffer.wrap(Base64.decodeBase64(s)))
+        s -> HyperLogLogCollector.makeCollector(ByteBuffer.wrap(StringUtils.decodeBase64String(s)))
     );
 
     Collection<List<HyperLogLogCollector>> permutations = Collections2.permutations(collectors);

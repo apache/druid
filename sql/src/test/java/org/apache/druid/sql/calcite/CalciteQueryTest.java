@@ -272,8 +272,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         ImmutableList.of(),
         ImmutableList.of(
-            new Object[]{"druid", "foo", "TABLE"},
-            new Object[]{"druid", "foo2", "TABLE"},
+            new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"},
+            new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"},
+            new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"},
             new Object[]{"druid", "aview", "VIEW"},
             new Object[]{"druid", "bview", "VIEW"},
             new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"},
@@ -293,20 +294,21 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')",
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"},
-            new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"},
-            new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"},
-            new Object[]{"druid", "aview", "VIEW"},
-            new Object[]{"druid", "bview", "VIEW"},
-            new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"},
-            new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"},
-            new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"},
-            new Object[]{"sys", "segments", "SYSTEM_TABLE"},
-            new Object[]{"sys", "server_segments", "SYSTEM_TABLE"},
-            new Object[]{"sys", "servers", "SYSTEM_TABLE"},
-            new Object[]{"sys", "tasks", "SYSTEM_TABLE"}
-        )
+        ImmutableList.<Object[]>builder()
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.FORBIDDEN_DATASOURCE, "TABLE"})
+            .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE"})
+            .add(new Object[]{"druid", "aview", "VIEW"})
+            .add(new Object[]{"druid", "bview", "VIEW"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE"})
+            .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "segments", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
+            .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
+        .build()
     );
   }
 
@@ -7687,6 +7689,72 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testFilterFloatDimension() throws Exception
+  {
+    testQuery(
+        "SELECT dim1 FROM numfoo WHERE f1 = 0.1 LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(QSS(Filtration.eternity()))
+                .columns("dim1")
+                .filters(SELECTOR("f1", "0.1", null))
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1"}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterDoubleDimension() throws Exception
+  {
+    testQuery(
+        "SELECT dim1 FROM numfoo WHERE d1 = 1.7 LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(QSS(Filtration.eternity()))
+                .columns("dim1")
+                .filters(SELECTOR("d1", "1.7", null))
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1"}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterLongDimension() throws Exception
+  {
+    testQuery(
+        "SELECT dim1 FROM numfoo WHERE l1 = 7 LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(QSS(Filtration.eternity()))
+                .columns("dim1")
+                .filters(SELECTOR("l1", "7", null))
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""}
+        )
     );
   }
 }

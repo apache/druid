@@ -129,8 +129,8 @@ public class CompressedFloatsSerdeTest
 
     assertIndexMatchesVals(floats, values);
     for (int i = 0; i < 10; i++) {
-      int a = (int) (Math.random() * values.length);
-      int b = (int) (Math.random() * values.length);
+      int a = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
+      int b = (int) (ThreadLocalRandom.current().nextDouble() * values.length);
       int start = a < b ? a : b;
       int end = a < b ? b : a;
       tryFill(floats, values, start, end - start);
