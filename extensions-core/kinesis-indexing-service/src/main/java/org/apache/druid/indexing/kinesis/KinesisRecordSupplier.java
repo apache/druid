@@ -275,6 +275,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             throw new RuntimeException(e);
           }
         }
+        catch (InvalidProtocolBufferException e) {
+          log.warn(e, "Aggregated message's format is invalid (doesn't match KPL's protobuf schema).");
+          throw new RuntimeException(e);
+        }
         catch (Throwable e) {
           // non transient errors
           log.error(e, "unknown getRecordRunnable exception, will not retry");
@@ -703,7 +707,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   }
 
   @VisibleForTesting
-  List<byte[]> deaggregateKinesisRecord(Record kinesisRecord) throws InvalidProtocolBufferException {
+  List<byte[]> deaggregateKinesisRecord(Record kinesisRecord) throws InvalidProtocolBufferException
+  {
     ByteBuffer kinesisRecordData = kinesisRecord.getData();
     int recordSize = kinesisRecordData.position(0).remaining();
     boolean validAggregateLength = (recordSize > KPL_AGGREGATE_MAGIC_NUMBERS.length + KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES);
