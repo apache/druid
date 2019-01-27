@@ -161,7 +161,7 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
         log.info("Starting graceful shutdown of task[%s].", task.getId());
 
         try {
-          task.stopGracefully();
+          task.stopGracefully(taskConfig);
           final TaskStatus taskStatus = item.getResult().get(
               new Interval(DateTimes.utc(start), taskConfig.getGracefulShutdownTimeout()).toDurationMillis(),
               TimeUnit.MILLISECONDS

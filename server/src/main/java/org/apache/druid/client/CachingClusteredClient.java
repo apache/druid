@@ -31,7 +31,6 @@ import com.google.common.collect.RangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.inject.Inject;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
@@ -391,7 +390,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       if (hasOnlyHistoricalSegments) {
         hasher.putBytes(queryCacheKey == null ? strategy.computeCacheKey(query) : queryCacheKey);
 
-        String currEtag = Base64.encodeBase64String(hasher.hash().asBytes());
+        String currEtag = StringUtils.encodeBase64String(hasher.hash().asBytes());
         responseContext.put(QueryResource.HEADER_ETAG, currEtag);
         return currEtag;
       } else {
