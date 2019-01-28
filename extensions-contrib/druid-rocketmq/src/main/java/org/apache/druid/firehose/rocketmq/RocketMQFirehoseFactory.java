@@ -404,7 +404,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
         this.requestsWrite.add(request);
         if (!hasNotified) {
           hasNotified = true;
-          notify();
+          notifyAll();
         }
       }
     }
