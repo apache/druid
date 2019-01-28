@@ -61,7 +61,6 @@ public class MetadataSegmentView
 
   private final Map<DataSegment, DateTime> publishedSegments = new ConcurrentHashMap<>();
   private ScheduledExecutorService scheduledExec;
-  private final DataSegmentInterner interner;
 
   @Inject
   public MetadataSegmentView(
@@ -75,7 +74,6 @@ public class MetadataSegmentView
     this.jsonMapper = jsonMapper;
     this.responseHandler = responseHandler;
     this.segmentWatcherConfig = segmentWatcherConfig;
-    this.interner = new DataSegmentInterner();
   }
 
   @LifecycleStart
@@ -109,7 +107,13 @@ public class MetadataSegmentView
 
     final DateTime ts = DateTimes.nowUtc();
     while (metadataSegments.hasNext()) {
-      final DataSegment interned = interner.replaceWithBetterSegmentIfPresent(metadataSegments.next());
+      final DataSegment currentSegment = metadataSegments.next();
+      final DataSegment interned;
+      if (currentSegment.getSize() > 0) {
+        interned = DataSegmentInterner.HISTORICAL_INTERNER.intern(currentSegment);
+      } else {
+        interned = DataSegmentInterner.REALTIME_INTERNER.intern(currentSegment);
+      }
       publishedSegments.put(interned, ts);
     }
     // filter the segments from cache which may not be present in subsequent polling

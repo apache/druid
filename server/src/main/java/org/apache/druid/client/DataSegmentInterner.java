@@ -19,40 +19,18 @@
 
 package org.apache.druid.client;
 
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 public class DataSegmentInterner
 {
+  public static final Interner<DataSegment> REALTIME_INTERNER = Interners.newWeakInterner();
+  public static final Interner<DataSegment> HISTORICAL_INTERNER = Interners.newWeakInterner();
 
-  private final ConcurrentMap<SegmentId, DataSegment> knownSegments = new ConcurrentHashMap<>();
-
-  /**
-   * This method will return a reference to already existing segment, if an equal and better segment exists.
-   * A segment is considered better if it has more attributes set. A segment gets updated when
-   * it moves from realtime to historical, it learns what its `size` and `dimensions`,
-   * so size is a good indicator, if a segment has more attributes set.
-   */
-  public DataSegment replaceWithBetterSegmentIfPresent(DataSegment segment)
+  private DataSegmentInterner()
   {
-    final DataSegment alreadyExistingSegment = knownSegments.get(segment.getId());
-    if (alreadyExistingSegment == null) {
-      knownSegments.put(segment.getId(), segment);
-      return segment;
-    }
 
-    if (alreadyExistingSegment.trueEquals(segment)) {
-      return alreadyExistingSegment;
-    } else {
-      if (alreadyExistingSegment.equals(segment) && alreadyExistingSegment.getSize() > segment.getSize()) {
-        return alreadyExistingSegment;
-      } else {
-        return segment;
-      }
-    }
   }
 
 }
