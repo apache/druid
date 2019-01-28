@@ -134,6 +134,14 @@
                 <artifactId>curator-client</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-framework</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-recipes</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-math3</artifactId>
               </exclusion>
