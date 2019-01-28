@@ -65,7 +65,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
           It appears that the SQL endpoint is disabled. Either <a
           href="http://druid.io/docs/latest/querying/sql.html">enable the SQL endpoint</a> or use the old <a
           href="/legacy-coordinator-console.html">coordinator</a> and <a
-          href="/legacy-overlord-console.html">overlord</a> consoles that do not rely on the SQL endpoint.
+          href="/console.html">overlord</a> consoles that do not rely on the SQL endpoint.
         </>
       });
       return false
@@ -82,7 +82,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
         message: <>
           Welcome to the unified Druid console, the old <a
           href="/legacy-coordinator-console.html">coordinator</a> and <a
-          href="/legacy-overlord-console.html">overlord</a> consoles are also available for use
+          href="/console.html">overlord</a> consoles are also available for use
           from the 'Legacy' link in the header
         </>,
         action: {
