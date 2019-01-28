@@ -30,9 +30,9 @@ In this document, we'll set up a simple cluster and discuss how it can be furthe
 your needs. 
 
 This simple cluster will feature:
- - Scalable, fault-tolerant Data servers running Historical and MiddleManager processes
- - Query servers, hosting Druid broker processes
  - A single Master server to host the Coordinator and Overlord processes
+ - Scalable, fault-tolerant Data servers running Historical and MiddleManager processes
+ - Query servers, hosting Druid Broker processes
 
 In production, we recommend deploying multiple Master servers with Coordinator and Overlord processes in a fault-tolerant configuration as well.
 
@@ -202,7 +202,7 @@ using this functionality, then at this point you should
 If you will be loading data from a Hadoop cluster, then at this point you should configure Druid to be aware
 of your cluster:
 
-- Update `druid.indexer.task.hadoopWorkingPath` in `conf/data/middleManager/runtime.properties` to
+- Update `druid.indexer.task.hadoopWorkingPath` in `conf/druid/middleManager/runtime.properties` to
 a path on HDFS that you'd like to use for temporary files required during the indexing process.
 `druid.indexer.task.hadoopWorkingPath=/tmp/druid-indexing` is a common choice.
 
@@ -219,8 +219,8 @@ For more info, please see [batch ingestion](../ingestion/batch-ingestion.html).
 ## Configure addresses for Druid coordination
 
 In this simple cluster, you will deploy a single Master server containing the following:
-- A single Druid coordinator process
-- A single Druid overlord process
+- A single Druid Coordinator process
+- A single Druid Overlord process
 - A single ZooKeeper istance
 - An embedded Derby metadata store
 
@@ -350,8 +350,8 @@ In production, we also recommend running a ZooKeeper cluster on its own dedicate
 On your coordination server, *cd* into the distribution and start up the coordination services (you should do this in different windows or pipe the log to a file):
 
 ```bash
-java `cat conf/druid/master/coordinator/jvm.config | xargs` -cp conf/druid/_common:conf/druid/master/coordinator:lib/* org.apache.druid.cli.Main server coordinator
-java `cat conf/druid/master/overlord/jvm.config | xargs` -cp conf/druid/_common:conf/druid/master/overlord:lib/* org.apache.druid.cli.Main server overlord
+java `cat conf/druid/coordinator/jvm.config | xargs` -cp conf/druid/_common:conf/druid/coordinator:lib/* org.apache.druid.cli.Main server coordinator
+java `cat conf/druid/overlord/jvm.config | xargs` -cp conf/druid/_common:conf/druid/overlord:lib/* org.apache.druid.cli.Main server overlord
 ```
 
 You should see a log message printed out for each service that starts up. You can view detailed logs
@@ -364,8 +364,8 @@ Copy the Druid distribution and your edited configurations to your Data servers 
 On each one, *cd* into the distribution and run this command to start the Data server processes:
 
 ```bash
-java `cat conf/druid/data/historical/jvm.config | xargs` -cp conf/druid/_common:conf/druid/data/historical:lib/* org.apache.druid.cli.Main server historical
-java `cat conf/druid/data/middleManager/jvm.config | xargs` -cp conf/druid/_common:conf/druid/data/middleManager:lib/* org.apache.druid.cli.Main server middleManager
+java `cat conf/druid/historical/jvm.config | xargs` -cp conf/druid/_common:conf/druid/historical:lib/* org.apache.druid.cli.Main server historical
+java `cat conf/druid/middleManager/jvm.config | xargs` -cp conf/druid/_common:conf/druid/middleManager:lib/* org.apache.druid.cli.Main server middleManager
 ```
 
 You can add more Data servers with Druid Historicals and MiddleManagers as needed.
@@ -395,7 +395,7 @@ Copy the Druid distribution and your edited configurations to your Query servers
 On each Query server, *cd* into the distribution and run this command to start the Broker process (you may want to pipe the output to a log file):
 
 ```bash
-java `cat conf/druid/query/broker/jvm.config | xargs` -cp conf/druid/_common:conf/druid/query/broker:lib/* org.apache.druid.cli.Main server broker
+java `cat conf/druid/broker/jvm.config | xargs` -cp conf/druid/_common:conf/druid/broker:lib/* org.apache.druid.cli.Main server broker
 ```
 
 You can add more Query servers as needed based on query load.

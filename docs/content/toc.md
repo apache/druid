@@ -101,13 +101,12 @@ layout: toc
   * [Overview](/docs/VERSION/design/index.html)
   * Storage
     * [Segments](/docs/VERSION/design/segments.html)
-  * Node Types
-    * [Historical](/docs/VERSION/design/historical.html)
-    * [Broker](/docs/VERSION/design/broker.html)
+  * [Processes and Servers](docs/VERSION/operations/process-colocation.html)
     * [Coordinator](/docs/VERSION/design/coordinator.html)
-    * [Indexing Service](/docs/VERSION/design/indexing-service.html)
-      * [Overlord](/docs/VERSION/design/overlord.html)
-      * [MiddleManager](/docs/VERSION/design/middlemanager.html)
+    * [Overlord](/docs/VERSION/design/overlord.html)
+    * [Broker](/docs/VERSION/design/broker.html)
+    * [Historical](/docs/VERSION/design/historical.html)
+    * [MiddleManager](/docs/VERSION/design/middlemanager.html)
       * [Peons](/docs/VERSION/design/peons.html)
     * [Realtime (Deprecated)](/docs/VERSION/design/realtime.html)
   * Dependencies
@@ -128,7 +127,6 @@ layout: toc
   * [Metrics and Monitoring](/docs/VERSION/operations/metrics.html)
   * [Alerts](/docs/VERSION/operations/alerts.html)
   * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
-  * [Process Colocation](docs/VERSION/operations/process-colocation.html)
   * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
   * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)

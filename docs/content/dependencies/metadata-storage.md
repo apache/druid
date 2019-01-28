@@ -122,8 +122,7 @@ parameters across the cluster at runtime.
 
 ### Task-related Tables
 
-There are also a number of tables created and used by the [Indexing
-Service](../design/indexing-service.html) in the course of its work.
+There are also a number of tables created and used by the [Overlord](../design/overlord.html) and [MiddleManager](../design/middlemanager.html) when managing tasks.
 
 ### Audit Table
 

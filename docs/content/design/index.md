@@ -93,67 +93,28 @@ Druid has a multi-process, distributed architecture that is designed to be cloud
 Druid process type can be configured and scaled independently, giving you maximum flexibility over your cluster. This
 design also provides enhanced fault tolerance: an outage of one component will not immediately affect other components.
 
-## Server Types
+## Processes and Servers
 
-A Druid cluster is organized into 3 server types:
+Druid has several process types, briefly described below:
 
-### Master server
+* [**Coordinator**](../design/coordinator.html) processes manage data availability on the cluster.
+* [**Overlord**](../design/overlord.html) processes control the assignment of data ingestion workloads.
+* [**Broker**](../design/broker.html) processes handle queries from external clients.
+* [**Router**](../development/router.html) processes are optional processes that can route requests to Brokers, Coordinators, and Overlords.
+* [**Historical**](../design/historical.html) processes store queryable data.
+* [**MiddleManager**](../design/middlemanager.html) processes are responsible for ingesting data.
 
-A master server manages data ingestion and storage: it is responsible for starting new ingestion jobs and coordinating availability of data on the "Data servers" described below.
+Druid processes can be deployed any way you like, but for ease of deployment we suggest organizing them into three server types: Master, Query, and Data.
 
-Within a master server, functionality is split between two processes, the coordinator and overlord.
+* **Master**: Runs Coordinator and Overlord processes, manages data availability and ingestion.
+* **Query**: Runs Broker and optional Router processes, handles queries from external clients.
+* **Data**: Runs Historical and MiddleManager processes, executes ingestion workloads and stores all queryable data.
 
-#### Coordinator process
-
-[**Coordinator**](../design/coordinator.html) processes watch over the Historical processes on the Data servers. They are responsible for assigning segments to specific servers, and for ensuring segments are well-balanced across Historicals.
-
-#### Overlord process
-
-[**Overlord**](../design/overlord.html) processes watch over the MiddleManager processes on the Data servers and are the controllers of data ingestion into Druid. They are responsible for assigning ingestion tasks to MiddleManagers and for coordinating segment publishing.
-
-### Query server
-
-A query server provides the endpoints that users and client applications interact with, routing queries to data servers or other query servers (and optionally proxied master server requests as well).
-
-Within a query server, functionality is split between two processes, the broker and router.
-
-#### Broker process
-
-[**Broker**](../design/broker.html) processes receive queries from external clients and forward those queries to Data servers. When Brokers receive results from those subqueries, they merge those results and return them to the
-caller. End users typically query Brokers rather than querying Historicals or MiddleManagers processes on Data servers directly.
-
-#### Router process (optional)
-
-[**Router**](../development/router.html) processes are _optional_ processes that provide a unified API gateway in front of Druid Brokers,
-Overlords, and Coordinators. They are optional since you can also simply contact the Druid Brokers, Overlords, and
-Coordinators directly.
-
-### Data server
-
-A data server executes ingestion jobs and stores queryable data.
-
-Within a data server, functionality is split between two processes, the historical and middle manager.
-
-#### Historical process
-
-[**Historical**](../design/historical.html) processes are the workhorses that handle storage and querying on "historical" data
-(including any streaming data that has been in the system long enough to be committed). Historical processes
-download segments from deep storage and respond to queries about these segments. They don't accept writes.
-
-#### Middle Manager process
-
-[**MiddleManager**](../design/middlemanager.html) processes handle ingestion of new data into the cluster. They are responsible
-for reading from external data sources and publishing new Druid segments.
-
-### Colocation
-
-While Druid processes are typically organized and colocated based on the server types described above, it is possible to deploy the processes separately.
-
-Please see [process colocation](../operations/process-colocation.html) for details.
+For more details on process and server organization, please see [Druid Processses and Servers](../processes.html).
 
 ### External dependencies
 
-In addition to these server and process types, Druid also has three external dependencies. These are intended to be able to
+In addition to its built-in process types, Druid also has three external dependencies. These are intended to be able to
 leverage existing infrastructure, where present.
 
 #### Deep storage
@@ -187,7 +148,7 @@ storage and the metadata store.
 
 ### Architecture diagram
 
-The following diagram shows how queries and data flow through this architecture:
+The following diagram shows how queries and data flow through this architecture, using the suggested Master/Query/Data server organization:
 
 <img src="../../img/druid-architecture.png" width="800"/>
 

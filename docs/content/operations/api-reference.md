@@ -60,7 +60,7 @@ Returns the current configuration properties of the node.
 
 ## Master Server
 
-This section documents the API endpoints for the processes that reside on master servers (coordinators and overlords).
+This section documents the API endpoints for the processes that reside on Master servers (Coordinators and Overlords) in the suggested [three-server configuration](../design/processes.html#server-types).
 
 ### Coordinator
 
@@ -70,18 +70,18 @@ This section documents the API endpoints for the processes that reside on master
 
 * `/druid/coordinator/v1/leader`
 
-Returns the current leader coordinator of the cluster.
+Returns the current leader Coordinator of the cluster.
 
 * `/druid/coordinator/v1/isLeader`
 
-Returns true if the coordinator receiving the request is the current leader.
+Returns true if the Coordinator receiving the request is the current leader.
 
 #### Segment Loading
 
 ##### GET
 
 Returns a JSON object with field "leader", either true or false, indicating if this server is the current leader
-coordinator of the cluster. In addition, returns HTTP 200 if the server is the current leader and HTTP 404 if not.
+Coordinator of the cluster. In addition, returns HTTP 200 if the server is the current leader and HTTP 404 if not.
 This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
 at the load balancer.
 
@@ -99,15 +99,15 @@ Returns the number of segments left to load in each tier until segments that sho
 
 * `/druid/coordinator/v1/loadqueue`
 
-Returns the ids of segments to load and drop for each historical node.
+Returns the ids of segments to load and drop for each Historical node.
 
 * `/druid/coordinator/v1/loadqueue?simple`
 
-Returns the number of segments to load and drop, as well as the total segment load and drop size in bytes for each historical node.
+Returns the number of segments to load and drop, as well as the total segment load and drop size in bytes for each Historical node.
 
 * `/druid/coordinator/v1/loadqueue?full`
 
-Returns the serialized JSON of segments to load and drop for each historical node.
+Returns the serialized JSON of segments to load and drop for each Historical node.
 
 #### Metadata store information
 
@@ -265,7 +265,7 @@ Returns all rules for a specified datasource and includes default datasource.
 
 * `/druid/coordinator/v1/rules/history?interval=<interval>`
 
- Returns audit history of rules for all datasources. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in coordinator runtime.properties
+ Returns audit history of rules for all datasources. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator runtime.properties
 
 * `/druid/coordinator/v1/rules/history?count=<n>`
 
@@ -273,7 +273,7 @@ Returns all rules for a specified datasource and includes default datasource.
 
 * `/druid/coordinator/v1/rules/{dataSourceName}/history?interval=<interval>`
 
- Returns audit history of rules for a specified datasource. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in coordinator runtime.properties
+ Returns audit history of rules for a specified datasource. default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in Coordinator runtime.properties
 
 * `/druid/coordinator/v1/rules/{dataSourceName}/history?count=<n>`
 
@@ -374,7 +374,7 @@ Returns a list of server data objects in which each object has the following key
 
 * `/druid/indexer/v1/leader` 
 
-Returns the current leader overlord of the cluster. If you have multiple overlords, just one is leading at any given time. The others are on standby.
+Returns the current leader Overlord of the cluster. If you have multiple Overlords, just one is leading at any given time. The others are on standby.
 
 * `/druid/indexer/v1/isLeader`
 
@@ -406,7 +406,7 @@ Retrieve a [task completion report](../ingestion/reports.html) for a task. Only 
 
 * `/druid/indexer/v1/task` 
 
-Endpoint for submitting tasks and supervisor specs to the overlord. Returns the taskId of the submitted task.
+Endpoint for submitting tasks and supervisor specs to the Overlord. Returns the taskId of the submitted task.
 
 * `druid/indexer/v1/task/{taskId}/shutdown`
 
@@ -494,7 +494,7 @@ Please use the equivalent 'terminate' instead.
 
 ## Data Server
 
-This section documents the API endpoints for the processes that reside on data servers (middle managers/peons and historicals).
+This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.html#server-types).
 
 ### MiddleManager
 
@@ -506,11 +506,11 @@ The MiddleManager does not have any API endpoints beyond the [common endpoints](
 
 * `/druid/worker/v1/chat/{taskId}/rowStats`
 
-Retrieve a live row stats report from a peon. See [task reports](../ingestion/reports.html) for more details.
+Retrieve a live row stats report from a Peon. See [task reports](../ingestion/reports.html) for more details.
 
 * `/druid/worker/v1/chat/{taskId}/unparseableEvents`
 
-Retrieve an unparseable events report from a peon. See [task reports](../ingestion/reports.html) for more details.
+Retrieve an unparseable events report from a Peon. See [task reports](../ingestion/reports.html) for more details.
 
 ### Historical
 
@@ -521,7 +521,7 @@ Retrieve an unparseable events report from a peon. See [task reports](../ingesti
 * `/druid/historical/v1/loadstatus`
 
 Returns JSON of the form `{"cacheInitialized":<value>}`, where value is either `true` or `false` indicating if all
-segments in the local cache have been loaded. This can be used to know when a historical node is ready
+segments in the local cache have been loaded. This can be used to know when a Historical node is ready
 to be queried after a restart.
 
 * `/druid/historical/v1/readiness`
@@ -532,7 +532,7 @@ in the local cache have been loaded, and 503 SERVICE UNAVAILABLE, if they haven'
 
 ## Query Server
 
-This section documents the API endpoints for the processes that reside on query servers (brokers).
+This section documents the API endpoints for the processes that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/processes.html#server-types).
 
 ### Broker
 
@@ -582,7 +582,7 @@ Returns segment information lists including server locations for the given datas
 
 * `/druid/broker/v1/loadstatus`
 
-Returns a flag indicating if the broker knows about all segments in Zookeeper. This can be used to know when a broker node is ready to be queried after a restart.
+Returns a flag indicating if the Broker knows about all segments in Zookeeper. This can be used to know when a Broker process is ready to be queried after a restart.
 
 #### Queries
 

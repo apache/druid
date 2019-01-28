@@ -29,8 +29,8 @@ Druid uses [ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of curr
 1.  [Coordinator](../design/coordinator.html) leader election
 2.  Segment "publishing" protocol from [Historical](../design/historical.html) and [Realtime](../design/realtime.html)
 3.  Segment load/drop protocol between [Coordinator](../design/coordinator.html) and [Historical](../design/historical.html)
-4.  [Overlord](../design/indexing-service.html) leader election
-5.  [Indexing Service](../design/indexing-service.html) task management
+4.  [Overlord](../design/overlord.html) leader election
+5.  [Overlord](../design/overlord.html) and [MiddleManager](../design/middlemanager.html) task management
 
 ### Coordinator Leader Election
 
@@ -74,4 +74,4 @@ When the [Coordinator](../design/coordinator.html) decides that a [Historical](.
 ${druid.zk.paths.loadQueuePath}/_host_of_historical_node/_segment_identifier
 ```
 
-This node will contain a payload that indicates to the historical node what it should do with the given segment. When the historical node is done with the work, it will delete the znode in order to signify to the Coordinator that it is complete.
+This node will contain a payload that indicates to the Historical node what it should do with the given segment. When the Historical node is done with the work, it will delete the znode in order to signify to the Coordinator that it is complete.
