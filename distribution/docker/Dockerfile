@@ -34,17 +34,20 @@ RUN wget -O /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.
 RUN addgroup --gid 1000 druid \
  && adduser --home /opt/druid --shell /bin/sh --no-create-home --uid 1000 --gecos '' --gid 1000 --disabled-password druid \
  && mkdir -p /opt/druid/var \
- && chown -R druid:druid /opt/druid
+ && chown -R druid:druid /opt/druid \
+ && chmod 775 /opt/druid/var
 
-# Use :debug to get a busybox shell so that scripts can run
-FROM gcr.io/distroless/java:debug
+FROM amd64/busybox:1.30.0-glibc as busybox
+FROM gcr.io/distroless/java
 MAINTAINER Don Bowman <don@agilicus.com>
 
+COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 COPY --from=builder --chown=druid /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
+RUN chown -R druid:druid /opt/druid
 USER druid
 VOLUME /opt/druid/var
 WORKDIR /opt/druid
