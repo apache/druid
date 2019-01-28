@@ -21,12 +21,15 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.hash.Hashing;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.HashedWheelTimer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.RequestLogLine;
@@ -37,7 +40,7 @@ import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.asynchttpclient.RequestBuilder;
 import org.asynchttpclient.Response;
 
-import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Map;
 import java.util.UUID;
 
@@ -57,7 +60,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
   private static final String URL = "http://ksgateway-"
                                     + EC2_REGION
                                     + "."
-                                    + NETFLIX_STACK
+                                    + (NETFLIX_STACK.equalsIgnoreCase("realtime") ? "prod" : NETFLIX_STACK)
                                     + "."
                                     + "netflix.net/REST/v1/stream/"
                                     + DRUID_LOG_STREAM;
@@ -69,19 +72,15 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
   {
     DefaultAsyncHttpClientConfig.Builder asyncClientConfigBuilder = new DefaultAsyncHttpClientConfig.Builder();
     asyncClientConfigBuilder.setThreadFactory(Execs.makeThreadFactory("nflx-druid-ksgateway-asynchttpclient-%d"));
-    asyncClientConfigBuilder.setNettyTimer(new HashedWheelTimer(Execs.makeThreadFactory("nflx-druid-ksgateway-asynchttpclient-timer-%d")));
+    asyncClientConfigBuilder.setNettyTimer(new HashedWheelTimer(Execs.makeThreadFactory(
+        "nflx-druid-ksgateway-asynchttpclient-timer-%d")));
     client = new DefaultAsyncHttpClient(asyncClientConfigBuilder.build());
   }
 
   @Override
   public void stop()
   {
-    try {
-      client.close();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    CloseQuietly.close(client);
   }
 
   @Override
@@ -121,7 +120,7 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
   }
 
   @Override
-  public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+  public void logSqlQuery(RequestLogLine requestLogLine)
   {
     // no-op
   }
@@ -180,8 +179,13 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
   @VisibleForTesting
   static class Payload
   {
+    private static final ObjectMapper mapper = new ObjectMapper();
     private final String queryId;
+    private final String queryHash;
+
+    // Used for identifying queries executed by bdp_tests framework
     private final String bdpQueryId;
+
     private final String datasource;
     private final String queryType;
     private final String remoteAddress;
@@ -194,10 +198,18 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     private final boolean wasInterrupted;
     private final String interruptionReason;
     private final String druidHostType;
+    private final String queryString;
 
     Payload(RequestLogLine logLine)
     {
       Query query = logLine.getQuery();
+      try {
+        queryString = mapper.writeValueAsString(query);
+        queryHash = Hashing.goodFastHash(32).hashString(queryString, Charset.defaultCharset()).toString();
+      }
+      catch (JsonProcessingException e) {
+        throw new RuntimeException(e);
+      }
       queryId = query.getId();
       bdpQueryId = (String) query.getContext().getOrDefault(BDP_QUERY_ID, "");
       datasource = query.getDataSource().toString();
@@ -214,6 +226,12 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
       interruptionReason = (String) queryStats.get(QueryStatsKey.INTERRUPTION_REASON.key);
       druidHostType = NETFLIX_DETAIL;
     }
+
+    @JsonProperty
+    public String getQueryString() {return queryString; }
+
+    @JsonProperty
+    public String getQueryHash() {return queryHash; }
 
     @JsonProperty
     public String getDatasource()
