@@ -181,7 +181,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       short position = copy.getShort();
       final int register = (int) copy.get() & 0xff;
       if (overflowValue != 0 && position == overflowPosition) {
-        int upperNibble = ((register & 0xf0) >>> bitsPerBucket) + minNum;
+        int upperNibble = ((register & 0xf0) >>> bitsPerBucket) + (minNum & 0xff);
         int lowerNibble = (register & 0x0f) + minNum;
         if (isUpperNibble) {
           upperNibble = Math.max(upperNibble, overflowValue);
@@ -215,7 +215,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     while (copy.hasRemaining()) {
       final int register = (int) copy.get() & 0xff;
       if (overflowValue != 0 && position == overflowPosition) {
-        int upperNibble = ((register & 0xf0) >>> bitsPerBucket) + minNum;
+        int upperNibble = ((register & 0xf0) >>> bitsPerBucket) + (minNum & 0xff);
         int lowerNibble = (register & 0x0f) + minNum;
         if (isUpperNibble) {
           upperNibble = Math.max(upperNibble, overflowValue);
