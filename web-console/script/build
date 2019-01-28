@@ -24,7 +24,7 @@ echo "Transpiling ReactTable CSS..."
 ./node_modules/.bin/stylus lib/react-table.styl -o lib/react-table.css
 
 echo "Webpacking everything..."
-./node_modules/.bin/webpack -c webpack.config.js --silent
+./node_modules/.bin/webpack -c webpack.config.js
 
 echo "Done! Have a good day."
 
