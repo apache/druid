@@ -97,7 +97,7 @@ public class MetadataSegmentView
 
   private void poll()
   {
-    log.info("Start polling published segments from coordinator");
+    log.info("polling published segments from coordinator");
     //get authorized published segments from coordinator
     final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
@@ -127,7 +127,6 @@ public class MetadataSegmentView
       publishedSegments.keySet()
                        .removeIf(key -> !segmentWatcherConfig.getWatchedDataSources().contains(key.getDataSource()));
     }
-    log.info("Done polling published segments");
   }
 
   public Iterator<DataSegment> getPublishedSegments()
