@@ -80,7 +80,9 @@ This string can then be used in the native or sql Druid query.
 
 
 ### Serialized Format for BloomKFilter
+
  Serialized BloomKFilter format:
+ 
  - 1 byte for the number of hash functions.
  - 1 big endian int(That is how OutputStream works) for the number of longs in the bitset
  - big endian longs in the BloomKFilter bitset
@@ -88,18 +90,28 @@ This string can then be used in the native or sql Druid query.
 Note: `org.apache.hive.common.util.BloomKFilter` provides a serialize method which can be used to serialize bloom filters to outputStream.
 
 ### SQL Queries
+
 Bloom filters are supported in SQL via the `bloom_filter_test` operator:
 
 ```sql
-SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<dimension>, '<serialized_bytes_for_BloomKFilter>')
+SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
 ```
 
-Expression virtual columns are not currently supported for the `dimension` parameter.
+### Expression and Virtual Column Support
+
+The bloom filter extension also adds a bloom filter [Druid expression](../../misc/math-expr.html) which shares syntax 
+with the SQL operator.
+
+```sql
+bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
+```
 
 ## Bloom Filter Query Aggregator
+
 Input for a `bloomKFilter` can also be created from a druid query with the `bloom` aggregator.
 
 ### JSON Specification of Bloom Filter Aggregator
+
 ```json
 {
       "type": "bloom",
@@ -117,6 +129,7 @@ Input for a `bloomKFilter` can also be created from a druid query with the `bloo
 |`maxNumEntries`          |Maximum number of distinct values supported by `org.apache.hive.common.util.BloomKFilter`, default `1500`| no |
 
 ### Example
+
 ```json
 {
   "queryType": "timeseries",
@@ -139,6 +152,7 @@ Input for a `bloomKFilter` can also be created from a druid query with the `bloo
 ```
 
 response
+
 ```json
 [{"timestamp":"2015-09-12T00:00:00.000Z","result":{"userBloom":"BAAAJhAAAA..."}}]
 ```

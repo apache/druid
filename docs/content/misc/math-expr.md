@@ -60,6 +60,7 @@ The following built-in functions are available.
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\])|
 |case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\])|
+|bloom_filter_test|bloom_filter_test(expr, filter) tests the value of 'expr' against 'filter', a bloom filter serialized as a base64 string. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
 
 ## String functions
 
