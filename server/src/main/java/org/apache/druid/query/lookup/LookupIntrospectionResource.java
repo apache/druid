@@ -20,7 +20,9 @@
 package org.apache.druid.query.lookup;
 
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.http.security.ConfigResourceFilter;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -28,6 +30,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 
 @Path("/druid/v1/lookups/introspect")
+@ResourceFilters(ConfigResourceFilter.class)
 public class LookupIntrospectionResource
 {
   private static final Logger LOGGER = new Logger(LookupIntrospectionResource.class);
