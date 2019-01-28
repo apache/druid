@@ -25,6 +25,7 @@ import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
@@ -92,6 +93,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     if (capabilities == null) {
       BaseNullableColumnValueSelector selector = columnFactory.makeColumnValueSelector(field.getDimension());
       if (selector instanceof NilColumnValueSelector) {
+        // BloomKFilter must be the same size so we cannot use a constant for the empty agg
         return new EmptyBloomFilterAggregator(filter);
       }
       throw new IAE(
@@ -166,15 +168,14 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     if (lhs == null) {
       return rhs;
     }
-    if (rhs instanceof BloomKFilter) {
-      ((BloomKFilter) lhs).merge((BloomKFilter) rhs);
-      return lhs;
-    } else {
-      ByteBuffer buf = (ByteBuffer) lhs;
-      ByteBuffer other = (ByteBuffer) rhs;
-      BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
-      return lhs;
-    }
+    ((BloomKFilter) lhs).merge((BloomKFilter) rhs);
+    return lhs;
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new BloomFilterAggregateCombiner(maxNumEntries);
   }
 
   @Override
