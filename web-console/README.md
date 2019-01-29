@@ -1,3 +1,22 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 # Apache Druid web console
 
 This is the unified Druid web console that servers as a data management layer for Druid.
@@ -5,7 +24,9 @@ This is the unified Druid web console that servers as a data management layer fo
 ## How to watch and run for development
 
 1. Install the modules with `npm install`
-2. Run `npm start`
+2. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
+
+Note: you can provide and environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start` 
 
 
 ## Description of the directory structure

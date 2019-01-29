@@ -22,6 +22,7 @@ import * as classNames from 'classnames';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 import { H5, Button } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import { addFilter, makeBooleanFilter, QueryManager, formatBytes, formatNumber, parseList, getErrorMessage } from "../utils";
 import "./segments-view.scss";
 
@@ -239,7 +240,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         const { payload } = rowInfo.original;
         const dimensions = parseList(payload.dimensions);
         const metrics = parseList(payload.metrics);
-        return <div style={{ padding: "20px" }}>
+        return <div className="segment-detail">
           <H5>Segment ID</H5>
           <p>{original.segment_id}</p>
           <H5>{`Dimensions (${dimensions.length})`}</H5>
@@ -258,12 +259,12 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       <div className="control-bar">
         <div className="control-label">Segments</div>
         <Button
-          icon="refresh"
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.segmentsQueryManager.rerunLastQuery()}
         />
         <Button
-          icon="console"
+          icon={IconNames.CONSOLE}
           text="Go to SQL"
           onClick={() => goToSql(this.segmentsQueryManager.getLastQuery().query)}
         />

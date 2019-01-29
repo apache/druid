@@ -22,6 +22,7 @@ import * as classNames from 'classnames';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 import { Button, H1, ButtonGroup, Intent, Label, Alert } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import { addFilter, QueryManager, getErrorMessage, countBy, formatDuration } from "../utils";
 import { AsyncActionDialog } from "../dialogs/async-action-dialog";
 import { SpecDialog } from "../dialogs/spec-dialog";
@@ -520,12 +521,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       <div className="control-bar">
         <div className="control-label">Supervisors</div>
         <Button
-          icon="refresh"
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.supervisorQueryManager.rerunLastQuery()}
         />
         <Button
-          icon="plus"
+          icon={IconNames.PLUS}
           text="Submit supervisor"
           onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
         />
@@ -544,17 +545,17 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           <Button active={groupTasksBy === 'status'} onClick={() => this.setState({ groupTasksBy: 'status' })}>Status</Button>
         </ButtonGroup>
         <Button
-          icon="refresh"
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.taskQueryManager.rerunLastQuery()}
         />
         <Button
-          icon="console"
+          icon={IconNames.CONSOLE}
           text="Go to SQL"
           onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
         />
         <Button
-          icon="plus"
+          icon={IconNames.PLUS}
           text="Submit task"
           onClick={() => this.setState({ taskSpecDialogOpen: true })}
         />
@@ -574,7 +575,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         title="Submit task"
       />
       <Alert
-        icon="error"
+        icon={IconNames.ERROR}
         intent={Intent.PRIMARY}
         isOpen={Boolean(alertErrorMsg)}
         confirmButtonText="OK"

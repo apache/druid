@@ -17,6 +17,7 @@
  */
 
 import { Button, InputGroup, Intent, HTMLSelect } from '@blueprintjs/core';
+import { IconNames } from "@blueprintjs/icons";
 import * as numeral from "numeral";
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
@@ -42,7 +43,7 @@ export function makeTextFilter(placeholder: string = ''): FilterRender {
       key={key}
       onChange={(e: any) => onChange(e.target.value)}
       value={filterValue}
-      rightElement={filterValue ? <Button icon="cross" intent={Intent.NONE} minimal={true} onClick={() => onChange('')} /> : undefined}
+      rightElement={filterValue ? <Button icon={IconNames.CROSS} intent={Intent.NONE} minimal={true} onClick={() => onChange('')} /> : undefined}
       placeholder={placeholder}
     />
   }

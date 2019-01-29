@@ -21,7 +21,7 @@ import * as React from 'react';
 import * as classNames from 'classnames';
 import { H5, Card, Icon } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
-import { formatNumber, QueryManager, pluralIfNeeded } from '../utils';
+import { QueryManager, pluralIfNeeded } from '../utils';
 import './home-view.scss';
 
 export interface CardOptions {
@@ -257,7 +257,7 @@ GROUP BY 1`);
   }
 
   renderCard(cardOptions: CardOptions): JSX.Element {
-    return <a href={cardOptions.href}>
+    return <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
       <Card interactive={true}>
         <H5><Icon color="#bfccd5" icon={cardOptions.icon}/>&nbsp;{cardOptions.title}</H5>
         {cardOptions.loading ? <p>Loading...</p> : (cardOptions.error ? `Error: ${cardOptions.error}` : cardOptions.content)}

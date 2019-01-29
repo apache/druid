@@ -55,7 +55,12 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
         if (query.trim().startsWith('{')) {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(query);
-          const runeResp = await axios.post("/druid/v2", runeQuery);
+          let runeResp: any;
+          try {
+            runeResp = await axios.post("/druid/v2", runeQuery);
+          } catch (e) {
+            throw new Error(getErrorMessage(e));
+          }
           return decodeRune(runeQuery, runeResp.data);
 
         } else {

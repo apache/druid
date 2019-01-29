@@ -22,9 +22,17 @@ import {
   Classes,
   AnchorButton, NavbarGroup, Alignment, NavbarHeading, NavbarDivider, Popover, Position, Navbar, Menu, MenuItem
 } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import { AboutDialog } from "../dialogs/about-dialog";
 import { CoordinatorDynamicConfigDialog } from '../dialogs/coordinator-dynamic-config';
 import "./header-bar.scss";
+import {
+  DRUID_DOCS,
+  DRUID_GITHUB,
+  DRUID_USER_GROUP,
+  LEGACY_COORDINATOR_CONSOLE,
+  LEGACY_OVERLORD_CONSOLE
+} from '../variables';
 
 export type HeaderActiveTab = null | 'datasources' | 'segments' | 'tasks' | 'servers' | 'sql';
 
@@ -82,19 +90,19 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
     const { aboutDialogOpen, coordinatorDynamicConfigDialogOpen } = this.state;
 
     const legacyMenu = <Menu>
-      <MenuItem icon="graph" text="Legacy coordinator console" href="/legacy-coordinator-console.html" target="_blank" />
-      <MenuItem icon="map" text="Legacy overlord console" href="/legacy-overlord-console.html" target="_blank" />
+      <MenuItem icon={IconNames.GRAPH} text="Legacy coordinator console" href={LEGACY_COORDINATOR_CONSOLE} target="_blank" />
+      <MenuItem icon={IconNames.MAP} text="Legacy overlord console" href={LEGACY_OVERLORD_CONSOLE} target="_blank" />
     </Menu>;
 
     const helpMenu  = <Menu>
-      <MenuItem icon="graph" text="About" onClick={() => this.setState({ aboutDialogOpen: true })} />
-      <MenuItem icon="th" text="Docs" href="http://druid.io/docs/latest" target="_blank" />
-      <MenuItem icon="user" text="User group" href="https://groups.google.com/forum/#!forum/druid-user" target="_blank" />
-      <MenuItem icon="git-branch" text="GitHub" href="https://github.com/apache/incubator-druid" target="_blank" />
+      <MenuItem icon={IconNames.GRAPH} text="About" onClick={() => this.setState({ aboutDialogOpen: true })} />
+      <MenuItem icon={IconNames.TH} text="Docs" href={DRUID_DOCS} target="_blank" />
+      <MenuItem icon={IconNames.USER} text="User group" href={DRUID_USER_GROUP} target="_blank" />
+      <MenuItem icon={IconNames.GIT_BRANCH} text="GitHub" href={DRUID_GITHUB} target="_blank" />
     </Menu>;
 
     const configMenu = <Menu>
-      <MenuItem icon="cog" text="Coordinator dynamic config" onClick={() => this.setState({ coordinatorDynamicConfigDialogOpen: true })}/>
+      <MenuItem icon={IconNames.COG} text="Coordinator dynamic config" onClick={() => this.setState({ coordinatorDynamicConfigDialogOpen: true })}/>
     </Menu>;
 
     return <Navbar className="header-bar">
@@ -103,22 +111,22 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
           {this.renderLogo()}
         </a>
         <NavbarDivider />
-        <AnchorButton className={Classes.MINIMAL} icon="multi-select" text="Datasources" href="#datasources" active={active === 'datasources'} />
-        <AnchorButton className={Classes.MINIMAL} icon="full-stacked-chart" text="Segments" href="#segments" active={active === 'segments'} />
-        <AnchorButton className={Classes.MINIMAL} icon="gantt-chart" text="Tasks" href="#tasks" active={active === 'tasks'} />
-        <AnchorButton className={Classes.MINIMAL} icon="database" text="Data servers" href="#servers" active={active === 'servers'} />
+        <AnchorButton className={Classes.MINIMAL} icon={IconNames.MULTI_SELECT} text="Datasources" href="#datasources" active={active === 'datasources'} />
+        <AnchorButton className={Classes.MINIMAL} icon={IconNames.FULL_STACKED_CHART} text="Segments" href="#segments" active={active === 'segments'} />
+        <AnchorButton className={Classes.MINIMAL} icon={IconNames.GANTT_CHART} text="Tasks" href="#tasks" active={active === 'tasks'} />
+        <AnchorButton className={Classes.MINIMAL} icon={IconNames.DATABASE} text="Data servers" href="#servers" active={active === 'servers'} />
         <NavbarDivider />
-        <AnchorButton className={Classes.MINIMAL} icon="console" text="SQL" href="#sql" active={active === 'sql'} />
+        <AnchorButton className={Classes.MINIMAL} icon={IconNames.CONSOLE} text="SQL" href="#sql" active={active === 'sql'} />
         <Popover content={configMenu} position={Position.BOTTOM_LEFT}>
-          <Button className={Classes.MINIMAL} icon="settings" text="Config"/>
+          <Button className={Classes.MINIMAL} icon={IconNames.SETTINGS} text="Config"/>
         </Popover>
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         <Popover content={legacyMenu} position={Position.BOTTOM_LEFT}>
-          <Button className={Classes.MINIMAL} icon="share" text="Legacy" />
+          <Button className={Classes.MINIMAL} icon={IconNames.SHARE} text="Legacy" />
         </Popover>
         <Popover content={helpMenu} position={Position.BOTTOM_LEFT}>
-          <Button className={Classes.MINIMAL} icon="lifesaver" text="Help" />
+          <Button className={Classes.MINIMAL} icon={IconNames.LIFESAVER} text="Help" />
         </Popover>
       </NavbarGroup>
       <AboutDialog

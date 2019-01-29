@@ -24,6 +24,7 @@ import { Intent } from "@blueprintjs/core";
 import { AppToaster } from './aux/toaster';
 import { HeaderBar, HeaderActiveTab } from './components/header-bar';
 import { localStorageGet, localStorageSet } from './utils';
+import { DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE } from './variables';
 import { HomeView } from './views/home-view';
 import { ServersView } from './views/servers-view';
 import { DatasourcesView } from './views/datasource-view';
@@ -63,9 +64,19 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
         timeout: 120000,
         message: <>
           It appears that the SQL endpoint is disabled. Either <a
+<<<<<<< HEAD
           href="http://druid.io/docs/latest/querying/sql.html">enable the SQL endpoint</a> or use the old <a
           href="/legacy-coordinator-console.html">coordinator</a> and <a
           href="/legacy-overlord-console.html">overlord</a> consoles that do not rely on the SQL endpoint.
+||||||| merged common ancestors
+          href="http://druid.io/docs/latest/querying/sql.html">enable the SQL endpoint</a> or use the old <a
+          href="/legacy-coordinator-console.html">coordinator</a> and <a
+          href="/console.html">overlord</a> consoles that do not rely on the SQL endpoint.
+=======
+          href={DRUID_DOCS_SQL}>enable the SQL endpoint</a> or use the old <a
+          href={LEGACY_COORDINATOR_CONSOLE}>coordinator</a> and <a
+          href={LEGACY_OVERLORD_CONSOLE}>overlord</a> consoles that do not rely on the SQL endpoint.
+>>>>>>> add licenses to misc files and tidy up
         </>
       });
       return false
@@ -81,8 +92,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
         timeout: 20000,
         message: <>
           Welcome to the unified Druid console, the old <a
-          href="/legacy-coordinator-console.html">coordinator</a> and <a
-          href="/legacy-overlord-console.html">overlord</a> consoles are also available for use
+          href={LEGACY_COORDINATOR_CONSOLE}>coordinator</a> and <a
+          href={LEGACY_OVERLORD_CONSOLE}>overlord</a> consoles are also available for use
           from the 'Legacy' link in the header
         </>,
         action: {

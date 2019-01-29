@@ -22,6 +22,7 @@ import * as classNames from 'classnames';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 import { Button, Intent, Switch } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import { AppToaster } from '../aux/toaster';
 import { RuleEditor } from '../components/rule-editor';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
@@ -445,12 +446,12 @@ GROUP BY 1`);
       <div className="control-bar">
         <div className="control-label">Datasources</div>
         <Button
-          icon="refresh"
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.datasourceQueryManager.rerunLastQuery()}
         />
         <Button
-          icon="console"
+          icon={IconNames.CONSOLE}
           text="Go to SQL"
           onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
         />
