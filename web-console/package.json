@@ -14,7 +14,7 @@
     "pretest": "./script/build",
     "run": "./script/run",
     "test": "jest --silent 2>&1",
-    "start": "webpack-dev-server --hot --open"
+    "start": "webpack-dev-server --hot --open --env.druid_host=172.31.5.116:8888"
   },
   "dependencies": {
     "@blueprintjs/core": "^3.12.0",
