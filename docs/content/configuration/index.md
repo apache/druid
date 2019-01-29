@@ -828,14 +828,14 @@ A description of the compaction config is:
 |--------|-----------|--------|
 |`dataSource`|dataSource name to be compacted.|yes|
 |`keepSegmentGranularity`|Set [keepSegmentGranularity](../ingestion/compaction.html) to true for compactionTask.|no (default = true)|
-|`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compact task.|no (default = 25)|
-|`inputSegmentSizeBytes`|Total input segment size of a compactionTask.|no (default = 419430400)|
-|`targetCompactionSizeBytes`|The target segment size of compaction. The actual size of a compact segment might be slightly larger or smaller than this value. This configuration cannot be used together with `maxRowsPerSegment`.|no (default = 419430400 if `maxRowsPerSegment` is not specified)|
+|`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compaction task.|no (default = 25)|
+|`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 419430400)|
+|`targetCompactionSizeBytes`|The target segment size, for each segment, after compaction. The actual sizes of compacted segments might be slightly larger or smaller than this value. Each compaction task may generate more than one output segment, and it will try to keep each output segment close to this configured size. This configuration cannot be used together with `maxRowsPerSegment`.|no (default = 419430400)|
 |`maxRowsPerSegment`|Max number of rows per segment after compaction. This configuration cannot be used together with `targetCompactionSizeBytes`.|no|
-|`maxNumSegmentsToCompact`|Max number of segments to compact together.|no (default = 150)|
+|`maxNumSegmentsToCompact`|Maximum number of segments to compact together per compaction task. Since a time chunk must be processed in its entirety, if a time chunk has a total number of segments greater than this parameter, compaction will not run for that time chunk.|no (default = 150)|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
-|`tuningConfig`|Tuning config for compact tasks. See [Compaction TuningConfig](#compaction-tuningconfig).|no|
-|`taskContext`|[Task context](../ingestion/tasks.html#task-context) for compact tasks.|no|
+|`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#compact-task-tuningconfig).|no|
+|`taskContext`|[Task context](../ingestion/tasks.html#task-context) for compaction tasks.|no|
 
 An example of compaction config is:
 
@@ -845,7 +845,12 @@ An example of compaction config is:
 }
 ```
 
-For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large value to avoid frequent compact task failures.
+Note that compaction tasks can fail if their locks are revoked by other tasks of higher priorities.
+Since realtime tasks have a higher priority than compaction task by default,
+it can be problematic if there are frequent conflicts between compaction tasks and realtime tasks.
+If this is the case, the coordinator's automatic compaction might get stuck because of frequent compaction task failures.
+This kind of problem may happen especially in Kafka/Kinesis indexing systems which allow late data arrival.
+If you see this problem, it's recommended to set `skipOffsetFromLatest` to some large enough value to avoid such conflicts between compaction tasks and realtime tasks.
 
 ##### Compaction TuningConfig
 

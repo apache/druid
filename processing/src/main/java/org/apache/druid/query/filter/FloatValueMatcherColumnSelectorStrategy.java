@@ -40,6 +40,9 @@ public class FloatValueMatcherColumnSelectorStrategy
       @Override
       public boolean matches()
       {
+        if (selector.isNull()) {
+          return false;
+        }
         return Float.floatToIntBits(selector.getFloat()) == matchValIntBits;
       }
 

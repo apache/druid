@@ -37,6 +37,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
   private static final Logger log = new Logger(HadoopDruidDetermineConfigurationJob.class);
   private final HadoopDruidIndexerConfig config;
   private Jobby job;
+  private String hadoopJobIdFile;
 
   @Inject
   public HadoopDruidDetermineConfigurationJob(
@@ -53,6 +54,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
 
     if (config.isDeterminingPartitions()) {
       job = config.getPartitionsSpec().getPartitionJob(config);
+      config.setHadoopJobIdFileName(hadoopJobIdFile);
       return JobHelper.runSingleJob(job, config);
     } else {
       int shardsPerInterval = config.getPartitionsSpec().getNumShards();
@@ -102,5 +104,10 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     }
 
     return job.getErrorMessage();
+  }
+
+  public void setHadoopJobIdFile(String hadoopJobIdFile)
+  {
+    this.hadoopJobIdFile = hadoopJobIdFile;
   }
 }
