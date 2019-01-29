@@ -202,7 +202,7 @@ public class ExecutorLifecycle
             }
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
   }
 

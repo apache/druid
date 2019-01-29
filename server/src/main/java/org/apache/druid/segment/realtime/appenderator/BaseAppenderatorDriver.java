@@ -523,7 +523,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
               metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
           );
         },
-        Execs.directExecutor()
+        Runnable::run
     );
   }
 

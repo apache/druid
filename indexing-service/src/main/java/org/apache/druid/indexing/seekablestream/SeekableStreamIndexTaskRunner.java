@@ -66,7 +66,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
@@ -878,7 +877,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             return publishedSegmentsAndMetadata;
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
     publishWaitList.add(publishFuture);
 
@@ -928,7 +927,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     return null;
                   }
                 },
-                Execs.directExecutor()
+                Runnable::run
             );
           }
 

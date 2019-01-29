@@ -285,7 +285,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
           }
           return sam;
         },
-        Execs.directExecutor()
+        Runnable::run
     );
   }
 
