@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.yahoo.sketches.hll.HllSketch;
 import org.apache.druid.initialization.DruidModule;
@@ -50,20 +51,8 @@ public class HllSketchModule implements DruidModule
   @Override
   public void configure(final Binder binder)
   {
-    if (ComplexMetrics.getSerdeForType(TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
-    }
-    if (ComplexMetrics.getSerdeForType(BUILD_TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
-    }
-    if (ComplexMetrics.getSerdeForType(MERGE_TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
-    }
-
-    if (binder != null) {
-      // Binder is null in some tests.
-      SqlBindings.addAggregator(binder, HllSketchSqlAggregator.class);
-    }
+    registerSerde();
+    SqlBindings.addAggregator(binder, HllSketchSqlAggregator.class);
   }
 
   @Override
@@ -79,5 +68,19 @@ public class HllSketchModule implements DruidModule
             new NamedType(HllSketchToEstimateWithBoundsPostAggregator.class, ESTIMATE_WITH_BOUNDS_TYPE_NAME)
         ).addSerializer(HllSketch.class, new HllSketchJsonSerializer())
     );
+  }
+
+  @VisibleForTesting
+  public static void registerSerde()
+  {
+    if (ComplexMetrics.getSerdeForType(TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
+    }
+    if (ComplexMetrics.getSerdeForType(BUILD_TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
+    }
+    if (ComplexMetrics.getSerdeForType(MERGE_TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
+    }
   }
 }

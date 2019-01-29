@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import org.apache.druid.initialization.DruidModule;
@@ -46,14 +47,8 @@ public class DoublesSketchModule implements DruidModule
   @Override
   public void configure(final Binder binder)
   {
-    if (ComplexMetrics.getSerdeForType(DOUBLES_SKETCH) == null) {
-      ComplexMetrics.registerSerde(DOUBLES_SKETCH, new DoublesSketchComplexMetricSerde());
-    }
-
-    if (binder != null) {
-      // Binder is null in some tests.
-      SqlBindings.addAggregator(binder, DoublesSketchSqlAggregator.class);
-    }
+    registerSerde();
+    SqlBindings.addAggregator(binder, DoublesSketchSqlAggregator.class);
   }
 
   @Override
@@ -70,5 +65,13 @@ public class DoublesSketchModule implements DruidModule
                 new NamedType(DoublesSketchToStringPostAggregator.class, DOUBLES_SKETCH_TO_STRING_POST_AGG)
             ).addSerializer(DoublesSketch.class, new DoublesSketchJsonSerializer())
     );
+  }
+
+  @VisibleForTesting
+  public static void registerSerde()
+  {
+    if (ComplexMetrics.getSerdeForType(DOUBLES_SKETCH) == null) {
+      ComplexMetrics.registerSerde(DOUBLES_SKETCH, new DoublesSketchComplexMetricSerde());
+    }
   }
 }

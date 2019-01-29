@@ -49,7 +49,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -122,13 +121,9 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
   @Before
   public void setUp() throws Exception
   {
-    ApproximateHistogramDruidModule approximateHistogramDruidModule = new ApproximateHistogramDruidModule();
-
-    // Note: this is needed in order to properly register the serde for Histogram.
-    approximateHistogramDruidModule.configure(null);
-
-    for (Module mod : approximateHistogramDruidModule.getJacksonModules()) {
-      TestHelper.JSON_MAPPER.registerModule(mod);
+    ApproximateHistogramDruidModule.registerSerde();
+    for (Module mod : new ApproximateHistogramDruidModule().getJacksonModules()) {
+      CalciteTests.getJsonMapper().registerModule(mod);
     }
 
     final QueryableIndex index = IndexBuilder.create()

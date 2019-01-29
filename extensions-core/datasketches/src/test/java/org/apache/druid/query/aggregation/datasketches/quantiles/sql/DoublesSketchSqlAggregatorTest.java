@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 
+import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -119,8 +120,10 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    // Note: this is needed in order to properly register the serde.
-    new DoublesSketchModule().configure(null);
+    DoublesSketchModule.registerSerde();
+    for (Module mod : new DoublesSketchModule().getJacksonModules()) {
+      CalciteTests.getJsonMapper().registerModule(mod);
+    }
 
     final QueryableIndex index = IndexBuilder.create()
                                              .tmpDir(temporaryFolder.newFolder())
