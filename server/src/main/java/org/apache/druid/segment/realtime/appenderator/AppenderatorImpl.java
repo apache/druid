@@ -641,6 +641,7 @@ public class AppenderatorImpl implements Appenderator
    * This is useful if we're going to do something that would otherwise potentially break currently in-progress
    * pushes.
    */
+  @SuppressWarnings("CheckReturnValue")
   private ListenableFuture<?> pushBarrier()
   {
     return intermediateTempExecutor.submit(

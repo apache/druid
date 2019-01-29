@@ -550,7 +550,7 @@ public class ImmutableRTreeTest
     }
   }
 
-  @SuppressWarnings("unused") // TODO rewrite to JMH and move to the benchmarks project
+  @SuppressWarnings({"unused", "CheckReturnValue"}) // TODO rewrite to JMH and move to the benchmarks project
   public void showBenchmarks()
   {
     final int start = 1;
@@ -581,7 +581,7 @@ public class ImmutableRTreeTest
 
         Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{50, 50}, radius));
 
-        Assert.assertNotNull(Iterables.size(points));
+        Iterables.size(points);
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
         System.out.printf(Locale.ENGLISH, "[%,d]: search = %,dms%n", numPoints, stop);
@@ -599,7 +599,7 @@ public class ImmutableRTreeTest
     }
   }
 
-  @SuppressWarnings("unused") // TODO rewrite to JMH and move to the benchmarks project
+  @SuppressWarnings({"unused", "CheckReturnValue"}) // TODO rewrite to JMH and move to the benchmarks project
   public void showBenchmarksBoundWithLimits()
   {
     //final int start = 1;
@@ -637,7 +637,7 @@ public class ImmutableRTreeTest
             )
         );
 
-        Assert.assertNotNull(Iterables.size(points));
+        Iterables.size(points);
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
         System.out.printf(Locale.ENGLISH, "[%,d]: search = %,dms%n", numPoints, stop);

@@ -889,6 +889,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         publishFuture,
         new FutureCallback<SegmentsAndMetadata>()
         {
+          @SuppressWarnings("CheckReturnValue")
           @Override
           public void onSuccess(SegmentsAndMetadata publishedSegmentsAndMetadata)
           {
