@@ -1429,6 +1429,15 @@
                                     </patterns>
                                 </license>
                                 <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                                    <licenseFamilyCategory>MIT</licenseFamilyCategory>
+                                    <licenseFamilyName>MIT Bootstrap</licenseFamilyName>
+                                    <notes></notes>
+                                    <patterns>
+                                        <pattern>Copyright 2011-2014 Twitter, Inc.</pattern>
+                                        <pattern>Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)</pattern>
+                                    </patterns>
+                                </license>
+                                <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
                                     <licenseFamilyCategory>Underscore</licenseFamilyCategory>
                                     <licenseFamilyName>Underscore</licenseFamilyName>
                                     <notes></notes>
@@ -1454,6 +1463,15 @@
                                         <pattern>GPL v2 or BSD 3 point style</pattern>
                                     </patterns>
                                 </license>
+                                <license implementation="org.apache.rat.analysis.license.SimplePatternBasedLicense">
+                                    <licenseFamilyCategory>Font Awesome</licenseFamilyCategory>
+                                    <licenseFamilyName>Font Awesome</licenseFamilyName>
+                                    <notes></notes>
+                                    <patterns>
+                                        <pattern>Font Awesome 4.2.0 by @davegandy - http://fontawesome.io - @fontawesome</pattern>
+                                        <pattern>License - http://fontawesome.io/license (Font: SIL OFL 1.1, CSS: MIT License)</pattern>
+                                    </patterns>
+                                </license>
                             </licenses>
 
                             <licenseFamilies>
@@ -1461,10 +1479,16 @@
                                     <familyName>MIT JQuery</familyName>
                                 </licenseFamily>
                                 <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                                    <familyName>MIT Bootstrap</familyName>
+                                </licenseFamily>
+                                <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
                                     <familyName>Underscore</familyName>
                                 </licenseFamily>
                                 <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
                                     <familyName>Allan Jardine</familyName>
+                                </licenseFamily>
+                                <licenseFamily implementation="org.apache.rat.license.SimpleLicenseFamily">
+                                    <familyName>Font Awesome</familyName>
                                 </licenseFamily>
                             </licenseFamilies>
                             <excludes>
@@ -1481,6 +1505,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>web-console/fonts/fontawesome-webfont.svg</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
