@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -34,7 +35,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -67,6 +68,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class StreamAppenderatorDriverFailTest extends EasyMockSupport
@@ -489,10 +491,13 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
                                                           )
                                                       )
                                                       .collect(Collectors.toList());
-        return Futures.transform(
+        return ListenableFutures.transformAsync(
             persistAll(committer),
-            commitMetadata -> new SegmentsAndMetadata(segments, commitMetadata),
-            Execs.directExecutor()
+            input -> {
+              final SettableFuture<SegmentsAndMetadata> future = SettableFuture.create();
+              future.set(new SegmentsAndMetadata(segments, input));
+              return future;
+            }
         );
       } else {
         if (interruptPush) {
