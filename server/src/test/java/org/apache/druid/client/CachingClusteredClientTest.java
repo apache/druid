@@ -2213,13 +2213,13 @@ public class CachingClusteredClientTest
             expectedResults.get(k).get(j)
         );
         serverExpectations.get(lastServer).addExpectation(expectation);
-
+        EasyMock.expect(mockSegment.getSize()).andReturn(-1L).anyTimes();
+        EasyMock.replay(mockSegment);
         ServerSelector selector = new ServerSelector(
             expectation.getSegment(),
             new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
         );
         selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
-
         final ShardSpec shardSpec;
         if (numChunks == 1) {
           shardSpec = new SingleDimensionShardSpec("dimAll", null, null, 0);
@@ -2234,6 +2234,7 @@ public class CachingClusteredClientTest
           }
           shardSpec = new SingleDimensionShardSpec("dim" + k, start, end, j);
         }
+        EasyMock.reset(mockSegment);
         EasyMock.expect(mockSegment.getShardSpec())
                 .andReturn(shardSpec)
                 .anyTimes();
