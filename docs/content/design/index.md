@@ -110,7 +110,7 @@ Druid processes can be deployed any way you like, but for ease of deployment we 
 * **Query**: Runs Broker and optional Router processes, handles queries from external clients.
 * **Data**: Runs Historical and MiddleManager processes, executes ingestion workloads and stores all queryable data.
 
-For more details on process and server organization, please see [Druid Processses and Servers](../processes.html).
+For more details on process and server organization, please see [Druid Processses and Servers](../design/processes.html).
 
 ### External dependencies
 

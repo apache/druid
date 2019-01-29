@@ -27,6 +27,7 @@ title: "Druid Processes and Servers"
 ## Process Types
 
 Druid has several process types:
+
 * [Coordinator](../design/coordinator.html)
 * [Overlord](../design/overlord.html)
 * [Broker](../design/broker.html)
@@ -37,6 +38,7 @@ Druid has several process types:
 ## Server Types
 
 Druid processes can be deployed any way you like, but for ease of deployment we suggest organizing them into three server types:
+
 * **Master**
 * **Query**
 * **Data**

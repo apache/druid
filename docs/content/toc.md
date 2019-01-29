@@ -101,7 +101,7 @@ layout: toc
   * [Overview](/docs/VERSION/design/index.html)
   * Storage
     * [Segments](/docs/VERSION/design/segments.html)
-  * [Processes and Servers](docs/VERSION/operations/process-colocation.html)
+  * [Processes and Servers](/docs/VERSION/design/processes.html)
     * [Coordinator](/docs/VERSION/design/coordinator.html)
     * [Overlord](/docs/VERSION/design/overlord.html)
     * [Broker](/docs/VERSION/design/broker.html)
