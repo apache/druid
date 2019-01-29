@@ -900,7 +900,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         futures.add(
             Futures.transform(
                 taskClient.getMovingAveragesAsync(taskId),
-                (currentStats) -> new StatsFromTaskResult(
+                // Ambiguous call if not explicitly declared
+                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                     groupId,
                     taskId,
                     currentStats
@@ -919,7 +920,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           futures.add(
               Futures.transform(
                   taskClient.getMovingAveragesAsync(taskId),
-                  (currentStats) -> new StatsFromTaskResult(
+                  // Ambiguous call if not explicitly declared
+                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
                       groupId,
                       taskId,
                       currentStats
