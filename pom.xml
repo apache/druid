@@ -1505,7 +1505,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
-                                <exclude>web-console/fonts/fontawesome-webfont.svg</exclude>
+                                <exclude>fonts/fontawesome-webfont.svg</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
