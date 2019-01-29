@@ -38,6 +38,7 @@ import kafka.javaapi.TopicMetadataRequest;
 import kafka.javaapi.TopicMetadataResponse;
 import kafka.javaapi.consumer.SimpleConsumer;
 import kafka.message.MessageAndOffset;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -62,31 +63,29 @@ public class KafkaSimpleConsumer
   public static final List<BytesMessageWithOffset> EMPTY_MSGS = new ArrayList<>();
 
   private static final Logger log = new Logger(KafkaSimpleConsumer.class);
-
+  private static final int SO_TIMEOUT_MILLIS = (int) TimeUnit.SECONDS.toMillis(30);
+  private static final int BUFFER_SIZE = 65536;
+  private static final long RETRY_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
+  private static final int FETCH_SIZE = 100_000_000;
   private final List<HostAndPort> allBrokers;
   private final String topic;
   private final int partitionId;
   private final String clientId;
   private final String leaderLookupClientId;
   private final boolean earliest;
-
   private volatile Broker leaderBroker;
   private List<HostAndPort> replicaBrokers;
   private SimpleConsumer consumer = null;
-
-  private static final int SO_TIMEOUT_MILLIS = (int) TimeUnit.SECONDS.toMillis(30);
-  private static final int BUFFER_SIZE = 65536;
-  private static final long RETRY_INTERVAL_MILLIS = TimeUnit.MINUTES.toMillis(1);
-  private static final int FETCH_SIZE = 100_000_000;
 
   public KafkaSimpleConsumer(String topic, int partitionId, String clientId, List<String> brokers, boolean earliest)
   {
     List<HostAndPort> brokerList = new ArrayList<>();
     for (String broker : brokers) {
       HostAndPort brokerHostAndPort = HostAndPort.fromString(broker);
+      final String hostText = GuavaUtils.getHostText(brokerHostAndPort);
       Preconditions.checkArgument(
-          brokerHostAndPort.getHostText() != null &&
-          !brokerHostAndPort.getHostText().isEmpty() &&
+          hostText != null &&
+          !hostText.isEmpty() &&
           brokerHostAndPort.hasPort(),
           "kafka broker [%s] is not valid, must be <host>:<port>",
           broker
@@ -123,35 +122,6 @@ public class KafkaSimpleConsumer
       consumer = new SimpleConsumer(
           leaderBroker.host(), leaderBroker.port(), SO_TIMEOUT_MILLIS, BUFFER_SIZE, clientId
       );
-    }
-  }
-
-  public static class BytesMessageWithOffset
-  {
-    final byte[] msg;
-    final long offset;
-    final int partition;
-
-    public BytesMessageWithOffset(byte[] msg, long offset, int partition)
-    {
-      this.msg = msg;
-      this.offset = offset;
-      this.partition = partition;
-    }
-
-    public int getPartition()
-    {
-      return partition;
-    }
-
-    public byte[] message()
-    {
-      return msg;
-    }
-
-    public long offset()
-    {
-      return offset;
     }
   }
 
@@ -304,7 +274,13 @@ public class KafkaSimpleConsumer
       SimpleConsumer consumer = null;
       try {
         log.info("Finding new leader from Kafka brokers, try broker [%s]", broker.toString());
-        consumer = new SimpleConsumer(broker.getHostText(), broker.getPort(), SO_TIMEOUT_MILLIS, BUFFER_SIZE, leaderLookupClientId);
+        consumer = new SimpleConsumer(
+            GuavaUtils.getHostText(broker),
+            broker.getPort(),
+            SO_TIMEOUT_MILLIS,
+            BUFFER_SIZE,
+            leaderLookupClientId
+        );
         TopicMetadataResponse resp = consumer.send(new TopicMetadataRequest(Collections.singletonList(topic)));
 
         List<TopicMetadata> metaData = resp.topicsMetadata();
@@ -386,6 +362,35 @@ public class KafkaSimpleConsumer
     if (Thread.interrupted()) {
       log.error(e, "Interrupted during fetching for %s - %s", topic, partitionId);
       throw new InterruptedException();
+    }
+  }
+
+  public static class BytesMessageWithOffset
+  {
+    final byte[] msg;
+    final long offset;
+    final int partition;
+
+    public BytesMessageWithOffset(byte[] msg, long offset, int partition)
+    {
+      this.msg = msg;
+      this.offset = offset;
+      this.partition = partition;
+    }
+
+    public int getPartition()
+    {
+      return partition;
+    }
+
+    public byte[] message()
+    {
+      return msg;
+    }
+
+    public long offset()
+    {
+      return offset;
     }
   }
 }

@@ -42,6 +42,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -840,7 +841,7 @@ class QuotableWhiteSpaceSplitter implements Iterable<String>
             if (inQuotes) {
               return false;
             }
-            return CharMatcher.BREAKING_WHITESPACE.matches(c);
+            return GuavaUtils.breakingWhitespace().matches(c);
           }
         }
     ).omitEmptyStrings().split(string).iterator();

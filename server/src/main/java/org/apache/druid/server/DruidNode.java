@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -146,7 +147,7 @@ public class DruidNode
     Integer portFromHostConfig;
     if (host != null) {
       hostAndPort = HostAndPort.fromString(host);
-      host = hostAndPort.getHostText();
+      host = GuavaUtils.getHostText(hostAndPort);
       portFromHostConfig = hostAndPort.hasPort() ? hostAndPort.getPort() : null;
       if (plainTextPort != null && portFromHostConfig != null && !plainTextPort.equals(portFromHostConfig)) {
         throw new IAE("Conflicting host:port [%s] and port [%d] settings", host, plainTextPort);

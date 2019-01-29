@@ -284,7 +284,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             sequenceNames.forEach(segments::remove);
           }
           return sam;
-        }
+        },
+        Execs.directExecutor()
     );
   }
 
@@ -363,7 +364,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                       numRemainingHandoffSegments.decrementAndGet();
                       resultFuture.setException(e);
                     }
-                  }
+                  },
+                  Execs.directExecutor()
               );
             }
         );

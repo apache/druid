@@ -48,6 +48,7 @@ import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.RE;
@@ -755,7 +756,7 @@ public class SystemSchema extends AbstractSchema
       return null;
     }
 
-    return HostAndPort.fromString(hostAndPort).getHostText();
+    return GuavaUtils.getHostText(HostAndPort.fromString(hostAndPort));
   }
 
   private static int extractPort(@Nullable final String hostAndPort)

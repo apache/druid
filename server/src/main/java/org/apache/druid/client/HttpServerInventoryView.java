@@ -29,6 +29,7 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -100,18 +101,14 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
    * DataSources and not maintaining any segment information of other DataSources in memory.
    */
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
-  private volatile Predicate<Pair<DruidServerMetadata, DataSegment>> finalPredicate;
-
   // For each queryable server, a name -> DruidServerHolder entry is kept
   private final ConcurrentHashMap<String, DruidServerHolder> servers = new ConcurrentHashMap<>();
-
-  private volatile ScheduledExecutorService executor;
-
   private final HttpClient httpClient;
   private final ObjectMapper smileMapper;
   private final HttpServerInventoryViewConfig config;
-
   private final CountDownLatch inventoryInitializationLatch = new CountDownLatch(1);
+  private volatile Predicate<Pair<DruidServerMetadata, DataSegment>> finalPredicate;
+  private volatile ScheduledExecutorService executor;
 
   @Inject
   public HttpServerInventoryView(
@@ -511,7 +508,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             smileMapper,
             httpClient,
             executor,
-            new URL(druidServer.getScheme(), hostAndPort.getHostText(), hostAndPort.getPort(), "/"),
+            new URL(
+                druidServer.getScheme(),
+                GuavaUtils.getHostText(hostAndPort),
+                hostAndPort.getPort(),
+                "/"
+            ),
             "/druid-internal/v1/segments",
             SEGMENT_LIST_RESP_TYPE_REF,
             config.getServerTimeout(),

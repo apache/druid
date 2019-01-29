@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.MonitorEntry;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -437,7 +438,8 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
             log.error(t, "Error while running a task for subTaskSpec[%s]", spec);
             taskCompleteEvents.offer(SubTaskCompleteEvent.fail(spec, t));
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 

@@ -1388,6 +1388,19 @@
                 </plugins>
             </build>
         </profile>
+        <profile>
+            <!-- A profile for testing very recent versions of java for compilation -->
+            <id>recent-guava</id>
+            <properties>
+                <guava.version>27.0.1-jre</guava.version>
+            </properties>
+        </profile>
+        <profile>
+            <id>hadoop-guava</id>
+            <properties>
+                <guava.version>11.0.2</guava.version>
+            </properties>
+        </profile>
         <!-- Run Apache Rat license checks in a separate profile, because during local builds it doesn't skip files
         that are not checked into Git -->
         <profile>

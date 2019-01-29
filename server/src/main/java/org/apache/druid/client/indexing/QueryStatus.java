@@ -22,7 +22,6 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 
 /**
@@ -30,13 +29,6 @@ import com.google.common.base.Preconditions;
  */
 public class QueryStatus
 {
-  public enum Status
-  {
-    RUNNING,
-    SUCCESS,
-    FAILED
-  }
-
   private final String id;
   private final Status status;
   private final long duration;
@@ -51,6 +43,16 @@ public class QueryStatus
     this.id = Preconditions.checkNotNull(id, "id");
     this.status = Preconditions.checkNotNull(status, "status");
     this.duration = duration;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "QueryStatus{" +
+           "id='" + id + '\'' +
+           ", status=" + status +
+           ", duration=" + duration +
+           '}';
   }
 
   @JsonProperty("id")
@@ -77,13 +79,10 @@ public class QueryStatus
     return status != Status.RUNNING;
   }
 
-  @Override
-  public String toString()
+  public enum Status
   {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("status", status)
-                  .add("duration", duration)
-                  .toString();
+    RUNNING,
+    SUCCESS,
+    FAILED
   }
 }

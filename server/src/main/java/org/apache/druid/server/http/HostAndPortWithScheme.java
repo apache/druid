@@ -21,6 +21,7 @@ package org.apache.druid.server.http;
 
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 
 public class HostAndPortWithScheme
@@ -69,7 +70,7 @@ public class HostAndPortWithScheme
 
   public String getHostText()
   {
-    return hostAndPort.getHostText();
+    return GuavaUtils.getHostText(hostAndPort);
   }
 
   public int getPort()

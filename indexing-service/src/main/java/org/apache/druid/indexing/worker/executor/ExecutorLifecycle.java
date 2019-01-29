@@ -201,7 +201,8 @@ public class ExecutorLifecycle
               throw Throwables.propagate(e);
             }
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 

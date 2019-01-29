@@ -22,8 +22,9 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+
+import java.util.Objects;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
@@ -178,12 +179,12 @@ public class TaskStatus
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("status", status)
-                  .add("duration", duration)
-                  .add("errorMsg", errorMsg)
-                  .toString();
+    return "TaskStatus{" +
+           "id='" + id + '\'' +
+           ", status=" + status +
+           ", duration=" + duration +
+           ", errorMsg='" + errorMsg + '\'' +
+           '}';
   }
 
   @Override
@@ -196,15 +197,15 @@ public class TaskStatus
       return false;
     }
     TaskStatus that = (TaskStatus) o;
-    return getDuration() == that.getDuration() &&
-           java.util.Objects.equals(getId(), that.getId()) &&
+    return duration == that.duration &&
+           id.equals(that.id) &&
            status == that.status &&
-           java.util.Objects.equals(getErrorMsg(), that.getErrorMsg());
+           Objects.equals(errorMsg, that.errorMsg);
   }
 
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(getId(), status, getDuration(), getErrorMsg());
+    return Objects.hash(id, status, duration, errorMsg);
   }
 }

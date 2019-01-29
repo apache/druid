@@ -172,14 +172,14 @@ public class TaskLock
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("type", type)
-                  .add("groupId", groupId)
-                  .add("dataSource", dataSource)
-                  .add("interval", interval)
-                  .add("version", version)
-                  .add("priority", priority)
-                  .add("revoked", revoked)
-                  .toString();
+    return "TaskLock{" +
+           "type=" + type +
+           ", groupId='" + groupId + '\'' +
+           ", dataSource='" + dataSource + '\'' +
+           ", interval=" + interval +
+           ", version='" + version + '\'' +
+           ", priority=" + priority +
+           ", revoked=" + revoked +
+           '}';
   }
 }

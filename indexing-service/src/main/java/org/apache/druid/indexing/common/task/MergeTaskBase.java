@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -61,6 +60,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 {
@@ -112,6 +112,80 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 
     this.segments = segments;
     this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
+  }
+
+  private static String computeProcessingID(final String dataSource, final List<DataSegment> segments)
+  {
+    final String segmentIDs = Joiner.on("_").join(
+        Iterables.transform(
+            Ordering.natural().sortedCopy(segments), new Function<DataSegment, String>()
+            {
+              @Override
+              public String apply(DataSegment x)
+              {
+                return StringUtils.format(
+                    "%s_%s_%s_%s",
+                    x.getInterval().getStart(),
+                    x.getInterval().getEnd(),
+                    x.getVersion(),
+                    x.getShardSpec().getPartitionNum()
+                );
+              }
+            }
+        )
+    );
+
+    return StringUtils.format(
+        "%s_%s",
+        dataSource,
+        Hashing.sha1().hashString(segmentIDs, StandardCharsets.UTF_8).toString()
+    );
+  }
+
+  private static Interval computeMergedInterval(final List<DataSegment> segments)
+  {
+    Preconditions.checkArgument(segments.size() > 0, "segments.size() > 0");
+
+    DateTime start = null;
+    DateTime end = null;
+
+    for (final DataSegment segment : segments) {
+      if (start == null || segment.getInterval().getStart().isBefore(start)) {
+        start = segment.getInterval().getStart();
+      }
+
+      if (end == null || segment.getInterval().getEnd().isAfter(end)) {
+        end = segment.getInterval().getEnd();
+      }
+    }
+
+    return new Interval(start, end);
+  }
+
+  private static DataSegment computeMergedSegment(
+      final String dataSource,
+      final String version,
+      final List<DataSegment> segments
+  )
+  {
+    final Interval mergedInterval = computeMergedInterval(segments);
+    final Set<String> mergedDimensions = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    final Set<String> mergedMetrics = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+
+    for (DataSegment segment : segments) {
+      mergedDimensions.addAll(segment.getDimensions());
+      mergedMetrics.addAll(segment.getMetrics());
+    }
+
+    return DataSegment.builder()
+                      .dataSource(dataSource)
+                      .interval(mergedInterval)
+                      .version(version)
+                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .dimensions(Lists.newArrayList(mergedDimensions))
+                      .metrics(Lists.newArrayList(mergedMetrics))
+                      .build();
   }
 
   protected void verifyInputSegments(List<DataSegment> segments)
@@ -251,86 +325,9 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("id", getId())
-                  .add("dataSource", getDataSource())
-                  .add("interval", getInterval())
-                  .add("segments", segments)
-                  .add("segmentWriteOutMediumFactory", segmentWriteOutMediumFactory)
-                  .toString();
-  }
-
-  private static String computeProcessingID(final String dataSource, final List<DataSegment> segments)
-  {
-    final String segmentIDs = Joiner.on("_").join(
-        Iterables.transform(
-            Ordering.natural().sortedCopy(segments), new Function<DataSegment, String>()
-            {
-              @Override
-              public String apply(DataSegment x)
-              {
-                return StringUtils.format(
-                    "%s_%s_%s_%s",
-                    x.getInterval().getStart(),
-                    x.getInterval().getEnd(),
-                    x.getVersion(),
-                    x.getShardSpec().getPartitionNum()
-                );
-              }
-            }
-        )
-    );
-
-    return StringUtils.format(
-        "%s_%s",
-        dataSource,
-        Hashing.sha1().hashString(segmentIDs, StandardCharsets.UTF_8).toString()
-    );
-  }
-
-  private static Interval computeMergedInterval(final List<DataSegment> segments)
-  {
-    Preconditions.checkArgument(segments.size() > 0, "segments.size() > 0");
-
-    DateTime start = null;
-    DateTime end = null;
-
-    for (final DataSegment segment : segments) {
-      if (start == null || segment.getInterval().getStart().isBefore(start)) {
-        start = segment.getInterval().getStart();
-      }
-
-      if (end == null || segment.getInterval().getEnd().isAfter(end)) {
-        end = segment.getInterval().getEnd();
-      }
-    }
-
-    return new Interval(start, end);
-  }
-
-  private static DataSegment computeMergedSegment(
-      final String dataSource,
-      final String version,
-      final List<DataSegment> segments
-  )
-  {
-    final Interval mergedInterval = computeMergedInterval(segments);
-    final Set<String> mergedDimensions = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-    final Set<String> mergedMetrics = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-
-    for (DataSegment segment : segments) {
-      mergedDimensions.addAll(segment.getDimensions());
-      mergedMetrics.addAll(segment.getMetrics());
-    }
-
-    return DataSegment.builder()
-                      .dataSource(dataSource)
-                      .interval(mergedInterval)
-                      .version(version)
-                      .binaryVersion(IndexIO.CURRENT_VERSION_ID)
-                      .shardSpec(NoneShardSpec.instance())
-                      .dimensions(Lists.newArrayList(mergedDimensions))
-                      .metrics(Lists.newArrayList(mergedMetrics))
-                      .build();
+    return "MergeTaskBase{" +
+           "segments=" + segments +
+           ", segmentWriteOutMediumFactory=" + segmentWriteOutMediumFactory +
+           '}';
   }
 }

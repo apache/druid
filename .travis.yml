@@ -37,12 +37,12 @@ matrix:
       install: true
       script: MAVEN_OPTS='-Xmx3000m' mvn clean verify -Prat -DskipTests -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 
-      # strict compilation
+      # strict compilation and future guava compat
     - env:
-        - NAME="strict compilation"
+        - NAME="strict compilation and guava checks"
       install: true
       # Strict compilation requires more than 2 GB
-      script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -pl '!benchmarks' compile test-compile -B --fail-at-end
+      script: MAVEN_OPTS='-Xmx3000m' mvn clean -Pstrict -Precent-guava -pl '!benchmarks' compile test-compile -B --fail-at-end
 
       # processing module test
     - env:

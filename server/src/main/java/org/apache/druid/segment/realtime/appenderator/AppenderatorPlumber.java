@@ -328,7 +328,8 @@ public class AppenderatorPlumber implements Plumber
             // TODO: Retry?
             log.warn(e, "Failed to drop segment: %s", identifier);
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 
@@ -481,7 +482,8 @@ public class AppenderatorPlumber implements Plumber
             log.warn(e, "Failed to push [%,d] segments.", segmentsToPush.size());
             errorHandler.apply(e);
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 }

@@ -42,18 +42,32 @@ public class ListenableFutures
   )
   {
     final SettableFuture<O> finalFuture = SettableFuture.create();
-    Futures.addCallback(inFuture, new FutureCallback<I>()
-    {
-      @Override
-      public void onSuccess(@Nullable I result)
-      {
-        final ListenableFuture<O> transformFuture = transform.apply(result);
-        Futures.addCallback(transformFuture, new FutureCallback<O>()
+    Futures.addCallback(
+        inFuture,
+        new FutureCallback<I>()
         {
           @Override
-          public void onSuccess(@Nullable O result)
+          public void onSuccess(@Nullable I result)
           {
-            finalFuture.set(result);
+            final ListenableFuture<O> transformFuture = transform.apply(result);
+            Futures.addCallback(
+                transformFuture,
+                new FutureCallback<O>()
+                {
+                  @Override
+                  public void onSuccess(@Nullable O result)
+                  {
+                    finalFuture.set(result);
+                  }
+
+                  @Override
+                  public void onFailure(Throwable t)
+                  {
+                    finalFuture.setException(t);
+                  }
+                },
+                Execs.directExecutor()
+            );
           }
 
           @Override
@@ -61,15 +75,9 @@ public class ListenableFutures
           {
             finalFuture.setException(t);
           }
-        });
-      }
-
-      @Override
-      public void onFailure(Throwable t)
-      {
-        finalFuture.setException(t);
-      }
-    });
+        },
+        Execs.directExecutor()
+    );
     return finalFuture;
   }
 }

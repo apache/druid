@@ -372,7 +372,8 @@ public class CachingClusteredClientTest
                   {
                     pair.lhs.setException(t);
                   }
-                }
+                },
+                Execs.directExecutor()
             );
           }
         }

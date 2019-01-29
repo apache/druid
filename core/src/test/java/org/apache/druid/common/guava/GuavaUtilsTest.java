@@ -19,19 +19,13 @@
 
 package org.apache.druid.common.guava;
 
+import com.google.common.net.HostAndPort;
 import com.google.common.primitives.Longs;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class GuavaUtilsTest
 {
-  enum MyEnum
-  {
-    ONE,
-    TWO,
-    BUCKLE_MY_SHOE
-  }
-
   @Test
   public void testParseLong()
   {
@@ -52,5 +46,26 @@ public class GuavaUtilsTest
     Assert.assertEquals(MyEnum.TWO, GuavaUtils.getEnumIfPresent(MyEnum.class, "TWO"));
     Assert.assertEquals(MyEnum.BUCKLE_MY_SHOE, GuavaUtils.getEnumIfPresent(MyEnum.class, "BUCKLE_MY_SHOE"));
     Assert.assertEquals(null, GuavaUtils.getEnumIfPresent(MyEnum.class, "buckle_my_shoe"));
+  }
+
+  @Test
+  public void testHostAndPorthostText()
+  {
+    Assert.assertEquals("localhost", GuavaUtils.getHostText(HostAndPort.fromString("localhost")));
+    Assert.assertEquals("127.0.0.1", GuavaUtils.getHostText(HostAndPort.fromString("127.0.0.1")));
+    Assert.assertEquals("::1", GuavaUtils.getHostText(HostAndPort.fromString("::1")));
+  }
+
+  @Test
+  public void testBreakingWhitespaceExists()
+  {
+    Assert.assertNotNull(GuavaUtils.breakingWhitespace());
+  }
+
+  enum MyEnum
+  {
+    ONE,
+    TWO,
+    BUCKLE_MY_SHOE
   }
 }

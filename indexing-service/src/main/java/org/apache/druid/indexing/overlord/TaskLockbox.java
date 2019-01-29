@@ -196,7 +196,7 @@ public class TaskLockbox
    * @param interval interval to lock
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
-   * {@link LockResult#revoked} flag.
+   * {@link LockResult#isRevoked} flag.
    *
    * @throws InterruptedException if the current thread is interrupted
    */
@@ -231,7 +231,7 @@ public class TaskLockbox
    * @param timeoutMs maximum time to wait
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
-   * {@link LockResult#revoked} flag.
+   * {@link LockResult#isRevoked} flag.
    *
    * @throws InterruptedException if the current thread is interrupted
    */
@@ -268,7 +268,7 @@ public class TaskLockbox
    * @param interval interval to lock
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
-   * {@link LockResult#revoked} flag.
+   * {@link LockResult#isRevoked} flag.
    *
    * @throws IllegalStateException if the task is not a valid active task
    */
@@ -1094,10 +1094,10 @@ public class TaskLockbox
     @Override
     public String toString()
     {
-      return Objects.toStringHelper(this)
-                    .add("taskLock", taskLock)
-                    .add("taskIds", taskIds)
-                    .toString();
+      return "TaskLockPosse{" +
+             "taskLock=" + taskLock +
+             ", taskIds=" + taskIds +
+             '}';
     }
   }
 }

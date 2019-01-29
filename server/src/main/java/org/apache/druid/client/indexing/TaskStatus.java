@@ -21,9 +21,10 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.TaskState;
+
+import java.util.Objects;
 
 /**
  * Should be synced with org.apache.druid.indexing.common.TaskStatus
@@ -69,6 +70,16 @@ public class TaskStatus
   }
 
   @Override
+  public String toString()
+  {
+    return "TaskStatus{" +
+           "id='" + id + '\'' +
+           ", status=" + status +
+           ", duration=" + duration +
+           '}';
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
@@ -79,23 +90,13 @@ public class TaskStatus
     }
     TaskStatus that = (TaskStatus) o;
     return duration == that.duration &&
-           java.util.Objects.equals(id, that.id) &&
+           id.equals(that.id) &&
            status == that.status;
   }
 
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(id, status, duration);
-  }
-
-  @Override
-  public String toString()
-  {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("status", status)
-                  .add("duration", duration)
-                  .toString();
+    return Objects.hash(id, status, duration);
   }
 }

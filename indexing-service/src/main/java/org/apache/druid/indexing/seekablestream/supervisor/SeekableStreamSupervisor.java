@@ -900,11 +900,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         futures.add(
             Futures.transform(
                 taskClient.getMovingAveragesAsync(taskId),
-                (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
+                (currentStats) -> new StatsFromTaskResult(
                     groupId,
                     taskId,
                     currentStats
-                )
+                ),
+                Execs.directExecutor()
             )
         );
         groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -918,11 +919,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           futures.add(
               Futures.transform(
                   taskClient.getMovingAveragesAsync(taskId),
-                  (Function<Map<String, Object>, StatsFromTaskResult>) (currentStats) -> new StatsFromTaskResult(
+                  (currentStats) -> new StatsFromTaskResult(
                       groupId,
                       taskId,
                       currentStats
-                  )
+                  ),
+                  Execs.directExecutor()
               )
           );
           groupAndTaskIds.add(new Pair<>(groupId, taskId));
@@ -1625,7 +1627,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
             return null;
           }
-        }
+        },
+        Execs.directExecutor()
     );
   }
 
@@ -1908,7 +1911,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   {
                     return null;
                   }
-                }
+                },
+                Execs.directExecutor()
             );
           }
 
@@ -2536,7 +2540,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               }
 
               return null;
-            }
+            },
+            Execs.directExecutor()
         )
     ).collect(Collectors.toList());
 
