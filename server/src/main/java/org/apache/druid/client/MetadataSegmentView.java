@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.timeline.DataSegment;
@@ -42,8 +42,8 @@ import org.joda.time.DateTime;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -52,14 +52,14 @@ public class MetadataSegmentView
 {
 
   private static final int DEFAULT_POLL_PERIOD_IN_MS = 60000;
-  private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
+  private static final Logger log = new Logger(MetadataSegmentView.class);
 
   private final DruidLeaderClient coordinatorDruidLeaderClient;
   private final ObjectMapper jsonMapper;
   private final BytesAccumulatingResponseHandler responseHandler;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
-  private final Map<DataSegment, DateTime> publishedSegments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<DataSegment, DateTime> publishedSegments = new ConcurrentHashMap<>();
   private ScheduledExecutorService scheduledExec;
 
   @Inject
@@ -105,19 +105,18 @@ public class MetadataSegmentView
         responseHandler
     );
 
-    final DateTime ts = DateTimes.nowUtc();
+    final DateTime timestamp = DateTimes.nowUtc();
     while (metadataSegments.hasNext()) {
       final DataSegment currentSegment = metadataSegments.next();
-      final DataSegment interned;
-      if (currentSegment.getSize() > 0) {
-        interned = DataSegmentInterner.HISTORICAL_INTERNER.intern(currentSegment);
-      } else {
-        interned = DataSegmentInterner.REALTIME_INTERNER.intern(currentSegment);
-      }
-      publishedSegments.put(interned, ts);
+      final DataSegment interned = DataSegmentInterner.getInterner(currentSegment).intern(currentSegment);
+      // timestamp is used to filter deleted segments
+      publishedSegments.put(interned, timestamp);
     }
-    // filter the segments from cache which may not be present in subsequent polling
-    publishedSegments.values().removeIf(v -> v != ts);
+    // filter the segments from cache whose timestamp is not equal to latest timestamp stored,
+    // since the presence of a segment with an earlier timestamp indicates that
+    // "that" segment is not returned by coordinator in latest poll, so it's
+    // likely deleted and therefore we remove it from publishedSegments
+    publishedSegments.values().removeIf(v -> v != timestamp);
 
     if (segmentWatcherConfig.getWatchedDataSources() != null) {
       log.debug(

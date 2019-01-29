@@ -25,12 +25,17 @@ import org.apache.druid.timeline.DataSegment;
 
 public class DataSegmentInterner
 {
-  public static final Interner<DataSegment> REALTIME_INTERNER = Interners.newWeakInterner();
-  public static final Interner<DataSegment> HISTORICAL_INTERNER = Interners.newWeakInterner();
+  private static final Interner<DataSegment> REALTIME_INTERNER = Interners.newWeakInterner();
+  private static final Interner<DataSegment> HISTORICAL_INTERNER = Interners.newWeakInterner();
 
   private DataSegmentInterner()
   {
 
+  }
+
+  public static Interner<DataSegment> getInterner(DataSegment segment)
+  {
+    return segment.getSize() > 0 ? DataSegmentInterner.HISTORICAL_INTERNER : DataSegmentInterner.REALTIME_INTERNER;
   }
 
 }

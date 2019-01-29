@@ -85,7 +85,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
-
 public class SystemSchema extends AbstractSchema
 {
   public static final String NAME = "sys";

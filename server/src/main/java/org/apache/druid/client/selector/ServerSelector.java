@@ -51,9 +51,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
       TierSelectorStrategy strategy
   )
   {
-    this.segment = new AtomicReference<>(segment.getSize() > 0
-                                         ? DataSegmentInterner.HISTORICAL_INTERNER.intern(segment)
-                                         : DataSegmentInterner.REALTIME_INTERNER.intern(segment));
+    this.segment = new AtomicReference<>(DataSegmentInterner.getInterner(segment).intern(segment));
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
