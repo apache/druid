@@ -24,7 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Bytes;
-import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -35,6 +34,7 @@ import org.apache.druid.collections.spatial.search.RectangularBound;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
+import org.junit.Assert;
 import org.junit.Test;
 import org.roaringbitmap.IntIterator;
 
@@ -581,7 +581,7 @@ public class ImmutableRTreeTest
 
         Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(new float[]{50, 50}, radius));
 
-        Iterables.size(points);
+        Assert.assertNotNull(Iterables.size(points));
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
         System.out.printf(Locale.ENGLISH, "[%,d]: search = %,dms%n", numPoints, stop);
@@ -637,7 +637,7 @@ public class ImmutableRTreeTest
             )
         );
 
-        Iterables.size(points);
+        Assert.assertNotNull(Iterables.size(points));
         stop = stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
         System.out.printf(Locale.ENGLISH, "[%,d]: search = %,dms%n", numPoints, stop);
@@ -672,6 +672,6 @@ public class ImmutableRTreeTest
 
     ImmutableRTree deserializedTree = genericIndexed.get(0);
     byte[] bytes2 = deserializedTree.toBytes();
-    org.junit.Assert.assertEquals(Bytes.asList(bytes1), Bytes.asList(bytes2));
+    Assert.assertEquals(Bytes.asList(bytes1), Bytes.asList(bytes2));
   }
 }
