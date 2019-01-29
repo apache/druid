@@ -109,7 +109,8 @@ public final class DateTimes
   {
     try {
       return new DateTime(instant, ISOChronology.getInstanceUTC());
-    } catch (IllegalArgumentException ex) {
+    }
+    catch (IllegalArgumentException ex) {
       return new DateTime(Long.valueOf(instant), ISOChronology.getInstanceUTC());
     }
   }
