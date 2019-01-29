@@ -31,9 +31,9 @@ Druid has several process types:
 * [Coordinator](../design/coordinator.html)
 * [Overlord](../design/overlord.html)
 * [Broker](../design/broker.html)
-* [Router (Optional)](../development/router.html) 
 * [Historical](../design/historical.html)
 * [MiddleManager](../design/middlemanager.html) and [Peons](../design/peons.html)
+* [Router (Optional)](../development/router.html) 
 
 ## Server Types
 
