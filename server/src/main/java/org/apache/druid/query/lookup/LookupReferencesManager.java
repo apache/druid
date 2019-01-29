@@ -500,10 +500,10 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       stateRef.set(new LookupUpdateState(builder.build(), ImmutableList.of(), ImmutableList.of()));
     }
     catch (InterruptedException | RuntimeException e) {
-      LOG.error(e, "Failed to finish lookup load process.");
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
+      LOG.error(e, "Failed to finish lookup load process.");
     }
     finally {
       executorService.shutdownNow();

@@ -361,10 +361,10 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       return hasQueryTimeout ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
     }
     catch (InterruptedException | TimeoutException e) {
-      future.cancel(true);
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
+      future.cancel(true);
       throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {

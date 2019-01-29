@@ -232,15 +232,15 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         executorService.shutdown();
         if (!future.isDone() && !future.cancel(false)) {
           LOG.warn("Could not cancel kafka listening thread");
         }
         LOG.error(e, "Failed to start kafka extraction factory");
         cacheHandler.close();
-        if (e instanceof InterruptedException) {
-          Thread.currentThread().interrupt();
-        }
         return false;
       }
 

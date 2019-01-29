@@ -148,8 +148,8 @@ public class KafkaEmitter implements Emitter
       }
     }
     catch (InterruptedException e) {
-      log.warn(e, "Failed to take record from queue!");
       Thread.currentThread().interrupt();
+      log.warn(e, "Failed to take record from queue!");
     }
   }
 

@@ -267,13 +267,13 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
         }
         catch (InterruptedException e) {
           // may happen if interrupted while BlockingQueue.offer() is waiting
+          Thread.currentThread().interrupt();
           log.warn(
               e,
               "Interrupted while waiting to add record to buffer, retrying in [%,dms]",
               EXCEPTION_RETRY_DELAY_MS
           );
           rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
-          Thread.currentThread().interrupt();
         }
         catch (ExpiredIteratorException e) {
           log.warn(
@@ -555,8 +555,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       return polledRecords;
     }
     catch (InterruptedException e) {
-      log.warn(e, "Interrupted while polling");
       Thread.currentThread().interrupt();
+      log.warn(e, "Interrupted while polling");
       return Collections.emptyList();
     }
 
@@ -632,8 +632,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       }
     }
     catch (InterruptedException e) {
-      log.warn(e, "InterruptedException while shutting down");
       Thread.currentThread().interrupt();
+      log.warn(e, "InterruptedException while shutting down");
       throw new RuntimeException(e);
     }
 

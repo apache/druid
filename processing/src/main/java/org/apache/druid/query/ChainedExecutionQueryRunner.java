@@ -155,9 +155,9 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               ).iterator();
             }
             catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
               log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
               futures.cancel(true);
-              Thread.currentThread().interrupt();
               throw new QueryInterruptedException(e);
             }
             catch (CancellationException e) {

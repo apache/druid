@@ -363,9 +363,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<ResultRow>
       }
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
       future.cancel(true);
-      Thread.currentThread().interrupt();
       throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {
