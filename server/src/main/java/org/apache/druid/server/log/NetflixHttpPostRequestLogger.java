@@ -56,11 +56,12 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
   private static final String NETFLIX_STACK = System.getenv("NETFLIX_STACK");
   private static final String NETFLIX_DETAIL = System.getenv("NETFLIX_DETAIL");
   private static final String EC2_REGION = System.getenv("EC2_REGION");
+  private static final String NETFLIX_ASG = System.getenv("NETFLIX_AUTO_SCALE_GROUP");
   private static final String DRUID_LOG_STREAM = "druid_logs";
   private static final String URL = "http://ksgateway-"
                                     + EC2_REGION
                                     + "."
-                                    + (NETFLIX_STACK.equalsIgnoreCase("realtime") ? "prod" : NETFLIX_STACK)
+                                    + "prod"
                                     + "."
                                     + "netflix.net/REST/v1/stream/"
                                     + DRUID_LOG_STREAM;
@@ -200,6 +201,10 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     private final String druidHostType;
     private final String queryString;
 
+    // Netflix druid cluster details
+    private final String druidStackName;
+    private final String druidAsg;
+
     Payload(RequestLogLine logLine)
     {
       Query query = logLine.getQuery();
@@ -225,7 +230,15 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
       wasInterrupted = queryStats.get(QueryStatsKey.INTERRUPTED.key) != null;
       interruptionReason = (String) queryStats.get(QueryStatsKey.INTERRUPTION_REASON.key);
       druidHostType = NETFLIX_DETAIL;
+      druidStackName = NETFLIX_STACK;
+      druidAsg = NETFLIX_ASG;
     }
+
+    @JsonProperty
+    public String getDruidStackName() { return druidStackName; }
+
+    @JsonProperty
+    public String getDruidAsg() { return druidAsg; }
 
     @JsonProperty
     public String getQueryString() {return queryString; }
