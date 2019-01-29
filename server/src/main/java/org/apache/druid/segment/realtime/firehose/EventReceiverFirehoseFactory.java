@@ -486,11 +486,11 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         if (newSequence <= producerSequence) {
           return Optional.of(
               Response.ok(
-                responseMapper.writeValueAsString(
-                    ImmutableMap.of("eventCount", 0, "skipped", true)
-                ),
-                responseContentType
-            ).build()
+                  responseMapper.writeValueAsString(
+                      ImmutableMap.of("eventCount", 0, "skipped", true)
+                  ),
+                  responseContentType
+              ).build()
           );
         }
 

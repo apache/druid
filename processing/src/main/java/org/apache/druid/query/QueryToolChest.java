@@ -20,6 +20,8 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
@@ -34,6 +36,34 @@ import java.util.List;
 @ExtensionPoint
 public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultType>>
 {
+  private final JavaType baseResultType;
+  private final JavaType bySegmentResultType;
+
+  protected QueryToolChest()
+  {
+    final TypeFactory typeFactory = TypeFactory.defaultInstance();
+    baseResultType = typeFactory.constructType(getResultTypeReference());
+    bySegmentResultType = typeFactory.constructParametrizedType(
+        Result.class,
+        Result.class,
+        typeFactory.constructParametrizedType(
+            BySegmentResultValueClass.class,
+            BySegmentResultValueClass.class,
+            baseResultType
+        )
+    );
+  }
+
+  public final JavaType getBaseResultType()
+  {
+    return baseResultType;
+  }
+
+  public final JavaType getBySegmentResultType()
+  {
+    return bySegmentResultType;
+  }
+
   /**
    * This method wraps a QueryRunner.  The input QueryRunner, by contract, will provide a series of
    * ResultType objects in time order (ascending or descending).  This method should return a new QueryRunner that
