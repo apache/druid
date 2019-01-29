@@ -230,12 +230,15 @@ public class SystemSchema extends AbstractSchema
       }
 
       //get published segments from metadata segment cache
-      final Iterator<DataSegment> pubSegments = metadataView.getPublishedSegments();
+      final Iterator<DataSegment> metadataSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> pubSegments)
+          .from(() -> getAuthorizedPublishedSegments(
+              metadataSegments,
+              root
+          ))
           .transform(val -> {
             try {
               segmentsAlreadySeen.add(val.getId());
@@ -307,6 +310,26 @@ public class SystemSchema extends AbstractSchema
 
       return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
 
+    }
+
+    private Iterator<DataSegment> getAuthorizedPublishedSegments(
+        Iterator<DataSegment> it,
+        DataContext root
+    )
+    {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
+      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+          authenticationResult,
+          () -> it,
+          raGenerator,
+          authorizerMapper
+      );
+      return authorizedSegments.iterator();
     }
 
     private Iterator<Entry<DataSegment, SegmentMetadataHolder>> getAuthorizedAvailableSegments(

@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,7 +33,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.timeline.DataSegment;
@@ -42,6 +43,7 @@ import org.joda.time.DateTime;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,7 +54,7 @@ public class MetadataSegmentView
 {
 
   private static final int DEFAULT_POLL_PERIOD_IN_MS = 60000;
-  private static final Logger log = new Logger(MetadataSegmentView.class);
+  private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
 
   private final DruidLeaderClient coordinatorDruidLeaderClient;
   private final ObjectMapper jsonMapper;
@@ -81,7 +83,14 @@ public class MetadataSegmentView
   {
     scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
     scheduledExec.scheduleWithFixedDelay(
-        () -> poll(),
+        () -> {
+          try {
+            poll();
+          }
+          catch (JsonProcessingException e) {
+            log.makeAlert(e, "Problem polling Coordinator.").emit();
+          }
+        },
         0,
         DEFAULT_POLL_PERIOD_IN_MS,
         TimeUnit.MILLISECONDS
@@ -95,20 +104,20 @@ public class MetadataSegmentView
     scheduledExec = null;
   }
 
-  private void poll()
+  private void poll() throws JsonProcessingException
   {
     log.info("polling published segments from coordinator");
     //get authorized published segments from coordinator
     final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
-        responseHandler
+        responseHandler,
+        segmentWatcherConfig.getWatchedDataSources()
     );
 
     final DateTime timestamp = DateTimes.nowUtc();
     while (metadataSegments.hasNext()) {
-      final DataSegment currentSegment = metadataSegments.next();
-      final DataSegment interned = DataSegmentInterner.getInterner(currentSegment).intern(currentSegment);
+      final DataSegment interned = DataSegmentInterner.intern(metadataSegments.next());
       // timestamp is used to filter deleted segments
       publishedSegments.put(interned, timestamp);
     }
@@ -137,14 +146,20 @@ public class MetadataSegmentView
   private static JsonParserIterator<DataSegment> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
-      BytesAccumulatingResponseHandler responseHandler
-  )
+      BytesAccumulatingResponseHandler responseHandler,
+      Set<String> watchedDataSources
+  ) throws JsonProcessingException
   {
+    String query = "/druid/coordinator/v1/metadata/segments";
+    if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
+      final String datasourcesJson = jsonMapper.writeValueAsString(watchedDataSources);
+      query = "/druid/coordinator/v1/metadata/segments?" + datasourcesJson;
+    }
     Request request;
     try {
       request = coordinatorClient.makeRequest(
           HttpMethod.GET,
-          StringUtils.format("/druid/coordinator/v1/metadata/segments"),
+          StringUtils.format(query),
           false
       );
     }

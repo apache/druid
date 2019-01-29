@@ -33,9 +33,9 @@ public class DataSegmentInterner
 
   }
 
-  public static Interner<DataSegment> getInterner(DataSegment segment)
+  public static DataSegment intern(DataSegment segment)
   {
-    return segment.getSize() > 0 ? DataSegmentInterner.HISTORICAL_INTERNER : DataSegmentInterner.REALTIME_INTERNER;
+    return segment.getSize() > 0 ? HISTORICAL_INTERNER.intern(segment) : REALTIME_INTERNER.intern(segment);
   }
 
 }
