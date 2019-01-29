@@ -55,12 +55,11 @@ import java.util.Properties;
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/favicon.ico",
-      "/css/*",
-      "/druid.js",
-      "/druid.css",
+      "/favicon.png",
       "/pages/*",
       "/fonts/*",
+      "/legacy/*",
+      "/legacy-coordinator-console.html",
       "/old-console/*",
       "/coordinator/false",
       "/overlord/false",
@@ -89,24 +88,17 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+    root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
+    root.setWelcomeFiles(new String[]{"index.html", "legacy-coordinator-console.html"});
 
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
     root.addServlet(holderPwd, "/");
     if (config.getConsoleStatic() == null) {
-      ResourceCollection staticResources;
-      if (beOverlord) {
-        staticResources = new ResourceCollection(
-            Resource.newClassPathResource("io/druid/console"),
-            Resource.newClassPathResource("static"),
-            Resource.newClassPathResource("indexer_static")
-        );
-      } else {
-        staticResources = new ResourceCollection(
-            Resource.newClassPathResource("io/druid/console"),
-            Resource.newClassPathResource("static")
-        );
-      }
+      final ResourceCollection staticResources = new ResourceCollection(
+          Resource.newClassPathResource("org/apache/druid/console"),
+          Resource.newClassPathResource("org/apache/druid/console/old_console")
+      );
       root.setBaseResource(staticResources);
     } else {
       // used for console development

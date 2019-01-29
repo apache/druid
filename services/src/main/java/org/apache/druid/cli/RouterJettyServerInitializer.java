@@ -69,7 +69,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       "/old-console/*",
       "/fonts/*",
       "/pages/*",
-      "/index.html",
+      "/unified-console.html",
       "/favicon.png",
       "/legacy-overlord-console.html",
       "/legacy-coordinator-console.html"
@@ -107,6 +107,9 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
   public void initialize(Server server, Injector injector)
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
+    root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+    root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
+    root.setWelcomeFiles(new String[]{"index.html", "unified-console.html"});
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
