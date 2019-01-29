@@ -500,7 +500,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   }
                 }
                 catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
-                  Throwables.propagate(e);
+                  throw Throwables.propagate(e);
                 }
               }
             }
