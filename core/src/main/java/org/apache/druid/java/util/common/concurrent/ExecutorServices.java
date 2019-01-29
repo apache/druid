@@ -47,7 +47,7 @@ public class ExecutorServices
       );
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     return service;
   }

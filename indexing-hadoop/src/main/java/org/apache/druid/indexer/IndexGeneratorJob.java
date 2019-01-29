@@ -129,7 +129,7 @@ public class IndexGeneratorJob implements Jobby
           + " either there was no input data to process or all the input events were discarded due to some error",
           e.getMessage()
       );
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

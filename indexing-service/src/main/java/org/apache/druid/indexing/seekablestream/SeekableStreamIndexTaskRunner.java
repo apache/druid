@@ -1253,7 +1253,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
   }
 

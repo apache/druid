@@ -98,7 +98,7 @@ public class InsertSegment extends GuiceRunnable
       segments = dataSegmentFinder.findSegments(workingDirPath, Boolean.valueOf(updateDescriptor));
     }
     catch (SegmentLoadingException e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
 
     log.info(
@@ -111,7 +111,7 @@ public class InsertSegment extends GuiceRunnable
       insertSegments(segments);
     }
     catch (IOException e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
 
     log.info("Done processing [%d] segments", segments.size());

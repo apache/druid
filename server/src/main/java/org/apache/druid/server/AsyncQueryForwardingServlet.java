@@ -311,7 +311,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
       }
       catch (JsonProcessingException e) {
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
     }
 

@@ -99,7 +99,7 @@ public class FileRequestLogger implements RequestLogger
                 }
               }
               catch (Exception e) {
-                Throwables.propagate(e);
+                throw Throwables.propagate(e);
               }
 
               return ScheduledExecutors.Signal.REPEAT;
@@ -108,7 +108,7 @@ public class FileRequestLogger implements RequestLogger
       );
     }
     catch (IOException e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
   }
 

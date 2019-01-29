@@ -119,8 +119,7 @@ public class GroupByQueryRunnerFactoryTest
                       );
                     }
                     catch (Exception e) {
-                      Throwables.propagate(e);
-                      return null;
+                      throw Throwables.propagate(e);
                     }
                   }
                 }
