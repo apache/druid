@@ -539,6 +539,7 @@ public class RealtimePlumber implements Plumber
         }
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
     }

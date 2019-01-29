@@ -119,6 +119,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       }
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
   }
@@ -131,6 +132,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       writeLock.lockInterruptibly();
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
     try {
@@ -196,6 +198,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       readLock.lockInterruptibly();
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
     try {

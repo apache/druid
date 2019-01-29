@@ -148,6 +148,9 @@ public class Utils
     }
     catch (IOException | InterruptedException ie) {
       log.error(ie, "couldn't get failure cause for job [%s]", failedJob.getJobName());
+      if (ie instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       return null;
     }
   }

@@ -147,6 +147,9 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
         }
       }
       catch (IOException | InterruptedException | ExecutionException e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         throw new RE(
             e,
             "Failure getting results for query[%s] url[%s] because of [%s]",

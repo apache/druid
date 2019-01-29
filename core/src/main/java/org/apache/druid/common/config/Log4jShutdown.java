@@ -185,6 +185,7 @@ public class Log4jShutdown implements ShutdownCallbackRegistry, LifeCycle
           }
         }
         catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
           throw new RuntimeException(e);
         }
       }

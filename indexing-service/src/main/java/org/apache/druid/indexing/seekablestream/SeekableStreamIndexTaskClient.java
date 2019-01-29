@@ -160,6 +160,9 @@ public abstract class SeekableStreamIndexTaskClient<PartitionIdType, SequenceOff
       return ImmutableMap.of();
     }
     catch (IOException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new RE(e, "Exception [%s] while pausing Task [%s]", e.getMessage(), id);
     }
   }

@@ -243,6 +243,9 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
     }
     catch (IOException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new RuntimeException(e);
     }
   }
@@ -266,6 +269,9 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
     }
     catch (IOException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new RuntimeException(e);
     }
   }
@@ -318,6 +324,9 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       );
     }
     catch (IOException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new RuntimeException(e);
     }
   }

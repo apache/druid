@@ -79,6 +79,9 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
           }
         }
         catch (ExecutionException | InterruptedException | TimeoutException ex) {
+          if (ex instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+          }
           throw new RuntimeException(ex);
         }
       }

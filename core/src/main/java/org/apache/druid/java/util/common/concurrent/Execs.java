@@ -149,6 +149,7 @@ public class Execs
               executor.getQueue().put(r);
             }
             catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
               throw new RejectedExecutionException("Got Interrupted while adding to the Queue", e);
             }
           }

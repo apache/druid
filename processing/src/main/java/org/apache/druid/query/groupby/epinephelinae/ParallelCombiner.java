@@ -199,6 +199,9 @@ public class ParallelCombiner<KeyType>
         }
       }
       catch (InterruptedException | CancellationException e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         throw new QueryInterruptedException(e);
       }
       catch (ExecutionException e) {

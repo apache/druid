@@ -189,6 +189,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
       future.cancel(true);
       closeOnFailure.close();
+      Thread.currentThread().interrupt();
       throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {

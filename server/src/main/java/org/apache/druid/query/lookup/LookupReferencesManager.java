@@ -243,6 +243,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         mainThread.join();
       }
       catch (InterruptedException ex) {
+        Thread.currentThread().interrupt();
         throw new ISE("failed to stop, mainThread couldn't finish.");
       }
     }
@@ -500,6 +501,9 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
     catch (InterruptedException | RuntimeException e) {
       LOG.error(e, "Failed to finish lookup load process.");
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
     }
     finally {
       executorService.shutdownNow();

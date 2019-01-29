@@ -305,6 +305,7 @@ public class DruidSchema extends AbstractSchema
             }
             catch (InterruptedException e) {
               // Just exit.
+              Thread.currentThread().interrupt();
             }
             catch (Throwable e) {
               // Throwables that fall out to here (not caught by an inner try/catch) are potentially gnarly, like

@@ -196,6 +196,9 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
       }
     }
     catch (InterruptedException | ExecutionException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new RuntimeException(e);
     }
     catch (TimeoutException e) {
@@ -223,6 +226,7 @@ public abstract class Fetcher<T> implements Iterator<OpenedObject<T>>
         }
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
     }

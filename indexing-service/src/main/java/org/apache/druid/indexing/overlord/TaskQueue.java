@@ -156,6 +156,7 @@ public class TaskQueue
                 }
                 catch (InterruptedException e) {
                   log.info("Interrupted, exiting!");
+                  Thread.currentThread().interrupt();
                   break;
                 }
                 catch (Exception e) {
@@ -166,6 +167,7 @@ public class TaskQueue
                   }
                   catch (InterruptedException e2) {
                     log.info("Interrupted, exiting!");
+                    Thread.currentThread().interrupt();
                     break;
                   }
                 }

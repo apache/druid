@@ -334,6 +334,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }
@@ -353,6 +354,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }
@@ -389,6 +391,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }

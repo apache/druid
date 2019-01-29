@@ -98,6 +98,7 @@ public class TimeChunkLockAcquireAction implements TaskAction<TaskLock>
       return result.isOk() ? result.getTaskLock() : null;
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
   }

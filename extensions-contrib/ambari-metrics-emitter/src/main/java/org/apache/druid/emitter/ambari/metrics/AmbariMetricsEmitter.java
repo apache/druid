@@ -209,6 +209,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
         }
         catch (InterruptedException | ExecutionException | TimeoutException e) {
           if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException("interrupted flushing elements from queue", e);
           }
         }

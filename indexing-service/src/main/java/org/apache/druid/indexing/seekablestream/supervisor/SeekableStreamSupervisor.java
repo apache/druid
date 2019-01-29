@@ -761,6 +761,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               catch (InterruptedException e) {
                 stateManager.recordThrowableEvent(e);
                 log.info("SeekableStreamSupervisor[%s] interrupted, exiting", dataSource);
+                Thread.currentThread().interrupt();
               }
             }
         );
@@ -1388,6 +1389,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                               catch (InterruptedException | ExecutionException | TimeoutException e) {
                                 stateManager.recordThrowableEvent(e);
                                 log.warn(e, "Exception while stopping task");
+                                if (e instanceof InterruptedException) {
+                                  Thread.currentThread().interrupt();
+                                }
                               }
                               return false;
                             }
@@ -1406,6 +1410,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             catch (InterruptedException | ExecutionException | TimeoutException e) {
                               stateManager.recordThrowableEvent(e);
                               log.warn(e, "Exception while stopping task");
+                              if (e instanceof InterruptedException) {
+                                Thread.currentThread().interrupt();
+                              }
                             }
                             return false;
                           } else {
@@ -1482,6 +1489,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Futures.allAsList(futures).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
     }
     catch (InterruptedException | ExecutionException | TimeoutException e) {
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new RuntimeException(e);
     }
   }
@@ -2091,6 +2101,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   );
                 }
                 catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
                   throw new RuntimeException(e);
                 }
                 catch (ExecutionException e) {

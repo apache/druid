@@ -273,6 +273,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
               EXCEPTION_RETRY_DELAY_MS
           );
           rescheduleRunnable(EXCEPTION_RETRY_DELAY_MS);
+          Thread.currentThread().interrupt();
         }
         catch (ExpiredIteratorException e) {
           log.warn(
@@ -555,6 +556,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
     catch (InterruptedException e) {
       log.warn(e, "Interrupted while polling");
+      Thread.currentThread().interrupt();
       return Collections.emptyList();
     }
 
@@ -631,6 +633,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
     catch (InterruptedException e) {
       log.warn(e, "InterruptedException while shutting down");
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
 

@@ -229,6 +229,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     catch (InterruptedException e) {
                       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
                       future.cancel(true);
+                      Thread.currentThread().interrupt();
                       throw new QueryInterruptedException(e);
                     }
                     catch (CancellationException e) {

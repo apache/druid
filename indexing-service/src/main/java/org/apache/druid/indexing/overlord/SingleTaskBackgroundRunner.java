@@ -419,6 +419,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         status = task.run(toolbox);
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         // Don't reset the interrupt flag of the thread, as we do want to continue to the end of this callable.
         if (stopping) {
           // Tasks may interrupt their own run threads to stop themselves gracefully; don't be too scary about this.

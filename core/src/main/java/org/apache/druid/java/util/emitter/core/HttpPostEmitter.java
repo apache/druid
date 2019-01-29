@@ -693,6 +693,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
         return true;
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         return false;
       }
       catch (Exception e) {

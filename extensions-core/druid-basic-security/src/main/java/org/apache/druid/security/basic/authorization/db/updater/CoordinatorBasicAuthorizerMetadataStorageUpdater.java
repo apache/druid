@@ -442,6 +442,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }
@@ -461,6 +462,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }
@@ -480,6 +482,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }
@@ -499,6 +502,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }
@@ -518,6 +522,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }
@@ -537,6 +542,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }
@@ -556,6 +562,7 @@ public class CoordinatorBasicAuthorizerMetadataStorageUpdater implements BasicAu
         Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
       }
       catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(ie);
       }
     }

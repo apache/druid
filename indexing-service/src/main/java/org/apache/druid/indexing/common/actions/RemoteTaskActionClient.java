@@ -108,11 +108,13 @@ public class RemoteTaskActionClient implements TaskActionClient
             Thread.sleep(sleepTime);
           }
           catch (InterruptedException e2) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e2);
           }
         }
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
     }

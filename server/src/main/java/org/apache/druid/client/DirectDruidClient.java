@@ -492,6 +492,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   }
                 }
                 catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
+                  if (e instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                  }
                   throw new RuntimeException(e);
                 }
               }

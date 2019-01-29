@@ -461,6 +461,7 @@ public class RealtimeIndexTask extends AbstractTask
         }
         catch (InterruptedException e) {
           log.debug(e, "Interrupted while finishing the job");
+          Thread.currentThread().interrupt();
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to finish realtime task").emit();

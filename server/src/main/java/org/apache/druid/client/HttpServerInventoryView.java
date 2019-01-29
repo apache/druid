@@ -340,6 +340,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         Thread.sleep(5000);
       }
       catch (InterruptedException ex) {
+        Thread.currentThread().interrupt();
         throw new RE(ex, "Interrupted while waiting for queryable server initial successful sync.");
       }
 
@@ -530,6 +531,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         return syncer.awaitInitialization(1, TimeUnit.MILLISECONDS);
       }
       catch (InterruptedException ex) {
+        Thread.currentThread().interrupt();
         throw new RE(
             ex,
             "Interrupted while waiting for queryable server[%s] initial successful sync.",

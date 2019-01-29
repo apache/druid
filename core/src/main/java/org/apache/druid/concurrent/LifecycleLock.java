@@ -127,6 +127,7 @@ public final class LifecycleLock
         acquireSharedInterruptibly(1);
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
       return isStarted();
@@ -141,6 +142,7 @@ public final class LifecycleLock
         }
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
       return isStarted();

@@ -238,6 +238,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
         LOG.error(e, "Failed to start kafka extraction factory");
         cacheHandler.close();
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         return false;
       }
 

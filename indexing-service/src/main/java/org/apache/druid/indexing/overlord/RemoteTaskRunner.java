@@ -625,6 +625,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 ).get();
               }
               catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
               }
               catch (ExecutionException e) {

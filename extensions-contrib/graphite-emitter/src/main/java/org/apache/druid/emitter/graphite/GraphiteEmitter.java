@@ -227,6 +227,7 @@ public class GraphiteEmitter implements Emitter
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
         if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
           throw new RuntimeException("interrupted flushing elements from queue", e);
         }
         log.error(e, e.getMessage());

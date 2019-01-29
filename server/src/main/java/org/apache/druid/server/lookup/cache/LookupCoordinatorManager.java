@@ -580,6 +580,7 @@ public class LookupCoordinatorManager
                     }
                     catch (InterruptedException ex) {
                       LOG.warn(ex, "lookup management on node [%s:%s:%s] interrupted.", node.getScheme(), node.getHostText(), node.getPort());
+                      Thread.currentThread().interrupt();
                       return null;
                     }
                     catch (Exception ex) {

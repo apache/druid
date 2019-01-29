@@ -362,6 +362,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
     catch (InterruptedException | TimeoutException e) {
       future.cancel(true);
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {

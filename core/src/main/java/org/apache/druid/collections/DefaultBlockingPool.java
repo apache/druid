@@ -86,6 +86,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return wrapObject(timeoutMs > 0 ? pollObject(timeoutMs) : pollObject());
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
   }
@@ -98,6 +99,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return wrapObject(takeObject());
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
   }
@@ -169,6 +171,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return objects.stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
   }
@@ -181,6 +184,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       return takeObjects(elementNum).stream().map(this::wrapObject).collect(Collectors.toList());
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       throw new RuntimeException(e);
     }
   }

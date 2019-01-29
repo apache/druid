@@ -93,6 +93,9 @@ class RetryingInputStream<T> extends InputStream
       }
       catch (InterruptedException | IOException e) {
         t.addSuppressed(e);
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         throwAsIOException(t);
       }
     } else {

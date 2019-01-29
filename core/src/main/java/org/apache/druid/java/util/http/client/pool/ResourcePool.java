@@ -186,7 +186,7 @@ public class ResourcePool<K, V> implements Closeable
             this.wait();
           }
           catch (InterruptedException e) {
-            Thread.interrupted();
+            Thread.currentThread().interrupt();
             return null;
           }
         }
