@@ -1067,22 +1067,18 @@ public class TaskLockbox
     }
 
     @Override
-    public boolean equals(Object o)
-    {
+    public boolean equals(Object o) {
       if (this == o) {
         return true;
       }
 
-      if (!getClass().equals(o.getClass())) {
+      if (o == null || !getClass().equals(o.getClass())) {
         return false;
       }
 
-      final TaskLockPosse that = (TaskLockPosse) o;
-      if (!taskLock.equals(that.taskLock)) {
-        return false;
-      }
-
-      return taskIds.equals(that.taskIds);
+      TaskLockPosse that = (TaskLockPosse) o;
+      return java.util.Objects.equals(taskLock, that.taskLock) &&
+              java.util.Objects.equals(taskIds, that.taskIds);
     }
 
     @Override
