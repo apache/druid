@@ -20,7 +20,7 @@
 package org.apache.druid.query.aggregation.datasketches.hll;
 
 import com.yahoo.sketches.hll.HllSketch;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.BufferedWriter;
 import java.nio.charset.StandardCharsets;
@@ -80,7 +80,7 @@ class GenerateTestData
     out.write("\t");
     out.write(dimension);
     out.write("\t");
-    out.write(Base64.encodeBase64String(sketch.toCompactByteArray()));
+    out.write(StringUtils.encodeBase64String(sketch.toCompactByteArray()));
     out.newLine();
   }
 

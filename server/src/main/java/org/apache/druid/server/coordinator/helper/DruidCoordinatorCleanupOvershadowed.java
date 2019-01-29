@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.helper;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -30,6 +29,7 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
@@ -61,7 +61,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
           for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
             VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSource.getName());
             if (timeline == null) {
-              timeline = new VersionedIntervalTimeline<>(Comparators.comparable());
+              timeline = new VersionedIntervalTimeline<>(Comparator.naturalOrder());
               timelines.put(dataSource.getName(), timeline);
             }
 

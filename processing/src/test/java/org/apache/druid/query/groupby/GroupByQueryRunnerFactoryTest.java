@@ -43,6 +43,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -170,6 +171,6 @@ public class GroupByQueryRunnerFactoryTest
 
     closerRule.closeLater(incrementalIndex);
 
-    return new IncrementalIndexSegment(incrementalIndex, "test");
+    return new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("test"));
   }
 }

@@ -73,13 +73,13 @@ In most cases, the configuration options map directly to the [postgres jdbc conn
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
-| `druid.metadata.postgres.useSSL` | Enables SSL | `false` | no |
-| `druid.metadata.postgres.sslPassword` | The [Password Provider](../../operations/password-provider.html) or String password for the client's key. | none | no |
-| `druid.metadata.postgres.sslFactory` | The class name to use as the `SSLSocketFactory` | none | no |
-| `druid.metadata.postgres.sslFactoryArg` | An optional argument passed to the sslFactory's constructor | none | no |
-| `druid.metadata.postgres.sslMode` | The sslMode. Possible values are "disable", "require", "verify-ca", "verify-full", "allow" and "prefer"| none | no |
-| `druid.metadata.postgres.sslCert` | The full path to the certificate file. | none | no |
-| `druid.metadata.postgres.sslKey` | The full path to the key file. | none | no |
-| `druid.metadata.postgres.sslRootCert` | The full path to the root certificate. | none | no |
-| `druid.metadata.postgres.sslHostNameVerifier` | The classname of the hostname verifier. | none | no |
-| `druid.metadata.postgres.sslPasswordCallback` | The classname of the SSL password provider. | none | no |
+| `druid.metadata.postgres.ssl.useSSL` | Enables SSL | `false` | no |
+| `druid.metadata.postgres.ssl.sslPassword` | The [Password Provider](../../operations/password-provider.html) or String password for the client's key. | none | no |
+| `druid.metadata.postgres.ssl.sslFactory` | The class name to use as the `SSLSocketFactory` | none | no |
+| `druid.metadata.postgres.ssl.sslFactoryArg` | An optional argument passed to the sslFactory's constructor | none | no |
+| `druid.metadata.postgres.ssl.sslMode` | The sslMode. Possible values are "disable", "require", "verify-ca", "verify-full", "allow" and "prefer"| none | no |
+| `druid.metadata.postgres.ssl.sslCert` | The full path to the certificate file. | none | no |
+| `druid.metadata.postgres.ssl.sslKey` | The full path to the key file. | none | no |
+| `druid.metadata.postgres.ssl.sslRootCert` | The full path to the root certificate. | none | no |
+| `druid.metadata.postgres.ssl.sslHostNameVerifier` | The classname of the hostname verifier. | none | no |
+| `druid.metadata.postgres.ssl.sslPasswordCallback` | The classname of the SSL password provider. | none | no |

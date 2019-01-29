@@ -21,6 +21,7 @@ package org.apache.druid.segment.serde;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
 
@@ -33,4 +34,10 @@ public interface ComplexMetricExtractor<T>
 
   @Nullable
   T extractValue(InputRow inputRow, String metricName);
+
+  @Nullable
+  default T extractValue(InputRow inputRow, String metricName, AggregatorFactory agg)
+  {
+    return extractValue(inputRow, metricName);
+  }
 }

@@ -32,6 +32,7 @@ import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 
@@ -149,14 +150,11 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   }
 
   @Override
-  public void loadSegment(
-      final DataSegment segment,
-      final LoadPeonCallback callback
-  )
+  public void loadSegment(final DataSegment segment, final LoadPeonCallback callback)
   {
     synchronized (lock) {
       if ((currentlyProcessing != null) &&
-          currentlyProcessing.getSegmentIdentifier().equals(segment.getIdentifier())) {
+          currentlyProcessing.getSegmentId().equals(segment.getId())) {
         if (callback != null) {
           currentlyProcessing.addCallback(callback);
         }
@@ -174,7 +172,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       }
     }
 
-    log.debug("Asking server peon[%s] to load segment[%s]", basePath, segment.getIdentifier());
+    log.debug("Asking server peon[%s] to load segment[%s]", basePath, segment.getId());
     queuedSize.addAndGet(segment.getSize());
     segmentsToLoad.put(segment, new SegmentHolder(segment, LOAD, Collections.singletonList(callback)));
   }
@@ -187,7 +185,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   {
     synchronized (lock) {
       if ((currentlyProcessing != null) &&
-          currentlyProcessing.getSegmentIdentifier().equals(segment.getIdentifier())) {
+          currentlyProcessing.getSegmentId().equals(segment.getId())) {
         if (callback != null) {
           currentlyProcessing.addCallback(callback);
         }
@@ -205,7 +203,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       }
     }
 
-    log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getIdentifier());
+    log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getId());
     segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
   }
 
@@ -227,7 +225,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       log.debug(
           "Server[%s] skipping processSegmentChangeRequest because something is currently loading[%s].",
           basePath,
-          currentlyProcessing.getSegmentIdentifier()
+          currentlyProcessing.getSegmentId()
       );
 
       return;
@@ -235,16 +233,16 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
     if (!segmentsToDrop.isEmpty()) {
       currentlyProcessing = segmentsToDrop.firstEntry().getValue();
-      log.debug("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      log.debug("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentId());
     } else if (!segmentsToLoad.isEmpty()) {
       currentlyProcessing = segmentsToLoad.firstEntry().getValue();
-      log.debug("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentIdentifier());
+      log.debug("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentId());
     } else {
       return;
     }
 
     try {
-      final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentIdentifier());
+      final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentId().toString());
       final byte[] payload = jsonMapper.writeValueAsBytes(currentlyProcessing.getChangeRequest());
       curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
 
@@ -379,7 +377,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         log.warn("Server[%s] an entry[%s] was removed even though it wasn't loading!?", basePath, path);
         return;
       }
-      if (!ZKPaths.getNodeFromPath(path).equals(currentlyProcessing.getSegmentIdentifier())) {
+      if (!ZKPaths.getNodeFromPath(path).equals(currentlyProcessing.getSegmentId().toString())) {
         log.warn(
             "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
             basePath, path, currentlyProcessing
@@ -413,11 +411,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     private final int type;
     private final List<LoadPeonCallback> callbacks = new ArrayList<>();
 
-    private SegmentHolder(
-        DataSegment segment,
-        int type,
-        Collection<LoadPeonCallback> callbacks
-    )
+    private SegmentHolder(DataSegment segment, int type, Collection<LoadPeonCallback> callbacks)
     {
       this.segment = segment;
       this.type = type;
@@ -437,9 +431,9 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       return type;
     }
 
-    public String getSegmentIdentifier()
+    public SegmentId getSegmentId()
     {
-      return segment.getIdentifier();
+      return segment.getId();
     }
 
     public long getSegmentSize()

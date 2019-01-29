@@ -68,8 +68,14 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
-    return ah.getMax();
+    Object val = values.get(fieldName);
+    if (val instanceof ApproximateHistogram) {
+      final ApproximateHistogram ah = (ApproximateHistogram) val;
+      return ah.getMax();
+    } else {
+      final FixedBucketsHistogram fbh = (FixedBucketsHistogram) val;
+      return fbh.getMax();
+    }
   }
 
   @Override
