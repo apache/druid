@@ -37,4 +37,17 @@ public class DateTimesTest
       Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt.toString()).matches());
     }
   }
+
+  @Test
+  public void testStringTimestampToDateTimeConversion()
+  {
+    Long milis = System.currentTimeMillis();
+    DateTime dt1 = DateTimes.of(milis.toString());
+    Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt1.toString()).matches());
+
+    Long seconds = milis / 1000;
+    DateTime dt2 = DateTimes.of(seconds.toString());
+    Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt2.toString()).matches());
+
+  }
 }
