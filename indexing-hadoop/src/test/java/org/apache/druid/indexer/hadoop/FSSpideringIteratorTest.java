@@ -83,14 +83,14 @@ public class FSSpideringIteratorTest
       Assert.assertTrue(files.isEmpty());
     }
     catch (IOException e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     finally {
       try {
         FileUtils.deleteDirectory(baseDir);
       }
       catch (IOException e) {
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
     }
   }

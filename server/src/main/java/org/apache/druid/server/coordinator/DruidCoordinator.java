@@ -418,7 +418,7 @@ public class DruidCoordinator
       }
       catch (Exception e) {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
     }
     catch (Exception e) {

@@ -239,7 +239,7 @@ public class TLSUtils
       );
     }
     catch (CertificateException | KeyManagementException | IOException | KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     return sslContext;
   }

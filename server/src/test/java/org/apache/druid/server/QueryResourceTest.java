@@ -452,7 +452,7 @@ public class QueryResourceTest
                 // When the query is cancelled the control will reach here,
                 // countdown the latch and rethrow the exception so that error response is returned for the query
                 cancelledCountDownLatch.countDown();
-                Throwables.propagate(e);
+                throw Throwables.propagate(e);
               }
               return new Access(true);
             } else {
@@ -505,7 +505,7 @@ public class QueryResourceTest
               Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
             }
             catch (IOException e) {
-              Throwables.propagate(e);
+              throw Throwables.propagate(e);
             }
             waitFinishLatch.countDown();
           }
@@ -573,7 +573,7 @@ public class QueryResourceTest
                 waitForCancellationLatch.await();
               }
               catch (InterruptedException e) {
-                Throwables.propagate(e);
+                throw Throwables.propagate(e);
               }
               return new Access(true);
             } else {
@@ -627,7 +627,7 @@ public class QueryResourceTest
               Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
             }
             catch (IOException e) {
-              Throwables.propagate(e);
+              throw Throwables.propagate(e);
             }
             waitFinishLatch.countDown();
           }

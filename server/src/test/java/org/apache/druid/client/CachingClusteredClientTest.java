@@ -428,7 +428,7 @@ public class CachingClusteredClientTest
           ).get();
         }
         catch (Exception e) {
-          Throwables.propagate(e);
+          throw Throwables.propagate(e);
         }
       }
     };

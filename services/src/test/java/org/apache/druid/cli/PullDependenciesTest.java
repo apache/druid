@@ -122,7 +122,7 @@ public class PullDependenciesTest
         jarFile.createNewFile();
       }
       catch (IOException e) {
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
       artifacts.add(new DefaultArtifact(null, jarName, null, "jar", "1.0", null, jarFile));
     }

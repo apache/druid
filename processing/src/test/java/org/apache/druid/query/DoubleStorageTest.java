@@ -327,7 +327,7 @@ public class DoubleStorageTest
         index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
       }
       catch (IndexSizeExceededException e) {
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
     });
 

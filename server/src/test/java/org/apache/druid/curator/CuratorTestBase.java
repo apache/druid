@@ -91,11 +91,11 @@ public class CuratorTestBase
                .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
       }
       catch (Exception e1) {
-        Throwables.propagate(e1);
+        throw Throwables.propagate(e1);
       }
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -121,11 +121,11 @@ public class CuratorTestBase
                .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(ImmutableSet.of(segment)));
       }
       catch (Exception e1) {
-        Throwables.propagate(e1);
+        throw Throwables.propagate(e1);
       }
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -160,11 +160,11 @@ public class CuratorTestBase
                .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(segments));
       }
       catch (Exception e1) {
-        Throwables.propagate(e1);
+        throw Throwables.propagate(e1);
       }
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
 
     return segmentAnnouncementPath;

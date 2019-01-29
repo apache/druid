@@ -175,7 +175,7 @@ public class SchemalessIndexTest
           theIndex.add(new MapBasedInputRow(timestamp, dims, event));
         }
         catch (IndexSizeExceededException e) {
-          Throwables.propagate(e);
+          throw Throwables.propagate(e);
         }
 
         count++;
@@ -348,7 +348,7 @@ public class SchemalessIndexTest
       }
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
   }
 

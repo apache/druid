@@ -275,7 +275,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       closer.close();
     }
     catch (IOException e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
   }
 

@@ -606,7 +606,7 @@ public class KerberosAuthenticator implements Authenticator
         }
       }
       catch (Exception ex) {
-        Throwables.propagate(ex);
+        throw Throwables.propagate(ex);
       }
     }
 

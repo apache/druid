@@ -146,7 +146,7 @@ public class MetadataTaskStorage implements TaskStorage
       if (e instanceof EntryExistsException) {
         throw (EntryExistsException) e;
       } else {
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
     }
   }

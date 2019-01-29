@@ -273,7 +273,7 @@ public class JettyTest extends BaseJettyTest
               // Expected.
             }
             catch (Throwable t) {
-              Throwables.propagate(t);
+              throw Throwables.propagate(t);
             }
             latch.countDown();
           }

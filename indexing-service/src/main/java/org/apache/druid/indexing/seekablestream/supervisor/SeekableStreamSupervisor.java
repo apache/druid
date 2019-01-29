@@ -1150,7 +1150,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
           catch (IOException e) {
             log.error("Resetting DataSourceMetadata failed [%s]", e.getMessage());
-            Throwables.propagate(e);
+            throw Throwables.propagate(e);
           }
         }
         if (metadataUpdateSuccess) {
@@ -2030,7 +2030,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
             catch (Exception e) {
               log.error("Something bad happened [%s]", e.getMessage());
-              Throwables.propagate(e);
+              throw Throwables.propagate(e);
             }
 
             if (taskGroup.tasks.isEmpty()) {
@@ -2552,7 +2552,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
       catch (Exception e) {
         log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getStream());
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
 
       Set<StreamPartition<PartitionIdType>> partitions = partitionIds
