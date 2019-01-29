@@ -329,7 +329,7 @@ public class AppenderatorPlumber implements Plumber
             log.warn(e, "Failed to drop segment: %s", identifier);
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
   }
 
@@ -483,7 +483,7 @@ public class AppenderatorPlumber implements Plumber
             errorHandler.apply(e);
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
   }
 }

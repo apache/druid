@@ -29,7 +29,6 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.HttpServerInventoryView;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
@@ -206,7 +205,7 @@ public class SegmentListerResource
             }
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
 
     asyncContext.setTimeout(timeout);
@@ -318,7 +317,7 @@ public class SegmentListerResource
             }
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
 
     asyncContext.setTimeout(timeout);

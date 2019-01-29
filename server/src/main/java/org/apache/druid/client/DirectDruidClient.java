@@ -32,7 +32,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -532,7 +531,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               }
             }
           },
-          Execs.directExecutor()
+          Runnable::run
       );
     }
     catch (IOException e) {

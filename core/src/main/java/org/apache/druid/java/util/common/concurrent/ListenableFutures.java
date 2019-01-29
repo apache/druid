@@ -66,7 +66,7 @@ public class ListenableFutures
                     finalFuture.setException(t);
                   }
                 },
-                Execs.directExecutor()
+                Runnable::run
             );
           }
 
@@ -76,7 +76,7 @@ public class ListenableFutures
             finalFuture.setException(t);
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
     return finalFuture;
   }

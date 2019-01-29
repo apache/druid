@@ -407,7 +407,7 @@ public class LookupCoordinatorManager
                 }
               }
             },
-            Execs.directExecutor()
+            Runnable::run
         );
 
         LOG.debug("Started");

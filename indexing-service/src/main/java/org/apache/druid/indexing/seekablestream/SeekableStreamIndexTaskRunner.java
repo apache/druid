@@ -622,7 +622,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                           backgroundThreadException = t;
                         }
                       },
-                      Execs.directExecutor()
+                      Runnable::run
                   );
                 }
               }
@@ -939,7 +939,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             handoffFuture.setException(t);
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
   }
 

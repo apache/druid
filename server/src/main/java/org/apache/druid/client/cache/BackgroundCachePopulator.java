@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -102,7 +101,7 @@ public class BackgroundCachePopulator implements CachePopulator
               exec
           );
         },
-        Execs.directExecutor()
+        Runnable::run
     );
   }
 

@@ -316,7 +316,7 @@ public class AppenderatorImpl implements Appenderator
                 persistError = t;
               }
             },
-            Execs.directExecutor()
+            Runnable::run
         );
       } else {
         isPersistRequired = true;

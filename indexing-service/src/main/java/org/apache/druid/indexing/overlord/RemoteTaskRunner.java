@@ -265,7 +265,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                           }
                         }
                       },
-                      Execs.directExecutor()
+                      Runnable::run
                   );
                   break;
                 case CHILD_UPDATED:
@@ -1177,7 +1177,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             removedWorkerCleanups.remove(worker, cleanupTask);
           }
         },
-        Execs.directExecutor()
+        Runnable::run
     );
   }
 

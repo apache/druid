@@ -365,7 +365,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                       resultFuture.setException(e);
                     }
                   },
-                  Execs.directExecutor()
+                  Runnable::run
               );
             }
         );

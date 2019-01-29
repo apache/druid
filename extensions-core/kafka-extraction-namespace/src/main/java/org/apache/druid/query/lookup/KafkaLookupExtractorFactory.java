@@ -261,7 +261,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               }
             }
           },
-          Execs.directExecutor()
+          Runnable::run
       );
       this.future = future;
       final Stopwatch stopwatch = Stopwatch.createStarted();
