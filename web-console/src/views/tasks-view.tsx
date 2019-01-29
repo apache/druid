@@ -23,7 +23,7 @@ import ReactTable from "react-table";
 import { Filter } from "react-table";
 import { Button, H1, ButtonGroup, Intent, Label, Alert } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { addFilter, QueryManager, getErrorMessage, countBy, formatDuration } from "../utils";
+import { addFilter, QueryManager, getDruidErrorMessage, countBy, formatDuration, queryDruidSql } from "../utils";
 import { AsyncActionDialog } from "../dialogs/async-action-dialog";
 import { SpecDialog } from "../dialogs/spec-dialog";
 import { AppToaster } from '../aux/toaster';
@@ -118,8 +118,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
 
     this.taskQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        const resp = await axios.post("/druid/v2/sql", { query });
-        return resp.data;
+        return await queryDruidSql({ query });
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -158,7 +157,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       await axios.post('/druid/indexer/v1/supervisor', spec);
     } catch (e) {
       AppToaster.show({
-        message: `Failed to submit supervisor: ${getErrorMessage(e)}`,
+        message: `Failed to submit supervisor: ${getDruidErrorMessage(e)}`,
         intent: Intent.DANGER
       });
       return;
@@ -175,7 +174,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       await axios.post('/druid/indexer/v1/task', spec);
     } catch (e) {
       AppToaster.show({
-        message: `Failed to submit task: ${getErrorMessage(e)}`,
+        message: `Failed to submit task: ${getDruidErrorMessage(e)}`,
         intent: Intent.DANGER
       });
       return;

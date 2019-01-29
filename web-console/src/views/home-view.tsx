@@ -21,7 +21,7 @@ import * as React from 'react';
 import * as classNames from 'classnames';
 import { H5, Card, Icon } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
-import { QueryManager, pluralIfNeeded } from '../utils';
+import { QueryManager, pluralIfNeeded, queryDruidSql } from '../utils';
 import './home-view.scss';
 
 export interface CardOptions {
@@ -128,9 +128,8 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
 
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const datasourceResp = await axios.post("/druid/v2/sql", { query: query });
-        const datasourceCount: number = datasourceResp.data.length;
-        return datasourceCount;
+        const datasources = await queryDruidSql({ query });
+        return datasources.length;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -147,9 +146,8 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
 
     this.segmentQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const segmentResp = await axios.post("/druid/v2/sql", { query });
-        const segmentCount: number = segmentResp.data[0].count;
-        return segmentCount;
+        const segments = await queryDruidSql({ query });
+        return segments[0].count;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -166,7 +164,7 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
 
     this.taskQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const taskResp = await axios.post("/druid/v2/sql", { query });
+        const taskCountsFromSql = await queryDruidSql({ query });
         let taskCounts = {
           successTaskCount: 0,
           failedTaskCount: 0,
@@ -174,7 +172,7 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
           waitingTaskCount: 0,
           pendingTaskCount: 0
         };
-        for (let dataStatus of taskResp.data) {
+        for (let dataStatus of taskCountsFromSql) {
           if (dataStatus.status === "SUCCESS") {
             taskCounts.successTaskCount = dataStatus.count;
           } else if (dataStatus.status === "FAILED") {
@@ -212,9 +210,8 @@ GROUP BY 1`);
 
     this.dataServerQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const dataServerResp = await axios.post("/druid/v2/sql", { query });
-        const dataServerCount: number = dataServerResp.data[0].count;
-        return dataServerCount;
+        const dataServerCounts = await queryDruidSql({ query });
+        return dataServerCounts[0].count;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({

@@ -23,7 +23,15 @@ import ReactTable from "react-table";
 import { Filter } from "react-table";
 import { H5, Button } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { addFilter, makeBooleanFilter, QueryManager, formatBytes, formatNumber, parseList, getErrorMessage } from "../utils";
+import {
+  addFilter,
+  makeBooleanFilter,
+  QueryManager,
+  formatBytes,
+  formatNumber,
+  parseList,
+  queryDruidSql
+} from "../utils";
 import "./segments-view.scss";
 
 export interface SegmentsViewProps extends React.Props<any> {
@@ -63,13 +71,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
 
     this.segmentsQueryManager = new QueryManager({
       processQuery: async (query: QueryAndSkip) => {
-        let sqlResp;
-        try {
-          sqlResp = await axios.post("/druid/v2/sql", { query: query.query });
-        } catch (e) {
-          throw new Error(getErrorMessage(e));
-        }
-        const results: any[] = sqlResp.data.slice(query.skip);
+        const results: any[] = (await queryDruidSql({ query: query.query })).slice(query.skip);
         results.forEach(result => {
           try {
             result.payload = JSON.parse(result.payload);

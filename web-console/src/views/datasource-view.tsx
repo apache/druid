@@ -33,8 +33,7 @@ import {
   countBy,
   lookupBy,
   QueryManager,
-  getErrorMessage,
-  pluralIfNeeded
+  pluralIfNeeded, queryDruidSql, getDruidErrorMessage
 } from "../utils";
 import { RetentionDialog } from '../dialogs/retention-dialog';
 
@@ -104,13 +103,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   componentDidMount(): void {
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        let datasourcesResp: any;
-        try {
-          datasourcesResp = await axios.post("/druid/v2/sql", { query });
-        } catch (e) {
-          throw new Error(getErrorMessage(e));
-        }
-        const datasources: any = datasourcesResp.data;
+        const datasources: any[] = await queryDruidSql({ query });
         const seen = countBy(datasources, (x: any) => x.datasource);
 
         const disabledResp = await axios.get('/druid/coordinator/v1/metadata/datasources?includeDisabled');
@@ -250,7 +243,7 @@ GROUP BY 1`);
       });
     } catch (e) {
       AppToaster.show({
-        message: `Failed to submit retention rules: ${getErrorMessage(e)}`,
+        message: `Failed to submit retention rules: ${getDruidErrorMessage(e)}`,
         intent: Intent.DANGER
       });
       return;

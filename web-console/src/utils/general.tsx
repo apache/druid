@@ -123,13 +123,6 @@ export function pluralIfNeeded(n: number, singular: string, plural?: string): st
 
 // ----------------------------
 
-export function getErrorMessage(e: any) {
-  const data: any = ((e.response || {}).data || {});
-  return [data.error, data.errorMessage, data.errorClass].filter(Boolean).join(' / ') || e.message;
-}
-
-// ----------------------------
-
 export function localStorageSet(key: string, value: string): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.setItem(key, value);

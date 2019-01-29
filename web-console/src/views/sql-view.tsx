@@ -22,7 +22,14 @@ import * as classNames from 'classnames';
 import ReactTable from "react-table";
 import * as Hjson from "hjson";
 import { SqlControl } from '../components/sql-control';
-import { QueryManager, getErrorMessage, localStorageSet, localStorageGet, decodeRune, HeaderRows } from '../utils';
+import {
+  QueryManager,
+  localStorageSet,
+  localStorageGet,
+  decodeRune,
+  HeaderRows,
+  queryDruidRune, queryDruidSql
+} from '../utils';
 import "./sql-view.scss";
 
 export interface SqlViewProps extends React.Props<any> {
@@ -55,27 +62,15 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
         if (query.trim().startsWith('{')) {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(query);
-          let runeResp: any;
-          try {
-            runeResp = await axios.post("/druid/v2", runeQuery);
-          } catch (e) {
-            throw new Error(getErrorMessage(e));
-          }
-          return decodeRune(runeQuery, runeResp.data);
+          return decodeRune(runeQuery, await queryDruidRune(runeQuery));
 
         } else {
-          let respSql: any;
-          try {
-            respSql = await axios.post("/druid/v2/sql", {
-              query,
-              resultFormat: "array",
-              header: true
-            });
-          } catch (e) {
-            throw new Error(getErrorMessage(e));
-          }
+          const result = await queryDruidSql({
+            query,
+            resultFormat: "array",
+            header: true
+          });
 
-          const result = respSql.data;
           return {
             header: (result && result.length) ? result[0] : [],
             rows: (result && result.length) ? result.slice(1) : []

@@ -24,7 +24,7 @@ import { Filter } from "react-table";
 import { sum } from "d3-array";
 import { Button, H1, Switch } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { addFilter, formatBytes, formatBytesCompact, QueryManager, getErrorMessage } from "../utils";
+import { addFilter, formatBytes, formatBytesCompact, QueryManager, queryDruidSql } from "../utils";
 import "./servers-view.scss";
 
 function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmentsToDrop: number, segmentsToDropSize: number): string {
@@ -80,15 +80,9 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
   componentDidMount(): void {
     this.serverQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        let serversResponse: any;
-        try {
-          serversResponse = await axios.post("/druid/v2/sql", { query });
-        } catch (e) {
-          throw new Error(getErrorMessage(e));
-        }
-        let loadQueueResponse = await axios.get("/druid/coordinator/v1/loadqueue?simple");
+        const servers = await queryDruidSql({ query });
 
-        const servers = serversResponse.data;
+        let loadQueueResponse = await axios.get("/druid/coordinator/v1/loadqueue?simple");
         const loadQueues = loadQueueResponse.data;
 
         return servers.map((s: any) => {
