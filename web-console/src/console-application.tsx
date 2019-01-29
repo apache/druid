@@ -64,19 +64,9 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
         timeout: 120000,
         message: <>
           It appears that the SQL endpoint is disabled. Either <a
-<<<<<<< HEAD
-          href="http://druid.io/docs/latest/querying/sql.html">enable the SQL endpoint</a> or use the old <a
-          href="/legacy-coordinator-console.html">coordinator</a> and <a
-          href="/legacy-overlord-console.html">overlord</a> consoles that do not rely on the SQL endpoint.
-||||||| merged common ancestors
-          href="http://druid.io/docs/latest/querying/sql.html">enable the SQL endpoint</a> or use the old <a
-          href="/legacy-coordinator-console.html">coordinator</a> and <a
-          href="/console.html">overlord</a> consoles that do not rely on the SQL endpoint.
-=======
           href={DRUID_DOCS_SQL}>enable the SQL endpoint</a> or use the old <a
           href={LEGACY_COORDINATOR_CONSOLE}>coordinator</a> and <a
           href={LEGACY_OVERLORD_CONSOLE}>overlord</a> consoles that do not rely on the SQL endpoint.
->>>>>>> add licenses to misc files and tidy up
         </>
       });
       return false
