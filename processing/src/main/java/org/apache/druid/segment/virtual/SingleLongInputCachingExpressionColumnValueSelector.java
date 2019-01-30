@@ -133,7 +133,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
     // It is possible for an expression to have a non-null String value but it can return null when parsed
     // as a primitive long/float/double.
     // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
-    return (!NullHandling.replaceWithDefault() && selector.isNull()) || getObject().isNumericNull();
+    return getObject().isNumericNull();
   }
 
   public class LruEvalCache
