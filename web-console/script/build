@@ -20,6 +20,10 @@ set -e
 
 #pushd web-console
 
+echo "Copying coordinator console in..."
+cp -r ./node_modules/druid-console/coordinator-console .
+cp ./node_modules/druid-console/index.html legacy-coordinator-console.html
+
 echo "Transpiling ReactTable CSS..."
 ./node_modules/.bin/stylus lib/react-table.styl -o lib/react-table.css
 

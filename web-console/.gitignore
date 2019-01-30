@@ -5,6 +5,7 @@ public/
 lib/*.css
 
 coordinator-console/
+legacy-coordinator-console.html
 
 .tscache
 tscommand-*.tmp.txt

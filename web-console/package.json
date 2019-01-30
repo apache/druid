@@ -22,7 +22,7 @@
     "axios": "^0.18.0",
     "classnames": "^2.2.6",
     "d3-array": "^2.0.3",
-    "druid-console": "0.0.1",
+    "druid-console": "^0.0.2",
     "es6-shim": "^0.35.4",
     "es7-shim": "^6.0.0",
     "hjson": "^3.1.2",
