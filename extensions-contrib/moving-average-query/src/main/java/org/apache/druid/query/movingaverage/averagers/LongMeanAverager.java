@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.movingaverage.averagers;
 
 public class LongMeanAverager extends BaseAverager<Number, Double>

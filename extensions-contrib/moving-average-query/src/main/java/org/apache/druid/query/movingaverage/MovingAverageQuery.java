@@ -31,7 +31,6 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -47,6 +46,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.having.HavingSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
+import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import java.util.ArrayList;

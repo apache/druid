@@ -16,12 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.movingaverage.averagers;
+
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.lang.reflect.Array;
 import java.util.Map;
-
-import org.apache.druid.query.aggregation.AggregatorFactory;
 
 /**
  * Common base class available for use by averagers. The base class implements methods that
@@ -53,10 +54,8 @@ public abstract class BaseAverager<I, R extends Object> implements Averager<R>
    * @param cycleSize      Cycle group size. Used to calculate day-of-week option. Default=1 (single element in group).
    * @param shouldFinalize Whether the intermediate values need to be finalized prior to averaging
    */
-  public BaseAverager(
-      Class<I> storageType, int numBuckets, String name, String fieldName, int cycleSize,
-      boolean shouldFinalize
-  )
+  public BaseAverager(Class<I> storageType, int numBuckets, String name, String fieldName, int cycleSize,
+                      boolean shouldFinalize)
   {
     this.numBuckets = numBuckets;
     this.name = name;

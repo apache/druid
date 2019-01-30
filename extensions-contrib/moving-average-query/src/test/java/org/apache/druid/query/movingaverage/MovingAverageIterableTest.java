@@ -16,24 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.movingaverage;
-
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-
-import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
-import org.apache.druid.query.movingaverage.averagers.ConstantAveragerFactory;
-import org.apache.druid.query.movingaverage.averagers.LongMeanAveragerFactory;
-
-import org.joda.time.DateTime;
-import org.joda.time.chrono.ISOChronology;
-import org.junit.Test;
 
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -46,6 +30,12 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
+import org.apache.druid.query.movingaverage.averagers.ConstantAveragerFactory;
+import org.apache.druid.query.movingaverage.averagers.LongMeanAveragerFactory;
+import org.joda.time.DateTime;
+import org.joda.time.chrono.ISOChronology;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,6 +45,15 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import static org.hamcrest.CoreMatchers.anyOf;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  *

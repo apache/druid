@@ -16,13 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.movingaverage;
 
+import org.apache.druid.data.input.Row;
 import org.joda.time.DateTime;
 
 import java.util.Collection;
-
-import org.apache.druid.data.input.Row;
 
 /**
  * Represents a set of rows for a specific date

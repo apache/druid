@@ -16,9 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/**
- * Copyright 2018 Oath Inc. All rights reserved.
- */
+
 package org.apache.druid.query.movingaverage.averagers;
 
 import java.util.Comparator;

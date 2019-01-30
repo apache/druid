@@ -16,23 +16,43 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.movingaverage;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
+import mockit.Mock;
+import mockit.MockUp;
+import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.GuiceInjectors;
-import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
+import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
+import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.guava.Accumulators;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
@@ -41,6 +61,12 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.movingaverage.test.TestConfig;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.TimelineLookup;
@@ -61,33 +87,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import com.google.inject.name.Names;
-import org.apache.druid.query.movingaverage.test.TestConfig;
-import org.apache.druid.client.CachingClusteredClient;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.initialization.Initialization;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesResultValue;
-
-import mockit.Mock;
-import mockit.MockUp;
-
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
