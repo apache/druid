@@ -33,6 +33,7 @@ import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
@@ -46,6 +47,7 @@ import java.util.List;
 
 /**
  */
+@JsonTypeName("ec2")
 public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
 {
   private static final EmittingLogger log = new EmittingLogger(EC2AutoScaler.class);

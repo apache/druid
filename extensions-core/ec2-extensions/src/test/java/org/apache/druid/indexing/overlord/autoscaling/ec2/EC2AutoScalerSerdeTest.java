@@ -17,13 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.autoscaling;
+package org.apache.druid.indexing.overlord.autoscaling.ec2;
 
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
+import org.apache.druid.indexing.overlord.autoscaling.AutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
@@ -56,38 +57,6 @@ public class EC2AutoScalerSerdeTest
                       + "   \"minNumWorkers\" : 2,\n"
                       + "   \"type\" : \"ec2\"\n"
                       + "}";
-
-  @Test
-  public void testSerde() throws Exception
-  {
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
-    objectMapper.setInjectableValues(
-        new InjectableValues()
-        {
-          @Override
-          public Object findInjectableValue(
-              Object o,
-              DeserializationContext deserializationContext,
-              BeanProperty beanProperty,
-              Object o1
-          )
-          {
-            return null;
-          }
-        }
-    );
-
-    final EC2AutoScaler autoScaler = (EC2AutoScaler) objectMapper.readValue(json, AutoScaler.class);
-    verifyAutoScaler(autoScaler);
-
-    final EC2AutoScaler roundTripAutoScaler = (EC2AutoScaler) objectMapper.readValue(
-        objectMapper.writeValueAsBytes(autoScaler),
-        AutoScaler.class
-    );
-    verifyAutoScaler(roundTripAutoScaler);
-
-    Assert.assertEquals("Round trip equals", autoScaler, roundTripAutoScaler);
-  }
 
   private static void verifyAutoScaler(final EC2AutoScaler autoScaler)
   {
@@ -131,5 +100,38 @@ public class EC2AutoScalerSerdeTest
                 .decodeBase64String(autoScaler.getEnvConfig().getUserData().withVersion("1234").getUserDataBase64())
         )
     );
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper()
+        .registerModules((Iterable<Module>) new EC2Module().getJacksonModules());
+    objectMapper.setInjectableValues(
+        new InjectableValues()
+        {
+          @Override
+          public Object findInjectableValue(
+              Object o,
+              DeserializationContext deserializationContext,
+              BeanProperty beanProperty,
+              Object o1
+          )
+          {
+            return null;
+          }
+        }
+    );
+
+    final EC2AutoScaler autoScaler = (EC2AutoScaler) objectMapper.readValue(json, AutoScaler.class);
+    verifyAutoScaler(autoScaler);
+
+    final EC2AutoScaler roundTripAutoScaler = (EC2AutoScaler) objectMapper.readValue(
+        objectMapper.writeValueAsBytes(autoScaler),
+        AutoScaler.class
+    );
+    verifyAutoScaler(roundTripAutoScaler);
+
+    Assert.assertEquals("Round trip equals", autoScaler, roundTripAutoScaler);
   }
 }

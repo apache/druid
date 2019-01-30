@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.overlord.autoscaling;
+package org.apache.druid.indexing.overlord.autoscaling.ec2;
 
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
@@ -33,6 +33,8 @@ import com.google.common.collect.ContiguousSet;
 import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
+import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
+import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
 import org.apache.druid.indexing.overlord.autoscaling.ec2.EC2EnvironmentConfig;
 import org.apache.druid.indexing.overlord.autoscaling.ec2.EC2NodeData;
