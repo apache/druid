@@ -20,7 +20,7 @@ import { Intent } from '@blueprintjs/core';
 import * as React from 'react';
 import axios from 'axios';
 import { IconNames } from "@blueprintjs/icons";
-import { AppToaster } from '../aux/toaster';
+import { AppToaster } from '../singletons/toaster';
 import { AutoForm } from '../components/auto-form';
 import { getDruidErrorMessage } from '../utils';
 import { SnitchDialog } from './snitch-dialog';

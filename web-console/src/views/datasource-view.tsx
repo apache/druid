@@ -23,7 +23,7 @@ import ReactTable from "react-table";
 import { Filter } from "react-table";
 import { Button, Intent, Switch } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
-import { AppToaster } from '../aux/toaster';
+import { AppToaster } from '../singletons/toaster';
 import { RuleEditor } from '../components/rule-editor';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import {

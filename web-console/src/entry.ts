@@ -20,7 +20,7 @@ import 'es6-shim/es6-shim';
 import 'es7-shim'; // Webpack with automatically pick browser.js which does the shim()
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import "./aux/react-table-defaults";
+import "./singletons/react-table-defaults";
 import "./entry.scss";
 
 import { ConsoleApplication } from './console-application';

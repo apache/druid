@@ -21,7 +21,7 @@ import * as React from 'react';
 import * as classNames from 'classnames';
 import { HashRouter, Route, Switch } from "react-router-dom";
 import { Intent } from "@blueprintjs/core";
-import { AppToaster } from './aux/toaster';
+import { AppToaster } from './singletons/toaster';
 import { HeaderBar, HeaderActiveTab } from './components/header-bar';
 import { localStorageGet, localStorageSet } from './utils';
 import { DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE } from './variables';

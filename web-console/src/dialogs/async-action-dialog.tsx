@@ -35,7 +35,7 @@ import {
   Icon,
   IconName
 } from "@blueprintjs/core";
-import { AppToaster } from '../aux/toaster';
+import { AppToaster } from '../singletons/toaster';
 
 export interface AsyncAlertDialogProps extends React.Props<any> {
   action: null | (() => Promise<void>),

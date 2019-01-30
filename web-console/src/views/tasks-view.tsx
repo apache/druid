@@ -26,7 +26,7 @@ import { IconNames } from "@blueprintjs/icons";
 import { addFilter, QueryManager, getDruidErrorMessage, countBy, formatDuration, queryDruidSql } from "../utils";
 import { AsyncActionDialog } from "../dialogs/async-action-dialog";
 import { SpecDialog } from "../dialogs/spec-dialog";
-import { AppToaster } from '../aux/toaster';
+import { AppToaster } from '../singletons/toaster';
 import "./tasks-view.scss";
 
 export interface TasksViewProps extends React.Props<any> {
