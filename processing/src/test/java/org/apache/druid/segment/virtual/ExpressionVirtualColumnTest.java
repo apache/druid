@@ -112,6 +112,12 @@ public class ExpressionVirtualColumnTest
       ValueType.LONG,
       TestExprMacroTable.INSTANCE
   );
+  private static final ExpressionVirtualColumn SCALE_LONG = new ExpressionVirtualColumn(
+      "expr",
+      "x * 2",
+      ValueType.LONG,
+      TestExprMacroTable.INSTANCE
+  );
 
   private static final ThreadLocal<Row> CURRENT_ROW = new ThreadLocal<>();
   private static final ColumnSelectorFactory COLUMN_SELECTOR_FACTORY = RowBasedColumnSelectorFactory.create(
@@ -490,5 +496,26 @@ public class ExpressionVirtualColumnTest
     Assert.assertEquals(ImmutableList.of(), CONSTANT_LIKE.requiredColumns());
     Assert.assertEquals(ImmutableList.of("z"), Z_LIKE.requiredColumns());
     Assert.assertEquals(ImmutableList.of("z", "x"), Z_CONCAT_X.requiredColumns());
+  }
+
+  @Test
+  public void testExprEvalSelectorWithLongsAndNulls()
+  {
+    final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
+        RowBasedColumnSelectorFactory.create(
+            CURRENT_ROW,
+            ImmutableMap.of("x", ValueType.LONG)
+        ),
+        Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
+    );
+
+    CURRENT_ROW.set(ROW0);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0, selector.getLong(), 0.0f);
+      Assert.assertFalse(selector.isNull());
+    } else {
+      Assert.assertTrue(selector.isNull());
+      Assert.assertTrue(selector.getObject().isNumericNull());
+    }
   }
 }

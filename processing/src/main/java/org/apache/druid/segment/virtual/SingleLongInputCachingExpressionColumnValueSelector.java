@@ -21,6 +21,7 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.longs.Long2ObjectLinkedOpenHashMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -98,6 +99,10 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public ExprEval getObject()
   {
+    // things can still call this even when underlying selector is null (e.g. ExpressionColumnValueSelector#isNull)
+    if (selector.isNull()) {
+      return ExprEval.ofLong(null);
+    }
     // No assert for null handling, as the delegate selector already has it.
     final long input = selector.getLong();
     final boolean cached = input == lastInput && lastOutput != null;
@@ -128,7 +133,7 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
     // It is possible for an expression to have a non-null String value but it can return null when parsed
     // as a primitive long/float/double.
     // ExprEval.isNumericNull checks whether the parsed primitive value is null or not.
-    return getObject().isNumericNull();
+    return (!NullHandling.replaceWithDefault() && selector.isNull()) || getObject().isNumericNull();
   }
 
   public class LruEvalCache
