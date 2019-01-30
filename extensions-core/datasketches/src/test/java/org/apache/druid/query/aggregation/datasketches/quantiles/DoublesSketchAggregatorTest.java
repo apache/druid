@@ -55,8 +55,8 @@ public class DoublesSketchAggregatorTest
 
   public DoublesSketchAggregatorTest(final GroupByQueryConfig config)
   {
-    DruidModule module = new DoublesSketchModule();
-    module.configure(null);
+    DoublesSketchModule.registerSerde();
+    DoublesSketchModule module = new DoublesSketchModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
     timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(

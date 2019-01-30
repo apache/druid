@@ -48,10 +48,9 @@ public class HllSketchAggregatorTest
 
   public HllSketchAggregatorTest(GroupByQueryConfig config)
   {
-    DruidModule module = new HllSketchModule();
-    module.configure(null);
+    HllSketchModule.registerSerde();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        module.getJacksonModules(), config, tempFolder);
+        new HllSketchModule().getJacksonModules(), config, tempFolder);
   }
 
   @Parameterized.Parameters(name = "{0}")
