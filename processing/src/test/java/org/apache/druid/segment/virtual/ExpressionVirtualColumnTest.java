@@ -518,4 +518,25 @@ public class ExpressionVirtualColumnTest
       Assert.assertTrue(selector.getObject().isNumericNull());
     }
   }
+
+  @Test
+  public void testExprEvalSelectorWithDoublesAndNulls()
+  {
+    final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
+        RowBasedColumnSelectorFactory.create(
+            CURRENT_ROW,
+            ImmutableMap.of("x", ValueType.DOUBLE)
+        ),
+        Parser.parse(SCALE_LONG.getExpression(), TestExprMacroTable.INSTANCE)
+    );
+
+    CURRENT_ROW.set(ROW0);
+    if (NullHandling.replaceWithDefault()) {
+      Assert.assertEquals(0, selector.getDouble(), 0.0f);
+      Assert.assertFalse(selector.isNull());
+    } else {
+      Assert.assertTrue(selector.isNull());
+      Assert.assertTrue(selector.getObject().isNumericNull());
+    }
+  }
 }
