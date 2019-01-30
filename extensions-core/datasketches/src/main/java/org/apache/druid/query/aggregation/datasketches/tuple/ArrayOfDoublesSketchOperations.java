@@ -27,9 +27,9 @@ import com.yahoo.sketches.tuple.ArrayOfDoublesSetOperationBuilder;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
 import com.yahoo.sketches.tuple.ArrayOfDoublesSketches;
 import com.yahoo.sketches.tuple.ArrayOfDoublesUnion;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 
@@ -117,7 +117,7 @@ public class ArrayOfDoublesSketchOperations
 
   public static ArrayOfDoublesSketch deserializeFromBase64EncodedString(final String str)
   {
-    return deserializeFromByteArray(Base64.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
+    return deserializeFromByteArray(StringUtils.decodeBase64(str.getBytes(StandardCharsets.UTF_8)));
   }
 
   public static ArrayOfDoublesSketch deserializeFromByteArray(final byte[] data)

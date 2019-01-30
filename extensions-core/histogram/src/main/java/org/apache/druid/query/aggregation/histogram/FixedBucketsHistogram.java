@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -751,7 +750,7 @@ public class FixedBucketsHistogram
   public String toBase64()
   {
     byte[] asBytes = toBytes();
-    return StringUtils.fromUtf8(Base64.encodeBase64(asBytes));
+    return StringUtils.fromUtf8(StringUtils.encodeBase64(asBytes));
   }
 
   /**
@@ -902,7 +901,7 @@ public class FixedBucketsHistogram
    */
   public static FixedBucketsHistogram fromBase64(String encodedHistogram)
   {
-    byte[] asBytes = Base64.decodeBase64(encodedHistogram.getBytes(StandardCharsets.UTF_8));
+    byte[] asBytes = StringUtils.decodeBase64(encodedHistogram.getBytes(StandardCharsets.UTF_8));
     return fromBytes(asBytes);
   }
 
