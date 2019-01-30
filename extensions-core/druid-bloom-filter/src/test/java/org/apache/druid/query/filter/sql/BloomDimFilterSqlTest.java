@@ -142,17 +142,17 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     String base64 = StringUtils.encodeBase64String(bytes);
 
+    // fool the planner to make an expression virtual column to test bloom filter Druid expression
     testQuery(
-        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s')", base64),
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s') = TRUE", base64),
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(QSS(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns()
                   .filters(
                       new ExpressionDimFilter(
-                          StringUtils.format("bloom_filter_test(concat(\"dim2\",'-foo'),'%s')", base64),
+                          StringUtils.format("(bloom_filter_test(concat(\"dim2\",'-foo'),'%s') == 1)", base64),
                           createExprMacroTable()
                       )
                   )
@@ -162,38 +162,6 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{5L}
-        )
-    );
-  }
-
-  @Test
-  public void testBloomFilterVirtualColumnNumber() throws Exception
-  {
-    BloomKFilter filter = new BloomKFilter(1500);
-    filter.addDouble(20.2);
-    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
-    String base64 = StringUtils.encodeBase64String(bytes);
-
-    testQuery(
-        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(2 * CAST(dim1 AS float), '%s')", base64),
-        ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .virtualColumns()
-                  .filters(
-                      new ExpressionDimFilter(
-                          StringUtils.format("bloom_filter_test((2 * CAST(\"dim1\", 'DOUBLE')),'%s')", base64),
-                          createExprMacroTable()
-                      )
-                  )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
-                  .context(TIMESERIES_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{1L}
         )
     );
   }
@@ -227,6 +195,37 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     );
   }
 
+
+  @Test
+  public void testBloomFilterVirtualColumnNumber() throws Exception
+  {
+    BloomKFilter filter = new BloomKFilter(1500);
+    filter.addFloat(20.2f);
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    String base64 = StringUtils.encodeBase64String(bytes);
+
+    testQuery(
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(2 * CAST(dim1 AS float), '%s')", base64),
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(
+                      EXPRESSION_VIRTUAL_COLUMN("v0", "(2 * CAST(\"dim1\", 'DOUBLE'))", ValueType.FLOAT)
+                  )
+                  .filters(
+                      new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
 
   @Test
   public void testBloomFilters() throws Exception
