@@ -98,33 +98,24 @@ $ ls -R conf
 druid       tranquility
 
 conf/druid:
-_common data    master  query
+_common       broker        coordinator   historical    middleManager overlord
 
 conf/druid/_common:
 common.runtime.properties log4j2.xml
 
-conf/druid/data:
-historical    middleManager
-
-conf/druid/data/historical:
+conf/druid/broker:
 jvm.config         runtime.properties
 
-conf/druid/data/middleManager:
+conf/druid/coordinator:
 jvm.config         runtime.properties
 
-conf/druid/master:
-coordinator overlord
-
-conf/druid/master/coordinator:
+conf/druid/historical:
 jvm.config         runtime.properties
 
-conf/druid/master/overlord:
+conf/druid/middleManager:
 jvm.config         runtime.properties
 
-conf/druid/query:
-broker
-
-conf/druid/query/broker:
+conf/druid/overlord:
 jvm.config         runtime.properties
 
 conf/tranquility:

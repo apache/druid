@@ -99,7 +99,7 @@ for reading from external data sources and publishing new Druid segments.
 
 [**Peon**](../design/peons.html) processes are task execution engines spawned by MiddleManagers. Each Peon runs a separate JVM and is responsible for executing a single task. Peons always run on the same host as the MiddleManager that spawned them.
 
-## Process Colocation
+## Pros and cons of colocation
 
 Druid processes can be colocated based on the Master/Data/Query server organization as
 described above. This organization generally results in better utilization of
