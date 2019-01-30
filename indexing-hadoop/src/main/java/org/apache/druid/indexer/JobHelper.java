@@ -412,7 +412,8 @@ public class JobHelper
     final FileSystem outputFS = FileSystem.get(finalIndexZipFilePath.toUri(), configuration);
     final AtomicLong size = new AtomicLong(0L);
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
-        DataPusher.class, new DataPusher()
+        DataPusher.class,
+        new DataPusher()
         {
           @Override
           public long push() throws IOException
@@ -469,7 +470,8 @@ public class JobHelper
       throws IOException
   {
     final DataPusher descriptorPusher = (DataPusher) RetryProxy.create(
-        DataPusher.class, new DataPusher()
+        DataPusher.class,
+        new DataPusher()
         {
           @Override
           public long push() throws IOException
@@ -694,7 +696,8 @@ public class JobHelper
     }
 
     final DataPusher zipPusher = (DataPusher) RetryProxy.create(
-        DataPusher.class, new DataPusher()
+        DataPusher.class,
+        new DataPusher()
         {
           @Override
           public long push() throws IOException

@@ -38,7 +38,7 @@ import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceSelectorConfig;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
@@ -202,11 +202,12 @@ public class CliOverlord extends ServerRunnable
                 Key.get(RowIngestionMetersFactory.class),
                 Key.get(DropwizardRowIngestionMetersFactory.class)
             );
-            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder = PolyBind.optionBinder(
-                binder, Key.get(RowIngestionMetersFactory.class)
-            );
-            rowIngestionMetersHandlerProviderBinder.addBinding("dropwizard")
-                                                   .to(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
+            final MapBinder<String, RowIngestionMetersFactory> rowIngestionMetersHandlerProviderBinder =
+                PolyBind.optionBinder(binder, Key.get(RowIngestionMetersFactory.class));
+            rowIngestionMetersHandlerProviderBinder
+                .addBinding("dropwizard")
+                .to(DropwizardRowIngestionMetersFactory.class)
+                .in(LazySingleton.class);
             binder.bind(DropwizardRowIngestionMetersFactory.class).in(LazySingleton.class);
 
             configureTaskStorage(binder);
@@ -234,12 +235,11 @@ public class CliOverlord extends ServerRunnable
               LifecycleModule.register(binder, Server.class);
             }
 
-            binder.bind(DiscoverySideEffectsProvider.Child.class).annotatedWith(IndexingService.class).toProvider(
-                new DiscoverySideEffectsProvider(
-                    DruidNodeDiscoveryProvider.NODE_TYPE_OVERLORD,
-                    ImmutableList.of()
-                )
-            ).in(LazySingleton.class);
+            binder
+                .bind(DiscoverySideEffectsProvider.Child.class)
+                .annotatedWith(IndexingService.class)
+                .toProvider(new DiscoverySideEffectsProvider(NodeType.OVERLORD, ImmutableList.of()))
+                .in(LazySingleton.class);
             LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, IndexingService.class));
           }
 
@@ -248,12 +248,13 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.storage", TaskStorageConfig.class);
 
             PolyBind.createChoice(
-                binder, "druid.indexer.storage.type", Key.get(TaskStorage.class), Key.get(HeapMemoryTaskStorage.class)
-            );
-            final MapBinder<String, TaskStorage> storageBinder = PolyBind.optionBinder(
                 binder,
-                Key.get(TaskStorage.class)
+                "druid.indexer.storage.type",
+                Key.get(TaskStorage.class),
+                Key.get(HeapMemoryTaskStorage.class)
             );
+            final MapBinder<String, TaskStorage> storageBinder =
+                PolyBind.optionBinder(binder, Key.get(TaskStorage.class));
 
             storageBinder.addBinding("local").to(HeapMemoryTaskStorage.class);
             binder.bind(HeapMemoryTaskStorage.class).in(LazySingleton.class);

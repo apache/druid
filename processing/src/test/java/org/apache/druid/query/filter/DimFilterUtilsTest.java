@@ -24,16 +24,16 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import com.google.common.collect.Sets;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,8 +81,8 @@ public class DimFilterUtilsTest
     Set<ShardSpec> result = DimFilterUtils.filterShards(filter, input, CONVERTER);
     Assert.assertEquals(expected, result);
 
-    Map<String, Optional<RangeSet<String>>> dimensionRangeMap = Maps.newHashMap();
-    result = Sets.newHashSet();
+    Map<String, Optional<RangeSet<String>>> dimensionRangeMap = new HashMap<>();
+    result = new HashSet<>();
     for (ShardSpec shard : input) {
       result.addAll(DimFilterUtils.filterShards(filter, ImmutableList.of(shard), CONVERTER, dimensionRangeMap));
     }

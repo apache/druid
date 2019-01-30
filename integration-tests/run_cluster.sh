@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # cleanup
-for node in druid-historical druid-coordinator druid-overlord druid-router druid-router-permissive-tls druid-router-no-client-auth-tls druid-broker druid-middlemanager druid-zookeeper-kafka druid-metadata-storage;
+for node in druid-historical druid-coordinator druid-overlord druid-router druid-router-permissive-tls druid-router-no-client-auth-tls druid-router-custom-check-tls druid-broker druid-middlemanager druid-zookeeper-kafka druid-metadata-storage;
 do
 docker stop $node
 docker rm $node
@@ -46,6 +46,12 @@ mkdir -p $SHARED_DIR/tasklogs
 rm -rf $SHARED_DIR/docker
 cp -R docker $SHARED_DIR/docker
 mvn -B dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
+
+# install logging config
+cp src/main/resources/log4j2.xml $SHARED_DIR/docker/lib/log4j2.xml
+
+# copy the integration test jar, it provides test-only extension implementations
+cp target/druid-integration-tests*.jar $SHARED_DIR/docker/lib
 
 docker network create --subnet=172.172.172.0/24 druid-it-net
 
@@ -81,3 +87,6 @@ docker run -d --privileged --net druid-it-net --ip 172.172.172.10 --name druid-r
 
 # Start Router with TLS but no client auth
 docker run -d --privileged --net druid-it-net --ip 172.172.172.11 --name druid-router-no-client-auth-tls -p 8890:8890 -p 9090:9090 -v $SHARED_DIR:/shared -v $DOCKERDIR/router-no-client-auth-tls.conf:$SUPERVISORDIR/router-no-client-auth-tls.conf --link druid-zookeeper-kafka:druid-zookeeper-kafka --link druid-coordinator:druid-coordinator --link druid-broker:druid-broker druid/cluster
+
+# Start Router with custom TLS cert checkers
+docker run -d --privileged --net druid-it-net --ip 172.172.172.12 --hostname druid-router-custom-check-tls --name druid-router-custom-check-tls -p 8891:8891 -p 9091:9091 -v $SHARED_DIR:/shared -v $DOCKERDIR/router-custom-check-tls.conf:$SUPERVISORDIR/router-custom-check-tls.conf --link druid-zookeeper-kafka:druid-zookeeper-kafka --link druid-coordinator:druid-coordinator --link druid-broker:druid-broker druid/cluster

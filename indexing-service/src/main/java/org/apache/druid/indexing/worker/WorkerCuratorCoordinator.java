@@ -22,7 +22,6 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
@@ -38,6 +37,7 @@ import org.apache.druid.server.initialization.IndexerZkConfig;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -198,7 +198,7 @@ public class WorkerCuratorCoordinator
 
   public List<TaskAnnouncement> getAnnouncements() throws Exception
   {
-    final List<TaskAnnouncement> announcements = Lists.newArrayList();
+    final List<TaskAnnouncement> announcements = new ArrayList<>();
 
     for (String id : curatorFramework.getChildren().forPath(getStatusPathForWorker())) {
       announcements.add(

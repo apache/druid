@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 
 public class LimitedBufferHashGrouperTest
@@ -118,7 +119,7 @@ public class LimitedBufferHashGrouperTest
 
     Assert.assertEquals(100, grouper.getLimit());
 
-    final List<Grouper.Entry<Integer>> expected = Lists.newArrayList();
+    final List<Grouper.Entry<Integer>> expected = new ArrayList<>();
     for (int i = 0; i < limit; i++) {
       expected.add(new Grouper.Entry<>(i, new Object[]{11L, 1L}));
     }
@@ -183,7 +184,7 @@ public class LimitedBufferHashGrouperTest
     }
     Assert.assertEquals(100, grouper.getLimit());
 
-    final List<Grouper.Entry<Integer>> expected = Lists.newArrayList();
+    final List<Grouper.Entry<Integer>> expected = new ArrayList<>();
     for (int i = 0; i < limit; i++) {
       expected.add(new Grouper.Entry<>(i, new Object[]{11L, 1L}));
     }

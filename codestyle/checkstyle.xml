@@ -198,5 +198,70 @@
       <property name="format" value="^org.apache.druid.*$"/>
     </module>
     <module name="PackageDeclaration"/>
+
+    <module name="Regexp">
+      <property name="format" value="instanceof\s+(ObjectColumnSelector|LongColumnSelector|FloatColumnSelector|DoubleColumnSelector)"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="ObjectColumnSelector, LongColumnSelector, FloatColumnSelector
+      and DoubleColumnSelector must not be used in an instanceof statement, see Javadoc of those interfaces."/>
+    </module>
+
+    <module name="Regexp">
+      <property
+          name="format"
+          value='(?&lt;!ImmutableMap.of|Types.mapOf|orderedMap|makeSelectResults|makeListOfPairs)\(\s*\n +([^,\n\(\{"&lt;/]+|[^,\n\(\{" /]+&gt; [a-zA-Z0-9_]+)\, ++[^,\n/]+'
+      />
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="&#10;
+According to the Druid code style, if a method or constructor declaration or a call&#10;
+doesn't fit a single line, each parameter or argument should be on it's own, e. g:&#10;
+&#10;
+    MyReturnType myMethodWithAVeryLongName(&#10;
+        MyParamTypeA myParamAWithAVeryLongName,&#10;
+        MyParamTypeB myParamBWithAVeryLongName&#10;
+    )&#10;
+&#10;
+or&#10;
+&#10;
+    MyValueType myValue = myMethodWithAVeryLongName(&#10;
+        myVeryLongArgA,&#10;
+        myVeryLongArgB&#10;
+    )&#10;
+&#10;
+The exceptions from this rule are map-like and pair-accepting constructors and methods,&#10;
+for those it's preferred to put each pair on it's own line, e. g:&#10;
+&#10;
+    Map&lt;MyKeyType, MyValueType&gt; myMap = ImmutableMap.of(&#10;
+        myKey1, myValue1,&#10;
+        myKey2, myValue2&#10;
+    )&#10;
+&#10;
+Always prefer to fit a declaration or a method or constructor call into a single line&#10;
+(less than 120 cols), if possible.&#10;
+&#10;
+Two things to note to avoid unnecessary breakdown:&#10;
+&#10;
+1) Exceptions declared for a method could be broken to the next line separately, e. g:&#10;
+&#10;
+    MyReturnType myMethodWithAVeryLongName(MyParamTypeA myParamA, MyParamTypeB myParamB)&#10;
+        throws MyExceptionTypeAWithVeryLongName, MyExceptionTypeBWithVeryLongName&#10;
+&#10;
+2) In a variable, field or constant assignment, it's often more readable to break the&#10;
+whole right hand side expression to the next line, instead of breaking the expression&#10;
+arguments, e. g:&#10;
+&#10;
+    MyTypeWithAVeryLongName myVariableWithAVeryLongName =&#10;
+        myMethodWithAVeryLongName(myArgA, myArgB);&#10;
+&#10;
+Also note that this checkstyle rule (the one that caused this message to be printed)&#10;
+doesn't spot all violations of the corresponding Druid code style rule. If you see&#10;
+a place where method or constructor parameters or call arguments are not properly&#10;
+located each on it's own line, but this checkstyle rule is silent, if doesn't mean&#10;
+that the code is formatted correctly. Fix it anyway.&#10;
+&#10;
+If you encouter a map-like or a pair-accepting method that is reported by this&#10;
+checkstyle rule, you should add it as an exception in the corresponding rule in&#10;
+codestyle/checkstyle.xml.&#10;"/>
+    </module>
   </module>
 </module>

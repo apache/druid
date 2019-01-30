@@ -216,7 +216,7 @@ public class AvroStreamInputRowParserTest
 
     InputRow inputRow = parser2.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
 
-    assertInputRowCorrect(inputRow, DIMENSIONS);
+    assertInputRowCorrect(inputRow, DIMENSIONS, false);
   }
 
   @Test
@@ -257,10 +257,10 @@ public class AvroStreamInputRowParserTest
 
     InputRow inputRow = parser2.parseBatch(ByteBuffer.wrap(out.toByteArray())).get(0);
 
-    assertInputRowCorrect(inputRow, DIMENSIONS_SCHEMALESS);
+    assertInputRowCorrect(inputRow, DIMENSIONS_SCHEMALESS, false);
   }
 
-  public static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions)
+  public static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions, boolean isFromPigAvro)
   {
     assertEquals(expectedDimensions, inputRow.getDimensions());
     assertEquals(1543698L, inputRow.getTimestampFromEpoch());
@@ -281,7 +281,8 @@ public class AvroStreamInputRowParserTest
     // towards Map avro field as druid dimension, need to convert its toString() back to HashMap to check equality
     assertEquals(1, inputRow.getDimension("someIntValueMap").size());
     assertEquals(
-        SOME_INT_VALUE_MAP_VALUE, new HashMap<CharSequence, Integer>(
+        SOME_INT_VALUE_MAP_VALUE,
+        new HashMap<CharSequence, Integer>(
             Maps.transformValues(
                 Splitter.on(",")
                         .withKeyValueSeparator("=")
@@ -299,7 +300,8 @@ public class AvroStreamInputRowParserTest
         )
     );
     assertEquals(
-        SOME_STRING_VALUE_MAP_VALUE, new HashMap<CharSequence, CharSequence>(
+        SOME_STRING_VALUE_MAP_VALUE,
+        new HashMap<CharSequence, CharSequence>(
             Splitter.on(",")
                     .withKeyValueSeparator("=")
                     .split(inputRow.getDimension("someIntValueMap").get(0).replaceAll("[\\{\\} ]", ""))
@@ -307,10 +309,12 @@ public class AvroStreamInputRowParserTest
     );
     assertEquals(Collections.singletonList(SOME_UNION_VALUE), inputRow.getDimension("someUnion"));
     assertEquals(Collections.emptyList(), inputRow.getDimension("someNull"));
-    assertEquals(Collections.singletonList(String.valueOf(SOME_FIXED_VALUE)), inputRow.getDimension("someFixed"));
+    if (isFromPigAvro) {
+      assertEquals(String.valueOf(SOME_FIXED_VALUE), Arrays.toString((byte[]) inputRow.getRaw("someFixed")));
+    }
     assertEquals(
-        Collections.singletonList(Arrays.toString(SOME_BYTES_VALUE.array())),
-        inputRow.getDimension("someBytes")
+        Arrays.toString(SOME_BYTES_VALUE.array()),
+        Arrays.toString((byte[]) (inputRow.getRaw("someBytes")))
     );
     assertEquals(Collections.singletonList(String.valueOf(MyEnum.ENUM1)), inputRow.getDimension("someEnum"));
     assertEquals(Collections.singletonList(String.valueOf(SOME_RECORD_VALUE)), inputRow.getDimension("someRecord"));

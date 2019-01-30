@@ -49,7 +49,8 @@ public class SimpleQueryableIndex extends AbstractIndex implements QueryableInde
   private final Map<String, DimensionHandler> dimensionHandlers;
 
   public SimpleQueryableIndex(
-      Interval dataInterval, Indexed<String> dimNames,
+      Interval dataInterval,
+      Indexed<String> dimNames,
       BitmapFactory bitmapFactory,
       Map<String, ColumnHolder> columns,
       SmooshedFileMapper fileMapper,

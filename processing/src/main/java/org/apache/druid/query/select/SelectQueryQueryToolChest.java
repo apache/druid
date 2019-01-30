@@ -28,9 +28,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -57,11 +55,13 @@ import org.joda.time.Interval;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  */
@@ -143,7 +143,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
 
   @Override
   public Function<Result<SelectResultValue>, Result<SelectResultValue>> makePreComputeManipulatorFn(
-      final SelectQuery query, final MetricManipulationFn fn
+      final SelectQuery query,
+      final MetricManipulationFn fn
   )
   {
     return Functions.identity();
@@ -190,7 +191,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           ++index;
         }
 
-        final Set<String> metrics = Sets.newTreeSet();
+        final Set<String> metrics = new TreeSet<>();
         if (query.getMetrics() != null) {
           metrics.addAll(query.getMetrics());
         }
@@ -339,7 +340,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         {
           @Override
           public Sequence<Result<SelectResultValue>> run(
-              QueryPlus<Result<SelectResultValue>> queryPlus, Map<String, Object> responseContext
+              QueryPlus<Result<SelectResultValue>> queryPlus,
+              Map<String, Object> responseContext
           )
           {
             SelectQuery selectQuery = (SelectQuery) queryPlus.getQuery();
@@ -383,12 +385,15 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     List<Interval> intervals = Lists.newArrayList(
         Iterables.transform(filteredPagingKeys, DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
     );
-    Collections.sort(
-        intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()
-                                        : Comparators.intervalsByStartThenEnd()
-    );
+    Comparator<Interval> comparator;
+    if (query.isDescending()) {
+      comparator = Comparators.intervalsByEndThenStart();
+    } else {
+      comparator = Comparators.intervalsByStartThenEnd();
+    }
+    Collections.sort(intervals, comparator);
 
-    TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();
+    TreeMap<Long, Long> granularThresholds = new TreeMap<>();
     for (Interval interval : intervals) {
       if (query.isDescending()) {
         long granularEnd = granularity.bucketStart(interval.getEnd()).getMillis();

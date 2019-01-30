@@ -64,7 +64,9 @@ public class HadoopDruidConverterConfig
             public void configure(Binder binder)
             {
               JsonConfigProvider.bindInstance(
-                  binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-converter", null, null, null, true, false)
+                  binder,
+                  Key.get(DruidNode.class, Self.class),
+                  new DruidNode("hadoop-converter", null, false, null, null, true, false)
               );
             }
           }

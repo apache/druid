@@ -62,7 +62,8 @@ public class OffHeapPollingCache<K, V> implements PollingCache<K, V>
 
       final Set<V> setOfValues = setOfValuesBuilder.build();
       reverseCache.putAll(Maps.asMap(
-          setOfValues, new Function<V, List<K>>()
+          setOfValues,
+          new Function<V, List<K>>()
           {
             @Override
             public List<K> apply(final V input)
@@ -80,7 +81,8 @@ public class OffHeapPollingCache<K, V> implements PollingCache<K, V>
                 }
               }).keySet());
             }
-          }));
+          }
+      ));
       started.getAndSet(true);
     }
   }

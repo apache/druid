@@ -20,7 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
-import com.google.common.collect.Maps;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.InputRow;
@@ -37,6 +36,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -109,7 +109,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       final boolean concurrentEventAdd
   )
   {
-    selectors = Maps.newHashMap();
+    selectors = new HashMap<>();
     aggOffsetInBuffer = new int[metrics.length];
 
     for (int i = 0; i < metrics.length; i++) {

@@ -26,7 +26,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
@@ -53,6 +52,7 @@ import org.apache.druid.query.filter.DimFilter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -130,7 +130,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
   @Override
   public Function<Result<SearchResultValue>, Result<SearchResultValue>> makePreComputeManipulatorFn(
-      SearchQuery query, MetricManipulationFn fn
+      SearchQuery query,
+      MetricManipulationFn fn
   )
   {
     return Functions.identity();
@@ -231,7 +232,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           {
             List<Object> result = (List<Object>) input;
             boolean needsRename = false;
-            final Map<String, String> outputNameMap = Maps.newHashMap();
+            final Map<String, String> outputNameMap = new HashMap<>();
             if (hasOutputName(result)) {
               List<String> cachedOutputNames = (List) result.get(2);
               Preconditions.checkArgument(cachedOutputNames.size() == dimOutputNames.size(),
@@ -333,7 +334,8 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
             {
               @Override
               public Sequence<Result<SearchResultValue>> run(
-                  QueryPlus<Result<SearchResultValue>> queryPlus, Map<String, Object> responseContext
+                  QueryPlus<Result<SearchResultValue>> queryPlus,
+                  Map<String, Object> responseContext
               )
               {
                 SearchQuery searchQuery = (SearchQuery) queryPlus.getQuery();

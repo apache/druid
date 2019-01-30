@@ -224,10 +224,12 @@ public class CompactionTaskTest
     final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
     objectMapper.setAnnotationIntrospectors(
         new AnnotationIntrospectorPair(
-            guiceIntrospector, objectMapper.getSerializationConfig().getAnnotationIntrospector()
+            guiceIntrospector,
+            objectMapper.getSerializationConfig().getAnnotationIntrospector()
         ),
         new AnnotationIntrospectorPair(
-            guiceIntrospector, objectMapper.getDeserializationConfig().getAnnotationIntrospector()
+            guiceIntrospector,
+            objectMapper.getDeserializationConfig().getAnnotationIntrospector()
         )
     );
     GuiceInjectableValues injectableValues = new GuiceInjectableValues(
@@ -698,7 +700,9 @@ public class CompactionTaskTest
     expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
 
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
-    segments.remove(0);
+    Collections.sort(segments);
+    // Remove one segment in the middle
+    segments.remove(segments.size() / 2);
     CompactionTask.createIngestionSchema(
         toolbox,
         new SegmentProvider(segments),

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.io.FileUtils;
@@ -73,6 +72,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -91,7 +91,7 @@ public class RealtimePlumberSchoolTest
         new MessageTimeRejectionPolicyFactory()
     };
 
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
     for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
       constructors.add(new Object[]{rejectionPolicy, OffHeapMemorySegmentWriteOutMediumFactory.instance()});
       constructors.add(new Object[]{rejectionPolicy, TmpFileSegmentWriteOutMediumFactory.instance()});
@@ -214,7 +214,7 @@ public class RealtimePlumberSchoolTest
 
     realtimePlumberSchool = new RealtimePlumberSchool(
         emitter,
-        new DefaultQueryRunnerFactoryConglomerate(Maps.newHashMap()),
+        new DefaultQueryRunnerFactoryConglomerate(new HashMap<>()),
         dataSegmentPusher,
         announcer,
         segmentPublisher,
@@ -588,7 +588,7 @@ public class RealtimePlumberSchoolTest
       @Override
       public List<String> getDimensions()
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
 
       @Override
@@ -606,7 +606,7 @@ public class RealtimePlumberSchoolTest
       @Override
       public List<String> getDimension(String dimension)
       {
-        return Lists.newArrayList();
+        return new ArrayList<>();
       }
 
       @Override

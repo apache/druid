@@ -32,6 +32,19 @@ See [mysql-metadata-storage extension documentation](../development/extensions-c
 
 See [postgresql-metadata-storage](../development/extensions-core/postgresql.html). 
 
+## Adding custom dbcp properties
+
+NOTE: These properties are not settable through the druid.metadata.storage.connector.dbcp properties : username, password, connectURI, validationQuery, testOnBorrow. These must be set through druid.metadata.storage.connector properties.
+
+Example supported properties:
+
+```properties
+druid.metadata.storage.connector.dbcp.maxConnLifetimeMillis=1200000
+druid.metadata.storage.connector.dbcp.defaultQueryTimeout=30000
+```
+
+See [BasicDataSource Configuration](https://commons.apache.org/proper/commons-dbcp/configuration.html) for full list.
+
 ## Metadata Storage Tables
 
 ### Segments Table

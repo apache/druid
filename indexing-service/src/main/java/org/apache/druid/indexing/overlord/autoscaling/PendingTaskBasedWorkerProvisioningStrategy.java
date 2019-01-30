@@ -27,7 +27,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.common.task.Task;
@@ -47,6 +46,8 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -136,8 +137,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     private final WorkerTaskRunner runner;
     private final ScalingStats scalingStats = new ScalingStats(config.getNumEventsToTrack());
 
-    private final Set<String> currentlyProvisioning = Sets.newHashSet();
-    private final Set<String> currentlyTerminating = Sets.newHashSet();
+    private final Set<String> currentlyProvisioning = new HashSet<>();
+    private final Set<String> currentlyTerminating = new HashSet<>();
 
     private DateTime lastProvisionTime = DateTimes.nowUtc();
     private DateTime lastTerminateTime = lastProvisionTime;
@@ -287,7 +288,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
       );
       log.debug("Valid workers: %d %s", validWorkers.size(), validWorkers);
 
-      Map<String, ImmutableWorkerInfo> workersMap = Maps.newHashMap();
+      Map<String, ImmutableWorkerInfo> workersMap = new HashMap<>();
       for (ImmutableWorkerInfo worker : validWorkers) {
         workersMap.put(worker.getWorker().getHost(), worker);
       }
@@ -478,8 +479,8 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     return new ImmutableWorkerInfo(
         new Worker(scheme, host, "-2", capacity, version),
         0,
-        Sets.newHashSet(),
-        Sets.newHashSet(),
+        new HashSet<>(),
+        new HashSet<>(),
         DateTimes.nowUtc()
     );
   }

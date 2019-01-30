@@ -64,6 +64,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 /**
  */
@@ -78,8 +79,8 @@ public class DruidLeaderClientTest extends BaseJettyTest
   @Override
   protected Injector setupInjector()
   {
-    final DruidNode node = new DruidNode("test", "localhost", null, null, true, false);
-    discoveryDruidNode = new DiscoveryDruidNode(node, "test", ImmutableMap.of());
+    final DruidNode node = new DruidNode("test", "localhost", false, null, null, true, false);
+    discoveryDruidNode = new DiscoveryDruidNode(node, NodeType.PEON, ImmutableMap.of());
 
     Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
@@ -114,21 +115,21 @@ public class DruidLeaderClientTest extends BaseJettyTest
     );
 
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.PEON)).andReturn(druidNodeDiscovery);
 
     EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        "nodetype",
+        NodeType.PEON,
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );
     druidLeaderClient.start();
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
-    request.setContent("hello".getBytes("UTF-8"));
+    request.setContent("hello".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
   }
 
@@ -139,14 +140,14 @@ public class DruidLeaderClientTest extends BaseJettyTest
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of());
 
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.PEON)).andReturn(druidNodeDiscovery);
 
     EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        "nodetype",
+        NodeType.PEON,
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );
@@ -166,21 +167,21 @@ public class DruidLeaderClientTest extends BaseJettyTest
     );
 
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.PEON)).andReturn(druidNodeDiscovery);
 
     EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        "nodetype",
+        NodeType.PEON,
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );
     druidLeaderClient.start();
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/redirect");
-    request.setContent("hello".getBytes("UTF-8"));
+    request.setContent("hello".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
   }
 
@@ -191,33 +192,30 @@ public class DruidLeaderClientTest extends BaseJettyTest
     EasyMock.expect(serverDiscoverySelector.pick()).andReturn(null).anyTimes();
 
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
-    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(
-        ImmutableList.of(new DiscoveryDruidNode(
-            new DruidNode("test", "dummyhost", 64231, null, true, false),
-            "test",
-            ImmutableMap.of()
-        ))
+    DiscoveryDruidNode dummyNode = new DiscoveryDruidNode(
+        new DruidNode("test", "dummyhost", false, 64231, null, true, false),
+        NodeType.PEON,
+        ImmutableMap.of()
     );
-    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(
-        ImmutableList.of(discoveryDruidNode)
-    );
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(dummyNode));
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(discoveryDruidNode));
 
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery).anyTimes();
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.PEON)).andReturn(druidNodeDiscovery).anyTimes();
 
     EasyMock.replay(serverDiscoverySelector, druidNodeDiscovery, druidNodeDiscoveryProvider);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        "nodetype",
+        NodeType.PEON,
         "/simple/leader",
         serverDiscoverySelector
     );
     druidLeaderClient.start();
 
     Request request = druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/redirect");
-    request.setContent("hello".getBytes("UTF-8"));
+    request.setContent("hello".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals("hello", druidLeaderClient.go(request).getContent());
   }
 
@@ -230,14 +228,14 @@ public class DruidLeaderClientTest extends BaseJettyTest
     );
 
     DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
-    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType("nodetype")).andReturn(druidNodeDiscovery);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeType(NodeType.PEON)).andReturn(druidNodeDiscovery);
 
     EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
 
     DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
         httpClient,
         druidNodeDiscoveryProvider,
-        "nodetype",
+        NodeType.PEON,
         "/simple/leader",
         EasyMock.createNiceMock(ServerDiscoverySelector.class)
     );

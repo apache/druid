@@ -22,7 +22,6 @@ package org.apache.druid.indexing.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -63,6 +62,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -73,7 +73,7 @@ public class WorkerTaskMonitorTest
   private static final String basePath = "/test/druid";
   private static final String tasksPath = StringUtils.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = StringUtils.format("%s/indexer/status/worker", basePath);
-  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", 9000, null, true, false);
+  private static final DruidNode DUMMY_NODE = new DruidNode("dummy", "dummy", false, 9000, null, true, false);
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -177,7 +177,7 @@ public class WorkerTaskMonitorTest
                       @Override
                       public List<StorageLocationConfig> getLocations()
                       {
-                        return Lists.newArrayList();
+                        return new ArrayList<>();
                       }
                     },
                     jsonMapper

@@ -216,9 +216,7 @@ public class ExtractionDimFilterTest
   @Test
   public void testEmpty()
   {
-    Filter extractionFilter = new SelectorDimFilter(
-        "foo", "NFDJUKFNDSJFNS", DIM_EXTRACTION_FN
-    ).toFilter();
+    Filter extractionFilter = new SelectorDimFilter("foo", "NFDJUKFNDSJFNS", DIM_EXTRACTION_FN).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
@@ -226,9 +224,7 @@ public class ExtractionDimFilterTest
   @Test
   public void testNull()
   {
-    Filter extractionFilter = new SelectorDimFilter(
-        "FDHJSFFHDS", "extractDimVal", DIM_EXTRACTION_FN
-    ).toFilter();
+    Filter extractionFilter = new SelectorDimFilter("FDHJSFFHDS", "extractDimVal", DIM_EXTRACTION_FN).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
@@ -236,9 +232,7 @@ public class ExtractionDimFilterTest
   @Test
   public void testNormal()
   {
-    Filter extractionFilter = new SelectorDimFilter(
-        "foo", "extractDimVal", DIM_EXTRACTION_FN
-    ).toFilter();
+    Filter extractionFilter = new SelectorDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(1, immutableBitmap.size());
   }
@@ -247,36 +241,24 @@ public class ExtractionDimFilterTest
   public void testOr()
   {
     Assert.assertEquals(
-        1, Filters.toFilter(
-            DimFilters.or(
-                new ExtractionDimFilter(
-                    "foo",
-                    "extractDimVal",
-                    DIM_EXTRACTION_FN,
-                    null
-                )
-            )
-        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+        1,
+        Filters
+            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
+            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
+            .size()
     );
 
     Assert.assertEquals(
         1,
-        Filters.toFilter(
-            DimFilters.or(
-                new ExtractionDimFilter(
-                    "foo",
-                    "extractDimVal",
-                    DIM_EXTRACTION_FN,
-                    null
-                ),
-                new ExtractionDimFilter(
-                    "foo",
-                    "DOES NOT EXIST",
-                    DIM_EXTRACTION_FN,
-                    null
+        Filters
+            .toFilter(
+                DimFilters.or(
+                    new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null),
+                    new ExtractionDimFilter("foo", "DOES NOT EXIST", DIM_EXTRACTION_FN, null)
                 )
             )
-        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
+            .size()
     );
   }
 
@@ -284,36 +266,24 @@ public class ExtractionDimFilterTest
   public void testAnd()
   {
     Assert.assertEquals(
-        1, Filters.toFilter(
-            DimFilters.or(
-                new ExtractionDimFilter(
-                    "foo",
-                    "extractDimVal",
-                    DIM_EXTRACTION_FN,
-                    null
-                )
-            )
-        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+        1,
+        Filters
+            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
+            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
+            .size()
     );
 
     Assert.assertEquals(
         1,
-        Filters.toFilter(
-            DimFilters.and(
-                new ExtractionDimFilter(
-                    "foo",
-                    "extractDimVal",
-                    DIM_EXTRACTION_FN,
-                    null
-                ),
-                new ExtractionDimFilter(
-                    "foo",
-                    "extractDimVal",
-                    DIM_EXTRACTION_FN,
-                    null
+        Filters
+            .toFilter(
+                DimFilters.and(
+                    new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null),
+                    new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)
                 )
             )
-        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
+            .size()
     );
   }
 
@@ -322,30 +292,19 @@ public class ExtractionDimFilterTest
   {
 
     Assert.assertEquals(
-        1, Filters.toFilter(
-            DimFilters.or(
-                new ExtractionDimFilter(
-                    "foo",
-                    "extractDimVal",
-                    DIM_EXTRACTION_FN,
-                    null
-                )
-            )
-        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+        1,
+        Filters
+            .toFilter(DimFilters.or(new ExtractionDimFilter("foo", "extractDimVal", DIM_EXTRACTION_FN, null)))
+            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
+            .size()
     );
 
     Assert.assertEquals(
         1,
-        Filters.toFilter(
-            DimFilters.not(
-                new ExtractionDimFilter(
-                    "foo",
-                    "DOES NOT EXIST",
-                    DIM_EXTRACTION_FN,
-                    null
-                )
-            )
-        ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
+        Filters
+            .toFilter(DimFilters.not(new ExtractionDimFilter("foo", "DOES NOT EXIST", DIM_EXTRACTION_FN, null)))
+            .getBitmapIndex(BITMAP_INDEX_SELECTOR)
+            .size()
     );
   }
 }

@@ -29,6 +29,7 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -61,7 +62,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
-
 
 /**
  */
@@ -167,8 +167,8 @@ public class HttpServerInventoryViewTest
     );
 
     DiscoveryDruidNode druidNode = new DiscoveryDruidNode(
-        new DruidNode("service", "host", 8080, null, true, false),
-        DruidNodeDiscoveryProvider.NODE_TYPE_HISTORICAL,
+        new DruidNode("service", "host", false, 8080, null, true, false),
+        NodeType.HISTORICAL,
         ImmutableMap.of(
             DataNodeService.DISCOVERY_SERVICE_KEY, new DataNodeService("tier", 1000, ServerType.HISTORICAL, 0)
         )
@@ -201,18 +201,14 @@ public class HttpServerInventoryViewTest
         new ServerView.SegmentCallback()
         {
           @Override
-          public ServerView.CallbackAction segmentAdded(
-              DruidServerMetadata server, DataSegment segment
-          )
+          public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
             segmentAddLathces.get(segment.getIdentifier()).countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
 
           @Override
-          public ServerView.CallbackAction segmentRemoved(
-              DruidServerMetadata server, DataSegment segment
-          )
+          public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
             segmentDropLatches.get(segment.getIdentifier()).countDown();
             return ServerView.CallbackAction.CONTINUE;
@@ -302,7 +298,8 @@ public class HttpServerInventoryViewTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler
     )
     {
       throw new UnsupportedOperationException("Not Implemented.");
@@ -310,7 +307,9 @@ public class HttpServerInventoryViewTest
 
     @Override
     public <Intermediate, Final> ListenableFuture<Final> go(
-        Request request, HttpResponseHandler<Intermediate, Final> httpResponseHandler, Duration duration
+        Request request,
+        HttpResponseHandler<Intermediate, Final> httpResponseHandler,
+        Duration duration
     )
     {
       if (requestNum.getAndIncrement() == 0) {

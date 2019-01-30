@@ -22,7 +22,6 @@ package org.apache.druid.segment.column;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -32,6 +31,7 @@ import org.apache.druid.segment.serde.Serializer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -114,7 +114,7 @@ public class ColumnDescriptor implements Serializer
     private ValueType valueType = null;
     private Boolean hasMultipleValues = null;
 
-    private final List<ColumnPartSerde> parts = Lists.newArrayList();
+    private final List<ColumnPartSerde> parts = new ArrayList<>();
 
     public Builder setValueType(ValueType valueType)
     {

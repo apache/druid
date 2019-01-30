@@ -68,12 +68,16 @@ public class MapLookupExtractionFnSerDeTest
     Assert.assertEquals(null, fn.apply(crazyString));
 
     Assert.assertEquals(
-        crazyString, mapper.readerFor(DimExtractionFn.class).<DimExtractionFn>readValue(
-            StringUtils.format(
-                "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}, \"retainMissingValue\":true}",
-                mapper.writeValueAsString(renames)
+        crazyString,
+        mapper
+            .readerFor(DimExtractionFn.class)
+            .<DimExtractionFn>readValue(
+                StringUtils.format(
+                    "{\"type\":\"lookup\",\"lookup\":{\"type\":\"map\", \"map\":%s}, \"retainMissingValue\":true}",
+                    mapper.writeValueAsString(renames)
+                )
             )
-        ).apply(crazyString)
+            .apply(crazyString)
     );
   }
 }

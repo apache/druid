@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.exception.GeoIp2Exception;
 import com.maxmind.geoip2.model.Omni;
@@ -38,6 +37,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -88,7 +88,7 @@ class WikipediaIrcDecoder implements IrcDecoder
   )
   {
     if (namespaces == null) {
-      namespaces = Maps.newHashMap();
+      namespaces = new HashMap<>();
     }
     this.namespaces = namespaces;
     this.geoIpDatabase = geoIpDatabase;
@@ -177,8 +177,8 @@ class WikipediaIrcDecoder implements IrcDecoder
   @Override
   public InputRow decodeMessage(final DateTime timestamp, String channel, String msg)
   {
-    final Map<String, String> dimensions = Maps.newHashMap();
-    final Map<String, Float> metrics = Maps.newHashMap();
+    final Map<String, String> dimensions = new HashMap<>();
+    final Map<String, Float> metrics = new HashMap<>();
 
     Matcher m = pattern.matcher(msg);
     if (!m.matches()) {

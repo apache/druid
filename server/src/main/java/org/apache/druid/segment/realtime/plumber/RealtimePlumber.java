@@ -28,7 +28,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.cache.Cache;
@@ -86,6 +85,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -280,7 +280,7 @@ public class RealtimePlumber implements Plumber
   @Override
   public void persist(final Committer committer)
   {
-    final List<Pair<FireHydrant, Interval>> indexesToPersist = Lists.newArrayList();
+    final List<Pair<FireHydrant, Interval>> indexesToPersist = new ArrayList<>();
     for (Sink sink : sinks.values()) {
       if (sink.swappable()) {
         indexesToPersist.add(Pair.of(sink.swap(), sink.getInterval()));
@@ -335,9 +335,7 @@ public class RealtimePlumber implements Plumber
             try {
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(
-                    persistHydrant(
-                        pair.lhs, schema, pair.rhs, metadataElems
-                    )
+                    persistHydrant(pair.lhs, schema, pair.rhs, metadataElems)
                 );
               }
               committer.run();
@@ -421,7 +419,7 @@ public class RealtimePlumber implements Plumber
               mergeStopwatch = Stopwatch.createStarted();
 
               final File mergedFile;
-              List<QueryableIndex> indexes = Lists.newArrayList();
+              List<QueryableIndex> indexes = new ArrayList<>();
               Closer closer = Closer.create();
               try {
                 for (FireHydrant fireHydrant : sink) {
@@ -659,7 +657,7 @@ public class RealtimePlumber implements Plumber
           }
       );
       boolean isCorrupted = false;
-      List<FireHydrant> hydrants = Lists.newArrayList();
+      List<FireHydrant> hydrants = new ArrayList<>();
       for (File segmentDir : sinkFiles) {
         log.info("Loading previously persisted segment at [%s]", segmentDir);
 
@@ -853,7 +851,7 @@ public class RealtimePlumber implements Plumber
         minTimestampAsDate
     );
 
-    List<Map.Entry<Long, Sink>> sinksToPush = Lists.newArrayList();
+    List<Map.Entry<Long, Sink>> sinksToPush = new ArrayList<>();
     for (Map.Entry<Long, Sink> entry : sinks.entrySet()) {
       final Long intervalStart = entry.getKey();
       if (intervalStart < minTimestamp) {

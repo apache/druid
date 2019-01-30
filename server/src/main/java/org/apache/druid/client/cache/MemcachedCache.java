@@ -542,7 +542,7 @@ public class MemcachedCache implements Cache
           }
       );
 
-      Map<NamedKey, byte[]> results = Maps.newHashMap();
+      Map<NamedKey, byte[]> results = new HashMap<>();
 
       BulkFuture<Map<String, Object>> future;
       try {

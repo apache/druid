@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -86,10 +87,12 @@ public class DruidStatementTest extends CalciteTestBase
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     plannerFactory = new PlannerFactory(
         druidSchema,
+        systemSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         operatorTable,
         macroTable,
@@ -124,6 +127,7 @@ public class DruidStatementTest extends CalciteTestBase
             Lists.newArrayList("cnt", "BIGINT", "java.lang.Long"),
             Lists.newArrayList("dim1", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("dim2", "VARCHAR", "java.lang.String"),
+            Lists.newArrayList("dim3", "VARCHAR", "java.lang.String"),
             Lists.newArrayList("m1", "FLOAT", "java.lang.Float"),
             Lists.newArrayList("m2", "DOUBLE", "java.lang.Double"),
             Lists.newArrayList("unique_dim1", "OTHER", "java.lang.Object")

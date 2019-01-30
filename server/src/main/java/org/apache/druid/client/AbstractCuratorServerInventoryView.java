@@ -138,9 +138,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
           }
 
           @Override
-          public DruidServer updateInventory(
-              DruidServer container, String inventoryKey, InventoryType inventory
-          )
+          public DruidServer updateInventory(DruidServer container, String inventoryKey, InventoryType inventory)
           {
             return updateInnerInventory(container, inventoryKey, inventory);
           }

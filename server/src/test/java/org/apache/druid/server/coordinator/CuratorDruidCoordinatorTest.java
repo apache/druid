@@ -62,6 +62,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -190,7 +191,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         Execs.singleThreaded("coordinator_test_load_queue_peon_dest-%d"),
         druidCoordinatorConfig
     );
-    druidNode = new DruidNode("hey", "what", 1234, null, true, false);
+    druidNode = new DruidNode("hey", "what", false, 1234, null, true, false);
     loadManagementPeons = new ConcurrentHashMap<>();
     scheduledExecutorFactory = (corePoolSize, nameFormat) -> Executors.newSingleThreadScheduledExecutor();
     leaderAnnouncerLatch = new CountDownLatch(1);
@@ -305,8 +306,8 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
 
     DataSegment segmentToMove = sourceSegments.get(2);
 
-    List<String> sourceSegKeys = Lists.newArrayList();
-    List<String> destSegKeys = Lists.newArrayList();
+    List<String> sourceSegKeys = new ArrayList<>();
+    List<String> destSegKeys = new ArrayList<>();
 
     for (DataSegment segment : sourceSegments) {
       sourceSegKeys.add(announceBatchSegmentsForServer(source, ImmutableSet.of(segment), zkPathsConfig, jsonMapper));

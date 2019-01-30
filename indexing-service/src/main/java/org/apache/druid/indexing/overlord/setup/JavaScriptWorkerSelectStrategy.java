@@ -74,7 +74,9 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
 
   @Override
   public ImmutableWorkerInfo findWorkerForTask(
-      WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task
+      WorkerTaskRunnerConfig config,
+      ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
+      Task task
   )
   {
     fnSelector = fnSelector == null ? compileSelectorFunction() : fnSelector;

@@ -71,9 +71,7 @@ public abstract class NumericTopNColumnSelectorStrategy<
   }
 
   @Override
-  public Aggregator[][] getDimExtractionRowSelector(
-      TopNQuery query, TopNParams params, StorageAdapter storageAdapter
-  )
+  public Aggregator[][] getDimExtractionRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter)
   {
     return null;
   }

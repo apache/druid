@@ -38,11 +38,7 @@ public class SelectBinaryFn
   private final PagingSpec pagingSpec;
   private final boolean descending;
 
-  public SelectBinaryFn(
-      Granularity granularity,
-      PagingSpec pagingSpec,
-      boolean descending
-  )
+  public SelectBinaryFn(Granularity granularity, PagingSpec pagingSpec, boolean descending)
   {
     this.gran = granularity;
     this.pagingSpec = pagingSpec;
@@ -50,9 +46,7 @@ public class SelectBinaryFn
   }
 
   @Override
-  public Result<SelectResultValue> apply(
-      Result<SelectResultValue> arg1, Result<SelectResultValue> arg2
-  )
+  public Result<SelectResultValue> apply(Result<SelectResultValue> arg1, Result<SelectResultValue> arg2)
   {
     if (arg1 == null) {
       return arg2;

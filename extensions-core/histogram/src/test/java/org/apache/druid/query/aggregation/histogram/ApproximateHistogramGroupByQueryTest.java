@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -43,6 +42,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -111,7 +111,7 @@ public class ApproximateHistogramGroupByQueryTest
     v1Config.setMaxIntermediateRows(10000);
     v1SingleThreadedConfig.setMaxIntermediateRows(10000);
 
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
     final List<GroupByQueryConfig> configs = ImmutableList.of(
         v1Config,
         v1SingleThreadedConfig,

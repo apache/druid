@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.rules;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -38,7 +37,9 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -52,10 +53,10 @@ public class BroadcastDistributionRuleTest
 {
   private DruidCluster druidCluster;
   private ServerHolder holderOfSmallSegment;
-  private List<ServerHolder> holdersOfLargeSegments = Lists.newArrayList();
-  private List<ServerHolder> holdersOfLargeSegments2 = Lists.newArrayList();
-  private final List<DataSegment> largeSegments = Lists.newArrayList();
-  private final List<DataSegment> largeSegments2 = Lists.newArrayList();
+  private List<ServerHolder> holdersOfLargeSegments = new ArrayList<>();
+  private List<ServerHolder> holdersOfLargeSegments2 = new ArrayList<>();
+  private final List<DataSegment> largeSegments = new ArrayList<>();
+  private final List<DataSegment> largeSegments2 = new ArrayList<>();
   private DataSegment smallSegment;
 
   @Before
@@ -65,9 +66,9 @@ public class BroadcastDistributionRuleTest
         "small_source",
         Intervals.of("0/1000"),
         DateTimes.nowUtc().toString(),
-        Maps.newHashMap(),
-        Lists.newArrayList(),
-        Lists.newArrayList(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
         NoneShardSpec.instance(),
         0,
         0
@@ -79,9 +80,9 @@ public class BroadcastDistributionRuleTest
               "large_source",
               Intervals.of((i * 1000) + "/" + ((i + 1) * 1000)),
               DateTimes.nowUtc().toString(),
-              Maps.newHashMap(),
-              Lists.newArrayList(),
-              Lists.newArrayList(),
+              new HashMap<>(),
+              new ArrayList<>(),
+              new ArrayList<>(),
               NoneShardSpec.instance(),
               0,
               100
@@ -95,9 +96,9 @@ public class BroadcastDistributionRuleTest
               "large_source2",
               Intervals.of((i * 1000) + "/" + ((i + 1) * 1000)),
               DateTimes.nowUtc().toString(),
-              Maps.newHashMap(),
-              Lists.newArrayList(),
-              Lists.newArrayList(),
+              new HashMap<>(),
+              new ArrayList<>(),
+              new ArrayList<>(),
               NoneShardSpec.instance(),
               0,
               100

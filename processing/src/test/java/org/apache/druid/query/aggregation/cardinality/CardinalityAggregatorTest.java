@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
@@ -56,6 +55,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -72,8 +72,8 @@ public class CardinalityAggregatorTest
 
     public TestDimensionSelector(Iterable<String[]> values, ExtractionFn exFn)
     {
-      this.lookup = Maps.newHashMap();
-      this.ids = Maps.newHashMap();
+      this.lookup = new HashMap<>();
+      this.ids = new HashMap<>();
       this.exFn = exFn;
 
       int index = 0;
@@ -89,25 +89,14 @@ public class CardinalityAggregatorTest
 
       this.column = Lists.newArrayList(
           Iterables.transform(
-              values, new Function<String[], Integer[]>()
+              values,
+              new Function<String[], Integer[]>()
               {
                 @Nullable
                 @Override
                 public Integer[] apply(@Nullable String[] input)
                 {
-                  return Iterators.toArray(
-                      Iterators.transform(
-                          Iterators.forArray(input), new Function<String, Integer>()
-                          {
-                            @Nullable
-                            @Override
-                            public Integer apply(@Nullable String input)
-                            {
-                              return ids.get(input);
-                            }
-                          }
-                      ), Integer.class
-                  );
+                  return Iterators.toArray(Iterators.transform(Iterators.forArray(input), ids::get), Integer.class);
                 }
               }
           )
@@ -400,7 +389,6 @@ public class CardinalityAggregatorTest
   public void testAggregateRows()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         dimInfoList,
         true
     );
@@ -417,7 +405,6 @@ public class CardinalityAggregatorTest
   public void testAggregateValues()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         dimInfoList,
         false
     );
@@ -493,8 +480,8 @@ public class CardinalityAggregatorTest
         )
     );
 
-    CardinalityAggregator agg1 = new CardinalityAggregator("billy", dimInfo1, true);
-    CardinalityAggregator agg2 = new CardinalityAggregator("billy", dimInfo2, true);
+    CardinalityAggregator agg1 = new CardinalityAggregator(dimInfo1, true);
+    CardinalityAggregator agg2 = new CardinalityAggregator(dimInfo2, true);
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selector1, agg1);
@@ -539,8 +526,8 @@ public class CardinalityAggregatorTest
         )
     );
 
-    CardinalityAggregator agg1 = new CardinalityAggregator("billy", dimInfo1, false);
-    CardinalityAggregator agg2 = new CardinalityAggregator("billy", dimInfo2, false);
+    CardinalityAggregator agg1 = new CardinalityAggregator(dimInfo1, false);
+    CardinalityAggregator agg2 = new CardinalityAggregator(dimInfo2, false);
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selector1, agg1);
@@ -568,7 +555,6 @@ public class CardinalityAggregatorTest
   public void testAggregateRowsWithExtraction()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         dimInfoListWithExtraction,
         true
     );
@@ -578,7 +564,6 @@ public class CardinalityAggregatorTest
     Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
 
     CardinalityAggregator agg2 = new CardinalityAggregator(
-        "billy",
         dimInfoListConstantVal,
         true
     );
@@ -592,7 +577,6 @@ public class CardinalityAggregatorTest
   public void testAggregateValuesWithExtraction()
   {
     CardinalityAggregator agg = new CardinalityAggregator(
-        "billy",
         dimInfoListWithExtraction,
         false
     );
@@ -602,7 +586,6 @@ public class CardinalityAggregatorTest
     Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
 
     CardinalityAggregator agg2 = new CardinalityAggregator(
-        "billy",
         dimInfoListConstantVal,
         false
     );

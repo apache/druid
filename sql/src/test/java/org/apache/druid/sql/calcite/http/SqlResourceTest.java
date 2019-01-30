@@ -43,6 +43,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
@@ -113,6 +114,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     req = EasyMock.createStrictMock(HttpServletRequest.class);
@@ -134,6 +136,7 @@ public class SqlResourceTest extends CalciteTestBase
         JSON_MAPPER,
         new PlannerFactory(
             druidSchema,
+            systemSchema,
             CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
             operatorTable,
             macroTable,
@@ -259,6 +262,7 @@ public class SqlResourceTest extends CalciteTestBase
                 1,
                 "",
                 "a",
+                "[\"a\",\"b\"]",
                 1.0,
                 1.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -269,6 +273,7 @@ public class SqlResourceTest extends CalciteTestBase
                 1,
                 "10.1",
                 nullStr,
+                "[\"b\",\"c\"]",
                 2.0,
                 2.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -287,12 +292,13 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            Arrays.asList("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1", "EXPR$7"),
+            Arrays.asList("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1", "EXPR$8"),
             Arrays.asList(
                 "2000-01-01T00:00:00.000Z",
                 1,
                 "",
                 "a",
+                "[\"a\",\"b\"]",
                 1.0,
                 1.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -303,6 +309,7 @@ public class SqlResourceTest extends CalciteTestBase
                 1,
                 "10.1",
                 nullStr,
+                "[\"b\",\"c\"]",
                 2.0,
                 2.0,
                 "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -328,6 +335,7 @@ public class SqlResourceTest extends CalciteTestBase
             1,
             "",
             "a",
+            "[\"a\",\"b\"]",
             1.0,
             1.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -341,6 +349,7 @@ public class SqlResourceTest extends CalciteTestBase
             1,
             "10.1",
             nullStr,
+            "[\"b\",\"c\"]",
             2.0,
             2.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -362,7 +371,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(5, lines.size());
     Assert.assertEquals(
-        Arrays.asList("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1", "EXPR$7"),
+        Arrays.asList("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1", "EXPR$8"),
         JSON_MAPPER.readValue(lines.get(0), List.class)
     );
     Assert.assertEquals(
@@ -371,6 +380,7 @@ public class SqlResourceTest extends CalciteTestBase
             1,
             "",
             "a",
+            "[\"a\",\"b\"]",
             1.0,
             1.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -384,6 +394,7 @@ public class SqlResourceTest extends CalciteTestBase
             1,
             "10.1",
             nullStr,
+            "[\"b\",\"c\"]",
             2.0,
             2.0,
             "org.apache.druid.hll.VersionOneHyperLogLogCollector",
@@ -403,7 +414,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
       return Maps.transformEntries(
           m,
-          (k, v) -> "EXPR$7".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
       );
     };
 
@@ -415,10 +426,11 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("cnt", 1)
                 .put("dim1", "")
                 .put("dim2", "a")
+                .put("dim3", "[\"a\",\"b\"]")
                 .put("m1", 1.0)
                 .put("m2", 1.0)
                 .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
-                .put("EXPR$7", "")
+                .put("EXPR$8", "")
                 .build(),
             ImmutableMap
                 .<String, Object>builder()
@@ -426,10 +438,11 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("cnt", 1)
                 .put("dim1", "10.1")
                 .put("dim2", "")
+                .put("dim3", "[\"b\",\"c\"]")
                 .put("m1", 2.0)
                 .put("m2", 2.0)
                 .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
-                .put("EXPR$7", "")
+                .put("EXPR$8", "")
                 .build()
         ).stream().map(transformer).collect(Collectors.toList()),
         doPost(
@@ -448,7 +461,7 @@ public class SqlResourceTest extends CalciteTestBase
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
       return Maps.transformEntries(
           m,
-          (k, v) -> "EXPR$7".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
       );
     };
     final List<String> lines = Splitter.on('\n').splitToList(response);
@@ -462,10 +475,11 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("cnt", 1)
                 .put("dim1", "")
                 .put("dim2", "a")
+                .put("dim3", "[\"a\",\"b\"]")
                 .put("m1", 1.0)
                 .put("m2", 1.0)
                 .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
-                .put("EXPR$7", "")
+                .put("EXPR$8", "")
                 .build()
         ),
         JSON_MAPPER.readValue(lines.get(0), Object.class)
@@ -478,10 +492,11 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("cnt", 1)
                 .put("dim1", "10.1")
                 .put("dim2", "")
+                .put("dim3", "[\"b\",\"c\"]")
                 .put("m1", 2.0)
                 .put("m2", 2.0)
                 .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
-                .put("EXPR$7", "")
+                .put("EXPR$8", "")
                 .build()
         ),
         JSON_MAPPER.readValue(lines.get(1), Object.class)
@@ -499,8 +514,8 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            "2000-01-01T00:00:00.000Z,1,,a,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
-            "2000-01-02T00:00:00.000Z,1,10.1,,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-01T00:00:00.000Z,1,,a,\"[\"\"a\"\",\"\"b\"\"]\",1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-02T00:00:00.000Z,1,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "",
             ""
         ),
@@ -517,9 +532,9 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            "__time,cnt,dim1,dim2,m1,m2,unique_dim1,EXPR$7",
-            "2000-01-01T00:00:00.000Z,1,,a,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
-            "2000-01-02T00:00:00.000Z,1,10.1,,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "__time,cnt,dim1,dim2,dim3,m1,m2,unique_dim1,EXPR$8",
+            "2000-01-01T00:00:00.000Z,1,,a,\"[\"\"a\"\",\"\"b\"\"]\",1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-02T00:00:00.000Z,1,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
             "",
             ""
         ),
@@ -550,7 +565,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     final QueryInterruptedException exception = doPost(
         new SqlQuery(
-            "SELECT dim3 FROM druid.foo",
+            "SELECT dim4 FROM druid.foo",
             ResultFormat.OBJECT,
             false,
             null
@@ -560,7 +575,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
     Assert.assertEquals(ValidationException.class.getName(), exception.getErrorClass());
-    Assert.assertTrue(exception.getMessage().contains("Column 'dim3' not found in any table"));
+    Assert.assertTrue(exception.getMessage().contains("Column 'dim4' not found in any table"));
   }
 
   @Test

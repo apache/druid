@@ -40,9 +40,8 @@ public class UnsecuredResourceFilter implements Filter
   }
 
   @Override
-  public void doFilter(
-      ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain
-  ) throws IOException, ServletException
+  public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+      throws IOException, ServletException
   {
     // PreResponseAuthorizationCheckFilter checks that this attribute is set,
     // but the value doesn't matter since we skip authorization checks for requests that go through this filter

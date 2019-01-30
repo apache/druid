@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Json;
@@ -46,6 +44,8 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -143,7 +143,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       }
                     }
                 ).fold(
-                    Maps.newHashMap(),
+                    new HashMap<>(),
                     new Folder3<Map<String, List<VersionedSupervisorSpec>>, Pair<String, VersionedSupervisorSpec>>()
                     {
                       @Override
@@ -157,7 +157,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                         try {
                           String specId = pair.lhs;
                           if (!retVal.containsKey(specId)) {
-                            retVal.put(specId, Lists.newArrayList());
+                            retVal.put(specId, new ArrayList<>());
                           }
 
                           retVal.get(specId).add(pair.rhs);
@@ -216,7 +216,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       }
                     }
                 ).fold(
-                    Maps.newHashMap(),
+                    new HashMap<>(),
                     new Folder3<Map<String, SupervisorSpec>, Pair<String, SupervisorSpec>>()
                     {
                       @Override

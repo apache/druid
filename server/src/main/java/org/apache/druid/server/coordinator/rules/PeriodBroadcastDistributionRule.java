@@ -32,17 +32,21 @@ import java.util.Objects;
 public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
 {
   static final String TYPE = "broadcastByPeriod";
+  private static final boolean DEFAULT_INCLUDE_FUTURE = true;
 
   private final Period period;
+  private final boolean includeFuture;
   private final List<String> colocatedDataSources;
 
   @JsonCreator
   public PeriodBroadcastDistributionRule(
       @JsonProperty("period") Period period,
+      @JsonProperty("includeFuture") Boolean includeFuture,
       @JsonProperty("colocatedDataSources") List<String> colocatedDataSources
   )
   {
     this.period = period;
+    this.includeFuture = includeFuture == null ? DEFAULT_INCLUDE_FUTURE : includeFuture;
     this.colocatedDataSources = colocatedDataSources;
   }
 
@@ -69,13 +73,19 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
   @Override
   public boolean appliesTo(Interval interval, DateTime referenceTimestamp)
   {
-    return Rules.eligibleForLoad(period, interval, referenceTimestamp);
+    return Rules.eligibleForLoad(period, interval, referenceTimestamp, includeFuture);
   }
 
   @JsonProperty
   public Period getPeriod()
   {
     return period;
+  }
+
+  @JsonProperty
+  public boolean isIncludeFuture()
+  {
+    return includeFuture;
   }
 
   @Override
@@ -94,7 +104,9 @@ public class PeriodBroadcastDistributionRule extends BroadcastDistributionRule
     if (!Objects.equals(period, that.period)) {
       return false;
     }
-
+    if (includeFuture != that.includeFuture) {
+      return false;
+    }
     return Objects.equals(colocatedDataSources, that.colocatedDataSources);
   }
 

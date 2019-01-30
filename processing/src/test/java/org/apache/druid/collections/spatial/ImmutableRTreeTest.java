@@ -40,6 +40,7 @@ import org.roaringbitmap.IntIterator;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Random;
 import java.util.Set;
@@ -399,7 +400,7 @@ public class ImmutableRTreeTest
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() == 500);
 
-    Set<Integer> expected = Sets.newHashSet();
+    Set<Integer> expected = new HashSet<>();
     for (int i = 0; i < 500; i++) {
       expected.add(i);
     }
@@ -445,7 +446,7 @@ public class ImmutableRTreeTest
     ImmutableBitmap finalSet = bf.union(points);
     Assert.assertTrue(finalSet.size() == 500);
 
-    Set<Integer> expected = Sets.newHashSet();
+    Set<Integer> expected = new HashSet<>();
     for (int i = 0; i < 500; i++) {
       expected.add(i);
     }

@@ -16,8 +16,8 @@ don't need to have loaded any data yet.
 
 A data load is initiated by submitting an *ingestion task* spec to the Druid overlord. For this tutorial, we'll be loading the sample Wikipedia page edits data.
 
-The Druid package includes the following sample native batch ingestion task spec at `quickstart/wikipedia-index.json`, shown here for convenience,
-which has been configured to read the `quickstart/wikiticker-2015-09-12-sampled.json.gz` input file:
+The Druid package includes the following sample native batch ingestion task spec at `quickstart/tutorial/wikipedia-index.json`, shown here for convenience,
+which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` input file:
 
 ```json
 {
@@ -71,7 +71,7 @@ which has been configured to read the `quickstart/wikiticker-2015-09-12-sampled.
       "type" : "index",
       "firehose" : {
         "type" : "local",
-        "baseDir" : "quickstart/",
+        "baseDir" : "quickstart/tutorial/",
         "filter" : "wikiticker-2015-09-12-sampled.json.gz"
       },
       "appendToExisting" : false
@@ -131,7 +131,7 @@ If you wish to go through any of the other ingestion tutorials, you will need to
 
 Let's briefly discuss how we would've submitted the ingestion task without using the script. You do not need to run these commands.
 
-To submit the task, POST it to Druid in a new terminal window from the druid-#{DRUIDVERSION} directory:
+To submit the task, POST it to Druid in a new terminal window from the apache-druid-#{DRUIDVERSION} directory:
 
 ```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index.json http://localhost:8090/druid/indexer/v1/task

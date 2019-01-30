@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -41,10 +42,12 @@ import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
@@ -92,6 +95,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private final KafkaIOConfig ioConfig;
   private final Optional<ChatHandlerProvider> chatHandlerProvider;
   private final KafkaIndexTaskRunner runner;
+  private final ObjectMapper configMapper;
 
   // This value can be tuned in some tests
   private long pollRetryMs = 30000;
@@ -106,7 +110,8 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
       @JsonProperty("context") Map<String, Object> context,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject ObjectMapper configMapper
   )
   {
     super(
@@ -122,6 +127,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.tuningConfig = Preconditions.checkNotNull(tuningConfig, "tuningConfig");
     this.ioConfig = Preconditions.checkNotNull(ioConfig, "ioConfig");
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
+    this.configMapper = configMapper;
     final CircularBuffer<Throwable> savedParseExceptions;
     if (tuningConfig.getMaxSavedParseExceptions() > 0) {
       savedParseExceptions = new CircularBuffer<>(tuningConfig.getMaxSavedParseExceptions());
@@ -196,7 +202,6 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   {
     return ioConfig;
   }
-
 
 
   @Override
@@ -285,9 +290,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
       final Properties props = new Properties();
 
-      for (Map.Entry<String, String> entry : ioConfig.getConsumerProperties().entrySet()) {
-        props.setProperty(entry.getKey(), entry.getValue());
-      }
+      addConsumerPropertiesFromConfig(props, configMapper, ioConfig.getConsumerProperties());
 
       props.setProperty("enable.auto.commit", "false");
       props.setProperty("auto.offset.reset", "none");
@@ -298,6 +301,25 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
+  }
+
+  public static void addConsumerPropertiesFromConfig(Properties properties, ObjectMapper configMapper, Map<String, Object> consumerProperties)
+  {
+    // Extract passwords before SSL connection to Kafka
+    for (Map.Entry<String, Object> entry : consumerProperties.entrySet()) {
+      String propertyKey = entry.getKey();
+      if (propertyKey.equals(KafkaSupervisorIOConfig.TRUST_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_STORE_PASSWORD_KEY)
+          || propertyKey.equals(KafkaSupervisorIOConfig.KEY_PASSWORD_KEY)) {
+        PasswordProvider configPasswordProvider = configMapper.convertValue(
+            entry.getValue(),
+            PasswordProvider.class
+        );
+        properties.setProperty(propertyKey, configPasswordProvider.getPassword());
+      } else {
+        properties.setProperty(propertyKey, String.valueOf(entry.getValue()));
+      }
     }
   }
 

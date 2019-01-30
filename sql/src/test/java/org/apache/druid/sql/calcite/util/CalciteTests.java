@@ -26,25 +26,30 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.collections.CloseableStupidPool;
+import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.discovery.DruidLeaderClient;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -115,16 +120,19 @@ import org.apache.druid.sql.calcite.expression.builtin.LookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -148,9 +156,7 @@ public class CalciteTests
       return new Authorizer()
       {
         @Override
-        public Access authorize(
-            AuthenticationResult authenticationResult, Resource resource, Action action
-        )
+        public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
         {
           if (authenticationResult.getIdentity().equals(TEST_SUPERUSER_NAME)) {
             return Access.OK;
@@ -168,7 +174,7 @@ public class CalciteTests
   public static final AuthenticatorMapper TEST_AUTHENTICATOR_MAPPER;
 
   static {
-    final Map<String, Authenticator> defaultMap = Maps.newHashMap();
+    final Map<String, Authenticator> defaultMap = new HashMap<>();
     defaultMap.put(
         AuthConfig.ALLOW_ALL_NAME,
         new AllowAllAuthenticator()
@@ -241,7 +247,7 @@ public class CalciteTests
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
-              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2")),
+              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")),
               null,
               null
           )
@@ -260,22 +266,62 @@ public class CalciteTests
 
   public static final List<InputRow> ROWS1 = ImmutableList.of(
       createRow(
-          ImmutableMap.of("t", "2000-01-01", "m1", "1.0", "m2", "1.0", "dim1", "", "dim2", ImmutableList.of("a"))
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-01")
+              .put("m1", "1.0")
+              .put("m2", "1.0")
+              .put("dim1", "")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of("a", "b"))
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2000-01-02", "m1", "2.0", "m2", "2.0", "dim1", "10.1", "dim2", ImmutableList.of())
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-02")
+              .put("m1", "2.0")
+              .put("m2", "2.0")
+              .put("dim1", "10.1")
+              .put("dim2", ImmutableList.of())
+              .put("dim3", ImmutableList.of("b", "c"))
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2000-01-03", "m1", "3.0", "m2", "3.0", "dim1", "2", "dim2", ImmutableList.of(""))
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-03")
+              .put("m1", "3.0")
+              .put("m2", "3.0")
+              .put("dim1", "2")
+              .put("dim2", ImmutableList.of(""))
+              .put("dim3", ImmutableList.of("d"))
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2001-01-01", "m1", "4.0", "m2", "4.0", "dim1", "1", "dim2", ImmutableList.of("a"))
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-01")
+              .put("m1", "4.0")
+              .put("m2", "4.0")
+              .put("dim1", "1")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of(""))
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2001-01-02", "m1", "5.0", "m2", "5.0", "dim1", "def", "dim2", ImmutableList.of("abc"))
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-02")
+              .put("m1", "5.0")
+              .put("m2", "5.0")
+              .put("dim1", "def")
+              .put("dim2", ImmutableList.of("abc"))
+              .put("dim3", ImmutableList.of())
+              .build()
       ),
       createRow(
-          ImmutableMap.of("t", "2001-01-03", "m1", "6.0", "m2", "6.0", "dim1", "abc")
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-03")
+              .put("m1", "6.0")
+              .put("m2", "6.0")
+              .put("dim1", "abc")
+              .build()
       )
   );
 
@@ -567,5 +613,31 @@ public class CalciteTests
             "m1", m1
         )
     ).get(0);
+  }
+
+
+  public static SystemSchema createMockSystemSchema(
+      final DruidSchema druidSchema,
+      final SpecificSegmentsQuerySegmentWalker walker
+  )
+  {
+    final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
+        EasyMock.createMock(HttpClient.class),
+        EasyMock.createMock(DruidNodeDiscoveryProvider.class),
+        NodeType.COORDINATOR,
+        "/simple/leader",
+        new ServerDiscoverySelector(EasyMock.createMock(ServiceProvider.class), "test")
+    )
+    {
+    };
+    final SystemSchema schema = new SystemSchema(
+        druidSchema,
+        new TestServerInventoryView(walker.getSegments()),
+        TEST_AUTHORIZER_MAPPER,
+        druidLeaderClient,
+        druidLeaderClient,
+        getJsonMapper()
+    );
+    return schema;
   }
 }

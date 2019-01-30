@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.JobHelper;
@@ -54,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -151,35 +151,27 @@ public class DatasourceInputFormatTest
     Path path4 = new Path(JobHelper.getURIFromSegment(segments2.get(0).getSegment()));
 
     // dummy locations for test
-    locations = ImmutableList.of(
-        new LocatedFileStatus(
-            1000, false, 0, 0, 0, 0, null, null, null, null, path1,
-            new BlockLocation[]{
-                new BlockLocation(null, new String[]{"s1", "s2"}, 0, 600),
-                new BlockLocation(null, new String[]{"s2", "s3"}, 600, 400)
-            }
-        ),
-        new LocatedFileStatus(
-            4000, false, 0, 0, 0, 0, null, null, null, null, path2,
-            new BlockLocation[]{
-                new BlockLocation(null, new String[]{"s1", "s2"}, 0, 1000),
-                new BlockLocation(null, new String[]{"s1", "s3"}, 1000, 1200),
-                new BlockLocation(null, new String[]{"s2", "s3"}, 2200, 1100),
-                new BlockLocation(null, new String[]{"s1", "s2"}, 3300, 700)
-            }
-        ),
-        new LocatedFileStatus(
-            500, false, 0, 0, 0, 0, null, null, null, null, path3,
-            new BlockLocation[]{
-                new BlockLocation(null, new String[]{"s2", "s3"}, 0, 500)
-            }
-        ),
-        new LocatedFileStatus(
-            500, false, 0, 0, 0, 0, null, null, null, null, path4,
-            new BlockLocation[]{
-                new BlockLocation(null, new String[]{"s2", "s3"}, 0, 500)
-            }
-        )
+    BlockLocation[] locations1 = {
+        new BlockLocation(null, new String[]{"s1", "s2"}, 0, 600),
+        new BlockLocation(null, new String[]{"s2", "s3"}, 600, 400)
+    };
+    BlockLocation[] locations2 = {
+        new BlockLocation(null, new String[]{"s1", "s2"}, 0, 1000),
+        new BlockLocation(null, new String[]{"s1", "s3"}, 1000, 1200),
+        new BlockLocation(null, new String[]{"s2", "s3"}, 2200, 1100),
+        new BlockLocation(null, new String[]{"s1", "s2"}, 3300, 700)
+    };
+    BlockLocation[] locations3 = {
+        new BlockLocation(null, new String[]{"s2", "s3"}, 0, 500)
+    };
+    BlockLocation[] locations4 = {
+        new BlockLocation(null, new String[]{"s2", "s3"}, 0, 500)
+    };
+    this.locations = ImmutableList.of(
+        new LocatedFileStatus(1000, false, 0, 0, 0, 0, null, null, null, null, path1, locations1),
+        new LocatedFileStatus(4000, false, 0, 0, 0, 0, null, null, null, null, path2, locations2),
+        new LocatedFileStatus(500, false, 0, 0, 0, 0, null, null, null, null, path3, locations3),
+        new LocatedFileStatus(500, false, 0, 0, 0, 0, null, null, null, null, path4, locations4)
     );
 
     config = populateConfiguration(new JobConf(), segments1, 0);
@@ -226,7 +218,7 @@ public class DatasourceInputFormatTest
     @Override
     public InputFormat get()
     {
-      final Map<String, LocatedFileStatus> locationMap = Maps.newHashMap();
+      final Map<String, LocatedFileStatus> locationMap = new HashMap<>();
       for (LocatedFileStatus status : locations) {
         locationMap.put(status.getPath().getName(), status);
       }

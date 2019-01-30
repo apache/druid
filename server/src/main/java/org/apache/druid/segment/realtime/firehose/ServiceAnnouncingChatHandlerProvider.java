@@ -123,6 +123,6 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
 
   private DruidNode makeDruidNode(String key)
   {
-    return new DruidNode(key, node.getHost(), node.getPlaintextPort(), node.getTlsPort(), node.isEnablePlaintextPort(), node.isEnableTlsPort());
+    return new DruidNode(key, node.getHost(), node.isBindOnHost(), node.getPlaintextPort(), node.getTlsPort(), node.isEnablePlaintextPort(), node.isEnableTlsPort());
   }
 }

@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -408,7 +407,7 @@ public class GroupByQueryRunnerTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
-    final List<Object[]> constructors = Lists.newArrayList();
+    final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : testConfigs()) {
       final Pair<GroupByQueryRunnerFactory, Closer> factoryAndCloser = makeQueryRunnerFactory(config);
       final GroupByQueryRunnerFactory factory = factoryAndCloser.lhs;
@@ -1536,7 +1535,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setContext(ImmutableMap.of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 0))
         .build();
@@ -2349,9 +2348,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -2382,7 +2379,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
 
     List<Row> allGranExpectedResults = Arrays.asList(
@@ -2439,7 +2436,7 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
         mergeRunner.run(QueryPlus.wrap(fullQuery), context),
@@ -2483,7 +2480,7 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
         mergeRunner.run(QueryPlus.wrap(fullQuery), context),
@@ -2535,7 +2532,7 @@ public class GroupByQueryRunnerTest
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, limit),
         mergeRunner.run(QueryPlus.wrap(fullQuery), context),
@@ -2635,9 +2632,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -2656,7 +2651,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
@@ -2687,7 +2682,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L)
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
 
@@ -2779,7 +2774,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L)
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -2817,7 +2812,7 @@ public class GroupByQueryRunnerTest
         new Object[]{"2011-04-01", "technology", 2L, 178.24917602539062D}
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -2854,7 +2849,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
     TestHelper.assertExpectedObjects(
@@ -3372,9 +3367,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3393,7 +3386,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
@@ -3672,9 +3665,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3693,7 +3684,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(QueryPlus.wrap(fullQuery), context), "merged");
   }
 
@@ -3776,9 +3767,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -3797,7 +3786,7 @@ public class GroupByQueryRunnerTest
         }
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     // add an extra layer of merging, simulate broker forwarding query to historical
     TestHelper.assertExpectedObjects(
         expectedResults,
@@ -3845,7 +3834,7 @@ public class GroupByQueryRunnerTest
     );
 
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
   }
 
@@ -3898,7 +3887,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "billy", null, "quality", "travel", "rows", 2L)
     );
 
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(QueryPlus.wrap(query), context), "no-limit");
   }
@@ -5080,7 +5069,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList())
+        .setDimensions(new ArrayList<>())
         .setAggregatorSpecs(new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, filter))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
@@ -5110,7 +5099,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList())
+        .setDimensions(new ArrayList<>())
         .setDimFilter(firstDaysFilter)
         .setAggregatorSpecs(new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, fridayFilter))
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -5146,7 +5135,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 10000))
         .build();
@@ -5174,7 +5163,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setVirtualColumns(new ExpressionVirtualColumn("expr", "1", ValueType.FLOAT, TestExprMacroTable.INSTANCE))
-        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new LongSumAggregatorFactory("count", "expr"))
+        .setDimensions(new ArrayList<>()).setAggregatorSpecs(new LongSumAggregatorFactory("count", "expr"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -5201,7 +5190,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new CardinalityAggregatorFactory(
+        .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CardinalityAggregatorFactory(
             "car",
             ImmutableList.of(new DefaultDimensionSpec(
                 "quality",
@@ -5240,7 +5229,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList()).setAggregatorSpecs(new CountAggregatorFactory("count"))
+        .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CountAggregatorFactory("count"))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
@@ -5507,7 +5496,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList())
+        .setDimensions(new ArrayList<>())
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount,
                             new LongSumAggregatorFactory("idx", "index"),
                             new HyperUniquesAggregatorFactory("quality_uniques_inner", "quality_uniques"))
@@ -5523,7 +5512,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-        .setDimensions(Lists.newArrayList())
+        .setDimensions(new ArrayList<>())
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"),
                             new LongSumAggregatorFactory("idx", "idx"),
                             new HyperUniquesAggregatorFactory("quality_uniques_outer", "quality_uniques_inner_post"))
@@ -5573,7 +5562,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(subquery)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(Lists.newArrayList())
+        .setDimensions(new ArrayList<>())
         .setAggregatorSpecs(new LongFirstAggregatorFactory("first", "innerfirst"),
                             new LongLastAggregatorFactory("last", "innerlast"))
         .setGranularity(QueryRunnerTestHelper.monthGran)
@@ -6295,7 +6284,7 @@ public class GroupByQueryRunnerTest
             ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
-    List<Result> bySegmentResults = Lists.newArrayList();
+    List<Result> bySegmentResults = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
@@ -6311,7 +6300,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
-    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
+    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -6325,7 +6314,7 @@ public class GroupByQueryRunnerTest
 
     TestHelper.assertExpectedObjects(
         bySegmentResults,
-        theRunner.run(QueryPlus.wrap(fullQuery), Maps.newHashMap()),
+        theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()),
         ""
     );
     exec.shutdownNow();
@@ -6352,7 +6341,7 @@ public class GroupByQueryRunnerTest
             ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
-    List<Result> bySegmentResults = Lists.newArrayList();
+    List<Result> bySegmentResults = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
@@ -6376,7 +6365,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
-    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
+    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -6388,7 +6377,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), Maps.newHashMap()), "");
+    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()), "");
     exec.shutdownNow();
   }
 
@@ -6412,7 +6401,7 @@ public class GroupByQueryRunnerTest
             ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
-    List<Result> bySegmentResults = Lists.newArrayList();
+    List<Result> bySegmentResults = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
@@ -6436,7 +6425,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
-    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
+    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -6448,7 +6437,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), Maps.newHashMap()), "");
+    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()), "");
     exec.shutdownNow();
   }
 
@@ -6886,7 +6875,7 @@ public class GroupByQueryRunnerTest
             ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
-    List<Result> bySegmentResults = Lists.newArrayList();
+    List<Result> bySegmentResults = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       bySegmentResults.add(singleSegmentResult);
     }
@@ -6933,7 +6922,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
 
-    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
+    List<QueryRunner<Row>> singleSegmentRunners = new ArrayList<>();
     for (int i = 0; i < segmentCount; i++) {
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -6945,7 +6934,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), Maps.newHashMap()), "");
+    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(QueryPlus.wrap(fullQuery), new HashMap<>()), "");
     exec.shutdownNow();
   }
 
@@ -8274,7 +8263,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology", "rows", 2L, "idx", 177L),
@@ -8317,9 +8306,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -8343,7 +8330,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
@@ -8389,9 +8376,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -8415,7 +8400,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "market", "spot", "rows", 2L, "idx", 243L),
@@ -8474,9 +8459,7 @@ public class GroupByQueryRunnerTest
         new QueryRunner<Row>()
         {
           @Override
-          public Sequence<Row> run(
-              QueryPlus<Row> queryPlus, Map<String, Object> responseContext
-          )
+          public Sequence<Row> run(QueryPlus<Row> queryPlus, Map<String, Object> responseContext)
           {
             // simulate two daily segments
             final QueryPlus<Row> queryPlus1 = queryPlus.withQuerySegmentSpec(
@@ -8500,7 +8483,7 @@ public class GroupByQueryRunnerTest
           }
         }
     );
-    Map<String, Object> context = Maps.newHashMap();
+    Map<String, Object> context = new HashMap<>();
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "market", "spot", "rows", 2L, "idx", 243L),

@@ -113,9 +113,7 @@ public class SpatialFilter implements Filter
   }
 
   @Override
-  public boolean supportsSelectivityEstimation(
-      ColumnSelector columnSelector, BitmapIndexSelector indexSelector
-  )
+  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, BitmapIndexSelector indexSelector)
   {
     return false;
   }

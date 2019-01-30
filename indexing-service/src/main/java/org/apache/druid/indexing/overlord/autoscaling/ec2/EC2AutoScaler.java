@@ -41,6 +41,7 @@ import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -186,7 +187,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   public AutoScalingData terminate(List<String> ips)
   {
     if (ips.isEmpty()) {
-      return new AutoScalingData(Lists.newArrayList());
+      return new AutoScalingData(new ArrayList<>());
     }
 
     DescribeInstancesResult result = amazonEC2Client.describeInstances(
@@ -196,7 +197,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
             )
     );
 
-    List<Instance> instances = Lists.newArrayList();
+    List<Instance> instances = new ArrayList<>();
     for (Reservation reservation : result.getReservations()) {
       instances.addAll(reservation.getInstances());
     }
@@ -227,7 +228,7 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   public AutoScalingData terminateWithIds(List<String> ids)
   {
     if (ids.isEmpty()) {
-      return new AutoScalingData(Lists.newArrayList());
+      return new AutoScalingData(new ArrayList<>());
     }
 
     try {

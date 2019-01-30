@@ -29,27 +29,29 @@ OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.htm
 
 ## Getting started
 
-To install Druid, run the following commands in your terminal:
+[Download](https://www.apache.org/dyn/closer.cgi?path=/incubator/druid/#{DRUIDVERSION}/apache-druid-#{DRUIDVERSION}-bin.tar.gz)
+the #{DRUIDVERSION} release.
+
+Extract Druid by running the following commands in your terminal:
 
 ```bash
-curl -O http://static.druid.io/artifacts/releases/druid-#{DRUIDVERSION}-bin.tar.gz
-tar -xzf druid-#{DRUIDVERSION}-bin.tar.gz
-cd druid-#{DRUIDVERSION}
+tar -xzf apache-druid-#{DRUIDVERSION}-bin.tar.gz
+cd apache-druid-#{DRUIDVERSION}
 ```
 
 In the package, you should find:
 
-* `LICENSE` - the license files.
-* `bin/` - scripts useful for this quickstart.
-* `conf/*` - template configurations for a clustered setup.
-* `extensions/*` - all Druid extensions.
-* `hadoop-dependencies/*` - Druid Hadoop dependencies.
-* `lib/*` - all included software packages for core Druid.
+* `DISCLAIMER`, `LICENSE`, and `NOTICE` files
+* `bin/*` - scripts useful for this quickstart
+* `conf/*` - template configurations for a clustered setup
+* `extensions/*` - core Druid extensions
+* `hadoop-dependencies/*` - Druid Hadoop dependencies
+* `lib/*` - libraries and dependencies for core Druid
 * `quickstart/*` - configuration files, sample data, and other files for the quickstart tutorials
 
 ## Download Zookeeper
 
-Druid currently has a dependency on [Apache ZooKeeper](http://zookeeper.apache.org/) for distributed coordination. You'll
+Druid has a dependency on [Apache ZooKeeper](http://zookeeper.apache.org/) for distributed coordination. You'll
 need to download and run Zookeeper.
 
 In the package root, run the following commands:
@@ -60,11 +62,11 @@ tar -xzf zookeeper-3.4.11.tar.gz
 mv zookeeper-3.4.11 zk
 ```
 
-The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the druid-#{DRUIDVERSION} package root.
+The startup scripts for the tutorial will expect the contents of the Zookeeper tarball to be located at `zk` under the apache-druid-#{DRUIDVERSION} package root.
 
 ## Start up Druid services
 
-From the druid-#{DRUIDVERSION} package root, run the following command:
+From the apache-druid-#{DRUIDVERSION} package root, run the following command:
 
 ```bash
 bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf
@@ -74,16 +76,16 @@ This will bring up instances of Zookeeper and the Druid services, all running on
 
 ```bash
 bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf
-[Thu Jul 26 12:16:23 2018] Running command[zk], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[coordinator], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/coordinator.log]: bin/run-druid coordinator quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[broker], logging to[//stage/druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[historical], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[overlord], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/overlord.log]: bin/run-druid overlord quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[middleManager], logging to[/stage/druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager quickstart/tutorial/conf
+[Thu Jul 26 12:16:23 2018] Running command[zk], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk quickstart/tutorial/conf
+[Thu Jul 26 12:16:23 2018] Running command[coordinator], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/coordinator.log]: bin/run-druid coordinator quickstart/tutorial/conf
+[Thu Jul 26 12:16:23 2018] Running command[broker], logging to[//stage/apache-druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker quickstart/tutorial/conf
+[Thu Jul 26 12:16:23 2018] Running command[historical], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical quickstart/tutorial/conf
+[Thu Jul 26 12:16:23 2018] Running command[overlord], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/overlord.log]: bin/run-druid overlord quickstart/tutorial/conf
+[Thu Jul 26 12:16:23 2018] Running command[middleManager], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager quickstart/tutorial/conf
 
 ```
 
-All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
+All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the apache-druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
 
 Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the Druid processes. 
 
@@ -109,7 +111,7 @@ rm -rf /tmp/kafka-logs
 
 For the following data loading tutorials, we have included a sample data file containing Wikipedia page edit events that occurred on 2015-09-12.
 
-This sample data is located at `quickstart/wikiticker-2015-09-12-sampled.json.gz` from the Druid package root. The page edit events are stored as JSON objects in a text file.
+This sample data is located at `quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz` from the Druid package root. The page edit events are stored as JSON objects in a text file.
 
 The sample data has the following columns, and an example event is shown below:
 

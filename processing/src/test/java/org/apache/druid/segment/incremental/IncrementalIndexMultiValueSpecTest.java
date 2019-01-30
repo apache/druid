@@ -83,9 +83,9 @@ public class IncrementalIndexMultiValueSpecTest
         .buildOnheap();
     index.add(
         new MapBasedInputRow(
-            0, Arrays.asList(
-            "string1", "string2", "string3", "float1", "float2", "float3", "long1", "long2", "long3"
-        ), map
+            0,
+            Arrays.asList("string1", "string2", "string3", "float1", "float2", "float3", "long1", "long2", "long3"),
+            map
         )
     );
 

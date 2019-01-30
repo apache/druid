@@ -68,8 +68,10 @@ public class GoogleDataSegmentPuller implements URIDataPuller
       }
       catch (IOException ioe) {
         LOG.warn(
-            ioe, "Failed to remove output directory [%s] for segment pulled from [%s]",
-            outDir.getAbsolutePath(), path
+            ioe,
+            "Failed to remove output directory [%s] for segment pulled from [%s]",
+            outDir.getAbsolutePath(),
+            path
         );
       }
       throw new SegmentLoadingException(e, e.getMessage());

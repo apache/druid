@@ -21,12 +21,12 @@ package org.apache.druid.server.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.query.DruidMetrics;
 
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -109,7 +109,7 @@ public class MonitorsConfig
 
   private static List<Class<? extends Monitor>> getMonitorsFromNames(List<String> monitorNames)
   {
-    List<Class<? extends Monitor>> monitors = Lists.newArrayList();
+    List<Class<? extends Monitor>> monitors = new ArrayList<>();
     if (monitorNames == null) {
       return monitors;
     }
