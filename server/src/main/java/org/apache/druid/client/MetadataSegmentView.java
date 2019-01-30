@@ -19,7 +19,6 @@
 
 package org.apache.druid.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.timeline.DataSegment;
@@ -44,10 +43,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * This class polls the coordinator in background to keep the latest published segments.
@@ -58,7 +59,7 @@ public class MetadataSegmentView
 {
 
   private static final int DEFAULT_POLL_PERIOD_IN_MS = 60000;
-  private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
+  private static final Logger log = new Logger(MetadataSegmentView.class);
 
   private final DruidLeaderClient coordinatorDruidLeaderClient;
   private final ObjectMapper jsonMapper;
@@ -86,19 +87,7 @@ public class MetadataSegmentView
   public void start()
   {
     scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
-    scheduledExec.scheduleWithFixedDelay(
-        () -> {
-          try {
-            poll();
-          }
-          catch (JsonProcessingException e) {
-            log.makeAlert(e, "Problem polling Coordinator.").emit();
-          }
-        },
-        0,
-        DEFAULT_POLL_PERIOD_IN_MS,
-        TimeUnit.MILLISECONDS
-    );
+    scheduledExec.schedule(new Poll(), 0, TimeUnit.MILLISECONDS);
   }
 
   @LifecycleStop
@@ -108,7 +97,18 @@ public class MetadataSegmentView
     scheduledExec = null;
   }
 
-  private void poll() throws JsonProcessingException
+  private class Poll implements Callable<Void>
+  {
+    @Override
+    public Void call()
+    {
+      poll();
+      scheduledExec.schedule(new Poll(), DEFAULT_POLL_PERIOD_IN_MS, TimeUnit.MILLISECONDS);
+      return null;
+    }
+  }
+
+  private void poll()
   {
     log.info("polling published segments from coordinator");
     //get authorized published segments from coordinator
@@ -129,7 +129,11 @@ public class MetadataSegmentView
     // since the presence of a segment with an earlier timestamp indicates that
     // "that" segment is not returned by coordinator in latest poll, so it's
     // likely deleted and therefore we remove it from publishedSegments
-    publishedSegments.values().removeIf(v -> v != timestamp);
+    Set<DateTime> toBeRemovedSegments = publishedSegments.values()
+                                                         .stream()
+                                                         .filter(v -> v != timestamp)
+                                                         .collect(Collectors.toSet());
+    publishedSegments.values().removeAll(toBeRemovedSegments);
 
     if (segmentWatcherConfig.getWatchedDataSources() != null) {
       log.debug(
@@ -152,12 +156,16 @@ public class MetadataSegmentView
       ObjectMapper jsonMapper,
       BytesAccumulatingResponseHandler responseHandler,
       Set<String> watchedDataSources
-  ) throws JsonProcessingException
+  )
   {
     String query = "/druid/coordinator/v1/metadata/segments";
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
-      final String datasourcesJson = jsonMapper.writeValueAsString(watchedDataSources);
-      query = "/druid/coordinator/v1/metadata/segments?" + datasourcesJson;
+      final StringBuilder sb = new StringBuilder();
+      for (String ds : watchedDataSources) {
+        sb.append("datasources=" + ds + "&");
+      }
+      sb.setLength(Math.max(sb.length() - 1, 0));
+      query = "/druid/coordinator/v1/metadata/segments?" + sb;
     }
     Request request;
     try {

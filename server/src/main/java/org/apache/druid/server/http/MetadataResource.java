@@ -21,7 +21,6 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -53,7 +52,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -153,21 +151,13 @@ public class MetadataResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseSegments(
       @Context final HttpServletRequest req,
-      @QueryParam("datasources") String datasources
+      @QueryParam("datasources") final Set<String> datasources
   )
-      throws IOException
   {
     Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
     if (datasources != null && !datasources.isEmpty()) {
-      Set<String> watchedDatasources = jsonMapper.readValue(
-          datasources,
-          jsonMapper.getTypeFactory()
-                    .constructType(new TypeReference<Set<String>>()
-                    {
-                    })
-      );
       druidDataSources = druidDataSources.stream()
-                                         .filter(src -> watchedDatasources.contains(src.getName()))
+                                         .filter(src -> datasources.contains(src.getName()))
                                          .collect(Collectors.toSet());
     }
     final Stream<DataSegment> metadataSegments = druidDataSources
