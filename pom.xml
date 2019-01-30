@@ -870,12 +870,6 @@
 
             <!-- GCP -->
             <dependency>
-                <groupId>org.apache.druid</groupId>
-                <artifactId>druid-core</artifactId>
-                <version>${project.parent.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
                 <groupId>com.google.api-client</groupId>
                 <artifactId>google-api-client</artifactId>
                 <version>${com.google.apis.client.version}</version>
