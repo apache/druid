@@ -345,7 +345,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Actions',
             id: 'actions',
             accessor: 'id',
-            width: 400,
+            width: 420,
             filterable: false,
             Cell: row => {
               const id = row.value;
@@ -356,6 +356,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <div>
                 <a href={`/druid/indexer/v1/supervisor/${id}`} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/supervisor/${id}/status`} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
+                <a href={`/druid/indexer/v1/supervisor/${id}/stats`} target="_blank">Stats</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/supervisor/${id}/history`} target="_blank">History</a>&nbsp;&nbsp;&nbsp;
                 {suspendResume}&nbsp;&nbsp;&nbsp;
                 <a onClick={() => this.setState({ resetSupervisorId: id })}>Reset</a>&nbsp;&nbsp;&nbsp;
@@ -488,7 +489,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Actions',
             id: 'actions',
             accessor: 'task_id',
-            width: 300,
+            width: 320,
             filterable: false,
             Cell: row => {
               if (row.aggregated) return '';
@@ -497,6 +498,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <div>
                 <a href={`/druid/indexer/v1/task/${id}`} target="_blank">Payload</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/status`} target="_blank">Status</a>&nbsp;&nbsp;&nbsp;
+                <a href={`/druid/indexer/v1/task/${id}/reports`} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/log`} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/log?offset=-8192`} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
                 { (status === 'RUNNING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a> }

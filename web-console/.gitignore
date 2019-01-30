@@ -1,9 +1,10 @@
 node/
 node_modules/
 resources/
-build/
 public/
 lib/*.css
+
+coordinator-console/
 
 .tscache
 tscommand-*.tmp.txt
