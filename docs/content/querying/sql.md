@@ -562,10 +562,6 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 ## SYSTEM SCHEMA
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
-For example to retrieve all segments for datasource "wikipedia", use the query:
-```sql
-SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
-```
 
 ### SEGMENTS table
 Segments table provides details on all Druid segments, whether they are published yet or not.
@@ -587,6 +583,26 @@ Segments table provides details on all Druid segments, whether they are publishe
 |is_realtime|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
 |payload|JSON-serialized data segment payload|
 
+For example to retrieve all segments for datasource "wikipedia", use the query:
+
+```sql
+SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
+```
+
+Another example to retrieve segments total_size, avg_size, avg_num_rows and num_segments per datasource:
+
+```sql
+select
+    datasource,
+    sum("size") as total_size,
+    case when sum("size") = 0 then 0 else sum("size") / (count(*) filter(where "size" > 0)) end as avg_size,
+    case when sum(num_rows) = 0 then 0 else sum("num_rows") / (count(*) filter(where num_rows > 0)) end as avg_num_rows,
+    count(*) as num_segments
+from sys.segments
+group by 1
+order by 2 desc
+```
+
 ### SERVERS table
 Servers table lists all data servers(any server that hosts a segment). It includes both historicals and peons.
 
@@ -602,6 +618,7 @@ Servers table lists all data servers(any server that hosts a segment). It includ
 |max_size|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
 
 To retrieve information about all servers, use the query:
+
 ```sql
 SELECT * FROM sys.servers;
 ```
@@ -617,6 +634,7 @@ SERVER_SEGMENTS is used to join servers with segments table
 
 JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource, 
 grouped by server, example query:
+
 ```sql
 SELECT count(segments.segment_id) as num_segments from sys.segments as segments 
 INNER JOIN sys.server_segments as server_segments 
@@ -649,10 +667,12 @@ check out [ingestion tasks](#../ingestion/tasks.html)
 |error_msg|Detailed error message in case of FAILED tasks|
 
 For example, to retrieve tasks information filtered by status, use the query
+
 ```sql
 SELECT * FROM sys.tasks where status='FAILED';
 ```
 
+Note that sys tables may not support all the Druid SQL Functions.
 
 ## Server configuration
 
