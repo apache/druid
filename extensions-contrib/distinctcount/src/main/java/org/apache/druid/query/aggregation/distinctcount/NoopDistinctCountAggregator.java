@@ -17,17 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.quantiles;
+package org.apache.druid.query.aggregation.distinctcount;
 
 import org.apache.druid.query.aggregation.Aggregator;
 
-public class DoublesSketchNoOpAggregator implements Aggregator
+public class NoopDistinctCountAggregator implements Aggregator
 {
-
-  @Override
-  public Object get()
+  public NoopDistinctCountAggregator()
   {
-    return DoublesSketchOperations.EMPTY_SKETCH;
   }
 
   @Override
@@ -36,20 +33,31 @@ public class DoublesSketchNoOpAggregator implements Aggregator
   }
 
   @Override
-  public void close()
+  public Object get()
   {
+    return 0L;
   }
 
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("Not implemented");
+    return 0.0f;
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("Not implemented");
+    return 0L;
   }
 
+  @Override
+  public double getDouble()
+  {
+    return 0.0;
+  }
+
+  @Override
+  public void close()
+  {
+  }
 }

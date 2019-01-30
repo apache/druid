@@ -26,12 +26,12 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.nio.ByteBuffer;
 
-public class ArrayOfDoublesSketchNoOpBufferAggregator implements BufferAggregator
+public class NoopArrayOfDoublesSketchBufferAggregator implements BufferAggregator
 {
 
   private final ArrayOfDoublesSketch emptySketch;
 
-  public ArrayOfDoublesSketchNoOpBufferAggregator(final int numberOfValues)
+  public NoopArrayOfDoublesSketchBufferAggregator(final int numberOfValues)
   {
     emptySketch = new ArrayOfDoublesUpdatableSketchBuilder().setNumberOfValues(numberOfValues).build().compact();
   }
