@@ -93,6 +93,9 @@
                 <argument>public</argument>
                 <argument>lib/react-table.css</argument>
                 <argument>node_modules</argument>
+                <argument>coordinator-console</argument>
+                <argument>pages</argument>
+                <argument>legacy-coordinator-console.html</argument>
               </arguments>
             </configuration>
           </execution>

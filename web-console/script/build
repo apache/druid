@@ -22,6 +22,7 @@ set -e
 
 echo "Copying coordinator console in..."
 cp -r ./node_modules/druid-console/coordinator-console .
+cp -r ./node_modules/druid-console/pages .
 cp ./node_modules/druid-console/index.html legacy-coordinator-console.html
 
 echo "Transpiling ReactTable CSS..."
