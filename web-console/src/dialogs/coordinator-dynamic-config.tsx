@@ -16,15 +16,15 @@
  * limitations under the License.
  */
 
+import { Intent } from '@blueprintjs/core';
 import * as React from 'react';
 import axios from 'axios';
-
+import { IconNames } from "@blueprintjs/icons";
+import { AppToaster } from '../aux/toaster';
 import { AutoForm } from '../components/auto-form';
-
+import { getDruidErrorMessage } from '../utils';
 import { SnitchDialog } from './snitch-dialog';
-
 import './coordinator-dynamic-config.scss';
-
 
 export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
   isOpen: boolean,
@@ -32,14 +32,14 @@ export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
 }
 
 export interface CoordinatorDynamicConfigDialogState {
-  config: Record<string, any> | null;
+  dynamicConfig: Record<string, any> | null;
 }
 
 export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
   constructor(props: CoordinatorDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      config: null
+      dynamicConfig: null
     }
   }
 
@@ -48,35 +48,47 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     try {
       const configResp = await axios.get("/druid/coordinator/v1/config");
       config = configResp.data
-    } catch (error) {
-      console.error(error)
+    } catch (e) {
+      AppToaster.show({
+        icon: IconNames.ERROR,
+        intent: Intent.DANGER,
+        message: `Could not load coordinator dynamic config: ${getDruidErrorMessage(e)}`
+      });
+      return;
     }
     this.setState({
-      config
+      dynamicConfig: config
     });
   }
 
-  saveClusterConfig = (author: string, comment: string) => {
+  private saveClusterConfig = async (author: string, comment: string) => {
     const { onClose } = this.props;
-    let newState: any = this.state.config;
-    const whiteList: any[] = newState["killDataSourceWhitelist"];
-    const skipList: any[] = newState["killPendingSegmentsSkipList"];
-    //newState["killDataSourceWhitelist"] = newState["killDataSourceWhitelist"].join(",");
-    //newState["killPendingSegmentsSkipList"] = newState["killPendingSegmentsSkipList"].join(",");
-    axios.post("/druid/coordinator/v1/config", newState, {
-      headers:{
-        "X-Druid-Author": author,
-        "X-Druid-Comment": comment
-      }
+    let newState: any = this.state.dynamicConfig;
+    try {
+      await axios.post("/druid/coordinator/v1/config", newState, {
+        headers: {
+          "X-Druid-Author": author,
+          "X-Druid-Comment": comment
+        }
+      });
+    } catch (e) {
+      AppToaster.show({
+        icon: IconNames.ERROR,
+        intent: Intent.DANGER,
+        message: `Could not save coordinator dynamic config: ${getDruidErrorMessage(e)}`
+      });
+    }
+
+    AppToaster.show({
+      message: 'Saved coordinator dynamic config',
+      intent: Intent.SUCCESS
     });
-    newState["killDataSourceWhitelist"] = whiteList;
-    newState["killPendingSegmentsSkipList"] = skipList;
     onClose();
   }
 
   render() {
     const { isOpen, onClose } = this.props;
-    const { config } = this.state;
+    const { dynamicConfig } = this.state;
 
     return <SnitchDialog
       className="coordinator-dynamic-config"
@@ -141,8 +153,8 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
             type: "number"
           }
         ]}
-        model={config}
-        onChange={m => this.setState({ config: m })}
+        model={dynamicConfig}
+        onChange={m => this.setState({ dynamicConfig: m })}
       />
     </SnitchDialog>
   }

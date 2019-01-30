@@ -23,10 +23,11 @@ This is the unified Druid web console that servers as a data management layer fo
 
 ## How to watch and run for development
 
-1. Install the modules with `npm install`
-2. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
+1. You need to be withing the `web-console` directory
+2. Install the modules with `npm install`
+3. Run `npm start` will start in development mode and will proxy druid requests to `localhost:8888`
 
-Note: you can provide and environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start` 
+**Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start` 
 
 
 ## Description of the directory structure

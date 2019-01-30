@@ -17,19 +17,13 @@
  */
 
 .coordinator-dynamic-config {
-  .dialog-body {
+  .bp3-dialog-body {
     overflow: scroll;
     max-height: 70vh;
-    margin: 10px 15px;
 
     .auto-form {
       max-height: 60vh;
       overflow: auto;
-    }
-
-    .bp3-form-group {
-      padding: 0 15px;
-      margin: 0 0 5px;
     }
 
     .bp3-html-select {
