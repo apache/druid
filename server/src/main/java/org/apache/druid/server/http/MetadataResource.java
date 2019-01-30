@@ -164,7 +164,7 @@ public class MetadataResource
         .stream()
         .flatMap(t -> t.getSegments().stream());
 
-    Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+    final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
         AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
 
     final Iterable<DataSegment> authorizedSegments =

@@ -87,7 +87,7 @@ public class MetadataSegmentView
   public void start()
   {
     scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
-    scheduledExec.schedule(new Poll(), 0, TimeUnit.MILLISECONDS);
+    scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
   }
 
   @LifecycleStop
@@ -95,17 +95,6 @@ public class MetadataSegmentView
   {
     scheduledExec.shutdownNow();
     scheduledExec = null;
-  }
-
-  private class Poll implements Callable<Void>
-  {
-    @Override
-    public Void call()
-    {
-      poll();
-      scheduledExec.schedule(new Poll(), DEFAULT_POLL_PERIOD_IN_MS, TimeUnit.MILLISECONDS);
-      return null;
-    }
   }
 
   private void poll()
@@ -129,7 +118,7 @@ public class MetadataSegmentView
     // since the presence of a segment with an earlier timestamp indicates that
     // "that" segment is not returned by coordinator in latest poll, so it's
     // likely deleted and therefore we remove it from publishedSegments
-    Set<DateTime> toBeRemovedSegments = publishedSegments.values()
+    final Set<DateTime> toBeRemovedSegments = publishedSegments.values()
                                                          .stream()
                                                          .filter(v -> v != timestamp)
                                                          .collect(Collectors.toSet());
@@ -195,6 +184,17 @@ public class MetadataSegmentView
         jsonMapper,
         responseHandler
     );
+  }
+
+  private class PollTask implements Callable<Void>
+  {
+    @Override
+    public Void call()
+    {
+      poll();
+      scheduledExec.schedule(new PollTask(), DEFAULT_POLL_PERIOD_IN_MS, TimeUnit.MILLISECONDS);
+      return null;
+    }
   }
 
 }
