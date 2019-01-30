@@ -45,7 +45,6 @@
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-aws-common</artifactId>
       <version>${project.parent.version}</version>
-      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
