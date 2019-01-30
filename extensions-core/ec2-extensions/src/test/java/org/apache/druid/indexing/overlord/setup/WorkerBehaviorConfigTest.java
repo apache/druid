@@ -75,6 +75,7 @@ public class WorkerBehaviorConfigTest
     );
 
     final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.registerSubtypes(EC2AutoScaler.class);
     mapper.setInjectableValues(
         new InjectableValues()
         {
