@@ -57,8 +57,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
       "/favicon.png",
       "/pages/*",
-      "/fonts/*",
-      "/legacy/*",
+      "/coordinator-console/*",
       "/legacy-coordinator-console.html",
       "/old-console/*",
       "/coordinator/false",
