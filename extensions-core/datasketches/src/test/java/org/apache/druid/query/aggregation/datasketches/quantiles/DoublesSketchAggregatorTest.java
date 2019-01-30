@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
