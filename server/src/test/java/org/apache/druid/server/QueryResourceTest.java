@@ -19,9 +19,9 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -395,10 +395,15 @@ public class QueryResourceTest
 
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(0, responses.size());
-    Assert.assertEquals(1, testRequestLogger.getLogs().size());
-    Assert.assertEquals(true,
-        testRequestLogger.getLogs().get(0).getQueryStats().getStats().get("success"));
-    Assert.assertEquals("druid", testRequestLogger.getLogs().get(0).getQueryStats().getStats().get("identity"));
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertEquals(
+        true,
+        testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats().get("success")
+    );
+    Assert.assertEquals(
+        "druid",
+        testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats().get("identity")
+    );
   }
 
   @Test(timeout = 60_000L)

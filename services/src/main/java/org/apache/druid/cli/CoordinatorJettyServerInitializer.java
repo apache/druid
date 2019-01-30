@@ -117,7 +117,6 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     final ObjectMapper jsonMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     final AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
 
-    List<Authenticator> authenticators = null;
     AuthenticationUtils.addSecuritySanityCheckFilter(root, jsonMapper);
 
     // perform no-op authorization for these resources
@@ -128,7 +127,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       AuthenticationUtils.addNoopAuthorizationFilters(root, CliOverlord.UNSECURED_PATHS);
     }
 
-    authenticators = authenticatorMapper.getAuthenticatorChain();
+    List<Authenticator> authenticators = authenticatorMapper.getAuthenticatorChain();
     AuthenticationUtils.addAuthenticationFilterChain(root, authenticators);
 
     AuthenticationUtils.addAllowOptionsFilter(root, authConfig.isAllowUnauthenticatedHttpOptions());

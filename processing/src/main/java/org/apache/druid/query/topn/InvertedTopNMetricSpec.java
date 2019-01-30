@@ -21,7 +21,6 @@ package org.apache.druid.query.topn;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -67,23 +66,7 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
       final List<PostAggregator> postAggregatorSpecs
   )
   {
-    return Comparators.inverse(
-        new Comparator()
-        {
-          @Override
-          public int compare(Object o1, Object o2)
-          {
-            // nulls last
-            if (o1 == null) {
-              return 1;
-            }
-            if (o2 == null) {
-              return -1;
-            }
-            return delegate.getComparator(aggregatorSpecs, postAggregatorSpecs).compare(o1, o2);
-          }
-        }
-    );
+    return Comparator.nullsFirst(delegate.getComparator(aggregatorSpecs, postAggregatorSpecs).reversed());
   }
 
   @Override

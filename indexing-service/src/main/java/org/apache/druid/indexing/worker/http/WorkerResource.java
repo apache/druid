@@ -34,6 +34,7 @@ import org.apache.druid.indexing.worker.WorkerCuratorCoordinator;
 import org.apache.druid.indexing.worker.WorkerTaskMonitor;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
@@ -168,7 +169,7 @@ public class WorkerResource
   public Response doShutdown(@PathParam("taskid") String taskid)
   {
     try {
-      taskRunner.shutdown(taskid);
+      taskRunner.shutdown(taskid, "shut down request via HTTP endpoint");
     }
     catch (Exception e) {
       log.error(e, "Failed to issue shutdown for task: %s", taskid);
@@ -179,7 +180,7 @@ public class WorkerResource
 
   @GET
   @Path("/task/{taskid}/log")
-  @Produces("text/plain")
+  @Produces(HttpMediaType.TEXT_PLAIN_UTF8)
   @ResourceFilters(StateResourceFilter.class)
   public Response doGetLog(
       @PathParam("taskid") String taskid,

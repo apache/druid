@@ -26,7 +26,13 @@ import org.apache.druid.server.RequestLogLine;
 public class NoopRequestLogger implements RequestLogger
 {
   @Override
-  public void log(RequestLogLine requestLogLine)
+  public void logNativeQuery(RequestLogLine requestLogLine)
+  {
+    // This is a no op!
+  }
+
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine)
   {
     // This is a no op!
   }

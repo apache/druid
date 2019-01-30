@@ -24,29 +24,74 @@ import org.apache.druid.server.RequestLogLine;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TestRequestLogger implements RequestLogger
 {
-  private final List<RequestLogLine> logs;
+  private final List<RequestLogLine> nativeQuerylogs;
+  private final List<RequestLogLine> sqlQueryLogs;
+  private final AtomicBoolean started = new AtomicBoolean();
 
   public TestRequestLogger()
   {
-    this.logs = new ArrayList<>();
+    this.nativeQuerylogs = new ArrayList<>();
+    this.sqlQueryLogs = new ArrayList<>();
   }
 
   @Override
-  public void log(final RequestLogLine requestLogLine)
+  public void start()
   {
-    synchronized (logs) {
-      logs.add(requestLogLine);
+    started.set(true);
+  }
+
+  @Override
+  public void stop()
+  {
+    started.set(false);
+  }
+
+  public boolean isStarted()
+  {
+    return started.get();
+  }
+
+  @Override
+  public void logNativeQuery(final RequestLogLine requestLogLine)
+  {
+    synchronized (nativeQuerylogs) {
+      nativeQuerylogs.add(requestLogLine);
     }
   }
 
-  public List<RequestLogLine> getLogs()
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine)
   {
-    synchronized (logs) {
-      return ImmutableList.copyOf(logs);
+    synchronized (sqlQueryLogs) {
+      sqlQueryLogs.add(requestLogLine);
     }
   }
 
+  public List<RequestLogLine> getNativeQuerylogs()
+  {
+    synchronized (nativeQuerylogs) {
+      return ImmutableList.copyOf(nativeQuerylogs);
+    }
+  }
+
+  public List<RequestLogLine> getSqlQueryLogs()
+  {
+    synchronized (sqlQueryLogs) {
+      return ImmutableList.copyOf(sqlQueryLogs);
+    }
+  }
+
+  public void clear()
+  {
+    synchronized (nativeQuerylogs) {
+      nativeQuerylogs.clear();
+    }
+    synchronized (sqlQueryLogs) {
+      sqlQueryLogs.clear();
+    }
+  }
 }

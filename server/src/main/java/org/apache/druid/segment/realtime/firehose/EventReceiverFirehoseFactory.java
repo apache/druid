@@ -138,8 +138,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     if (chatHandlerProvider.isPresent()) {
       log.info("Found chathandler of class[%s]", chatHandlerProvider.get().getClass().getName());
       chatHandlerProvider.get().register(serviceName, firehose);
-      if (serviceName.contains(":")) {
-        chatHandlerProvider.get().register(serviceName.replaceAll(".*:", ""), firehose); // rofl
+      int lastIndexOfColon = serviceName.lastIndexOf(':');
+      if (lastIndexOfColon > 0) {
+        chatHandlerProvider.get().register(serviceName.substring(lastIndexOfColon + 1), firehose);
       }
     } else {
       log.warn("No chathandler detected");
@@ -242,7 +243,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       }
 
       CountingInputStream countingInputStream = new CountingInputStream(in);
-      Collection<Map<String, Object>> events = null;
+      Collection<Map<String, Object>> events;
       try {
         events = objectMapper.readValue(
             countingInputStream,

@@ -151,7 +151,6 @@ public class HadoopTuningConfig implements TuningConfig
     this.useExplicitVersion = useExplicitVersion;
     this.allowedHadoopPrefix = allowedHadoopPrefix == null ? ImmutableList.of() : allowedHadoopPrefix;
 
-
     this.ignoreInvalidRows = ignoreInvalidRows == null ? false : ignoreInvalidRows;
     if (maxParseExceptions != null) {
       this.maxParseExceptions = maxParseExceptions;

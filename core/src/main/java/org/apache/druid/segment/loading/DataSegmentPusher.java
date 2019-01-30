@@ -39,6 +39,7 @@ public interface DataSegmentPusher
 
   @Deprecated
   String getPathForHadoop(String dataSource);
+
   String getPathForHadoop();
 
   /**

@@ -106,10 +106,8 @@ public class CuratorTestBase
       ObjectMapper jsonMapper
   )
   {
-    final String segmentAnnouncementPath = ZKPaths.makePath(ZKPaths.makePath(
-        zkPathsConfig.getLiveSegmentsPath(),
-        druidServer.getHost()
-    ), segment.getIdentifier());
+    final String segmentAnnouncementPath =
+        ZKPaths.makePath(zkPathsConfig.getLiveSegmentsPath(), druidServer.getHost(), segment.getId().toString());
 
     try {
       curator.create()
@@ -138,15 +136,15 @@ public class CuratorTestBase
       ObjectMapper jsonMapper
   )
   {
-    final String segmentAnnouncementPath = ZKPaths.makePath(ZKPaths.makePath(
+    final String segmentAnnouncementPath = ZKPaths.makePath(
         zkPathsConfig.getLiveSegmentsPath(),
-        druidServer.getHost()),
+        druidServer.getHost(),
         UUIDUtils.generateUuid(
           druidServer.getHost(),
           druidServer.getType().toString(),
           druidServer.getTier(),
           DateTimes.nowUtc().toString()
-        ) + String.valueOf(batchCtr++)
+        ) + (batchCtr++)
     );
 
 
@@ -175,12 +173,12 @@ public class CuratorTestBase
   protected void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment, ZkPathsConfig zkPathsConfig)
       throws Exception
   {
-    curator.delete().guaranteed().forPath(
-        ZKPaths.makePath(
-            ZKPaths.makePath(zkPathsConfig.getLiveSegmentsPath(), druidServer.getHost()),
-            segment.getIdentifier()
-        )
+    String path = ZKPaths.makePath(
+        zkPathsConfig.getLiveSegmentsPath(),
+        druidServer.getHost(),
+        segment.getId().toString()
     );
+    curator.delete().guaranteed().forPath(path);
   }
 
   protected void unannounceSegmentFromBatchForServer(DruidServer druidServer, DataSegment segment, String batchPath, ZkPathsConfig zkPathsConfig)

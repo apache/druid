@@ -58,7 +58,7 @@ public class CloudFilesUtils
   {
     String path = fileName;
     if (!basePath.isEmpty()) {
-      int lastSlashIndex = basePath.lastIndexOf("/");
+      int lastSlashIndex = basePath.lastIndexOf('/');
       if (lastSlashIndex != -1) {
         basePath = basePath.substring(0, lastSlashIndex);
       }

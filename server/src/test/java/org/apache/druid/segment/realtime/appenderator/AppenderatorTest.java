@@ -57,7 +57,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AppenderatorTest
 {
-  private static final List<SegmentIdentifier> IDENTIFIERS = ImmutableList.of(
+  private static final List<SegmentIdWithShardSpec> IDENTIFIERS = ImmutableList.of(
       SI("2000/2001", "A", 0),
       SI("2000/2001", "A", 1),
       SI("2001/2002", "A", 0)
@@ -128,12 +128,12 @@ public class AppenderatorTest
           sorted(
               Lists.transform(
                   segmentsAndMetadata.getSegments(),
-                  new Function<DataSegment, SegmentIdentifier>()
+                  new Function<DataSegment, SegmentIdWithShardSpec>()
                   {
                     @Override
-                    public SegmentIdentifier apply(DataSegment input)
+                    public SegmentIdWithShardSpec apply(DataSegment input)
                     {
-                      return SegmentIdentifier.fromDataSegment(input);
+                      return SegmentIdWithShardSpec.fromDataSegment(input);
                     }
                   }
               )
@@ -742,9 +742,9 @@ public class AppenderatorTest
     }
   }
 
-  private static SegmentIdentifier SI(String interval, String version, int partitionNum)
+  private static SegmentIdWithShardSpec SI(String interval, String version, int partitionNum)
   {
-    return new SegmentIdentifier(
+    return new SegmentIdWithShardSpec(
         AppenderatorTester.DATASOURCE,
         Intervals.of(interval),
         version,
@@ -798,13 +798,11 @@ public class AppenderatorTest
     final List<T> xsSorted = Lists.newArrayList(xs);
     Collections.sort(
         xsSorted,
-        (a, b) -> {
-          if (a instanceof SegmentIdentifier && b instanceof SegmentIdentifier) {
-            return ((SegmentIdentifier) a).getIdentifierAsString()
-                                          .compareTo(((SegmentIdentifier) b).getIdentifierAsString());
+        (T a, T b) -> {
+          if (a instanceof SegmentIdWithShardSpec && b instanceof SegmentIdWithShardSpec) {
+            return ((SegmentIdWithShardSpec) a).compareTo(((SegmentIdWithShardSpec) b));
           } else if (a instanceof DataSegment && b instanceof DataSegment) {
-            return ((DataSegment) a).getIdentifier()
-                                    .compareTo(((DataSegment) b).getIdentifier());
+            return ((DataSegment) a).getId().compareTo(((DataSegment) b).getId());
           } else {
             throw new IllegalStateException("WTF??");
           }

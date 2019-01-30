@@ -160,7 +160,7 @@ public class DefaultOfflineAppenderatorFactoryTest
     )) {
       Assert.assertEquals("dataSourceName", appenderator.getDataSource());
       Assert.assertEquals(null, appenderator.startJob());
-      SegmentIdentifier identifier = new SegmentIdentifier(
+      SegmentIdWithShardSpec identifier = new SegmentIdWithShardSpec(
           "dataSourceName",
           Intervals.of("2000/2001"),
           "A",

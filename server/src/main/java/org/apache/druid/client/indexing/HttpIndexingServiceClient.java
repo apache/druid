@@ -91,7 +91,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   public String compactSegments(
       List<DataSegment> segments,
       boolean keepSegmentGranularity,
-      long targetCompactionSizeBytes,
+      @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
       @Nullable ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
@@ -154,7 +154,10 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       final FullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.POST,
-              StringUtils.format("/druid/indexer/v1/task/%s/shutdown", taskId)
+              StringUtils.format(
+                  "/druid/indexer/v1/task/%s/shutdown",
+                  StringUtils.urlEncode(taskId)
+              )
           )
       );
 
@@ -255,7 +258,10 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   {
     try {
       final FullResponseHolder responseHolder = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/task/%s/status", taskId))
+          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format(
+              "/druid/indexer/v1/task/%s/status",
+              StringUtils.urlEncode(taskId)
+          ))
       );
 
       return jsonMapper.readValue(
@@ -279,11 +285,31 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
+  public TaskPayloadResponse getTaskPayload(String taskId)
+  {
+    try {
+      final FullResponseHolder responseHolder = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/task/%s", taskId))
+      );
+
+      return jsonMapper.readValue(
+          responseHolder.getContent(),
+          new TypeReference<TaskPayloadResponse>()
+          {
+          }
+      );
+    }
+    catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
   public int killPendingSegments(String dataSource, DateTime end)
   {
     final String endPoint = StringUtils.format(
         "/druid/indexer/v1/pendingSegments/%s?interval=%s",
-        dataSource,
+        StringUtils.urlEncode(dataSource),
         new Interval(DateTimes.MIN, end)
     );
     try {

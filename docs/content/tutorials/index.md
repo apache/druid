@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "Quickstart"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # Druid Quickstart
 
@@ -87,7 +107,7 @@ bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf
 
 All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the apache-druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
 
-Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the Druid processes. 
+Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the Druid processes.
 
 ### Resetting cluster state
 
@@ -134,7 +154,7 @@ The sample data has the following columns, and an example event is shown below:
   * regionIsoCode
   * regionName
   * user
- 
+
 ```json
 {
   "timestamp":"2015-09-12T20:03:45.018Z",

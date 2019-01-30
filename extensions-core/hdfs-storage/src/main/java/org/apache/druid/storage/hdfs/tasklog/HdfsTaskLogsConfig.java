@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.storage.hdfs.tasklog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;

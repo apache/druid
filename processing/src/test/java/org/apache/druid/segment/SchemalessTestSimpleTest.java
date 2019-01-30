@@ -57,6 +57,7 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -84,8 +85,8 @@ public class SchemalessTestSimpleTest
       final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
       final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
       argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null), false});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, persistedIncrementalIndex), false});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedIncrementalIndex), true});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(persistedIncrementalIndex, null), false});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(mergedIncrementalIndex, null), true});
     }
     return argumentArrays;
   }
@@ -167,6 +168,7 @@ public class SchemalessTestSimpleTest
 
   //  @Test TODO: Handling of null values is inconsistent right now, need to make it all consistent and re-enable test
   // TODO: Complain to Eric when you see this.  It shouldn't be like this...
+  @Ignore
   @SuppressWarnings("unused")
   public void testFullOnTopN()
   {

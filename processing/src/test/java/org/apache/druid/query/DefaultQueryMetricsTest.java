@@ -60,7 +60,7 @@ public class DefaultQueryMetricsTest
             null
         ))
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null))
@@ -75,7 +75,7 @@ public class DefaultQueryMetricsTest
     Assert.assertEquals("", actualEvent.get("service"));
     Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
     Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
-    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnInterval.getIntervals();
+    List<Interval> expectedIntervals = QueryRunnerTestHelper.fullOnIntervalSpec.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
     Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
@@ -152,10 +152,5 @@ public class DefaultQueryMetricsTest
     actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
     Assert.assertEquals("query/node/bytes", actualEvent.get("metric"));
     Assert.assertEquals(10L, actualEvent.get("value"));
-
-    queryMetrics.reportBackPressureTime(11000001).emit(serviceEmitter);
-    actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
-    Assert.assertEquals("query/node/backpressure", actualEvent.get("metric"));
-    Assert.assertEquals(11L, actualEvent.get("value"));
   }
 }

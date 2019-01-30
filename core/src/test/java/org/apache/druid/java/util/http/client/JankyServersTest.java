@@ -298,7 +298,7 @@ public class JankyServersTest
   public boolean isChannelClosedException(Throwable e)
   {
     return e instanceof ChannelException ||
-           (e instanceof IOException && e.getMessage().matches(".*Connection reset by peer.*"));
+           (e instanceof IOException && e.getMessage().contains("Connection reset by peer"));
   }
 
   @Test

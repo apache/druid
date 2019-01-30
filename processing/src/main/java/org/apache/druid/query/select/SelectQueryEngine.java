@@ -21,7 +21,6 @@ package org.apache.druid.query.select;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.DateTimes;
@@ -51,7 +50,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.timeline.DataSegmentUtils;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -194,8 +192,11 @@ public class SelectQueryEngine
       );
     }
 
-    // at the point where this code is called, only one datasource should exist.
-    String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+    Preconditions.checkArgument(
+        query.getDataSource().getNames().size() == 1,
+        "At the point where this code is called, only one data source should exist. Data sources: %s",
+        query.getDataSource().getNames()
+    );
 
     final Iterable<DimensionSpec> dims;
     if (query.getDimensions() == null || query.getDimensions().isEmpty()) {
@@ -214,7 +215,7 @@ public class SelectQueryEngine
     Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
 
     // should be rewritten with given interval
-    final String segmentId = DataSegmentUtils.withInterval(dataSource, segment.getIdentifier(), intervals.get(0));
+    final String segmentId = segment.getId().withInterval(intervals.get(0)).toString();
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
 

@@ -21,6 +21,7 @@ package org.apache.druid.tests.hadoop;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -60,12 +61,12 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
 
   private void loadData(String hadoopDir)
   {
-    String indexerSpec = "";
+    String indexerSpec;
 
     try {
       LOG.info("indexerFile name: [%s]", BATCH_TASK);
       indexerSpec = getTaskAsString(BATCH_TASK);
-      indexerSpec = indexerSpec.replaceAll("%%HADOOP_TEST_PATH%%", hadoopDir);
+      indexerSpec = StringUtils.replace(indexerSpec, "%%HADOOP_TEST_PATH%%", hadoopDir);
     }
     catch (Exception e) {
       LOG.error("could not read and modify indexer file: %s", e.getMessage());

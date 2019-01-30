@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -24,6 +25,7 @@ import com.google.common.base.Preconditions;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.druid.data.input.avro.AvroBytesDecoder;
 import org.apache.druid.data.input.avro.AvroParsers;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 
@@ -36,6 +38,7 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   private final ParseSpec parseSpec;
   private final AvroBytesDecoder avroBytesDecoder;
   private final ObjectFlattener<GenericRecord> avroFlattener;
+  private final MapInputRowParser mapParser;
 
   @JsonCreator
   public AvroStreamInputRowParser(
@@ -46,12 +49,13 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
     this.parseSpec = Preconditions.checkNotNull(parseSpec, "parseSpec");
     this.avroBytesDecoder = Preconditions.checkNotNull(avroBytesDecoder, "avroBytesDecoder");
     this.avroFlattener = AvroParsers.makeFlattener(parseSpec, false, false);
+    this.mapParser = new MapInputRowParser(parseSpec);
   }
 
   @Override
   public List<InputRow> parseBatch(ByteBuffer input)
   {
-    return AvroParsers.parseGenericRecord(avroBytesDecoder.parse(input), parseSpec, avroFlattener);
+    return AvroParsers.parseGenericRecord(avroBytesDecoder.parse(input), mapParser, avroFlattener);
   }
 
   @JsonProperty

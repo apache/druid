@@ -27,6 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -45,6 +46,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.Closeable;
 import java.io.File;
@@ -99,6 +101,9 @@ public class SegmentGenerator implements Closeable
           case LONG:
             dimensions.add(new LongDimensionSchema(columnSchema.getName()));
             break;
+          case DOUBLE:
+            dimensions.add(new DoubleDimensionSchema(columnSchema.getName()));
+            break;
           case FLOAT:
             dimensions.add(new FloatDimensionSchema(columnSchema.getName()));
             break;
@@ -127,7 +132,7 @@ public class SegmentGenerator implements Closeable
       }
 
       if (rows.size() % MAX_ROWS_IN_MEMORY == 0) {
-        indexes.add(makeIndex(dataSegment.getIdentifier(), indexes.size(), rows, indexSchema));
+        indexes.add(makeIndex(dataSegment.getId(), indexes.size(), rows, indexSchema));
         rows.clear();
       }
     }
@@ -135,7 +140,7 @@ public class SegmentGenerator implements Closeable
     log.info("%,d/%,d rows generated.", numRows, numRows);
 
     if (rows.size() > 0) {
-      indexes.add(makeIndex(dataSegment.getIdentifier(), indexes.size(), rows, indexSchema));
+      indexes.add(makeIndex(dataSegment.getId(), indexes.size(), rows, indexSchema));
       rows.clear();
     }
 
@@ -177,7 +182,7 @@ public class SegmentGenerator implements Closeable
   }
 
   private QueryableIndex makeIndex(
-      final String identifier,
+      final SegmentId identifier,
       final int indexNumber,
       final List<InputRow> rows,
       final IncrementalIndexSchema indexSchema
@@ -186,7 +191,7 @@ public class SegmentGenerator implements Closeable
     return IndexBuilder
         .create()
         .schema(indexSchema)
-        .tmpDir(new File(new File(tempDir, identifier), String.valueOf(indexNumber)))
+        .tmpDir(new File(new File(tempDir, identifier.toString()), String.valueOf(indexNumber)))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .rows(rows)
         .buildMMappedIndex();

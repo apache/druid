@@ -19,10 +19,12 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -30,6 +32,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -66,7 +69,8 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
   NewestSegmentFirstIterator(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources
+      Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
+      Map<String, List<Interval>> skipIntervals
   )
   {
     this.compactionConfigs = compactionConfigs;
@@ -79,8 +83,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final DataSourceCompactionConfig config = compactionConfigs.get(dataSource);
 
       if (config != null && !timeline.isEmpty()) {
-        final Interval searchInterval = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest());
-        timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchInterval));
+        final List<Interval> searchIntervals = findInitialSearchInterval(timeline, config.getSkipOffsetFromLatest(), skipIntervals.get(dataSource));
+        if (!searchIntervals.isEmpty()) {
+          timelineIterators.put(dataSource, new CompactibleTimelineObjectHolderCursor(timeline, searchIntervals));
+        }
       }
     }
 
@@ -168,7 +174,7 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
         config
     );
 
-    if (segmentsToCompact.getSize() > 1) {
+    if (segmentsToCompact.getNumSegments() > 1) {
       queue.add(new QueueEntry(segmentsToCompact.segments));
     }
   }
@@ -183,19 +189,22 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     CompactibleTimelineObjectHolderCursor(
         VersionedIntervalTimeline<String, DataSegment> timeline,
-        Interval totalIntervalToSearch
+        List<Interval> totalIntervalsToSearch
     )
     {
-      this.holders = timeline
-          .lookup(totalIntervalToSearch)
+      this.holders = totalIntervalsToSearch
           .stream()
-          .filter(holder -> {
-            final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject().iterator());
-            final long partitionBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
-            return chunks.size() > 0
-                   && partitionBytes > 0
-                   && totalIntervalToSearch.contains(chunks.get(0).getObject().getInterval());
-          })
+          .flatMap(interval -> timeline
+              .lookup(interval)
+              .stream()
+              .filter(holder -> {
+                final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject().iterator());
+                final long partitionBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
+                return chunks.size() > 0
+                       && partitionBytes > 0
+                       && interval.contains(chunks.get(0).getObject().getInterval());
+              })
+          )
           .collect(Collectors.toList());
     }
 
@@ -247,13 +256,12 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     final boolean keepSegmentGranularity = config.isKeepSegmentGranularity();
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
     final int maxNumSegmentsToCompact = config.getMaxNumSegmentsToCompact();
-    final List<DataSegment> segmentsToCompact = new ArrayList<>();
-    long totalSegmentsToCompactBytes = 0;
+    final SegmentsToCompact segmentsToCompact = new SegmentsToCompact();
 
     // Finds segments to compact together while iterating timeline from latest to oldest
     while (compactibleTimelineObjectHolderCursor.hasNext()
-           && totalSegmentsToCompactBytes < inputSegmentSize
-           && segmentsToCompact.size() < maxNumSegmentsToCompact) {
+           && segmentsToCompact.getTotalSize() < inputSegmentSize
+           && segmentsToCompact.getNumSegments() < maxNumSegmentsToCompact) {
       final TimelineObjectHolder<String, DataSegment> timeChunkHolder = Preconditions.checkNotNull(
           compactibleTimelineObjectHolderCursor.get(),
           "timelineObjectHolder"
@@ -261,23 +269,39 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(timeChunkHolder.getObject().iterator());
       final long timeChunkSizeBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
 
-      // The segments in a holder should be added all together or not.
-      if (SegmentCompactorUtil.isCompactibleSize(inputSegmentSize, totalSegmentsToCompactBytes, timeChunkSizeBytes)
-          && SegmentCompactorUtil.isCompactibleNum(maxNumSegmentsToCompact, segmentsToCompact.size(), chunks.size())
-          && (!keepSegmentGranularity || segmentsToCompact.size() == 0)) {
-        chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
-        totalSegmentsToCompactBytes += timeChunkSizeBytes;
+      final boolean isSameOrAbuttingInterval;
+      final Interval lastInterval = segmentsToCompact.getIntervalOfLastSegment();
+      if (lastInterval == null) {
+        isSameOrAbuttingInterval = true;
       } else {
-        if (segmentsToCompact.size() > 1) {
-          // We found some segmens to compact and cannot add more. End here.
-          return new SegmentsToCompact(segmentsToCompact);
-        } else {
-          // (*) Discard segments found so far because we can't compact them anyway.
-          final int numSegmentsToCompact = segmentsToCompact.size();
-          segmentsToCompact.clear();
+        final Interval currentInterval = chunks.get(0).getObject().getInterval();
+        isSameOrAbuttingInterval = currentInterval.isEqual(lastInterval) || currentInterval.abuts(lastInterval);
+      }
 
+      // The segments in a holder should be added all together or not.
+      final boolean isCompactibleSize = SegmentCompactorUtil.isCompactibleSize(
+          inputSegmentSize,
+          segmentsToCompact.getTotalSize(),
+          timeChunkSizeBytes
+      );
+      final boolean isCompactibleNum = SegmentCompactorUtil.isCompactibleNum(
+          maxNumSegmentsToCompact,
+          segmentsToCompact.getNumSegments(),
+          chunks.size()
+      );
+      if (isCompactibleSize
+          && isCompactibleNum
+          && isSameOrAbuttingInterval
+          && (!keepSegmentGranularity || segmentsToCompact.isEmpty())) {
+        chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
+      } else {
+        if (segmentsToCompact.getNumSegments() > 1) {
+          // We found some segmens to compact and cannot add more. End here.
+          return segmentsToCompact;
+        } else {
           if (!SegmentCompactorUtil.isCompactibleSize(inputSegmentSize, 0, timeChunkSizeBytes)) {
             final DataSegment segment = chunks.get(0).getObject();
+            segmentsToCompact.clear();
             log.warn(
                 "shardSize[%d] for dataSource[%s] and interval[%s] is larger than inputSegmentSize[%d]."
                 + " Continue to the next shard.",
@@ -288,9 +312,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
             );
           } else if (maxNumSegmentsToCompact < chunks.size()) {
             final DataSegment segment = chunks.get(0).getObject();
+            segmentsToCompact.clear();
             log.warn(
                 "The number of segments[%d] for dataSource[%s] and interval[%s] is larger than "
-                + "numTargetCompactSegments[%d]. If you see lots of shards are being skipped due to too many "
+                + "maxNumSegmentsToCompact[%d]. If you see lots of shards are being skipped due to too many "
                 + "segments, consider increasing 'numTargetCompactionSegments' and "
                 + "'druid.indexer.runner.maxZnodeBytes'. Continue to the next shard.",
                 chunks.size(),
@@ -299,18 +324,19 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
                 maxNumSegmentsToCompact
             );
           } else {
-            if (numSegmentsToCompact == 1) {
+            if (segmentsToCompact.getNumSegments() == 1) {
               // We found a segment which is smaller than targetCompactionSize but too large to compact with other
               // segments. Skip this one.
-              // Note that segmentsToCompact is already cleared at (*).
+              segmentsToCompact.clear();
               chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
-              totalSegmentsToCompactBytes = timeChunkSizeBytes;
             } else {
               throw new ISE(
-                  "Cannot compact segments[%s]. shardBytes[%s], numSegments[%s]",
+                  "Cannot compact segments[%s]. shardBytes[%s], numSegments[%s] "
+                  + "with current segmentsToCompact[%s]",
                   chunks.stream().map(PartitionChunk::getObject).collect(Collectors.toList()),
                   timeChunkSizeBytes,
-                  chunks.size()
+                  chunks.size(),
+                  segmentsToCompact
               );
             }
           }
@@ -320,24 +346,26 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       compactibleTimelineObjectHolderCursor.next();
     }
 
-    if (segmentsToCompact.size() > 1) {
-      return new SegmentsToCompact(segmentsToCompact);
-    } else {
-      return new SegmentsToCompact(Collections.emptyList());
+    if (segmentsToCompact.getNumSegments() == 1) {
+      // Don't compact a single segment
+      segmentsToCompact.clear();
     }
+
+    return segmentsToCompact;
   }
 
   /**
    * Returns the initial searchInterval which is {@code (timeline.first().start, timeline.last().end - skipOffset)}.
    *
-   * @param timeline   timeline of a dataSource
-   * @param skipOffset skipOFfset
+   * @param timeline      timeline of a dataSource
+   * @param skipIntervals intervals to skip
    *
-   * @return found searchInterval
+   * @return found interval to search or null if it's not found
    */
-  private static Interval findInitialSearchInterval(
+  private static List<Interval> findInitialSearchInterval(
       VersionedIntervalTimeline<String, DataSegment> timeline,
-      Period skipOffset
+      Period skipOffset,
+      @Nullable List<Interval> skipIntervals
   )
   {
     Preconditions.checkArgument(timeline != null && !timeline.isEmpty(), "timeline should not be null or empty");
@@ -345,29 +373,118 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
     final TimelineObjectHolder<String, DataSegment> first = Preconditions.checkNotNull(timeline.first(), "first");
     final TimelineObjectHolder<String, DataSegment> last = Preconditions.checkNotNull(timeline.last(), "last");
-
-    final Interval skipInterval = new Interval(skipOffset, last.getInterval().getEnd());
-
-    final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(
-        new Interval(first.getInterval().getStart(), last.getInterval().getEnd().minus(skipOffset))
+    final List<Interval> fullSkipIntervals = sortAndAddSkipIntervalFromLatest(
+        last.getInterval().getEnd(),
+        skipOffset,
+        skipIntervals
     );
 
-    final List<DataSegment> segments = holders
-        .stream()
-        .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
-        .map(PartitionChunk::getObject)
-        .filter(segment -> !segment.getInterval().overlaps(skipInterval))
-        .sorted((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval()))
-        .collect(Collectors.toList());
+    final Interval totalInterval = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
+    final List<Interval> filteredInterval = filterSkipIntervals(totalInterval, fullSkipIntervals);
+    final List<Interval> searchIntervals = new ArrayList<>();
 
-    if (segments.isEmpty()) {
-      return new Interval(first.getInterval().getStart(), first.getInterval().getStart());
-    } else {
-      return new Interval(
-          segments.get(0).getInterval().getStart(),
-          segments.get(segments.size() - 1).getInterval().getEnd()
+    for (Interval lookupInterval : filteredInterval) {
+      final List<TimelineObjectHolder<String, DataSegment>> holders = timeline.lookup(
+          new Interval(lookupInterval.getStart(), lookupInterval.getEnd())
       );
+
+      final List<DataSegment> segments = holders
+          .stream()
+          .flatMap(holder -> StreamSupport.stream(holder.getObject().spliterator(), false))
+          .map(PartitionChunk::getObject)
+          .filter(segment -> lookupInterval.contains(segment.getInterval()))
+          .sorted((s1, s2) -> Comparators.intervalsByStartThenEnd().compare(s1.getInterval(), s2.getInterval()))
+          .collect(Collectors.toList());
+
+      if (!segments.isEmpty()) {
+        searchIntervals.add(
+            new Interval(
+                segments.get(0).getInterval().getStart(),
+                segments.get(segments.size() - 1).getInterval().getEnd()
+            )
+        );
+      }
     }
+
+    return searchIntervals;
+  }
+
+  @VisibleForTesting
+  static List<Interval> sortAndAddSkipIntervalFromLatest(
+      DateTime latest,
+      Period skipOffset,
+      @Nullable List<Interval> skipIntervals
+  )
+  {
+    final List<Interval> nonNullSkipIntervals = skipIntervals == null
+                                                ? new ArrayList<>(1)
+                                                : new ArrayList<>(skipIntervals.size());
+
+    if (skipIntervals != null) {
+      final List<Interval> sortedSkipIntervals = new ArrayList<>(skipIntervals);
+      sortedSkipIntervals.sort(Comparators.intervalsByStartThenEnd());
+
+      final List<Interval> overlapIntervals = new ArrayList<>();
+      final Interval skipFromLatest = new Interval(skipOffset, latest);
+
+      for (Interval interval : sortedSkipIntervals) {
+        if (interval.overlaps(skipFromLatest)) {
+          overlapIntervals.add(interval);
+        } else {
+          nonNullSkipIntervals.add(interval);
+        }
+      }
+
+      if (!overlapIntervals.isEmpty()) {
+        overlapIntervals.add(skipFromLatest);
+        nonNullSkipIntervals.add(JodaUtils.umbrellaInterval(overlapIntervals));
+      } else {
+        nonNullSkipIntervals.add(skipFromLatest);
+      }
+    } else {
+      final Interval skipFromLatest = new Interval(skipOffset, latest);
+      nonNullSkipIntervals.add(skipFromLatest);
+    }
+
+    return nonNullSkipIntervals;
+  }
+
+  /**
+   * Returns a list of intervals which are contained by totalInterval but don't ovarlap with skipIntervals.
+   *
+   * @param totalInterval total interval
+   * @param skipIntervals intervals to skip. This should be sorted by {@link Comparators#intervalsByStartThenEnd()}.
+   */
+  @VisibleForTesting
+  static List<Interval> filterSkipIntervals(Interval totalInterval, List<Interval> skipIntervals)
+  {
+    final List<Interval> filteredIntervals = new ArrayList<>(skipIntervals.size() + 1);
+
+    DateTime remainingStart = totalInterval.getStart();
+    DateTime remainingEnd = totalInterval.getEnd();
+    for (Interval skipInterval : skipIntervals) {
+      if (skipInterval.getStart().isBefore(remainingStart) && skipInterval.getEnd().isAfter(remainingStart)) {
+        remainingStart = skipInterval.getEnd();
+      } else if (skipInterval.getStart().isBefore(remainingEnd) && skipInterval.getEnd().isAfter(remainingEnd)) {
+        remainingEnd = skipInterval.getStart();
+      } else if (!remainingStart.isAfter(skipInterval.getStart()) && !remainingEnd.isBefore(skipInterval.getEnd())) {
+        filteredIntervals.add(new Interval(remainingStart, skipInterval.getStart()));
+        remainingStart = skipInterval.getEnd();
+      } else {
+        // Ignore this skipInterval
+        log.warn(
+            "skipInterval[%s] is not contained in remainingInterval[%s]",
+            skipInterval,
+            new Interval(remainingStart, remainingEnd)
+        );
+      }
+    }
+
+    if (!remainingStart.equals(remainingEnd)) {
+      filteredIntervals.add(new Interval(remainingStart, remainingEnd));
+    }
+
+    return filteredIntervals;
   }
 
   private static class QueueEntry
@@ -394,16 +511,54 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
 
   private static class SegmentsToCompact
   {
-    private final List<DataSegment> segments;
+    private final List<DataSegment> segments = new ArrayList<>();
+    private long totalSize;
 
-    private SegmentsToCompact(List<DataSegment> segments)
+    private void add(DataSegment segment)
     {
-      this.segments = segments;
+      segments.add(segment);
+      totalSize += segment.getSize();
     }
 
-    private int getSize()
+    private boolean isEmpty()
+    {
+      Preconditions.checkState((totalSize == 0) == segments.isEmpty());
+      return segments.isEmpty();
+    }
+
+    @Nullable
+    private Interval getIntervalOfLastSegment()
+    {
+      if (segments.isEmpty()) {
+        return null;
+      } else {
+        return segments.get(segments.size() - 1).getInterval();
+      }
+    }
+
+    private int getNumSegments()
     {
       return segments.size();
+    }
+
+    private long getTotalSize()
+    {
+      return totalSize;
+    }
+
+    private void clear()
+    {
+      segments.clear();
+      totalSize = 0;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "SegmentsToCompact{" +
+             "segments=" + segments +
+             ", totalSize=" + totalSize +
+             '}';
     }
   }
 }

@@ -94,8 +94,8 @@ public class IndexMergerV9WithSpatialIndexTest
       final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMergerV9, indexIO);
       final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec, indexMergerV9, indexIO);
       argumentArrays.add(new Object[] {new IncrementalIndexSegment(rtIndex, null)});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mMappedTestIndex)});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedRealtimeIndex)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(mMappedTestIndex, null)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(mergedRealtimeIndex, null)});
     }
     return argumentArrays;
   }

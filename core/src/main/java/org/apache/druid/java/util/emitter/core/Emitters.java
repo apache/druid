@@ -50,7 +50,7 @@ public class Emitters
       Lifecycle lifecycle
   )
   {
-    Map<String, Object> jsonified = new HashMap<>();
+    Map<String, Object> jsonified;
     if (props.getProperty(LOG_EMITTER_PROP) != null) {
       jsonified = makeLoggingMap(props);
       jsonified.put("type", "logging");

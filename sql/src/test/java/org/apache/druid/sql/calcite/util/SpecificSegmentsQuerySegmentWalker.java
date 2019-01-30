@@ -23,9 +23,9 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -75,9 +75,9 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryableIndex index
   )
   {
-    final Segment segment = new QueryableIndexSegment(descriptor.getIdentifier(), index);
+    final Segment segment = new QueryableIndexSegment(index, descriptor.getId());
     if (!timelines.containsKey(descriptor.getDataSource())) {
-      timelines.put(descriptor.getDataSource(), new VersionedIntervalTimeline<String, Segment>(Ordering.natural()));
+      timelines.put(descriptor.getDataSource(), new VersionedIntervalTimeline<>(Ordering.natural()));
     }
 
     final VersionedIntervalTimeline<String, Segment> timeline = timelines.get(descriptor.getDataSource());
@@ -224,7 +224,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     return new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 FunctionalIterable
                     .create(specs)
                     .transformCat(

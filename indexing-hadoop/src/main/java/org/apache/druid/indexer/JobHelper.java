@@ -59,8 +59,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -347,6 +349,24 @@ public class JobHelper
     }
   }
 
+  public static void writeJobIdToFile(String hadoopJobIdFileName, String hadoopJobId)
+  {
+    if (hadoopJobId != null && hadoopJobIdFileName != null) {
+      try {
+        HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
+            new OutputStreamWriter(new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
+            hadoopJobId
+        );
+        log.info("MR job id [%s] is written to the file [%s]", hadoopJobId, hadoopJobIdFileName);
+      }
+      catch (IOException e) {
+        log.warn(e, "Error writing job id [%s] to the file [%s]", hadoopJobId, hadoopJobIdFileName);
+      }
+    } else {
+      log.info("Either job id or file name is null for the submitted job. Skipping writing the file [%s]", hadoopJobIdFileName);
+    }
+  }
+
   public static boolean runSingleJob(Jobby job, HadoopDruidIndexerConfig config)
   {
     boolean succeeded = job.run();
@@ -490,7 +510,6 @@ public class JobHelper
                   progressable
               )) {
                 HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(descriptorOut, segment);
-                descriptorOut.flush();
               }
             }
             catch (RuntimeException | IOException ex) {
@@ -766,7 +785,11 @@ public class JobHelper
       // getHdfsStorageDir. But that wouldn't fix this issue for people who already have segments with ":".
       // Because of this we just URL encode the : making everything work as it should.
       segmentLocURI = URI.create(
-          StringUtils.format("gs://%s/%s", loadSpec.get("bucket"), loadSpec.get("path").toString().replace(":", "%3A"))
+          StringUtils.format(
+              "gs://%s/%s",
+              loadSpec.get("bucket"),
+              StringUtils.replaceChar(loadSpec.get("path").toString(), ':', "%3A")
+          )
       );
     } else if ("local".equals(type)) {
       try {

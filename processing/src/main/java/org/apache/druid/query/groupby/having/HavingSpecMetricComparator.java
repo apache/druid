@@ -73,6 +73,14 @@ class HavingSpecMetricComparator
           double d = Double.parseDouble(metricValueStr);
           return Double.compare(d, value.doubleValue());
         }
+      } else if (aggregators != null && aggregators.containsKey(aggregationName)) {
+        // Use custom comparator in case of custom aggregation types
+        AggregatorFactory aggregatorFactory = aggregators.get(aggregationName);
+        return aggregatorFactory.getComparator()
+                                .compare(
+                                    aggregatorFactory.deserialize(metricValueObj),
+                                    aggregatorFactory.deserialize(value)
+                                );
       } else {
         throw new ISE("Unknown type of metric value: %s", metricValueObj);
       }

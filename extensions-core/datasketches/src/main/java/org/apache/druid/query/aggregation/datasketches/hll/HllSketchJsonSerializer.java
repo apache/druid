@@ -19,12 +19,12 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.yahoo.sketches.hll.HllSketch;
+
+import java.io.IOException;
 
 public class HllSketchJsonSerializer extends JsonSerializer<HllSketch>
 {

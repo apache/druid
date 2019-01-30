@@ -24,10 +24,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
@@ -53,6 +53,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.LogicalSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -80,7 +81,7 @@ public class SegmentMetadataQueryTest
 
   @SuppressWarnings("unchecked")
   public static QueryRunner makeMMappedQueryRunner(
-      String segmentId,
+      SegmentId segmentId,
       boolean rollup,
       QueryRunnerFactory factory
   )
@@ -89,14 +90,14 @@ public class SegmentMetadataQueryTest
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
         segmentId,
-        new QueryableIndexSegment(segmentId, index),
+        new QueryableIndexSegment(index, segmentId),
         null
     );
   }
 
   @SuppressWarnings("unchecked")
   public static QueryRunner makeIncrementalIndexQueryRunner(
-      String segmentId,
+      SegmentId segmentId,
       boolean rollup,
       QueryRunnerFactory factory
   )
@@ -142,8 +143,8 @@ public class SegmentMetadataQueryTest
       boolean differentIds
   )
   {
-    final String id1 = differentIds ? "testSegment1" : "testSegment";
-    final String id2 = differentIds ? "testSegment2" : "testSegment";
+    final SegmentId id1 = SegmentId.dummy(differentIds ? "testSegment1" : "testSegment");
+    final SegmentId id2 = SegmentId.dummy(differentIds ? "testSegment2" : "testSegment");
     this.runner1 = mmap1
                    ? makeMMappedQueryRunner(id1, rollup1, FACTORY)
                    : makeIncrementalIndexQueryRunner(id1, rollup1, FACTORY);
@@ -169,7 +170,7 @@ public class SegmentMetadataQueryTest
                       .build();
 
     expectedSegmentAnalysis1 = new SegmentAnalysis(
-        id1,
+        id1.toString(),
         ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         ImmutableMap.of(
             "__time",
@@ -210,7 +211,7 @@ public class SegmentMetadataQueryTest
         null
     );
     expectedSegmentAnalysis2 = new SegmentAnalysis(
-        id2,
+        id2.toString(),
         ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
         ImmutableMap.of(
             "__time",
@@ -266,7 +267,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithRollupMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -304,7 +305,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -334,7 +335,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithHasMultipleValuesMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -372,7 +373,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -402,7 +403,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithComplexColumnMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -440,7 +441,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -517,7 +518,7 @@ public class SegmentMetadataQueryTest
   )
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         ImmutableList.of(expectedSegmentAnalysis1.getIntervals().get(0)),
         ImmutableMap.of(
             "__time",
@@ -557,7 +558,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -581,7 +582,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithNoAnalysisTypesMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -609,7 +610,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -643,7 +644,7 @@ public class SegmentMetadataQueryTest
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -671,7 +672,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -701,7 +702,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithTimestampSpecMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -729,7 +730,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -759,7 +760,7 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQueryWithQueryGranularityMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : "testSegment",
+        differentIds ? "merged" : SegmentId.dummy("testSegment").toString(),
         null,
         ImmutableMap.of(
             "placement",
@@ -787,7 +788,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 Lists.newArrayList(
                     toolChest.preMergeQueryDecoration(runner1),
                     toolChest.preMergeQueryDecoration(runner2)
@@ -832,7 +833,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
-                MoreExecutors.sameThreadExecutor(),
+                Execs.directExecutor(),
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
                 //https://github.com/apache/incubator-druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare

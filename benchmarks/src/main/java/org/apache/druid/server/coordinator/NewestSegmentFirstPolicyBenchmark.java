@@ -42,6 +42,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -96,6 +97,7 @@ public class NewestSegmentFirstPolicyBenchmark
               null,
               null,
               null,
+              null,
               null
           )
       );
@@ -137,7 +139,7 @@ public class NewestSegmentFirstPolicyBenchmark
   @Benchmark
   public void measureNewestSegmentFirstPolicy(Blackhole blackhole)
   {
-    final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources);
+    final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources, Collections.emptyMap());
     for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
       final List<DataSegment> segments = iterator.next();
       blackhole.consume(segments);

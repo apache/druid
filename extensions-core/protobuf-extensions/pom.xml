@@ -55,6 +55,12 @@
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java-util</artifactId>
       <version>${protobuf.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.github.os72</groupId>
@@ -75,6 +81,7 @@
         <artifactId>maven-shade-plugin</artifactId>
         <version>3.0.0</version>
         <configuration>
+          <createDependencyReducedPom>false</createDependencyReducedPom>
           <relocations>
             <relocation>
               <pattern>com.google.protobuf</pattern>

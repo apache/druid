@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -48,6 +47,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -80,6 +80,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
@@ -343,50 +344,49 @@ public class DumpSegment extends GuiceRunnable
           @Override
           public Object apply(final OutputStream out)
           {
-            try {
-              final JsonGenerator jg = objectMapper.getFactory().createGenerator(out);
-
+            try (final JsonGenerator jg = objectMapper.getFactory().createGenerator(out)) {
               jg.writeStartObject();
-              jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
-              jg.writeFieldName("bitmaps");
-              jg.writeStartObject();
+              {
+                jg.writeObjectField("bitmapSerdeFactory", bitmapSerdeFactory);
+                jg.writeFieldName("bitmaps");
+                jg.writeStartObject();
+                {
+                  for (final String columnName : columnNames) {
+                    final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                    final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
 
-              for (final String columnName : columnNames) {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
-                final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-
-                if (bitmapIndex == null) {
-                  jg.writeNullField(columnName);
-                } else {
-                  jg.writeFieldName(columnName);
-                  jg.writeStartObject();
-                  for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
-                    String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
-                    if (val != null) {
-                      final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-                      if (decompressBitmaps) {
-                        jg.writeStartArray();
-                        final IntIterator iterator = bitmap.iterator();
-                        while (iterator.hasNext()) {
-                          final int rowNum = iterator.next();
-                          jg.writeNumber(rowNum);
-                        }
-                        jg.writeEndArray();
-                      } else {
-                        byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
-                        if (bytes != null) {
-                          jg.writeBinary(bytes);
+                    if (bitmapIndex == null) {
+                      jg.writeNullField(columnName);
+                    } else {
+                      jg.writeFieldName(columnName);
+                      jg.writeStartObject();
+                      for (int i = 0; i < bitmapIndex.getCardinality(); i++) {
+                        String val = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(i));
+                        if (val != null) {
+                          final ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+                          if (decompressBitmaps) {
+                            jg.writeStartArray();
+                            final IntIterator iterator = bitmap.iterator();
+                            while (iterator.hasNext()) {
+                              final int rowNum = iterator.next();
+                              jg.writeNumber(rowNum);
+                            }
+                            jg.writeEndArray();
+                          } else {
+                            byte[] bytes = bitmapSerdeFactory.getObjectStrategy().toBytes(bitmap);
+                            if (bytes != null) {
+                              jg.writeBinary(bytes);
+                            }
+                          }
                         }
                       }
+                      jg.writeEndObject();
                     }
                   }
-                  jg.writeEndObject();
                 }
+                jg.writeEndObject();
               }
-
               jg.writeEndObject();
-              jg.writeEndObject();
-              jg.close();
             }
             catch (IOException e) {
               throw Throwables.propagate(e);
@@ -483,10 +483,10 @@ public class DumpSegment extends GuiceRunnable
   {
     final QueryRunnerFactoryConglomerate conglomerate = injector.getInstance(QueryRunnerFactoryConglomerate.class);
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment("segment", index));
+    final QueryRunner<T> runner = factory.createRunner(new QueryableIndexSegment(index, SegmentId.dummy("segment")));
     return factory
         .getToolchest()
-        .mergeResults(factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner)))
+        .mergeResults(factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner)))
         .run(QueryPlus.wrap(query), new HashMap<>());
   }
 

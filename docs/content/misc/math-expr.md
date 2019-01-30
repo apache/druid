@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "Druid Expressions"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # Druid Expressions
 
@@ -40,6 +60,7 @@ The following built-in functions are available.
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |case_searched|case_searched(expr1, result1, \[\[expr2, result2, ...\], else-result\])|
 |case_simple|case_simple(expr, value1, result1, \[\[value2, result2, ...\], else-result\])|
+|bloom_filter_test|bloom_filter_test(expr, filter) tests the value of 'expr' against 'filter', a bloom filter serialized as a base64 string. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
 
 ## String functions
 
@@ -52,7 +73,7 @@ The following built-in functions are available.
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
 |strlen|strlen(expr) returns length of a string in UTF-16 code units|
-|strpos|strpos(haystack, needle) returns the position of the needle within the haystack, with indexes starting from 0. If the needle is not found then the function returns -1.|
+|strpos|strpos(haystack, needle[, fromIndex]) returns the position of the needle within the haystack, with indexes starting from 0. The search will begin at fromIndex, or 0 if fromIndex is not specified. If the needle is not found then the function returns -1.|
 |trim|trim(expr[, chars]) remove leading and trailing characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
 |ltrim|ltrim(expr[, chars]) remove leading characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
 |rtrim|rtrim(expr[, chars]) remove trailing characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|

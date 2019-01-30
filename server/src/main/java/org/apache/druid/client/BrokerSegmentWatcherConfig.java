@@ -33,6 +33,9 @@ public class BrokerSegmentWatcherConfig
   @JsonProperty
   private Set<String> watchedDataSources = null;
 
+  @JsonProperty
+  private boolean awaitInitializationOnStart = true;
+
   public Set<String> getWatchedTiers()
   {
     return watchedTiers;
@@ -41,5 +44,10 @@ public class BrokerSegmentWatcherConfig
   public Set<String> getWatchedDataSources()
   {
     return watchedDataSources;
+  }
+
+  public boolean isAwaitInitializationOnStart()
+  {
+    return awaitInitializationOnStart;
   }
 }

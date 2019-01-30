@@ -79,6 +79,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     hasFilters(query);
     duration(query);
     queryId(query);
+    sqlQueryId(query);
   }
 
   @Override
@@ -119,6 +120,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public void queryId(QueryType query)
   {
     setDimension(DruidMetrics.ID, StringUtils.nullToEmptyNonDruidDataString(query.getId()));
+  }
+
+  @Override
+  public void sqlQueryId(QueryType query)
+  {
+    // Emit nothing by default.
   }
 
   @Override
@@ -225,6 +232,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     return reportMillisTimeMetric("query/segmentAndCache/time", timeNs);
   }
 
+  @Deprecated
   @Override
   public QueryMetrics<QueryType> reportIntervalChunkTime(long timeNs)
   {
@@ -246,7 +254,8 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public QueryMetrics<QueryType> reportBackPressureTime(long timeNs)
   {
-    return reportMillisTimeMetric("query/node/backpressure", timeNs);
+    // Don't emit by default.
+    return this;
   }
 
   @Override

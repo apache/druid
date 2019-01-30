@@ -44,6 +44,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -106,6 +107,13 @@ public class ITKafkaTest extends AbstractIndexerTest
   @Inject
   private IntegrationTestingConfig config;
 
+  private String fullDatasourceName;
+
+  @BeforeSuite
+  public void setFullDatasourceName()
+  {
+    fullDatasourceName = DATASOURCE + config.getExtraDatasourceNameSuffix();
+  }
   @Test
   public void testKafka()
   {
@@ -151,7 +159,7 @@ public class ITKafkaTest extends AbstractIndexerTest
         new StringSerializer()
     );
 
-    DateTimeZone zone = DateTimes.inferTzfromString("UTC");
+    DateTimeZone zone = DateTimes.inferTzFromString("UTC");
     // format for putting into events
     DateTimeFormatter event_fmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
@@ -197,18 +205,18 @@ public class ITKafkaTest extends AbstractIndexerTest
       consumerProperties.put("zookeeper.connection.timeout.ms", "15000");
       consumerProperties.put("zookeeper.sync.time.ms", "5000");
       consumerProperties.put("group.id", Long.toString(System.currentTimeMillis()));
-      consumerProperties.put("zookeeper.sync.time.ms", "5000");
       consumerProperties.put("fetch.message.max.bytes", "1048586");
       consumerProperties.put("auto.offset.reset", "smallest");
       consumerProperties.put("auto.commit.enable", "false");
 
       addFilteredProperties(consumerProperties);
 
-      indexerSpec = getTaskAsString(INDEXER_FILE)
-          .replaceAll("%%DATASOURCE%%", DATASOURCE)
-          .replaceAll("%%TOPIC%%", TOPIC_NAME)
-          .replaceAll("%%COUNT%%", Integer.toString(num_events))
-          .replaceAll("%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
+      indexerSpec = getTaskAsString(INDEXER_FILE);
+      indexerSpec = StringUtils.replace(indexerSpec, "%%DATASOURCE%%", fullDatasourceName);
+      indexerSpec = StringUtils.replace(indexerSpec, "%%TOPIC%%", TOPIC_NAME);
+      indexerSpec = StringUtils.replace(indexerSpec, "%%COUNT%%", Integer.toString(num_events));
+      String consumerPropertiesJson = jsonMapper.writeValueAsString(consumerProperties);
+      indexerSpec = StringUtils.replace(indexerSpec, "%%CONSUMER_PROPERTIES%%", consumerPropertiesJson);
 
       LOG.info("indexerFile: [%s]\n", indexerSpec);
     }
@@ -233,7 +241,7 @@ public class ITKafkaTest extends AbstractIndexerTest
             @Override
             public Boolean call()
             {
-              return coordinator.areSegmentsLoaded(DATASOURCE);
+              return coordinator.areSegmentsLoaded(fullDatasourceName);
             }
           },
           true,
@@ -249,31 +257,32 @@ public class ITKafkaTest extends AbstractIndexerTest
     segmentsExist = true;
 
     // put the timestamps into the query structure
-    String query_response_template = null;
+    String queryResponseTemplate;
     InputStream is = ITKafkaTest.class.getResourceAsStream(QUERIES_FILE);
     if (null == is) {
       throw new ISE("could not open query file: %s", QUERIES_FILE);
     }
 
     try {
-      query_response_template = IOUtils.toString(is, "UTF-8");
+      queryResponseTemplate = IOUtils.toString(is, "UTF-8");
     }
     catch (IOException e) {
       throw new ISE(e, "could not read query file: %s", QUERIES_FILE);
     }
 
-    String queryStr = query_response_template
-        .replaceAll("%%DATASOURCE%%", DATASOURCE)
-        // time boundary
-        .replace("%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-        .replace("%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast))
-        .replace("%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst))
-        // time series
-        .replace("%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst))
-        .replace("%%TIMESERIES_QUERY_END%%", INTERVAL_FMT.print(dtFirst.plusMinutes(MINUTES_TO_SEND + 2)))
-        .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
-        .replace("%%TIMESERIES_ADDED%%", Integer.toString(added))
-        .replace("%%TIMESERIES_NUMEVENTS%%", Integer.toString(num_events));
+    String queryStr = queryResponseTemplate;
+    queryStr = StringUtils.replace(queryStr, "%%DATASOURCE%%", fullDatasourceName);
+    // time boundary
+    queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
+    queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast));
+    queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MINTIME%%", TIMESTAMP_FMT.print(dtFirst));
+    // time series
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_QUERY_START%%", INTERVAL_FMT.print(dtFirst));
+    String queryEnd = INTERVAL_FMT.print(dtFirst.plusMinutes(MINUTES_TO_SEND + 2));
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_QUERY_END%%", queryEnd);
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_ADDED%%", Integer.toString(added));
+    queryStr = StringUtils.replace(queryStr, "%%TIMESERIES_NUMEVENTS%%", Integer.toString(num_events));
 
     // this query will probably be answered from the realtime task
     try {
@@ -295,7 +304,7 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     // remove segments
     if (segmentsExist) {
-      unloadAndKillData(DATASOURCE);
+      unloadAndKillData(fullDatasourceName);
     }
   }
 

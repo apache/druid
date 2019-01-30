@@ -254,6 +254,11 @@ public class CachingQueryRunnerTest
       }
 
       @Override
+      public void close() throws IOException
+      {
+      }
+
+      @Override
       public CacheStats getStats()
       {
         return null;
@@ -271,12 +276,12 @@ public class CachingQueryRunnerTest
       }
     };
 
-    String segmentIdentifier = "segment";
+    String cacheId = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     CachingQueryRunner runner = new CachingQueryRunner(
-        segmentIdentifier,
+        cacheId,
         segmentDescriptor,
         objectMapper,
         cache,
@@ -308,7 +313,7 @@ public class CachingQueryRunnerTest
 
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
-        segmentIdentifier,
+        cacheId,
         segmentDescriptor,
         cacheStrategy.computeCacheKey(query)
     );
@@ -349,12 +354,12 @@ public class CachingQueryRunnerTest
   ) throws IOException
   {
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    String segmentIdentifier = "segment";
+    String cacheId = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
-        segmentIdentifier,
+        cacheId,
         segmentDescriptor,
         cacheStrategy.computeCacheKey(query)
     );
@@ -363,7 +368,7 @@ public class CachingQueryRunnerTest
     cache.put(cacheKey, toByteArray(Iterables.transform(expectedResults, cacheStrategy.prepareForSegmentLevelCache())));
 
     CachingQueryRunner runner = new CachingQueryRunner(
-        segmentIdentifier,
+        cacheId,
         segmentDescriptor,
         objectMapper,
         cache,

@@ -31,7 +31,6 @@ import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
 import com.yahoo.sketches.theta.Union;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -90,6 +89,7 @@ public class SketchHolder
 
   private static final Comparator<Memory> MEMORY_COMPARATOR = new Comparator<Memory>()
   {
+    @SuppressWarnings("SubtractionInCompareTo")
     @Override
     public int compare(Memory o1, Memory o2)
     {
@@ -222,7 +222,7 @@ public class SketchHolder
 
   private static Sketch deserializeFromBase64EncodedString(String str)
   {
-    return deserializeFromByteArray(Base64.decodeBase64(StringUtils.toUtf8(str)));
+    return deserializeFromByteArray(StringUtils.decodeBase64(StringUtils.toUtf8(str)));
   }
 
   private static Sketch deserializeFromByteArray(byte[] data)

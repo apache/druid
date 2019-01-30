@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.primitives.Longs;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.Result;
 import org.joda.time.DateTime;
 
@@ -110,10 +109,7 @@ public class SelectResultValueBuilder
 
   public Result<SelectResultValue> build()
   {
-    return new Result<SelectResultValue>(
-        timestamp,
-        new SelectResultValue(pagingIdentifiers, dimensions, metrics, getEventHolders())
-    );
+    return new Result<>(timestamp, new SelectResultValue(pagingIdentifiers, dimensions, metrics, getEventHolders()));
   }
 
   protected List<EventHolder> getEventHolders()
@@ -137,7 +133,7 @@ public class SelectResultValueBuilder
     protected Queue<EventHolder> instantiatePQueue()
     {
       int threshold = pagingSpec.getThreshold();
-      return MinMaxPriorityQueue.orderedBy(descending ? Comparators.inverse(comparator) : comparator)
+      return MinMaxPriorityQueue.orderedBy(descending ? comparator.reversed() : comparator)
                                 .maximumSize(threshold > 0 ? threshold : Integer.MAX_VALUE)
                                 .create();
     }

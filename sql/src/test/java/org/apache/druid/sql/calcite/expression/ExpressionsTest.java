@@ -66,13 +66,13 @@ import java.util.Map;
 
 public class ExpressionsTest extends CalciteTestBase
 {
-  private static final DateTimeZone LOS_ANGELES = DateTimes.inferTzfromString("America/Los_Angeles");
 
   private final PlannerContext plannerContext = PlannerContext.create(
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      CalciteTests.REGULAR_USER_AUTH_RESULT
   );
   private final RowSignature rowSignature = RowSignature
       .builder()
@@ -195,6 +195,42 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         DruidExpression.fromExpression("(strpos(null,'ax') + 1)"),
         NullHandling.replaceWithDefault() ? 0L : null
+    );
+  }
+
+  @Test
+  public void testPosition()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',0) + 1)"),
+        2L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s"),
+            rexBuilder.makeExactLiteral(BigDecimal.valueOf(2))
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',(2 - 1)) + 1)"),
+        2L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.POSITION,
+            rexBuilder.makeLiteral("oo"),
+            inputRef("s"),
+            rexBuilder.makeExactLiteral(BigDecimal.valueOf(3))
+        ),
+        DruidExpression.fromExpression("(strpos(\"s\",'oo',(3 - 1)) + 1)"),
+        0L
     );
   }
 
@@ -783,10 +819,10 @@ public class ExpressionsTest extends CalciteTestBase
   )
   {
     final DruidExpression expression = Expressions.toDruidExpression(plannerContext, rowSignature, rexNode);
-    Assert.assertEquals("Expression for: " + rexNode.toString(), expectedExpression, expression);
+    Assert.assertEquals("Expression for: " + rexNode, expectedExpression, expression);
 
     final ExprEval result = Parser.parse(expression.getExpression(), plannerContext.getExprMacroTable())
                                   .eval(Parser.withMap(bindings));
-    Assert.assertEquals("Result for: " + rexNode.toString(), expectedResult, result.value());
+    Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());
   }
 }

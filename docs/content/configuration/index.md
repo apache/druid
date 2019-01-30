@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "Configuration Reference"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # Configuration Reference
 
@@ -45,7 +65,7 @@ This page documents all of the configuration properties for each Druid service t
         * [Autoscaler](#autoscaler)
   * [MiddleManager & Peons](#middlemanager-and-peons)
     * [Node Config](#middlemanager-node-config)
-    * [MiddleManger Configuration](#middlemanager-configuration)
+    * [MiddleManager Configuration](#middlemanager-configuration)
     * [Peon Processing](#peon-processing)
     * [Peon Query Configuration](#peon-query-configuration)
     * [Caching](#peon-caching)
@@ -286,11 +306,11 @@ Note that some sensitive information may be logged if these settings are enabled
 
 ### Request Logging
 
-All nodes that can serve queries can also log the query requests they see.
+All nodes that can serve queries can also log the query requests they see. Broker nodes can additionally log the SQL requests (both from HTTP and JDBC) they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing. How to log every query request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j, filtered, composing, switching. How to log every query request.|[required to configure request logging]|
 
 Note that, you can enable sending all the HTTP requests to log by setting  "org.apache.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
@@ -301,6 +321,19 @@ Daily request logs are stored on disk.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.dir`|Historical, Realtime and Broker nodes maintain request logs of all of the requests they get (interacton is via POST, so normal request logs don’t generally capture information about the actual query), this specifies the directory to store the request logs in|none|
+|`druid.request.logging.filePattern`|[Joda datetime format](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) for each file|"yyyy-MM-dd'.log'"|
+
+The format of request logs is TSV, one line per requests, with five fields: timestamp, remote\_addr, native\_query, query\_context, sql\_query.
+
+For native JSON request, the `sql_query` field is empty. Example
+```
+2019-01-14T10:00:00.000Z        127.0.0.1   {"queryType":"topN","dataSource":{"type":"table","name":"wikiticker"},"virtualColumns":[],"dimension":{"type":"LegacyDimensionSpec","dimension":"page","outputName":"page","outputType":"STRING"},"metric":{"type":"LegacyTopNMetricSpec","metric":"count"},"threshold":10,"intervals":{"type":"LegacySegmentSpec","intervals":["2015-09-12T00:00:00.000Z/2015-09-13T00:00:00.000Z"]},"filter":null,"granularity":{"type":"all"},"aggregations":[{"type":"count","name":"count"}],"postAggregations":[],"context":{"queryId":"74c2d540-d700-4ebd-b4a9-3d02397976aa"},"descending":false}    {"query/time":100,"query/bytes":800,"success":true,"identity":"user1"}
+```
+
+For SQL query request, the `native_query` field is empty. Example
+```
+2019-01-14T10:00:00.000Z        127.0.0.1       {"sqlQuery/time":100,"sqlQuery/bytes":600,"success":true,"identity":"user1"}  {"query":"SELECT page, COUNT(*) AS Edits FROM wikiticker WHERE __time BETWEEN TIMESTAMP '2015-09-12 00:00:00' AND TIMESTAMP '2015-09-13 00:00:00' GROUP BY page ORDER BY Edits DESC LIMIT 10","context":{"sqlQueryId":"c9d035a0-5ffd-4a79-a865-3ffdadbb5fdd","nativeQueryIds":"[490978e4-f5c7-4cf6-b174-346e63cf8863]"}}
+```
 
 #### Emitter Request Logging
 
@@ -312,18 +345,19 @@ Every request is emitted to some external location.
 
 #### SLF4J Request Logging
 
-Every request is logged via SLF4J. Queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
+Every request is logged via SLF4J. Native queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `org.apache.druid.server.log.LoggingRequestLogger`.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.setMDC`|If MDC entries should be set in the log entry. Your logging setup still has to be configured to handle MDC to format this data|false|
 |`druid.request.logging.setContextMDC`|If the druid query `context` should be added to the MDC entries. Has no effect unless `setMDC` is `true`|false|
 
-MDC fields populated with `setMDC`:
+For native query, the following MDC fields are populated with `setMDC`:
 
 |MDC field|Description|
 |---------|-----------|
 |`queryId`   |The query ID|
+|`sqlQueryId`|The SQL query ID if this query is part of a SQL request|
 |`dataSource`|The datasource the query was against|
 |`queryType` |The type of the query|
 |`hasFilters`|If the query has any filters|
@@ -333,11 +367,13 @@ MDC fields populated with `setMDC`:
 |`descending`|If the query is a descending query|
 
 #### Filtered Request Logging
-Filtered Request Logger filters requests based on a configurable query/time threshold. Only request logs where query/time is above the threshold are emitted.
+Filtered Request Logger filters requests based on a configurable query/time threshold (for native query) and sqlQuery/time threshold (for SQL query).
+For native query, only request logs where query/time is above the threshold are emitted. For SQL query, only request logs where sqlQuery/time is above the threshold are emitted.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.queryTimeThresholdMs`|Threshold value for query/time in milliseconds.|0 i.e no filtering|
+|`druid.request.logging.sqlQueryTimeThresholdMs`|Threshold value for sqlQuery/time in milliseconds.|0 i.e no filtering|
 |`druid.request.logging.delegate.type`|Type of delegate request logger to log requests.|none|
 
 #### Composite Request Logging
@@ -346,6 +382,14 @@ Composite Request Logger emits request logs to multiple request loggers.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.loggerProviders`|List of request loggers for emitting request logs.|none|
+
+#### Switching Request Logging
+Switching Request Logger routes native query's request logs to one request logger and SQL query's request logs to another request logger.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.logging.nativeQueryLogger`|request logger for emitting native query's request logs.|none|
+|`druid.request.logging.sqlQueryLogger`|request logger for emitting SQL query's request logs.|none|
 
 ### Enabling Metrics
 
@@ -525,13 +569,13 @@ If you are running the indexing service in remote mode, the task logs must be st
 |--------|-----------|-------|
 |`druid.indexer.logs.type`|Choices:noop, s3, azure, google, hdfs, file. Where to store task logs|file|
 
-You can also configure the Overlord to automatically retain the task logs only for last x milliseconds by configuring following additional properties.
+You can also configure the Overlord to automatically retain the task logs in log directory and entries in task-related metadata storage tables only for last x milliseconds by configuring following additional properties.
 Caution: Automatic log file deletion typically works based on log file modification timestamp on the backing store, so large clock skews between druid nodes and backing store nodes might result in un-intended behavior.  
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. |false|
-|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs to be retained created in last x milliseconds. |None|
+|`druid.indexer.logs.kill.enabled`|Boolean value for whether to enable deletion of old task logs. If set to true, overlord will submit kill tasks periodically based on `druid.indexer.logs.kill.delay` specified, which will delete task logs from the log directory as well as tasks and tasklogs table entries in metadata storage except for tasks created in the last `druid.indexer.logs.kill.durationToRetain` period. |false|
+|`druid.indexer.logs.kill.durationToRetain`| Required if kill is enabled. In milliseconds, task logs and entries in task-related metadata storage tables to be retained created in last x milliseconds. |None|
 |`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
 |`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
@@ -680,7 +724,7 @@ These coordinator static configurations can be defined in the `coordinator/runti
 #### Segment Management
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.announcer.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of zookeeper.|batch|
+|`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of zookeeper.|batch|
 |`druid.coordinator.loadqueuepeon.type`|curator or http|Whether to use "http" or "curator" implementation to assign segment loads/drops to historical|curator|
 
 ##### Additional config when "http" loadqueuepeon is used
@@ -784,25 +828,39 @@ A description of the compaction config is:
 |--------|-----------|--------|
 |`dataSource`|dataSource name to be compacted.|yes|
 |`keepSegmentGranularity`|Set [keepSegmentGranularity](../ingestion/compaction.html) to true for compactionTask.|no (default = true)|
-|`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compact task.|no (default = 25)|
-|`inputSegmentSizeBytes`|Total input segment size of a compactionTask.|no (default = 419430400)|
-|`targetCompactionSizeBytes`|The target segment size of compaction. The actual size of a compact segment might be slightly larger or smaller than this value.|no (default = 419430400)|
-|`maxNumSegmentsToCompact`|Max number of segments to compact together.|no (default = 150)|
+|`taskPriority`|[Priority](../ingestion/tasks.html#task-priorities) of compaction task.|no (default = 25)|
+|`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk. Because each compaction task runs with a single thread, setting this value too far above 1–2GB will result in compaction tasks taking an excessive amount of time.|no (default = 419430400)|
+|`targetCompactionSizeBytes`|The target segment size, for each segment, after compaction. The actual sizes of compacted segments might be slightly larger or smaller than this value. Each compaction task may generate more than one output segment, and it will try to keep each output segment close to this configured size. This configuration cannot be used together with `maxRowsPerSegment`.|no (default = 419430400)|
+|`maxRowsPerSegment`|Max number of rows per segment after compaction. This configuration cannot be used together with `targetCompactionSizeBytes`.|no|
+|`maxNumSegmentsToCompact`|Maximum number of segments to compact together per compaction task. Since a time chunk must be processed in its entirety, if a time chunk has a total number of segments greater than this parameter, compaction will not run for that time chunk.|no (default = 150)|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted. Strongly recommended to set for realtime dataSources. |no (default = "P1D")|
-|`tuningConfig`|Tuning config for compact tasks. See below [Compact Task TuningConfig](#compact-task-tuningconfig).|no|
-|`taskContext`|[Task context](../ingestion/tasks.html#task-context) for compact tasks.|no|
+|`tuningConfig`|Tuning config for compaction tasks. See below [Compaction Task TuningConfig](#compact-task-tuningconfig).|no|
+|`taskContext`|[Task context](../ingestion/tasks.html#task-context) for compaction tasks.|no|
 
 An example of compaction config is:
 
 ```json
 {
-  "dataSource": "wikiticker",
-  "targetCompactionSizeBytes": 800000000,
-  "skipOffsetFromLatest": "P1D"
+  "dataSource": "wikiticker"
 }
 ```
 
-For realtime dataSources, it's recommended to set `skipOffsetFromLatest` to some sufficiently large values to avoid frequent compact task failures.
+Note that compaction tasks can fail if their locks are revoked by other tasks of higher priorities.
+Since realtime tasks have a higher priority than compaction task by default,
+it can be problematic if there are frequent conflicts between compaction tasks and realtime tasks.
+If this is the case, the coordinator's automatic compaction might get stuck because of frequent compaction task failures.
+This kind of problem may happen especially in Kafka/Kinesis indexing systems which allow late data arrival.
+If you see this problem, it's recommended to set `skipOffsetFromLatest` to some large enough value to avoid such conflicts between compaction tasks and realtime tasks.
+
+##### Compaction TuningConfig
+
+|Property|Description|Required|
+|--------|-----------|--------|
+|`maxRowsInMemory`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 1000000)|
+|`maxTotalRows`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 20000000)|
+|`indexSpec`|See [IndexSpec](../ingestion/native_tasks.html#indexspec)|no|
+|`maxPendingPersists`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 0 (meaning one persist can be running concurrently with ingestion, and none can be queued up))|
+|`pushTimeout`|See [tuningConfig for indexTask](../ingestion/native_tasks.html#tuningconfig)|no (default = 0)|
 
 ## Overlord
 
@@ -1058,7 +1116,7 @@ Processing properties set on the Middlemanager will be passed through to Peons.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|1073741824 (1GB)|
+|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|auto (max 1GB)|
 |`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
 |`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy v2) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
@@ -1139,7 +1197,7 @@ then the value from the configuration below is used:
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.defaultSegmentWriteOutMediumFactory`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|
+|`druid.peon.defaultSegmentWriteOutMediumFactory.type`|`tmpFile` or `offHeapMemory`, see explanation above|`tmpFile`|
 
 ## Broker
 
@@ -1189,6 +1247,8 @@ Druid uses Jetty to serve HTTP requests.
 Druid Brokers use an HTTP client to communicate with with data servers (historical servers and real-time tasks). This
 client has the following configuration options.
 
+|Property|Description|Default|
+|--------|-----------|-------|
 |`druid.broker.http.numConnections`|Size of connection pool for the Broker to connect to historical and real-time processes. If there are more queries than this number that all need to speak to the same node, then they will queue up.|20|
 |`druid.broker.http.compressionCodec`|Compression codec the Broker uses to communicate with historical and real-time processes. May be "gzip" or "identity".|gzip|
 |`druid.broker.http.readTimeout`|The timeout for data reads from historical servers and real-time tasks.|PT15M|
@@ -1205,11 +1265,11 @@ Druid broker can optionally retry queries internally for transient errors.
 
 #### Processing
 
-The broker uses processing configs for nested groupBy queries. And, optionally, Long-interval queries (of any type) can be broken into shorter interval queries and processed in parallel inside this thread pool. For more details, see "chunkPeriod" in [Query Context](../querying/query-context.html) doc.
+The broker uses processing configs for nested groupBy queries. And, if you use groupBy v1, long-interval queries (of any type) can be broken into shorter interval queries and processed in parallel inside this thread pool. For more details, see "chunkPeriod" in [Query Context](../querying/query-context.html) doc.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|1073741824 (1GB)|
+|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|auto (max 1GB)|
 |`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
 |`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy v2) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
@@ -1240,11 +1300,12 @@ The Druid SQL server is configured through the following properties on the broke
 |`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|1|
 |`druid.sql.avatica.connectionIdleTimeout`|Avatica client connection idle timeout.|PT5M|
 |`druid.sql.http.enable`|Whether to enable JSON over HTTP querying at `/druid/v2/sql/`.|true|
+|`druid.sql.planner.awaitInitializationOnStart`|Boolean|Whether the the Broker will wait for its SQL metadata view to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.broker.segment.awaitInitializationOnStart`, a related setting.|true|
 |`druid.sql.planner.maxQueryCount`|Maximum number of queries to issue, including nested queries. Set to 1 to disable sub-queries, or set to 0 for unlimited.|8|
 |`druid.sql.planner.maxSemiJoinRowsInMemory`|Maximum number of rows to keep in memory for executing two-stage semi-join queries like `SELECT * FROM Employee WHERE DeptName IN (SELECT DeptName FROM Dept)`.|100000|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.html). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.html) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
-|`druid.sql.planner.selectPageSize`|Page size threshold for [Select queries](../querying/select-query.html). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
+|`druid.sql.planner.selectThreshold`|Page size threshold for [Select queries](../querying/select-query.html). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.html) will be used instead.|true|
 |`druid.sql.planner.useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|false|
@@ -1270,9 +1331,10 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 ### Segment Discovery
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.announcer.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of zookeeper.|batch|
+|`druid.serverview.type`|batch or http|Segment discovery method to use. "http" enables discovering segments using HTTP instead of zookeeper.|batch|
 |`druid.broker.segment.watchedTiers`|List of strings|Broker watches the segment announcements from nodes serving segments to build cache of which node is serving which segments, this configuration allows to only consider segments being served from a whitelist of tiers. By default, Broker would consider all tiers. This can be used to partition your dataSources in specific historical tiers and configure brokers in partitions so that they are only queryable for specific dataSources.|none|
 |`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from nodes serving segments to build cache of which node is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|
+|`druid.broker.segment.awaitInitializationOnStart`|Boolean|Whether the the Broker will wait for its view of segments to fully initialize before starting up. If set to 'true', the Broker's HTTP server will not start up, and the Broker will not announce itself as available, until the server view is initialized. See also `druid.sql.planner.awaitInitializationOnStart`, a related setting.|true|
 
 ## Historical
 
@@ -1334,7 +1396,7 @@ Druid uses Jetty to serve HTTP requests.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|1073741824 (1GB)|
+|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|auto (max 1GB)|
 |`druid.processing.buffer.poolCacheMaxCount`|processing buffer pool caches the buffers for later use, this is the maximum count cache will grow to. note that pool can create more buffers than it can cache if necessary.|Integer.MAX_VALUE|
 |`druid.processing.formatString`|Realtime and historical nodes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy v2) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|

@@ -327,7 +327,8 @@ public class MaterializedViewSupervisor implements Supervisor
     // use max created_date of base segments as the version of derivative segments
     Map<Interval, String> maxCreatedDate = baseSegmentsSnapshot.lhs;
     Map<Interval, String> derivativeVersion = derivativeSegmentsSnapshot.lhs;
-    SortedMap<Interval, String> sortedToBuildInterval = new TreeMap<>(Comparators.inverse(Comparators.intervalsByStartThenEnd()));
+    SortedMap<Interval, String> sortedToBuildInterval =
+        new TreeMap<>(Comparators.intervalsByStartThenEnd().reversed());
     // find the intervals to drop and to build
     MapDifference<Interval, String> difference = Maps.difference(maxCreatedDate, derivativeVersion);
     Map<Interval, String> toBuildInterval = new HashMap<>(difference.entriesOnlyOnLeft());
@@ -345,7 +346,7 @@ public class MaterializedViewSupervisor implements Supervisor
           && !toBuildInterval.get(interval).equals(runningVersion.get(interval))
       ) {
         if (taskMaster.getTaskQueue().isPresent()) {
-          taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId());
+          taskMaster.getTaskQueue().get().shutdown(runningTasks.get(interval).getId(), "version mismatch");
           runningTasks.remove(interval);
         }
       }
@@ -353,7 +354,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
-        segmentManager.removeSegment(dataSource, segment.getIdentifier());
+        segmentManager.removeSegment(segment.getId());
       }
     }
     // data of the latest interval will be built firstly.
@@ -450,7 +451,7 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     for (HadoopIndexTask task : runningTasks.values()) {
       if (taskMaster.getTaskQueue().isPresent()) {
-        taskMaster.getTaskQueue().get().shutdown(task.getId());
+        taskMaster.getTaskQueue().get().shutdown(task.getId(), "killing all tasks");
       }
     }
     runningTasks.clear();
@@ -461,7 +462,7 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     log.info("Clear all metadata of dataSource %s", dataSource);
     metadataStorageCoordinator.deletePendingSegments(dataSource, ALL_INTERVAL);
-    segmentManager.removeDatasource(dataSource);
+    segmentManager.removeDataSource(dataSource);
     metadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
   }
   

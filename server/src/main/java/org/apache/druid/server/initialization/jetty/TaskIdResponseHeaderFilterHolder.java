@@ -20,6 +20,7 @@
 package org.apache.druid.server.initialization.jetty;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
 
 public class TaskIdResponseHeaderFilterHolder extends ResponseHeaderFilterHolder
@@ -29,7 +30,7 @@ public class TaskIdResponseHeaderFilterHolder extends ResponseHeaderFilterHolder
     super(path,
           taskId == null
           ? ImmutableMap.of()
-          : ImmutableMap.of(ChatHandlerResource.TASK_ID_HEADER, taskId)
+          : ImmutableMap.of(ChatHandlerResource.TASK_ID_HEADER, StringUtils.urlEncode(taskId))
     );
   }
 }

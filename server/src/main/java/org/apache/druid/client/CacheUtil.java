@@ -33,7 +33,7 @@ import java.nio.ByteBuffer;
 public class CacheUtil
 {
   public static Cache.NamedKey computeSegmentCacheKey(
-      String segmentIdentifier,
+      String segmentId,
       SegmentDescriptor descriptor,
       byte[] queryCacheKey
   )
@@ -42,7 +42,7 @@ public class CacheUtil
     final byte[] versionBytes = StringUtils.toUtf8(descriptor.getVersion());
 
     return new Cache.NamedKey(
-        segmentIdentifier,
+        segmentId,
         ByteBuffer
             .allocate(16 + versionBytes.length + 4 + queryCacheKey.length)
             .putLong(segmentQueryInterval.getStartMillis())

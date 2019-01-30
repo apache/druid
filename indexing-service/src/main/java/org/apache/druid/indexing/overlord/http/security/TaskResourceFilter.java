@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.http.security;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
@@ -41,7 +40,6 @@ import org.apache.druid.server.security.ResourceType;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
-import java.util.List;
 
 /**
  * Use this ResourceFilter when the datasource information is present after "task" segment in the request Path
@@ -66,7 +64,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
   @Override
   public ContainerRequest filter(ContainerRequest request)
   {
-    final String taskId = Preconditions.checkNotNull(
+    String taskId = Preconditions.checkNotNull(
         request.getPathSegments()
                .get(
                    Iterables.indexOf(
@@ -82,6 +80,7 @@ public class TaskResourceFilter extends AbstractResourceFilter
                    ) + 1
                ).getPath()
     );
+    taskId = StringUtils.urlDecode(taskId);
 
     Optional<Task> taskOptional = taskStorageQueryAdapter.getTask(taskId);
     if (!taskOptional.isPresent()) {
@@ -109,17 +108,5 @@ public class TaskResourceFilter extends AbstractResourceFilter
     }
 
     return request;
-  }
-
-  @Override
-  public boolean isApplicable(String requestPath)
-  {
-    List<String> applicablePaths = ImmutableList.of("druid/indexer/v1/task/");
-    for (String path : applicablePaths) {
-      if (requestPath.startsWith(path) && !requestPath.equals(path)) {
-        return true;
-      }
-    }
-    return false;
   }
 }

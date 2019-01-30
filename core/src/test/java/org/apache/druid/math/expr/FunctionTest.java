@@ -95,6 +95,10 @@ public class FunctionTest
   public void testStrpos()
   {
     assertExpr("strpos(x, 'o')", 1L);
+    assertExpr("strpos(x, 'o', 0)", 1L);
+    assertExpr("strpos(x, 'o', 1)", 1L);
+    assertExpr("strpos(x, 'o', 2)", 2L);
+    assertExpr("strpos(x, 'o', 3)", -1L);
     assertExpr("strpos(x, '')", 0L);
     assertExpr("strpos(x, 'x')", -1L);
   }

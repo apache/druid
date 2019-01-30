@@ -34,7 +34,7 @@ public class DefaultTimeseriesQueryMetricsFactory implements TimeseriesQueryMetr
 
   /**
    * Should be used only in tests, directly or indirectly (via {@link
-   * TimeseriesQueryQueryToolChest#TimeseriesQueryQueryToolChest(org.apache.druid.query.IntervalChunkingQueryRunnerDecorator)}).
+   * TimeseriesQueryQueryToolChest#TimeseriesQueryQueryToolChest}).
    */
   @VisibleForTesting
   public static TimeseriesQueryMetricsFactory instance()

@@ -50,14 +50,6 @@ public class TieredBrokerConfig
 
   @JsonProperty
   @NotNull
-  private String rulesEndpoint = "/druid/coordinator/v1/rules";
-
-  @JsonProperty
-  @NotNull
-  private String coordinatorServiceName = DEFAULT_COORDINATOR_SERVICE_NAME;
-
-  @JsonProperty
-  @NotNull
   private Period pollPeriod = new Period("PT1M");
 
   @JsonProperty
@@ -85,16 +77,6 @@ public class TieredBrokerConfig
   public String getDefaultRule()
   {
     return defaultRule;
-  }
-
-  public String getRulesEndpoint()
-  {
-    return rulesEndpoint;
-  }
-
-  public String getCoordinatorServiceName()
-  {
-    return coordinatorServiceName;
   }
 
   public Period getPollPeriod()

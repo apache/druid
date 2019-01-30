@@ -2,6 +2,25 @@
 layout: toc
 ---
 
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
 ## Getting Started
   * [Design](/docs/VERSION/design/index.html)
     * [What is Druid?](/docs/VERSION/design/index.html#what-is-druid)
@@ -29,12 +48,12 @@ layout: toc
 
 ## Data Ingestion
   * [Ingestion overview](/docs/VERSION/ingestion/index.html)
+  * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
   * [Data Formats](/docs/VERSION/ingestion/data-formats.html)
   * [Tasks Overview](/docs/VERSION/ingestion/tasks.html)
   * [Ingestion Spec](/docs/VERSION/ingestion/ingestion-spec.html)
     * [Transform Specs](/docs/VERSION/ingestion/transform-spec.html)
     * [Firehoses](/docs/VERSION/ingestion/firehose.html)
-  * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
   * [Schema Changes](/docs/VERSION/ingestion/schema-changes.html)
   * [Batch File Ingestion](/docs/VERSION/ingestion/batch-ingestion.html)
     * [Native Batch Ingestion](/docs/VERSION/ingestion/native_tasks.html)
@@ -89,7 +108,7 @@ layout: toc
     * [Indexing Service](/docs/VERSION/design/indexing-service.html)
       * [Overlord](/docs/VERSION/design/overlord.html)
       * [MiddleManager](/docs/VERSION/design/middlemanager.html)
-      * [Peons](/docs/VERSION/design/peon.html)
+      * [Peons](/docs/VERSION/design/peons.html)
     * [Realtime (Deprecated)](/docs/VERSION/design/realtime.html)
   * Dependencies
     * [Deep Storage](/docs/VERSION/dependencies/deep-storage.html)

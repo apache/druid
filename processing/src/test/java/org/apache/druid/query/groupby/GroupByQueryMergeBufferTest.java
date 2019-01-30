@@ -25,11 +25,11 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
@@ -60,6 +60,7 @@ import static org.junit.Assert.assertEquals;
 public class GroupByQueryMergeBufferTest
 {
   private static final long TIMEOUT = 5000;
+
   private static class TestBlockingPool extends CloseableDefaultBlockingPool<ByteBuffer>
   {
     private int minRemainBufferNum;
@@ -221,7 +222,7 @@ public class GroupByQueryMergeBufferTest
 
   public GroupByQueryMergeBufferTest(QueryRunner<Row> runner)
   {
-    this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner));
+    this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
   }
 
   @Before

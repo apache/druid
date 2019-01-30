@@ -23,13 +23,13 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.curator.announcement.Announcer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -39,10 +39,10 @@ import org.junit.Test;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
+ *
  */
 public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 {
@@ -69,7 +69,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 
     Announcer announcer = new Announcer(
         curator,
-        MoreExecutors.sameThreadExecutor()
+        Execs.directExecutor()
     );
     announcer.start();
 
@@ -129,13 +129,13 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
             coordNodes.addAll(nodes);
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
             coordNodes.removeAll(nodes);
           }
@@ -147,13 +147,13 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
         new DruidNodeDiscovery.Listener()
         {
           @Override
-          public void nodesAdded(List<DiscoveryDruidNode> nodes)
+          public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
           {
             overlordNodes.addAll(nodes);
           }
 
           @Override
-          public void nodesRemoved(List<DiscoveryDruidNode> nodes)
+          public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
           {
             overlordNodes.removeAll(nodes);
           }

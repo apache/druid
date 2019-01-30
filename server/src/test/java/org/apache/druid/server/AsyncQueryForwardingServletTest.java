@@ -39,6 +39,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -50,6 +51,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.log.NoopRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.router.QueryHostFinder;
 import org.apache.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
@@ -250,7 +252,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         new NoopServiceEmitter(),
-        requestLogLine -> { /* noop */ },
+        new NoopRequestLogger(),
         new DefaultGenericQueryMetricsFactory(jsonMapper),
         new AuthenticatorMapper(ImmutableMap.of())
     )
@@ -342,7 +344,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
               injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               new NoopServiceEmitter(),
-              requestLogLine -> { /* noop */ },
+              new NoopRequestLogger(),
               new DefaultGenericQueryMetricsFactory(jsonMapper),
               new AuthenticatorMapper(ImmutableMap.of())
           )
@@ -350,11 +352,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
             @Override
             protected String rewriteURI(HttpServletRequest request, String scheme, String host)
             {
-              String uri = super.rewriteURI(request, scheme, host).toString();
+              String uri = super.rewriteURI(request, scheme, host);
               if (uri.contains("/druid/v2")) {
-                return URI.create(uri.replace("/druid/v2", "/default")).toString();
+                return URI.create(StringUtils.replace(uri, "/druid/v2", "/default")).toString();
               }
-              return URI.create(uri.replace("/proxy", "")).toString();
+              return URI.create(StringUtils.replace(uri, "/proxy", "")).toString();
             }
           });
       //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
@@ -373,7 +375,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testRewriteURI() throws Exception
+  public void testRewriteURI()
   {
 
     // test params

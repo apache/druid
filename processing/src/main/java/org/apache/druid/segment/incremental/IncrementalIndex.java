@@ -194,7 +194,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             @Override
             public Object getObject()
             {
-              return extractor.extractValue(in.get(), column);
+              return extractor.extractValue(in.get(), column, agg);
             }
 
             @Override

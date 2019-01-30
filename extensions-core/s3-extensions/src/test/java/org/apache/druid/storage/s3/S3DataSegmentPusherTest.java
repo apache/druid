@@ -45,6 +45,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.regex.Pattern;
 
 /**
  */
@@ -148,7 +149,7 @@ public class S3DataSegmentPusherTest
     Assert.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
     Assert.assertTrue(
         segment.getLoadSpec().get("key").toString(),
-        segment.getLoadSpec().get("key").toString().matches(matcher)
+        Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches()
     );
     Assert.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
 

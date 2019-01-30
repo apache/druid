@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.DataSegmentFinder;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -60,14 +61,14 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
   public Set<DataSegment> findSegments(String workingDirPathStr, boolean updateDescriptor)
       throws SegmentLoadingException
   {
-    final Map<String, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
+    final Map<SegmentId, Pair<DataSegment, Long>> timestampedSegments = new HashMap<>();
     final Path workingDirPath = new Path(workingDirPathStr);
     FileSystem fs;
     try {
       fs = workingDirPath.getFileSystem(config);
 
       log.info(fs.getScheme());
-      log.info("FileSystem URI:" + fs.getUri().toString());
+      log.info("FileSystem URI:" + fs.getUri());
 
       if (!fs.exists(workingDirPath)) {
         throw new SegmentLoadingException("Working directory [%s] doesn't exist.", workingDirPath);
@@ -109,7 +110,7 @@ public class HdfsDataSegmentFinder implements DataSegmentFinder
 
           if (fs.exists(indexZip)) {
             final DataSegment dataSegment = mapper.readValue(fs.open(path), DataSegment.class);
-            log.info("Found segment [%s] located at [%s]", dataSegment.getIdentifier(), indexZip);
+            log.info("Found segment [%s] located at [%s]", dataSegment.getId(), indexZip);
 
             final Map<String, Object> loadSpec = dataSegment.getLoadSpec();
             final String pathWithoutScheme = indexZip.toUri().getPath();

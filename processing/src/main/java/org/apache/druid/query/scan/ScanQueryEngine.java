@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.scan;
 
 import com.google.common.base.Preconditions;
@@ -38,6 +39,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -114,7 +116,7 @@ public class ScanQueryEngine
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
 
-    final String segmentId = segment.getIdentifier();
+    final SegmentId segmentId = segment.getId();
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
 
@@ -193,7 +195,7 @@ public class ScanQueryEngine
                                   timeoutAt - (System.currentTimeMillis() - start)
                               );
                             }
-                            return new ScanResultValue(segmentId, allColumns, events);
+                            return new ScanResultValue(segmentId.toString(), allColumns, events);
                           }
 
                           @Override
