@@ -48,6 +48,7 @@
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-gcp-common</artifactId>
             <version>${project.parent.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
