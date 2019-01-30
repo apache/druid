@@ -134,10 +134,10 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
       Sequence<Row> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponse);
       try {
         // use localhost for remote address
-        requestLogger.log(new RequestLogLine(
+        requestLogger.logNativeQuery(RequestLogLine.forNative(
+            gbq,
             DateTimes.nowUtc(),
             "127.0.0.1",
-            gbq,
             new QueryStats(
                 ImmutableMap.of(
                     "query/time", 0,
@@ -172,10 +172,10 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
       Sequence<Result<TimeseriesResultValue>> results = tsq.getRunner(walker).run(QueryPlus.wrap(tsq), tsqResponse);
       try {
         // use localhost for remote address
-        requestLogger.log(new RequestLogLine(
+        requestLogger.logNativeQuery(RequestLogLine.forNative(
+            tsq,
             DateTimes.nowUtc(),
             "127.0.0.1",
-            tsq,
             new QueryStats(
                 ImmutableMap.of(
                     "query/time", 0,

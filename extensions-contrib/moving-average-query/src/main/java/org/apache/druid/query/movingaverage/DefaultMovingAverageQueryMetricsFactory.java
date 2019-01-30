@@ -33,6 +33,10 @@ public class DefaultMovingAverageQueryMetricsFactory implements MovingAverageQue
   private static final MovingAverageQueryMetricsFactory INSTANCE =
       new DefaultMovingAverageQueryMetricsFactory(new DefaultObjectMapper());
 
+  /**
+   * Should be used only in tests, directly or indirectly (via {@link
+   * MovingAverageQueryToolChest#MovingAverageQueryToolChest}).
+   */
   @VisibleForTesting
   public static MovingAverageQueryMetricsFactory instance()
   {

@@ -32,7 +32,6 @@ import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.NullDimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import java.util.Collection;
@@ -84,7 +83,7 @@ public class MovingAverageIterable implements Iterable<Row>
       {
         // Generating empty records while aggregating on Filtered aggregators requires a dimension selector
         // for initialization.  This dimension selector is not actually used for generating values
-        return NullDimensionSelector.instance();
+        return DimensionSelector.constant(null);
       }
 
       @Override

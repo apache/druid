@@ -380,6 +380,12 @@ public class MovingAverageQueryTest
           }
 
           @Override
+          public List<ImmutableDruidServer> getDruidServers()
+          {
+            return null;
+          }
+
+          @Override
           public <T> QueryRunner<T> getQueryRunner(DruidServer server)
           {
             return null;
