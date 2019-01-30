@@ -17,23 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.common.aws;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
+import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
-import com.google.inject.Module;
 import com.google.inject.Provides;
-import org.apache.druid.common.aws.AWSClientConfig;
-import org.apache.druid.common.aws.AWSCredentialsConfig;
-import org.apache.druid.common.aws.AWSCredentialsUtils;
-import org.apache.druid.common.aws.AWSEndpointConfig;
-import org.apache.druid.common.aws.AWSProxyConfig;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.initialization.DruidModule;
 
-/**
- */
-public class AWSModule implements Module
+import java.util.Collections;
+import java.util.List;
+
+public class AWSModule implements DruidModule
 {
   @Override
   public void configure(Binder binder)
@@ -56,5 +55,11 @@ public class AWSModule implements Module
   public AmazonEC2 getEc2Client(AWSCredentialsProvider credentials)
   {
     return new AmazonEC2Client(credentials);
+  }
+
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return Collections.emptyList();
   }
 }
