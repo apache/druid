@@ -66,13 +66,13 @@ import java.util.Map;
 
 public class ExpressionsTest extends CalciteTestBase
 {
-  private static final DateTimeZone LOS_ANGELES = DateTimes.inferTzfromString("America/Los_Angeles");
 
   private final PlannerContext plannerContext = PlannerContext.create(
       CalciteTests.createOperatorTable(),
       CalciteTests.createExprMacroTable(),
       new PlannerConfig(),
-      ImmutableMap.of()
+      ImmutableMap.of(),
+      CalciteTests.REGULAR_USER_AUTH_RESULT
   );
   private final RowSignature rowSignature = RowSignature
       .builder()

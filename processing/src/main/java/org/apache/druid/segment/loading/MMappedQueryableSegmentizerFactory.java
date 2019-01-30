@@ -45,7 +45,7 @@ public class MMappedQueryableSegmentizerFactory implements SegmentizerFactory
   public Segment factorize(DataSegment dataSegment, File parentDir) throws SegmentLoadingException
   {
     try {
-      return new QueryableIndexSegment(dataSegment.getIdentifier(), indexIO.loadIndex(parentDir));
+      return new QueryableIndexSegment(indexIO.loadIndex(parentDir), dataSegment.getId());
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "%s", e.getMessage());

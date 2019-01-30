@@ -19,9 +19,11 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.indexing.ClientCompactQuery;
+import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -34,7 +36,6 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentUtils;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -179,20 +180,19 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
       if (segmentsToCompact.size() > 1) {
         final DataSourceCompactionConfig config = compactionConfigs.get(dataSourceName);
-        // Currently set keepSegmentGranularity to false because it breaks the algorithm of CompactionSegmentIterator to
-        // find segments to be compacted.
+        // make tuningConfig
         final String taskId = indexingServiceClient.compactSegments(
             segmentsToCompact,
             config.isKeepSegmentGranularity(),
             config.getTargetCompactionSizeBytes(),
             config.getTaskPriority(),
-            config.getTuningConfig(),
+            ClientCompactQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             config.getTaskContext()
         );
         LOG.info(
-            "Submitted a compactTask[%s] for segments[%s]",
+            "Submitted a compactTask[%s] for segments %s",
             taskId,
-            DataSegmentUtils.getIdentifiersString(segmentsToCompact)
+            Iterables.transform(segmentsToCompact, DataSegment::getId)
         );
       } else if (segmentsToCompact.size() == 1) {
         throw new ISE("Found one segments[%s] to compact", segmentsToCompact);

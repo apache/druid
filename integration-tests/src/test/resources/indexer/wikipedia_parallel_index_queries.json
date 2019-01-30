@@ -3,7 +3,7 @@
         "description": "timeseries, 1 agg, all",
         "query":{
             "queryType" : "timeBoundary",
-            "dataSource": "wikipedia_parallel_index_test"
+            "dataSource": "%%DATASOURCE%%"
         },
         "expectedResults":[
             {
@@ -20,7 +20,7 @@
         "description":"having spec on post aggregation",
         "query":{
             "queryType":"groupBy",
-            "dataSource":"wikipedia_parallel_index_test",
+            "dataSource":"%%DATASOURCE%%",
             "granularity":"day",
             "dimensions":[
                 "page"

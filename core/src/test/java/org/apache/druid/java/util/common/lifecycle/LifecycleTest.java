@@ -177,19 +177,20 @@ public class LifecycleTest
     lifecycle.addManagedInstance(new ObjectToBeLifecycled(5, startOrder, stopOrder));
     lifecycle.addStartCloseInstance(new ObjectToBeLifecycled(6, startOrder, stopOrder), Lifecycle.Stage.LAST);
     lifecycle.addManagedInstance(new ObjectToBeLifecycled(7, startOrder, stopOrder));
+    lifecycle.addStartCloseInstance(new ObjectToBeLifecycled(8, startOrder, stopOrder), Lifecycle.Stage.INIT);
 
-    final List<Integer> expectedOrder = Arrays.asList(0, 1, 2, 4, 5, 7, 3, 6);
+    final List<Integer> expectedOrder = Arrays.asList(8, 0, 1, 2, 4, 5, 7, 3, 6);
 
     lifecycle.start();
 
-    Assert.assertEquals(8, startOrder.size());
+    Assert.assertEquals(9, startOrder.size());
     Assert.assertEquals(0, stopOrder.size());
     Assert.assertEquals(expectedOrder, startOrder);
 
     lifecycle.stop();
 
-    Assert.assertEquals(8, startOrder.size());
-    Assert.assertEquals(8, stopOrder.size());
+    Assert.assertEquals(9, startOrder.size());
+    Assert.assertEquals(9, stopOrder.size());
     Assert.assertEquals(Lists.reverse(expectedOrder), stopOrder);
   }
 
@@ -212,7 +213,7 @@ public class LifecycleTest
                 new ObjectToBeLifecycled(1, startOrder, stopOrder), Lifecycle.Stage.NORMAL
             );
             lifecycle.addMaybeStartManagedInstance(
-                new ObjectToBeLifecycled(2, startOrder, stopOrder), Lifecycle.Stage.NORMAL
+                new ObjectToBeLifecycled(2, startOrder, stopOrder), Lifecycle.Stage.INIT
             );
             lifecycle.addMaybeStartManagedInstance(
                 new ObjectToBeLifecycled(3, startOrder, stopOrder), Lifecycle.Stage.LAST
@@ -234,6 +235,7 @@ public class LifecycleTest
     );
 
     final List<Integer> expectedOrder = Arrays.asList(0, 1, 2, 4, 5, 7, 3, 6);
+    final List<Integer> expectedStopOrder = Arrays.asList(6, 3, 7, 5, 4, 1, 0, 2);
 
     lifecycle.start();
 
@@ -243,7 +245,7 @@ public class LifecycleTest
     lifecycle.stop();
 
     Assert.assertEquals(expectedOrder, startOrder);
-    Assert.assertEquals(Lists.reverse(expectedOrder), stopOrder);
+    Assert.assertEquals(expectedStopOrder, stopOrder);
   }
 
   public static class ObjectToBeLifecycled

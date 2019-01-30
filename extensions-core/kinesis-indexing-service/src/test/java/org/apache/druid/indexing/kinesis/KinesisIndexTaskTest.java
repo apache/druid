@@ -331,7 +331,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   {
     synchronized (runningTasks) {
       for (Task task : runningTasks) {
-        task.stopGracefully();
+        task.stopGracefully(toolboxFactory.build(task).getConfig());
       }
 
       runningTasks.clear();
@@ -2126,7 +2126,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(2, countEvents(task1));
 
     // Stop without publishing segment
-    task1.stopGracefully();
+    task1.stopGracefully(toolboxFactory.build(task1).getConfig());
     unlockAppenderatorBasePersistDirForTask(task1);
 
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
@@ -2651,7 +2651,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         null,
         50000,
         null,
-        false,
+        true,
         null,
         null
     );
@@ -2765,7 +2765,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         this::makeTimeseriesOnlyConglomerate,
-        MoreExecutors.sameThreadExecutor(), // queryExecutorService
+        Execs.directExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
         new SegmentLoaderFactory(
             new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())

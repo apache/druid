@@ -147,7 +147,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
 
   @Override
   @JsonProperty
-  public int getMaxRowsPerSegment()
+  public Integer getMaxRowsPerSegment()
   {
     return maxRowsPerSegment;
   }

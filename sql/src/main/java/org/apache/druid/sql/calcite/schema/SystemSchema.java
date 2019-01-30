@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
@@ -67,6 +68,7 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -79,8 +81,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class SystemSchema extends AbstractSchema
 {
@@ -156,24 +158,19 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
-    this.tableMap = ImmutableMap.<String, Table>builder()
-        .put(
-            SEGMENTS_TABLE,
-            new SegmentsTable(druidSchema, coordinatorDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
-        )
-        .put(
-            SERVERS_TABLE,
-            new ServersTable(serverView, authorizerMapper)
-        )
-        .put(
-            SERVER_SEGMENTS_TABLE,
-            new ServerSegmentsTable(serverView, authorizerMapper)
-        )
-        .put(
-            TASKS_TABLE,
-            new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
-        )
-        .build();
+    SegmentsTable segmentsTable = new SegmentsTable(
+        druidSchema,
+        coordinatorDruidLeaderClient,
+        jsonMapper,
+        responseHandler,
+        authorizerMapper
+    );
+    this.tableMap = ImmutableMap.of(
+        SEGMENTS_TABLE, segmentsTable,
+        SERVERS_TABLE, new ServersTable(serverView, authorizerMapper),
+        SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper),
+        TASKS_TABLE, new TasksTable(overlordDruidLeaderClient, jsonMapper, responseHandler, authorizerMapper)
+    );
   }
 
   @Override
@@ -222,15 +219,17 @@ public class SystemSchema extends AbstractSchema
     {
       //get available segments from druidSchema
       final Map<DataSegment, SegmentMetadataHolder> availableSegmentMetadata = druidSchema.getSegmentMetadata();
-      final Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries = availableSegmentMetadata.entrySet()
-                                                                                                                  .iterator();
+      final Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries =
+          availableSegmentMetadata.entrySet().iterator();
 
       // in memory map to store segment data from available segments
-      final Map<String, PartialSegmentData> partialSegmentDataMap = availableSegmentMetadata.values().stream().collect(
-          Collectors.toMap(
-              SegmentMetadataHolder::getSegmentId,
-              h -> new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(), h.getNumRows())
-          ));
+      final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
+          Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
+      for (SegmentMetadataHolder h : availableSegmentMetadata.values()) {
+        PartialSegmentData partialSegmentData =
+            new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(h.getSegmentId()), h.getNumRows());
+        partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
+      }
 
       //get published segments from coordinator
       final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
@@ -239,17 +238,17 @@ public class SystemSchema extends AbstractSchema
           responseHandler
       );
 
-      final Set<String> segmentsAlreadySeen = new HashSet<>();
+      final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(
               metadataSegments,
               root
           ))
-          .transform(val -> {
+          .transform((DataSegment val) -> {
             try {
-              segmentsAlreadySeen.add(val.getIdentifier());
-              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getIdentifier());
+              segmentsAlreadySeen.add(val.getId());
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getId());
               long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
               if (partialSegmentData != null) {
                 numReplicas = partialSegmentData.getNumReplicas();
@@ -258,7 +257,7 @@ public class SystemSchema extends AbstractSchema
                 isRealtime = partialSegmentData.isRealtime();
               }
               return new Object[]{
-                  val.getIdentifier(),
+                  val.getId(),
                   val.getDataSource(),
                   val.getInterval().getStart().toString(),
                   val.getInterval().getEnd().toString(),
@@ -274,7 +273,7 @@ public class SystemSchema extends AbstractSchema
               };
             }
             catch (JsonProcessingException e) {
-              throw new RE(e, "Error getting segment payload for segment %s", val.getIdentifier());
+              throw new RE(e, "Error getting segment payload for segment %s", val.getId());
             }
           });
 
@@ -285,13 +284,13 @@ public class SystemSchema extends AbstractSchema
           ))
           .transform(val -> {
             try {
-              if (segmentsAlreadySeen.contains(val.getKey().getIdentifier())) {
+              if (segmentsAlreadySeen.contains(val.getKey().getId())) {
                 return null;
               }
-              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey().getIdentifier());
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey().getId());
               final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
               return new Object[]{
-                  val.getKey().getIdentifier(),
+                  val.getKey().getId(),
                   val.getKey().getDataSource(),
                   val.getKey().getInterval().getStart().toString(),
                   val.getKey().getInterval().getEnd().toString(),
@@ -307,7 +306,7 @@ public class SystemSchema extends AbstractSchema
               };
             }
             catch (JsonProcessingException e) {
-              throw new RE(e, "Error getting segment payload for segment %s", val.getKey().getIdentifier());
+              throw new RE(e, "Error getting segment payload for segment %s", val.getKey().getId());
             }
           });
 
@@ -315,7 +314,7 @@ public class SystemSchema extends AbstractSchema
           Iterables.concat(publishedSegments, availableSegments)
       );
 
-      return Linq4j.asEnumerable(allSegments).where(t -> t != null);
+      return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
 
     }
 
@@ -526,11 +525,10 @@ public class SystemSchema extends AbstractSchema
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
       for (ImmutableDruidServer druidServer : druidServers) {
-        final Map<String, DataSegment> segmentMap = druidServer.getSegments();
-        for (DataSegment segment : segmentMap.values()) {
+        for (DataSegment segment : druidServer.getSegments()) {
           Object[] row = new Object[serverSegmentsTableSize];
           row[0] = druidServer.getHost();
-          row[1] = segment.getIdentifier();
+          row[1] = segment.getId();
           rows.add(row);
         }
       }
@@ -602,9 +600,12 @@ public class SystemSchema extends AbstractSchema
               if (task.getLocation().getHost() == null) {
                 hostAndPort = null;
               } else {
-                final int port = task.getLocation().getTlsPort() >= 0
-                                 ? task.getLocation().getTlsPort()
-                                 : task.getLocation().getPort();
+                final int port;
+                if (task.getLocation().getTlsPort() >= 0) {
+                  port = task.getLocation().getTlsPort();
+                } else {
+                  port = task.getLocation().getPort();
+                }
 
                 hostAndPort = HostAndPort.fromParts(task.getLocation().getHost(), port).toString();
               }
@@ -684,7 +685,6 @@ public class SystemSchema extends AbstractSchema
       BytesAccumulatingResponseHandler responseHandler
   )
   {
-
     Request request;
     try {
       request = indexingServiceClient.makeRequest(

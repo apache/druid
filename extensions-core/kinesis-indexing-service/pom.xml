@@ -57,6 +57,13 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-kinesis</artifactId>
             <version>${aws.sdk.version}</version>
+            <exclusions>
+                <!-- aws-java-sdk-core is provided by Druid core. -->
+                <exclusion>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

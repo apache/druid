@@ -1051,7 +1051,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             {
               notices.add(new RunNotice());
             }
-          }, MoreExecutors.sameThreadExecutor()
+          }, Execs.directExecutor()
       );
       listenerRegistered = true;
     }

@@ -46,6 +46,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,7 +60,7 @@ import java.util.Map;
 public class TopNQueryQueryToolChestTest
 {
 
-  private static final String segmentId = "testSegment";
+  private static final SegmentId segmentId = SegmentId.dummy("testSegment");
 
   @Test
   public void testCacheStrategy() throws Exception
@@ -157,7 +158,7 @@ public class TopNQueryQueryToolChestTest
           .granularity(QueryRunnerTestHelper.allGran)
           .dimension(QueryRunnerTestHelper.placementishDimension)
           .metric(QueryRunnerTestHelper.indexMetric)
-          .intervals(QueryRunnerTestHelper.fullOnInterval)
+          .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
           .aggregators(QueryRunnerTestHelper.commonDoubleAggregators);
 
       TopNQuery query1 = builder.threshold(10).context(null).build();

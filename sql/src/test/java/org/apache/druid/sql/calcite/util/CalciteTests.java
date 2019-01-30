@@ -34,8 +34,12 @@ import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -112,10 +116,12 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
@@ -142,6 +148,7 @@ public class CalciteTests
 {
   public static final String DATASOURCE1 = "foo";
   public static final String DATASOURCE2 = "foo2";
+  public static final String DATASOURCE3 = "numfoo";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
@@ -241,6 +248,22 @@ public class CalciteTests
       )
   );
 
+  private static final InputRowParser<Map<String, Object>> PARSER_NUMERIC_DIMS = new MapInputRowParser(
+      new TimeAndDimsParseSpec(
+          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+          new DimensionsSpec(
+              ImmutableList.<DimensionSchema>builder()
+                  .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
+                  .add(new DoubleDimensionSchema("d1"))
+                  .add(new FloatDimensionSchema("f1"))
+                  .add(new LongDimensionSchema("l1"))
+                  .build(),
+              null,
+              null
+          )
+      )
+  );
+
   private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
@@ -248,6 +271,17 @@ public class CalciteTests
           new DoubleSumAggregatorFactory("m2", "m2"),
           new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
       )
+      .withRollup(false)
+      .build();
+
+  private static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
+      .withMetrics(
+          new CountAggregatorFactory("cnt"),
+          new FloatSumAggregatorFactory("m1", "m1"),
+          new DoubleSumAggregatorFactory("m2", "m2"),
+          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+      )
+      .withDimensionsSpec(PARSER_NUMERIC_DIMS)
       .withRollup(false)
       .build();
 
@@ -311,6 +345,84 @@ public class CalciteTests
               .build()
       )
   );
+
+  public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS = ImmutableList.of(
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-01")
+              .put("m1", "1.0")
+              .put("m2", "1.0")
+              .put("d1", 1.0)
+              .put("f1", 1.0f)
+              .put("l1", 7L)
+              .put("dim1", "")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of("a", "b"))
+              .build(),
+          PARSER_NUMERIC_DIMS
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-02")
+              .put("m1", "2.0")
+              .put("m2", "2.0")
+              .put("d1", 1.7)
+              .put("f1", 0.1f)
+              .put("l1", 325323L)
+              .put("dim1", "10.1")
+              .put("dim2", ImmutableList.of())
+              .put("dim3", ImmutableList.of("b", "c"))
+              .build(),
+          PARSER_NUMERIC_DIMS
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2000-01-03")
+              .put("m1", "3.0")
+              .put("m2", "3.0")
+              .put("d1", 0.0)
+              .put("f1", 0.0)
+              .put("l1", 0)
+              .put("dim1", "2")
+              .put("dim2", ImmutableList.of(""))
+              .put("dim3", ImmutableList.of("d"))
+              .build(),
+          PARSER_NUMERIC_DIMS
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-01")
+              .put("m1", "4.0")
+              .put("m2", "4.0")
+              .put("dim1", "1")
+              .put("dim2", ImmutableList.of("a"))
+              .put("dim3", ImmutableList.of(""))
+              .build(),
+          PARSER_NUMERIC_DIMS
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-02")
+              .put("m1", "5.0")
+              .put("m2", "5.0")
+              .put("dim1", "def")
+              .put("dim2", ImmutableList.of("abc"))
+              .put("dim3", ImmutableList.of())
+              .build(),
+          PARSER_NUMERIC_DIMS
+      ),
+      createRow(
+          ImmutableMap.<String, Object>builder()
+              .put("t", "2001-01-03")
+              .put("m1", "6.0")
+              .put("m2", "6.0")
+              .put("dim1", "abc")
+              .build(),
+          PARSER_NUMERIC_DIMS
+      )
+  );
+
+
 
   public static final List<InputRow> ROWS2 = ImmutableList.of(
       createRow("2000-01-01", "דרואיד", "he", 1.0),
@@ -459,6 +571,15 @@ public class CalciteTests
     );
   }
 
+  public static SqlLifecycleFactory createSqlLifecycleFactory(final PlannerFactory plannerFactory)
+  {
+    return new SqlLifecycleFactory(
+        plannerFactory,
+        new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
+        new NoopRequestLogger()
+    );
+  }
+
   public static ObjectMapper getJsonMapper()
   {
     return INJECTOR.getInstance(Key.get(ObjectMapper.class, Json.class));
@@ -493,6 +614,14 @@ public class CalciteTests
         .rows(FORBIDDEN_ROWS)
         .buildMMappedIndex();
 
+    final QueryableIndex indexNumericDims = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "3"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(INDEX_SCHEMA_NUMERIC_DIMS)
+        .rows(ROWS1_WITH_NUMERIC_DIMS)
+        .buildMMappedIndex();
+
     return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
         DataSegment.builder()
                    .dataSource(DATASOURCE1)
@@ -517,6 +646,13 @@ public class CalciteTests
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
         forbiddenIndex
+    ).add(DataSegment.builder()
+                     .dataSource(DATASOURCE3)
+                     .interval(indexNumericDims.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .build(),
+          indexNumericDims
     );
   }
 
@@ -581,6 +717,11 @@ public class CalciteTests
   public static InputRow createRow(final ImmutableMap<String, ?> map)
   {
     return PARSER.parseBatch((Map<String, Object>) map).get(0);
+  }
+
+  public static InputRow createRow(final ImmutableMap<String, ?> map, InputRowParser<Map<String, Object>> parser)
+  {
+    return parser.parseBatch((Map<String, Object>) map).get(0);
   }
 
   public static InputRow createRow(final Object t, final String dim1, final String dim2, final double m1)

@@ -40,6 +40,7 @@ import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DatasourceWhitelist;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -153,17 +154,7 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
   private int mergeSegments(SegmentsToMerge segmentsToMerge, String dataSource)
   {
     final List<DataSegment> segments = segmentsToMerge.getSegments();
-    final List<String> segmentNames = Lists.transform(
-        segments,
-        new Function<DataSegment, String>()
-        {
-          @Override
-          public String apply(DataSegment input)
-          {
-            return input.getIdentifier();
-          }
-        }
-    );
+    final List<SegmentId> segmentNames = Lists.transform(segments, DataSegment::getId);
 
     log.info("[%s] Found %d segments to merge %s", dataSource, segments.size(), segmentNames);
 
@@ -171,12 +162,7 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
       indexingServiceClient.mergeSegments(segments);
     }
     catch (Exception e) {
-      log.error(
-          e,
-          "[%s] Merging error for segments [%s]",
-          dataSource,
-          segmentNames
-      );
+      log.error(e, "[%s] Merging error for segments %s", dataSource, segmentNames);
     }
 
     return segments.size();

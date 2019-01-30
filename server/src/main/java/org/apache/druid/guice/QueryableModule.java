@@ -33,6 +33,7 @@ import org.apache.druid.server.log.LoggingRequestLoggerProvider;
 import org.apache.druid.server.log.NoopRequestLoggerProvider;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.RequestLoggerProvider;
+import org.apache.druid.server.log.SwitchingRequestLoggerProvider;
 
 import java.util.Collections;
 import java.util.List;
@@ -67,7 +68,8 @@ public class QueryableModule implements DruidModule
                 FileRequestLoggerProvider.class,
                 LoggingRequestLoggerProvider.class,
                 ComposingRequestLoggerProvider.class,
-                FilteredRequestLoggerProvider.class
+                FilteredRequestLoggerProvider.class,
+                SwitchingRequestLoggerProvider.class
             )
     );
   }

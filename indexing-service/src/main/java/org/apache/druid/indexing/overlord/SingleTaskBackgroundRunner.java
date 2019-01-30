@@ -178,17 +178,15 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     if (runningItem != null) {
       final Task task = runningItem.getTask();
       final long start = System.currentTimeMillis();
-      final boolean graceful;
       final long elapsed;
       boolean error = false;
 
-      if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
-        // Attempt graceful shutdown.
-        graceful = true;
-        log.info("Starting graceful shutdown of task[%s].", task.getId());
+      // stopGracefully for resource cleaning
+      log.info("Starting graceful shutdown of task[%s].", task.getId());
+      task.stopGracefully(taskConfig);
 
+      if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
         try {
-          task.stopGracefully();
           final TaskStatus taskStatus = runningItem.getResult().get(
               new Interval(DateTimes.utc(start), taskConfig.getGracefulShutdownTimeout()).toDurationMillis(),
               TimeUnit.MILLISECONDS
@@ -213,7 +211,6 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
         }
       } else {
-        graceful = false;
         TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
       }
 
@@ -223,7 +220,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           .builder()
           .setDimension("task", task.getId())
           .setDimension("dataSource", task.getDataSource())
-          .setDimension("graceful", String.valueOf(graceful))
+          .setDimension("graceful", "true") // for backward compatibility
           .setDimension("error", String.valueOf(error));
 
       emitter.emit(metricBuilder.build("task/interrupt/count", 1L));

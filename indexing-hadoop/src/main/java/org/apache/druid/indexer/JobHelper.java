@@ -59,8 +59,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -344,6 +346,24 @@ public class JobHelper
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
+    }
+  }
+
+  public static void writeJobIdToFile(String hadoopJobIdFileName, String hadoopJobId)
+  {
+    if (hadoopJobId != null && hadoopJobIdFileName != null) {
+      try {
+        HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
+            new OutputStreamWriter(new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
+            hadoopJobId
+        );
+        log.info("MR job id [%s] is written to the file [%s]", hadoopJobId, hadoopJobIdFileName);
+      }
+      catch (IOException e) {
+        log.warn(e, "Error writing job id [%s] to the file [%s]", hadoopJobId, hadoopJobIdFileName);
+      }
+    } else {
+      log.info("Either job id or file name is null for the submitted job. Skipping writing the file [%s]", hadoopJobIdFileName);
     }
   }
 

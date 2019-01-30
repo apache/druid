@@ -25,17 +25,20 @@ import com.yahoo.sketches.Util;
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.DoublesUnion;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.ObjectAggregateCombiner;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -135,6 +138,42 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
     union.update((DoublesSketch) lhs);
     union.update((DoublesSketch) rhs);
     return union.getResultAndReset();
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    return new ObjectAggregateCombiner<DoublesSketch>()
+    {
+      private final DoublesUnion union = DoublesUnion.builder().setMaxK(k).build();
+
+      @Override
+      public void reset(final ColumnValueSelector selector)
+      {
+        union.reset();
+        fold(selector);
+      }
+
+      @Override
+      public void fold(final ColumnValueSelector selector)
+      {
+        final DoublesSketch sketch = (DoublesSketch) selector.getObject();
+        union.update(sketch);
+      }
+
+      @Nullable
+      @Override
+      public DoublesSketch getObject()
+      {
+        return union.getResult();
+      }
+
+      @Override
+      public Class<DoublesSketch> classOfObject()
+      {
+        return DoublesSketch.class;
+      }
+    };
   }
 
   @Override

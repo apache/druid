@@ -77,6 +77,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -412,8 +413,8 @@ public class SearchBenchmark
   {
     QueryRunner<SearchHit> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "incIndex",
-        new IncrementalIndexSegment(incIndexes.get(0), "incIndex")
+        SegmentId.dummy("incIndex"),
+        new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
@@ -430,8 +431,8 @@ public class SearchBenchmark
   {
     final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "qIndex",
-        new QueryableIndexSegment("qIndex", qIndexes.get(0))
+        SegmentId.dummy("qIndex"),
+        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
@@ -453,8 +454,8 @@ public class SearchBenchmark
       String segmentName = "qIndex" + i;
       final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          SegmentId.dummy(segmentName),
+          new QueryableIndexSegment(qIndexes.get(i), SegmentId.dummy(segmentName))
       );
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }

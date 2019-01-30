@@ -105,7 +105,7 @@ public class CliRealtimeExample extends ServerRunnable
   private static class NoopInventoryView implements InventoryView
   {
     @Override
-    public DruidServer getInventoryValue(String string)
+    public DruidServer getInventoryValue(String serverKey)
     {
       return null;
     }

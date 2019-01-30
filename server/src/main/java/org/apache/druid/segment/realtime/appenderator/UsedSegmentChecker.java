@@ -33,5 +33,5 @@ public interface UsedSegmentChecker
    *
    * @return used DataSegments
    */
-  Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers) throws IOException;
+  Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException;
 }
