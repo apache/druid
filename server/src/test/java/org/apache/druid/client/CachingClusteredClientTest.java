@@ -2213,7 +2213,7 @@ public class CachingClusteredClientTest
             expectedResults.get(k).get(j)
         );
         serverExpectations.get(lastServer).addExpectation(expectation);
-        EasyMock.expect(mockSegment.getSize()).andReturn(-1L).anyTimes();
+        EasyMock.expect(mockSegment.getSize()).andReturn(0L).anyTimes();
         EasyMock.replay(mockSegment);
         ServerSelector selector = new ServerSelector(
             expectation.getSegment(),

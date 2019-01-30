@@ -49,6 +49,10 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * This class polls the coordinator in background to keep the latest published segments.
+ * Provides {@link #getPublishedSegments()} for others to get segments in metadata store.
+ */
 @ManageLifecycle
 public class MetadataSegmentView
 {
@@ -67,8 +71,8 @@ public class MetadataSegmentView
   @Inject
   public MetadataSegmentView(
       final @Coordinator DruidLeaderClient druidLeaderClient,
-      ObjectMapper jsonMapper,
-      BytesAccumulatingResponseHandler responseHandler,
+      final ObjectMapper jsonMapper,
+      final BytesAccumulatingResponseHandler responseHandler,
       final BrokerSegmentWatcherConfig segmentWatcherConfig
   )
   {
