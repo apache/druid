@@ -101,6 +101,8 @@
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.4.11</zookeeper.version>
         <checkerframework.version>2.5.7</checkerframework.version>
+        <com.google.apis.client.version>1.22.0</com.google.apis.client.version>
+
         <repoOrgId>apache.snapshots</repoOrgId>
         <repoOrgName>Apache Snapshot Repository</repoOrgName>
         <repoOrgUrl>https://repository.apache.org/snapshots</repoOrgUrl>
@@ -120,9 +122,11 @@
         <module>services</module>
         <module>integration-tests</module>
         <module>benchmarks</module>
-        <module>aws-common</module>
         <module>extendedset</module>
         <module>hll</module>
+        <!-- Core cloud functionality -->
+        <module>cloud/aws-common</module>
+        <module>cloud/gcp-common</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -144,6 +148,7 @@
         <module>extensions-core/s3-extensions</module>
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
+        <module>extensions-core/google-extensions</module>
         <!-- Community extensions -->
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/azure-extensions</module>
@@ -157,7 +162,6 @@
         <module>extensions-contrib/statsd-emitter</module>
         <module>extensions-contrib/orc-extensions</module>
         <module>extensions-contrib/time-min-max</module>
-        <module>extensions-contrib/google-extensions</module>
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
@@ -863,6 +867,72 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+
+            <!-- GCP -->
+            <dependency>
+                <groupId>org.apache.druid</groupId>
+                <artifactId>druid-core</artifactId>
+                <version>${project.parent.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.api-client</groupId>
+                <artifactId>google-api-client</artifactId>
+                <version>${com.google.apis.client.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.code.findbugs</groupId>
+                        <artifactId>jsr305</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.google.guava</groupId>
+                        <artifactId>guava-jdk5</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.httpcomponents</groupId>
+                        <artifactId>httpcore</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.httpcomponents</groupId>
+                        <artifactId>httpclient</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.google.http-client</groupId>
+                <artifactId>google-http-client-jackson2</artifactId>
+                <version>${com.google.apis.client.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.httpcomponents</groupId>
+                        <artifactId>httpclient</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-guice</artifactId>
+                <version>${jackson.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>

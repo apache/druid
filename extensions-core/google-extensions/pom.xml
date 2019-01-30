@@ -33,6 +33,10 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
+    <properties>
+        <com.google.apis.storage.version>v1-rev79-${com.google.apis.client.version}</com.google.apis.storage.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -40,35 +44,21 @@
             <version>${project.parent.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
+            <artifactId>druid-gcp-common</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-storage</artifactId>
-            <version>v1-rev79-1.22.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.http-client</groupId>
-            <artifactId>google-http-client-jackson2</artifactId>
-            <version>1.22.0</version>
+            <version>${com.google.apis.storage.version}</version>
             <exclusions>
                 <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-guice</artifactId>
-            <version>${jackson.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-core</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
+                    <groupId>com.google.api-client</groupId>
+                    <artifactId>google-api-client</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

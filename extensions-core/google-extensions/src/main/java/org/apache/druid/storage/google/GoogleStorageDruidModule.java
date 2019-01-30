@@ -23,13 +23,10 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.StorageScopes;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
@@ -40,15 +37,12 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.List;
 
 public class GoogleStorageDruidModule implements DruidModule
 {
-  private static final Logger LOG = new Logger(GoogleStorageDruidModule.class);
-
   public static final String SCHEME = "google";
+  private static final Logger LOG = new Logger(GoogleStorageDruidModule.class);
   private static final String APPLICATION_NAME = "druid-google-extensions";
 
   @Override
@@ -103,19 +97,18 @@ public class GoogleStorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public GoogleStorage getGoogleStorage(final GoogleAccountConfig config)
-      throws IOException, GeneralSecurityException
+  public GoogleStorage getGoogleStorage(
+      HttpTransport httpTransport,
+      JsonFactory jsonFactory,
+      HttpRequestInitializer requestInitializer
+  )
   {
     LOG.info("Building Cloud Storage Client...");
 
-    HttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-    JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
-
-    GoogleCredential credential = GoogleCredential.getApplicationDefault(httpTransport, jsonFactory);
-    if (credential.createScopedRequired()) {
-      credential = credential.createScoped(StorageScopes.all());
-    }
-    Storage storage = new Storage.Builder(httpTransport, jsonFactory, credential).setApplicationName(APPLICATION_NAME).build();
+    Storage storage = new Storage
+        .Builder(httpTransport, jsonFactory, requestInitializer)
+        .setApplicationName(APPLICATION_NAME)
+        .build();
 
     return new GoogleStorage(storage);
   }
