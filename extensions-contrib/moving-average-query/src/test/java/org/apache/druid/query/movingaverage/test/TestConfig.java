@@ -16,12 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.movingaverage.test;
 
-import java.util.Map;
+package org.apache.druid.query.movingaverage.test;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.util.Map;
 
 /**
  * Configuration for a unit test.

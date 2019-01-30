@@ -16,14 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.movingaverage.averagers;
 
-import java.util.Comparator;
+package org.apache.druid.query.movingaverage.averagers;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.Util;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchHolder;
+
+import java.util.Comparator;
 
 public class SketchUnionAveragerFactory extends BaseAveragerFactory<SketchHolder, Double>
 {

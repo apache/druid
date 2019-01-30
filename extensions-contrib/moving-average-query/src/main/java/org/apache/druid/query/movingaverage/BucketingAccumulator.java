@@ -16,13 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.movingaverage;
 
-import java.util.ArrayList;
-import java.util.Collection;
+package org.apache.druid.query.movingaverage;
 
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Works together with {@link RowBucketIterable} to group all the rows for a specific day together.

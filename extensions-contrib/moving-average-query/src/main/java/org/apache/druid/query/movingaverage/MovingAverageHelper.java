@@ -19,13 +19,13 @@
 
 package org.apache.druid.query.movingaverage;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.dimension.DimensionSpec;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MovingAverageHelper
 {

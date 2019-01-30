@@ -16,11 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.movingaverage.averagers;
 
-import java.util.Map;
-
 import org.apache.druid.query.aggregation.AggregatorFactory;
+
+import java.util.Map;
 
 /**
  * The constant averager.Created soley for incremental development and wiring things up.

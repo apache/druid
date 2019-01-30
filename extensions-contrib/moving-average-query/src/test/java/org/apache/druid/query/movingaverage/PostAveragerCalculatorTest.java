@@ -16,9 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.movingaverage;
 
+import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.movingaverage.averagers.DoubleMeanAveragerFactory;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
@@ -29,15 +38,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.TableDataSource;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;

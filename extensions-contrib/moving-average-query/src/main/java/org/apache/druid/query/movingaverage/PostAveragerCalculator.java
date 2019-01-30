@@ -16,15 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.movingaverage;
 
-import java.util.List;
-import java.util.Map;
+package org.apache.druid.query.movingaverage;
 
 import com.google.common.base.Function;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.PostAggregator;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Function that can be applied to a Sequence to calculate PostAverager results
