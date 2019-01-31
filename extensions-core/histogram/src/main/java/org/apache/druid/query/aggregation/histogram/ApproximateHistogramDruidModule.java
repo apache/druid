@@ -47,7 +47,8 @@ public class ApproximateHistogramDruidModule implements DruidModule
             QuantilesPostAggregator.class,
             QuantilePostAggregator.class,
             MinPostAggregator.class,
-            MaxPostAggregator.class
+            MaxPostAggregator.class,
+            FixedBucketsHistogramAggregatorFactory.class
         )
     );
   }
@@ -57,6 +58,10 @@ public class ApproximateHistogramDruidModule implements DruidModule
   {
     if (ComplexMetrics.getSerdeForType("approximateHistogram") == null) {
       ComplexMetrics.registerSerde("approximateHistogram", new ApproximateHistogramFoldingSerde());
+    }
+
+    if (ComplexMetrics.getSerdeForType(FixedBucketsHistogramAggregator.TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(FixedBucketsHistogramAggregator.TYPE_NAME, new FixedBucketsHistogramSerde());
     }
 
     if (binder != null) {

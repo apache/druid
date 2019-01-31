@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Longs;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
 
@@ -31,7 +30,6 @@ import java.util.Comparator;
  */
 public class Comparators
 {
-
   private static final Ordering<Object> ALWAYS_EQUAL = new Ordering<Object>()
   {
     @SuppressWarnings("ComparatorMethodParameterNotUsed")
@@ -59,25 +57,6 @@ public class Comparators
     return NATURAL_NULLS_FIRST;
   }
 
-  /**
-   * Use Guava Ordering.natural() instead
-   *
-   * @param <T>
-   * @return
-   */
-  @Deprecated
-  public static <T extends Comparable> Comparator<T> comparable()
-  {
-    return new Comparator<T>()
-    {
-      @Override
-      public int compare(T t, T t1)
-      {
-        return t.compareTo(t1);
-      }
-    };
-  }
-
   private static final Comparator<Interval> INTERVAL_BY_START_THEN_END = new Comparator<Interval>()
   {
     private final DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
@@ -86,9 +65,9 @@ public class Comparators
     public int compare(Interval lhs, Interval rhs)
     {
       if (lhs.getChronology().equals(rhs.getChronology())) {
-        int compare = Longs.compare(lhs.getStartMillis(), rhs.getStartMillis());
+        int compare = Long.compare(lhs.getStartMillis(), rhs.getStartMillis());
         if (compare == 0) {
-          return Longs.compare(lhs.getEndMillis(), rhs.getEndMillis());
+          return Long.compare(lhs.getEndMillis(), rhs.getEndMillis());
         }
         return compare;
       }
@@ -108,9 +87,9 @@ public class Comparators
     public int compare(Interval lhs, Interval rhs)
     {
       if (lhs.getChronology().equals(rhs.getChronology())) {
-        int compare = Longs.compare(lhs.getEndMillis(), rhs.getEndMillis());
+        int compare = Long.compare(lhs.getEndMillis(), rhs.getEndMillis());
         if (compare == 0) {
-          return Longs.compare(lhs.getStartMillis(), rhs.getStartMillis());
+          return Long.compare(lhs.getStartMillis(), rhs.getStartMillis());
         }
         return compare;
       }

@@ -26,7 +26,7 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -120,7 +120,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public SegmentIdentifier allocatePendingSegment(
+  public SegmentIdWithShardSpec allocatePendingSegment(
       String dataSource,
       String sequenceName,
       String previousSegmentId,

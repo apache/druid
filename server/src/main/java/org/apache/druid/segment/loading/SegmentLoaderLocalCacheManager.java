@@ -163,7 +163,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
         }
       }
     }
-    throw new SegmentLoadingException("Failed to load segment %s in all locations.", segment.getIdentifier());
+    throw new SegmentLoadingException("Failed to load segment %s in all locations.", segment.getId());
   }
 
   private void loadInLocationWithStartMarker(DataSegment segment, File storageDir) throws SegmentLoadingException
@@ -200,7 +200,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     if (result.getSize() != segment.getSize()) {
       log.warn(
           "Segment [%s] is different than expected size. Expected [%d] found [%d]",
-          segment.getIdentifier(),
+          segment.getId(),
           segment.getSize(),
           result.getSize()
       );

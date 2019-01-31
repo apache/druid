@@ -30,7 +30,7 @@ import org.apache.druid.server.StatusResource;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorResource;
-import org.apache.druid.server.http.DatasourcesResource;
+import org.apache.druid.server.http.DataSourcesResource;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.IntervalsResource;
 import org.apache.druid.server.http.MetadataResource;
@@ -59,7 +59,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
     return ImmutableList.copyOf(
         Iterables.concat(
             getRequestPathsWithAuthorizer(CoordinatorResource.class),
-            getRequestPathsWithAuthorizer(DatasourcesResource.class),
+            getRequestPathsWithAuthorizer(DataSourcesResource.class),
             getRequestPathsWithAuthorizer(BrokerResource.class),
             getRequestPathsWithAuthorizer(HistoricalResource.class),
             getRequestPathsWithAuthorizer(IntervalsResource.class),

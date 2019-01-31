@@ -290,7 +290,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1"
     );
 
-    final DateTimeZone timeZone = DateTimes.inferTzfromString("America/Los_Angeles");
+    final DateTimeZone timeZone = DateTimes.inferTzFromString("America/Los_Angeles");
     final DateTime localDateTime = new DateTime("2000-01-01T00Z", timeZone);
 
     final List<Map<String, Object>> resultRows = getRows(resultSet);
@@ -388,13 +388,19 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         ImmutableList.of(
             ROW(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", "foo"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE1),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
             ROW(
                 Pair.of("TABLE_CAT", "druid"),
-                Pair.of("TABLE_NAME", "foo2"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE2),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            ROW(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )
@@ -427,6 +433,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ROW(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            ROW(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             )

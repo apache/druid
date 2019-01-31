@@ -38,6 +38,7 @@ public class HadoopDruidIndexerJob implements Jobby
   private final MetadataStorageUpdaterJob metadataStorageUpdaterJob;
   private IndexGeneratorJob indexJob;
   private volatile List<DataSegment> publishedSegments = null;
+  private String hadoopJobIdFile;
 
   @Inject
   public HadoopDruidIndexerJob(
@@ -92,7 +93,7 @@ public class HadoopDruidIndexerJob implements Jobby
         }
     );
 
-
+    config.setHadoopJobIdFileName(hadoopJobIdFile);
     return JobHelper.runJobs(jobs, config);
   }
 
@@ -123,5 +124,10 @@ public class HadoopDruidIndexerJob implements Jobby
       throw new IllegalStateException("Job hasn't run yet. No segments have been published yet.");
     }
     return publishedSegments;
+  }
+
+  public void setHadoopJobIdFile(String hadoopJobIdFile)
+  {
+    this.hadoopJobIdFile = hadoopJobIdFile;
   }
 }

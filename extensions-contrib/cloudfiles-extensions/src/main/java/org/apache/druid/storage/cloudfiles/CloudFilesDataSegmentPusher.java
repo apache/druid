@@ -88,7 +88,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
 
       final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
-      log.info("Copying segment[%s] to CloudFiles at location[%s]", inSegment.getIdentifier(), segmentPath);
+      log.info("Copying segment[%s] to CloudFiles at location[%s]", inSegment.getId(), segmentPath);
       return CloudFilesUtils.retryCloudFilesOperation(
           () -> {
             CloudFilesObject segmentData = new CloudFilesObject(

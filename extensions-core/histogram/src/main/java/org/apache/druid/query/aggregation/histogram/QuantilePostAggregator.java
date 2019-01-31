@@ -79,8 +79,15 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(fieldName);
-    return ah.getQuantiles(new float[]{probability})[0];
+    Object value = values.get(fieldName);
+    if (value instanceof ApproximateHistogram) {
+      final ApproximateHistogram ah = (ApproximateHistogram) value;
+      return ah.getQuantiles(new float[]{probability})[0];
+    } else {
+      final FixedBucketsHistogram fbh = (FixedBucketsHistogram) value;
+      float x = fbh.percentilesFloat(new double[]{probability * 100.0})[0];
+      return x;
+    }
   }
 
   @Override

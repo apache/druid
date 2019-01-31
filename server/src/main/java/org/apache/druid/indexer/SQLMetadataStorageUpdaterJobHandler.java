@@ -68,7 +68,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
 
               batch.add(
                   new ImmutableMap.Builder<String, Object>()
-                      .put("id", segment.getIdentifier())
+                      .put("id", segment.getId().toString())
                       .put("dataSource", segment.getDataSource())
                       .put("created_date", DateTimes.nowUtc().toString())
                       .put("start", segment.getInterval().getStart().toString())
@@ -80,7 +80,7 @@ public class SQLMetadataStorageUpdaterJobHandler implements MetadataStorageUpdat
                       .build()
               );
 
-              log.info("Published %s", segment.getIdentifier());
+              log.info("Published %s", segment.getId());
 
             }
             batch.execute();

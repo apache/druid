@@ -76,7 +76,7 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
                   stats.addToTieredStat("unneededCount", server.getTier(), 1);
                   log.info(
                       "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
-                      segment.getIdentifier(),
+                      segment.getId(),
                       server.getName(),
                       server.getTier()
                   );

@@ -489,7 +489,7 @@ public class CompactionTask extends AbstractTask
     for (Pair<QueryableIndex, DataSegment> pair : queryableIndexAndSegments) {
       final QueryableIndex index = pair.lhs;
       if (index.getMetadata() == null) {
-        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getIdentifier());
+        throw new RE("Index metadata doesn't exist for segment[%s]", pair.rhs.getId());
       }
     }
 
@@ -569,9 +569,9 @@ public class CompactionTask extends AbstractTask
           intervalComparator.compare(shouldBeSmaller, shouldBeLarger) <= 0,
           "QueryableIndexes are not sorted! Interval[%s] of segment[%s] is laster than interval[%s] of segment[%s]",
           shouldBeSmaller,
-          queryableIndices.get(i).rhs.getIdentifier(),
+          queryableIndices.get(i).rhs.getId(),
           shouldBeLarger,
-          queryableIndices.get(i + 1).rhs.getIdentifier()
+          queryableIndices.get(i + 1).rhs.getId()
       );
     }
 
@@ -636,7 +636,7 @@ public class CompactionTask extends AbstractTask
       for (PartitionChunk<DataSegment> chunk : partitionHolder) {
         final DataSegment segment = chunk.getObject();
         final QueryableIndex queryableIndex = indexIO.loadIndex(
-            Preconditions.checkNotNull(segmentFileMap.get(segment), "File for segment %s", segment.getIdentifier())
+            Preconditions.checkNotNull(segmentFileMap.get(segment), "File for segment %s", segment.getId())
         );
         segments.add(Pair.of(queryableIndex, segment));
       }

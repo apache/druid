@@ -75,7 +75,7 @@ public abstract class BroadcastDistributionRule implements Rule
     for (ServerHolder holder : serverHolders) {
       if (segment.getSize() > holder.getAvailableSize()) {
         log.makeAlert("Failed to broadcast segment for [%s]", segment.getDataSource())
-           .addData("segmentId", segment.getIdentifier())
+           .addData("segmentId", segment.getId())
            .addData("segmentSize", segment.getSize())
            .addData("hostName", holder.getServer().getHost())
            .addData("availableSize", holder.getAvailableSize())
