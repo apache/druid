@@ -25,8 +25,8 @@ title: "Native Index Tasks"
 # Native Index Tasks
 
 Druid currently has two types of native batch indexing tasks, `index_parallel` which runs tasks
-in parallel on multiple middle manager nodes, and `index` which will run a single indexing task locally on a single
-middle manager.
+in parallel on multiple MiddleManager nodes, and `index` which will run a single indexing task locally on a single
+MiddleManager.
 
 Parallel Index Task
 --------------------------------
@@ -34,7 +34,7 @@ Parallel Index Task
 The Parallel Index Task is a task for parallel batch indexing. This task only uses Druid's resource and
 doesn't depend on other external systems like Hadoop. This task currently works in a single phase without shuffling intermediate
 data. `index_parallel` task is a supervisor task which basically generates multiple worker tasks and submits
-them to overlords. Each worker task reads input data and makes segments. Once they successfully generate segments for all
+them to Overlords. Each worker task reads input data and makes segments. Once they successfully generate segments for all
 input, they report the generated segment list to the supervisor task. The supervisor task periodically checks the worker
 task statuses. If one of them fails, it retries the failed task until the retrying number reaches the configured limit.
 If all worker tasks succeed, then it collects the reported list of generated segments and publishes those segments at once.
