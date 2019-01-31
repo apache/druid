@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-export const LEGACY_COORDINATOR_CONSOLE = "/coordinator-console.html";
+export const LEGACY_COORDINATOR_CONSOLE = "/index.html";
 export const LEGACY_OVERLORD_CONSOLE = "/console.html";
 
 export const DRUID_WEBSITE = "http://druid.io";

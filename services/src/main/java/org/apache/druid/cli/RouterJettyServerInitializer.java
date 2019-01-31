@@ -71,7 +71,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       "/unified-console.html",
       "/favicon.png",
       "/console.html",
-      "/coordinator-console.html"
+      "/index.html"
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;
@@ -109,7 +109,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
     root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
     // index.html is the welcome file for old-console
-    root.setWelcomeFiles(new String[]{"index.html", "unified-console.html"});
+    root.setWelcomeFiles(new String[]{"unified-console.html", "index.html"});
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 

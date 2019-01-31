@@ -23,7 +23,7 @@ set -e
 echo "Copying coordinator console in..."
 cp -r ./node_modules/druid-console/coordinator-console .
 cp -r ./node_modules/druid-console/pages .
-cp ./node_modules/druid-console/index.html coordinator-console.html
+cp ./node_modules/druid-console/index.html .
 
 echo "Transpiling ReactTable CSS..."
 ./node_modules/.bin/stylus lib/react-table.styl -o lib/react-table.css

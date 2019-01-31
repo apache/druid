@@ -6,7 +6,7 @@ lib/*.css
 
 coordinator-console/
 pages/
-coordinator-console.html
+index.html
 
 .tscache
 tscommand-*.tmp.txt

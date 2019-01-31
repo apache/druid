@@ -22,5 +22,4 @@ rm -rf \
   coordinator-console \
   pages \
   public \
-  coordinator-console.html \
-  coordinator-console.html
+  index.html

@@ -32,22 +32,22 @@ This is the unified Druid web console that servers as a data management layer fo
 
 ## Description of the directory structure
 
-A lot of the directory structure was created to preserve the legacy console structure as much as possible.
+A lot of the directory structure was created to preserve the existing console structure as much as possible.
 
 As part of this repo:
 
-- `console.html` - Entry file for the legacy overlord console
+- `console.html` - Entry file for the overlord console
 - `lib/` - A place where some overrides to the react-table stylus files live, this is outside of the normal SCSS build system.
-- `old-console/` - Files for the legacy overlord console 
+- `old-console/` - Files for the overlord console
 - `public/` - The compiled destination of the file powering this console
 - `script/` - Some helper bash scripts for running this console
 - `src/` - This directory (together with `lib`) constitutes all the source code for this console 
 
 Generated/copied dynamically
 
-- `coordinator-console.html` - Entry file for the legacy coordinator console
-- `pages/` - The files for the older legacy coordinator console
-- `coordinator-console/` - Files for the legacy coordinator console
+- `index.html` - Entry file for the coordinator console
+- `pages/` - The files for the older coordinator console
+- `coordinator-console/` - Files for the coordinator console
 
 
 ## List of non SQL data reading APIs used
