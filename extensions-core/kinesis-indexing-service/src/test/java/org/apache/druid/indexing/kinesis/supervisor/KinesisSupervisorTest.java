@@ -3560,7 +3560,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
-  private static List<byte[]> JB(
+  private static List<byte[]> jb(
       String timestamp,
       String dim1,
       String dim2,
