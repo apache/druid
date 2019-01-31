@@ -26,7 +26,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.http.OverlordProxyServlet;
 import org.apache.druid.server.http.RedirectFilter;
@@ -45,7 +44,6 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
-import org.eclipse.jetty.util.resource.ResourceCollection;
 
 import java.util.List;
 import java.util.Properties;
@@ -66,19 +64,15 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       "/druid/coordinator/v1/isLeader"
   );
 
-  private static Logger log = new Logger(CoordinatorJettyServerInitializer.class);
-
   private final DruidCoordinatorConfig config;
   private final boolean beOverlord;
-  private final AuthConfig authConfig;
   private final ServerConfig serverConfig;
 
   @Inject
-  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, AuthConfig authConfig, ServerConfig serverConfig)
+  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, ServerConfig serverConfig)
   {
     this.config = config;
     this.beOverlord = CliCoordinator.isOverlord(properties);
-    this.authConfig = authConfig;
     this.serverConfig = serverConfig;
   }
 
@@ -95,11 +89,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
 
     root.addServlet(holderPwd, "/");
     if (config.getConsoleStatic() == null) {
-      final ResourceCollection staticResources = new ResourceCollection(
-          Resource.newClassPathResource("org/apache/druid/console"),
-          Resource.newClassPathResource("org/apache/druid/console/old-console")
-      );
-      root.setBaseResource(staticResources);
+      root.setBaseResource(Resource.newClassPathResource("org/apache/druid/console"));
     } else {
       // used for console development
       root.setResourceBase(config.getConsoleStatic());

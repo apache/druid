@@ -36,7 +36,7 @@ A lot of the directory structure was created to preserve the legacy console stru
 
 As part of this repo:
 
-- `legacy-overlord-console.html` - Entry file for the legacy overlord console
+- `console.html` - Entry file for the legacy overlord console
 - `lib/` - A place where some overrides to the react-table stylus files live, this is outside of the normal SCSS build system.
 - `old-console/` - Files for the legacy overlord console 
 - `public/` - The compiled destination of the file powering this console
@@ -45,7 +45,7 @@ As part of this repo:
 
 Generated/copied dynamically
 
-- `legacy-coordinator-console.html` - Entry file for the legacy coordinator console
+- `coordinator-console.html` - Entry file for the legacy coordinator console
 - `pages/` - The files for the older legacy coordinator console
 - `coordinator-console/` - Files for the legacy coordinator console
 

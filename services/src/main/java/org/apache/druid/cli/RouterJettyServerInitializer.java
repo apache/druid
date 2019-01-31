@@ -108,6 +108,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
     root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
+    // index.html is the welcome file for old-console
     root.setWelcomeFiles(new String[]{"index.html", "unified-console.html"});
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
