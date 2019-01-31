@@ -88,7 +88,7 @@ do
     # Can't use IFS='=' to parse since var might have = in it (e.g. password)
     val=$(echo "$evar" | sed -e 's?[^=]*=??')
     var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
-    setKey _common "$var" "$val"
+    setKey $SERVICE "$var" "$val"
 done
 
 env |grep ^s3service | while read evar
