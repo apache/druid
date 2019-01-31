@@ -29,7 +29,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Sets;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
@@ -50,6 +49,7 @@ import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -164,7 +164,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
   )
   {
 
-    final Set<String> outputNames = Sets.newHashSet();
+    final Set<String> outputNames = new HashSet<>();
     for (DimensionSpec dimension : dimensions) {
       if (!outputNames.add(dimension.getOutputName())) {
         throw new IAE("Duplicate output name[%s]", dimension.getOutputName());
