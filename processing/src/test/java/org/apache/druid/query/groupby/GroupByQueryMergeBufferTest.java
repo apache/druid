@@ -157,7 +157,7 @@ public class GroupByQueryMergeBufferTest
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         strategySelector,
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
     return new GroupByQueryRunnerFactory(
         strategySelector,

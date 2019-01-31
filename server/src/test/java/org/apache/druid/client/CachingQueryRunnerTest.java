@@ -141,7 +141,7 @@ public class CachingQueryRunnerTest
 
     QueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     testCloseAndPopulate(expectedRes, expectedCacheRes, builder.build(), toolchest);
@@ -189,7 +189,7 @@ public class CachingQueryRunnerTest
       }
 
       QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(
-          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+          QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
       );
 
       testCloseAndPopulate(expectedResults, expectedResults, query, toolChest);

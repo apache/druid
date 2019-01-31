@@ -362,7 +362,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = client.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(Pair.of("TABLE_CAT", "druid"))
+            row(Pair.of("TABLE_CAT", "druid"))
         ),
         getRows(metaData.getCatalogs())
     );
@@ -374,7 +374,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = client.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(Pair.of("TABLE_CATALOG", "druid"), Pair.of("TABLE_SCHEM", "druid"))
+            row(Pair.of("TABLE_CATALOG", "druid"), Pair.of("TABLE_SCHEM", "druid"))
         ),
         getRows(metaData.getSchemas(null, "druid"))
     );
@@ -386,19 +386,19 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = client.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(
+            row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE1),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE2),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -418,25 +418,25 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = superuserClient.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(
+            row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE1),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE2),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -456,7 +456,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = client.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "__time"),
@@ -464,7 +464,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "TIMESTAMP"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "cnt"),
@@ -472,7 +472,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "BIGINT"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim1"),
@@ -480,7 +480,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim2"),
@@ -488,7 +488,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "dim3"),
@@ -496,7 +496,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m1"),
@@ -504,7 +504,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "FLOAT"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "m2"),
@@ -512,7 +512,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "DOUBLE"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", "foo"),
                 Pair.of("COLUMN_NAME", "unique_dim1"),
@@ -547,7 +547,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     final DatabaseMetaData metaData = superuserClient.getMetaData();
     Assert.assertEquals(
         ImmutableList.of(
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "__time"),
@@ -555,7 +555,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "TIMESTAMP"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "cnt"),
@@ -563,7 +563,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "BIGINT"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "dim1"),
@@ -571,7 +571,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "dim2"),
@@ -579,7 +579,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "VARCHAR"),
                 Pair.of("IS_NULLABLE", "YES")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "m1"),
@@ -587,7 +587,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "FLOAT"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "m2"),
@@ -595,7 +595,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("TYPE_NAME", "DOUBLE"),
                 Pair.of("IS_NULLABLE", "NO")
             ),
-            ROW(
+            row(
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.FORBIDDEN_DATASOURCE),
                 Pair.of("COLUMN_NAME", "unique_dim1"),
@@ -928,7 +928,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     }
   }
 
-  private static Map<String, Object> ROW(final Pair<String, ?>... entries)
+  private static Map<String, Object> row(final Pair<String, ?>... entries)
   {
     final Map<String, Object> m = new HashMap<>();
     for (Pair<String, ?> entry : entries) {
