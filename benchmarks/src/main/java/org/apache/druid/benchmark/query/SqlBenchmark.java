@@ -188,6 +188,7 @@ public class SqlBenchmark
     final List<Object[]> results = sqlLifecycle.runSimple(
         sqlQuery,
         null,
+        null,
         NoopEscalator.getInstance().createEscalatedAuthenticationResult()
     ).toList();
     blackhole.consume(results);

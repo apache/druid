@@ -25,6 +25,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -52,6 +53,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.easymock.EasyMock;
@@ -187,7 +189,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     try {
       resource.doPost(
-          new SqlQuery("select count(*) from forbiddenDatasource", null, false, null),
+          new SqlQuery("select count(*) from forbiddenDatasource", null, false, null, null),
           testRequest
       );
       Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
@@ -202,7 +204,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCountStar() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo", null, false, null)
+        new SqlQuery("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo", null, false, null, null)
     ).rhs;
 
     Assert.assertEquals(
@@ -222,7 +224,29 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
             ResultFormat.OBJECT,
             false,
+            null,
             null
+        )
+    ).rhs;
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableMap.of("__time", "2000-01-01T00:00:00.000Z", "t2", "2000-01-01T00:00:00.000Z")
+        ),
+        rows
+    );
+  }
+
+  @Test
+  public void testTimestampsInResponseWithParameterizedLimit() throws Exception
+  {
+    final List<Map<String, Object>> rows = doPost(
+        new SqlQuery(
+            "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT ?",
+            ResultFormat.OBJECT,
+            false,
+            null,
+            ImmutableList.of(new SqlParameter(1, SqlType.INTEGER, 1))
         )
     ).rhs;
 
@@ -242,7 +266,8 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1",
             ResultFormat.OBJECT,
             false,
-            ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles")
+            ImmutableMap.of(PlannerContext.CTX_SQL_TIME_ZONE, "America/Los_Angeles"),
+            null
         )
     ).rhs;
 
@@ -258,7 +283,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testFieldAliasingSelect() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo LIMIT 1", ResultFormat.OBJECT, false, null)
+        new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo LIMIT 1", ResultFormat.OBJECT, false, null, null)
     ).rhs;
 
     Assert.assertEquals(
@@ -273,7 +298,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testFieldAliasingGroupBy() throws Exception
   {
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo GROUP BY dim2", ResultFormat.OBJECT, false, null)
+        new SqlQuery("SELECT dim2 \"x\", dim2 \"y\" FROM druid.foo GROUP BY dim2", ResultFormat.OBJECT, false, null, null)
     ).rhs;
 
     Assert.assertEquals(
@@ -325,7 +350,7 @@ public class SqlResourceTest extends CalciteTestBase
                 nullStr
             )
         ),
-        doPost(new SqlQuery(query, ResultFormat.ARRAY, false, null), new TypeReference<List<List<Object>>>() {}).rhs
+        doPost(new SqlQuery(query, ResultFormat.ARRAY, false, null, null), new TypeReference<List<List<Object>>>() {}).rhs
     );
   }
 
@@ -361,7 +386,7 @@ public class SqlResourceTest extends CalciteTestBase
                 nullStr
             )
         ),
-        doPost(new SqlQuery(query, ResultFormat.ARRAY, true, null), new TypeReference<List<List<Object>>>() {}).rhs
+        doPost(new SqlQuery(query, ResultFormat.ARRAY, true, null, null), new TypeReference<List<List<Object>>>() {}).rhs
     );
   }
 
@@ -369,7 +394,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayLinesResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, false, null)).rhs;
+    final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, false, null, null)).rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -410,7 +435,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayLinesResultFormatWithHeader() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, true, null)).rhs;
+    final String response = doPostRaw(new SqlQuery(query, ResultFormat.ARRAYLINES, true, null, null)).rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -491,7 +516,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .build()
         ).stream().map(transformer).collect(Collectors.toList()),
         doPost(
-            new SqlQuery(query, ResultFormat.OBJECT, false, null),
+            new SqlQuery(query, ResultFormat.OBJECT, false, null, null),
             new TypeReference<List<Map<String, Object>>>() {}
         ).rhs
     );
@@ -501,7 +526,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testObjectLinesResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, false, null)).rhs;
+    final String response = doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, false, null, null)).rhs;
     final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
       return Maps.transformEntries(
@@ -554,7 +579,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCsvResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, false, null)).rhs;
+    final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, false, null, null)).rhs;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(
@@ -572,7 +597,7 @@ public class SqlResourceTest extends CalciteTestBase
   public void testCsvResultFormatWithHeaders() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, true, null)).rhs;
+    final String response = doPostRaw(new SqlQuery(query, ResultFormat.CSV, true, null, null)).rhs;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(
@@ -592,7 +617,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     Map<String, Object> queryContext = ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", ResultFormat.OBJECT, false, queryContext)
+        new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", ResultFormat.OBJECT, false, queryContext, null)
     ).rhs;
 
     Assert.assertEquals(
@@ -617,6 +642,7 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT dim4 FROM druid.foo",
             ResultFormat.OBJECT,
             false,
+            null,
             null
         )
     ).lhs;
@@ -633,7 +659,7 @@ public class SqlResourceTest extends CalciteTestBase
   {
     // SELECT + ORDER unsupported
     final QueryInterruptedException exception = doPost(
-        new SqlQuery("SELECT dim1 FROM druid.foo ORDER BY dim1", ResultFormat.OBJECT, false, null)
+        new SqlQuery("SELECT dim1 FROM druid.foo ORDER BY dim1", ResultFormat.OBJECT, false, null, null)
     ).lhs;
 
     Assert.assertNotNull(exception);
@@ -654,7 +680,8 @@ public class SqlResourceTest extends CalciteTestBase
             "SELECT DISTINCT dim1 FROM foo",
             ResultFormat.OBJECT,
             false,
-            ImmutableMap.of("maxMergingDictionarySize", 1)
+            ImmutableMap.of("maxMergingDictionarySize", 1),
+            null
         )
     ).lhs;
 

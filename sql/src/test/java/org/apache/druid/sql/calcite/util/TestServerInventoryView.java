@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
@@ -83,7 +84,7 @@ public class TestServerInventoryView implements TimelineServerView
   @Override
   public List<ImmutableDruidServer> getDruidServers()
   {
-    throw new UnsupportedOperationException();
+    return ImmutableList.of(new ImmutableDruidServer(DUMMY_SERVER, 0, ImmutableMap.of(), 0));
   }
 
   @Override

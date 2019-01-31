@@ -22,8 +22,10 @@ package org.apache.druid.sql.avatica;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.druid.java.util.common.ISE;
@@ -35,6 +37,7 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycle;
+import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -80,6 +83,8 @@ public class DruidStatement implements Closeable
   private Yielder<Object[]> yielder;
   private int offset = 0;
   private Throwable throwable;
+  private List<TypedValue> parameters;
+  private AuthenticationResult authenticationResult;
 
   public DruidStatement(
       final String connectionId,
@@ -143,6 +148,11 @@ public class DruidStatement implements Closeable
     return columns;
   }
 
+  public void setParameters(List<TypedValue> parameters)
+  {
+    this.parameters = parameters;
+  }
+
   public DruidStatement prepare(
       final String query,
       final long maxRowCount,
@@ -153,27 +163,36 @@ public class DruidStatement implements Closeable
       try {
         ensure(State.NEW);
         sqlLifecycle.initialize(query, queryContext);
-        sqlLifecycle.planAndAuthorize(authenticationResult);
+
+        this.authenticationResult = authenticationResult;
+        PrepareResult prepareResult = sqlLifecycle.prepare(authenticationResult);
         this.maxRowCount = maxRowCount;
         this.query = query;
+        ArrayList<AvaticaParameter> params = new ArrayList<>();
+        final RelDataType parameterRowType = prepareResult.getParameterRowType();
+        for (RelDataTypeField field : parameterRowType.getFieldList()) {
+          RelDataType type = field.getType();
+          params.add(
+              new AvaticaParameter(
+                  false,
+                  type.getPrecision(),
+                  type.getScale(),
+                  type.getSqlTypeName().getJdbcOrdinal(),
+                  type.getSqlTypeName().getName(),
+                  Object.class.getName(),
+                  field.getName()));
+        }
         this.signature = Meta.Signature.create(
             createColumnMetaData(sqlLifecycle.rowType()),
             query,
-            new ArrayList<>(),
+            params,
             Meta.CursorFactory.ARRAY,
             Meta.StatementType.SELECT // We only support SELECT
         );
         this.state = State.PREPARED;
       }
       catch (Throwable t) {
-        this.throwable = t;
-        try {
-          close();
-        }
-        catch (Throwable t1) {
-          t.addSuppressed(t1);
-        }
-        throw Throwables.propagate(t);
+        return closeAndPropagateThrowable(t);
       }
 
       return this;
@@ -184,11 +203,10 @@ public class DruidStatement implements Closeable
   {
     synchronized (lock) {
       ensure(State.PREPARED);
-
       try {
-        final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(
-            sqlLifecycle::execute
-        ).get();
+        sqlLifecycle.setParameters(parameters);
+        sqlLifecycle.planAndAuthorize(authenticationResult);
+        final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(sqlLifecycle::execute).get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
         final Sequence<Object[]> retSequence =
@@ -200,14 +218,7 @@ public class DruidStatement implements Closeable
         state = State.RUNNING;
       }
       catch (Throwable t) {
-        this.throwable = t;
-        try {
-          close();
-        }
-        catch (Throwable t1) {
-          t.addSuppressed(t1);
-        }
-        throw Throwables.propagate(t);
+        closeAndPropagateThrowable(t);
       }
 
       return this;
@@ -349,6 +360,18 @@ public class DruidStatement implements Closeable
         throw Throwables.propagate(t);
       }
     }
+  }
+
+  private DruidStatement closeAndPropagateThrowable(Throwable t)
+  {
+    this.throwable = t;
+    try {
+      close();
+    }
+    catch (Throwable t1) {
+      t.addSuppressed(t1);
+    }
+    throw Throwables.propagate(t);
   }
 
   @GuardedBy("lock")

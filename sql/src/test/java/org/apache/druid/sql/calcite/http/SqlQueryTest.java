@@ -20,10 +20,13 @@
 package org.apache.druid.sql.calcite.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.http.ResultFormat;
+import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,7 +37,10 @@ public class SqlQueryTest extends CalciteTestBase
   public void testSerde() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final SqlQuery query = new SqlQuery("SELECT 1", ResultFormat.ARRAY, true, ImmutableMap.of("useCache", false));
+    final SqlQuery query = new SqlQuery(
+        "SELECT ?", ResultFormat.ARRAY, true, ImmutableMap.of("useCache", false),
+                                        ImmutableList.of(new SqlParameter(1, SqlType.INTEGER, 1))
+    );
     Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }
 }

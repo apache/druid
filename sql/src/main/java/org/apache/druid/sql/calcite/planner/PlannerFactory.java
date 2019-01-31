@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
@@ -44,12 +45,13 @@ import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 public class PlannerFactory
 {
-  private static final SqlParser.Config PARSER_CONFIG = SqlParser
+  static final SqlParser.Config PARSER_CONFIG = SqlParser
       .configBuilder()
       .setCaseSensitive(true)
       .setUnquotedCasing(Casing.UNCHANGED)
@@ -91,6 +93,7 @@ public class PlannerFactory
 
   public DruidPlanner createPlanner(
       final Map<String, Object> queryContext,
+      final List<TypedValue> parameters,
       final AuthenticationResult authenticationResult
   )
   {
@@ -104,6 +107,7 @@ public class PlannerFactory
         macroTable,
         plannerConfig,
         queryContext,
+        parameters,
         authenticationResult
     );
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);
@@ -152,7 +156,7 @@ public class PlannerFactory
         .build();
 
     return new DruidPlanner(
-        Frameworks.getPlanner(frameworkConfig),
+        frameworkConfig,
         plannerContext
     );
   }

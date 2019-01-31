@@ -185,13 +185,13 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult == null) {
       throw new ForbiddenException("Authentication failed.");
     }
-    final Signature signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
+    druidStatement.prepare(sql, maxRowCount, authenticationResult);
     final Frame firstFrame = druidStatement.execute()
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
                                                getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
                                            );
-
+    final Signature signature = druidStatement.getSignature();
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(
@@ -254,16 +254,16 @@ public class DruidMeta extends MetaImpl
       final int maxRowsInFirstFrame
   ) throws NoSuchStatementException
   {
-    Preconditions.checkArgument(parameterValues.isEmpty(), "Expected parameterValues to be empty");
-
     final DruidStatement druidStatement = getDruidStatement(statement);
-    final Signature signature = druidStatement.getSignature();
+    druidStatement.setParameters(parameterValues);
+
     final Frame firstFrame = druidStatement.execute()
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
                                                getEffectiveMaxRowsPerFrame(maxRowsInFirstFrame)
                                            );
 
+    final Signature signature = druidStatement.getSignature();
     return new ExecuteResult(
         ImmutableList.of(
             MetaResultSet.create(

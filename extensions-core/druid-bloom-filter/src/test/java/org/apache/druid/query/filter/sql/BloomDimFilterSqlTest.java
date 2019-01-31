@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
@@ -53,6 +54,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
+import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -232,10 +234,67 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     );
   }
 
+  @Test
+  public void testBloomFilterBigNoParam() throws Exception
+  {
+    BloomKFilter filter = new BloomKFilter(5_000_000);
+    filter.addString("def");
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    String base64 = StringUtils.encodeBase64String(bytes);
+    testQuery(
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, '%s')", base64),
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
+  public void testBloomFilterBigParameter() throws Exception
+  {
+    BloomKFilter filter = new BloomKFilter(5_000_000);
+    filter.addString("def");
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    String base64 = StringUtils.encodeBase64String(bytes);
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, ?)",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(
+                      new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        ),
+        ImmutableList.of(new SqlParameter(1, SqlType.VARCHAR, base64))
+    );
+  }
+
+
   @Override
   public List<Object[]> getResults(
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
+      final List<SqlParameter> parameters,
       final String sql,
       final AuthenticationResult authenticationResult
   ) throws Exception
@@ -247,6 +306,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     return getResults(
         plannerConfig,
         queryContext,
+        parameters,
         sql,
         authenticationResult,
         operatorTable,

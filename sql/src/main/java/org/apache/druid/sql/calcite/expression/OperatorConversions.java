@@ -20,17 +20,21 @@
 package org.apache.druid.sql.calcite.expression;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.type.BasicSqlType;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
@@ -118,6 +122,17 @@ public class OperatorConversions
     // For operand type checking
     private List<SqlTypeFamily> operandTypes;
     private int requiredOperands = Integer.MAX_VALUE;
+    private SqlOperandTypeInference operandTypeInference = (callBinding, returnType, types) -> {
+      for (int i = 0; i < types.length; i++) {
+        // calcite sql validate tries to do bad things to dynamic parameters if the type is inferred to be a string
+        if (callBinding.operand(i).isA(ImmutableSet.of(SqlKind.DYNAMIC_PARAM))) {
+          types[i] = new BasicSqlType(
+              DruidTypeSystem.INSTANCE,
+              SqlTypeName.ANY
+          );
+        }
+      }
+    };
 
     private OperatorBuilder(final String name)
     {
@@ -164,6 +179,12 @@ public class OperatorConversions
       return this;
     }
 
+    public OperatorBuilder operandTypeInference(final SqlOperandTypeInference operandTypeInference)
+    {
+      this.operandTypeInference = operandTypeInference;
+      return this;
+    }
+
     public OperatorBuilder requiredOperands(final int requiredOperands)
     {
       this.requiredOperands = requiredOperands;
@@ -176,7 +197,7 @@ public class OperatorConversions
           name,
           kind,
           Preconditions.checkNotNull(returnTypeInference, "returnTypeInference"),
-          null,
+          operandTypeInference,
           OperandTypes.family(
               Preconditions.checkNotNull(operandTypes, "operandTypes"),
               i -> i + 1 > requiredOperands

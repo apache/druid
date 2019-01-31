@@ -21,9 +21,11 @@ package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.adapter.java.JavaTypeFactory;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.java.util.common.DateTimes;
@@ -58,9 +60,11 @@ public class PlannerContext
   private final PlannerConfig plannerConfig;
   private final DateTime localNow;
   private final Map<String, Object> queryContext;
+  private final List<TypedValue> parameters;
   private final AuthenticationResult authenticationResult;
   private final String sqlQueryId;
   private final List<String> nativeQueryIds = new CopyOnWriteArrayList<>();
+
 
   private PlannerContext(
       final DruidOperatorTable operatorTable,
@@ -68,6 +72,7 @@ public class PlannerContext
       final PlannerConfig plannerConfig,
       final DateTime localNow,
       final Map<String, Object> queryContext,
+      final List<TypedValue> parameters,
       final AuthenticationResult authenticationResult
   )
   {
@@ -75,6 +80,7 @@ public class PlannerContext
     this.macroTable = macroTable;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.queryContext = queryContext != null ? new HashMap<>(queryContext) : new HashMap<>();
+    this.parameters = parameters != null ? parameters : ImmutableList.of();
     this.localNow = Preconditions.checkNotNull(localNow, "localNow");
     this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
 
@@ -91,6 +97,7 @@ public class PlannerContext
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
       final Map<String, Object> queryContext,
+      final List<TypedValue> parameters,
       final AuthenticationResult authenticationResult
   )
   {
@@ -123,6 +130,7 @@ public class PlannerContext
         plannerConfig.withOverrides(queryContext),
         utcNow.withZone(timeZone),
         queryContext,
+        parameters,
         authenticationResult
     );
   }
@@ -157,6 +165,11 @@ public class PlannerContext
     return queryContext;
   }
 
+  public List<TypedValue> getParameters()
+  {
+    return parameters;
+  }
+
   public AuthenticationResult getAuthenticationResult()
   {
     return authenticationResult;
@@ -177,11 +190,11 @@ public class PlannerContext
     this.nativeQueryIds.add(queryId);
   }
 
-  public DataContext createDataContext(final JavaTypeFactory typeFactory)
+  public DataContext createDataContext(final JavaTypeFactory typeFactory, List<TypedValue> parameters)
   {
     class DruidDataContext implements DataContext
     {
-      private final Map<String, Object> context = ImmutableMap.of(
+      private final Map<String, Object> base_context = ImmutableMap.of(
           DataContext.Variable.UTC_TIMESTAMP.camelName, localNow.getMillis(),
           DataContext.Variable.CURRENT_TIMESTAMP.camelName, localNow.getMillis(),
           DataContext.Variable.LOCAL_TIMESTAMP.camelName, new Interval(
@@ -191,6 +204,17 @@ public class PlannerContext
           DataContext.Variable.TIME_ZONE.camelName, localNow.getZone().toTimeZone().clone(),
           DATA_CTX_AUTHENTICATION_RESULT, authenticationResult
       );
+      private final Map<String, Object> context;
+
+      DruidDataContext()
+      {
+        ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+        builder.putAll(base_context);
+        for (int i = 0; i < parameters.size(); i++) {
+          builder.put("?" + i, parameters.get(i).value);
+        }
+        context = builder.build();
+      }
 
       @Override
       public SchemaPlus getRootSchema()

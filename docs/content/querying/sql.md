@@ -53,6 +53,9 @@ like `100` (denoting an integer), `100.0` (denoting a floating point value), or 
 timestamps can be written like `TIMESTAMP '2000-01-01 00:00:00'`. Literal intervals, used for time arithmetic, can be
 written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL '1-2' YEAR TO MONTH`, and so on.
 
+Druid SQL supports dynamic parameters using the `?` syntax where parameters are bound to `?` in order. Replace any 
+literal with a `?` and supply parameters to the query and the values will be bound at execution time.
+ 
 Druid SQL supports SELECT queries with the following structure:
 
 ```
@@ -236,6 +239,7 @@ over the connection time zone.
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
 |`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in the base64 serialized bloom filter. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.
+
 ### Unsupported features
 
 Druid does not support all SQL features, including:
@@ -365,6 +369,17 @@ of configuration.
 You can make Druid SQL queries using JSON over HTTP by posting to the endpoint `/druid/v2/sql/`. The request should
 be a JSON object with a "query" field, like `{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}`.
 
+##### Request
+      
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`query`|`String`| SQL query to run|yes|
+|`resultFormat`|`String` (`ResultFormat`)| Result format for output | no (default `"object"`)|
+|`header`|`Boolean`| Write column name header for supporting formats| no (default `false`)|
+|`context`|`Object`| Connection context map. see [connection context parameters](#connection-context)| no |
+|`parameters`|`SqlParameter` list| List of query parameters for parameterized queries. |
+
+
 You can use _curl_ to send SQL queries from the command-line:
 
 ```bash
@@ -387,7 +402,26 @@ like:
 }
 ```
 
-Metadata is available over the HTTP API by querying [system tables](#retrieving-metadata).
+Parameterized SQL queries are also supported:
+
+```json
+{
+  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = ? AND __time > ?",
+  "parameters": [
+    { "ordinal": 1, "type": "VARCHAR", "value": "bar"},
+    { "ordinal": 2, "type": "TIMESTAMP", "value": "2000-01-01 00:00:00" }
+  ]
+}
+```
+
+##### SqlParameter
+
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`ordinal`|`int`| Ordinal of sql parameter|yes|
+|`type`|`String` (`SqlType`) | String value of `SqlType` of parameter. [`SqlType`](https://calcite.apache.org/avatica/apidocs/org/apache/calcite/avatica/SqlType.html) is an friendly wrapper around [`java.sql.Types`](https://docs.oracle.com/javase/8/docs/api/java/sql/Types.html?is-external=true)|yes|
+|`value`|`Object`| Value of the parameter|yes|
+
 
 #### Responses
 
@@ -401,6 +435,8 @@ Druid SQL supports a variety of result formats. You can specify these by adding 
 ```
 
 The supported result formats are:
+
+##### ResultFormat
 
 |Format|Description|Content-Type|
 |------|-----------|------------|
@@ -454,7 +490,7 @@ Properties connectionProperties = new Properties();
 try (Connection connection = DriverManager.getConnection(url, connectionProperties)) {
   try (
       final Statement statement = connection.createStatement();
-      final ResultSet resultSet = statement.executeQuery(query)
+      final ResultSet resultSet = statement.executeQuery(query);
   ) {
     while (resultSet.next()) {
       // Do something
@@ -476,6 +512,17 @@ the necessary stickiness even with a normal non-sticky load balancer. Please see
 [Router](../development/router.html) documentation for more details.
 
 Note that the non-JDBC [JSON over HTTP](#json-over-http) API is stateless and does not require stickiness.
+
+### Dynamic Parameters
+
+Parameterized queries are supported with JDBC:
+
+```java
+PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ? OR dim1 = ?");
+statement.setString(1, "abc");
+statement.setString(2, "def");
+final ResultSet resultSet = statement.executeQuery(query);
+```
 
 ### Connection context
 
