@@ -63,6 +63,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class DruidSchemaTest extends CalciteTestBase
@@ -242,31 +243,33 @@ public class DruidSchemaTest extends CalciteTestBase
   @Test
   public void testNullDatasource() throws IOException
   {
-    Map<DataSegment, SegmentMetadataHolder> segmentsMetadata = schema.getSegmentMetadata();
-    Set<DataSegment> segments = segmentsMetadata.keySet();
+    Map<DataSegment, SegmentMetadataHolder> segmentMetadatas = schema.getSegmentMetadata();
+    Set<DataSegment> segments = segmentMetadatas.keySet();
     Assert.assertEquals(segments.size(), 3);
-    final DataSegment segmentToRemove = segments.stream().findFirst().orElse(null);
+    // segments contains two segments with datasource "foo" and one with datasource "foo2"
+    // let's remove the only segment with datasource "foo2"
+    final DataSegment segmentToRemove = segments.stream().filter(segment -> segment.getDataSource().equals("foo2")).findFirst().orElse(null);
     Assert.assertFalse(segmentToRemove == null);
     schema.removeSegment(segmentToRemove);
     schema.refreshSegments(segments); // can cause NPE without dataSourceSegments null check in DruidSchema#refreshSegmentsForDataSource
-    segmentsMetadata = schema.getSegmentMetadata();
-    segments = segmentsMetadata.keySet();
+    segmentMetadatas = schema.getSegmentMetadata();
+    segments = segmentMetadatas.keySet();
     Assert.assertEquals(segments.size(), 2);
   }
 
   @Test
   public void testNullSegmentMetadataHolder() throws IOException
   {
-    Map<DataSegment, SegmentMetadataHolder> segmentsMetadata = schema.getSegmentMetadata();
-    Set<DataSegment> segments = segmentsMetadata.keySet();
+    Map<DataSegment, SegmentMetadataHolder> segmentMetadatas = schema.getSegmentMetadata();
+    Set<DataSegment> segments = segmentMetadatas.keySet();
     Assert.assertEquals(segments.size(), 3);
-    //remove the 2nd segment with datasource foo
-    final DataSegment segmentToRemove = segments.stream().skip(1).findFirst().orElse(null);
+    //remove one of the segments with datasource "foo"
+    final DataSegment segmentToRemove = segments.stream().filter(segment -> segment.getDataSource().equals("foo")).findFirst().orElse(null);
     Assert.assertFalse(segmentToRemove == null);
     schema.removeSegment(segmentToRemove);
     schema.refreshSegments(segments); // can cause NPE without holder null check in SegmentMetadataHolder#from
-    segmentsMetadata = schema.getSegmentMetadata();
-    segments = segmentsMetadata.keySet();
+    segmentMetadatas = schema.getSegmentMetadata();
+    segments = segmentMetadatas.keySet();
     Assert.assertEquals(segments.size(), 2);
   }
 
