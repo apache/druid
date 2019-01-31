@@ -34,8 +34,8 @@ For a list of API endpoints supported by the MiddleManager, please see the [API 
 
 ### Overview
 
-The middle manager node is a worker node that executes submitted tasks. Middle Managers forward tasks to peons that run in separate JVMs.
-The reason we have separate JVMs for tasks is for resource and log isolation. Each [Peon](../design/peons.html) is capable of running only one task at a time, however, a middle manager may have multiple peons.
+The MiddleManager node is a worker node that executes submitted tasks. Middle Managers forward tasks to Peons that run in separate JVMs.
+The reason we have separate JVMs for tasks is for resource and log isolation. Each [Peon](../design/peons.html) is capable of running only one task at a time, however, a MiddleManager may have multiple Peons.
 
 ### Running
 
