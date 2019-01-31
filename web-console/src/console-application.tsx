@@ -74,31 +74,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     return true;
   }
 
-  static showIntoNotification() {
-    if (localStorageGet(ConsoleApplication.MESSAGE_KEY) !== ConsoleApplication.MESSAGE_DISMISSED) {
-      AppToaster.show({
-        icon: 'share',
-        intent: Intent.WARNING,
-        timeout: 20000,
-        message: <>
-          Welcome to the unified Druid console, the old <a
-          href={LEGACY_COORDINATOR_CONSOLE}>coordinator</a> and <a
-          href={LEGACY_OVERLORD_CONSOLE}>overlord</a> consoles are also available for use
-          from the 'Legacy' link in the header
-        </>,
-        action: {
-          text: "Dismiss forever",
-          onClick: () => {
-            localStorageSet(ConsoleApplication.MESSAGE_KEY, ConsoleApplication.MESSAGE_DISMISSED);
-          }
-        }
-      });
-    }
-  }
-
   static async shownNotifications() {
-    const hasSql = await ConsoleApplication.ensureSql();
-    if (hasSql) ConsoleApplication.showIntoNotification();
+    await ConsoleApplication.ensureSql();
   }
 
   private taskId: string | null;
