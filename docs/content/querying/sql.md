@@ -592,15 +592,15 @@ SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
 Another example to retrieve segments total_size, avg_size, avg_num_rows and num_segments per datasource:
 
 ```sql
-select
+SELECT
     datasource,
-    sum("size") as total_size,
-    case when sum("size") = 0 then 0 else sum("size") / (count(*) filter(where "size" > 0)) end as avg_size,
-    case when sum(num_rows) = 0 then 0 else sum("num_rows") / (count(*) filter(where num_rows > 0)) end as avg_num_rows,
-    count(*) as num_segments
-from sys.segments
-group by 1
-order by 2 desc
+    SUM("size") AS total_size,
+    CASE WHEN SUM("size") = 0 THEN 0 ELSE SUM("size") / (COUNT(*) FILTER(WHERE "size" > 0)) END AS avg_size,
+    CASE WHEN SUM(num_rows) = 0 THEN 0 ELSE SUM("num_rows") / (COUNT(*) FILTER(WHERE num_rows > 0)) END AS avg_num_rows,
+    COUNT(*) AS num_segments
+FROM sys.segments
+GROUP BY 1
+ORDER BY 2 DESC
 ```
 
 ### SERVERS table
@@ -669,7 +669,7 @@ check out [ingestion tasks](#../ingestion/tasks.html)
 For example, to retrieve tasks information filtered by status, use the query
 
 ```sql
-SELECT * FROM sys.tasks where status='FAILED';
+SELECT * FROM sys.tasks WHERE status='FAILED';
 ```
 
 Note that sys tables may not support all the Druid SQL Functions.
