@@ -95,7 +95,7 @@ The parameters are as follows
 
 If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid.manager.lookups.hostUpdateTimeout`. If `firstCacheTimeout` is NOT set, then management is essentially asynchronous and does not know if a lookup succeeded or failed in starting. In such a case logs from the lookup nodes should be monitored for repeated failures.
 
-Proper functionality of globally cached lookups requires the following extension to be loaded on the broker, peon, and historical nodes:
+Proper functionality of globally cached lookups requires the following extension to be loaded on the Broker, Peon, and Historical nodes:
 `druid-lookups-cached-global`
 
 ## Example configuration
@@ -131,7 +131,7 @@ In a simple case where only one [tier](../../querying/lookups.html#dynamic-confi
 }
 ```
 
-Where the coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2/country_code` should return
+Where the Coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2/country_code` should return
 
 ```json
 {
@@ -160,8 +160,8 @@ Where the coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2
 
 ## Cache Settings
 
-Lookups are cached locally on historical nodes. The following are settings used by the nodes which service queries when 
-setting namespaces (broker, peon, historical)
+Lookups are cached locally on Historical nodes. The following are settings used by the nodes which service queries when 
+setting namespaces (Broker, Peon, Historical)
 
 |Property|Description|Default|
 |--------|-----------|-------|

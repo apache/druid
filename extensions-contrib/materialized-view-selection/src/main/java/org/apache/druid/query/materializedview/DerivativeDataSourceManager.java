@@ -210,7 +210,7 @@ public class DerivativeDataSourceManager
   }
 
   /**
-   * caculate the average data size per segment granularity for a given datasource.
+   * calculate the average data size per segment granularity for a given datasource.
    * 
    * e.g. for a datasource, there're 5 segments as follows,
    * interval = "2018-04-01/2017-04-02", segment size = 1024 * 1024 * 2
