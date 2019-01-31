@@ -32,7 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.timeline.DataSegment;
@@ -43,12 +43,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * This class polls the coordinator in background to keep the latest published segments.
@@ -58,15 +56,15 @@ import java.util.stream.Collectors;
 public class MetadataSegmentView
 {
 
-  private static final int DEFAULT_POLL_PERIOD_IN_MS = 60000;
-  private static final Logger log = new Logger(MetadataSegmentView.class);
+  private static final long POLL_PERIOD_IN_MS = 60000;
+  private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
 
   private final DruidLeaderClient coordinatorDruidLeaderClient;
   private final ObjectMapper jsonMapper;
   private final BytesAccumulatingResponseHandler responseHandler;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
-  private final ConcurrentMap<DataSegment, DateTime> publishedSegments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<DataSegment, DateTime> publishedSegments = new ConcurrentHashMap<>(1000);
   private ScheduledExecutorService scheduledExec;
 
   @Inject
@@ -118,20 +116,8 @@ public class MetadataSegmentView
     // since the presence of a segment with an earlier timestamp indicates that
     // "that" segment is not returned by coordinator in latest poll, so it's
     // likely deleted and therefore we remove it from publishedSegments
-    final Set<DateTime> toBeRemovedSegments = publishedSegments.values()
-                                                         .stream()
-                                                         .filter(v -> v != timestamp)
-                                                         .collect(Collectors.toSet());
-    publishedSegments.values().removeAll(toBeRemovedSegments);
+    publishedSegments.entrySet().removeIf(e -> e.getValue() != timestamp);
 
-    if (segmentWatcherConfig.getWatchedDataSources() != null) {
-      log.debug(
-          "filtering datasources[%s] in published segments based on broker's watchedDataSources",
-          segmentWatcherConfig.getWatchedDataSources()
-      );
-      publishedSegments.keySet()
-                       .removeIf(key -> !segmentWatcherConfig.getWatchedDataSources().contains(key.getDataSource()));
-    }
   }
 
   public Iterator<DataSegment> getPublishedSegments()
@@ -149,11 +135,13 @@ public class MetadataSegmentView
   {
     String query = "/druid/coordinator/v1/metadata/segments";
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
+      log.debug(
+          "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
       final StringBuilder sb = new StringBuilder();
       for (String ds : watchedDataSources) {
         sb.append("datasources=" + ds + "&");
       }
-      sb.setLength(Math.max(sb.length() - 1, 0));
+      sb.setLength(sb.length() - 1);
       query = "/druid/coordinator/v1/metadata/segments?" + sb;
     }
     Request request;
@@ -186,14 +174,28 @@ public class MetadataSegmentView
     );
   }
 
-  private class PollTask implements Callable<Void>
+  private class PollTask implements Runnable
   {
     @Override
-    public Void call()
+    public void run()
     {
-      poll();
-      scheduledExec.schedule(new PollTask(), DEFAULT_POLL_PERIOD_IN_MS, TimeUnit.MILLISECONDS);
-      return null;
+      long delayMS = POLL_PERIOD_IN_MS;
+      try {
+        long pollStartTime = System.nanoTime();
+        poll();
+        long pollEndTime = System.nanoTime();
+        final long pollTimeNs = pollEndTime - pollStartTime;
+        final long pollTimeMs = TimeUnit.NANOSECONDS.toMillis(pollTimeNs);
+        if (pollTimeMs > POLL_PERIOD_IN_MS) {
+          delayMS = 0;
+        } else {
+          delayMS = pollTimeMs;
+        }
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Problem polling Coordinator.").emit();
+      }
+      scheduledExec.schedule(new PollTask(), delayMS, TimeUnit.MILLISECONDS);
     }
   }
 
