@@ -123,7 +123,7 @@ It is illegal to set `retainMissingValue = true` and also specify a `replaceMiss
 
 A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).
 
-The second kind where it is not possible to pass at query time due to their size, will be based on an external lookup table or resource that is already registered via configuration file or/and coordinator.
+The second kind where it is not possible to pass at query time due to their size, will be based on an external lookup table or resource that is already registered via configuration file or/and Coordinator.
 
 ```json
 {
@@ -375,7 +375,7 @@ A property of `injective` can override the lookup's own sense of whether or not 
 configuration.
 
 A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).
-The optimization layer will run on the broker and it will rewrite the extraction filter as clause of selector filters.
+The optimization layer will run on the Broker and it will rewrite the extraction filter as clause of selector filters.
 For instance the following filter
 
 ```json
