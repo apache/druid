@@ -22,4 +22,5 @@ rm -rf \
   coordinator-console \
   pages \
   public \
+  coordinator-console.html \
   legacy-coordinator-console.html

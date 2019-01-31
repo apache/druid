@@ -58,7 +58,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       "/favicon.png",
       "/pages/*",
       "/coordinator-console/*",
-      "/legacy-coordinator-console.html",
+      "/coordinator-console.html",
       "/old-console/*",
       "/coordinator/false",
       "/overlord/false",
@@ -89,7 +89,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
     root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
     // index.html is the welcome file for old-console
-    root.setWelcomeFiles(new String[]{"index.html", "legacy-coordinator-console.html"});
+    root.setWelcomeFiles(new String[]{"index.html", "coordinator-console.html"});
 
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 

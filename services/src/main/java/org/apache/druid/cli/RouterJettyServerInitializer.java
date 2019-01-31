@@ -70,8 +70,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       "/pages/*",
       "/unified-console.html",
       "/favicon.png",
-      "/legacy-overlord-console.html",
-      "/legacy-coordinator-console.html"
+      "/console.html",
+      "/coordinator-console.html"
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;

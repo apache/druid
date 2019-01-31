@@ -132,7 +132,7 @@ public class CliOverlord extends ServerRunnable
   protected static List<String> UNSECURED_PATHS = ImmutableList.of(
       "/",
       "/favicon.png",
-      "/legacy-overlord-console.html",
+      "/console.html",
       "/old-console/*",
       "/images/*",
       "/js/*",
@@ -355,7 +355,7 @@ public class CliOverlord extends ServerRunnable
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
       root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
-      root.setWelcomeFiles(new String[]{"legacy-overlord-console.html"});
+      root.setWelcomeFiles(new String[]{"console.html"});
 
       ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
