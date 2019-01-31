@@ -165,7 +165,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     FileUtils.deleteDirectory(tmpDir);
   }
 
-  private static TestCase TC(
+  private static TestCase tc(
       String intervalString,
       int expectedCount,
       long expectedSum,
@@ -187,7 +187,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     );
   }
 
-  private static DataSegmentMaker DS(
+  private static DataSegmentMaker ds(
       String intervalString,
       String version,
       int partitionNum,
@@ -197,7 +197,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     return new DataSegmentMaker(Intervals.of(intervalString), version, partitionNum, Arrays.asList(rows));
   }
 
-  private static InputRow IR(String timeString, long metricValue)
+  private static InputRow ir(String timeString, long metricValue)
   {
     return new MapBasedInputRow(
         DateTimes.of(timeString).getMillis(),
@@ -249,34 +249,34 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<TestCase> testCases = ImmutableList.of(
-        TC(
+        tc(
             "2000/2000T02", 3, 7,
-            DS("2000/2000T01", "v1", 0, IR("2000", 1), IR("2000T00:01", 2)),
-            DS("2000T01/2000T02", "v1", 0, IR("2000T01", 4))
+            ds("2000/2000T01", "v1", 0, ir("2000", 1), ir("2000T00:01", 2)),
+            ds("2000T01/2000T02", "v1", 0, ir("2000T01", 4))
         ) /* Adjacent segments */,
-        TC(
+        tc(
             "2000/2000T02", 3, 7,
-            DS("2000/2000T02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8)),
-            DS("2000T01/2000T02", "v2", 0, IR("2000T01:01", 4))
+            ds("2000/2000T02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8)),
+            ds("2000T01/2000T02", "v2", 0, ir("2000T01:01", 4))
         ) /* 1H segment overlaid on top of 2H segment */,
-        TC(
+        tc(
             "2000/2000-01-02", 4, 23,
-            DS("2000/2000-01-02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8), IR("2000T02", 16)),
-            DS("2000T01/2000T02", "v2", 0, IR("2000T01:01", 4))
+            ds("2000/2000-01-02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8), ir("2000T02", 16)),
+            ds("2000T01/2000T02", "v2", 0, ir("2000T01:01", 4))
         ) /* 1H segment overlaid on top of 1D segment */,
-        TC(
+        tc(
             "2000/2000T02", 4, 15,
-            DS("2000/2000T02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8)),
-            DS("2000/2000T02", "v1", 1, IR("2000T01:01", 4))
+            ds("2000/2000T02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8)),
+            ds("2000/2000T02", "v1", 1, ir("2000T01:01", 4))
         ) /* Segment set with two segments for the same interval */,
-        TC(
+        tc(
             "2000T01/2000T02", 1, 2,
-            DS("2000/2000T03", "v1", 0, IR("2000", 1), IR("2000T01", 2), IR("2000T02", 4))
+            ds("2000/2000T03", "v1", 0, ir("2000", 1), ir("2000T01", 2), ir("2000T02", 4))
         ) /* Segment wider than desired interval */,
-        TC(
+        tc(
             "2000T02/2000T04", 2, 12,
-            DS("2000/2000T03", "v1", 0, IR("2000", 1), IR("2000T01", 2), IR("2000T02", 4)),
-            DS("2000T03/2000T04", "v1", 0, IR("2000T03", 8))
+            ds("2000/2000T03", "v1", 0, ir("2000", 1), ir("2000T01", 2), ir("2000T02", 4)),
+            ds("2000T03/2000T04", "v1", 0, ir("2000T03", 8))
         ) /* Segment intersecting desired interval */
     );
 
