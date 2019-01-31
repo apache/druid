@@ -204,6 +204,12 @@
       <property name="message" value="Use org.apache.druid.server.http.HttpMediaType#TEXT_PLAIN_UTF8 instead"/>
     </module>
 
+    <module name="Regexp">
+      <property name="format" value='^((?!throw|=).)* Throwables.propagate\('/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Throw caught exception"/>
+    </module>
+
     <module name="PackageName">
       <property name="format" value="^org.apache.druid.*$"/>
     </module>
