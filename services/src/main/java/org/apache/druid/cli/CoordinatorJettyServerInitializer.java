@@ -88,6 +88,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
     root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
+    // index.html is the welcome file for old-console
     root.setWelcomeFiles(new String[]{"index.html", "legacy-coordinator-console.html"});
 
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
@@ -96,7 +97,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     if (config.getConsoleStatic() == null) {
       final ResourceCollection staticResources = new ResourceCollection(
           Resource.newClassPathResource("org/apache/druid/console"),
-          Resource.newClassPathResource("org/apache/druid/console/old_console")
+          Resource.newClassPathResource("org/apache/druid/console/old-console")
       );
       root.setBaseResource(staticResources);
     } else {
