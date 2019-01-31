@@ -356,7 +356,7 @@ public class BloomFilterSqlAggregatorTest
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
       String raw = NullHandling.emptyToNullIfNeeded((String) row.getRaw("dim1"));
       // empty string extractionFn produces null
-      if (raw == null || raw.equals("")) {
+      if (raw == null || "".equals(raw)) {
         expected1.addBytes(null, 0, 0);
       } else {
         expected1.addString(raw.substring(0, 1));
