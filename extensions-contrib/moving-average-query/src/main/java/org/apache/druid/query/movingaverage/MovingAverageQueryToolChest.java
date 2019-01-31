@@ -22,7 +22,6 @@ package org.apache.druid.query.movingaverage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -37,6 +36,7 @@ import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.server.log.RequestLogger;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -100,7 +100,7 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
       public Row apply(Row result)
       {
         MapBasedRow mRow = (MapBasedRow) result;
-        final Map<String, Object> values = Maps.newHashMap(mRow.getEvent());
+        final Map<String, Object> values = new HashMap(mRow.getEvent());
 
         for (AggregatorFactory agg : query.getAggregatorSpecs()) {
           Object aggVal = values.get(agg.getName());
