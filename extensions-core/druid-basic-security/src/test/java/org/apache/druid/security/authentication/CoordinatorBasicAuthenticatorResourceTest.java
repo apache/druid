@@ -32,6 +32,7 @@ import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.updater.CoordinatorBasicAuthenticatorMetadataStorageUpdater;
 import org.apache.druid.security.basic.authentication.endpoint.BasicAuthenticatorResource;
 import org.apache.druid.security.basic.authentication.endpoint.CoordinatorBasicAuthenticatorResourceHandler;
+import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
@@ -53,6 +54,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
 {
   private static final String AUTHENTICATOR_NAME = "test";
   private static final String AUTHENTICATOR_NAME2 = "test2";
+  private static final String AUTHENTICATOR_NAME_LDAP = "testLdap";
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -65,12 +67,14 @@ public class CoordinatorBasicAuthenticatorResourceTest
   private BasicAuthenticatorResource resource;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private HttpServletRequest req;
+  private ObjectMapper objectMapper;
 
   @Before
   public void setUp()
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
 
+    objectMapper = new ObjectMapper(new SmileFactory());
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
@@ -83,20 +87,51 @@ public class CoordinatorBasicAuthenticatorResourceTest
             new BasicHTTPAuthenticator(
                 null,
                 AUTHENTICATOR_NAME,
-                "test",
+                null,
                 new DefaultPasswordProvider("druid"),
                 new DefaultPasswordProvider("druid"),
                 null,
                 null,
+                null,
+                false,
+                null,
+                null, null, null, null, null, null, null, null, null,
                 null
             ),
             AUTHENTICATOR_NAME2,
             new BasicHTTPAuthenticator(
                 null,
                 AUTHENTICATOR_NAME2,
-                "test",
+                null,
                 new DefaultPasswordProvider("druid"),
                 new DefaultPasswordProvider("druid"),
+                null,
+                null,
+                null,
+                false,
+                null,
+                null, null, null, null, null, null, null, null, null,
+                null
+            ),
+            AUTHENTICATOR_NAME_LDAP,
+            new BasicHTTPAuthenticator(
+                null,
+                AUTHENTICATOR_NAME2,
+                null,
+                new DefaultPasswordProvider("druid"),
+                new DefaultPasswordProvider("druid"),
+                null,
+                null,
+                null,
+                false,
+                null,
+                "https://testUrl",
+                "testUser",
+                new DefaultPasswordProvider("testPassword"),
+                "testDn",
+                "testUserSearch",
+                "testUserAttribute",
+                new String[]{"testGroupFilter"},
                 null,
                 null,
                 null
@@ -164,10 +199,26 @@ public class CoordinatorBasicAuthenticatorResourceTest
     response = resource.getAllUsers(req, AUTHENTICATOR_NAME);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUsers, response.getEntity());
+
+    // Verify cached user map is also getting updated
+    response = resource.getCachedSerializedUserMap(req, AUTHENTICATOR_NAME);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Map<String, BasicAuthenticatorUser> cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
+    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
+    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
+    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assert.assertNotNull(cachedUserMap.get("druid"));
+    Assert.assertEquals(cachedUserMap.get("druid").getName(), "druid");
+    Assert.assertNotNull(cachedUserMap.get("druid2"));
+    Assert.assertEquals(cachedUserMap.get("druid2").getName(), "druid2");
+    Assert.assertNotNull(cachedUserMap.get("druid3"));
+    Assert.assertEquals(cachedUserMap.get("druid3").getName(), "druid3");
   }
 
   @Test
-  public void testSeparateDatabaseTables()
+  public void testGetAllUsersSeparateDatabaseTables()
   {
     Response response = resource.getAllUsers(req, AUTHENTICATOR_NAME);
     Assert.assertEquals(200, response.getStatus());
@@ -201,9 +252,43 @@ public class CoordinatorBasicAuthenticatorResourceTest
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUsers, response.getEntity());
 
+    // Verify cached user map for AUTHENTICATOR_NAME authenticator is also getting updated
+    response = resource.getCachedSerializedUserMap(req, AUTHENTICATOR_NAME);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof byte[]);
+
+    Map<String, BasicAuthenticatorUser> cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
+    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
+    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
+    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assert.assertNotNull(cachedUserMap.get("druid"));
+    Assert.assertEquals(cachedUserMap.get("druid").getName(), "druid");
+    Assert.assertNotNull(cachedUserMap.get("druid2"));
+    Assert.assertEquals(cachedUserMap.get("druid2").getName(), "druid2");
+    Assert.assertNotNull(cachedUserMap.get("druid3"));
+    Assert.assertEquals(cachedUserMap.get("druid3").getName(), "druid3");
+
     response = resource.getAllUsers(req, AUTHENTICATOR_NAME2);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(expectedUsers2, response.getEntity());
+
+    // Verify cached user map for each AUTHENTICATOR_NAME2 is also getting updated
+    response = resource.getCachedSerializedUserMap(req, AUTHENTICATOR_NAME2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof byte[]);
+
+    cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
+    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
+    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
+    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assert.assertNotNull(cachedUserMap.get("druid4"));
+    Assert.assertEquals(cachedUserMap.get("druid4").getName(), "druid4");
+    Assert.assertNotNull(cachedUserMap.get("druid5"));
+    Assert.assertEquals(cachedUserMap.get("druid5").getName(), "druid5");
+    Assert.assertNotNull(cachedUserMap.get("druid6"));
+    Assert.assertEquals(cachedUserMap.get("druid6").getName(), "druid6");
   }
 
   @Test
@@ -219,6 +304,13 @@ public class CoordinatorBasicAuthenticatorResourceTest
 
     response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
+
+    response = resource.getCachedSerializedUserMap(req, AUTHENTICATOR_NAME);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Map<String, BasicAuthenticatorUser> cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
+    Assert.assertNotNull(cachedUserMap);
+    Assert.assertNull(cachedUserMap.get("druid"));
 
     response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid");
     Assert.assertEquals(400, response.getStatus());
@@ -263,6 +355,29 @@ public class CoordinatorBasicAuthenticatorResourceTest
     );
     Assert.assertArrayEquals(recalculatedHash, hash);
 
+    response = resource.getCachedSerializedUserMap(req, AUTHENTICATOR_NAME);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Map<String, BasicAuthenticatorUser> cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
+    Assert.assertNotNull(cachedUserMap);
+    Assert.assertNotNull(cachedUserMap.get("druid"));
+    Assert.assertEquals("druid", cachedUserMap.get("druid").getName());
+    BasicAuthenticatorCredentials cachedUserCredentials = cachedUserMap.get("druid").getCredentials();
+
+    salt = cachedUserCredentials.getSalt();
+    hash = cachedUserCredentials.getHash();
+    iterations = cachedUserCredentials.getIterations();
+    Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
+    Assert.assertEquals(BasicAuthUtils.KEY_LENGTH / 8, hash.length);
+    Assert.assertEquals(BasicAuthUtils.DEFAULT_KEY_ITERATIONS, iterations);
+
+    recalculatedHash = BasicAuthUtils.hashPassword(
+        "helloworld".toCharArray(),
+        salt,
+        iterations
+    );
+    Assert.assertArrayEquals(recalculatedHash, hash);
+
     response = resource.deleteUser(req, AUTHENTICATOR_NAME, "druid");
     Assert.assertEquals(200, response.getStatus());
 
@@ -280,9 +395,131 @@ public class CoordinatorBasicAuthenticatorResourceTest
     Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
   }
 
+  @Test
+  public void testGetConfig()
+  {
+    BasicAuthConfig config = new BasicAuthConfig(
+        "https://testUrl",
+        "testUser",
+        "testPassword",
+        "testDn",
+        "testUserSearch",
+        "testUserAttribute",
+        new String[]{"testGroupFilter"}
+    );
+    byte[] serializedConfig = BasicAuthUtils.serializeAuthenticatorConfig(objectMapper, config);
+
+    Response response = resource.getConfig(req, AUTHENTICATOR_NAME_LDAP);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof BasicAuthConfig);
+
+    BasicAuthConfig actualConfig = (BasicAuthConfig) response.getEntity();
+    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
+    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
+    Assert.assertEquals("...", actualConfig.getBindPassword());
+    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
+    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
+    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
+    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
+
+    response = resource.getCachedSerializedConfig(req, AUTHENTICATOR_NAME_LDAP);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Assert.assertArrayEquals(serializedConfig, (byte[]) response.getEntity());
+  }
+
+  @Test
+  public void testGetConfigSeparateDatabaseTables()
+  {
+    BasicAuthConfig config = new BasicAuthConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    byte[] serializedConfig = BasicAuthUtils.serializeAuthenticatorConfig(objectMapper, config);
+
+    Response response = resource.getConfig(req, AUTHENTICATOR_NAME2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof BasicAuthConfig);
+
+    BasicAuthConfig actualConfig = (BasicAuthConfig) response.getEntity();
+    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
+    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
+    Assert.assertEquals(config.getBindPassword(), actualConfig.getBindPassword());
+    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
+    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
+    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
+    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
+
+    response = resource.getCachedSerializedConfig(req, AUTHENTICATOR_NAME2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Assert.assertArrayEquals(serializedConfig, (byte[]) response.getEntity());
+  }
+
+  @Test
+  public void testUpdateConfig()
+  {
+    BasicAuthConfig config = new BasicAuthConfig(
+        "https://testUrlUpdate",
+        "testUserUpdate",
+        "testPasswordUpdate",
+        "testDnUpdate",
+        "testUserSearchUpdate",
+        "testUserAttributeUpdate",
+        new String[]{"testGroupFilterUpdate"}
+    );
+    byte[] serializedConfig = BasicAuthUtils.serializeAuthenticatorConfig(objectMapper, config);
+
+    Response response = resource.updateConfig(req, AUTHENTICATOR_NAME_LDAP, config);
+    Assert.assertEquals(200, response.getStatus());
+
+    response = resource.getConfig(req, AUTHENTICATOR_NAME_LDAP);
+    Assert.assertTrue(response.getEntity() instanceof BasicAuthConfig);
+
+    BasicAuthConfig actualConfig = (BasicAuthConfig) response.getEntity();
+    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
+    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
+    Assert.assertEquals("...", actualConfig.getBindPassword());
+    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
+    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
+    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
+    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
+
+    response = resource.getCachedSerializedConfig(req, AUTHENTICATOR_NAME_LDAP);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Assert.assertArrayEquals(serializedConfig, (byte[]) response.getEntity());
+
+    // Verify other authenticator config is not getting updated
+    config = new BasicAuthConfig(
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    response = resource.getConfig(req, AUTHENTICATOR_NAME2);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof BasicAuthConfig);
+    actualConfig = (BasicAuthConfig) response.getEntity();
+    Assert.assertEquals(config.getUrl(), actualConfig.getUrl());
+    Assert.assertEquals(config.getBindUser(), actualConfig.getBindUser());
+    Assert.assertEquals(config.getBindPassword(), actualConfig.getBindPassword());
+    Assert.assertEquals(config.getBaseDn(), actualConfig.getBaseDn());
+    Assert.assertEquals(config.getUserSearch(), actualConfig.getUserSearch());
+    Assert.assertEquals(config.getUserAttribute(), actualConfig.getUserAttribute());
+    Assert.assertArrayEquals(config.getGroupFilters(), actualConfig.getGroupFilters());
+  }
+
   private static Map<String, String> errorMapWithMsg(String errorMsg)
   {
     return ImmutableMap.of("error", errorMsg);
   }
-
 }

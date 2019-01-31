@@ -43,6 +43,7 @@ import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.BytesFullResponseHandler;
 import org.apache.druid.security.basic.authentication.BytesFullResponseHolder;
+import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -69,6 +70,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
   private static final EmittingLogger LOG = new EmittingLogger(CoordinatorPollingBasicAuthenticatorCacheManager.class);
 
   private final ConcurrentHashMap<String, Map<String, BasicAuthenticatorUser>> cachedUserMaps;
+  private final ConcurrentHashMap<String, BasicAuthConfig> cachedConfigs;
   private final Set<String> authenticatorPrefixes;
   private final Injector injector;
   private final ObjectMapper objectMapper;
@@ -90,6 +92,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;
     this.cachedUserMaps = new ConcurrentHashMap<>();
+    this.cachedConfigs = new ConcurrentHashMap<>();
     this.authenticatorPrefixes = new HashSet<>();
     this.druidLeaderClient = druidLeaderClient;
   }
@@ -101,7 +104,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
       throw new ISE("can't start.");
     }
 
-    LOG.info("Starting DefaultBasicAuthenticatorCacheManager.");
+    LOG.info("Starting CoordinatorPollingBasicAuthenticatorCacheManager.");
 
     try {
       initUserMaps();
@@ -113,17 +116,17 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
           () -> {
             try {
               long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());
-              LOG.debug("Inserting random polling delay of [%s] ms", randomDelay);
+              LOG.debug("Inserting cachedUserMaps random polling delay of [%s] ms", randomDelay);
               Thread.sleep(randomDelay);
 
-              LOG.debug("Scheduled cache poll is running");
+              LOG.debug("Scheduled user cache poll is running");
               for (String authenticatorPrefix : authenticatorPrefixes) {
                 Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorPrefix, false);
                 if (userMap != null) {
                   cachedUserMaps.put(authenticatorPrefix, userMap);
                 }
               }
-              LOG.debug("Scheduled cache poll is done");
+              LOG.debug("Scheduled user cache poll is done");
             }
             catch (Throwable t) {
               LOG.makeAlert(t, "Error occured while polling for cachedUserMaps.").emit();
@@ -131,8 +134,33 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
           }
       );
 
+      ScheduledExecutors.scheduleWithFixedDelay(
+          exec,
+          new Duration(commonCacheConfig.getPollingPeriod()),
+          new Duration(commonCacheConfig.getPollingPeriod()),
+          () -> {
+            try {
+              long randomDelay = ThreadLocalRandom.current().nextLong(0, commonCacheConfig.getMaxRandomDelay());
+              LOG.debug("Inserting cachedConfigs random polling delay of [%s] ms", randomDelay);
+              Thread.sleep(randomDelay);
+
+              LOG.debug("Scheduled config cache poll is running");
+              for (String authenticatorPrefix : authenticatorPrefixes) {
+                BasicAuthConfig config = fetchConfigFromCoordinator(authenticatorPrefix);
+                if (config != null) {
+                  cachedConfigs.put(authenticatorPrefix, config);
+                }
+              }
+              LOG.debug("Scheduled config cache poll is done");
+            }
+            catch (Throwable t) {
+              LOG.makeAlert(t, "Error occured while polling for cachedConfigs.").emit();
+            }
+          }
+      );
+
       lifecycleLock.started();
-      LOG.info("Started DefaultBasicAuthenticatorCacheManager.");
+      LOG.info("Started CoordinatorPollingBasicAuthenticatorCacheManager.");
     }
     finally {
       lifecycleLock.exitStart();
@@ -146,15 +174,15 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
       throw new ISE("can't stop.");
     }
 
-    LOG.info("DefaultBasicAuthenticatorCacheManager is stopping.");
+    LOG.info("CoordinatorPollingBasicAuthenticatorCacheManager is stopping.");
     exec.shutdown();
-    LOG.info("DefaultBasicAuthenticatorCacheManager is stopped.");
+    LOG.info("CoordinatorPollingBasicAuthenticatorCacheManager is stopped.");
   }
 
   @Override
-  public void handleAuthenticatorUpdate(String authenticatorPrefix, byte[] serializedUserMap)
+  public void handleAuthenticatorUserMapUpdate(String authenticatorPrefix, byte[] serializedUserMap)
   {
-    LOG.debug("Received cache update for authenticator [%s].", authenticatorPrefix);
+    LOG.debug("Received user cache update for authenticator [%s].", authenticatorPrefix);
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
     try {
       cachedUserMaps.put(
@@ -170,7 +198,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
       }
     }
     catch (Exception e) {
-      LOG.makeAlert(e, "WTF? Could not deserialize user map received from coordinator.").emit();
+      LOG.makeAlert(e, "Could not deserialize user map received from coordinator.").emit();
     }
   }
 
@@ -180,6 +208,33 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
 
     return cachedUserMaps.get(authenticatorPrefix);
+  }
+
+  @Override
+  public void handleAuthenticatorConfigUpdate(String authenticatorPrefix, byte[] serializedConfig)
+  {
+    LOG.debug("Received config cache update for authenticator [%s].", authenticatorPrefix);
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+    try {
+      cachedConfigs.put(
+          authenticatorPrefix,
+          objectMapper.readValue(
+              serializedConfig,
+              BasicAuthConfig.class
+          )
+      );
+    }
+    catch (Exception e) {
+      LOG.makeAlert(e, "Could not deserialize config received from coordinator.").emit();
+    }
+  }
+
+  @Override
+  public BasicAuthConfig getConfig(String authenticatorPrefix)
+  {
+    Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
+
+    return cachedConfigs.get(authenticatorPrefix);
   }
 
   @Nullable
@@ -209,6 +264,24 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
           }
         }
       }
+      return null;
+    }
+  }
+
+  @Nullable
+  private BasicAuthConfig fetchConfigFromCoordinator(String prefix)
+  {
+    try {
+      return RetryUtils.retry(
+          () -> {
+            return tryFetchConfigFromCoordinator(prefix);
+          },
+          e -> true,
+          commonCacheConfig.getMaxSyncRetries()
+      );
+    }
+    catch (Exception e) {
+      LOG.makeAlert(e, "Encountered exception while fetching config for authenticator [%s]", prefix).emit();
       return null;
     }
   }
@@ -266,6 +339,20 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
     return userMap;
   }
 
+  private BasicAuthConfig tryFetchConfigFromCoordinator(String prefix) throws Exception
+  {
+    Request req = druidLeaderClient.makeRequest(
+        HttpMethod.GET,
+          StringUtils.format("/druid-ext/basic-security/authentication/db/%s/cachedSerializedConfig", prefix)
+    );
+    BytesFullResponseHolder responseHolder = (BytesFullResponseHolder) druidLeaderClient.go(
+        req,
+        new BytesFullResponseHandler()
+    );
+    byte[] configBytes = responseHolder.getBytes();
+    return objectMapper.readValue(configBytes, BasicAuthConfig.class);
+  }
+
   private void initUserMaps()
   {
     AuthenticatorMapper authenticatorMapper = injector.getInstance(AuthenticatorMapper.class);
@@ -279,9 +366,15 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
       if (authenticator instanceof BasicHTTPAuthenticator) {
         String authenticatorName = entry.getKey();
         authenticatorPrefixes.add(authenticatorName);
+
         Map<String, BasicAuthenticatorUser> userMap = fetchUserMapFromCoordinator(authenticatorName, true);
         if (userMap != null) {
           cachedUserMaps.put(authenticatorName, userMap);
+        }
+
+        BasicAuthConfig config = fetchConfigFromCoordinator(authenticatorName);
+        if (config != null) {
+          cachedConfigs.put(authenticatorName, config);
         }
       }
     }

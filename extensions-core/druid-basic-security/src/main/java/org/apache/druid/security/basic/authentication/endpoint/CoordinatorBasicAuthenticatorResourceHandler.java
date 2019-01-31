@@ -28,6 +28,7 @@ import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.BasicSecurityDBResourceException;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.updater.BasicAuthenticatorMetadataStorageUpdater;
+import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.server.security.Authenticator;
@@ -179,7 +180,70 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   }
 
   @Override
-  public Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap)
+  public Response getConfig(String authenticatorName)
+  {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
+      return makeResponseForAuthenticatorNotFound(authenticatorName);
+    }
+
+    BasicAuthConfig config = BasicAuthUtils.deserializeAuthenticatorConfig(
+        objectMapper,
+        storageUpdater.getCurrentConfigBytes(authenticatorName)
+    );
+    if (config == null) {
+      throw new BasicSecurityDBResourceException("Authenticator [%s] config does not exist.", authenticatorName);
+    }
+
+    BasicAuthConfig maskedConfig = new BasicAuthConfig(
+        config.getUrl(),
+        config.getBindUser(),
+        config.getBindPassword() != null ? "..." : null,
+        config.getBaseDn(),
+        config.getUserSearch(),
+        config.getUserAttribute(),
+        config.getGroupFilters()
+    );
+
+    return Response.ok(maskedConfig).build();
+  }
+
+  @Override
+  public Response updateConfig(String authenticatorName, BasicAuthConfig config)
+  {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
+      return makeResponseForAuthenticatorNotFound(authenticatorName);
+    }
+
+    try {
+      storageUpdater.updateConfig(authenticatorName, config);
+      return Response.ok().build();
+    }
+    catch (BasicSecurityDBResourceException cfe) {
+      return makeResponseForBasicSecurityDBResourceException(cfe);
+    }
+  }
+
+  @Override
+  public Response getCachedSerializedConfig(String authenticatorName)
+  {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
+      return makeResponseForAuthenticatorNotFound(authenticatorName);
+    }
+
+    return Response.ok(storageUpdater.getCachedSerializedConfig(authenticatorName)).build();
+  }
+
+  @Override
+  public Response authenticatorUserUpdateListener(String authenticatorName, byte[] serializedUserMap)
+  {
+    return Response.status(Response.Status.NOT_FOUND).build();
+  }
+
+  @Override
+  public Response authenticatorConfigUpdateListener(String authenticatorName, byte[] serializedConfig)
   {
     return Response.status(Response.Status.NOT_FOUND).build();
   }
@@ -190,7 +254,8 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
     Map<String, Boolean> loadStatus = new HashMap<>();
     authenticatorMap.forEach(
         (authenticatorName, authenticator) -> {
-          loadStatus.put(authenticatorName, storageUpdater.getCachedUserMap(authenticatorName) != null);
+          loadStatus.put(authenticatorName, storageUpdater.getCachedUserMap(authenticatorName) != null &&
+                                            storageUpdater.getCachedConfig(authenticatorName) != null);
         }
     );
     return Response.ok(loadStatus).build();

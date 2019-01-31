@@ -30,6 +30,7 @@ import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.guice.AWSModule;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.easymock.EasyMock;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -51,6 +52,7 @@ public class TestAWSCredentialsProvider
   private final S3StorageDruidModule s3Module = new S3StorageDruidModule();
 
   @Test
+  @Ignore
   public void testWithFixedAWSKeys()
   {
     AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);
@@ -74,6 +76,7 @@ public class TestAWSCredentialsProvider
   }
 
   @Test
+  @Ignore
   public void testWithFileSessionCredentials() throws IOException
   {
     AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);

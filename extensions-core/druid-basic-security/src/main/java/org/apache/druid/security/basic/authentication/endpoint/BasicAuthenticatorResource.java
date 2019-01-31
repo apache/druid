@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
+import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 
 import javax.servlet.http.HttpServletRequest;
@@ -211,7 +212,65 @@ public class BasicAuthenticatorResource
   }
 
   /**
-   * Listen for update notifications for the auth storage
+   * @param req      HTTP request
+   *
+   * @return Authenticator configuration
+   */
+  @GET
+  @Path("/db/{authenticatorName}/config")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getConfig(
+      @Context HttpServletRequest req,
+      @PathParam("authenticatorName") final String authenticatorName
+  )
+  {
+    return handler.getConfig(authenticatorName);
+  }
+
+  /**
+   * Update authenticator configuration
+   *
+   * @param req     HTTP request
+   * @param config  Authenticator configuration
+   *
+   * @return OK response
+   */
+  @POST
+  @Path("/db/{authenticatorName}/config")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response updateConfig(
+      @Context HttpServletRequest req,
+      @PathParam("authenticatorName") final String authenticatorName,
+      BasicAuthConfig config
+  )
+  {
+    return handler.updateConfig(authenticatorName, config);
+  }
+
+  /**
+   * @param req HTTP request
+   *
+   * @return serialized config
+   */
+  @GET
+  @Path("/db/{authenticatorName}/cachedSerializedConfig")
+  @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response getCachedSerializedConfig(
+      @Context HttpServletRequest req,
+      @PathParam("authenticatorName") final String authenticatorName
+  )
+  {
+    return handler.getCachedSerializedConfig(authenticatorName);
+  }
+
+  /**
+   * Listen for users update notifications for the auth storage
    */
   @POST
   @Path("/listen/{authenticatorName}")
@@ -224,6 +283,23 @@ public class BasicAuthenticatorResource
       byte[] serializedUserMap
   )
   {
-    return handler.authenticatorUpdateListener(authenticatorName, serializedUserMap);
+    return handler.authenticatorUserUpdateListener(authenticatorName, serializedUserMap);
+  }
+
+  /**
+   * Listen for config update notifications for the auth storage
+   */
+  @POST
+  @Path("/listen/config/{authenticatorName}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(BasicSecurityResourceFilter.class)
+  public Response authenticatorConfigUpdateListener(
+      @Context HttpServletRequest req,
+      @PathParam("authenticatorName") final String authenticatorName,
+      byte[] serializedConfig
+  )
+  {
+    return handler.authenticatorConfigUpdateListener(authenticatorName, serializedConfig);
   }
 }

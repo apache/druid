@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.db.cache.BasicAuthenticatorCacheManager;
+import org.apache.druid.security.basic.authentication.entity.BasicAuthConfig;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -109,7 +110,25 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
   }
 
   @Override
-  public Response authenticatorUpdateListener(String authenticatorName, byte[] serializedUserMap)
+  public Response getConfig(String authenticatorName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response updateConfig(String authenticatorName, BasicAuthConfig config)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response getCachedSerializedConfig(String authenticatorName)
+  {
+    return NOT_FOUND_RESPONSE;
+  }
+
+  @Override
+  public Response authenticatorUserUpdateListener(String authenticatorName, byte[] serializedUserMap)
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
@@ -123,7 +142,26 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
                      .build();
     }
 
-    cacheManager.handleAuthenticatorUpdate(authenticatorName, serializedUserMap);
+    cacheManager.handleAuthenticatorUserMapUpdate(authenticatorName, serializedUserMap);
+    return Response.ok().build();
+  }
+
+  @Override
+  public Response authenticatorConfigUpdateListener(String authenticatorName, byte[] serializedConfig)
+  {
+    final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
+    if (authenticator == null) {
+      String errMsg = StringUtils.format("Received update for unknown authenticator[%s]", authenticatorName);
+      log.error(errMsg);
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.<String, Object>of(
+                         "error",
+                         StringUtils.format(errMsg)
+                     ))
+                     .build();
+    }
+
+    cacheManager.handleAuthenticatorConfigUpdate(authenticatorName, serializedConfig);
     return Response.ok().build();
   }
 
@@ -133,7 +171,9 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
     Map<String, Boolean> loadStatus = new HashMap<>();
     authenticatorMap.forEach(
         (authenticatorName, authenticator) -> {
-          loadStatus.put(authenticatorName, cacheManager.getUserMap(authenticatorName) != null);
+          loadStatus.put(authenticatorName, cacheManager.getUserMap(authenticatorName) != null &&
+                                            cacheManager.getConfig(authenticatorName) != null
+          );
         }
     );
     return Response.ok(loadStatus).build();
