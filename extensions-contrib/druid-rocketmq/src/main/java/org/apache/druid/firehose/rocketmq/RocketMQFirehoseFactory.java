@@ -404,7 +404,8 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
         this.requestsWrite.add(request);
         if (!hasNotified) {
           hasNotified = true;
-          notifyAll();
+          // No need to use notifyAll here since extended class com.alibaba.rocketmq.common.ServiceThread handles it
+          notify();
         }
       }
     }
