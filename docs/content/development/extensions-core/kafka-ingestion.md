@@ -32,14 +32,12 @@ ingestion mechanisms using Tranquility. The supervisor oversees the state of the
 and ensure that the scalability and replication requirements are maintained.
 
 This service is provided in the `druid-kafka-indexing-service` core extension (see
-[Including Extensions](../../operations/including-extensions.html)). Please note that the Kafka indexing service is
-currently designated as an *experimental feature* and is subject to the usual
-[experimental caveats](../experimental.html).
+[Including Extensions](../../operations/including-extensions.html)).
 
 <div class="note info">
 The Kafka indexing service uses the Java consumer that was introduced in Kafka 0.10.x. As there were protocol changes
 made in this version, Kafka 0.10.x consumers might not be compatible with older brokers. Ensure that your Kafka brokers are
-version 0.10.x or better before using this service. Refer <a href="https://kafka.apache.org/documentation/#upgrade">Kafka upgrade guide</a> if you are using older version of kafka brokers.
+version 0.10.x or better before using this functionality. Refer <a href="https://kafka.apache.org/documentation/#upgrade">Kafka upgrade guide</a> if you are using older version of Kafka brokers.
 </div>
 
 ## Submitting a Supervisor Spec
