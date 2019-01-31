@@ -123,7 +123,7 @@ public class MovingAverageQueryTest
     return tests;
   }
 
-  public MovingAverageQueryTest(String yamlFile) throws JsonParseException, JsonMappingException, IOException
+  public MovingAverageQueryTest(String yamlFile) throws IOException
   {
     List<Module> modules = getRequiredModules();
     modules.add(
@@ -238,7 +238,7 @@ public class MovingAverageQueryTest
    * @throws JsonMappingException
    * @throws JsonParseException
    */
-  protected void defineMocks(Query<?> query) throws JsonParseException, JsonMappingException, IOException
+  protected void defineMocks(Query<?> query) throws IOException
   {
     groupByResults.clear();
     timeseriesResults.clear();
@@ -320,7 +320,7 @@ public class MovingAverageQueryTest
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Test
-  public void testQuery() throws JsonParseException, JsonMappingException, IOException
+  public void testQuery() throws IOException
   {
 
 

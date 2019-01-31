@@ -104,7 +104,7 @@ public class MovingAverageIterable implements Iterable<Row>
       Aggregator aggFactorized = agg.factorize(colFact);
       fakeEvents.put(agg.getName(), aggFactorized.get());
     });
-    postAggMap.values().stream().forEach(postAgg -> fakeEvents.put(postAgg.getName(), postAgg.compute(fakeEvents)));
+    postAggMap.values().forEach(postAgg -> fakeEvents.put(postAgg.getName(), postAgg.compute(fakeEvents)));
   }
 
   /* (non-Javadoc)
@@ -280,12 +280,12 @@ public class MovingAverageIterable implements Iterable<Row>
       }
 
       if (!skip) {
-        avg.stream().forEach(af -> af.addElement(event, aggMap));
+        avg.forEach(af -> af.addElement(event, aggMap));
       } else {
-        avg.stream().forEach(af -> af.skip());
+        avg.forEach(af -> af.skip());
       }
 
-      avg.stream().forEach(af -> result.put(af.getName(), af.getResult()));
+      avg.forEach(af -> result.put(af.getName(), af.getResult()));
 
       // At least one non-dimension value must be in the record for it to be valid.
       if (result.entrySet().stream().anyMatch(e -> !key.containsKey(e.getKey()) && e.getValue() != null)) {
