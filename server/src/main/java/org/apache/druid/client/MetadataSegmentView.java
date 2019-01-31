@@ -98,7 +98,6 @@ public class MetadataSegmentView
   private void poll()
   {
     log.info("polling published segments from coordinator");
-    //get authorized published segments from coordinator
     final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
@@ -116,6 +115,11 @@ public class MetadataSegmentView
     // since the presence of a segment with an earlier timestamp indicates that
     // "that" segment is not returned by coordinator in latest poll, so it's
     // likely deleted and therefore we remove it from publishedSegments
+    // Since segments are not atomically replaced because it can cause high
+    // memory footprint due to large number of published segments, so
+    // we are incrementally removing deleted segments from the map
+    // This means publishedSegments will be eventually consistent with
+    // the segments in coordinator
     publishedSegments.entrySet().removeIf(e -> e.getValue() != timestamp);
 
   }
@@ -139,7 +143,7 @@ public class MetadataSegmentView
           "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
       final StringBuilder sb = new StringBuilder();
       for (String ds : watchedDataSources) {
-        sb.append("datasources=" + ds + "&");
+        sb.append("datasources=").append(ds).append("&");
       }
       sb.setLength(sb.length() - 1);
       query = "/druid/coordinator/v1/metadata/segments?" + sb;
@@ -181,16 +185,12 @@ public class MetadataSegmentView
     {
       long delayMS = POLL_PERIOD_IN_MS;
       try {
-        long pollStartTime = System.nanoTime();
+        final long pollStartTime = System.nanoTime();
         poll();
-        long pollEndTime = System.nanoTime();
-        final long pollTimeNs = pollEndTime - pollStartTime;
-        final long pollTimeMs = TimeUnit.NANOSECONDS.toMillis(pollTimeNs);
-        if (pollTimeMs > POLL_PERIOD_IN_MS) {
-          delayMS = 0;
-        } else {
-          delayMS = pollTimeMs;
-        }
+        final long pollEndTime = System.nanoTime();
+        final long pollTimeNS = pollEndTime - pollStartTime;
+        final long pollTimeMS = TimeUnit.NANOSECONDS.toMillis(pollTimeNS);
+        delayMS = Math.max(POLL_PERIOD_IN_MS - pollTimeMS, 0);
       }
       catch (Exception e) {
         log.makeAlert(e, "Problem polling Coordinator.").emit();
