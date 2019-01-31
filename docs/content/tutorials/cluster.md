@@ -227,7 +227,9 @@ In this simple cluster, you will deploy a single Master server containing the fo
 The processes on the cluster need to be configured with the addresses of this ZK instance and the metadata store.
 
 In `conf/druid/_common/common.runtime.properties`, replace
-"zk.service.host" with the address of the machine that runs your ZK instance:
+"zk.service.host" with [connection string](https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html)
+containing a comma separated list of host:port pairs, each corresponding to a ZooKeeper server
+(e.g. "127.0.0.1:4545" or "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002"):
 
 - `druid.zk.service.host`
 
