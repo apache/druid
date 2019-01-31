@@ -133,11 +133,9 @@ public class MomentSketchQuantilePostAggregator implements PostAggregator
   {
     final CacheKeyBuilder builder = new CacheKeyBuilder(
         PostAggregatorIds.MOMENTS_SKETCH_TO_QUANTILES_CACHE_TYPE_ID
-    ).appendCacheable(
-        field
-    ).appendDoubleArray(
-        fractions
-    );
+    )
+        .appendCacheable(field)
+        .appendDoubleArray(fractions);
     return builder.build();
   }
 

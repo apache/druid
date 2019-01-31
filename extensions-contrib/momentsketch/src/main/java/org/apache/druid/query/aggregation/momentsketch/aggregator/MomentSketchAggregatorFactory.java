@@ -72,8 +72,8 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   public MomentSketchAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("k") final Integer k,
-      @JsonProperty("compress") final Boolean compress
+      @Nullable @JsonProperty("k") final Integer k,
+      @Nullable @JsonProperty("compress") final Boolean compress
   )
   {
     this(name, fieldName, k, compress, AggregatorUtil.MOMENTS_SKETCH_BUILD_CACHE_TYPE_ID);

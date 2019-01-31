@@ -53,8 +53,8 @@ The `momentSketch` aggregator operates over raw data while the `momentSketchMerg
 |type|Type of aggregator desired. Either "momentSketch" or "momentSketchMerge" |yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field (can contain sketches or raw numeric values).|yes|
-|k|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Usable range is generally [3,15] |no, defaults to 13|
-|compress|Flag for whether the aggregator compresses numeric values using arcsinh. Can improve robustness to skewed and long-tailed distributions, but reduces accuracy slightly on more uniform distributions.|| no, defaults to true
+|k|Parameter that determines the accuracy and size of the sketch. Higher k means higher accuracy but more space to store sketches. Usable range is generally [3,15] |no, defaults to 13.|
+|compress|Flag for whether the aggregator compresses numeric values using arcsinh. Can improve robustness to skewed and long-tailed distributions, but reduces accuracy slightly on more uniform distributions.| no, defaults to true
 
 ### Post Aggregators
 
@@ -64,7 +64,7 @@ Users can query for a set of quantiles using the `momentSketchSolveQuantiles` po
   "type"  : "momentSketchSolveQuantiles",
   "name" : <output_name>,
   "field" : <reference to moment sketch>,
-  "fractions" : <double array within [0,1]>
+  "fractions" : <array of doubles in [0,1]>
 }
 ```
 
