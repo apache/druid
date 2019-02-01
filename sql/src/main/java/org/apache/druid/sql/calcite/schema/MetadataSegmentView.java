@@ -99,31 +99,35 @@ public class MetadataSegmentView
   @LifecycleStart
   public void start()
   {
-    if (!lifecycleLock.canStart()) {
-      throw new ISE("can't start.");
-    }
-    try {
-      if (isCacheEnabled) {
-        scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
-        lifecycleLock.started();
-        log.info("MetadataSegmentView Started.");
+    synchronized (lifecycleLock) {
+      if (!lifecycleLock.canStart()) {
+        throw new ISE("can't start.");
       }
-    }
-    finally {
-      lifecycleLock.exitStart();
+      try {
+        if (isCacheEnabled) {
+          scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
+          lifecycleLock.started();
+          log.info("MetadataSegmentView Started.");
+        }
+      }
+      finally {
+        lifecycleLock.exitStart();
+      }
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-    if (!lifecycleLock.canStop()) {
-      throw new ISE("can't stop.");
-    }
-    if (isCacheEnabled) {
-      log.info("MetadataSegmentView is stopping.");
-      scheduledExec.shutdown();
-      log.info("MetadataSegmentView Stopped.");
+    synchronized (lifecycleLock) {
+      if (!lifecycleLock.canStop()) {
+        throw new ISE("can't stop.");
+      }
+      if (isCacheEnabled) {
+        log.info("MetadataSegmentView is stopping.");
+        scheduledExec.shutdown();
+        log.info("MetadataSegmentView Stopped.");
+      }
     }
   }
 
@@ -224,19 +228,20 @@ public class MetadataSegmentView
     @Override
     public void run()
     {
-      long delayMS = pollPeriodinMS;
       try {
         final long pollStartTime = System.nanoTime();
         poll();
         final long pollEndTime = System.nanoTime();
         final long pollTimeNS = pollEndTime - pollStartTime;
         final long pollTimeMS = TimeUnit.NANOSECONDS.toMillis(pollTimeNS);
-        delayMS = Math.max(pollPeriodinMS - pollTimeMS, 0);
+        final long delayMS = Math.max(pollPeriodinMS - pollTimeMS, 0);
+        if (!Thread.currentThread().isInterrupted()) {
+          scheduledExec.schedule(new PollTask(), delayMS, TimeUnit.MILLISECONDS);
+        }
       }
       catch (Exception e) {
         log.makeAlert(e, "Problem polling Coordinator.").emit();
       }
-      scheduledExec.schedule(new PollTask(), delayMS, TimeUnit.MILLISECONDS);
     }
   }
 
