@@ -193,122 +193,117 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
   public void testApproxCountDistinctThetaSketch() throws Exception
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    try {
-      final String sql = "SELECT\n"
-                         + "  SUM(cnt),\n"
-                         + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2),\n" // uppercase
-                         + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2) FILTER(WHERE dim2 <> ''),\n" // lowercase; also, filtered
-                         + "  APPROX_COUNT_DISTINCT_DS_THETA(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn
-                         + "  APPROX_COUNT_DISTINCT_DS_THETA(SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression
-                         + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1, 32768),\n" // on native theta sketch column
-                         + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1)\n" // on native theta sketch column
-                         + "FROM druid.foo";
+    final String sql = "SELECT\n"
+                       + "  SUM(cnt),\n"
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2),\n" // uppercase
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2) FILTER(WHERE dim2 <> ''),\n" // lowercase; also, filtered
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1, 32768),\n" // on native theta sketch column
+                       + "  APPROX_COUNT_DISTINCT_DS_THETA(thetasketch_dim1)\n" // on native theta sketch column
+                       + "FROM druid.foo";
 
-      // Verify results
-      final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
-      final List<Object[]> expectedResults;
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults;
 
-      if (NullHandling.replaceWithDefault()) {
-        expectedResults = ImmutableList.of(
-            new Object[]{
-                6L,
-                2L,
-                2L,
-                1L,
-                2L,
-                5L,
-                5L
-            }
-        );
-      } else {
-        expectedResults = ImmutableList.of(
-            new Object[]{
-                6L,
-                2L,
-                2L,
-                1L,
-                1L,
-                5L,
-                5L
-            }
-        );
-      }
-
-      Assert.assertEquals(expectedResults.size(), results.size());
-      for (int i = 0; i < expectedResults.size(); i++) {
-        Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-      }
-
-      // Verify query
-      Assert.assertEquals(
-          Druids.newTimeseriesQueryBuilder()
-                .dataSource(CalciteTests.DATASOURCE1)
-                .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                .granularity(Granularities.ALL)
-                .virtualColumns(
-                    new ExpressionVirtualColumn(
-                        "a3:v",
-                        "substring(\"dim2\", 0, 1)",
-                        ValueType.STRING,
-                        TestExprMacroTable.INSTANCE
-                    ),
-                    new ExpressionVirtualColumn(
-                        "a4:v",
-                        "concat(substring(\"dim2\", 0, 1),'x')",
-                        ValueType.STRING,
-                        TestExprMacroTable.INSTANCE
-                    )
-                )
-                .aggregators(
-                    ImmutableList.of(
-                        new LongSumAggregatorFactory("a0", "cnt"),
-                        new SketchMergeAggregatorFactory(
-                            "a1",
-                            "dim2",
-                            null,
-                            null,
-                            null,
-                            null
-                        ),
-                        new FilteredAggregatorFactory(
-                            new SketchMergeAggregatorFactory(
-                                "a2",
-                                "dim2",
-                                null,
-                                null,
-                                null,
-                                null
-                            ),
-                            BaseCalciteQueryTest.NOT(BaseCalciteQueryTest.SELECTOR("dim2", "", null))
-                        ),
-                        new SketchMergeAggregatorFactory(
-                            "a3",
-                            "a3:v",
-                            null,
-                            null,
-                            null,
-                            null
-                        ),
-                        new SketchMergeAggregatorFactory(
-                            "a4",
-                            "a4:v",
-                            null,
-                            null,
-                            null,
-                            null
-                        ),
-                        new SketchMergeAggregatorFactory("a5", "thetasketch_dim1", 32768, null, null, null),
-                        new SketchMergeAggregatorFactory("a6", "thetasketch_dim1", null, null, null, null)
-                    )
-                )
-                .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
-                .build(),
-          Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    if (NullHandling.replaceWithDefault()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              2L,
+              5L,
+              5L
+          }
+      );
+    } else {
+      expectedResults = ImmutableList.of(
+          new Object[]{
+              6L,
+              2L,
+              2L,
+              1L,
+              1L,
+              5L,
+              5L
+          }
       );
     }
-    catch (Exception e) {
-      throw e;
+
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
     }
+
+    // Verify query
+    Assert.assertEquals(
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(CalciteTests.DATASOURCE1)
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+              .granularity(Granularities.ALL)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "a3:v",
+                      "substring(\"dim2\", 0, 1)",
+                      ValueType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  ),
+                  new ExpressionVirtualColumn(
+                      "a4:v",
+                      "concat(substring(\"dim2\", 0, 1),'x')",
+                      ValueType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .aggregators(
+                  ImmutableList.of(
+                      new LongSumAggregatorFactory("a0", "cnt"),
+                      new SketchMergeAggregatorFactory(
+                          "a1",
+                          "dim2",
+                          null,
+                          null,
+                          null,
+                          null
+                      ),
+                      new FilteredAggregatorFactory(
+                          new SketchMergeAggregatorFactory(
+                              "a2",
+                              "dim2",
+                              null,
+                              null,
+                              null,
+                              null
+                          ),
+                          BaseCalciteQueryTest.NOT(BaseCalciteQueryTest.SELECTOR("dim2", "", null))
+                      ),
+                      new SketchMergeAggregatorFactory(
+                          "a3",
+                          "a3:v",
+                          null,
+                          null,
+                          null,
+                          null
+                      ),
+                      new SketchMergeAggregatorFactory(
+                          "a4",
+                          "a4:v",
+                          null,
+                          null,
+                          null,
+                          null
+                      ),
+                      new SketchMergeAggregatorFactory("a5", "thetasketch_dim1", 32768, null, null, null),
+                      new SketchMergeAggregatorFactory("a6", "thetasketch_dim1", null, null, null, null)
+                  )
+              )
+              .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
+              .build(),
+        Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
+    );
   }
 
   @Test
@@ -316,97 +311,92 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
 
-    try {
-      final String sql = "SELECT\n"
-                         + "  AVG(u)\n"
-                         + "FROM (SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT_DS_THETA(cnt) AS u FROM druid.foo GROUP BY 1)";
+    final String sql = "SELECT\n"
+                       + "  AVG(u)\n"
+                       + "FROM (SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT_DS_THETA(cnt) AS u FROM druid.foo GROUP BY 1)";
 
-      // Verify results
-      final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
-      final List<Object[]> expectedResults = ImmutableList.of(
-          new Object[]{
-              1L
-          }
-      );
-      Assert.assertEquals(expectedResults.size(), results.size());
-      for (int i = 0; i < expectedResults.size(); i++) {
-        Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
-      }
-
-      Query expected = GroupByQuery.builder()
-                                   .setDataSource(
-                                       new QueryDataSource(
-                                           GroupByQuery.builder()
-                                                       .setDataSource(CalciteTests.DATASOURCE1)
-                                                       .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                                                       .setGranularity(Granularities.ALL)
-                                                       .setVirtualColumns(
-                                                           new ExpressionVirtualColumn(
-                                                               "d0:v",
-                                                               "timestamp_floor(\"__time\",'P1D',null,'UTC')",
-                                                               ValueType.LONG,
-                                                               TestExprMacroTable.INSTANCE
-                                                           )
-                                                       )
-                                                       .setDimensions(
-                                                           Collections.singletonList(
-                                                               new DefaultDimensionSpec(
-                                                                   "d0:v",
-                                                                   "d0",
-                                                                   ValueType.LONG
-                                                               )
-                                                           )
-                                                       )
-                                                       .setAggregatorSpecs(
-                                                           Collections.singletonList(
-                                                               new SketchMergeAggregatorFactory(
-                                                                   "a0:a",
-                                                                   "cnt",
-                                                                   null,
-                                                                   null,
-                                                                   null,
-                                                                   null
-                                                               )
-                                                           )
-                                                       )
-                                                       .setPostAggregatorSpecs(
-                                                           ImmutableList.of(
-                                                               new FinalizingFieldAccessPostAggregator("a0", "a0:a")
-                                                           )
-                                                       )
-                                                       .setContext(QUERY_CONTEXT_DEFAULT)
-                                                       .build()
-                                       )
-                                   )
-                                   .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                                   .setGranularity(Granularities.ALL)
-                                   .setAggregatorSpecs(Arrays.asList(
-                                       new LongSumAggregatorFactory("_a0:sum", "a0"),
-                                       new CountAggregatorFactory("_a0:count")
-                                   ))
-                                   .setPostAggregatorSpecs(
-                                       ImmutableList.of(
-                                           new ArithmeticPostAggregator(
-                                               "_a0",
-                                               "quotient",
-                                               ImmutableList.of(
-                                                   new FieldAccessPostAggregator(null, "_a0:sum"),
-                                                   new FieldAccessPostAggregator(null, "_a0:count")
-                                               )
-                                           )
-                                       )
-                                   )
-                                   .setContext(QUERY_CONTEXT_DEFAULT)
-                                   .build();
-
-      Query actual = Iterables.getOnlyElement(queryLogHook.getRecordedQueries());
-
-      // Verify query
-      Assert.assertEquals(expected, actual);
-
+    // Verify results
+    final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{
+            1L
+        }
+    );
+    Assert.assertEquals(expectedResults.size(), results.size());
+    for (int i = 0; i < expectedResults.size(); i++) {
+      Assert.assertArrayEquals(expectedResults.get(i), results.get(i));
     }
-    catch (Exception e) {
-      throw e;
-    }
+
+    Query expected = GroupByQuery.builder()
+                                 .setDataSource(
+                                     new QueryDataSource(
+                                         GroupByQuery.builder()
+                                                     .setDataSource(CalciteTests.DATASOURCE1)
+                                                     .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(
+                                                         Filtration.eternity())))
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         new ExpressionVirtualColumn(
+                                                             "d0:v",
+                                                             "timestamp_floor(\"__time\",'P1D',null,'UTC')",
+                                                             ValueType.LONG,
+                                                             TestExprMacroTable.INSTANCE
+                                                         )
+                                                     )
+                                                     .setDimensions(
+                                                         Collections.singletonList(
+                                                             new DefaultDimensionSpec(
+                                                                 "d0:v",
+                                                                 "d0",
+                                                                 ValueType.LONG
+                                                             )
+                                                         )
+                                                     )
+                                                     .setAggregatorSpecs(
+                                                         Collections.singletonList(
+                                                             new SketchMergeAggregatorFactory(
+                                                                 "a0:a",
+                                                                 "cnt",
+                                                                 null,
+                                                                 null,
+                                                                 null,
+                                                                 null
+                                                             )
+                                                         )
+                                                     )
+                                                     .setPostAggregatorSpecs(
+                                                         ImmutableList.of(
+                                                             new FinalizingFieldAccessPostAggregator("a0", "a0:a")
+                                                         )
+                                                     )
+                                                     .setContext(QUERY_CONTEXT_DEFAULT)
+                                                     .build()
+                                     )
+                                 )
+                                 .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                                 .setGranularity(Granularities.ALL)
+                                 .setAggregatorSpecs(Arrays.asList(
+                                     new LongSumAggregatorFactory("_a0:sum", "a0"),
+                                     new CountAggregatorFactory("_a0:count")
+                                 ))
+                                 .setPostAggregatorSpecs(
+                                     ImmutableList.of(
+                                         new ArithmeticPostAggregator(
+                                             "_a0",
+                                             "quotient",
+                                             ImmutableList.of(
+                                                 new FieldAccessPostAggregator(null, "_a0:sum"),
+                                                 new FieldAccessPostAggregator(null, "_a0:count")
+                                             )
+                                         )
+                                     )
+                                 )
+                                 .setContext(QUERY_CONTEXT_DEFAULT)
+                                 .build();
+
+    Query actual = Iterables.getOnlyElement(queryLogHook.getRecordedQueries());
+
+    // Verify query
+    Assert.assertEquals(expected, actual);
   }
 }
