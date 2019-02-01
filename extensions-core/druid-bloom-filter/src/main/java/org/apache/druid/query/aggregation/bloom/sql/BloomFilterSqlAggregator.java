@@ -99,7 +99,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
     );
 
     if (!maxNumEntriesOperand.isA(SqlKind.LITERAL)) {
-      // Probability must be a literal in order to plan.
+      // maxNumEntriesOperand must be a literal in order to plan.
       return null;
     }
 
