@@ -72,7 +72,7 @@ public class MetadataSegmentView
 
   private final boolean isCacheEnabled;
   private final ConcurrentMap<DataSegment, DateTime> publishedSegments;
-  private ScheduledExecutorService scheduledExec;
+  private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodinMS;
   private LifecycleLock lifecycleLock = new LifecycleLock();
 
@@ -92,7 +92,8 @@ public class MetadataSegmentView
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.isCacheEnabled = plannerConfig.isMetadataSegmentCacheEnable();
     this.pollPeriodinMS = plannerConfig.getMetadataSegmentPollPeriod();
-    this.publishedSegments = isCacheEnabled ? new ConcurrentHashMap<>(1000) : new ConcurrentHashMap<>();
+    this.publishedSegments = isCacheEnabled ? new ConcurrentHashMap<>(1000) : null;
+    this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
   }
 
   @LifecycleStart
@@ -103,7 +104,6 @@ public class MetadataSegmentView
     }
     try {
       if (isCacheEnabled) {
-        scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
         scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
         lifecycleLock.started();
         log.info("MetadataSegmentView Started.");
@@ -121,10 +121,10 @@ public class MetadataSegmentView
       throw new ISE("can't stop.");
     }
     if (isCacheEnabled) {
-      scheduledExec.shutdownNow();
-      scheduledExec = null;
+      log.info("MetadataSegmentView is stopping.");
+      scheduledExec.shutdown();
+      log.info("MetadataSegmentView Stopped.");
     }
-    log.info("MetadataSegmentView Stopped.");
   }
 
   private void poll()
