@@ -381,6 +381,7 @@ public class CliPeon extends GuiceRunnable
         }
       }
       catch (Throwable t) {
+        System.err.println("ERROR stopping!");
         System.err.println(Throwables.getStackTraceAsString(t));
         System.exit(1);
       }
