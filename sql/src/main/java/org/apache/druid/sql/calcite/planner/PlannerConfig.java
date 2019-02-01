@@ -66,10 +66,6 @@ public class PlannerConfig
   @JsonProperty
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
 
-  /**
-   * If this config is set to true, broker would cache the published segments,
-   * which can make your sys table queries faster
-   */
   @JsonProperty
   private boolean metadataSegmentCacheEnable = false;
 
