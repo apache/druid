@@ -20,19 +20,17 @@
 package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import org.apache.druid.benchmark.datagen.BenchmarkSchemas;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -43,6 +41,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.extraction.DimExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
@@ -50,7 +49,6 @@ import org.apache.druid.query.extraction.LowerExtractionFn;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.extraction.UpperExtractionFn;
-import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -60,28 +58,32 @@ import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
-import org.apache.druid.query.search.SearchQueryConfig;
-import org.apache.druid.query.search.SearchQueryQueryToolChest;
-import org.apache.druid.query.search.SearchQueryRunnerFactory;
-import org.apache.druid.query.search.SearchStrategySelector;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
 import java.io.IOException;
@@ -92,6 +94,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
@@ -99,8 +102,11 @@ import java.util.concurrent.ExecutorService;
 @Measurement(iterations = 25)
 public class ScanBenchmark
 {
-  @Param({"1"})
+  @Param({"1", "4"})
   private int numSegments;
+
+  @Param({"1", "2"})
+  private int numProcessingThreads;
 
   @Param({"750000"})
   private int rowsPerSegment;
@@ -281,7 +287,7 @@ public class ScanBenchmark
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
       ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(HyperLogLogHash.getDefault()));
     }
-    executorService = Execs.multiThreaded(numSegments, "SearchThreadPool");
+    executorService = Execs.multiThreaded(numProcessingThreads, "ScanThreadPool");
 
     setupQueries();
 
@@ -367,5 +373,67 @@ public class ScanBenchmark
 
     Sequence<T> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     return queryResult.toList();
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void querySingleIncrementalIndex(Blackhole blackhole)
+  {
+    QueryRunner<ScanResultValue> runner = QueryBenchmarkUtil.makeQueryRunner(
+        factory,
+        SegmentId.dummy("incIndex"),
+        new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
+    );
+
+    List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, query);
+    blackhole.consume(results);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void querySingleQueryableIndex(Blackhole blackhole)
+  {
+    final QueryRunner<Result<ScanResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
+        factory,
+        SegmentId.dummy("qIndex"),
+        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
+    );
+
+    List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, query);
+    blackhole.consume(results);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void queryMultiQueryableIndex(Blackhole blackhole)
+  {
+    List<QueryRunner<Row>> runners = new ArrayList<>();
+    QueryToolChest toolChest = factory.getToolchest();
+    for (int i = 0; i < numSegments; i++) {
+      String segmentName = "qIndex" + i;
+      final QueryRunner<Result<ScanResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
+          factory,
+          SegmentId.dummy(segmentName),
+          new QueryableIndexSegment(qIndexes.get(i), SegmentId.dummy(segmentName))
+      );
+      runners.add(toolChest.preMergeQueryDecoration(runner));
+    }
+
+    QueryRunner theRunner = toolChest.postMergeQueryDecoration(
+        new FinalizeResultsQueryRunner<>(
+            toolChest.mergeResults(factory.mergeRunners(executorService, runners)),
+            toolChest
+        )
+    );
+
+    Sequence<Result<ScanResultValue>> queryResult = theRunner.run(
+        QueryPlus.wrap(query),
+        new HashMap<>()
+    );
+    List<Result<ScanResultValue>> results = queryResult.toList();
+    blackhole.consume(results);
   }
 }
