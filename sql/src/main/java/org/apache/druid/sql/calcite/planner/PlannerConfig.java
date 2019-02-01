@@ -82,6 +82,8 @@ public class PlannerConfig
     return metadataSegmentCacheEnable;
   }
 
+  private boolean serializeComplexValues = true;
+
   public Period getMetadataRefreshPeriod()
   {
     return metadataRefreshPeriod;
@@ -137,6 +139,11 @@ public class PlannerConfig
     return awaitInitializationOnStart;
   }
 
+  public boolean shouldSerializeComplexValues()
+  {
+    return serializeComplexValues;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -169,6 +176,7 @@ public class PlannerConfig
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
     newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
     newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
+    newConfig.serializeComplexValues = shouldSerializeComplexValues();
     return newConfig;
   }
 
@@ -211,6 +219,7 @@ public class PlannerConfig
            awaitInitializationOnStart == that.awaitInitializationOnStart &&
            metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
            metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
+           serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone);
   }
@@ -232,7 +241,8 @@ public class PlannerConfig
         awaitInitializationOnStart,
         sqlTimeZone,
         metadataSegmentCacheEnable,
-        metadataSegmentPollPeriod
+        metadataSegmentPollPeriod,
+        serializeComplexValues
     );
   }
 
@@ -253,6 +263,7 @@ public class PlannerConfig
            ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
            ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
+           ", serializeComplexValues=" + serializeComplexValues +
            '}';
   }
 }

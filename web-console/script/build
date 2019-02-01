@@ -18,19 +18,15 @@
 
 set -e
 
-#pushd web-console
-
 echo "Copying coordinator console in..."
 cp -r ./node_modules/druid-console/coordinator-console .
 cp -r ./node_modules/druid-console/pages .
 cp ./node_modules/druid-console/index.html .
 
 echo "Transpiling ReactTable CSS..."
-./node_modules/.bin/stylus lib/react-table.styl -o lib/react-table.css
+PATH="./target/node:$PATH" ./node_modules/.bin/stylus lib/react-table.styl -o lib/react-table.css
 
 echo "Webpacking everything..."
-./node_modules/.bin/webpack -c webpack.config.js
+PATH="./target/node:$PATH" ./node_modules/.bin/webpack -c webpack.config.js
 
 echo "Done! Have a good day."
-
-#popd
