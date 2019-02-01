@@ -99,35 +99,31 @@ public class MetadataSegmentView
   @LifecycleStart
   public void start()
   {
-    synchronized (lifecycleLock) {
-      if (!lifecycleLock.canStart()) {
-        throw new ISE("can't start.");
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("can't start.");
+    }
+    try {
+      if (isCacheEnabled) {
+        scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
+        lifecycleLock.started();
+        log.info("MetadataSegmentView Started.");
       }
-      try {
-        if (isCacheEnabled) {
-          scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
-          lifecycleLock.started();
-          log.info("MetadataSegmentView Started.");
-        }
-      }
-      finally {
-        lifecycleLock.exitStart();
-      }
+    }
+    finally {
+      lifecycleLock.exitStart();
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-    synchronized (lifecycleLock) {
-      if (!lifecycleLock.canStop()) {
-        throw new ISE("can't stop.");
-      }
-      if (isCacheEnabled) {
-        log.info("MetadataSegmentView is stopping.");
-        scheduledExec.shutdown();
-        log.info("MetadataSegmentView Stopped.");
-      }
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("can't stop.");
+    }
+    if (isCacheEnabled) {
+      log.info("MetadataSegmentView is stopping.");
+      scheduledExec.shutdown();
+      log.info("MetadataSegmentView Stopped.");
     }
   }
 
