@@ -46,6 +46,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -71,10 +72,11 @@ public class MetadataSegmentView
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
+  @Nullable
   private final ConcurrentMap<DataSegment, DateTime> publishedSegments;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodinMS;
-  private LifecycleLock lifecycleLock = new LifecycleLock();
+  private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   @Inject
   public MetadataSegmentView(
