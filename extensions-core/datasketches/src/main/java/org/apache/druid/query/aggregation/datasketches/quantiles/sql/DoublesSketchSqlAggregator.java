@@ -172,19 +172,11 @@ public class DoublesSketchSqlAggregator implements SqlAggregator
     final List<VirtualColumn> virtualColumns = new ArrayList<>();
 
     if (input.isDirectColumnAccess()) {
-      if (rowSignature.getColumnType(input.getDirectColumn()) == ValueType.COMPLEX) {
-        aggregatorFactory = new DoublesSketchAggregatorFactory(
-            histogramName,
-            input.getDirectColumn(),
-            k
-        );
-      } else {
-        aggregatorFactory = new DoublesSketchAggregatorFactory(
-            histogramName,
-            input.getDirectColumn(),
-            k
-        );
-      }
+      aggregatorFactory = new DoublesSketchAggregatorFactory(
+          histogramName,
+          input.getDirectColumn(),
+          k
+      );
     } else {
       final ExpressionVirtualColumn virtualColumn = input.toVirtualColumn(
           StringUtils.format("%s:v", name),
