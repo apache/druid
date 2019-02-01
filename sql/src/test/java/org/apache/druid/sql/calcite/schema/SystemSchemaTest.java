@@ -37,7 +37,6 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DruidLeaderClient;

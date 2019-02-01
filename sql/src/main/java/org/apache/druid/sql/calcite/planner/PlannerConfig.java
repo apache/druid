@@ -66,6 +66,14 @@ public class PlannerConfig
   @JsonProperty
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
 
+  @JsonProperty
+  private boolean metadataSegmentCacheEnable = false;
+
+  public boolean isMetadataSegmentCacheEnable()
+  {
+    return metadataSegmentCacheEnable;
+  }
+
   public Period getMetadataRefreshPeriod()
   {
     return metadataRefreshPeriod;
@@ -151,6 +159,7 @@ public class PlannerConfig
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
+    newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
     return newConfig;
   }
 

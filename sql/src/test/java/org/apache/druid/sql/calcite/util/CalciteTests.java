@@ -32,7 +32,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
-import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.data.input.InputRow;
@@ -126,6 +125,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
+import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -742,7 +742,8 @@ public class CalciteTests
 
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
-      final SpecificSegmentsQuerySegmentWalker walker
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig
   )
   {
     final DruidLeaderClient druidLeaderClient = new DruidLeaderClient(
@@ -760,7 +761,8 @@ public class CalciteTests
             druidLeaderClient,
             getJsonMapper(),
             new BytesAccumulatingResponseHandler(),
-            new BrokerSegmentWatcherConfig()
+            new BrokerSegmentWatcherConfig(),
+            plannerConfig
         ),
         new TestServerInventoryView(walker.getSegments()),
         TEST_AUTHORIZER_MAPPER,

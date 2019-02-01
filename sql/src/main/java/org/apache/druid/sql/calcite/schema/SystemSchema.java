@@ -45,7 +45,6 @@ import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
-import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.IndexingService;
@@ -229,7 +228,7 @@ public class SystemSchema extends AbstractSchema
         partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
       }
 
-      //get published segments from metadata segment cache
+      //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
       final Iterator<DataSegment> metadataSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();

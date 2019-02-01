@@ -17,13 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.client;
+package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.DataSegmentInterner;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
@@ -35,6 +39,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
@@ -66,15 +71,18 @@ public class MetadataSegmentView
 
   private final ConcurrentMap<DataSegment, DateTime> publishedSegments = new ConcurrentHashMap<>(1000);
   private ScheduledExecutorService scheduledExec;
+  final PlannerConfig plannerConfig;
 
   @Inject
   public MetadataSegmentView(
       final @Coordinator DruidLeaderClient druidLeaderClient,
       final ObjectMapper jsonMapper,
       final BytesAccumulatingResponseHandler responseHandler,
-      final BrokerSegmentWatcherConfig segmentWatcherConfig
+      final BrokerSegmentWatcherConfig segmentWatcherConfig,
+      final PlannerConfig plannerConfig
   )
   {
+    this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.coordinatorDruidLeaderClient = druidLeaderClient;
     this.jsonMapper = jsonMapper;
     this.responseHandler = responseHandler;
@@ -84,8 +92,10 @@ public class MetadataSegmentView
   @LifecycleStart
   public void start()
   {
-    scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
-    scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
+    if (plannerConfig.isMetadataSegmentCacheEnable()) {
+      scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
+      scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
+    }
   }
 
   @LifecycleStop
@@ -126,7 +136,16 @@ public class MetadataSegmentView
 
   public Iterator<DataSegment> getPublishedSegments()
   {
-    return publishedSegments.keySet().iterator();
+    if (plannerConfig.isMetadataSegmentCacheEnable()) {
+      return publishedSegments.keySet().iterator();
+    } else {
+      return getMetadataSegments(
+          coordinatorDruidLeaderClient,
+          jsonMapper,
+          responseHandler,
+          segmentWatcherConfig.getWatchedDataSources()
+      );
+    }
   }
 
   // Note that coordinator must be up to get segments
