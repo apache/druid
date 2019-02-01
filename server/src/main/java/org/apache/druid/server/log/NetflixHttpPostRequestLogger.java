@@ -21,7 +21,6 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hashing;
@@ -180,7 +179,6 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
   @VisibleForTesting
   static class Payload
   {
-    private static final ObjectMapper mapper = new ObjectMapper();
     private final String queryId;
     private final String queryHash;
 
@@ -208,13 +206,8 @@ public class NetflixHttpPostRequestLogger implements RequestLogger
     Payload(RequestLogLine logLine)
     {
       Query query = logLine.getQuery();
-      try {
-        queryString = mapper.writeValueAsString(query);
-        queryHash = Hashing.goodFastHash(32).hashString(queryString, Charset.defaultCharset()).toString();
-      }
-      catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
-      }
+      queryString = query.toString();
+      queryHash = Hashing.goodFastHash(32).hashString(queryString, Charset.defaultCharset()).toString();
       queryId = query.getId();
       bdpQueryId = (String) query.getContext().getOrDefault(BDP_QUERY_ID, "");
       datasource = query.getDataSource().toString();
