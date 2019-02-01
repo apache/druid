@@ -315,7 +315,6 @@ public class SelectBenchmark
     }
   }
 
-
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
