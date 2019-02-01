@@ -66,6 +66,9 @@ public class PlannerConfig
   @JsonProperty
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
 
+  @JsonProperty
+  private boolean serializeComplexValues = true;
+
   public Period getMetadataRefreshPeriod()
   {
     return metadataRefreshPeriod;
@@ -121,6 +124,11 @@ public class PlannerConfig
     return awaitInitializationOnStart;
   }
 
+  public boolean shouldSerializeComplexValues()
+  {
+    return serializeComplexValues;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> context)
   {
     if (context == null) {
@@ -151,6 +159,7 @@ public class PlannerConfig
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
+    newConfig.serializeComplexValues = shouldSerializeComplexValues();
     return newConfig;
   }
 
@@ -191,6 +200,7 @@ public class PlannerConfig
            useFallback == that.useFallback &&
            requireTimeCondition == that.requireTimeCondition &&
            awaitInitializationOnStart == that.awaitInitializationOnStart &&
+           serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone);
   }
@@ -210,7 +220,8 @@ public class PlannerConfig
         useFallback,
         requireTimeCondition,
         awaitInitializationOnStart,
-        sqlTimeZone
+        sqlTimeZone,
+        serializeComplexValues
     );
   }
 
@@ -229,6 +240,7 @@ public class PlannerConfig
            ", requireTimeCondition=" + requireTimeCondition +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
            ", sqlTimeZone=" + sqlTimeZone +
+           ", serializeComplexValues=" + serializeComplexValues +
            '}';
   }
 }
