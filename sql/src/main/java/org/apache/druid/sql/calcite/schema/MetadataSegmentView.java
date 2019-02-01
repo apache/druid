@@ -29,9 +29,11 @@ import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.DataSegmentInterner;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -61,7 +63,6 @@ import java.util.concurrent.TimeUnit;
 public class MetadataSegmentView
 {
 
-  private static final long POLL_PERIOD_IN_MS = 60000;
   private static final EmittingLogger log = new EmittingLogger(MetadataSegmentView.class);
 
   private final DruidLeaderClient coordinatorDruidLeaderClient;
@@ -69,9 +70,11 @@ public class MetadataSegmentView
   private final BytesAccumulatingResponseHandler responseHandler;
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
-  private final ConcurrentMap<DataSegment, DateTime> publishedSegments = new ConcurrentHashMap<>(1000);
+  private final boolean isCacheEnabled;
+  private final ConcurrentMap<DataSegment, DateTime> publishedSegments;
   private ScheduledExecutorService scheduledExec;
-  final PlannerConfig plannerConfig;
+  private final long pollPeriodinMS;
+  private LifecycleLock lifecycleLock = new LifecycleLock();
 
   @Inject
   public MetadataSegmentView(
@@ -82,27 +85,46 @@ public class MetadataSegmentView
       final PlannerConfig plannerConfig
   )
   {
-    this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
+    Preconditions.checkNotNull(plannerConfig, "plannerConfig");
     this.coordinatorDruidLeaderClient = druidLeaderClient;
     this.jsonMapper = jsonMapper;
     this.responseHandler = responseHandler;
     this.segmentWatcherConfig = segmentWatcherConfig;
+    this.isCacheEnabled = plannerConfig.isMetadataSegmentCacheEnable();
+    this.pollPeriodinMS = plannerConfig.getMetadataSegmentPollPeriod();
+    this.publishedSegments = isCacheEnabled ? new ConcurrentHashMap<>(1000) : new ConcurrentHashMap<>();
   }
 
   @LifecycleStart
   public void start()
   {
-    if (plannerConfig.isMetadataSegmentCacheEnable()) {
-      scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
-      scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
+    if (!lifecycleLock.canStart()) {
+      throw new ISE("can't start.");
+    }
+    try {
+      if (isCacheEnabled) {
+        scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
+        scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
+        lifecycleLock.started();
+        log.info("MetadataSegmentView Started.");
+      }
+    }
+    finally {
+      lifecycleLock.exitStart();
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-    scheduledExec.shutdownNow();
-    scheduledExec = null;
+    if (!lifecycleLock.canStop()) {
+      throw new ISE("can't stop.");
+    }
+    if (isCacheEnabled) {
+      scheduledExec.shutdownNow();
+      scheduledExec = null;
+    }
+    log.info("MetadataSegmentView Stopped.");
   }
 
   private void poll()
@@ -136,7 +158,7 @@ public class MetadataSegmentView
 
   public Iterator<DataSegment> getPublishedSegments()
   {
-    if (plannerConfig.isMetadataSegmentCacheEnable()) {
+    if (isCacheEnabled) {
       return publishedSegments.keySet().iterator();
     } else {
       return getMetadataSegments(
@@ -202,14 +224,14 @@ public class MetadataSegmentView
     @Override
     public void run()
     {
-      long delayMS = POLL_PERIOD_IN_MS;
+      long delayMS = pollPeriodinMS;
       try {
         final long pollStartTime = System.nanoTime();
         poll();
         final long pollEndTime = System.nanoTime();
         final long pollTimeNS = pollEndTime - pollStartTime;
         final long pollTimeMS = TimeUnit.NANOSECONDS.toMillis(pollTimeNS);
-        delayMS = Math.max(POLL_PERIOD_IN_MS - pollTimeMS, 0);
+        delayMS = Math.max(pollPeriodinMS - pollTimeMS, 0);
       }
       catch (Exception e) {
         log.makeAlert(e, "Problem polling Coordinator.").emit();

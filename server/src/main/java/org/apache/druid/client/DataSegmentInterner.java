@@ -36,7 +36,7 @@ public class DataSegmentInterner
 
   private DataSegmentInterner()
   {
-
+    //No instantiation
   }
 
   public static DataSegment intern(DataSegment segment)
@@ -46,5 +46,4 @@ public class DataSegmentInterner
     // HISTORICAL interner.
     return segment.getSize() > 0 ? HISTORICAL_INTERNER.intern(segment) : REALTIME_INTERNER.intern(segment);
   }
-
 }

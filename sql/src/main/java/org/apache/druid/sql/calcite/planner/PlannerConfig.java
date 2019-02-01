@@ -69,6 +69,14 @@ public class PlannerConfig
   @JsonProperty
   private boolean metadataSegmentCacheEnable = false;
 
+  @JsonProperty
+  private long metadataSegmentPollPeriod = 60000;
+
+  public long getMetadataSegmentPollPeriod()
+  {
+    return metadataSegmentPollPeriod;
+  }
+
   public boolean isMetadataSegmentCacheEnable()
   {
     return metadataSegmentCacheEnable;
@@ -160,6 +168,7 @@ public class PlannerConfig
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
     newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
+    newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     return newConfig;
   }
 
@@ -200,6 +209,8 @@ public class PlannerConfig
            useFallback == that.useFallback &&
            requireTimeCondition == that.requireTimeCondition &&
            awaitInitializationOnStart == that.awaitInitializationOnStart &&
+           metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
+           metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone);
   }
@@ -219,7 +230,9 @@ public class PlannerConfig
         useFallback,
         requireTimeCondition,
         awaitInitializationOnStart,
-        sqlTimeZone
+        sqlTimeZone,
+        metadataSegmentCacheEnable,
+        metadataSegmentPollPeriod
     );
   }
 
@@ -237,6 +250,8 @@ public class PlannerConfig
            ", useFallback=" + useFallback +
            ", requireTimeCondition=" + requireTimeCondition +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
+           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
            '}';
   }
