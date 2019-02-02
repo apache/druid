@@ -48,6 +48,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRun
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -138,13 +139,14 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     this.authorizerMapper = authorizerMapper;
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
 
-    if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions() > 0) {
+    if (ingestionSchema.getTuningConfig().getMaxSavedParseExceptions()
+        != TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS) {
       log.warn("maxSavedParseExceptions is not supported yet");
     }
-    if (ingestionSchema.getTuningConfig().getMaxParseExceptions() > 0) {
+    if (ingestionSchema.getTuningConfig().getMaxParseExceptions() != TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS) {
       log.warn("maxParseExceptions is not supported yet");
     }
-    if (ingestionSchema.getTuningConfig().isLogParseExceptions()) {
+    if (ingestionSchema.getTuningConfig().isLogParseExceptions() != TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS) {
       log.warn("logParseExceptions is not supported yet");
     }
   }
