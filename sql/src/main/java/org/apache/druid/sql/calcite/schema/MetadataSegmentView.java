@@ -106,10 +106,15 @@ public class MetadataSegmentView
     }
     try {
       if (isCacheEnabled) {
-        scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
-        lifecycleLock.started();
-        log.info("MetadataSegmentView Started.");
+        try {
+          poll();
+        }
+        finally {
+          scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
+        }
       }
+      lifecycleLock.started();
+      log.info("MetadataSegmentView Started.");
     }
     finally {
       lifecycleLock.exitStart();
@@ -161,6 +166,10 @@ public class MetadataSegmentView
   public Iterator<DataSegment> getPublishedSegments()
   {
     if (isCacheEnabled) {
+      Preconditions.checkState(
+          lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS),
+          "hold on, still syncing published segments"
+      );
       return publishedSegments.keySet().iterator();
     } else {
       return getMetadataSegments(
@@ -173,7 +182,7 @@ public class MetadataSegmentView
   }
 
   // Note that coordinator must be up to get segments
-  private static JsonParserIterator<DataSegment> getMetadataSegments(
+  private JsonParserIterator<DataSegment> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       BytesAccumulatingResponseHandler responseHandler,
@@ -226,19 +235,22 @@ public class MetadataSegmentView
     @Override
     public void run()
     {
+      long delayMS = pollPeriodinMS;
       try {
         final long pollStartTime = System.nanoTime();
         poll();
         final long pollEndTime = System.nanoTime();
         final long pollTimeNS = pollEndTime - pollStartTime;
         final long pollTimeMS = TimeUnit.NANOSECONDS.toMillis(pollTimeNS);
-        final long delayMS = Math.max(pollPeriodinMS - pollTimeMS, 0);
-        if (!Thread.currentThread().isInterrupted()) {
-          scheduledExec.schedule(new PollTask(), delayMS, TimeUnit.MILLISECONDS);
-        }
+        delayMS = Math.max(pollPeriodinMS - pollTimeMS, 0);
       }
       catch (Exception e) {
         log.makeAlert(e, "Problem polling Coordinator.").emit();
+      }
+      finally {
+        if (!Thread.currentThread().isInterrupted()) {
+          scheduledExec.schedule(new PollTask(), delayMS, TimeUnit.MILLISECONDS);
+        }
       }
     }
   }
