@@ -125,15 +125,33 @@
         <version>3.6.0.2</version>
         <executions>
           <execution>
+          <phase>generate-sources</phase>
+          <goals>
+            <goal>run</goal>
+          </goals>
+          <configuration>
+            <addProtoSources>all</addProtoSources>
+            <inputDirectories>
+              <include>src/main/protobuf</include>
+            </inputDirectories>
+          </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.4</version>
+        <executions>
+          <execution>
             <phase>generate-sources</phase>
             <goals>
-              <goal>run</goal>
+              <goal>add-source</goal>
             </goals>
             <configuration>
-              <addProtoSources>all</addProtoSources>
-              <inputDirectories>
-                <include>src/main/protobuf</include>
-              </inputDirectories>
+              <sources>
+                <source>${basedir}/target/generated-sources</source>
+              </sources>
             </configuration>
           </execution>
         </executions>
