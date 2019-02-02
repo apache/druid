@@ -43,12 +43,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import org.apache.druid.query.extraction.DimExtractionFn;
-import org.apache.druid.query.extraction.IdentityExtractionFn;
-import org.apache.druid.query.extraction.LowerExtractionFn;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
-import org.apache.druid.query.extraction.SubstringDimExtractionFn;
-import org.apache.druid.query.extraction.UpperExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
@@ -96,10 +91,11 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/* Works with 4GB heap size or greater.  Otherwise there's a good chance of an OOME. */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Warmup(iterations = 5)
+@Measurement(iterations = 5)
 public class ScanBenchmark
 {
   @Param({"1", "4"})
@@ -108,7 +104,7 @@ public class ScanBenchmark
   @Param({"1", "2"})
   private int numProcessingThreads;
 
-  @Param({"750000"})
+  @Param({"250000"})
   private int rowsPerSegment;
 
   @Param({"basic.A"})
@@ -174,14 +170,15 @@ public class ScanBenchmark
     }
   }
 
+  /* Just get everything */
   private static Druids.ScanQueryBuilder basicA(final BenchmarkSchemaInfo basicSchema)
   {
     final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     return Druids.newScanQueryBuilder()
                  .dataSource("blah")
-                 .intervals(intervalSpec)
-                 .query("123");
+                 .intervals(intervalSpec);
+
   }
 
   private static Druids.ScanQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
@@ -202,11 +199,11 @@ public class ScanBenchmark
       dimHyperUniqueFilterVals.add(String.valueOf(i));
     }
 
-    final List<DimFilter> dimFilters = new ArrayList<>();
-    dimFilters.add(new InDimFilter("dimUniform", dimUniformFilterVals, null));
-    dimFilters.add(new InDimFilter("dimHyperUnique", dimHyperUniqueFilterVals, null));
+    DimFilter filter = new InDimFilter("dimHyperUnique", dimHyperUniqueFilterVals, null);
 
-    return Druids.newScanQueryBuilder(); // TODO
+    return Druids.newScanQueryBuilder()
+                 .filters(filter)
+                 .intervals(intervalSpec);
   }
 
   private static Druids.ScanQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
@@ -221,40 +218,9 @@ public class ScanBenchmark
     }
 
     final String dimName = "dimUniform";
-    final List<DimFilter> dimFilters = new ArrayList<>();
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, IdentityExtractionFn.getInstance()));
-    dimFilters.add(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()));
-    dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, new DimExtractionFn()
-    {
-      @Override
-      public byte[] getCacheKey()
-      {
-        return new byte[]{0xF};
-      }
-
-      @Override
-      public String apply(String value)
-      {
-        return String.valueOf(Long.parseLong(value) + 1);
-      }
-
-      @Override
-      public boolean preservesOrdering()
-      {
-        return false;
-      }
-
-      @Override
-      public ExtractionType getExtractionType()
-      {
-        return ExtractionType.ONE_TO_ONE;
-      }
-    }, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, new LowerExtractionFn(null)));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, new UpperExtractionFn(null)));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, new SubstringDimExtractionFn(1, 3)));
-
-    return Druids.newScanQueryBuilder(); // TODO
+    return Druids.newScanQueryBuilder()
+        .filters(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()))
+        .intervals(intervalSpec); // TODO
   }
 
   private static Druids.ScanQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
@@ -271,12 +237,11 @@ public class ScanBenchmark
     }
 
     final String dimName = "dimUniform";
-    final List<DimFilter> dimFilters = new ArrayList<>();
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
-    dimFilters.add(new SelectorDimFilter(dimName, "3", null));
-    dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null));
 
-    return Druids.newScanQueryBuilder(); // TODO
+
+    return Druids.newScanQueryBuilder()
+        .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))
+        .intervals(intervalSpec); // TODO
   }
 
   @Setup
