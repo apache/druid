@@ -108,15 +108,7 @@ public class MetadataSegmentView
     }
     try {
       if (isCacheEnabled) {
-        try {
-          poll();
-        }
-        catch (Exception e) {
-          log.makeAlert(e, "Problem polling Coordinator.").emit();
-        }
-        finally {
-          scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
-        }
+        scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
       }
       lifecycleLock.started();
       log.info("MetadataSegmentView Started.");
