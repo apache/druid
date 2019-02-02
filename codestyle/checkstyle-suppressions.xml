@@ -65,4 +65,6 @@
 
   <suppress checks="ImportOrder" files="[\\/]target[\\/]generated-test-sources[\\/]" />
   <suppress checks="EmptyLineSeparator" files="[\\/]target[\\/]generated-test-sources[\\/]" />
+
+  <suppress checks="[a-zA-Z0-9]*" files="AggregatedRecordProtos.java" />
 </suppressions>
