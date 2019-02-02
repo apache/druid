@@ -43,7 +43,8 @@ public class SocketUtil
     while (currPort < 0xffff) {
       try (ServerSocket socket = new ServerSocket(currPort)) {
         return currPort;
-      } catch (IOException e) {
+      }
+      catch (IOException e) {
         ++currPort;
       }
     }
