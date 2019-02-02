@@ -75,7 +75,7 @@ public class MetadataSegmentView
   @Nullable
   private final ConcurrentMap<DataSegment, DateTime> publishedSegments;
   private final ScheduledExecutorService scheduledExec;
-  private final long pollPeriodinMS;
+  private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   @Inject
@@ -93,7 +93,7 @@ public class MetadataSegmentView
     this.responseHandler = responseHandler;
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.isCacheEnabled = plannerConfig.isMetadataSegmentCacheEnable();
-    this.pollPeriodinMS = plannerConfig.getMetadataSegmentPollPeriod();
+    this.pollPeriodInMS = plannerConfig.getMetadataSegmentPollPeriod();
     this.publishedSegments = isCacheEnabled ? new ConcurrentHashMap<>(1000) : null;
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
   }
@@ -109,8 +109,11 @@ public class MetadataSegmentView
         try {
           poll();
         }
+        catch (Exception e) {
+          log.makeAlert(e, "Problem polling Coordinator.").emit();
+        }
         finally {
-          scheduledExec.schedule(new PollTask(), 0, TimeUnit.MILLISECONDS);
+          scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
         }
       }
       lifecycleLock.started();
@@ -235,14 +238,14 @@ public class MetadataSegmentView
     @Override
     public void run()
     {
-      long delayMS = pollPeriodinMS;
+      long delayMS = pollPeriodInMS;
       try {
         final long pollStartTime = System.nanoTime();
         poll();
         final long pollEndTime = System.nanoTime();
         final long pollTimeNS = pollEndTime - pollStartTime;
         final long pollTimeMS = TimeUnit.NANOSECONDS.toMillis(pollTimeNS);
-        delayMS = Math.max(pollPeriodinMS - pollTimeMS, 0);
+        delayMS = Math.max(pollPeriodInMS - pollTimeMS, 0);
       }
       catch (Exception e) {
         log.makeAlert(e, "Problem polling Coordinator.").emit();
