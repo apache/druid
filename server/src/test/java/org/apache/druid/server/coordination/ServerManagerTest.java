@@ -123,7 +123,7 @@ public class ServerManagerTest
           }
 
           @Override
-          public Segment getSegment(final DataSegment segment)
+          public Segment getSegment(final DataSegment segment, boolean lazy)
           {
             return new SegmentForTesting(
                 MapUtils.getString(segment.getLoadSpec(), "version"),
@@ -481,7 +481,8 @@ public class ServerManagerTest
               NoneShardSpec.instance(),
               IndexIO.CURRENT_VERSION_ID,
               123L
-          )
+          ),
+          false
       );
     }
     catch (SegmentLoadingException e) {

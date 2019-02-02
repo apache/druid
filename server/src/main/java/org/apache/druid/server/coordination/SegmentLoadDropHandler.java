@@ -252,11 +252,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    *
    * @throws SegmentLoadingException
    */
-  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback) throws SegmentLoadingException
+  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback, boolean lazy) throws SegmentLoadingException
   {
     final boolean loaded;
     try {
-      loaded = segmentManager.loadSegment(segment);
+      loaded = segmentManager.loadSegment(segment, lazy);
     }
     catch (Exception e) {
       removeSegment(segment, callback, false);
@@ -304,7 +304,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
           segmentsToDelete.remove(segment);
         }
       }
-      loadSegment(segment, DataSegmentChangeCallback.NOOP);
+      loadSegment(segment, DataSegmentChangeCallback.NOOP, false);
       try {
         announcer.announceSegment(segment);
       }
@@ -354,7 +354,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
                       numSegments,
                       segment.getId()
                   );
-                  loadSegment(segment, callback);
+                  loadSegment(segment, callback, config.isLazyLoadOnStart());
                   try {
                     backgroundSegmentAnnouncer.announceSegment(segment);
                   }

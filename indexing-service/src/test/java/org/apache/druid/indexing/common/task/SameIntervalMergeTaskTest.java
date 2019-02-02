@@ -230,7 +230,7 @@ public class SameIntervalMergeTaskTest
               }
 
               @Override
-              public Segment getSegment(DataSegment segment)
+              public Segment getSegment(DataSegment segment, boolean lazy)
               {
                 return null;
               }

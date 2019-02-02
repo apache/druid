@@ -102,7 +102,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   }
 
   @Override
-  public Segment getSegment(DataSegment segment) throws SegmentLoadingException
+  public Segment getSegment(DataSegment segment, boolean lazy) throws SegmentLoadingException
   {
     File segmentFiles = getSegmentFiles(segment);
     File factoryJson = new File(segmentFiles, "factory.json");
@@ -119,7 +119,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
       factory = new MMappedQueryableSegmentizerFactory(indexIO);
     }
 
-    return factory.factorize(segment, segmentFiles);
+    return factory.factorize(segment, segmentFiles, lazy);
   }
 
   @Override
