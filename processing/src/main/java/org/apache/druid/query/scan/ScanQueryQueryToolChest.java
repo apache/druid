@@ -112,7 +112,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
           PriorityQueue<Object> q = new PriorityQueue<>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
           Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
-          
+
           while (scanResultIterator.hasNext()) {
             ScanResultValue next = scanResultIterator.next();
             List<Object> events = (List<Object>) next.getEvents();
