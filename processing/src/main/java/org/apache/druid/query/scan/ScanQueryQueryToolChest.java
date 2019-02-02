@@ -106,37 +106,13 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
           return new BaseSequence<>(scanQueryLimitRowIteratorMaker);
         } else if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_ASCENDING) ||
                    scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_DESCENDING)) {
-          Comparator priorityQComparator = (val1, val2) -> {
-            int comparison;
-            ScanResultValue val1SRV = (ScanResultValue) val1,
-                val2SRV = (ScanResultValue) val2;
-            if (scanQuery.getResultFormat().equals(ScanQuery.RESULT_FORMAT_LIST)) {
-              comparison = Longs.compare(
-                  (Long) ((Map<String, Object>) ((List) val1SRV.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME),
-                  (Long) ((Map<String, Object>) ((List) val2SRV.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME)
-              );
-            } else if (scanQuery.getResultFormat().equals(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)) {
-              int val1TimeColumnIndex = val1SRV.getColumns().indexOf(ColumnHolder.TIME_COLUMN_NAME);
-              int val2TimeColumnIndex = val2SRV.getColumns().indexOf(ColumnHolder.TIME_COLUMN_NAME);
-              List<Object> event1 = (List<Object>) ((List<Object>) val1SRV.getEvents()).get(0);
-              List<Object> event2 = (List<Object>) ((List<Object>) val2SRV.getEvents()).get(0);
-              comparison = Longs.compare(
-                  (Long) event1.get(val1TimeColumnIndex),
-                  (Long) event2.get(val2TimeColumnIndex)
-              );
-            } else {
-              throw new UOE("Result format [%s] is not supported", scanQuery.getResultFormat());
-            }
-            if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_DESCENDING)) {
-              return comparison * -1;
-            }
-            return comparison;
-          };
+          Comparator priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
 
           // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
           // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
           PriorityQueue<Object> q = new PriorityQueue<>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
           Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
+          
           while (scanResultIterator.hasNext()) {
             ScanResultValue next = scanResultIterator.next();
             List<Object> events = (List<Object>) next.getEvents();
