@@ -120,7 +120,11 @@ public class CuratorConfig
 
   public void setTerminateDruidProcessOnConnectFail(Boolean terminateDruidProcessOnConnectFail)
   {
-    this.terminateDruidProcessOnConnectFail = terminateDruidProcessOnConnectFail == null ? false : terminateDruidProcessOnConnectFail;
+    if (terminateDruidProcessOnConnectFail == null) {
+      this.terminateDruidProcessOnConnectFail = false;
+    } else {
+      this.terminateDruidProcessOnConnectFail = terminateDruidProcessOnConnectFail;
+    }
   }
 
 }
