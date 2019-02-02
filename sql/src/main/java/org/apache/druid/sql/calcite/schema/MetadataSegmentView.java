@@ -124,11 +124,11 @@ public class MetadataSegmentView
     if (!lifecycleLock.canStop()) {
       throw new ISE("can't stop.");
     }
+    log.info("MetadataSegmentView is stopping.");
     if (isCacheEnabled) {
-      log.info("MetadataSegmentView is stopping.");
       scheduledExec.shutdown();
-      log.info("MetadataSegmentView Stopped.");
     }
+    log.info("MetadataSegmentView Stopped.");
   }
 
   private void poll()
