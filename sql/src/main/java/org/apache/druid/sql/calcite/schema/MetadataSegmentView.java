@@ -55,6 +55,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class polls the coordinator in background to keep the latest published segments.
@@ -77,6 +78,7 @@ public class MetadataSegmentView
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
+  private final AtomicBoolean cachePopulated = new AtomicBoolean(false);
 
   @Inject
   public MetadataSegmentView(
@@ -163,14 +165,14 @@ public class MetadataSegmentView
     // This means publishedSegments will be eventually consistent with
     // the segments in coordinator
     publishedSegments.entrySet().removeIf(e -> e.getValue() != timestamp);
-
+    cachePopulated.set(true);
   }
 
   public Iterator<DataSegment> getPublishedSegments()
   {
     if (isCacheEnabled) {
       Preconditions.checkState(
-          lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS),
+          lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS) && cachePopulated.get(),
           "hold on, still syncing published segments"
       );
       return publishedSegments.keySet().iterator();
