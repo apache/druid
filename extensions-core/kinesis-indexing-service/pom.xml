@@ -139,22 +139,36 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.4</version>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.0.0</version>
+        <configuration>
+          <createDependencyReducedPom>false</createDependencyReducedPom>
+          <relocations>
+            <relocation>
+              <pattern>com.google.protobuf</pattern>
+              <shadedPattern>shaded.com.google.protobuf</shadedPattern>
+            </relocation>
+          </relocations>
+        </configuration>
         <executions>
           <execution>
-            <phase>generate-sources</phase>
+            <phase>package</phase>
             <goals>
-              <goal>add-source</goal>
+              <goal>shade</goal>
             </goals>
-            <configuration>
-              <sources>
-                <source>${basedir}/target/generated-sources</source>
-              </sources>
-            </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.0.2</version>
+        <configuration>
+          <nonFilteredFileExtensions>
+            <nonFilteredFileExtension>desc</nonFilteredFileExtension>
+          </nonFilteredFileExtensions>
+        </configuration>
       </plugin>
     </plugins>
   </build>
