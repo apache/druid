@@ -40,6 +40,15 @@ public class ScanQueryConfig
     return this;
   }
 
+  // int should suffice here because no one should be sorting greater than 2B rows in memory
+  @JsonProperty
+  private int maxRowsTimeOrderedInMemory = 100000;
+
+  public int getMaxRowsTimeOrderedInMemory()
+  {
+    return maxRowsTimeOrderedInMemory;
+  }
+
   @Override
   public boolean equals(final Object o)
   {

@@ -53,6 +53,7 @@ public class ScanQuerySpecTest
         + "\"resultFormat\":\"list\","
         + "\"batchSize\":20480,"
         + "\"limit\":3,"
+        + "\"timeOrder\":\"none\","
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
         + "\"legacy\":null,"
@@ -70,7 +71,8 @@ public class ScanQuerySpecTest
         null,
         Arrays.asList("market", "quality", "index"),
         null,
-        null
+        null,
+        "none"
     );
 
     String actual = jsonMapper.writeValueAsString(query);

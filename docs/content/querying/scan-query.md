@@ -24,7 +24,13 @@ title: "Scan query"
 
 # Scan query
 
-Scan query returns raw Druid rows in streaming mode.
+The Scan query returns raw Druid rows in streaming mode.  The biggest difference between the Select query and the Scan
+query is that the Scan query does not retain all the returned rows in memory before they are returned to the client
+(except when time-ordering is used).  The Select query _will_ retain the rows in memory, causing memory pressure if too
+many rows are returned.  The Scan query can return all the rows without issuing another pagination query, which is
+extremely useful when directly querying against historical or realtime nodes.
+
+An example Scan query object is shown below:
 
 ```json
  {
@@ -36,28 +42,29 @@ Scan query returns raw Druid rows in streaming mode.
      "2013-01-01/2013-01-02"
    ],
    "batchSize":20480,
-   "limit":5
+   "limit":3
  }
 ```
 
-There are several main parts to a scan query:
+The following are the main parameters for Scan queries:
 
 |property|description|required?|
 |--------|-----------|---------|
 |queryType|This String should always be "scan"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.html) for more information.|yes|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
-|resultFormat|How result represented, list or compactedList or valueVector. Currently only `list` and `compactedList` are supported. Default is `list`|no|
+|resultFormat|How the results are represented: list, compactedList or valueVector. Currently only `list` and `compactedList` are supported. Default is `list`|no|
 |filter|See [Filters](../querying/filters.html)|no|
 |columns|A String array of dimensions and metrics to scan. If left empty, all dimensions and metrics are returned.|no|
 |batchSize|How many rows buffered before return to client. Default is `20480`|no|
 |limit|How many rows to return. If not specified, all rows will be returned.|no|
+|timeOrder|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the limit is less than `druid.query.scan.maxRowsTimeOrderedInMemory`.  Scan queries that are either legacy mode or have a limit greater than `druid.query.scan.maxRowsTimeOrderedInMemory` will not be time-ordered and default to a timeOrder of "none".|none|
 |legacy|Return results consistent with the legacy "scan-query" contrib extension. Defaults to the value set by `druid.query.scan.legacy`, which in turn defaults to false. See [Legacy mode](#legacy-mode) for details.|no|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
 
 ## Example results
 
-The format of the result when resultFormat equals to `list`:
+The format of the result when resultFormat equals `list`:
 
 ```json
  [{
@@ -123,41 +130,11 @@ The format of the result when resultFormat equals to `list`:
         "delta" : 77.0,
         "variation" : 77.0,
         "deleted" : 0.0
-    }, {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "0",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "113_U.S._73",
-        "language" : "en",
-        "newpage" : "1",
-        "user" : "MZMcBride",
-        "count" : 1.0,
-        "added" : 70.0,
-        "delta" : 70.0,
-        "variation" : 70.0,
-        "deleted" : 0.0
-    }, {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "0",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "113_U.S._756",
-        "language" : "en",
-        "newpage" : "1",
-        "user" : "MZMcBride",
-        "count" : 1.0,
-        "added" : 68.0,
-        "delta" : 68.0,
-        "variation" : 68.0,
-        "deleted" : 0.0
     } ]
 } ]
 ```
 
-The format of the result when resultFormat equals to `compactedList`:
+The format of the result when resultFormat equals `compactedList`:
 
 ```json
  [{
@@ -168,17 +145,18 @@ The format of the result when resultFormat equals to `compactedList`:
     "events" : [
      ["2013-01-01T00:00:00.000Z", "1", "article", "0", "0", "11._korpus_(NOVJ)", "sl", "0", "EmausBot", 1.0, 39.0, 39.0, 39.0, 0.0],
      ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "112_U.S._580", "en", "1", "MZMcBride", 1.0, 70.0, 70.0, 70.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "113_U.S._243", "en", "1", "MZMcBride", 1.0, 77.0, 77.0, 77.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "113_U.S._73", "en", "1", "MZMcBride", 1.0, 70.0, 70.0, 70.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "113_U.S._756", "en", "1", "MZMcBride", 1.0, 68.0, 68.0, 68.0, 0.0]
+     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "113_U.S._243", "en", "1", "MZMcBride", 1.0, 77.0, 77.0, 77.0, 0.0]
     ]
 } ]
 ```
 
-The biggest difference between select query and scan query is that, scan query doesn't retain all rows in memory before rows can be returned to client.  
-It will cause memory pressure if too many rows required by select query.  
-Scan query doesn't have this issue.  
-Scan query can return all rows without issuing another pagination query, which is extremely useful when query against Historical or realtime node directly.
+## Time Ordering
+
+The Scan query currently supports ordering based on timestamp for non-legacy queries where the limit is less than
+`druid.query.scan.maxRowsTimeOrderedInMemory` rows.  The default value of `druid.query.scan.maxRowsTimeOrderedInMemory`
+is 100000 rows.  The reasoning behind this limit is that the current implementation of time ordering sorts all returned
+records in memory.  Attempting to load too many rows into memory runs the risk of Broker nodes running out of memory.
+The limit can be configured based on server memory and number of dimensions being queried.
 
 ## Legacy mode
 
@@ -194,3 +172,10 @@ Legacy mode can be triggered either by passing `"legacy" : true` in your query J
 `druid.query.scan.legacy = true` on your Druid nodes. If you were previously using the scan-query contrib extension,
 the best way to migrate is to activate legacy mode during a rolling upgrade, then switch it off after the upgrade
 is complete.
+
+## Configuration Properties
+
+|property|description|values|default|
+|--------|-----------|------|-------|
+|druid.query.scan.maxRowsTimeOrderedInMemory|An integer in the range [0, 2147483647]|100000|
+|druid.query.scan.legacy|Whether legacy mode should be turned on for Scan queries|true or false|false|

@@ -43,6 +43,10 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public static final String RESULT_FORMAT_COMPACTED_LIST = "compactedList";
   public static final String RESULT_FORMAT_VALUE_VECTOR = "valueVector";
 
+  public static final String TIME_ORDER_ASCENDING = "ascending";
+  public static final String TIME_ORDER_DESCENDING = "descending";
+  public static final String TIME_ORDER_NONE = "none";
+
   private final VirtualColumns virtualColumns;
   private final String resultFormat;
   private final int batchSize;
@@ -50,6 +54,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final DimFilter dimFilter;
   private final List<String> columns;
   private final Boolean legacy;
+  private final String timeOrder;
 
   @JsonCreator
   public ScanQuery(
@@ -62,7 +67,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("legacy") Boolean legacy,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("timeOrder") String timeOrder
   )
   {
     super(dataSource, querySegmentSpec, false, context);
@@ -75,6 +81,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.dimFilter = dimFilter;
     this.columns = columns;
     this.legacy = legacy;
+    this.timeOrder = timeOrder == null ? TIME_ORDER_NONE : timeOrder;
   }
 
   @JsonProperty
@@ -99,6 +106,12 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public long getLimit()
   {
     return limit;
+  }
+
+  @JsonProperty
+  public String getTimeOrder()
+  {
+    return timeOrder;
   }
 
   @Override
@@ -234,6 +247,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     private DimFilter dimFilter;
     private List<String> columns;
     private Boolean legacy;
+    private String timeOrder;
 
     public ScanQueryBuilder()
     {
@@ -247,6 +261,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       dimFilter = null;
       columns = new ArrayList<>();
       legacy = null;
+      timeOrder = null;
     }
 
     public ScanQuery build()
@@ -261,7 +276,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
           dimFilter,
           columns,
           legacy,
-          context
+          context,
+          timeOrder
       );
     }
 
@@ -277,7 +293,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
           .filters(query.getFilter())
           .columns(query.getColumns())
           .legacy(query.isLegacy())
-          .context(query.getContext());
+          .context(query.getContext())
+          .timeOrder(query.getTimeOrder());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -336,6 +353,12 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     public ScanQueryBuilder filters(DimFilter f)
     {
       dimFilter = f;
+      return this;
+    }
+
+    public ScanQueryBuilder timeOrder(String t)
+    {
+      timeOrder = t;
       return this;
     }
 
