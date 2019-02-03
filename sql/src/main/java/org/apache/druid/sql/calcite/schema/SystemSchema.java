@@ -149,6 +149,7 @@ public class SystemSchema extends AbstractSchema
   @Inject
   public SystemSchema(
       final DruidSchema druidSchema,
+      final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
       final AuthorizerMapper authorizerMapper,
       final @Coordinator DruidLeaderClient coordinatorDruidLeaderClient,
@@ -158,11 +159,10 @@ public class SystemSchema extends AbstractSchema
   {
     Preconditions.checkNotNull(serverView, "serverView");
     BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
-    SegmentsTable segmentsTable = new SegmentsTable(
+    final SegmentsTable segmentsTable = new SegmentsTable(
         druidSchema,
-        coordinatorDruidLeaderClient,
+        metadataView,
         jsonMapper,
-        responseHandler,
         authorizerMapper
     );
     this.tableMap = ImmutableMap.of(
@@ -182,23 +182,20 @@ public class SystemSchema extends AbstractSchema
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
     private final DruidSchema druidSchema;
-    private final DruidLeaderClient druidLeaderClient;
     private final ObjectMapper jsonMapper;
-    private final BytesAccumulatingResponseHandler responseHandler;
     private final AuthorizerMapper authorizerMapper;
+    private final MetadataSegmentView metadataView;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
-        DruidLeaderClient druidLeaderClient,
+        MetadataSegmentView metadataView,
         ObjectMapper jsonMapper,
-        BytesAccumulatingResponseHandler responseHandler,
         AuthorizerMapper authorizerMapper
     )
     {
       this.druidSchema = druidSchemna;
-      this.druidLeaderClient = druidLeaderClient;
+      this.metadataView = metadataView;
       this.jsonMapper = jsonMapper;
-      this.responseHandler = responseHandler;
       this.authorizerMapper = authorizerMapper;
     }
 
@@ -231,12 +228,8 @@ public class SystemSchema extends AbstractSchema
         partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
       }
 
-      //get published segments from coordinator
-      final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
-          druidLeaderClient,
-          jsonMapper,
-          responseHandler
-      );
+      //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
+      final Iterator<DataSegment> metadataSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
@@ -245,7 +238,7 @@ public class SystemSchema extends AbstractSchema
               metadataSegments,
               root
           ))
-          .transform((DataSegment val) -> {
+          .transform(val -> {
             try {
               segmentsAlreadySeen.add(val.getId());
               final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getId());
@@ -318,6 +311,26 @@ public class SystemSchema extends AbstractSchema
 
     }
 
+    private Iterator<DataSegment> getAuthorizedPublishedSegments(
+        Iterator<DataSegment> it,
+        DataContext root
+    )
+    {
+      final AuthenticationResult authenticationResult =
+          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
+
+      Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
+      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+          authenticationResult,
+          () -> it,
+          raGenerator,
+          authorizerMapper
+      );
+      return authorizedSegments.iterator();
+    }
+
     private Iterator<Entry<DataSegment, SegmentMetadataHolder>> getAuthorizedAvailableSegments(
         Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries,
         DataContext root
@@ -338,27 +351,6 @@ public class SystemSchema extends AbstractSchema
           );
 
       return authorizedSegments.iterator();
-    }
-
-    private CloseableIterator<DataSegment> getAuthorizedPublishedSegments(
-        JsonParserIterator<DataSegment> it,
-        DataContext root
-    )
-    {
-      final AuthenticationResult authenticationResult =
-          (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
-
-      Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
-
-      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
-          authenticationResult,
-          () -> it,
-          raGenerator,
-          authorizerMapper
-      );
-
-      return wrap(authorizedSegments.iterator(), it);
     }
 
     private static class PartialSegmentData
@@ -402,44 +394,6 @@ public class SystemSchema extends AbstractSchema
         return numRows;
       }
     }
-  }
-
-  // Note that coordinator must be up to get segments
-  private static JsonParserIterator<DataSegment> getMetadataSegments(
-      DruidLeaderClient coordinatorClient,
-      ObjectMapper jsonMapper,
-      BytesAccumulatingResponseHandler responseHandler
-  )
-  {
-
-    Request request;
-    try {
-      request = coordinatorClient.makeRequest(
-          HttpMethod.GET,
-          StringUtils.format("/druid/coordinator/v1/metadata/segments"),
-          false
-      );
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    ListenableFuture<InputStream> future = coordinatorClient.goAsync(
-        request,
-        responseHandler
-    );
-
-    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
-    {
-    });
-    return new JsonParserIterator<>(
-        typeRef,
-        future,
-        request.getUrl().toString(),
-        null,
-        request.getUrl().getHost(),
-        jsonMapper,
-        responseHandler
-    );
   }
 
   static class ServersTable extends AbstractTable implements ScannableTable

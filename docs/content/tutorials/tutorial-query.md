@@ -57,7 +57,7 @@ Druid's native query format is expressed in JSON. We have included a sample nati
 
 This query retrieves the 10 Wikipedia pages with the most page edits on 2015-09-12.
 
-Let's submit this query to the Druid broker:
+Let's submit this query to the Druid Broker:
 
 ```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-top-pages.json http://localhost:8082/druid/v2?pretty
@@ -114,7 +114,7 @@ The SQL queries are submitted as JSON over HTTP.
 
 ### TopN query example
 
-The tutorial package includes an example file that contains the SQL query shown above at `quickstart/tutorial/wikipedia-top-pages-sql.json`. Let's submit that query to the Druid broker:
+The tutorial package includes an example file that contains the SQL query shown above at `quickstart/tutorial/wikipedia-top-pages-sql.json`. Let's submit that query to the Druid Broker:
 
 ```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-top-pages-sql.json http://localhost:8082/druid/v2/sql

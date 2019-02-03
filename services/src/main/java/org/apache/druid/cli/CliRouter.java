@@ -98,9 +98,7 @@ public class CliRouter extends ServerRunnable
 
             binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
             binder.bind(QueryHostFinder.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>()
-            {
-            })
+            binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>() {})
                   .toProvider(TieredBrokerSelectorStrategiesProvider.class)
                   .in(LazySingleton.class);
 

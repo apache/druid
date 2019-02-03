@@ -123,6 +123,7 @@
         <module>aws-common</module>
         <module>extendedset</module>
         <module>hll</module>
+        <module>web-console</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -1277,6 +1278,15 @@
                     <configuration>
                         <source>${maven.compiler.source}</source>
                         <target>${maven.compiler.target}</target>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>com.github.eirslett</groupId>
+                    <artifactId>frontend-maven-plugin</artifactId>
+                    <version>1.6</version>
+                    <configuration>
+                        <nodeVersion>v10.13.0</nodeVersion>
+                        <npmVersion>6.4.1</npmVersion>
                     </configuration>
                 </plugin>
             </plugins>

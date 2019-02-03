@@ -114,7 +114,7 @@ public class SqlBenchmark
     final QueryRunnerFactoryConglomerate conglomerate = conglomerateCloserPair.lhs;
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
     final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,

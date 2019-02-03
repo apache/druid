@@ -40,9 +40,9 @@ import java.util.Set;
  */
 public class SelectBinaryFnTest
 {
-  private static final String segmentId1 = "testSegment";
+  private static final String segmentId1 = "testSegment1";
 
-  private static final String segmentId2 = "testSegment";
+  private static final String segmentId2 = "testSegment2";
 
   @Test
   public void testApply()
