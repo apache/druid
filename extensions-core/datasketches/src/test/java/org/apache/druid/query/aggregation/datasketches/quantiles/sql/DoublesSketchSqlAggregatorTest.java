@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.histogram.sql;
+package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
@@ -34,10 +34,10 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
-import org.apache.druid.query.aggregation.histogram.ApproximateHistogramAggregatorFactory;
-import org.apache.druid.query.aggregation.histogram.ApproximateHistogramDruidModule;
-import org.apache.druid.query.aggregation.histogram.ApproximateHistogramFoldingAggregatorFactory;
-import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
+import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToQuantilePostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -82,7 +82,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-public class QuantileSqlAggregatorTest extends CalciteTestBase
+public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
 {
   private static final String DATA_SOURCE = "foo";
 
@@ -120,8 +120,8 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   @Before
   public void setUp() throws Exception
   {
-    ApproximateHistogramDruidModule.registerSerde();
-    for (Module mod : new ApproximateHistogramDruidModule().getJacksonModules()) {
+    DoublesSketchModule.registerSerde();
+    for (Module mod : new DoublesSketchModule().getJacksonModules()) {
       CalciteTests.getJsonMapper().registerModule(mod);
     }
 
@@ -133,13 +133,10 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                                      .withMetrics(
                                                          new CountAggregatorFactory("cnt"),
                                                          new DoubleSumAggregatorFactory("m1", "m1"),
-                                                         new ApproximateHistogramAggregatorFactory(
-                                                             "hist_m1",
+                                                         new DoublesSketchAggregatorFactory(
+                                                             "qsketch_m1",
                                                              "m1",
-                                                             null,
-                                                             null,
-                                                             null,
-                                                             null
+                                                             128
                                                          )
                                                      )
                                                      .withRollup(false)
@@ -160,23 +157,23 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
 
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
     final DruidOperatorTable operatorTable = new DruidOperatorTable(
-        ImmutableSet.of(new QuantileSqlAggregator()),
+        ImmutableSet.of(new DoublesSketchSqlAggregator()),
         ImmutableSet.of()
     );
 
     sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(
-      new PlannerFactory(
-          druidSchema,
-          systemSchema,
-          CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-          operatorTable,
-          CalciteTests.createExprMacroTable(),
-          plannerConfig,
-          AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-          CalciteTests.getJsonMapper()
-      )
+        new PlannerFactory(
+            druidSchema,
+            systemSchema,
+            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+            operatorTable,
+            CalciteTests.createExprMacroTable(),
+            plannerConfig,
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            CalciteTests.getJsonMapper()
+        )
     );
   }
 
@@ -191,17 +188,16 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   public void testQuantileOnFloatAndLongs() throws Exception
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-
     final String sql = "SELECT\n"
-                       + "APPROX_QUANTILE(m1, 0.01),\n"
-                       + "APPROX_QUANTILE(m1, 0.5, 50),\n"
-                       + "APPROX_QUANTILE(m1, 0.98, 200),\n"
-                       + "APPROX_QUANTILE(m1, 0.99),\n"
-                       + "APPROX_QUANTILE(m1 * 2, 0.97),\n"
-                       + "APPROX_QUANTILE(m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
-                       + "APPROX_QUANTILE(m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
-                       + "APPROX_QUANTILE(m1, 0.999) FILTER(WHERE dim1 = 'abc'),\n"
-                       + "APPROX_QUANTILE(cnt, 0.5)\n"
+                       + "APPROX_QUANTILE_DS(m1, 0.01),\n"
+                       + "APPROX_QUANTILE_DS(m1, 0.5, 64),\n"
+                       + "APPROX_QUANTILE_DS(m1, 0.98, 256),\n"
+                       + "APPROX_QUANTILE_DS(m1, 0.99),\n"
+                       + "APPROX_QUANTILE_DS(m1 * 2, 0.97),\n"
+                       + "APPROX_QUANTILE_DS(m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
+                       + "APPROX_QUANTILE_DS(m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
+                       + "APPROX_QUANTILE_DS(m1, 0.999) FILTER(WHERE dim1 = 'abc'),\n"
+                       + "APPROX_QUANTILE_DS(cnt, 0.5)\n"
                        + "FROM foo";
 
     // Verify results
@@ -209,12 +205,12 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{
             1.0,
-            3.0,
-            5.880000114440918,
-            5.940000057220459,
-            11.640000343322754,
+            4.0,
             6.0,
-            4.994999885559082,
+            6.0,
+            12.0,
+            6.0,
+            5.0,
             6.0,
             1.0
         }
@@ -239,29 +235,30 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                   )
               )
               .aggregators(ImmutableList.of(
-                  new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null),
-                  new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null),
-                  new ApproximateHistogramAggregatorFactory("a4:agg", "a4:v", null, null, null, null),
+                  new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
+                  new DoublesSketchAggregatorFactory("a1:agg", "m1", 64),
+                  new DoublesSketchAggregatorFactory("a2:agg", "m1", 256),
+                  new DoublesSketchAggregatorFactory("a4:agg", "a4:v", null),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null),
+                      new DoublesSketchAggregatorFactory("a5:agg", "m1", null),
                       new SelectorDimFilter("dim1", "abc", null)
                   ),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramAggregatorFactory("a6:agg", "m1", null, null, null, null),
+                      new DoublesSketchAggregatorFactory("a6:agg", "m1", null),
                       new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                   ),
-                  new ApproximateHistogramAggregatorFactory("a8:agg", "cnt", null, null, null, null)
+                  new DoublesSketchAggregatorFactory("a8:agg", "cnt", null)
               ))
               .postAggregators(
-                  new QuantilePostAggregator("a0", "a0:agg", 0.01f),
-                  new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-                  new QuantilePostAggregator("a2", "a2:agg", 0.98f),
-                  new QuantilePostAggregator("a3", "a0:agg", 0.99f),
-                  new QuantilePostAggregator("a4", "a4:agg", 0.97f),
-                  new QuantilePostAggregator("a5", "a5:agg", 0.99f),
-                  new QuantilePostAggregator("a6", "a6:agg", 0.999f),
-                  new QuantilePostAggregator("a7", "a5:agg", 0.999f),
-                  new QuantilePostAggregator("a8", "a8:agg", 0.50f)
+                  new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
+                  new DoublesSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.50f),
+                  new DoublesSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a2:agg"), 0.98f),
+                  new DoublesSketchToQuantilePostAggregator("a3", makeFieldAccessPostAgg("a0:agg"), 0.99f),
+                  new DoublesSketchToQuantilePostAggregator("a4", makeFieldAccessPostAgg("a4:agg"), 0.97f),
+                  new DoublesSketchToQuantilePostAggregator("a5", makeFieldAccessPostAgg("a5:agg"), 0.99f),
+                  new DoublesSketchToQuantilePostAggregator("a6", makeFieldAccessPostAgg("a6:agg"), 0.999f),
+                  new DoublesSketchToQuantilePostAggregator("a7", makeFieldAccessPostAgg("a5:agg"), 0.999f),
+                  new DoublesSketchToQuantilePostAggregator("a8", makeFieldAccessPostAgg("a8:agg"), 0.50f)
               )
               .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
               .build(),
@@ -274,19 +271,27 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   {
     SqlLifecycle lifecycle = sqlLifecycleFactory.factorize();
     final String sql = "SELECT\n"
-                       + "APPROX_QUANTILE(hist_m1, 0.01),\n"
-                       + "APPROX_QUANTILE(hist_m1, 0.5, 50),\n"
-                       + "APPROX_QUANTILE(hist_m1, 0.98, 200),\n"
-                       + "APPROX_QUANTILE(hist_m1, 0.99),\n"
-                       + "APPROX_QUANTILE(hist_m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
-                       + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
-                       + "APPROX_QUANTILE(hist_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
+                       + "APPROX_QUANTILE_DS(qsketch_m1, 0.01),\n"
+                       + "APPROX_QUANTILE_DS(qsketch_m1, 0.5, 64),\n"
+                       + "APPROX_QUANTILE_DS(qsketch_m1, 0.98, 256),\n"
+                       + "APPROX_QUANTILE_DS(qsketch_m1, 0.99),\n"
+                       + "APPROX_QUANTILE_DS(qsketch_m1, 0.99) FILTER(WHERE dim1 = 'abc'),\n"
+                       + "APPROX_QUANTILE_DS(qsketch_m1, 0.999) FILTER(WHERE dim1 <> 'abc'),\n"
+                       + "APPROX_QUANTILE_DS(qsketch_m1, 0.999) FILTER(WHERE dim1 = 'abc')\n"
                        + "FROM foo";
 
     // Verify results
     final List<Object[]> results = lifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
     final List<Object[]> expectedResults = ImmutableList.of(
-        new Object[]{1.0, 3.0, 5.880000114440918, 5.940000057220459, 6.0, 4.994999885559082, 6.0}
+        new Object[]{
+            1.0,
+            4.0,
+            6.0,
+            6.0,
+            6.0,
+            5.0,
+            6.0
+        }
     );
     Assert.assertEquals(expectedResults.size(), results.size());
     for (int i = 0; i < expectedResults.size(); i++) {
@@ -300,25 +305,26 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
               .granularity(Granularities.ALL)
               .aggregators(ImmutableList.of(
-                  new ApproximateHistogramFoldingAggregatorFactory("a0:agg", "hist_m1", null, null, null, null),
-                  new ApproximateHistogramFoldingAggregatorFactory("a2:agg", "hist_m1", 200, null, null, null),
+                  new DoublesSketchAggregatorFactory("a0:agg", "qsketch_m1", null),
+                  new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", 64),
+                  new DoublesSketchAggregatorFactory("a2:agg", "qsketch_m1", 256),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramFoldingAggregatorFactory("a4:agg", "hist_m1", null, null, null, null),
+                      new DoublesSketchAggregatorFactory("a4:agg", "qsketch_m1", null),
                       new SelectorDimFilter("dim1", "abc", null)
                   ),
                   new FilteredAggregatorFactory(
-                      new ApproximateHistogramFoldingAggregatorFactory("a5:agg", "hist_m1", null, null, null, null),
+                      new DoublesSketchAggregatorFactory("a5:agg", "qsketch_m1", null),
                       new NotDimFilter(new SelectorDimFilter("dim1", "abc", null))
                   )
               ))
               .postAggregators(
-                  new QuantilePostAggregator("a0", "a0:agg", 0.01f),
-                  new QuantilePostAggregator("a1", "a0:agg", 0.50f),
-                  new QuantilePostAggregator("a2", "a2:agg", 0.98f),
-                  new QuantilePostAggregator("a3", "a0:agg", 0.99f),
-                  new QuantilePostAggregator("a4", "a4:agg", 0.99f),
-                  new QuantilePostAggregator("a5", "a5:agg", 0.999f),
-                  new QuantilePostAggregator("a6", "a4:agg", 0.999f)
+                  new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
+                  new DoublesSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.50f),
+                  new DoublesSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a2:agg"), 0.98f),
+                  new DoublesSketchToQuantilePostAggregator("a3", makeFieldAccessPostAgg("a0:agg"), 0.99f),
+                  new DoublesSketchToQuantilePostAggregator("a4", makeFieldAccessPostAgg("a4:agg"), 0.99f),
+                  new DoublesSketchToQuantilePostAggregator("a5", makeFieldAccessPostAgg("a5:agg"), 0.999f),
+                  new DoublesSketchToQuantilePostAggregator("a6", makeFieldAccessPostAgg("a4:agg"), 0.999f)
               )
               .context(ImmutableMap.of("skipEmptyBuckets", true, PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
               .build(),
@@ -330,16 +336,16 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
   public void testQuantileOnInnerQuery() throws Exception
   {
     SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
-    final String sql = "SELECT AVG(x), APPROX_QUANTILE(x, 0.98)\n"
+    final String sql = "SELECT AVG(x), APPROX_QUANTILE_DS(x, 0.98)\n"
                        + "FROM (SELECT dim2, SUM(m1) AS x FROM foo GROUP BY dim2)";
 
     // Verify results
     final List<Object[]> results = sqlLifecycle.runSimple(sql, QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
     final List<Object[]> expectedResults;
     if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
+      expectedResults = ImmutableList.of(new Object[]{7.0, 11.0});
     } else {
-      expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
+      expectedResults = ImmutableList.of(new Object[]{5.25, 8.0});
     }
     Assert.assertEquals(expectedResults.size(), results.size());
     for (int i = 0; i < expectedResults.size(); i++) {
@@ -370,12 +376,9 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                     .setAggregatorSpecs(
                         new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                         new CountAggregatorFactory("_a0:count"),
-                        new ApproximateHistogramAggregatorFactory(
+                        new DoublesSketchAggregatorFactory(
                             "_a1:agg",
                             "a0",
-                            null,
-                            null,
-                            null,
                             null
                         )
                     )
@@ -389,12 +392,17 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
                                     new FieldAccessPostAggregator(null, "_a0:count")
                                 )
                             ),
-                            new QuantilePostAggregator("_a1", "_a1:agg", 0.98f)
+                            new DoublesSketchToQuantilePostAggregator("_a1", makeFieldAccessPostAgg("_a1:agg"), 0.98f)
                         )
                     )
                     .setContext(ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, "dummy"))
                     .build(),
         Iterables.getOnlyElement(queryLogHook.getRecordedQueries())
     );
+  }
+
+  private static PostAggregator makeFieldAccessPostAgg(String name)
+  {
+    return new FieldAccessPostAggregator(name, name);
   }
 }
