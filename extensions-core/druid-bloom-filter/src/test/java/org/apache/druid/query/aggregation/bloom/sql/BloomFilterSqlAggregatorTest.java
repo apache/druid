@@ -228,7 +228,12 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(),
+            authenticationResult
+        ).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -280,7 +285,12 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(),
+            authenticationResult
+        ).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
@@ -350,7 +360,12 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(),
+            authenticationResult
+        ).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -406,8 +421,12 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
-
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(),
+            authenticationResult
+        ).toList();
 
     BloomKFilter expected3 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -461,7 +480,12 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(),
+            authenticationResult
+        ).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -523,7 +547,12 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(),
+            authenticationResult
+        ).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
@@ -586,7 +615,12 @@ public class BloomFilterSqlAggregatorTest
                        + "FROM numfoo";
 
     final List<Object[]> results =
-        sqlLifecycle.runSimple(sql, BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT, authenticationResult).toList();
+        sqlLifecycle.runSimple(
+            sql,
+            BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT,
+            ImmutableList.of(),
+            authenticationResult
+        ).toList();
 
     BloomKFilter expected1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : CalciteTests.ROWS1_WITH_NUMERIC_DIMS) {
