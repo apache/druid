@@ -38,7 +38,6 @@ import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
