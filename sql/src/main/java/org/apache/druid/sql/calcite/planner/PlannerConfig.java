@@ -67,6 +67,21 @@ public class PlannerConfig
   private DateTimeZone sqlTimeZone = DateTimeZone.UTC;
 
   @JsonProperty
+  private boolean metadataSegmentCacheEnable = false;
+
+  @JsonProperty
+  private long metadataSegmentPollPeriod = 60000;
+
+  public long getMetadataSegmentPollPeriod()
+  {
+    return metadataSegmentPollPeriod;
+  }
+
+  public boolean isMetadataSegmentCacheEnable()
+  {
+    return metadataSegmentCacheEnable;
+  }
+
   private boolean serializeComplexValues = true;
 
   public Period getMetadataRefreshPeriod()
@@ -159,6 +174,8 @@ public class PlannerConfig
     newConfig.requireTimeCondition = isRequireTimeCondition();
     newConfig.sqlTimeZone = getSqlTimeZone();
     newConfig.awaitInitializationOnStart = isAwaitInitializationOnStart();
+    newConfig.metadataSegmentCacheEnable = isMetadataSegmentCacheEnable();
+    newConfig.metadataSegmentPollPeriod = getMetadataSegmentPollPeriod();
     newConfig.serializeComplexValues = shouldSerializeComplexValues();
     return newConfig;
   }
@@ -200,6 +217,8 @@ public class PlannerConfig
            useFallback == that.useFallback &&
            requireTimeCondition == that.requireTimeCondition &&
            awaitInitializationOnStart == that.awaitInitializationOnStart &&
+           metadataSegmentCacheEnable == that.metadataSegmentCacheEnable &&
+           metadataSegmentPollPeriod == that.metadataSegmentPollPeriod &&
            serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(metadataRefreshPeriod, that.metadataRefreshPeriod) &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone);
@@ -221,6 +240,8 @@ public class PlannerConfig
         requireTimeCondition,
         awaitInitializationOnStart,
         sqlTimeZone,
+        metadataSegmentCacheEnable,
+        metadataSegmentPollPeriod,
         serializeComplexValues
     );
   }
@@ -239,6 +260,8 @@ public class PlannerConfig
            ", useFallback=" + useFallback +
            ", requireTimeCondition=" + requireTimeCondition +
            ", awaitInitializationOnStart=" + awaitInitializationOnStart +
+           ", metadataSegmentCacheEnable=" + metadataSegmentCacheEnable +
+           ", metadataSegmentPollPeriod=" + metadataSegmentPollPeriod +
            ", sqlTimeZone=" + sqlTimeZone +
            ", serializeComplexValues=" + serializeComplexValues +
            '}';
