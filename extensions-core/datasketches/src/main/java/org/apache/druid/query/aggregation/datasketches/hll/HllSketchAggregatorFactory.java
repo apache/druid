@@ -39,11 +39,11 @@ import java.util.Objects;
  * Base class for both build and merge factories
  * @author Alexander Saydakov
  */
-abstract class HllSketchAggregatorFactory extends AggregatorFactory
+public abstract class HllSketchAggregatorFactory extends AggregatorFactory
 {
 
-  static final int DEFAULT_LG_K = 12;
-  static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
+  public static final int DEFAULT_LG_K = 12;
+  public static final TgtHllType DEFAULT_TGT_HLL_TYPE = TgtHllType.HLL_4;
 
   static final Comparator<HllSketch> COMPARATOR =
       Comparator.nullsFirst(Comparator.comparingDouble(HllSketch::getEstimate));
