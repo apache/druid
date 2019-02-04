@@ -174,7 +174,7 @@ public class S3DataSegmentMover implements DataSegmentMover
               .withPrefix(s3Path)
               .withMaxKeys(1)
       );
-      if (listResult.getKeyCount() == 0) {
+      if (listResult.getObjectSummaries().size() == 0) {
         // should never happen
         throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
       }
