@@ -155,6 +155,7 @@ public class CuratorModule implements Module
 
     RetryPolicy retryPolicy;
     if (config.getTerminateDruidProcessOnConnectFail()) {
+      // It's unknown whether or not this precaution is needed.  Tests revealed that this path was never taken.
       final Runnable exitRunner = () -> {
         try {
           log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
