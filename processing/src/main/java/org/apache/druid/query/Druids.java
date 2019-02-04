@@ -924,6 +924,7 @@ public class Druids
     private DimFilter dimFilter;
     private List<String> columns;
     private Boolean legacy;
+    private String timeOrder;
 
     public ScanQueryBuilder()
     {
@@ -937,6 +938,7 @@ public class Druids
       dimFilter = null;
       columns = new ArrayList<>();
       legacy = null;
+      timeOrder = null;
     }
 
     public ScanQuery build()
@@ -951,7 +953,8 @@ public class Druids
           dimFilter,
           columns,
           legacy,
-          context
+          context,
+          timeOrder
       );
     }
 
@@ -967,7 +970,8 @@ public class Druids
           .filters(query.getFilter())
           .columns(query.getColumns())
           .legacy(query.isLegacy())
-          .context(query.getContext());
+          .context(query.getContext())
+          .timeOrder(query.getTimeOrder());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -1044,6 +1048,12 @@ public class Druids
     public ScanQueryBuilder legacy(Boolean legacy)
     {
       this.legacy = legacy;
+      return this;
+    }
+
+    public ScanQueryBuilder timeOrder(String timeOrder)
+    {
+      this.timeOrder = timeOrder;
       return this;
     }
   }
