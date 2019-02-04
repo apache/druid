@@ -48,8 +48,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -67,7 +67,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
   private ExecutorService listenerExecutor;
 
-  private final Map<NodeType, NodeTypeWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<NodeType, NodeTypeWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
@@ -155,8 +155,8 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     private final NodeType nodeType;
     private final ObjectMapper jsonMapper;
 
-    // hostAndPort -> DiscoveryDruidNode
-    private final Map<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
+    /** hostAndPort -> DiscoveryDruidNode */
+    private final ConcurrentMap<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
     private final Collection<DiscoveryDruidNode> unmodifiableNodes = Collections.unmodifiableCollection(nodes.values());
 
     private final PathChildrenCache cache;
