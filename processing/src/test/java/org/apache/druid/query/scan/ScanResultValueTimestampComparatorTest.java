@@ -19,17 +19,163 @@
 
 package org.apache.druid.query.scan;
 
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.joda.time.Interval;
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 
 public class ScanResultValueTimestampComparatorTest
 {
-  @Test
-  public void comparisonTest() {
+  private static QuerySegmentSpec intervalSpec;
 
+  @BeforeClass
+  public void setup() {
+    intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(new Interval(0, 1)));
+  }
+
+
+  @Test
+  public void comparisonDescendingListTest()
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
+                            .resultFormat(ScanQuery.RESULT_FORMAT_LIST)
+                            .dataSource("some src")
+                            .intervals(intervalSpec)
+                            .build();
+
+    ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
+
+    ArrayList<HashMap<String, Object>> events1  = new ArrayList<>();
+    HashMap<String, Object> event1 = new HashMap<>();
+    event1.put(ColumnHolder.TIME_COLUMN_NAME, new Long(42));
+    events1.add(event1);
+
+    ScanResultValue s1 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events1);
+
+    ArrayList<HashMap<String, Object>> events2 = new ArrayList<>();
+    HashMap<String, Object> event2 = new HashMap<>();
+    event2.put(ColumnHolder.TIME_COLUMN_NAME, new Long(43));
+    events2.add(event2);
+
+    ScanResultValue s2 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events2);
+
+    Assert.assertEquals(1, comparator.compare(s1, s2));
   }
 
   @Test
-  public void priorityQueueTest() {
-    
+  public void comparisonAscendingListTest()
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
+                            .resultFormat(ScanQuery.RESULT_FORMAT_LIST)
+                            .dataSource("some src")
+                            .intervals(intervalSpec)
+                            .build();
+
+    ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
+
+    ArrayList<HashMap<String, Object>> events1  = new ArrayList<>();
+    HashMap<String, Object> event1 = new HashMap<>();
+    event1.put(ColumnHolder.TIME_COLUMN_NAME, new Long(42));
+    events1.add(event1);
+
+    ScanResultValue s1 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events1);
+
+    ArrayList<HashMap<String, Object>> events2 = new ArrayList<>();
+    HashMap<String, Object> event2 = new HashMap<>();
+    event2.put(ColumnHolder.TIME_COLUMN_NAME, new Long(43));
+    events2.add(event2);
+
+    ScanResultValue s2 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events2);
+
+    Assert.assertEquals(-1, comparator.compare(s1, s2));
+  }
+
+  @Test
+  public void comparisonDescendingCompactedListTest()
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
+                            .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                            .dataSource("some src")
+                            .intervals(intervalSpec)
+                            .build();
+
+    ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
+
+    List<List<Object>> events1 = new ArrayList<>();
+    List<Object> event1 = Collections.singletonList(new Long(42));
+    events1.add(event1);
+
+    ScanResultValue s1 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events1);
+
+    List<List<Object>> events2 = new ArrayList<>();
+    List<Object> event2 = Collections.singletonList(new Long(43));
+    events2.add(event2);
+
+    ScanResultValue s2 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events2);
+
+    Assert.assertEquals(1, comparator.compare(s1, s2));
+  }
+
+  @Test
+  public void comparisonAscendingCompactedListTest()
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
+                            .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                            .dataSource("some src")
+                            .intervals(intervalSpec)
+                            .build();
+
+    ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
+
+    List<List<Object>> events1 = new ArrayList<>();
+    List<Object> event1 = Collections.singletonList(new Long(42));
+    events1.add(event1);
+
+    ScanResultValue s1 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events1);
+
+    List<List<Object>> events2 = new ArrayList<>();
+    List<Object> event2 = Collections.singletonList(new Long(43));
+    events2.add(event2);
+
+    ScanResultValue s2 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events2);
+
+    Assert.assertEquals(-1, comparator.compare(s1, s2));
   }
 }

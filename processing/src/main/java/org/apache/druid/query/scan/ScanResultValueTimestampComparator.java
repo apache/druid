@@ -31,7 +31,8 @@ public class ScanResultValueTimestampComparator implements Comparator<ScanResult
 {
   private final ScanQuery scanQuery;
 
-  public ScanResultValueTimestampComparator(ScanQuery scanQuery) {
+  public ScanResultValueTimestampComparator(ScanQuery scanQuery)
+  {
     this.scanQuery = scanQuery;
   }
 

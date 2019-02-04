@@ -22,7 +22,6 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -36,7 +35,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.segment.column.ColumnHolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
