@@ -45,7 +45,7 @@ public class BoundedExponentialBackoffRetryWithQuit extends BoundedExponentialBa
   @Override
   public boolean allowRetry(int retryCount, long elapsedTimeMs, RetrySleeper sleeper)
   {
-    log.warn("Zookeeper can't be reached, retrying (retryCount = " + retryCount + " out of " + this.getN() + ")...");
+    log.warn("Zookeeper can't be reached, retrying (retryCount = %s out of %s)...", retryCount, this.getN());
     boolean shouldRetry = super.allowRetry(retryCount, elapsedTimeMs, sleeper);
     if (!shouldRetry) {
       log.warn("Since Zookeeper can't be reached after retries exhausted, calling exit function...");

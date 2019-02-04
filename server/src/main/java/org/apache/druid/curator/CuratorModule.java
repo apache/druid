@@ -22,6 +22,7 @@ package org.apache.druid.curator;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import io.netty.util.SuppressForbidden;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.ensemble.EnsembleProvider;
 import org.apache.curator.ensemble.exhibitor.DefaultExhibitorRestClient;
@@ -71,6 +72,7 @@ public class CuratorModule implements Module
 
   @Provides
   @LazySingleton
+  @SuppressForbidden(reason = "System#err")
   public CuratorFramework makeCurator(CuratorConfig config, EnsembleProvider ensembleProvider, Lifecycle lifecycle)
   {
     final Builder builder = CuratorFrameworkFactory.builder();
@@ -87,7 +89,7 @@ public class CuratorModule implements Module
         try {
           log.error("Zookeeper can't be reached, forcefully stopping lifecycle...");
           lifecycle.stop();
-          log.error("Zookeeper can't be reached, forcefully stopping virtual machine...");
+          System.err.println("Zookeeper can't be reached, forcefully stopping virtual machine...");
         }
         finally {
           System.exit(1);
