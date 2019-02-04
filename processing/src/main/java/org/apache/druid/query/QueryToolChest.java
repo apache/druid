@@ -42,16 +42,24 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   protected QueryToolChest()
   {
     final TypeFactory typeFactory = TypeFactory.defaultInstance();
-    baseResultType = typeFactory.constructType(getResultTypeReference());
-    bySegmentResultType = typeFactory.constructParametrizedType(
-        Result.class,
-        Result.class,
-        typeFactory.constructParametrizedType(
-            BySegmentResultValueClass.class,
-            BySegmentResultValueClass.class,
-            baseResultType
-        )
-    );
+    TypeReference<ResultType> resultTypeReference = getResultTypeReference();
+    // resultTypeReference is null in MaterializedViewQueryQueryToolChest.
+    // See https://github.com/apache/incubator-druid/issues/6977
+    if (resultTypeReference != null) {
+      baseResultType = typeFactory.constructType(resultTypeReference);
+      bySegmentResultType = typeFactory.constructParametrizedType(
+          Result.class,
+          Result.class,
+          typeFactory.constructParametrizedType(
+              BySegmentResultValueClass.class,
+              BySegmentResultValueClass.class,
+              baseResultType
+          )
+      );
+    } else {
+      baseResultType = null;
+      bySegmentResultType = null;
+    }
   }
 
   public final JavaType getBaseResultType()
