@@ -45,6 +45,15 @@ import org.apache.calcite.rex.RexShuttle;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
 
+/**
+ * Traverse {@link RelNode} tree and replacesall {@link RexDynamicParam} with {@link org.apache.calcite.rex.RexLiteral}
+ * using {@link RexBuilder} if a value binding exists for the parameter. All parameters must have a value by the time
+ * {@link RelParameterizerShuttle} is run, or else it will throw an exception.
+ *
+ * Note: none of the tests currently hit this anymore since {@link SqlParametizerShuttle} has been modified to handle
+ * most common jdbc types, but leaving this here provides a safety net to try again to convert parameters
+ * to literal values in case {@link SqlParametizerShuttle} fails.
+ */
 public class RelParameterizerShuttle implements RelShuttle
 {
   private final PlannerContext plannerContext;

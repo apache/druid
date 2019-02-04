@@ -27,6 +27,15 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.calcite.util.TimestampString;
 
+/**
+ * Replaces all {@link SqlDynamicParam} encountered in an {@link SqlNode} tree with a {@link SqlLiteral} if a value
+ * binding exists for the parameter, if possible. This is used in tandem with {@link RelParameterizerShuttle}.
+ *
+ * It is preferable that all parameters are placed here to pick up as many optimizations as possible, but the facilities
+ * to convert jdbc types to {@link SqlLiteral} are a bit less rich here than exist for converting a
+ * {@link org.apache.calcite.rex.RexDynamicParam} to {@link org.apache.calcite.rex.RexLiteral}, which is why
+ * {@link SqlParametizerShuttle} and {@link RelParameterizerShuttle} both exist.
+ */
 public class SqlParametizerShuttle extends SqlShuttle
 {
   private final PlannerContext plannerContext;
