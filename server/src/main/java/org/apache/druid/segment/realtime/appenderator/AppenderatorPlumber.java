@@ -148,7 +148,8 @@ public class AppenderatorPlumber implements Plumber
   }
 
   @Override
-  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier)
+      throws IndexSizeExceededException
   {
     final SegmentIdWithShardSpec identifier = getSegmentIdentifier(row.getTimestampFromEpoch());
     if (identifier == null) {
