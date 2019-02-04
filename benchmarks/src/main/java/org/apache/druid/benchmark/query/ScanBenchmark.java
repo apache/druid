@@ -220,7 +220,7 @@ public class ScanBenchmark
     final String dimName = "dimUniform";
     return Druids.newScanQueryBuilder()
         .filters(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()))
-        .intervals(intervalSpec); // TODO
+        .intervals(intervalSpec);
   }
 
   private static Druids.ScanQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
@@ -241,7 +241,7 @@ public class ScanBenchmark
 
     return Druids.newScanQueryBuilder()
         .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))
-        .intervals(intervalSpec); // TODO
+        .intervals(intervalSpec);
   }
 
   @Setup
