@@ -50,7 +50,6 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskReport;
@@ -1029,7 +1028,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       );
 
       // Trigger graceful shutdown.
-      task1.stopGracefully();
+      task1.stopGracefully(taskToolboxFactory.build(task1).getConfig());
 
       // Wait for the task to finish. The status doesn't really matter, but we'll check it anyway.
       final TaskStatus taskStatus = statusFuture.get();
@@ -1129,7 +1128,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       Assert.assertEquals(1, sumMetric(task1, null, "rows").longValue());
 
       // Trigger graceful shutdown.
-      task1.stopGracefully();
+      task1.stopGracefully(taskToolboxFactory.build(task1).getConfig());
 
       // Wait for the task to finish. The status doesn't really matter.
       while (!statusFuture.isDone()) {
@@ -1202,7 +1201,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       );
 
       // Trigger graceful shutdown.
-      task1.stopGracefully();
+      task1.stopGracefully(taskToolboxFactory.build(task1).getConfig());
 
       // Wait for the task to finish. The status doesn't really matter, but we'll check it anyway.
       final TaskStatus taskStatus = statusFuture.get();
@@ -1257,7 +1256,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
 
     final AppenderatorDriverRealtimeIndexTask task1 = makeRealtimeTask(null);
 
-    task1.stopGracefully();
+    task1.stopGracefully(taskToolboxFactory.build(task1).getConfig());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task1);
 
     // Wait for the task to finish.
@@ -1517,15 +1516,14 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         return result;
       }
     };
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
+    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null);
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         taskStorage,
         mdc,
         emitter,
-        EasyMock.createMock(SupervisorManager.class),
-        new Counters()
+        EasyMock.createMock(SupervisorManager.class)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

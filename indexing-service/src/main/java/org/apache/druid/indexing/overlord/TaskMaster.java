@@ -120,7 +120,7 @@ public class TaskMaster implements TaskCountStatsProvider
           );
 
           // Sensible order to start stuff:
-          final Lifecycle leaderLifecycle = new Lifecycle();
+          final Lifecycle leaderLifecycle = new Lifecycle("task-master");
           if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
             log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
                .emit();
@@ -166,6 +166,7 @@ public class TaskMaster implements TaskCountStatsProvider
         try {
           initialized = false;
           final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
+
           if (leaderLifecycle != null) {
             leaderLifecycle.stop();
           }
@@ -203,6 +204,7 @@ public class TaskMaster implements TaskCountStatsProvider
     giant.lock();
 
     try {
+      gracefulStopLeaderLifecycle();
       overlordLeaderSelector.unregisterListener();
     }
     finally {
@@ -320,6 +322,18 @@ public class TaskMaster implements TaskCountStatsProvider
       return taskQueue.get().getWaitingTaskCount();
     } else {
       return null;
+    }
+  }
+
+  private void gracefulStopLeaderLifecycle()
+  {
+    try {
+      if (isLeader()) {
+        leadershipListener.stopBeingLeader();
+      }
+    }
+    catch (Exception ex) {
+      // fail silently since we are stopping anyway
     }
   }
 }

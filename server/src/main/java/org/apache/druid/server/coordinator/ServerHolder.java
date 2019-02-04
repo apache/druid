@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.primitives.Longs;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
@@ -114,7 +113,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public boolean isServingSegment(DataSegment segment)
   {
-    return (server.getSegment(segment.getIdentifier()) != null);
+    return server.getSegment(segment.getId()) != null;
   }
 
   public boolean isLoadingSegment(DataSegment segment)
@@ -130,7 +129,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   @Override
   public int compareTo(ServerHolder serverHolder)
   {
-    int result = Longs.compare(getAvailableSize(), serverHolder.getAvailableSize());
+    int result = Long.compare(getAvailableSize(), serverHolder.getAvailableSize());
     if (result != 0) {
       return result;
     }

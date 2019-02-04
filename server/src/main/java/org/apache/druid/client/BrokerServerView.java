@@ -42,6 +42,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
@@ -67,7 +68,7 @@ public class BrokerServerView implements TimelineServerView
   private final Object lock = new Object();
 
   private final ConcurrentMap<String, QueryableDruidServer> clients;
-  private final Map<String, ServerSelector> selectors;
+  private final Map<SegmentId, ServerSelector> selectors;
   private final Map<String, VersionedIntervalTimeline<String, ServerSelector>> timelines;
   private final ConcurrentMap<TimelineCallback, Executor> timelineCallbacks = new ConcurrentHashMap<>();
 
@@ -218,7 +219,7 @@ public class BrokerServerView implements TimelineServerView
 
   private QueryableDruidServer removeServer(DruidServer server)
   {
-    for (DataSegment segment : server.getSegments().values()) {
+    for (DataSegment segment : server.getSegments()) {
       serverRemovedSegment(server.getMetadata(), segment);
     }
     return clients.remove(server.getName());
@@ -226,9 +227,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-
-
-    String segmentId = segment.getIdentifier();
+    SegmentId segmentId = segment.getId();
     synchronized (lock) {
       log.debug("Adding segment[%s] for server[%s]", segment, server);
 
@@ -257,8 +256,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
-
-    String segmentId = segment.getIdentifier();
+    SegmentId segmentId = segment.getId();
     final ServerSelector selector;
 
     synchronized (lock) {
@@ -277,6 +275,8 @@ public class BrokerServerView implements TimelineServerView
             server,
             segmentId
         );
+      } else {
+        runTimelineCallbacks(callback -> callback.serverSegmentRemoved(server, segment));
       }
 
       if (selector.isEmpty()) {

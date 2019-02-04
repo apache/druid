@@ -73,7 +73,7 @@ public class VarianceTopNQueryTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(3)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(
@@ -137,7 +137,7 @@ public class VarianceTopNQueryTest
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
     final QueryRunner<Result<TopNResultValue>> mergeRunner = chest.mergeResults(runner);
     final Sequence<Result<TopNResultValue>> retval = mergeRunner.run(

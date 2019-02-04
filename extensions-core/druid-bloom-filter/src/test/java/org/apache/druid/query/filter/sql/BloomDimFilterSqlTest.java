@@ -26,18 +26,23 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
+import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.query.expression.LookupExprMacro;
+import org.apache.druid.query.expressions.BloomFilterExprMacro;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
+import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.TestHelper;
@@ -51,6 +56,7 @@ import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.junit.Rule;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +83,17 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
           .getInstance(Key.get(ObjectMapper.class, Json.class))
           .registerModules(Collections.singletonList(new BloomFilterSerializersModule()));
 
+  public static ExprMacroTable createExprMacroTable()
+  {
+    final List<ExprMacroTable.ExprMacro> exprMacros = new ArrayList<>();
+    for (Class<? extends ExprMacroTable.ExprMacro> clazz : ExpressionModule.EXPR_MACROS) {
+      exprMacros.add(injector.getInstance(clazz));
+    }
+    exprMacros.add(injector.getInstance(BloomFilterExprMacro.class));
+    exprMacros.add(injector.getInstance(LookupExprMacro.class));
+    return new ExprMacroTable(exprMacros);
+  }
+
   @Rule
   @Override
   public QueryLogHook getQueryLogHook()
@@ -90,7 +107,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("def");
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
-    String base64 = Base64.encodeBase64String(bytes);
+    String base64 = StringUtils.encodeBase64String(bytes);
 
     testQuery(
         StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, '%s')", base64),
@@ -113,6 +130,74 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testBloomFilterVirtualColumn() throws Exception
+  {
+    BloomKFilter filter = new BloomKFilter(1500);
+    filter.addString("a-foo");
+    filter.addString("-foo");
+    if (!NullHandling.replaceWithDefault()) {
+      filter.addBytes(null, 0, 0);
+    }
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    String base64 = StringUtils.encodeBase64String(bytes);
+
+    testQuery(
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s')", base64),
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns()
+                  .filters(
+                      new ExpressionDimFilter(
+                          StringUtils.format("bloom_filter_test(concat(\"dim2\",'-foo'),'%s')", base64),
+                          createExprMacroTable()
+                      )
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{5L}
+        )
+    );
+  }
+
+  @Test
+  public void testBloomFilterVirtualColumnNumber() throws Exception
+  {
+    BloomKFilter filter = new BloomKFilter(1500);
+    filter.addDouble(20.2);
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    String base64 = StringUtils.encodeBase64String(bytes);
+
+    testQuery(
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(2 * CAST(dim1 AS float), '%s')", base64),
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(QSS(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns()
+                  .filters(
+                      new ExpressionDimFilter(
+                          StringUtils.format("bloom_filter_test((2 * CAST(\"dim1\", 'DOUBLE')),'%s')", base64),
+                          createExprMacroTable()
+                      )
+                  )
+                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
   public void testBloomFilters() throws Exception
   {
     BloomKFilter filter = new BloomKFilter(1500);
@@ -121,9 +206,8 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     filter.addString("abc");
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     byte[] bytes2 = BloomFilterSerializersModule.bloomKFilterToBytes(filter2);
-    String base64 = Base64.encodeBase64String(bytes);
-    String base642 = Base64.encodeBase64String(bytes2);
-
+    String base64 = StringUtils.encodeBase64String(bytes);
+    String base642 = StringUtils.encodeBase64String(bytes2);
 
     testQuery(
         StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(dim1, '%s') OR bloom_filter_test(dim2, '%s')", base64, base642),
@@ -166,7 +250,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         sql,
         authenticationResult,
         operatorTable,
-        CalciteTests.createExprMacroTable(),
+        createExprMacroTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         jsonMapper
     );

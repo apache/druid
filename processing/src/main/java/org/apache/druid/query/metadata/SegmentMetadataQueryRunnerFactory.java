@@ -166,7 +166,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         return Sequences.simple(
             Collections.singletonList(
                 new SegmentAnalysis(
-                    segment.getIdentifier(),
+                    segment.getId().toString(),
                     retIntervals,
                     columns,
                     totalSize,

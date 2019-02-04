@@ -277,16 +277,12 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
         .forEach((final String name, final List<DataSegment> segments) -> {
           final long size = segments.stream().mapToLong(DataSegment::getSize).sum();
           emitter.emit(
-              new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, name).build(
-                  "segment/size", size
-              )
+              new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, name).build("segment/size", size)
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, name).build(
-                  "segment/count", segments.size()
-              )
+                  .setDimension(DruidMetrics.DATASOURCE, name)
+                  .build("segment/count", segments.size())
           );
         });
 

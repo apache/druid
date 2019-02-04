@@ -945,7 +945,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndex(0, 0)),
+        new QueryableIndexSegment(schemalessIndexTest.getMergedIncrementalIndex(0, 0), null),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1028,7 +1028,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndex(1, 1)),
+        new QueryableIndexSegment(schemalessIndexTest.getMergedIncrementalIndex(1, 1), null),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1158,7 +1158,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8})),
+        new QueryableIndexSegment(schemalessIndexTest.getMergedIncrementalIndex(new int[]{6, 7, 8}), null),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1349,7 +1349,7 @@ public class SchemalessTestFullTest
     );
 
     runTests(
-        new QueryableIndexSegment(null, schemalessIndexTest.getMergedIncrementalIndexDiffMetrics()),
+        new QueryableIndexSegment(schemalessIndexTest.getMergedIncrementalIndexDiffMetrics(), null),
         expectedTimeseriesResults,
         expectedFilteredTimeSeriesResults,
         expectedTopNResults,
@@ -1398,7 +1398,7 @@ public class SchemalessTestFullTest
   {
     for (Pair<QueryableIndex, String> entry : getIndexes(index1, index2)) {
       runTests(
-          new QueryableIndexSegment(null, entry.lhs),
+          new QueryableIndexSegment(entry.lhs, null),
           expectedTimeseriesResults,
           expectedFilteredTimeseriesResults,
           expectedTopNResults,

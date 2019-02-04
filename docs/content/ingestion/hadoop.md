@@ -25,7 +25,7 @@ title: "Hadoop-based Batch Ingestion"
 # Hadoop-based Batch Ingestion
 
 Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running
-instance of a Druid [overlord](../design/overlord.html). 
+instance of a Druid [Overlord](../design/overlord.html). 
 
 ## Command Line Hadoop Indexer
 
@@ -105,7 +105,7 @@ A sample task is shown below:
 |type|The task type, this should always be "index_hadoop".|yes|
 |spec|A Hadoop Index Spec. See [Ingestion](../ingestion/ingestion-spec.html)|yes|
 |hadoopDependencyCoordinates|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`|no|
-|classpathPrefix|Classpath that will be pre-appended for the peon process.|no|
+|classpathPrefix|Classpath that will be pre-appended for the Peon process.|no|
 
 also note that, druid automatically computes the classpath for hadoop job containers that run in hadoop cluster. But, in case of conflicts between hadoop and druid's dependencies, you can manually specify the classpath by setting `druid.extensions.hadoopContainerDruidClasspath` property. See the extensions config in [base druid configuration](../configuration/index.html#extensions).
 

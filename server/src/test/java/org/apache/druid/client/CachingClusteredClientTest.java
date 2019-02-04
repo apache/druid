@@ -128,6 +128,7 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -252,7 +253,7 @@ public class CachingClusteredClientTest
   private static final DimFilter DIM_FILTER = null;
   private static final List<PostAggregator> RENAMED_POST_AGGS = ImmutableList.of();
   private static final Granularity GRANULARITY = Granularities.DAY;
-  private static final DateTimeZone TIMEZONE = DateTimes.inferTzfromString("America/Los_Angeles");
+  private static final DateTimeZone TIMEZONE = DateTimes.inferTzFromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
   private static final Supplier<SelectQueryConfig> SELECT_CONFIG_SUPPLIER = Suppliers.ofInstance(
@@ -443,7 +444,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
 
@@ -482,7 +483,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
 
@@ -565,7 +566,7 @@ public class CachingClusteredClientTest
     client = makeClient(new ForegroundCachePopulator(JSON_MAPPER, new CachePopulatorStats(), -1), cache, limit);
     final DruidServer lastServer = servers[random.nextInt(servers.length)];
     final DataSegment dataSegment = EasyMock.createNiceMock(DataSegment.class);
-    EasyMock.expect(dataSegment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
+    EasyMock.expect(dataSegment.getId()).andReturn(SegmentId.dummy(DATA_SOURCE)).anyTimes();
     EasyMock.replay(dataSegment);
     final ServerSelector selector = new ServerSelector(
         dataSegment,
@@ -608,9 +609,8 @@ public class CachingClusteredClientTest
                                                         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-    )
+        getDefaultQueryRunner(),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator())
     );
 
     testQueryCaching(
@@ -671,7 +671,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
 
@@ -715,9 +715,8 @@ public class CachingClusteredClientTest
                                                         .postAggregators(POST_AGGS)
                                                         .context(CONTEXT);
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-    )
+        getDefaultQueryRunner(),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator())
     );
     testQueryCaching(
         runner,
@@ -736,7 +735,7 @@ public class CachingClusteredClientTest
     Assert.assertEquals(0, cache.getStats().getNumHits());
     Assert.assertEquals(0, cache.getStats().getNumMisses());
 
-    cache.close("0_0");
+    cache.close(SegmentId.dummy("0_0").toString());
 
     testQueryCaching(
         runner,
@@ -793,7 +792,7 @@ public class CachingClusteredClientTest
         getDefaultQueryRunner(),
         new TopNQueryQueryToolChest(
             new TopNQueryConfig(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
 
@@ -867,10 +866,11 @@ public class CachingClusteredClientTest
         .context(CONTEXT);
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
-        getDefaultQueryRunner(), new TopNQueryQueryToolChest(
-        new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-    )
+        getDefaultQueryRunner(),
+        new TopNQueryQueryToolChest(
+            new TopNQueryConfig(),
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
+        )
     );
 
     testQueryCaching(
@@ -974,7 +974,7 @@ public class CachingClusteredClientTest
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
     testQueryCaching(
@@ -1047,7 +1047,7 @@ public class CachingClusteredClientTest
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
     testQueryCaching(
@@ -1148,7 +1148,7 @@ public class CachingClusteredClientTest
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new SearchQueryQueryToolChest(
         new SearchQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -1218,7 +1218,7 @@ public class CachingClusteredClientTest
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new SearchQueryQueryToolChest(
         new SearchQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -1316,7 +1316,7 @@ public class CachingClusteredClientTest
         getDefaultQueryRunner(),
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
             SELECT_CONFIG_SUPPLIER
         )
     );
@@ -1394,7 +1394,7 @@ public class CachingClusteredClientTest
         getDefaultQueryRunner(),
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
             SELECT_CONFIG_SUPPLIER
         )
     );
@@ -1638,7 +1638,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
 
@@ -1712,7 +1712,7 @@ public class CachingClusteredClientTest
 
     QueryRunner runner = new FinalizeResultsQueryRunner(
         getDefaultQueryRunner(), new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     )
     );
 
@@ -1765,7 +1765,7 @@ public class CachingClusteredClientTest
   )
   {
     DataSegment segment = EasyMock.createNiceMock(DataSegment.class);
-    EasyMock.expect(segment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
+    EasyMock.expect(segment.getId()).andReturn(SegmentId.dummy(DATA_SOURCE)).anyTimes();
     EasyMock.expect(segment.getShardSpec()).andReturn(new SingleDimensionShardSpec(dimension, start, end, partitionNum))
             .anyTimes();
     EasyMock.replay(segment);
@@ -1880,7 +1880,7 @@ public class CachingClusteredClientTest
         QueryRunner queryable = expectations.getQueryRunner();
 
         if (query instanceof TimeseriesQuery) {
-          final List<String> segmentIds = new ArrayList<>();
+          final List<SegmentId> segmentIds = new ArrayList<>();
           final List<Iterable<Result<TimeseriesResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
             segmentIds.add(expectation.getSegmentId());
@@ -1947,7 +1947,7 @@ public class CachingClusteredClientTest
 
   private Sequence<Result<TimeseriesResultValue>> toFilteredQueryableTimeseriesResults(
       TimeseriesQuery query,
-      List<String> segmentIds,
+      List<SegmentId> segmentIds,
       List<Interval> queryIntervals,
       List<Iterable<Result<TimeseriesResultValue>>> results
   )
@@ -1955,21 +1955,20 @@ public class CachingClusteredClientTest
     MultipleSpecificSegmentSpec spec = (MultipleSpecificSegmentSpec) query.getQuerySegmentSpec();
     List<Result<TimeseriesResultValue>> ret = new ArrayList<>();
     for (SegmentDescriptor descriptor : spec.getDescriptors()) {
-      String id = StringUtils.format(
-          "%s_%s",
-          queryIntervals.indexOf(descriptor.getInterval()),
-          descriptor.getPartitionNumber()
+      SegmentId id = SegmentId.dummy(
+          StringUtils.format("%s_%s", queryIntervals.indexOf(descriptor.getInterval()), descriptor.getPartitionNumber())
       );
       int index = segmentIds.indexOf(id);
       if (index != -1) {
-        ret.add(new Result(
+        Result result = new Result(
             results.get(index).iterator().next().getTimestamp(),
             new BySegmentResultValueClass(
                 Lists.newArrayList(results.get(index)),
-                id,
+                id.toString(),
                 descriptor.getInterval()
             )
-        ));
+        );
+        ret.add(result);
       } else {
         throw new ISE("Descriptor %s not found in server", id);
       }
@@ -2031,7 +2030,7 @@ public class CachingClusteredClientTest
         QueryRunner queryable = expectations.getQueryRunner();
 
         if (query instanceof TimeseriesQuery) {
-          List<String> segmentIds = new ArrayList<>();
+          List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<TimeseriesResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
@@ -2044,7 +2043,7 @@ public class CachingClusteredClientTest
                   .once();
 
         } else if (query instanceof TopNQuery) {
-          List<String> segmentIds = new ArrayList<>();
+          List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<TopNResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
@@ -2056,7 +2055,7 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableTopNResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof SearchQuery) {
-          List<String> segmentIds = new ArrayList<>();
+          List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<SearchResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
@@ -2068,7 +2067,7 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableSearchResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof SelectQuery) {
-          List<String> segmentIds = new ArrayList<>();
+          List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<SelectResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
@@ -2080,7 +2079,7 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableSelectResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof GroupByQuery) {
-          List<String> segmentIds = new ArrayList<>();
+          List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Row>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
@@ -2092,7 +2091,7 @@ public class CachingClusteredClientTest
                   .andReturn(toQueryableGroupByResults(segmentIds, intervals, results))
                   .once();
         } else if (query instanceof TimeBoundaryQuery) {
-          List<String> segmentIds = new ArrayList<>();
+          List<SegmentId> segmentIds = new ArrayList<>();
           List<Interval> intervals = new ArrayList<>();
           List<Iterable<Result<TimeBoundaryResultValue>>> results = new ArrayList<>();
           for (ServerExpectation expectation : expectations) {
@@ -2207,20 +2206,20 @@ public class CachingClusteredClientTest
         }
 
         DataSegment mockSegment = makeMock(mocks, DataSegment.class);
-        ServerExpectation expectation = new ServerExpectation(
-            StringUtils.format("%s_%s", k, j), // interval/chunk
+        ServerExpectation<Object> expectation = new ServerExpectation<>(
+            SegmentId.dummy(StringUtils.format("%s_%s", k, j)), // interval/chunk
             queryIntervals.get(k),
             mockSegment,
             expectedResults.get(k).get(j)
         );
         serverExpectations.get(lastServer).addExpectation(expectation);
-
+        EasyMock.expect(mockSegment.getSize()).andReturn(0L).anyTimes();
+        EasyMock.replay(mockSegment);
         ServerSelector selector = new ServerSelector(
             expectation.getSegment(),
             new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
         );
         selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
-
         final ShardSpec shardSpec;
         if (numChunks == 1) {
           shardSpec = new SingleDimensionShardSpec("dimAll", null, null, 0);
@@ -2235,6 +2234,7 @@ public class CachingClusteredClientTest
           }
           shardSpec = new SingleDimensionShardSpec("dim" + k, start, end, j);
         }
+        EasyMock.reset(mockSegment);
         EasyMock.expect(mockSegment.getShardSpec())
                 .andReturn(shardSpec)
                 .anyTimes();
@@ -2246,7 +2246,7 @@ public class CachingClusteredClientTest
 
   private Sequence<Result<TimeseriesResultValue>> toQueryableTimeseriesResults(
       boolean bySegment,
-      Iterable<String> segmentIds,
+      Iterable<SegmentId> segmentIds,
       Iterable<Interval> intervals,
       Iterable<Iterable<Result<TimeseriesResultValue>>> results
   )
@@ -2258,12 +2258,12 @@ public class CachingClusteredClientTest
               .trinaryTransform(
                   intervals,
                   results,
-                  new TrinaryFn<String, Interval, Iterable<Result<TimeseriesResultValue>>, Result<TimeseriesResultValue>>()
+                  new TrinaryFn<SegmentId, Interval, Iterable<Result<TimeseriesResultValue>>, Result<TimeseriesResultValue>>()
                   {
                     @Override
                     @SuppressWarnings("unchecked")
                     public Result<TimeseriesResultValue> apply(
-                        final String segmentId,
+                        final SegmentId segmentId,
                         final Interval interval,
                         final Iterable<Result<TimeseriesResultValue>> results
                     )
@@ -2272,7 +2272,7 @@ public class CachingClusteredClientTest
                           results.iterator().next().getTimestamp(),
                           new BySegmentResultValueClass(
                               Lists.newArrayList(results),
-                              segmentId,
+                              segmentId.toString(),
                               interval
                           )
                       );
@@ -2286,7 +2286,7 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result<TopNResultValue>> toQueryableTopNResults(
-      Iterable<String> segmentIds,
+      Iterable<SegmentId> segmentIds,
       Iterable<Interval> intervals,
       Iterable<Iterable<Result<TopNResultValue>>> results
   )
@@ -2297,12 +2297,12 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<String, Interval, Iterable<Result<TopNResultValue>>, Result<TopNResultValue>>()
+                new TrinaryFn<SegmentId, Interval, Iterable<Result<TopNResultValue>>, Result<TopNResultValue>>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
                   public Result<TopNResultValue> apply(
-                      final String segmentId,
+                      final SegmentId segmentId,
                       final Interval interval,
                       final Iterable<Result<TopNResultValue>> results
                   )
@@ -2311,7 +2311,7 @@ public class CachingClusteredClientTest
                         interval.getStart(),
                         new BySegmentResultValueClass(
                             Lists.newArrayList(results),
-                            segmentId,
+                            segmentId.toString(),
                             interval
                         )
                     );
@@ -2322,7 +2322,7 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result<SearchResultValue>> toQueryableSearchResults(
-      Iterable<String> segmentIds,
+      Iterable<SegmentId> segmentIds,
       Iterable<Interval> intervals,
       Iterable<Iterable<Result<SearchResultValue>>> results
   )
@@ -2333,12 +2333,12 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<String, Interval, Iterable<Result<SearchResultValue>>, Result<SearchResultValue>>()
+                new TrinaryFn<SegmentId, Interval, Iterable<Result<SearchResultValue>>, Result<SearchResultValue>>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
                   public Result<SearchResultValue> apply(
-                      final String segmentId,
+                      final SegmentId segmentId,
                       final Interval interval,
                       final Iterable<Result<SearchResultValue>> results
                   )
@@ -2347,7 +2347,7 @@ public class CachingClusteredClientTest
                         results.iterator().next().getTimestamp(),
                         new BySegmentResultValueClass(
                             Lists.newArrayList(results),
-                            segmentId,
+                            segmentId.toString(),
                             interval
                         )
                     );
@@ -2358,7 +2358,7 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result<SelectResultValue>> toQueryableSelectResults(
-      Iterable<String> segmentIds,
+      Iterable<SegmentId> segmentIds,
       Iterable<Interval> intervals,
       Iterable<Iterable<Result<SelectResultValue>>> results
   )
@@ -2369,12 +2369,12 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<String, Interval, Iterable<Result<SelectResultValue>>, Result<SelectResultValue>>()
+                new TrinaryFn<SegmentId, Interval, Iterable<Result<SelectResultValue>>, Result<SelectResultValue>>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
                   public Result<SelectResultValue> apply(
-                      final String segmentId,
+                      final SegmentId segmentId,
                       final Interval interval,
                       final Iterable<Result<SelectResultValue>> results
                   )
@@ -2383,7 +2383,7 @@ public class CachingClusteredClientTest
                         results.iterator().next().getTimestamp(),
                         new BySegmentResultValueClass(
                             Lists.newArrayList(results),
-                            segmentId,
+                            segmentId.toString(),
                             interval
                         )
                     );
@@ -2394,7 +2394,7 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result> toQueryableGroupByResults(
-      Iterable<String> segmentIds,
+      Iterable<SegmentId> segmentIds,
       Iterable<Interval> intervals,
       Iterable<Iterable<Row>> results
   )
@@ -2405,21 +2405,17 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<String, Interval, Iterable<Row>, Result>()
+                new TrinaryFn<SegmentId, Interval, Iterable<Row>, Result>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
-                  public Result apply(
-                      final String segmentId,
-                      final Interval interval,
-                      final Iterable<Row> results
-                  )
+                  public Result apply(final SegmentId segmentId, final Interval interval, final Iterable<Row> results)
                   {
                     return new Result(
                         results.iterator().next().getTimestamp(),
                         new BySegmentResultValueClass(
                             Lists.newArrayList(results),
-                            segmentId,
+                            segmentId.toString(),
                             interval
                         )
                     );
@@ -2430,7 +2426,7 @@ public class CachingClusteredClientTest
   }
 
   private Sequence<Result<TimeBoundaryResultValue>> toQueryableTimeBoundaryResults(
-      Iterable<String> segmentIds,
+      Iterable<SegmentId> segmentIds,
       Iterable<Interval> intervals,
       Iterable<Iterable<Result<TimeBoundaryResultValue>>> results
   )
@@ -2441,12 +2437,12 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<String, Interval, Iterable<Result<TimeBoundaryResultValue>>, Result<TimeBoundaryResultValue>>()
+                new TrinaryFn<SegmentId, Interval, Iterable<Result<TimeBoundaryResultValue>>, Result<TimeBoundaryResultValue>>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
                   public Result<TimeBoundaryResultValue> apply(
-                      final String segmentId,
+                      final SegmentId segmentId,
                       final Interval interval,
                       final Iterable<Result<TimeBoundaryResultValue>> results
                   )
@@ -2455,7 +2451,7 @@ public class CachingClusteredClientTest
                         results.iterator().next().getTimestamp(),
                         new BySegmentResultValueClass(
                             Lists.newArrayList(results),
-                            segmentId,
+                            segmentId.toString(),
                             interval
                         )
                     );
@@ -2748,13 +2744,13 @@ public class CachingClusteredClientTest
 
   private static class ServerExpectation<T>
   {
-    private final String segmentId;
+    private final SegmentId segmentId;
     private final Interval interval;
     private final DataSegment segment;
     private final Iterable<Result<T>> results;
 
     public ServerExpectation(
-        String segmentId,
+        SegmentId segmentId,
         Interval interval,
         DataSegment segment,
         Iterable<Result<T>> results
@@ -2766,7 +2762,7 @@ public class CachingClusteredClientTest
       this.results = results;
     }
 
-    public String getSegmentId()
+    public SegmentId getSegmentId()
     {
       return segmentId;
     }
@@ -2869,7 +2865,7 @@ public class CachingClusteredClientTest
       }
 
       @Override
-      public String getIdentifier()
+      public SegmentId getId()
       {
         return segmentId;
       }

@@ -32,20 +32,18 @@ ingestion mechanisms using Tranquility. The supervisor oversees the state of the
 and ensure that the scalability and replication requirements are maintained.
 
 This service is provided in the `druid-kafka-indexing-service` core extension (see
-[Including Extensions](../../operations/including-extensions.html)). Please note that the Kafka indexing service is
-currently designated as an *experimental feature* and is subject to the usual
-[experimental caveats](../experimental.html).
+[Including Extensions](../../operations/including-extensions.html)).
 
 <div class="note info">
 The Kafka indexing service uses the Java consumer that was introduced in Kafka 0.10.x. As there were protocol changes
 made in this version, Kafka 0.10.x consumers might not be compatible with older brokers. Ensure that your Kafka brokers are
-version 0.10.x or better before using this service. Refer <a href="https://kafka.apache.org/documentation/#upgrade">Kafka upgrade guide</a> if you are using older version of kafka brokers.
+version 0.10.x or better before using this functionality. Refer <a href="https://kafka.apache.org/documentation/#upgrade">Kafka upgrade guide</a> if you are using older version of Kafka brokers.
 </div>
 
 ## Submitting a Supervisor Spec
 
-The Kafka indexing service requires that the `druid-kafka-indexing-service` extension be loaded on both the overlord and the
-middle managers. A supervisor for a dataSource is started by submitting a supervisor spec via HTTP POST to
+The Kafka indexing service requires that the `druid-kafka-indexing-service` extension be loaded on both the Overlord and the
+MiddleManagers. A supervisor for a dataSource is started by submitting a supervisor spec via HTTP POST to
 `http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`, for example:
 
 ```
@@ -271,7 +269,7 @@ spec to the create api.
 
 ### Capacity Planning
 
-Kafka indexing tasks run on middle managers and are thus limited by the resources available in the middle manager
+Kafka indexing tasks run on MiddleManagers and are thus limited by the resources available in the MiddleManager
 cluster. In particular, you should make sure that you have sufficient worker capacity (configured using the
 `druid.worker.capacity` property) to handle the configuration in the supervisor spec. Note that worker capacity is
 shared across all types of indexing tasks, so you should plan your worker capacity to handle your total indexing load
@@ -281,7 +279,7 @@ in data loss (assuming the tasks run before Kafka purges those offsets).
 
 A running task will normally be in one of two states: *reading* or *publishing*. A task will remain in reading state for
 `taskDuration`, at which point it will transition to publishing state. A task will remain in publishing state for as long
-as it takes to generate segments, push segments to deep storage, and have them be loaded and served by a historical node
+as it takes to generate segments, push segments to deep storage, and have them be loaded and served by a Historical node
 (or until `completionTimeout` elapses).
 
 The number of reading tasks is controlled by `replicas` and `taskCount`. In general, there will be `replicas * taskCount`
@@ -296,7 +294,7 @@ workerCapacity = 2 * replicas * taskCount
 
 This value is for the ideal situation in which there is at most one set of tasks publishing while another set is reading.
 In some circumstances, it is possible to have multiple sets of tasks publishing simultaneously. This would happen if the
-time-to-publish (generate segment, push to deep storage, loaded on historical) > `taskDuration`. This is a valid
+time-to-publish (generate segment, push to deep storage, loaded on Historical) > `taskDuration`. This is a valid
 scenario (correctness-wise) but requires additional worker capacity to support. In general, it is a good idea to have
 `taskDuration` be large enough that the previous set of tasks finishes publishing before the current set begins.
 
@@ -306,11 +304,11 @@ When a supervisor spec is submitted via the `POST /druid/indexer/v1/supervisor` 
 configured metadata database. There can only be a single supervisor per dataSource, and submitting a second spec for
 the same dataSource will overwrite the previous one.
 
-When an overlord gains leadership, either by being started or as a result of another overlord failing, it will spawn
+When an Overlord gains leadership, either by being started or as a result of another Overlord failing, it will spawn
 a supervisor for each supervisor spec in the metadata database. The supervisor will then discover running Kafka indexing
 tasks and will attempt to adopt them if they are compatible with the supervisor's configuration. If they are not
 compatible because they have a different ingestion spec or partition allocation, the tasks will be killed and the
-supervisor will create a new set of tasks. In this way, the supervisors are persistent across overlord restarts and
+supervisor will create a new set of tasks. In this way, the supervisors are persistent across Overlord restarts and
 fail-overs.
 
 A supervisor is stopped via the `POST /druid/indexer/v1/supervisor/<supervisorId>/terminate` endpoint. This places a
@@ -322,7 +320,7 @@ return after all tasks have been signalled to stop but before the tasks finish p
 ### Schema/Configuration Changes
 
 Schema and configuration changes are handled by submitting the new supervisor spec via the same
-`POST /druid/indexer/v1/supervisor` endpoint used to initially create the supervisor. The overlord will initiate a
+`POST /druid/indexer/v1/supervisor` endpoint used to initially create the supervisor. The Overlord will initiate a
 graceful shutdown of the existing supervisor which will cause the tasks being managed by that supervisor to stop reading
 and begin publishing their segments. A new supervisor will then be started which will create a new set of tasks that
 will start reading from the offsets where the previous now-publishing tasks left off, but using the updated schema.

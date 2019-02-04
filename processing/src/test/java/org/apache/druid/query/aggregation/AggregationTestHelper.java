@@ -82,6 +82,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.Closeable;
@@ -194,14 +195,14 @@ public class AggregationTestHelper implements Closeable
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
         TestHelper.makeJsonMapper(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
         configSupplier
     );
 
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             TestHelper.makeJsonMapper(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
             configSupplier
         ),
         new SelectQueryEngine(
@@ -241,7 +242,7 @@ public class AggregationTestHelper implements Closeable
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
@@ -283,7 +284,7 @@ public class AggregationTestHelper implements Closeable
 
     TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     final CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
@@ -581,7 +582,7 @@ public class AggregationTestHelper implements Closeable
           public Segment apply(File segmentDir)
           {
             try {
-              return new QueryableIndexSegment("", indexIO.loadIndex(segmentDir));
+              return new QueryableIndexSegment(indexIO.loadIndex(segmentDir), SegmentId.dummy(""));
             }
             catch (IOException ex) {
               throw Throwables.propagate(ex);

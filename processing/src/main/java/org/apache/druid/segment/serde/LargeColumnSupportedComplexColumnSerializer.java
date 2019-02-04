@@ -116,5 +116,4 @@ public class LargeColumnSupportedComplexColumnSerializer<T> implements GenericCo
   {
     writer.writeTo(channel, smoosher);
   }
-
 }

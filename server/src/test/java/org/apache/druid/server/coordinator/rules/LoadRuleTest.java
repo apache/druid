@@ -129,7 +129,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment("foo");
 
-    throttler.registerReplicantCreation(DruidServer.DEFAULT_TIER, segment.getIdentifier(), "hostNorm");
+    throttler.registerReplicantCreation(DruidServer.DEFAULT_TIER, segment.getId(), "hostNorm");
     EasyMock.expectLastCall().once();
 
     EasyMock.expect(mockBalancerStrategy.findNewSegmentHomeReplicator(EasyMock.anyObject(), EasyMock.anyObject()))
@@ -736,7 +736,6 @@ public class LoadRuleTest
     EasyMock.verify(mockPeon1, mockPeon2, mockBalancerStrategy);
   }
 
-
   /**
    * 2 tiers, 2 servers each, 1 server of the second tier is in maintenance.
    * Should not load a segment to the server in maintenance mode.
@@ -755,7 +754,7 @@ public class LoadRuleTest
 
     final DataSegment segment = createDataSegment("foo");
 
-    throttler.registerReplicantCreation(EasyMock.eq("tier2"), EasyMock.anyString(), EasyMock.anyObject());
+    throttler.registerReplicantCreation(EasyMock.eq("tier2"), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().times(2);
 
     ServerHolder holder1 = createServerHolder("tier1", mockPeon1, true);

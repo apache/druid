@@ -27,12 +27,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -111,6 +111,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -145,8 +146,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
 
   private final Map<PartitionIdType, SequenceOffsetType> endOffsets;
-  private final Map<PartitionIdType, SequenceOffsetType> currOffsets = new ConcurrentHashMap<>();
-  private final Map<PartitionIdType, SequenceOffsetType> lastPersistedOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<PartitionIdType, SequenceOffsetType> currOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<PartitionIdType, SequenceOffsetType> lastPersistedOffsets = new ConcurrentHashMap<>();
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
@@ -744,10 +745,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
       for (SegmentsAndMetadata handedOff : handedOffList) {
         log.info(
-            "Handoff completed for segments[%s] with metadata[%s].",
-            Joiner.on(", ").join(
-                handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
-            ),
+            "Handoff completed for segments %s with metadata[%s].",
+            Lists.transform(handedOff.getSegments(), DataSegment::getId),
             Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
         );
       }
@@ -893,11 +892,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           public void onSuccess(SegmentsAndMetadata publishedSegmentsAndMetadata)
           {
             log.info(
-                "Published segments[%s] with metadata[%s].",
-                publishedSegmentsAndMetadata.getSegments()
-                                            .stream()
-                                            .map(DataSegment::getIdentifier)
-                                            .collect(Collectors.toList()),
+                "Published segments %s with metadata[%s].",
+                Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::getId),
                 Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
             );
 
@@ -922,11 +918,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   {
                     if (handoffSegmentsAndMetadata == null) {
                       log.warn(
-                          "Failed to handoff segments[%s]",
-                          publishedSegmentsAndMetadata.getSegments()
-                                                      .stream()
-                                                      .map(DataSegment::getIdentifier)
-                                                      .collect(Collectors.toList())
+                          "Failed to handoff segments %s",
+                          Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::getId)
                       );
                     }
                     handoffFuture.set(handoffSegmentsAndMetadata);

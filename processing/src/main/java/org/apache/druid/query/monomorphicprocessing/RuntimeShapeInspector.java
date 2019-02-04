@@ -37,8 +37,8 @@ public interface RuntimeShapeInspector
   /**
    * To be called from {@link HotLoopCallee#inspectRuntimeShape(RuntimeShapeInspector)} with something, that is
    * important to ensure monomorphism and predictable branch taking in hot loops, but doesn't apply to other visit()
-   * methods in RuntimeShapeInspector. For example, {@link org.apache.druid.segment.BitmapOffset#inspectRuntimeShape} reports
-   * bitmap population via this method, to ensure predictable branch taking inside Bitmap's iterators.
+   * methods in RuntimeShapeInspector. For example, {@link org.apache.druid.segment.BitmapOffset#inspectRuntimeShape}
+   * reports bitmap population via this method, to ensure predictable branch taking inside Bitmap's iterators.
    */
   void visit(String key, String runtimeShape);
 }

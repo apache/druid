@@ -52,7 +52,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AllowAllAuthorizer;
 import org.apache.druid.server.security.Authorizer;
@@ -386,7 +386,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public SegmentIdentifier allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
+    public SegmentIdWithShardSpec allocateSegment(String supervisorTaskId, DateTime timestamp) throws IOException
     {
       return supervisorTask.allocateNewSegment(timestamp);
     }

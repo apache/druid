@@ -40,6 +40,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,15 +69,15 @@ public class MapVirtualColumnTopNTest
         new StupidPool<>("map-virtual-column-test", () -> ByteBuffer.allocate(1024)),
         new TopNQueryQueryToolChest(
             new TopNQueryConfig(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         ),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
     runner = QueryRunnerTestHelper.makeQueryRunner(
         factory,
-        "index1",
-        new IncrementalIndexSegment(incrementalIndex, "index1"),
+        SegmentId.dummy("index1"),
+        new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("index1")),
         "incremental"
     );
   }

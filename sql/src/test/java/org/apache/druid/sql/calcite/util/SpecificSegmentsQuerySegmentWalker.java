@@ -75,9 +75,9 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryableIndex index
   )
   {
-    final Segment segment = new QueryableIndexSegment(descriptor.getIdentifier(), index);
+    final Segment segment = new QueryableIndexSegment(index, descriptor.getId());
     if (!timelines.containsKey(descriptor.getDataSource())) {
-      timelines.put(descriptor.getDataSource(), new VersionedIntervalTimeline<String, Segment>(Ordering.natural()));
+      timelines.put(descriptor.getDataSource(), new VersionedIntervalTimeline<>(Ordering.natural()));
     }
 
     final VersionedIntervalTimeline<String, Segment> timeline = timelines.get(descriptor.getDataSource());

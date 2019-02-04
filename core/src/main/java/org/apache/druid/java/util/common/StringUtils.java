@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -42,6 +43,8 @@ public class StringUtils
   @Deprecated // Charset parameters to String are currently slower than the charset's string name
   public static final Charset UTF8_CHARSET = StandardCharsets.UTF_8;
   public static final String UTF8_STRING = StandardCharsets.UTF_8.toString();
+  private static final Base64.Encoder BASE64_ENCODER = Base64.getEncoder();
+  private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
 
   // should be used only for estimation
   // returns the same result with StringUtils.fromUtf8(value).length for valid string values
@@ -153,10 +156,39 @@ public class StringUtils
     return s.toUpperCase(Locale.ENGLISH);
   }
 
+  /**
+   * Encodes a String in application/x-www-form-urlencoded format, with one exception:
+   * "+" in the encoded form is replaced with "%20".
+   *
+   * application/x-www-form-urlencoded encodes spaces as "+", but we use this to encode non-form data as well.
+   *
+   * @param s String to be encoded
+   * @return application/x-www-form-urlencoded format encoded String, but with "+" replaced with "%20".
+   */
+  @Nullable
   public static String urlEncode(String s)
   {
+    if (s == null) {
+      return null;
+    }
+
     try {
-      return URLEncoder.encode(s, "UTF-8");
+      return StringUtils.replace(URLEncoder.encode(s, "UTF-8"), "+", "%20");
+    }
+    catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Nullable
+  public static String urlDecode(String s)
+  {
+    if (s == null) {
+      return null;
+    }
+
+    try {
+      return URLDecoder.decode(s, "UTF-8");
     }
     catch (UnsupportedEncodingException e) {
       throw new RuntimeException(e);
@@ -279,11 +311,54 @@ public class StringUtils
    * Convert an input to base 64 and return the utf8 string of that byte array
    *
    * @param input The string to convert to base64
-   *
    * @return the base64 of the input in string form
    */
   public static String utf8Base64(String input)
   {
-    return fromUtf8(Base64.getEncoder().encode(toUtf8(input)));
+    return fromUtf8(encodeBase64(toUtf8(input)));
+  }
+
+  /**
+   * Convert an input byte array into a newly-allocated byte array using the {@link Base64} encoding scheme
+   *
+   * @param input The byte array to convert to base64
+   * @return the base64 of the input in byte array form
+   */
+  public static byte[] encodeBase64(byte[] input)
+  {
+    return BASE64_ENCODER.encode(input);
+  }
+
+  /**
+   * Convert an input byte array into a string using the {@link Base64} encoding scheme
+   *
+   * @param input The byte array to convert to base64
+   * @return the base64 of the input in string form
+   */
+  public static String encodeBase64String(byte[] input)
+  {
+    return BASE64_ENCODER.encodeToString(input);
+  }
+
+  /**
+   * Decode an input byte array using the {@link Base64} encoding scheme and return a newly-allocated byte array
+   *
+   * @param input The byte array to decode from base64
+   * @return a newly-allocated byte array
+   */
+  public static byte[] decodeBase64(byte[] input)
+  {
+    return BASE64_DECODER.decode(input);
+  }
+
+  /**
+   * Decode an input string using the {@link Base64} encoding scheme and return a newly-allocated byte array
+   *
+   * @param input The string to decode from base64
+   * @return a newly-allocated byte array
+   */
+  public static byte[] decodeBase64String(String input)
+  {
+    return BASE64_DECODER.decode(input);
   }
 }

@@ -72,7 +72,12 @@ public class ClientInfoResourceTestClient
       StatusResponseHolder response = httpClient.go(
           new Request(
               HttpMethod.GET,
-              new URL(StringUtils.format("%s/%s/dimensions?interval=%s", getBrokerURL(), dataSource, interval))
+              new URL(StringUtils.format(
+                  "%s/%s/dimensions?interval=%s",
+                  getBrokerURL(),
+                  StringUtils.urlEncode(dataSource),
+                  interval
+              ))
           ),
           responseHandler
       ).get();

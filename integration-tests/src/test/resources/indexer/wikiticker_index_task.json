@@ -2,7 +2,7 @@
   "type": "index",
   "spec": {
     "dataSchema": {
-      "dataSource": "wikiticker",
+      "dataSource": "%%DATASOURCE%%",
       "granularitySpec": {
         "type": "uniform",
         "segmentGranularity": "day",
@@ -18,20 +18,7 @@
           "dimensionsSpec": {
             "dimensions": [
               "channel",
-              "cityName",
-              "comment",
-              "countryIsoCode",
-              "countryName",
-              "isAnonymous",
-              "isMinor",
-              "isNew",
-              "isRobot",
-              "isUnpatrolled",
-              "metroCode",
-              "namespace",
               "page",
-              "regionIsoCode",
-              "regionName",
               "user"
             ]
           },
@@ -60,11 +47,6 @@
           "name": "delta",
           "type": "longSum",
           "fieldName": "delta"
-        },
-        {
-          "name": "user_unique",
-          "type": "hyperUnique",
-          "fieldName": "user"
         }
       ]
     },
@@ -72,7 +54,7 @@
       "type": "index",
       "firehose": {
         "type": "local",
-        "baseDir": "/examples/quickstart/tutorial",
+        "baseDir": "/shared/wikiticker-it",
         "filter": "wikiticker-2015-09-12-sampled.json.gz"
       }
     },

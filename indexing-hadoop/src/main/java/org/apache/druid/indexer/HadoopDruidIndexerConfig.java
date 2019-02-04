@@ -212,6 +212,7 @@ public class HadoopDruidIndexerConfig
 
   private HadoopIngestionSpec schema;
   private PathSpec pathSpec;
+  private String hadoopJobIdFileName;
   private final Map<Long, ShardSpecLookup> shardSpecLookups = new HashMap<>();
   private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = new HashMap<>();
   private final Granularity rollupGran;
@@ -373,6 +374,16 @@ public class HadoopDruidIndexerConfig
   public int getMaxParseExceptions()
   {
     return schema.getTuningConfig().getMaxParseExceptions();
+  }
+
+  public void setHadoopJobIdFileName(String hadoopJobIdFileName)
+  {
+    this.hadoopJobIdFileName = hadoopJobIdFileName;
+  }
+
+  public String getHadoopJobIdFileName()
+  {
+    return hadoopJobIdFileName;
   }
 
   /**
@@ -547,10 +558,7 @@ public class HadoopDruidIndexerConfig
 
   public Path makeDescriptorInfoPath(DataSegment segment)
   {
-    return new Path(
-        makeDescriptorInfoDir(),
-        StringUtils.removeChar(StringUtils.format("%s.json", segment.getIdentifier()), ':')
-    );
+    return new Path(makeDescriptorInfoDir(), StringUtils.removeChar(segment.getId() + ".json", ':'));
   }
 
   public void addJobProperties(Job job)

@@ -82,7 +82,7 @@ to `<MiddleManager_IP:PORT>/druid/worker/v1/enable`.
 
 If autoscaling is enabled on your Overlord, then Overlord nodes can launch new Middle Manager nodes
 en masse and then gracefully terminate old ones as their tasks finish. This process is configured by
-setting `druid.indexer.runner.minWorkerVersion=#{VERSION}`. Each time you update your overlord node,
+setting `druid.indexer.runner.minWorkerVersion=#{VERSION}`. Each time you update your Overlord node,
 the `VERSION` value should be increased, which will trigger a mass launch of new Middle Managers.
 
 The config `druid.indexer.autoscale.workerVersion=#{VERSION}` also needs to be set.
@@ -94,7 +94,7 @@ Standalone real-time nodes can be updated one at a time in a rolling fashion.
 ## Broker
 
 Broker nodes can be updated one at a time in a rolling fashion. There needs to be some delay between
-updating each node as brokers must load the entire state of the cluster before they return valid
+updating each node as Brokers must load the entire state of the cluster before they return valid
 results.
 
 ## Coordinator

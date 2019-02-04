@@ -31,6 +31,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   private static String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
   private static String INDEX_DATASOURCE = "wikipedia_index_test";
+
   private static String REINDEX_TASK = "/indexer/wikipedia_reindex_task.json";
   private static String REINDEX_DATASOURCE = "wikipedia_reindex_test";
 
@@ -38,8 +39,8 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   public void testIndexData() throws Exception
   {
     try (
-        final Closeable indexCloseable = unloader(INDEX_DATASOURCE);
-        final Closeable reindexCloseable = unloader(REINDEX_DATASOURCE)
+        final Closeable indexCloseable = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
+        final Closeable reindexCloseable = unloader(REINDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
     ) {
       doIndexTestTest(
           INDEX_DATASOURCE,
@@ -47,6 +48,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           INDEX_QUERIES_RESOURCE
       );
       doReindexTest(
+          INDEX_DATASOURCE,
           REINDEX_DATASOURCE,
           REINDEX_TASK,
           INDEX_QUERIES_RESOURCE

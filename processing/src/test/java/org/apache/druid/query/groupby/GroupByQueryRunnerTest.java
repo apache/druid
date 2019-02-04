@@ -396,13 +396,7 @@ public class GroupByQueryRunnerTest
     final Closer closer = Closer.create();
     closer.register(bufferPool);
     closer.register(mergeBufferPool);
-    return Pair.of(
-        new GroupByQueryRunnerFactory(
-            strategySelector,
-            toolChest
-        ),
-        closer
-    );
+    return Pair.of(new GroupByQueryRunnerFactory(strategySelector, toolChest), closer);
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -2017,7 +2011,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setLimitSpec(
@@ -2481,7 +2475,7 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"))
         .setAggregatorSpecs(
             new LongFirstAggregatorFactory("first", "index"),
@@ -2696,7 +2690,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithTimeZone()
   {
-    DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
+    DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
 
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -3432,7 +3426,7 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.marketDimension,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
@@ -3479,7 +3473,7 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.marketDimension,
             QueryRunnerTestHelper.marketDimension
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(
@@ -3516,7 +3510,7 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.marketDimension,
             QueryRunnerTestHelper.marketDimension
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(
@@ -3579,7 +3573,7 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.marketDimension,
             QueryRunnerTestHelper.marketDimension
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(
@@ -3626,7 +3620,7 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.marketDimension,
             QueryRunnerTestHelper.marketDimension
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(
@@ -3675,7 +3669,7 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.marketDimension,
             QueryRunnerTestHelper.marketDimension
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(
@@ -5006,7 +5000,7 @@ public class GroupByQueryRunnerTest
     GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(
             new DefaultDimensionSpec("market", "market"),
             new ExtractionDimensionSpec(
@@ -5760,7 +5754,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -5770,8 +5764,8 @@ public class GroupByQueryRunnerTest
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(new ArrayList<>())
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .setDimensions(Collections.emptyList())
         .setAggregatorSpecs(new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, filter))
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
@@ -5789,7 +5783,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -5808,8 +5802,8 @@ public class GroupByQueryRunnerTest
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(new ArrayList<>())
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .setDimensions(Collections.emptyList())
         .setDimFilter(firstDaysFilter)
         .setAggregatorSpecs(new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, fridayFilter))
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -5836,7 +5830,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
@@ -5863,7 +5857,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
@@ -5890,7 +5884,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"), new DefaultDimensionSpec("quality", "quality"))
         .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("index", "index"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -5899,13 +5893,11 @@ public class GroupByQueryRunnerTest
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(new ArrayList<>()).setAggregatorSpecs(new CardinalityAggregatorFactory(
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .setDimensions(Collections.emptyList())
+        .setAggregatorSpecs(new CardinalityAggregatorFactory(
             "car",
-            ImmutableList.of(new DefaultDimensionSpec(
-                "quality",
-                "quality"
-            )),
+            ImmutableList.of(new DefaultDimensionSpec("quality", "quality")),
             false
         ))
         .setGranularity(QueryRunnerTestHelper.allGran)
@@ -5924,7 +5916,7 @@ public class GroupByQueryRunnerTest
     final GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .setLimitSpec(
@@ -6267,7 +6259,7 @@ public class GroupByQueryRunnerTest
     GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(new DefaultDimensionSpec("market", "market"))
         .setAggregatorSpecs(
             QueryRunnerTestHelper.rowsCount,
@@ -6281,8 +6273,8 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(subquery)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(new ArrayList<>())
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .setDimensions(Collections.emptyList())
         .setAggregatorSpecs(
             new LongFirstAggregatorFactory("first", "innerfirst"),
             new LongLastAggregatorFactory("last", "innerlast")
@@ -7377,7 +7369,7 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(
             new DefaultDimensionSpec("market", "market"),
             new ExtractionDimensionSpec(
@@ -7626,7 +7618,7 @@ public class GroupByQueryRunnerTest
     GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setDimensions(
             new DefaultDimensionSpec("market", "market"),
             new ExtractionDimensionSpec(
@@ -7843,9 +7835,9 @@ public class GroupByQueryRunnerTest
   public void testBySegmentResults()
   {
     int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueClass<>(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -7856,7 +7848,9 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = new ArrayList<>();
@@ -7900,9 +7894,9 @@ public class GroupByQueryRunnerTest
   public void testBySegmentResultsUnOptimizedDimextraction()
   {
     int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueClass<>(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -7913,7 +7907,9 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = new ArrayList<>();
@@ -7964,9 +7960,9 @@ public class GroupByQueryRunnerTest
   public void testBySegmentResultsOptimizedDimextraction()
   {
     int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueClass<>(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -7977,7 +7973,9 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = new ArrayList<>();
@@ -8452,9 +8450,9 @@ public class GroupByQueryRunnerTest
   public void testBySegmentResultsWithAllFiltersWithExtractionFns()
   {
     int segmentCount = 32;
-    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> singleSegmentResult = new Result<>(
         DateTimes.of("2011-01-12T00:00:00.000Z"),
-        new BySegmentResultValueClass(
+        new BySegmentResultValueClass<>(
             Collections.singletonList(
                 GroupByQueryRunnerTestHelper.createExpectedRow(
                     "2011-04-01",
@@ -8465,7 +8463,9 @@ public class GroupByQueryRunnerTest
                     "idx",
                     4420L
                 )
-            ), "testSegment", Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+            ),
+            QueryRunnerTestHelper.segmentId.toString(),
+            Intervals.of("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
         )
     );
     List<Result> bySegmentResults = new ArrayList<>();
@@ -9886,7 +9886,7 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.marketDimension,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec(
@@ -10317,7 +10317,7 @@ public class GroupByQueryRunnerTest
             QueryRunnerTestHelper.marketDimension,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec(
@@ -10460,7 +10460,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setGranularity(QueryRunnerTestHelper.allGran)
         .setDimensions(new DefaultDimensionSpec(QueryRunnerTestHelper.marketDimension, "marketalias"))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),

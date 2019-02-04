@@ -6,8 +6,8 @@
             "dataSource": {
                 "type": "union",
                 "dataSources": [
-                    "wikipedia_index_test1", "wikipedia_index_test2", "wikipedia_index_test3",
-                    "wikipedia_index_test0"
+                    "%%DATASOURCE%%1", "%%DATASOURCE%%2", "%%DATASOURCE%%3",
+                    "%%DATASOURCE%%0"
                 ]
             },
             "intervals": ["2013-08-31/2013-09-01"],
@@ -69,8 +69,8 @@
             "dataSource": {
                 "type": "union",
                 "dataSources": [
-                    "wikipedia_index_test1", "wikipedia_index_test2", "wikipedia_index_test3",
-                    "wikipedia_index_test0"
+                    "%%DATASOURCE%%1", "%%DATASOURCE%%2", "%%DATASOURCE%%3",
+                    "%%DATASOURCE%%0"
                 ]
             },
             "intervals": ["2013-08-31/2013-09-01"],
@@ -149,8 +149,8 @@
             "dataSource": {
                 "type": "union",
                 "dataSources": [
-                    "wikipedia_index_test1", "wikipedia_index_test2", "wikipedia_index_test3",
-                    "wikipedia_index_test0"
+                    "%%DATASOURCE%%1", "%%DATASOURCE%%2", "%%DATASOURCE%%3",
+                    "%%DATASOURCE%%0"
                 ]
             },
             "intervals": ["2013-08-31/2013-09-01"],
@@ -263,8 +263,8 @@
             "dataSource": {
                 "type": "union",
                 "dataSources": [
-                    "wikipedia_index_test1", "wikipedia_index_test2", "wikipedia_index_test3",
-                    "wikipedia_index_test0"
+                    "%%DATASOURCE%%1", "%%DATASOURCE%%2", "%%DATASOURCE%%3",
+                    "%%DATASOURCE%%0"
                 ]
             },
             "intervals": ["2013-08-31/2013-09-01"],
@@ -344,8 +344,8 @@
             "dataSource": {
                 "type": "union",
                 "dataSources": [
-                    "wikipedia_index_test1", "wikipedia_index_test2", "wikipedia_index_test3",
-                    "wikipedia_index_test0"
+                    "%%DATASOURCE%%1", "%%DATASOURCE%%2", "%%DATASOURCE%%3",
+                    "%%DATASOURCE%%0"
                 ]
             },
             "intervals": ["2013-08-31/2013-09-01"],
@@ -417,8 +417,8 @@
             "dataSource": {
                 "type": "union",
                 "dataSources": [
-                    "wikipedia_index_test1", "wikipedia_index_test2", "wikipedia_index_test3",
-                    "wikipedia_index_test0"
+                    "%%DATASOURCE%%1", "%%DATASOURCE%%2", "%%DATASOURCE%%3",
+                    "%%DATASOURCE%%0"
                 ]
             },
             "intervals": ["2013-08-31/2013-09-01"],
@@ -508,8 +508,8 @@
             "dataSource": {
                 "type": "union",
                 "dataSources": [
-                    "wikipedia_index_test1", "wikipedia_index_test2", "wikipedia_index_test3",
-                    "wikipedia_index_test0"
+                    "%%DATASOURCE%%1", "%%DATASOURCE%%2", "%%DATASOURCE%%3",
+                    "%%DATASOURCE%%0"
                 ]
             },
             "granularity": "all",
@@ -548,8 +548,8 @@
             "dataSource": {
                 "type": "union",
                 "dataSources": [
-                    "wikipedia_index_test1", "wikipedia_index_test2", "wikipedia_index_test3",
-                    "wikipedia_index_test0"
+                    "%%DATASOURCE%%1", "%%DATASOURCE%%2", "%%DATASOURCE%%3",
+                    "%%DATASOURCE%%0"
                 ]
             }
         },

@@ -34,13 +34,13 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.LogicalSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -52,6 +52,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class DataSourceMetadataQueryTest
 {
@@ -119,10 +120,11 @@ public class DataSourceMetadataQueryTest
         .buildOnheap();
 
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
-        (QueryRunnerFactory) new DataSourceMetadataQueryRunnerFactory(
+        new DataSourceMetadataQueryRunnerFactory(
             new DataSourceQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ), new IncrementalIndexSegment(rtIndex, "test"),
+        ),
+        new IncrementalIndexSegment(rtIndex, SegmentId.dummy("test")),
         null
     );
     DateTime timestamp = DateTimes.nowUtc();
@@ -136,7 +138,7 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
                                                             .dataSource("testing")
                                                             .build();
-    Map<String, Object> context = new ConcurrentHashMap<>();
+    ConcurrentMap<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     Iterable<Result<DataSourceMetadataResultValue>> results =
         runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();

@@ -269,6 +269,15 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
       final List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(timeChunkHolder.getObject().iterator());
       final long timeChunkSizeBytes = chunks.stream().mapToLong(chunk -> chunk.getObject().getSize()).sum();
 
+      final boolean isSameOrAbuttingInterval;
+      final Interval lastInterval = segmentsToCompact.getIntervalOfLastSegment();
+      if (lastInterval == null) {
+        isSameOrAbuttingInterval = true;
+      } else {
+        final Interval currentInterval = chunks.get(0).getObject().getInterval();
+        isSameOrAbuttingInterval = currentInterval.isEqual(lastInterval) || currentInterval.abuts(lastInterval);
+      }
+
       // The segments in a holder should be added all together or not.
       final boolean isCompactibleSize = SegmentCompactorUtil.isCompactibleSize(
           inputSegmentSize,
@@ -280,7 +289,10 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
           segmentsToCompact.getNumSegments(),
           chunks.size()
       );
-      if (isCompactibleSize && isCompactibleNum && (!keepSegmentGranularity || segmentsToCompact.isEmpty())) {
+      if (isCompactibleSize
+          && isCompactibleNum
+          && isSameOrAbuttingInterval
+          && (!keepSegmentGranularity || segmentsToCompact.isEmpty())) {
         chunks.forEach(chunk -> segmentsToCompact.add(chunk.getObject()));
       } else {
         if (segmentsToCompact.getNumSegments() > 1) {
@@ -512,6 +524,16 @@ public class NewestSegmentFirstIterator implements CompactionSegmentIterator
     {
       Preconditions.checkState((totalSize == 0) == segments.isEmpty());
       return segments.isEmpty();
+    }
+
+    @Nullable
+    private Interval getIntervalOfLastSegment()
+    {
+      if (segments.isEmpty()) {
+        return null;
+      } else {
+        return segments.get(segments.size() - 1).getInterval();
+      }
     }
 
     private int getNumSegments()

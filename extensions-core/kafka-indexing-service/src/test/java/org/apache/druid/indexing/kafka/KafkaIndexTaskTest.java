@@ -50,7 +50,6 @@ import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskLock;
@@ -345,7 +344,7 @@ public class KafkaIndexTaskTest
   {
     synchronized (runningTasks) {
       for (Task task : runningTasks) {
-        task.stopGracefully();
+        task.stopGracefully(toolboxFactory.build(task).getConfig());
       }
 
       runningTasks.clear();
@@ -1848,7 +1847,7 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(2, countEvents(task1));
 
     // Stop without publishing segment
-    task1.stopGracefully();
+    task1.stopGracefully(toolboxFactory.build(task1).getConfig());
     unlockAppenderatorBasePersistDirForTask(task1);
 
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
@@ -2339,7 +2338,7 @@ public class KafkaIndexTaskTest
         null,
         50000,
         null,
-        false,
+        true,
         null,
         null
     );
@@ -2393,8 +2392,7 @@ public class KafkaIndexTaskTest
             );
             return true;
           }
-        },
-        new Counters()
+        }
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

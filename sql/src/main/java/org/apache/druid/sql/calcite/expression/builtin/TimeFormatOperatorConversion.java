@@ -73,7 +73,7 @@ public class TimeFormatOperatorConversion implements SqlOperatorConversion
                            ? RexLiteral.stringValue(call.getOperands().get(1))
                            : "yyyy-MM-dd'T'HH:mm:ss.SSSZZ";
     final DateTimeZone timeZone = call.getOperands().size() > 2 && !RexLiteral.isNullLiteral(call.getOperands().get(2))
-                                  ? DateTimes.inferTzfromString(RexLiteral.stringValue(call.getOperands().get(2)))
+                                  ? DateTimes.inferTzFromString(RexLiteral.stringValue(call.getOperands().get(2)))
                                   : plannerContext.getTimeZone();
 
     return DruidExpression.fromFunctionCall(

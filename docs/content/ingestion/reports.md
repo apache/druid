@@ -90,7 +90,7 @@ The `errorMsg` field shows a message describing the error that caused a task to 
 
 The non-parallel [Native Batch Task](../native_tasks.md), the Hadoop batch task, and the tasks created by the Kafka Indexing Service support retrieval of row stats while the task is running.
 
-The live report can be accessed with a GET to the following URL on a peon running a task:
+The live report can be accessed with a GET to the following URL on a Peon running a task:
 
 ```
 http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/rowStats
@@ -143,7 +143,7 @@ http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/<supervisor-i
 
 ### Unparseable Events
 
-Current lists of unparseable events can be retrieved from a running task with a GET to the following peon API:
+Current lists of unparseable events can be retrieved from a running task with a GET to the following Peon API:
 
 ```
 http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/unparseableEvents

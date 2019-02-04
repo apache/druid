@@ -78,6 +78,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -141,7 +142,7 @@ public class CachingQueryRunnerTest
 
     QueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     testCloseAndPopulate(expectedRes, expectedCacheRes, builder.build(), toolchest);
@@ -189,7 +190,7 @@ public class CachingQueryRunnerTest
       }
 
       QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(
-          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+          QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
       );
 
       testCloseAndPopulate(expectedResults, expectedResults, query, toolChest);
@@ -227,7 +228,7 @@ public class CachingQueryRunnerTest
     final CountDownLatch cacheMustBePutOnce = new CountDownLatch(1);
     Cache cache = new Cache()
     {
-      private final Map<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
+      private final ConcurrentMap<NamedKey, byte[]> baseMap = new ConcurrentHashMap<>();
 
       @Override
       public byte[] get(NamedKey key)
@@ -254,7 +255,7 @@ public class CachingQueryRunnerTest
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
       }
 
@@ -276,12 +277,12 @@ public class CachingQueryRunnerTest
       }
     };
 
-    String segmentIdentifier = "segment";
+    String cacheId = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     CachingQueryRunner runner = new CachingQueryRunner(
-        segmentIdentifier,
+        cacheId,
         segmentDescriptor,
         objectMapper,
         cache,
@@ -313,7 +314,7 @@ public class CachingQueryRunnerTest
 
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
-        segmentIdentifier,
+        cacheId,
         segmentDescriptor,
         cacheStrategy.computeCacheKey(query)
     );
@@ -354,12 +355,12 @@ public class CachingQueryRunnerTest
   ) throws IOException
   {
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    String segmentIdentifier = "segment";
+    String cacheId = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(Intervals.of("2011/2012"), "version", 0);
 
     CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
-        segmentIdentifier,
+        cacheId,
         segmentDescriptor,
         cacheStrategy.computeCacheKey(query)
     );
@@ -368,7 +369,7 @@ public class CachingQueryRunnerTest
     cache.put(cacheKey, toByteArray(Iterables.transform(expectedResults, cacheStrategy.prepareForSegmentLevelCache())));
 
     CachingQueryRunner runner = new CachingQueryRunner(
-        segmentIdentifier,
+        cacheId,
         segmentDescriptor,
         objectMapper,
         cache,
