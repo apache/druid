@@ -228,7 +228,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                      "a4:v",
+                      "v0",
                       "(\"m1\" * 2)",
                       ValueType.FLOAT,
                       TestExprMacroTable.INSTANCE
@@ -238,7 +238,7 @@ public class DoublesSketchSqlAggregatorTest extends CalciteTestBase
                   new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
                   new DoublesSketchAggregatorFactory("a1:agg", "m1", 64),
                   new DoublesSketchAggregatorFactory("a2:agg", "m1", 256),
-                  new DoublesSketchAggregatorFactory("a4:agg", "a4:v", null),
+                  new DoublesSketchAggregatorFactory("a4:agg", "v0", null),
                   new FilteredAggregatorFactory(
                       new DoublesSketchAggregatorFactory("a5:agg", "m1", null),
                       new SelectorDimFilter("dim1", "abc", null)
