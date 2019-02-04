@@ -624,6 +624,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               // here for kafka is to +1 while for kinesis we simply save the current sequence number
               currOffsets.put(record.getPartitionId(), getSequenceNumberToStoreAfterRead(record.getSequenceNumber()));
             }
+
             if ((currOffsets.get(record.getPartitionId()).equals(endOffsets.get(record.getPartitionId()))
                  || isEndOfShard(currOffsets.get(record.getPartitionId())))
                 && assignment.remove(record.getStreamPartition())) {
