@@ -69,78 +69,71 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public QueryRunner<ScanResultValue> mergeResults(final QueryRunner<ScanResultValue> runner)
   {
-    return new QueryRunner<ScanResultValue>()
-    {
-      @Override
-      public Sequence<ScanResultValue> run(
-          final QueryPlus<ScanResultValue> queryPlus, final Map<String, Object> responseContext
-      )
-      {
-        // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
-        // the same way, even if they have different default legacy values.
-        final ScanQuery scanQuery = ((ScanQuery) queryPlus.getQuery()).withNonNullLegacy(scanQueryConfig);
-        final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
-        BaseSequence.IteratorMaker scanQueryLimitRowIteratorMaker =
-            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
+    return (queryPlus, responseContext) -> {
+      // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
+      // the same way, even if they have different default legacy values.
+      final ScanQuery scanQuery = ((ScanQuery) queryPlus.getQuery()).withNonNullLegacy(scanQueryConfig);
+      final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
+      BaseSequence.IteratorMaker scanQueryLimitRowIteratorMaker =
+          new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
+          {
+            @Override
+            public ScanQueryLimitRowIterator make()
+            {
+              return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
+            }
+
+            @Override
+            public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+            {
+              CloseQuietly.close(iterFromMake);
+            }
+          };
+
+      if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_NONE) ||
+          scanQuery.getLimit() > maxRowsForInMemoryTimeOrdering) {
+        if (scanQuery.getLimit() == Long.MAX_VALUE) {
+          return runner.run(queryPlusWithNonNullLegacy, responseContext);
+        }
+        return new BaseSequence<>(scanQueryLimitRowIteratorMaker);
+      } else if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_ASCENDING) ||
+                 scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_DESCENDING)) {
+        Comparator priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
+
+        // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
+        // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
+        PriorityQueue q = new PriorityQueue<>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
+        Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
+
+        while (scanResultIterator.hasNext()) {
+          ScanResultValue next = scanResultIterator.next();
+          List<Object> events = (List<Object>) next.getEvents();
+          for (Object event : events) {
+            // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
+            // needs to be preserved for queries using the compactedList result format
+            q.offer(new ScanResultValue(null, next.getColumns(), Collections.singletonList(event)));
+          }
+        }
+
+        Iterator queueIterator = q.iterator();
+
+        return new BaseSequence(
+            new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedTimeOrderedQueueIterator>()
             {
               @Override
-              public ScanQueryLimitRowIterator make()
+              public ScanBatchedTimeOrderedQueueIterator make()
               {
-                return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
+                return new ScanBatchedTimeOrderedQueueIterator(queueIterator, scanQuery.getBatchSize());
               }
 
               @Override
-              public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+              public void cleanup(ScanBatchedTimeOrderedQueueIterator iterFromMake)
               {
                 CloseQuietly.close(iterFromMake);
               }
-            };
-
-        if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_NONE) ||
-            scanQuery.getLimit() > maxRowsForInMemoryTimeOrdering) {
-          if (scanQuery.getLimit() == Long.MAX_VALUE) {
-            return runner.run(queryPlusWithNonNullLegacy, responseContext);
-          }
-          return new BaseSequence<>(scanQueryLimitRowIteratorMaker);
-        } else if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_ASCENDING) ||
-                   scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_DESCENDING)) {
-          Comparator priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
-
-          // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
-          // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-          PriorityQueue<Object> q = new PriorityQueue<>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
-          Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
-
-          while (scanResultIterator.hasNext()) {
-            ScanResultValue next = scanResultIterator.next();
-            List<Object> events = (List<Object>) next.getEvents();
-            for (Object event : events) {
-              // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
-              // needs to be preserved for queries using the compactedList result format
-              q.offer(new ScanResultValue(null, next.getColumns(), Collections.singletonList(event)));
-            }
-          }
-
-          Iterator queueIterator = q.iterator();
-
-          return new BaseSequence(
-              new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedTimeOrderedQueueIterator>()
-              {
-                @Override
-                public ScanBatchedTimeOrderedQueueIterator make()
-                {
-                  return new ScanBatchedTimeOrderedQueueIterator(queueIterator, scanQuery.getBatchSize());
-                }
-
-                @Override
-                public void cleanup(ScanBatchedTimeOrderedQueueIterator iterFromMake)
-                {
-                  CloseQuietly.close(iterFromMake);
-                }
-              });
-        } else {
-          throw new UOE("Time ordering [%s] is not supported", scanQuery.getTimeOrder());
-        }
+            });
+      } else {
+        throw new UOE("Time ordering [%s] is not supported", scanQuery.getTimeOrder());
       }
     };
   }

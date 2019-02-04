@@ -91,7 +91,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/* Works with 4GB heap size or greater.  Otherwise there's a good chance of an OOME. */
+/* Works with 8GB heap size or greater.  Otherwise there's a good chance of an OOME. */
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
@@ -104,14 +104,17 @@ public class ScanBenchmark
   @Param({"1", "2"})
   private int numProcessingThreads;
 
-  @Param({"250000"})
+  @Param({"750000"})
   private int rowsPerSegment;
 
   @Param({"basic.A"})
   private String schemaAndQuery;
 
-  @Param({"1000"})
+  @Param({"1000", "99999"})
   private int limit;
+
+  @Param({"none", "descending", "ascending"})
+  private static String timeOrdering;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final ObjectMapper JSON_MAPPER;
@@ -178,7 +181,7 @@ public class ScanBenchmark
     return Druids.newScanQueryBuilder()
                  .dataSource("blah")
                  .intervals(intervalSpec)
-                 .timeOrder("none");
+                 .timeOrder(timeOrdering);
 
   }
 
@@ -205,7 +208,7 @@ public class ScanBenchmark
     return Druids.newScanQueryBuilder()
                  .filters(filter)
                  .intervals(intervalSpec)
-                 .timeOrder("none");
+                 .timeOrder(timeOrdering);
   }
 
   private static Druids.ScanQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
@@ -223,7 +226,7 @@ public class ScanBenchmark
     return Druids.newScanQueryBuilder()
         .filters(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()))
         .intervals(intervalSpec)
-        .timeOrder("none");
+        .timeOrder(timeOrdering);
   }
 
   private static Druids.ScanQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
@@ -245,7 +248,7 @@ public class ScanBenchmark
     return Druids.newScanQueryBuilder()
         .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))
         .intervals(intervalSpec)
-        .timeOrder("none");
+        .timeOrder(timeOrdering);
   }
 
   @Setup
