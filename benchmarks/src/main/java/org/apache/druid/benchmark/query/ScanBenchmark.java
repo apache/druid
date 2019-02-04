@@ -98,10 +98,10 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class ScanBenchmark
 {
-  @Param({"1", "4"})
+  @Param({"2", "4"})
   private int numSegments;
 
-  @Param({"1", "2"})
+  @Param({"2"})
   private int numProcessingThreads;
 
   @Param({"750000"})
