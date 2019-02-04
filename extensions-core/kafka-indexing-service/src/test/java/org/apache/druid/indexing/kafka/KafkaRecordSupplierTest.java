@@ -270,8 +270,28 @@ public class KafkaRecordSupplierTest
     List<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
 
     Assert.assertEquals(records.size(), polledRecords.size());
-    Assert.assertTrue(initialRecords.containsAll(polledRecords));
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
 
+    final int initialRecordsPartition0Size = initialRecords.stream()
+                                                           .filter(r -> r.getPartitionId().equals(0))
+                                                           .collect(Collectors.toSet())
+                                                           .size();
+    final int initialRecordsPartition1Size = initialRecords.stream()
+                                                           .filter(r -> r.getPartitionId().equals(1))
+                                                           .collect(Collectors.toSet())
+                                                           .size();
+
+    final int polledRecordsPartition0Size = polledRecords.stream()
+                                                         .filter(r -> r.getPartitionId().equals(0))
+                                                         .collect(Collectors.toSet())
+                                                         .size();
+    final int polledRecordsPartition1Size = polledRecords.stream()
+                                                         .filter(r -> r.getPartitionId().equals(1))
+                                                         .collect(Collectors.toSet())
+                                                         .size();
+
+    Assert.assertEquals(initialRecordsPartition0Size, polledRecordsPartition0Size);
+    Assert.assertEquals(initialRecordsPartition1Size, polledRecordsPartition1Size);
 
     recordSupplier.close();
   }
