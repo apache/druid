@@ -167,6 +167,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       message: 'Supervisor submitted successfully',
       intent: Intent.SUCCESS
     });
+    this.supervisorQueryManager.rerunLastQuery();
   }
 
   private async submitTask(spec: JSON) {
@@ -184,6 +185,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       message: 'Task submitted successfully',
       intent: Intent.SUCCESS
     });
+    this.taskQueryManager.rerunLastQuery();
   }
 
   renderResumeSupervisorAction() {
@@ -192,7 +194,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     return <AsyncActionDialog
       action={
         resumeSupervisorId ? async () => {
-          const resp = await axios.post(`/druid/indexer/v1/supervisor/${resumeSupervisorId}/suspend`, {})
+          const resp = await axios.post(`/druid/indexer/v1/supervisor/${resumeSupervisorId}/suspend`, {});
           return resp.data;
         } : null
       }
@@ -489,7 +491,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Actions',
             id: 'actions',
             accessor: 'task_id',
-            width: 320,
+            width: 360,
             filterable: false,
             Cell: row => {
               if (row.aggregated) return '';

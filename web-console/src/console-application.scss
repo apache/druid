@@ -39,8 +39,11 @@
     left: 0;
     right: 0;
     bottom: 0;
-    overflow-y: scroll;
     padding: $standard-padding;
+
+    &.scrollable {
+      overflow-y: scroll;
+    }
   }
 
   .control-separator {
