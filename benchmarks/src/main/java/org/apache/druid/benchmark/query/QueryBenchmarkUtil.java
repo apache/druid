@@ -49,7 +49,7 @@ public class QueryBenchmarkUtil
     );
   }
 
-  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
       @Override

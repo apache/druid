@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
 /**
@@ -210,7 +211,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
       LoadPeonCallback callback = null;
       try {
-        Map<SegmentId, BalancerSegmentHolder> movingSegments = currentlyMovingSegments.get(toServer.getTier());
+        ConcurrentMap<SegmentId, BalancerSegmentHolder> movingSegments =
+            currentlyMovingSegments.get(toServer.getTier());
         movingSegments.put(segmentId, segment);
         callback = () -> movingSegments.remove(segmentId);
         coordinator.moveSegment(

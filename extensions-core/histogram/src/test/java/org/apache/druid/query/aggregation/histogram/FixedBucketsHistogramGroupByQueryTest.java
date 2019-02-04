@@ -146,8 +146,7 @@ public class FixedBucketsHistogramGroupByQueryTest
     this.factory = factory;
     this.runner = runner;
 
-    //Note: this is needed in order to properly register the serde for Histogram.
-    new ApproximateHistogramDruidModule().configure(null);
+    ApproximateHistogramDruidModule.registerSerde();
   }
 
   @After

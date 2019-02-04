@@ -94,6 +94,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -121,7 +122,13 @@ public class AppenderatorImpl implements Appenderator
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
   private final Cache cache;
-  private final Map<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
+  /**
+   * This map needs to be concurrent because it's accessed and mutated from multiple threads: both the thread from where
+   * this Appenderator is used (and methods like {@link #add(SegmentIdWithShardSpec, InputRow, Supplier, boolean)} are
+   * called) and from {@link #persistExecutor}. It could also be accessed (but not mutated) potentially in the context
+   * of any thread from {@link #drop}.
+   */
+  private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER
@@ -1105,17 +1112,18 @@ public class AppenderatorImpl implements Appenderator
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
         pushBarrier(),
-        new Function<Object, Object>()
+        new Function<Object, Void>()
         {
           @Nullable
           @Override
-          public Object apply(@Nullable Object input)
+          public Void apply(@Nullable Object input)
           {
-            if (sinks.get(identifier) != sink) {
-              // Only abandon sink if it is the same one originally requested to be abandoned.
-              log.warn("Sink for segment[%s] no longer valid, not abandoning.", identifier);
+            if (!sinks.remove(identifier, sink)) {
+              log.error("Sink for segment[%s] no longer valid, not abandoning.", identifier);
               return null;
             }
+            log.info("Removing sink for segment[%s].", identifier);
+            metrics.setSinkCount(sinks.size());
 
             if (removeOnDiskData) {
               // Remove this segment from the committed list. This must be done from the persist thread.
@@ -1148,9 +1156,6 @@ public class AppenderatorImpl implements Appenderator
                  .emit();
             }
 
-            log.info("Removing sink for segment[%s].", identifier);
-            sinks.remove(identifier);
-            metrics.setSinkCount(sinks.size());
             droppingSinks.remove(identifier);
             sinkTimeline.remove(
                 sink.getInterval(),

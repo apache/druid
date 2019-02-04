@@ -56,7 +56,7 @@ Generally, you should only set one of these parameters, not both.
 These properties can be set in either one of the following ways:
 
 - Using the task definition, e.g. add `"mapreduce.job.classloader": "true"` to the `jobProperties` of the `tuningConfig` of your indexing task (see the [Hadoop batch ingestion documentation](../ingestion/hadoop.html)).
-- Using system properties, e.g. on the middleManager set `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.classloader=true`.
+- Using system properties, e.g. on the MiddleManager set `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.classloader=true`.
 
 ### Overriding specific classes
 
@@ -181,7 +181,7 @@ For more about building Druid, please see [Building Druid](../development/build.
 
 **Alternate workaround - 2**
 
-Another workaround solution is to build a custom fat jar of Druid using [sbt](http://www.scala-sbt.org/), which manually excludes all the conflicting Jackson dependencies, and then put this fat jar in the classpath of the command that starts overlord indexing service. To do this, please follow the following steps.
+Another workaround solution is to build a custom fat jar of Druid using [sbt](http://www.scala-sbt.org/), which manually excludes all the conflicting Jackson dependencies, and then put this fat jar in the classpath of the command that starts Overlord indexing service. To do this, please follow the following steps.
 
 (1) Download and install sbt.
 

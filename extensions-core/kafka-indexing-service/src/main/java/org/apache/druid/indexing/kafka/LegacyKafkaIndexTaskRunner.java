@@ -104,6 +104,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -123,8 +124,8 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   private static final EmittingLogger log = new EmittingLogger(LegacyKafkaIndexTaskRunner.class);
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
 
-  private final Map<Integer, Long> endOffsets = new ConcurrentHashMap<>();
-  private final Map<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Integer, Long> endOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully

@@ -52,6 +52,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class DataSourceMetadataQueryTest
 {
@@ -137,7 +138,7 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
                                                             .dataSource("testing")
                                                             .build();
-    Map<String, Object> context = new ConcurrentHashMap<>();
+    ConcurrentMap<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     Iterable<Result<DataSourceMetadataResultValue>> results =
         runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();
