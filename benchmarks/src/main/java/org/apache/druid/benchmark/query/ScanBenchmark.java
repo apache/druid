@@ -91,7 +91,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/* Works with 4GB heap size or greater.  Otherwise there's a good chance of an OOME. */
+/* Works with 8GB heap size or greater.  Otherwise there's a good chance of an OOME. */
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
@@ -104,13 +104,13 @@ public class ScanBenchmark
   @Param({"1", "2"})
   private int numProcessingThreads;
 
-  @Param({"250000"})
+  @Param({"750000"})
   private int rowsPerSegment;
 
   @Param({"basic.A"})
   private String schemaAndQuery;
 
-  @Param({"1000"})
+  @Param({"1000", "99999"})
   private int limit;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
