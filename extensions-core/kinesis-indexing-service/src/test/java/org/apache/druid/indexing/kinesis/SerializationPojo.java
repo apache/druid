@@ -22,7 +22,8 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SerializationPojo {
+public class SerializationPojo
+{
   @JsonProperty
   public String timestamp;
 

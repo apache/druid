@@ -29,7 +29,6 @@
 
   <properties>
     <protobuf.version>3.6.1</protobuf.version>
-    <checkstyle.skip>true</checkstyle.skip>
   </properties>
 
   <parent>
@@ -38,7 +37,6 @@
     <version>0.13.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
-
 
   <dependencies>
     <dependency>
@@ -130,6 +128,13 @@
                 <!-- Protoc-generated classes miss @Override, that is not easy to fix -->
                 <arg>-Xep:MissingOverride:WARN</arg>
               </compilerArgs>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-checkstyle-plugin</artifactId>
+            <configuration>
+              <excludes>**AggregatedRecordProtos**</excludes>
             </configuration>
           </plugin>
         </plugins>

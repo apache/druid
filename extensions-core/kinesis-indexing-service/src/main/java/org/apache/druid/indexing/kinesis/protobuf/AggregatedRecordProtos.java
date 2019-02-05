@@ -26,75 +26,92 @@ package org.apache.druid.indexing.kinesis.protobuf;
 public final class AggregatedRecordProtos
 {
   private AggregatedRecordProtos() {}
+
   public static void registerAllExtensions(
-      com.google.protobuf.ExtensionRegistryLite registry) {
+      com.google.protobuf.ExtensionRegistryLite registry
+  )
+  {
   }
 
   public static void registerAllExtensions(
-      com.google.protobuf.ExtensionRegistry registry) {
+      com.google.protobuf.ExtensionRegistry registry
+  )
+  {
     registerAllExtensions(
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
+
   public interface AggregatedRecordOrBuilder extends
       // @@protoc_insertion_point(interface_extends:kinesisindexingservice.AggregatedRecord)
-      com.google.protobuf.MessageOrBuilder {
+      com.google.protobuf.MessageOrBuilder
+  {
 
     /**
      * <code>repeated string partition_key_table = 1;</code>
      */
     java.util.List<String>
-        getPartitionKeyTableList();
+    getPartitionKeyTableList();
+
     /**
      * <code>repeated string partition_key_table = 1;</code>
      */
     int getPartitionKeyTableCount();
+
     /**
      * <code>repeated string partition_key_table = 1;</code>
      */
     String getPartitionKeyTable(int index);
+
     /**
      * <code>repeated string partition_key_table = 1;</code>
      */
     com.google.protobuf.ByteString
-        getPartitionKeyTableBytes(int index);
+    getPartitionKeyTableBytes(int index);
 
     /**
      * <code>repeated string explicit_hash_key_table = 2;</code>
      */
     java.util.List<String>
-        getExplicitHashKeyTableList();
+    getExplicitHashKeyTableList();
+
     /**
      * <code>repeated string explicit_hash_key_table = 2;</code>
      */
     int getExplicitHashKeyTableCount();
+
     /**
      * <code>repeated string explicit_hash_key_table = 2;</code>
      */
     String getExplicitHashKeyTable(int index);
+
     /**
      * <code>repeated string explicit_hash_key_table = 2;</code>
      */
     com.google.protobuf.ByteString
-        getExplicitHashKeyTableBytes(int index);
+    getExplicitHashKeyTableBytes(int index);
 
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
     java.util.List<Record>
-        getRecordsList();
+    getRecordsList();
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
     AggregatedRecordProtos.Record getRecords(int index);
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
     int getRecordsCount();
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
     java.util.List<? extends RecordOrBuilder>
-        getRecordsOrBuilderList();
+    getRecordsOrBuilderList();
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
@@ -102,33 +119,43 @@ public final class AggregatedRecordProtos
         int index
     );
   }
+
   /**
    * Protobuf type {@code kinesisindexingservice.AggregatedRecord}
    */
-  public  static final class AggregatedRecord extends
+  public static final class AggregatedRecord extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:kinesisindexingservice.AggregatedRecord)
-      AggregatedRecordOrBuilder {
-  private static final long serialVersionUID = 0L;
+      AggregatedRecordOrBuilder
+  {
+    private static final long serialVersionUID = 0L;
+
     // Use AggregatedRecord.newBuilder() to construct.
-    private AggregatedRecord(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    private AggregatedRecord(com.google.protobuf.GeneratedMessageV3.Builder<?> builder)
+    {
       super(builder);
     }
-    private AggregatedRecord() {
+
+    private AggregatedRecord()
+    {
       partitionKeyTable_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       explicitHashKeyTable_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       records_ = java.util.Collections.emptyList();
     }
 
     @Override
-    public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+    public com.google.protobuf.UnknownFieldSet
+    getUnknownFields()
+    {
       return this.unknownFields;
     }
+
     private AggregatedRecord(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       this();
       if (extensionRegistry == null) {
         throw new NullPointerException();
@@ -180,12 +207,15 @@ public final class AggregatedRecordProtos
             }
           }
         }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+      }
+      catch (com.google.protobuf.InvalidProtocolBufferException e) {
         throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
+      }
+      catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
-      } finally {
+      }
+      finally {
         if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
           partitionKeyTable_ = partitionKeyTable_.getUnmodifiableView();
         }
@@ -199,14 +229,17 @@ public final class AggregatedRecordProtos
         makeExtensionsImmutable();
       }
     }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+
+    public static com.google.protobuf.Descriptors.Descriptor
+    getDescriptor()
+    {
       return AggregatedRecordProtos.internal_static_kinesisindexingservice_AggregatedRecord_descriptor;
     }
 
     @Override
     protected FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable()
+    {
       return AggregatedRecordProtos.internal_static_kinesisindexingservice_AggregatedRecord_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               AggregatedRecordProtos.AggregatedRecord.class, AggregatedRecordProtos.AggregatedRecord.Builder.class);
@@ -214,103 +247,136 @@ public final class AggregatedRecordProtos
 
     public static final int PARTITION_KEY_TABLE_FIELD_NUMBER = 1;
     private com.google.protobuf.LazyStringList partitionKeyTable_;
+
     /**
      * <code>repeated string partition_key_table = 1;</code>
      */
     public com.google.protobuf.ProtocolStringList
-        getPartitionKeyTableList() {
+    getPartitionKeyTableList()
+    {
       return partitionKeyTable_;
     }
+
     /**
      * <code>repeated string partition_key_table = 1;</code>
      */
-    public int getPartitionKeyTableCount() {
+    public int getPartitionKeyTableCount()
+    {
       return partitionKeyTable_.size();
     }
+
     /**
      * <code>repeated string partition_key_table = 1;</code>
      */
-    public String getPartitionKeyTable(int index) {
+    public String getPartitionKeyTable(int index)
+    {
       return partitionKeyTable_.get(index);
     }
+
     /**
      * <code>repeated string partition_key_table = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getPartitionKeyTableBytes(int index) {
+    getPartitionKeyTableBytes(int index)
+    {
       return partitionKeyTable_.getByteString(index);
     }
 
     public static final int EXPLICIT_HASH_KEY_TABLE_FIELD_NUMBER = 2;
     private com.google.protobuf.LazyStringList explicitHashKeyTable_;
+
     /**
      * <code>repeated string explicit_hash_key_table = 2;</code>
      */
     public com.google.protobuf.ProtocolStringList
-        getExplicitHashKeyTableList() {
+    getExplicitHashKeyTableList()
+    {
       return explicitHashKeyTable_;
     }
+
     /**
      * <code>repeated string explicit_hash_key_table = 2;</code>
      */
-    public int getExplicitHashKeyTableCount() {
+    public int getExplicitHashKeyTableCount()
+    {
       return explicitHashKeyTable_.size();
     }
+
     /**
      * <code>repeated string explicit_hash_key_table = 2;</code>
      */
-    public String getExplicitHashKeyTable(int index) {
+    public String getExplicitHashKeyTable(int index)
+    {
       return explicitHashKeyTable_.get(index);
     }
+
     /**
      * <code>repeated string explicit_hash_key_table = 2;</code>
      */
     public com.google.protobuf.ByteString
-        getExplicitHashKeyTableBytes(int index) {
+    getExplicitHashKeyTableBytes(int index)
+    {
       return explicitHashKeyTable_.getByteString(index);
     }
 
     public static final int RECORDS_FIELD_NUMBER = 3;
     private java.util.List<Record> records_;
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
-    public java.util.List<Record> getRecordsList() {
+    public java.util.List<Record> getRecordsList()
+    {
       return records_;
     }
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
     public java.util.List<? extends RecordOrBuilder>
-        getRecordsOrBuilderList() {
+    getRecordsOrBuilderList()
+    {
       return records_;
     }
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
-    public int getRecordsCount() {
+    public int getRecordsCount()
+    {
       return records_.size();
     }
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
-    public AggregatedRecordProtos.Record getRecords(int index) {
+    public AggregatedRecordProtos.Record getRecords(int index)
+    {
       return records_.get(index);
     }
+
     /**
      * <code>repeated .kinesisindexingservice.Record records = 3;</code>
      */
     public AggregatedRecordProtos.RecordOrBuilder getRecordsOrBuilder(
-        int index) {
+        int index
+    )
+    {
       return records_.get(index);
     }
 
     private byte memoizedIsInitialized = -1;
+
     @Override
-    public final boolean isInitialized() {
+    public boolean isInitialized()
+    {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
+      if (isInitialized == 1) {
+        return true;
+      }
+      if (isInitialized == 0) {
+        return false;
+      }
 
       for (int i = 0; i < getRecordsCount(); i++) {
         if (!getRecords(i).isInitialized()) {
@@ -324,7 +390,8 @@ public final class AggregatedRecordProtos
 
     @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
+        throws java.io.IOException
+    {
       for (int i = 0; i < partitionKeyTable_.size(); i++) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, partitionKeyTable_.getRaw(i));
       }
@@ -338,9 +405,12 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public int getSerializedSize() {
+    public int getSerializedSize()
+    {
       int size = memoizedSize;
-      if (size != -1) return size;
+      if (size != -1) {
+        return size;
+      }
 
       size = 0;
       {
@@ -361,7 +431,7 @@ public final class AggregatedRecordProtos
       }
       for (int i = 0; i < records_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, records_.get(i));
+            .computeMessageSize(3, records_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -369,9 +439,10 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final Object obj)
+    {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof AggregatedRecordProtos.AggregatedRecord)) {
         return super.equals(obj);
@@ -390,7 +461,8 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
       if (memoizedHashCode != 0) {
         return memoizedHashCode;
       }
@@ -414,133 +486,187 @@ public final class AggregatedRecordProtos
     }
 
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(
-        java.nio.ByteBuffer data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        java.nio.ByteBuffer data
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(
         java.nio.ByteBuffer data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(
         com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(
         byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseDelimitedFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.AggregatedRecord parseFrom(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
     @Override
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder() {
+    public Builder newBuilderForType()
+    {
+      return newBuilder();
+    }
+
+    public static Builder newBuilder()
+    {
       return DEFAULT_INSTANCE.toBuilder();
     }
-    public static Builder newBuilder(AggregatedRecordProtos.AggregatedRecord prototype) {
+
+    public static Builder newBuilder(AggregatedRecordProtos.AggregatedRecord prototype)
+    {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+
     @Override
-    public Builder toBuilder() {
+    public Builder toBuilder()
+    {
       return this == DEFAULT_INSTANCE
-          ? new Builder() : new Builder().mergeFrom(this);
+             ? new Builder() : new Builder().mergeFrom(this);
     }
 
     @Override
     protected Builder newBuilderForType(
-        BuilderParent parent) {
+        BuilderParent parent
+    )
+    {
       Builder builder = new Builder(parent);
       return builder;
     }
+
     /**
      * Protobuf type {@code kinesisindexingservice.AggregatedRecord}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
         // @@protoc_insertion_point(builder_implements:kinesisindexingservice.AggregatedRecord)
-        AggregatedRecordProtos.AggregatedRecordOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+        AggregatedRecordProtos.AggregatedRecordOrBuilder
+    {
+      public static com.google.protobuf.Descriptors.Descriptor
+      getDescriptor()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_AggregatedRecord_descriptor;
       }
 
       @Override
       protected FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_AggregatedRecord_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 AggregatedRecordProtos.AggregatedRecord.class, AggregatedRecordProtos.AggregatedRecord.Builder.class);
       }
 
       // Construct using org.apache.druid.indexing.kinesis.protobuf.AggregatedRecordProtos.AggregatedRecord.newBuilder()
-      private Builder() {
+      private Builder()
+      {
         maybeForceBuilderInitialization();
       }
 
       private Builder(
-          BuilderParent parent) {
+          BuilderParent parent
+      )
+      {
         super(parent);
         maybeForceBuilderInitialization();
       }
-      private void maybeForceBuilderInitialization() {
+
+      private void maybeForceBuilderInitialization()
+      {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
           getRecordsFieldBuilder();
         }
       }
+
       @Override
-      public Builder clear() {
+      public Builder clear()
+      {
         super.clear();
         partitionKeyTable_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -557,17 +683,20 @@ public final class AggregatedRecordProtos
 
       @Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_AggregatedRecord_descriptor;
       }
 
       @Override
-      public AggregatedRecordProtos.AggregatedRecord getDefaultInstanceForType() {
+      public AggregatedRecordProtos.AggregatedRecord getDefaultInstanceForType()
+      {
         return AggregatedRecordProtos.AggregatedRecord.getDefaultInstance();
       }
 
       @Override
-      public AggregatedRecordProtos.AggregatedRecord build() {
+      public AggregatedRecordProtos.AggregatedRecord build()
+      {
         AggregatedRecordProtos.AggregatedRecord result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
@@ -576,7 +705,8 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public AggregatedRecordProtos.AggregatedRecord buildPartial() {
+      public AggregatedRecordProtos.AggregatedRecord buildPartial()
+      {
         AggregatedRecordProtos.AggregatedRecord result = new AggregatedRecordProtos.AggregatedRecord(this);
         int from_bitField0_ = bitField0_;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -603,49 +733,70 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public Builder clone() {
+      public Builder clone()
+      {
         return (Builder) super.clone();
       }
+
       @Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
+          Object value
+      )
+      {
         return (Builder) super.setField(field, value);
       }
+
       @Override
       public Builder clearField(
-          com.google.protobuf.Descriptors.FieldDescriptor field) {
+          com.google.protobuf.Descriptors.FieldDescriptor field
+      )
+      {
         return (Builder) super.clearField(field);
       }
+
       @Override
       public Builder clearOneof(
-          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+          com.google.protobuf.Descriptors.OneofDescriptor oneof
+      )
+      {
         return (Builder) super.clearOneof(oneof);
       }
+
       @Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
+          int index, Object value
+      )
+      {
         return (Builder) super.setRepeatedField(field, index, value);
       }
+
       @Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
+          Object value
+      )
+      {
         return (Builder) super.addRepeatedField(field, value);
       }
+
       @Override
-      public Builder mergeFrom(com.google.protobuf.Message other) {
+      public Builder mergeFrom(com.google.protobuf.Message other)
+      {
         if (other instanceof AggregatedRecordProtos.AggregatedRecord) {
-          return mergeFrom((AggregatedRecordProtos.AggregatedRecord)other);
+          return mergeFrom((AggregatedRecordProtos.AggregatedRecord) other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(AggregatedRecordProtos.AggregatedRecord other) {
-        if (other == AggregatedRecordProtos.AggregatedRecord.getDefaultInstance()) return this;
+      public Builder mergeFrom(AggregatedRecordProtos.AggregatedRecord other)
+      {
+        if (other == AggregatedRecordProtos.AggregatedRecord.getDefaultInstance()) {
+          return this;
+        }
         if (!other.partitionKeyTable_.isEmpty()) {
           if (partitionKeyTable_.isEmpty()) {
             partitionKeyTable_ = other.partitionKeyTable_;
@@ -685,8 +836,8 @@ public final class AggregatedRecordProtos
               records_ = other.records_;
               bitField0_ = (bitField0_ & ~0x00000004);
               recordsBuilder_ =
-                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                   getRecordsFieldBuilder() : null;
+                  com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                  getRecordsFieldBuilder() : null;
             } else {
               recordsBuilder_.addAllMessages(other.records_);
             }
@@ -698,7 +849,8 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public final boolean isInitialized() {
+      public boolean isInitialized()
+      {
         for (int i = 0; i < getRecordsCount(); i++) {
           if (!getRecords(i).isInitialized()) {
             return false;
@@ -710,216 +862,271 @@ public final class AggregatedRecordProtos
       @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry
+      )
+          throws java.io.IOException
+      {
         AggregatedRecordProtos.AggregatedRecord parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        }
+        catch (com.google.protobuf.InvalidProtocolBufferException e) {
           parsedMessage = (AggregatedRecordProtos.AggregatedRecord) e.getUnfinishedMessage();
           throw e.unwrapIOException();
-        } finally {
+        }
+        finally {
           if (parsedMessage != null) {
             mergeFrom(parsedMessage);
           }
         }
         return this;
       }
+
       private int bitField0_;
 
       private com.google.protobuf.LazyStringList partitionKeyTable_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-      private void ensurePartitionKeyTableIsMutable() {
+
+      private void ensurePartitionKeyTableIsMutable()
+      {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
           partitionKeyTable_ = new com.google.protobuf.LazyStringArrayList(partitionKeyTable_);
           bitField0_ |= 0x00000001;
-         }
+        }
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
       public com.google.protobuf.ProtocolStringList
-          getPartitionKeyTableList() {
+      getPartitionKeyTableList()
+      {
         return partitionKeyTable_.getUnmodifiableView();
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
-      public int getPartitionKeyTableCount() {
+      public int getPartitionKeyTableCount()
+      {
         return partitionKeyTable_.size();
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
-      public String getPartitionKeyTable(int index) {
+      public String getPartitionKeyTable(int index)
+      {
         return partitionKeyTable_.get(index);
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getPartitionKeyTableBytes(int index) {
+      getPartitionKeyTableBytes(int index)
+      {
         return partitionKeyTable_.getByteString(index);
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
       public Builder setPartitionKeyTable(
-          int index, String value) {
+          int index, String value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensurePartitionKeyTableIsMutable();
+          throw new NullPointerException();
+        }
+        ensurePartitionKeyTableIsMutable();
         partitionKeyTable_.set(index, value);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
       public Builder addPartitionKeyTable(
-          String value) {
+          String value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensurePartitionKeyTableIsMutable();
+          throw new NullPointerException();
+        }
+        ensurePartitionKeyTableIsMutable();
         partitionKeyTable_.add(value);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
       public Builder addAllPartitionKeyTable(
-          Iterable<String> values) {
+          Iterable<String> values
+      )
+      {
         ensurePartitionKeyTableIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
             values, partitionKeyTable_);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
-      public Builder clearPartitionKeyTable() {
+      public Builder clearPartitionKeyTable()
+      {
         partitionKeyTable_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string partition_key_table = 1;</code>
        */
       public Builder addPartitionKeyTableBytes(
-          com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensurePartitionKeyTableIsMutable();
+          throw new NullPointerException();
+        }
+        ensurePartitionKeyTableIsMutable();
         partitionKeyTable_.add(value);
         onChanged();
         return this;
       }
 
       private com.google.protobuf.LazyStringList explicitHashKeyTable_ = com.google.protobuf.LazyStringArrayList.EMPTY;
-      private void ensureExplicitHashKeyTableIsMutable() {
+
+      private void ensureExplicitHashKeyTableIsMutable()
+      {
         if (!((bitField0_ & 0x00000002) == 0x00000002)) {
           explicitHashKeyTable_ = new com.google.protobuf.LazyStringArrayList(explicitHashKeyTable_);
           bitField0_ |= 0x00000002;
-         }
+        }
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
       public com.google.protobuf.ProtocolStringList
-          getExplicitHashKeyTableList() {
+      getExplicitHashKeyTableList()
+      {
         return explicitHashKeyTable_.getUnmodifiableView();
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
-      public int getExplicitHashKeyTableCount() {
+      public int getExplicitHashKeyTableCount()
+      {
         return explicitHashKeyTable_.size();
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
-      public String getExplicitHashKeyTable(int index) {
+      public String getExplicitHashKeyTable(int index)
+      {
         return explicitHashKeyTable_.get(index);
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
       public com.google.protobuf.ByteString
-          getExplicitHashKeyTableBytes(int index) {
+      getExplicitHashKeyTableBytes(int index)
+      {
         return explicitHashKeyTable_.getByteString(index);
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
       public Builder setExplicitHashKeyTable(
-          int index, String value) {
+          int index, String value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureExplicitHashKeyTableIsMutable();
+          throw new NullPointerException();
+        }
+        ensureExplicitHashKeyTableIsMutable();
         explicitHashKeyTable_.set(index, value);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
       public Builder addExplicitHashKeyTable(
-          String value) {
+          String value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureExplicitHashKeyTableIsMutable();
+          throw new NullPointerException();
+        }
+        ensureExplicitHashKeyTableIsMutable();
         explicitHashKeyTable_.add(value);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
       public Builder addAllExplicitHashKeyTable(
-          Iterable<String> values) {
+          Iterable<String> values
+      )
+      {
         ensureExplicitHashKeyTableIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
             values, explicitHashKeyTable_);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
-      public Builder clearExplicitHashKeyTable() {
+      public Builder clearExplicitHashKeyTable()
+      {
         explicitHashKeyTable_ = com.google.protobuf.LazyStringArrayList.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000002);
         onChanged();
         return this;
       }
+
       /**
        * <code>repeated string explicit_hash_key_table = 2;</code>
        */
       public Builder addExplicitHashKeyTableBytes(
-          com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  ensureExplicitHashKeyTableIsMutable();
+          throw new NullPointerException();
+        }
+        ensureExplicitHashKeyTableIsMutable();
         explicitHashKeyTable_.add(value);
         onChanged();
         return this;
       }
 
       private java.util.List<Record> records_ =
-        java.util.Collections.emptyList();
-      private void ensureRecordsIsMutable() {
+          java.util.Collections.emptyList();
+
+      private void ensureRecordsIsMutable()
+      {
         if (!((bitField0_ & 0x00000004) == 0x00000004)) {
           records_ = new java.util.ArrayList<Record>(records_);
           bitField0_ |= 0x00000004;
-         }
+        }
       }
 
       private com.google.protobuf.RepeatedFieldBuilderV3<
@@ -928,38 +1135,46 @@ public final class AggregatedRecordProtos
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
-      public java.util.List<Record> getRecordsList() {
+      public java.util.List<Record> getRecordsList()
+      {
         if (recordsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(records_);
         } else {
           return recordsBuilder_.getMessageList();
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
-      public int getRecordsCount() {
+      public int getRecordsCount()
+      {
         if (recordsBuilder_ == null) {
           return records_.size();
         } else {
           return recordsBuilder_.getCount();
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
-      public AggregatedRecordProtos.Record getRecords(int index) {
+      public AggregatedRecordProtos.Record getRecords(int index)
+      {
         if (recordsBuilder_ == null) {
           return records_.get(index);
         } else {
           return recordsBuilder_.getMessage(index);
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public Builder setRecords(
-          int index, AggregatedRecordProtos.Record value) {
+          int index, AggregatedRecordProtos.Record value
+      )
+      {
         if (recordsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -972,11 +1187,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public Builder setRecords(
-          int index, AggregatedRecordProtos.Record.Builder builderForValue) {
+          int index, AggregatedRecordProtos.Record.Builder builderForValue
+      )
+      {
         if (recordsBuilder_ == null) {
           ensureRecordsIsMutable();
           records_.set(index, builderForValue.build());
@@ -986,10 +1204,12 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
-      public Builder addRecords(AggregatedRecordProtos.Record value) {
+      public Builder addRecords(AggregatedRecordProtos.Record value)
+      {
         if (recordsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1002,11 +1222,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public Builder addRecords(
-          int index, AggregatedRecordProtos.Record value) {
+          int index, AggregatedRecordProtos.Record value
+      )
+      {
         if (recordsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1019,11 +1242,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public Builder addRecords(
-          AggregatedRecordProtos.Record.Builder builderForValue) {
+          AggregatedRecordProtos.Record.Builder builderForValue
+      )
+      {
         if (recordsBuilder_ == null) {
           ensureRecordsIsMutable();
           records_.add(builderForValue.build());
@@ -1033,11 +1259,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public Builder addRecords(
-          int index, AggregatedRecordProtos.Record.Builder builderForValue) {
+          int index, AggregatedRecordProtos.Record.Builder builderForValue
+      )
+      {
         if (recordsBuilder_ == null) {
           ensureRecordsIsMutable();
           records_.add(index, builderForValue.build());
@@ -1047,11 +1276,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public Builder addAllRecords(
-          Iterable<? extends Record> values) {
+          Iterable<? extends Record> values
+      )
+      {
         if (recordsBuilder_ == null) {
           ensureRecordsIsMutable();
           com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -1062,10 +1294,12 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
-      public Builder clearRecords() {
+      public Builder clearRecords()
+      {
         if (recordsBuilder_ == null) {
           records_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000004);
@@ -1075,10 +1309,12 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
-      public Builder removeRecords(int index) {
+      public Builder removeRecords(int index)
+      {
         if (recordsBuilder_ == null) {
           ensureRecordsIsMutable();
           records_.remove(index);
@@ -1088,79 +1324,103 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public AggregatedRecordProtos.Record.Builder getRecordsBuilder(
-          int index) {
+          int index
+      )
+      {
         return getRecordsFieldBuilder().getBuilder(index);
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public AggregatedRecordProtos.RecordOrBuilder getRecordsOrBuilder(
-          int index) {
+          int index
+      )
+      {
         if (recordsBuilder_ == null) {
-          return records_.get(index);  } else {
+          return records_.get(index);
+        } else {
           return recordsBuilder_.getMessageOrBuilder(index);
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public java.util.List<? extends RecordOrBuilder>
-           getRecordsOrBuilderList() {
+      getRecordsOrBuilderList()
+      {
         if (recordsBuilder_ != null) {
           return recordsBuilder_.getMessageOrBuilderList();
         } else {
           return java.util.Collections.unmodifiableList(records_);
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
-      public AggregatedRecordProtos.Record.Builder addRecordsBuilder() {
+      public AggregatedRecordProtos.Record.Builder addRecordsBuilder()
+      {
         return getRecordsFieldBuilder().addBuilder(
             AggregatedRecordProtos.Record.getDefaultInstance());
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public AggregatedRecordProtos.Record.Builder addRecordsBuilder(
-          int index) {
+          int index
+      )
+      {
         return getRecordsFieldBuilder().addBuilder(
             index, AggregatedRecordProtos.Record.getDefaultInstance());
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Record records = 3;</code>
        */
       public java.util.List<Record.Builder>
-           getRecordsBuilderList() {
+      getRecordsBuilderList()
+      {
         return getRecordsFieldBuilder().getBuilderList();
       }
+
       private com.google.protobuf.RepeatedFieldBuilderV3<
           Record, Record.Builder, RecordOrBuilder>
-          getRecordsFieldBuilder() {
+      getRecordsFieldBuilder()
+      {
         if (recordsBuilder_ == null) {
           recordsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
               Record, Record.Builder, RecordOrBuilder>(
-                  records_,
-                  ((bitField0_ & 0x00000004) == 0x00000004),
-                  getParentForChildren(),
-                  isClean());
+              records_,
+              ((bitField0_ & 0x00000004) == 0x00000004),
+              getParentForChildren(),
+              isClean()
+          );
           records_ = null;
         }
         return recordsBuilder_;
       }
+
       @Override
-      public final Builder setUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
+      public Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields
+      )
+      {
         return super.setUnknownFields(unknownFields);
       }
 
       @Override
-      public final Builder mergeUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
+      public Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields
+      )
+      {
         return super.mergeUnknownFields(unknownFields);
       }
 
@@ -1170,36 +1430,45 @@ public final class AggregatedRecordProtos
 
     // @@protoc_insertion_point(class_scope:kinesisindexingservice.AggregatedRecord)
     private static final AggregatedRecordProtos.AggregatedRecord DEFAULT_INSTANCE;
+
     static {
       DEFAULT_INSTANCE = new AggregatedRecordProtos.AggregatedRecord();
     }
 
-    public static AggregatedRecordProtos.AggregatedRecord getDefaultInstance() {
+    public static AggregatedRecordProtos.AggregatedRecord getDefaultInstance()
+    {
       return DEFAULT_INSTANCE;
     }
 
-    @Deprecated public static final com.google.protobuf.Parser<AggregatedRecord>
-        PARSER = new com.google.protobuf.AbstractParser<AggregatedRecord>() {
+    @Deprecated
+    public static final com.google.protobuf.Parser<AggregatedRecord>
+        PARSER = new com.google.protobuf.AbstractParser<AggregatedRecord>()
+    {
       @Override
       public AggregatedRecord parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry
+      )
+          throws com.google.protobuf.InvalidProtocolBufferException
+      {
         return new AggregatedRecord(input, extensionRegistry);
       }
     };
 
-    public static com.google.protobuf.Parser<AggregatedRecord> parser() {
+    public static com.google.protobuf.Parser<AggregatedRecord> parser()
+    {
       return PARSER;
     }
 
     @Override
-    public com.google.protobuf.Parser<AggregatedRecord> getParserForType() {
+    public com.google.protobuf.Parser<AggregatedRecord> getParserForType()
+    {
       return PARSER;
     }
 
     @Override
-    public AggregatedRecordProtos.AggregatedRecord getDefaultInstanceForType() {
+    public AggregatedRecordProtos.AggregatedRecord getDefaultInstanceForType()
+    {
       return DEFAULT_INSTANCE;
     }
 
@@ -1207,62 +1476,77 @@ public final class AggregatedRecordProtos
 
   public interface TagOrBuilder extends
       // @@protoc_insertion_point(interface_extends:kinesisindexingservice.Tag)
-      com.google.protobuf.MessageOrBuilder {
+      com.google.protobuf.MessageOrBuilder
+  {
 
     /**
      * <code>required string key = 1;</code>
      */
     boolean hasKey();
+
     /**
      * <code>required string key = 1;</code>
      */
     String getKey();
+
     /**
      * <code>required string key = 1;</code>
      */
     com.google.protobuf.ByteString
-        getKeyBytes();
+    getKeyBytes();
 
     /**
      * <code>optional string value = 2;</code>
      */
     boolean hasValue();
+
     /**
      * <code>optional string value = 2;</code>
      */
     String getValue();
+
     /**
      * <code>optional string value = 2;</code>
      */
     com.google.protobuf.ByteString
-        getValueBytes();
+    getValueBytes();
   }
+
   /**
    * Protobuf type {@code kinesisindexingservice.Tag}
    */
-  public  static final class Tag extends
+  public static final class Tag extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:kinesisindexingservice.Tag)
-      TagOrBuilder {
-  private static final long serialVersionUID = 0L;
+      TagOrBuilder
+  {
+    private static final long serialVersionUID = 0L;
+
     // Use Tag.newBuilder() to construct.
-    private Tag(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    private Tag(com.google.protobuf.GeneratedMessageV3.Builder<?> builder)
+    {
       super(builder);
     }
-    private Tag() {
+
+    private Tag()
+    {
       key_ = "";
       value_ = "";
     }
 
     @Override
-    public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+    public com.google.protobuf.UnknownFieldSet
+    getUnknownFields()
+    {
       return this.unknownFields;
     }
+
     private Tag(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       this();
       if (extensionRegistry == null) {
         throw new NullPointerException();
@@ -1299,24 +1583,30 @@ public final class AggregatedRecordProtos
             }
           }
         }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+      }
+      catch (com.google.protobuf.InvalidProtocolBufferException e) {
         throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
+      }
+      catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
-      } finally {
+      }
+      finally {
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
       }
     }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+
+    public static com.google.protobuf.Descriptors.Descriptor
+    getDescriptor()
+    {
       return AggregatedRecordProtos.internal_static_kinesisindexingservice_Tag_descriptor;
     }
 
     @Override
     protected FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable()
+    {
       return AggregatedRecordProtos.internal_static_kinesisindexingservice_Tag_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               AggregatedRecordProtos.Tag.class, AggregatedRecordProtos.Tag.Builder.class);
@@ -1325,16 +1615,20 @@ public final class AggregatedRecordProtos
     private int bitField0_;
     public static final int KEY_FIELD_NUMBER = 1;
     private volatile Object key_;
+
     /**
      * <code>required string key = 1;</code>
      */
-    public boolean hasKey() {
+    public boolean hasKey()
+    {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+
     /**
      * <code>required string key = 1;</code>
      */
-    public String getKey() {
+    public String getKey()
+    {
       Object ref = key_;
       if (ref instanceof String) {
         return (String) ref;
@@ -1348,11 +1642,13 @@ public final class AggregatedRecordProtos
         return s;
       }
     }
+
     /**
      * <code>required string key = 1;</code>
      */
     public com.google.protobuf.ByteString
-        getKeyBytes() {
+    getKeyBytes()
+    {
       Object ref = key_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b =
@@ -1367,16 +1663,20 @@ public final class AggregatedRecordProtos
 
     public static final int VALUE_FIELD_NUMBER = 2;
     private volatile Object value_;
+
     /**
      * <code>optional string value = 2;</code>
      */
-    public boolean hasValue() {
+    public boolean hasValue()
+    {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+
     /**
      * <code>optional string value = 2;</code>
      */
-    public String getValue() {
+    public String getValue()
+    {
       Object ref = value_;
       if (ref instanceof String) {
         return (String) ref;
@@ -1390,11 +1690,13 @@ public final class AggregatedRecordProtos
         return s;
       }
     }
+
     /**
      * <code>optional string value = 2;</code>
      */
     public com.google.protobuf.ByteString
-        getValueBytes() {
+    getValueBytes()
+    {
       Object ref = value_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b =
@@ -1408,11 +1710,17 @@ public final class AggregatedRecordProtos
     }
 
     private byte memoizedIsInitialized = -1;
+
     @Override
-    public final boolean isInitialized() {
+    public boolean isInitialized()
+    {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
+      if (isInitialized == 1) {
+        return true;
+      }
+      if (isInitialized == 0) {
+        return false;
+      }
 
       if (!hasKey()) {
         memoizedIsInitialized = 0;
@@ -1424,7 +1732,8 @@ public final class AggregatedRecordProtos
 
     @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
+        throws java.io.IOException
+    {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, key_);
       }
@@ -1435,9 +1744,12 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public int getSerializedSize() {
+    public int getSerializedSize()
+    {
       int size = memoizedSize;
-      if (size != -1) return size;
+      if (size != -1) {
+        return size;
+      }
 
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
@@ -1452,9 +1764,10 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final Object obj)
+    {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof AggregatedRecordProtos.Tag)) {
         return super.equals(obj);
@@ -1477,7 +1790,8 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
       if (memoizedHashCode != 0) {
         return memoizedHashCode;
       }
@@ -1497,132 +1811,186 @@ public final class AggregatedRecordProtos
     }
 
     public static AggregatedRecordProtos.Tag parseFrom(
-        java.nio.ByteBuffer data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        java.nio.ByteBuffer data
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(
         java.nio.ByteBuffer data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(
         com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(
         byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Tag parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.Tag parseDelimitedFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.Tag parseFrom(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
     @Override
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder() {
+    public Builder newBuilderForType()
+    {
+      return newBuilder();
+    }
+
+    public static Builder newBuilder()
+    {
       return DEFAULT_INSTANCE.toBuilder();
     }
-    public static Builder newBuilder(AggregatedRecordProtos.Tag prototype) {
+
+    public static Builder newBuilder(AggregatedRecordProtos.Tag prototype)
+    {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+
     @Override
-    public Builder toBuilder() {
+    public Builder toBuilder()
+    {
       return this == DEFAULT_INSTANCE
-          ? new Builder() : new Builder().mergeFrom(this);
+             ? new Builder() : new Builder().mergeFrom(this);
     }
 
     @Override
     protected Builder newBuilderForType(
-        BuilderParent parent) {
+        BuilderParent parent
+    )
+    {
       Builder builder = new Builder(parent);
       return builder;
     }
+
     /**
      * Protobuf type {@code kinesisindexingservice.Tag}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
         // @@protoc_insertion_point(builder_implements:kinesisindexingservice.Tag)
-        AggregatedRecordProtos.TagOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+        AggregatedRecordProtos.TagOrBuilder
+    {
+      public static com.google.protobuf.Descriptors.Descriptor
+      getDescriptor()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_Tag_descriptor;
       }
 
       @Override
       protected FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_Tag_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 AggregatedRecordProtos.Tag.class, AggregatedRecordProtos.Tag.Builder.class);
       }
 
       // Construct using org.apache.druid.indexing.kinesis.protobuf.AggregatedRecordProtos.Tag.newBuilder()
-      private Builder() {
+      private Builder()
+      {
         maybeForceBuilderInitialization();
       }
 
       private Builder(
-          BuilderParent parent) {
+          BuilderParent parent
+      )
+      {
         super(parent);
         maybeForceBuilderInitialization();
       }
-      private void maybeForceBuilderInitialization() {
+
+      private void maybeForceBuilderInitialization()
+      {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
         }
       }
+
       @Override
-      public Builder clear() {
+      public Builder clear()
+      {
         super.clear();
         key_ = "";
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -1633,17 +2001,20 @@ public final class AggregatedRecordProtos
 
       @Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_Tag_descriptor;
       }
 
       @Override
-      public AggregatedRecordProtos.Tag getDefaultInstanceForType() {
+      public AggregatedRecordProtos.Tag getDefaultInstanceForType()
+      {
         return AggregatedRecordProtos.Tag.getDefaultInstance();
       }
 
       @Override
-      public AggregatedRecordProtos.Tag build() {
+      public AggregatedRecordProtos.Tag build()
+      {
         AggregatedRecordProtos.Tag result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
@@ -1652,7 +2023,8 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public AggregatedRecordProtos.Tag buildPartial() {
+      public AggregatedRecordProtos.Tag buildPartial()
+      {
         AggregatedRecordProtos.Tag result = new AggregatedRecordProtos.Tag(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
@@ -1670,49 +2042,70 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public Builder clone() {
+      public Builder clone()
+      {
         return (Builder) super.clone();
       }
+
       @Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
+          Object value
+      )
+      {
         return (Builder) super.setField(field, value);
       }
+
       @Override
       public Builder clearField(
-          com.google.protobuf.Descriptors.FieldDescriptor field) {
+          com.google.protobuf.Descriptors.FieldDescriptor field
+      )
+      {
         return (Builder) super.clearField(field);
       }
+
       @Override
       public Builder clearOneof(
-          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+          com.google.protobuf.Descriptors.OneofDescriptor oneof
+      )
+      {
         return (Builder) super.clearOneof(oneof);
       }
+
       @Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
+          int index, Object value
+      )
+      {
         return (Builder) super.setRepeatedField(field, index, value);
       }
+
       @Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
+          Object value
+      )
+      {
         return (Builder) super.addRepeatedField(field, value);
       }
+
       @Override
-      public Builder mergeFrom(com.google.protobuf.Message other) {
+      public Builder mergeFrom(com.google.protobuf.Message other)
+      {
         if (other instanceof AggregatedRecordProtos.Tag) {
-          return mergeFrom((AggregatedRecordProtos.Tag)other);
+          return mergeFrom((AggregatedRecordProtos.Tag) other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(AggregatedRecordProtos.Tag other) {
-        if (other == AggregatedRecordProtos.Tag.getDefaultInstance()) return this;
+      public Builder mergeFrom(AggregatedRecordProtos.Tag other)
+      {
+        if (other == AggregatedRecordProtos.Tag.getDefaultInstance()) {
+          return this;
+        }
         if (other.hasKey()) {
           bitField0_ |= 0x00000001;
           key_ = other.key_;
@@ -1729,7 +2122,8 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public final boolean isInitialized() {
+      public boolean isInitialized()
+      {
         if (!hasKey()) {
           return false;
         }
@@ -1739,34 +2133,43 @@ public final class AggregatedRecordProtos
       @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry
+      )
+          throws java.io.IOException
+      {
         AggregatedRecordProtos.Tag parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        }
+        catch (com.google.protobuf.InvalidProtocolBufferException e) {
           parsedMessage = (AggregatedRecordProtos.Tag) e.getUnfinishedMessage();
           throw e.unwrapIOException();
-        } finally {
+        }
+        finally {
           if (parsedMessage != null) {
             mergeFrom(parsedMessage);
           }
         }
         return this;
       }
+
       private int bitField0_;
 
       private Object key_ = "";
+
       /**
        * <code>required string key = 1;</code>
        */
-      public boolean hasKey() {
+      public boolean hasKey()
+      {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+
       /**
        * <code>required string key = 1;</code>
        */
-      public String getKey() {
+      public String getKey()
+      {
         Object ref = key_;
         if (!(ref instanceof String)) {
           com.google.protobuf.ByteString bs =
@@ -1780,11 +2183,13 @@ public final class AggregatedRecordProtos
           return (String) ref;
         }
       }
+
       /**
        * <code>required string key = 1;</code>
        */
       public com.google.protobuf.ByteString
-          getKeyBytes() {
+      getKeyBytes()
+      {
         Object ref = key_;
         if (ref instanceof String) {
           com.google.protobuf.ByteString b =
@@ -1796,53 +2201,65 @@ public final class AggregatedRecordProtos
           return (com.google.protobuf.ByteString) ref;
         }
       }
+
       /**
        * <code>required string key = 1;</code>
        */
       public Builder setKey(
-          String value) {
+          String value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         key_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>required string key = 1;</code>
        */
-      public Builder clearKey() {
+      public Builder clearKey()
+      {
         bitField0_ = (bitField0_ & ~0x00000001);
         key_ = getDefaultInstance().getKey();
         onChanged();
         return this;
       }
+
       /**
        * <code>required string key = 1;</code>
        */
       public Builder setKeyBytes(
-          com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000001;
         key_ = value;
         onChanged();
         return this;
       }
 
       private Object value_ = "";
+
       /**
        * <code>optional string value = 2;</code>
        */
-      public boolean hasValue() {
+      public boolean hasValue()
+      {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+
       /**
        * <code>optional string value = 2;</code>
        */
-      public String getValue() {
+      public String getValue()
+      {
         Object ref = value_;
         if (!(ref instanceof String)) {
           com.google.protobuf.ByteString bs =
@@ -1856,11 +2273,13 @@ public final class AggregatedRecordProtos
           return (String) ref;
         }
       }
+
       /**
        * <code>optional string value = 2;</code>
        */
       public com.google.protobuf.ByteString
-          getValueBytes() {
+      getValueBytes()
+      {
         Object ref = value_;
         if (ref instanceof String) {
           com.google.protobuf.ByteString b =
@@ -1872,50 +2291,63 @@ public final class AggregatedRecordProtos
           return (com.google.protobuf.ByteString) ref;
         }
       }
+
       /**
        * <code>optional string value = 2;</code>
        */
       public Builder setValue(
-          String value) {
+          String value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         value_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>optional string value = 2;</code>
        */
-      public Builder clearValue() {
+      public Builder clearValue()
+      {
         bitField0_ = (bitField0_ & ~0x00000002);
         value_ = getDefaultInstance().getValue();
         onChanged();
         return this;
       }
+
       /**
        * <code>optional string value = 2;</code>
        */
       public Builder setValueBytes(
-          com.google.protobuf.ByteString value) {
+          com.google.protobuf.ByteString value
+      )
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000002;
         value_ = value;
         onChanged();
         return this;
       }
+
       @Override
-      public final Builder setUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
+      public Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields
+      )
+      {
         return super.setUnknownFields(unknownFields);
       }
 
       @Override
-      public final Builder mergeUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
+      public Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields
+      )
+      {
         return super.mergeUnknownFields(unknownFields);
       }
 
@@ -1925,36 +2357,45 @@ public final class AggregatedRecordProtos
 
     // @@protoc_insertion_point(class_scope:kinesisindexingservice.Tag)
     private static final AggregatedRecordProtos.Tag DEFAULT_INSTANCE;
+
     static {
       DEFAULT_INSTANCE = new AggregatedRecordProtos.Tag();
     }
 
-    public static AggregatedRecordProtos.Tag getDefaultInstance() {
+    public static AggregatedRecordProtos.Tag getDefaultInstance()
+    {
       return DEFAULT_INSTANCE;
     }
 
-    @Deprecated public static final com.google.protobuf.Parser<Tag>
-        PARSER = new com.google.protobuf.AbstractParser<Tag>() {
+    @Deprecated
+    public static final com.google.protobuf.Parser<Tag>
+        PARSER = new com.google.protobuf.AbstractParser<Tag>()
+    {
       @Override
       public Tag parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry
+      )
+          throws com.google.protobuf.InvalidProtocolBufferException
+      {
         return new Tag(input, extensionRegistry);
       }
     };
 
-    public static com.google.protobuf.Parser<Tag> parser() {
+    public static com.google.protobuf.Parser<Tag> parser()
+    {
       return PARSER;
     }
 
     @Override
-    public com.google.protobuf.Parser<Tag> getParserForType() {
+    public com.google.protobuf.Parser<Tag> getParserForType()
+    {
       return PARSER;
     }
 
     @Override
-    public AggregatedRecordProtos.Tag getDefaultInstanceForType() {
+    public AggregatedRecordProtos.Tag getDefaultInstanceForType()
+    {
       return DEFAULT_INSTANCE;
     }
 
@@ -1962,12 +2403,14 @@ public final class AggregatedRecordProtos
 
   public interface RecordOrBuilder extends
       // @@protoc_insertion_point(interface_extends:kinesisindexingservice.Record)
-      com.google.protobuf.MessageOrBuilder {
+      com.google.protobuf.MessageOrBuilder
+  {
 
     /**
      * <code>required uint64 partition_key_index = 1;</code>
      */
     boolean hasPartitionKeyIndex();
+
     /**
      * <code>required uint64 partition_key_index = 1;</code>
      */
@@ -1977,6 +2420,7 @@ public final class AggregatedRecordProtos
      * <code>optional uint64 explicit_hash_key_index = 2;</code>
      */
     boolean hasExplicitHashKeyIndex();
+
     /**
      * <code>optional uint64 explicit_hash_key_index = 2;</code>
      */
@@ -1986,6 +2430,7 @@ public final class AggregatedRecordProtos
      * <code>required bytes data = 3;</code>
      */
     boolean hasData();
+
     /**
      * <code>required bytes data = 3;</code>
      */
@@ -1995,20 +2440,24 @@ public final class AggregatedRecordProtos
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
     java.util.List<Tag>
-        getTagsList();
+    getTagsList();
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
     AggregatedRecordProtos.Tag getTags(int index);
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
     int getTagsCount();
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
     java.util.List<? extends TagOrBuilder>
-        getTagsOrBuilderList();
+    getTagsOrBuilderList();
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
@@ -2016,19 +2465,25 @@ public final class AggregatedRecordProtos
         int index
     );
   }
+
   /**
    * Protobuf type {@code kinesisindexingservice.Record}
    */
-  public  static final class Record extends
+  public static final class Record extends
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:kinesisindexingservice.Record)
-      RecordOrBuilder {
-  private static final long serialVersionUID = 0L;
+      RecordOrBuilder
+  {
+    private static final long serialVersionUID = 0L;
+
     // Use Record.newBuilder() to construct.
-    private Record(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+    private Record(com.google.protobuf.GeneratedMessageV3.Builder<?> builder)
+    {
       super(builder);
     }
-    private Record() {
+
+    private Record()
+    {
       partitionKeyIndex_ = 0L;
       explicitHashKeyIndex_ = 0L;
       data_ = com.google.protobuf.ByteString.EMPTY;
@@ -2036,14 +2491,18 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public final com.google.protobuf.UnknownFieldSet
-    getUnknownFields() {
+    public com.google.protobuf.UnknownFieldSet
+    getUnknownFields()
+    {
       return this.unknownFields;
     }
+
     private Record(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       this();
       if (extensionRegistry == null) {
         throw new NullPointerException();
@@ -2092,12 +2551,15 @@ public final class AggregatedRecordProtos
             }
           }
         }
-      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+      }
+      catch (com.google.protobuf.InvalidProtocolBufferException e) {
         throw e.setUnfinishedMessage(this);
-      } catch (java.io.IOException e) {
+      }
+      catch (java.io.IOException e) {
         throw new com.google.protobuf.InvalidProtocolBufferException(
             e).setUnfinishedMessage(this);
-      } finally {
+      }
+      finally {
         if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
           tags_ = java.util.Collections.unmodifiableList(tags_);
         }
@@ -2105,14 +2567,17 @@ public final class AggregatedRecordProtos
         makeExtensionsImmutable();
       }
     }
-    public static final com.google.protobuf.Descriptors.Descriptor
-        getDescriptor() {
+
+    public static com.google.protobuf.Descriptors.Descriptor
+    getDescriptor()
+    {
       return AggregatedRecordProtos.internal_static_kinesisindexingservice_Record_descriptor;
     }
 
     @Override
     protected FieldAccessorTable
-        internalGetFieldAccessorTable() {
+    internalGetFieldAccessorTable()
+    {
       return AggregatedRecordProtos.internal_static_kinesisindexingservice_Record_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               AggregatedRecordProtos.Record.class, AggregatedRecordProtos.Record.Builder.class);
@@ -2121,90 +2586,119 @@ public final class AggregatedRecordProtos
     private int bitField0_;
     public static final int PARTITION_KEY_INDEX_FIELD_NUMBER = 1;
     private long partitionKeyIndex_;
+
     /**
      * <code>required uint64 partition_key_index = 1;</code>
      */
-    public boolean hasPartitionKeyIndex() {
+    public boolean hasPartitionKeyIndex()
+    {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
+
     /**
      * <code>required uint64 partition_key_index = 1;</code>
      */
-    public long getPartitionKeyIndex() {
+    public long getPartitionKeyIndex()
+    {
       return partitionKeyIndex_;
     }
 
     public static final int EXPLICIT_HASH_KEY_INDEX_FIELD_NUMBER = 2;
     private long explicitHashKeyIndex_;
+
     /**
      * <code>optional uint64 explicit_hash_key_index = 2;</code>
      */
-    public boolean hasExplicitHashKeyIndex() {
+    public boolean hasExplicitHashKeyIndex()
+    {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
+
     /**
      * <code>optional uint64 explicit_hash_key_index = 2;</code>
      */
-    public long getExplicitHashKeyIndex() {
+    public long getExplicitHashKeyIndex()
+    {
       return explicitHashKeyIndex_;
     }
 
     public static final int DATA_FIELD_NUMBER = 3;
     private com.google.protobuf.ByteString data_;
+
     /**
      * <code>required bytes data = 3;</code>
      */
-    public boolean hasData() {
+    public boolean hasData()
+    {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
+
     /**
      * <code>required bytes data = 3;</code>
      */
-    public com.google.protobuf.ByteString getData() {
+    public com.google.protobuf.ByteString getData()
+    {
       return data_;
     }
 
     public static final int TAGS_FIELD_NUMBER = 4;
     private java.util.List<Tag> tags_;
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
-    public java.util.List<Tag> getTagsList() {
+    public java.util.List<Tag> getTagsList()
+    {
       return tags_;
     }
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
     public java.util.List<? extends TagOrBuilder>
-        getTagsOrBuilderList() {
+    getTagsOrBuilderList()
+    {
       return tags_;
     }
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
-    public int getTagsCount() {
+    public int getTagsCount()
+    {
       return tags_.size();
     }
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
-    public AggregatedRecordProtos.Tag getTags(int index) {
+    public AggregatedRecordProtos.Tag getTags(int index)
+    {
       return tags_.get(index);
     }
+
     /**
      * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
      */
     public AggregatedRecordProtos.TagOrBuilder getTagsOrBuilder(
-        int index) {
+        int index
+    )
+    {
       return tags_.get(index);
     }
 
     private byte memoizedIsInitialized = -1;
+
     @Override
-    public final boolean isInitialized() {
+    public boolean isInitialized()
+    {
       byte isInitialized = memoizedIsInitialized;
-      if (isInitialized == 1) return true;
-      if (isInitialized == 0) return false;
+      if (isInitialized == 1) {
+        return true;
+      }
+      if (isInitialized == 0) {
+        return false;
+      }
 
       if (!hasPartitionKeyIndex()) {
         memoizedIsInitialized = 0;
@@ -2226,7 +2720,8 @@ public final class AggregatedRecordProtos
 
     @Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
+        throws java.io.IOException
+    {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeUInt64(1, partitionKeyIndex_);
       }
@@ -2243,26 +2738,29 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public int getSerializedSize() {
+    public int getSerializedSize()
+    {
       int size = memoizedSize;
-      if (size != -1) return size;
+      if (size != -1) {
+        return size;
+      }
 
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(1, partitionKeyIndex_);
+            .computeUInt64Size(1, partitionKeyIndex_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(2, explicitHashKeyIndex_);
+            .computeUInt64Size(2, explicitHashKeyIndex_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(3, data_);
+            .computeBytesSize(3, data_);
       }
       for (int i = 0; i < tags_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, tags_.get(i));
+            .computeMessageSize(4, tags_.get(i));
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -2270,9 +2768,10 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public boolean equals(final Object obj) {
+    public boolean equals(final Object obj)
+    {
       if (obj == this) {
-       return true;
+        return true;
       }
       if (!(obj instanceof AggregatedRecordProtos.Record)) {
         return super.equals(obj);
@@ -2283,12 +2782,12 @@ public final class AggregatedRecordProtos
       result = result && (hasPartitionKeyIndex() == other.hasPartitionKeyIndex());
       if (hasPartitionKeyIndex()) {
         result = result && (getPartitionKeyIndex()
-            == other.getPartitionKeyIndex());
+                            == other.getPartitionKeyIndex());
       }
       result = result && (hasExplicitHashKeyIndex() == other.hasExplicitHashKeyIndex());
       if (hasExplicitHashKeyIndex()) {
         result = result && (getExplicitHashKeyIndex()
-            == other.getExplicitHashKeyIndex());
+                            == other.getExplicitHashKeyIndex());
       }
       result = result && (hasData() == other.hasData());
       if (hasData()) {
@@ -2302,7 +2801,8 @@ public final class AggregatedRecordProtos
     }
 
     @Override
-    public int hashCode() {
+    public int hashCode()
+    {
       if (memoizedHashCode != 0) {
         return memoizedHashCode;
       }
@@ -2332,133 +2832,187 @@ public final class AggregatedRecordProtos
     }
 
     public static AggregatedRecordProtos.Record parseFrom(
-        java.nio.ByteBuffer data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        java.nio.ByteBuffer data
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(
         java.nio.ByteBuffer data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ByteString data
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(
         com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(
         byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws com.google.protobuf.InvalidProtocolBufferException
+    {
       return PARSER.parseFrom(data, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Record parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.Record parseDelimitedFrom(
         java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
+        com.google.protobuf.CodedInputStream input
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input);
     }
+
     public static AggregatedRecordProtos.Record parseFrom(
         com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry
+    )
+        throws java.io.IOException
+    {
       return com.google.protobuf.GeneratedMessageV3
           .parseWithIOException(PARSER, input, extensionRegistry);
     }
 
     @Override
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder() {
+    public Builder newBuilderForType()
+    {
+      return newBuilder();
+    }
+
+    public static Builder newBuilder()
+    {
       return DEFAULT_INSTANCE.toBuilder();
     }
-    public static Builder newBuilder(AggregatedRecordProtos.Record prototype) {
+
+    public static Builder newBuilder(AggregatedRecordProtos.Record prototype)
+    {
       return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
     }
+
     @Override
-    public Builder toBuilder() {
+    public Builder toBuilder()
+    {
       return this == DEFAULT_INSTANCE
-          ? new Builder() : new Builder().mergeFrom(this);
+             ? new Builder() : new Builder().mergeFrom(this);
     }
 
     @Override
     protected Builder newBuilderForType(
-        BuilderParent parent) {
+        BuilderParent parent
+    )
+    {
       Builder builder = new Builder(parent);
       return builder;
     }
+
     /**
      * Protobuf type {@code kinesisindexingservice.Record}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
         // @@protoc_insertion_point(builder_implements:kinesisindexingservice.Record)
-        AggregatedRecordProtos.RecordOrBuilder {
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
+        AggregatedRecordProtos.RecordOrBuilder
+    {
+      public static com.google.protobuf.Descriptors.Descriptor
+      getDescriptor()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_Record_descriptor;
       }
 
       @Override
       protected FieldAccessorTable
-          internalGetFieldAccessorTable() {
+      internalGetFieldAccessorTable()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_Record_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 AggregatedRecordProtos.Record.class, AggregatedRecordProtos.Record.Builder.class);
       }
 
       // Construct using org.apache.druid.indexing.kinesis.protobuf.AggregatedRecordProtos.Record.newBuilder()
-      private Builder() {
+      private Builder()
+      {
         maybeForceBuilderInitialization();
       }
 
       private Builder(
-          BuilderParent parent) {
+          BuilderParent parent
+      )
+      {
         super(parent);
         maybeForceBuilderInitialization();
       }
-      private void maybeForceBuilderInitialization() {
+
+      private void maybeForceBuilderInitialization()
+      {
         if (com.google.protobuf.GeneratedMessageV3
-                .alwaysUseFieldBuilders) {
+            .alwaysUseFieldBuilders) {
           getTagsFieldBuilder();
         }
       }
+
       @Override
-      public Builder clear() {
+      public Builder clear()
+      {
         super.clear();
         partitionKeyIndex_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -2477,17 +3031,20 @@ public final class AggregatedRecordProtos
 
       @Override
       public com.google.protobuf.Descriptors.Descriptor
-          getDescriptorForType() {
+      getDescriptorForType()
+      {
         return AggregatedRecordProtos.internal_static_kinesisindexingservice_Record_descriptor;
       }
 
       @Override
-      public AggregatedRecordProtos.Record getDefaultInstanceForType() {
+      public AggregatedRecordProtos.Record getDefaultInstanceForType()
+      {
         return AggregatedRecordProtos.Record.getDefaultInstance();
       }
 
       @Override
-      public AggregatedRecordProtos.Record build() {
+      public AggregatedRecordProtos.Record build()
+      {
         AggregatedRecordProtos.Record result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
@@ -2496,7 +3053,8 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public AggregatedRecordProtos.Record buildPartial() {
+      public AggregatedRecordProtos.Record buildPartial()
+      {
         AggregatedRecordProtos.Record result = new AggregatedRecordProtos.Record(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
@@ -2527,49 +3085,70 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public Builder clone() {
+      public Builder clone()
+      {
         return (Builder) super.clone();
       }
+
       @Override
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
+          Object value
+      )
+      {
         return (Builder) super.setField(field, value);
       }
+
       @Override
       public Builder clearField(
-          com.google.protobuf.Descriptors.FieldDescriptor field) {
+          com.google.protobuf.Descriptors.FieldDescriptor field
+      )
+      {
         return (Builder) super.clearField(field);
       }
+
       @Override
       public Builder clearOneof(
-          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+          com.google.protobuf.Descriptors.OneofDescriptor oneof
+      )
+      {
         return (Builder) super.clearOneof(oneof);
       }
+
       @Override
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, Object value) {
+          int index, Object value
+      )
+      {
         return (Builder) super.setRepeatedField(field, index, value);
       }
+
       @Override
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          Object value) {
+          Object value
+      )
+      {
         return (Builder) super.addRepeatedField(field, value);
       }
+
       @Override
-      public Builder mergeFrom(com.google.protobuf.Message other) {
+      public Builder mergeFrom(com.google.protobuf.Message other)
+      {
         if (other instanceof AggregatedRecordProtos.Record) {
-          return mergeFrom((AggregatedRecordProtos.Record)other);
+          return mergeFrom((AggregatedRecordProtos.Record) other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(AggregatedRecordProtos.Record other) {
-        if (other == AggregatedRecordProtos.Record.getDefaultInstance()) return this;
+      public Builder mergeFrom(AggregatedRecordProtos.Record other)
+      {
+        if (other == AggregatedRecordProtos.Record.getDefaultInstance()) {
+          return this;
+        }
         if (other.hasPartitionKeyIndex()) {
           setPartitionKeyIndex(other.getPartitionKeyIndex());
         }
@@ -2598,8 +3177,8 @@ public final class AggregatedRecordProtos
               tags_ = other.tags_;
               bitField0_ = (bitField0_ & ~0x00000008);
               tagsBuilder_ =
-                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                   getTagsFieldBuilder() : null;
+                  com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                  getTagsFieldBuilder() : null;
             } else {
               tagsBuilder_.addAllMessages(other.tags_);
             }
@@ -2611,7 +3190,8 @@ public final class AggregatedRecordProtos
       }
 
       @Override
-      public final boolean isInitialized() {
+      public boolean isInitialized()
+      {
         if (!hasPartitionKeyIndex()) {
           return false;
         }
@@ -2629,81 +3209,102 @@ public final class AggregatedRecordProtos
       @Override
       public Builder mergeFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry
+      )
+          throws java.io.IOException
+      {
         AggregatedRecordProtos.Record parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        }
+        catch (com.google.protobuf.InvalidProtocolBufferException e) {
           parsedMessage = (AggregatedRecordProtos.Record) e.getUnfinishedMessage();
           throw e.unwrapIOException();
-        } finally {
+        }
+        finally {
           if (parsedMessage != null) {
             mergeFrom(parsedMessage);
           }
         }
         return this;
       }
+
       private int bitField0_;
 
-      private long partitionKeyIndex_ ;
+      private long partitionKeyIndex_;
+
       /**
        * <code>required uint64 partition_key_index = 1;</code>
        */
-      public boolean hasPartitionKeyIndex() {
+      public boolean hasPartitionKeyIndex()
+      {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
+
       /**
        * <code>required uint64 partition_key_index = 1;</code>
        */
-      public long getPartitionKeyIndex() {
+      public long getPartitionKeyIndex()
+      {
         return partitionKeyIndex_;
       }
+
       /**
        * <code>required uint64 partition_key_index = 1;</code>
        */
-      public Builder setPartitionKeyIndex(long value) {
+      public Builder setPartitionKeyIndex(long value)
+      {
         bitField0_ |= 0x00000001;
         partitionKeyIndex_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>required uint64 partition_key_index = 1;</code>
        */
-      public Builder clearPartitionKeyIndex() {
+      public Builder clearPartitionKeyIndex()
+      {
         bitField0_ = (bitField0_ & ~0x00000001);
         partitionKeyIndex_ = 0L;
         onChanged();
         return this;
       }
 
-      private long explicitHashKeyIndex_ ;
+      private long explicitHashKeyIndex_;
+
       /**
        * <code>optional uint64 explicit_hash_key_index = 2;</code>
        */
-      public boolean hasExplicitHashKeyIndex() {
+      public boolean hasExplicitHashKeyIndex()
+      {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
+
       /**
        * <code>optional uint64 explicit_hash_key_index = 2;</code>
        */
-      public long getExplicitHashKeyIndex() {
+      public long getExplicitHashKeyIndex()
+      {
         return explicitHashKeyIndex_;
       }
+
       /**
        * <code>optional uint64 explicit_hash_key_index = 2;</code>
        */
-      public Builder setExplicitHashKeyIndex(long value) {
+      public Builder setExplicitHashKeyIndex(long value)
+      {
         bitField0_ |= 0x00000002;
         explicitHashKeyIndex_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>optional uint64 explicit_hash_key_index = 2;</code>
        */
-      public Builder clearExplicitHashKeyIndex() {
+      public Builder clearExplicitHashKeyIndex()
+      {
         bitField0_ = (bitField0_ & ~0x00000002);
         explicitHashKeyIndex_ = 0L;
         onChanged();
@@ -2711,34 +3312,42 @@ public final class AggregatedRecordProtos
       }
 
       private com.google.protobuf.ByteString data_ = com.google.protobuf.ByteString.EMPTY;
+
       /**
        * <code>required bytes data = 3;</code>
        */
-      public boolean hasData() {
+      public boolean hasData()
+      {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
+
       /**
        * <code>required bytes data = 3;</code>
        */
-      public com.google.protobuf.ByteString getData() {
+      public com.google.protobuf.ByteString getData()
+      {
         return data_;
       }
+
       /**
        * <code>required bytes data = 3;</code>
        */
-      public Builder setData(com.google.protobuf.ByteString value) {
+      public Builder setData(com.google.protobuf.ByteString value)
+      {
         if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000004;
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
         data_ = value;
         onChanged();
         return this;
       }
+
       /**
        * <code>required bytes data = 3;</code>
        */
-      public Builder clearData() {
+      public Builder clearData()
+      {
         bitField0_ = (bitField0_ & ~0x00000004);
         data_ = getDefaultInstance().getData();
         onChanged();
@@ -2746,12 +3355,14 @@ public final class AggregatedRecordProtos
       }
 
       private java.util.List<Tag> tags_ =
-        java.util.Collections.emptyList();
-      private void ensureTagsIsMutable() {
+          java.util.Collections.emptyList();
+
+      private void ensureTagsIsMutable()
+      {
         if (!((bitField0_ & 0x00000008) == 0x00000008)) {
           tags_ = new java.util.ArrayList<Tag>(tags_);
           bitField0_ |= 0x00000008;
-         }
+        }
       }
 
       private com.google.protobuf.RepeatedFieldBuilderV3<
@@ -2760,38 +3371,46 @@ public final class AggregatedRecordProtos
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
-      public java.util.List<Tag> getTagsList() {
+      public java.util.List<Tag> getTagsList()
+      {
         if (tagsBuilder_ == null) {
           return java.util.Collections.unmodifiableList(tags_);
         } else {
           return tagsBuilder_.getMessageList();
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
-      public int getTagsCount() {
+      public int getTagsCount()
+      {
         if (tagsBuilder_ == null) {
           return tags_.size();
         } else {
           return tagsBuilder_.getCount();
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
-      public AggregatedRecordProtos.Tag getTags(int index) {
+      public AggregatedRecordProtos.Tag getTags(int index)
+      {
         if (tagsBuilder_ == null) {
           return tags_.get(index);
         } else {
           return tagsBuilder_.getMessage(index);
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public Builder setTags(
-          int index, AggregatedRecordProtos.Tag value) {
+          int index, AggregatedRecordProtos.Tag value
+      )
+      {
         if (tagsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -2804,11 +3423,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public Builder setTags(
-          int index, AggregatedRecordProtos.Tag.Builder builderForValue) {
+          int index, AggregatedRecordProtos.Tag.Builder builderForValue
+      )
+      {
         if (tagsBuilder_ == null) {
           ensureTagsIsMutable();
           tags_.set(index, builderForValue.build());
@@ -2818,10 +3440,12 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
-      public Builder addTags(AggregatedRecordProtos.Tag value) {
+      public Builder addTags(AggregatedRecordProtos.Tag value)
+      {
         if (tagsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -2834,11 +3458,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public Builder addTags(
-          int index, AggregatedRecordProtos.Tag value) {
+          int index, AggregatedRecordProtos.Tag value
+      )
+      {
         if (tagsBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -2851,11 +3478,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public Builder addTags(
-          AggregatedRecordProtos.Tag.Builder builderForValue) {
+          AggregatedRecordProtos.Tag.Builder builderForValue
+      )
+      {
         if (tagsBuilder_ == null) {
           ensureTagsIsMutable();
           tags_.add(builderForValue.build());
@@ -2865,11 +3495,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public Builder addTags(
-          int index, AggregatedRecordProtos.Tag.Builder builderForValue) {
+          int index, AggregatedRecordProtos.Tag.Builder builderForValue
+      )
+      {
         if (tagsBuilder_ == null) {
           ensureTagsIsMutable();
           tags_.add(index, builderForValue.build());
@@ -2879,11 +3512,14 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public Builder addAllTags(
-          Iterable<? extends Tag> values) {
+          Iterable<? extends Tag> values
+      )
+      {
         if (tagsBuilder_ == null) {
           ensureTagsIsMutable();
           com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -2894,10 +3530,12 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
-      public Builder clearTags() {
+      public Builder clearTags()
+      {
         if (tagsBuilder_ == null) {
           tags_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000008);
@@ -2907,10 +3545,12 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
-      public Builder removeTags(int index) {
+      public Builder removeTags(int index)
+      {
         if (tagsBuilder_ == null) {
           ensureTagsIsMutable();
           tags_.remove(index);
@@ -2920,79 +3560,103 @@ public final class AggregatedRecordProtos
         }
         return this;
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public AggregatedRecordProtos.Tag.Builder getTagsBuilder(
-          int index) {
+          int index
+      )
+      {
         return getTagsFieldBuilder().getBuilder(index);
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public AggregatedRecordProtos.TagOrBuilder getTagsOrBuilder(
-          int index) {
+          int index
+      )
+      {
         if (tagsBuilder_ == null) {
-          return tags_.get(index);  } else {
+          return tags_.get(index);
+        } else {
           return tagsBuilder_.getMessageOrBuilder(index);
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public java.util.List<? extends TagOrBuilder>
-           getTagsOrBuilderList() {
+      getTagsOrBuilderList()
+      {
         if (tagsBuilder_ != null) {
           return tagsBuilder_.getMessageOrBuilderList();
         } else {
           return java.util.Collections.unmodifiableList(tags_);
         }
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
-      public AggregatedRecordProtos.Tag.Builder addTagsBuilder() {
+      public AggregatedRecordProtos.Tag.Builder addTagsBuilder()
+      {
         return getTagsFieldBuilder().addBuilder(
             AggregatedRecordProtos.Tag.getDefaultInstance());
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public AggregatedRecordProtos.Tag.Builder addTagsBuilder(
-          int index) {
+          int index
+      )
+      {
         return getTagsFieldBuilder().addBuilder(
             index, AggregatedRecordProtos.Tag.getDefaultInstance());
       }
+
       /**
        * <code>repeated .kinesisindexingservice.Tag tags = 4;</code>
        */
       public java.util.List<Tag.Builder>
-           getTagsBuilderList() {
+      getTagsBuilderList()
+      {
         return getTagsFieldBuilder().getBuilderList();
       }
+
       private com.google.protobuf.RepeatedFieldBuilderV3<
           Tag, Tag.Builder, TagOrBuilder>
-          getTagsFieldBuilder() {
+      getTagsFieldBuilder()
+      {
         if (tagsBuilder_ == null) {
           tagsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
               Tag, Tag.Builder, TagOrBuilder>(
-                  tags_,
-                  ((bitField0_ & 0x00000008) == 0x00000008),
-                  getParentForChildren(),
-                  isClean());
+              tags_,
+              ((bitField0_ & 0x00000008) == 0x00000008),
+              getParentForChildren(),
+              isClean()
+          );
           tags_ = null;
         }
         return tagsBuilder_;
       }
+
       @Override
-      public final Builder setUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
+      public Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields
+      )
+      {
         return super.setUnknownFields(unknownFields);
       }
 
       @Override
-      public final Builder mergeUnknownFields(
-          final com.google.protobuf.UnknownFieldSet unknownFields) {
+      public Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields
+      )
+      {
         return super.mergeUnknownFields(unknownFields);
       }
 
@@ -3002,107 +3666,126 @@ public final class AggregatedRecordProtos
 
     // @@protoc_insertion_point(class_scope:kinesisindexingservice.Record)
     private static final AggregatedRecordProtos.Record DEFAULT_INSTANCE;
+
     static {
       DEFAULT_INSTANCE = new AggregatedRecordProtos.Record();
     }
 
-    public static AggregatedRecordProtos.Record getDefaultInstance() {
+    public static AggregatedRecordProtos.Record getDefaultInstance()
+    {
       return DEFAULT_INSTANCE;
     }
 
-    @Deprecated public static final com.google.protobuf.Parser<Record>
-        PARSER = new com.google.protobuf.AbstractParser<Record>() {
+    @Deprecated
+    public static final com.google.protobuf.Parser<Record>
+        PARSER = new com.google.protobuf.AbstractParser<Record>()
+    {
       @Override
       public Record parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry
+      )
+          throws com.google.protobuf.InvalidProtocolBufferException
+      {
         return new Record(input, extensionRegistry);
       }
     };
 
-    public static com.google.protobuf.Parser<Record> parser() {
+    public static com.google.protobuf.Parser<Record> parser()
+    {
       return PARSER;
     }
 
     @Override
-    public com.google.protobuf.Parser<Record> getParserForType() {
+    public com.google.protobuf.Parser<Record> getParserForType()
+    {
       return PARSER;
     }
 
     @Override
-    public AggregatedRecordProtos.Record getDefaultInstanceForType() {
+    public AggregatedRecordProtos.Record getDefaultInstanceForType()
+    {
       return DEFAULT_INSTANCE;
     }
 
   }
 
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_kinesisindexingservice_AggregatedRecord_descriptor;
+      internal_static_kinesisindexingservice_AggregatedRecord_descriptor;
   private static final
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_kinesisindexingservice_AggregatedRecord_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_kinesisindexingservice_Tag_descriptor;
+      internal_static_kinesisindexingservice_Tag_descriptor;
   private static final
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_kinesisindexingservice_Tag_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_kinesisindexingservice_Record_descriptor;
+      internal_static_kinesisindexingservice_Record_descriptor;
   private static final
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+  com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_kinesisindexingservice_Record_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
-      getDescriptor() {
+  getDescriptor()
+  {
     return descriptor;
   }
-  private static  com.google.protobuf.Descriptors.FileDescriptor
+
+  private static com.google.protobuf.Descriptors.FileDescriptor
       descriptor;
+
   static {
     String[] descriptorData = {
-      "\n\026aggregatedrecord.proto\022\026kinesisindexin" +
-      "gservice\"\201\001\n\020AggregatedRecord\022\033\n\023partiti" +
-      "on_key_table\030\001 \003(\t\022\037\n\027explicit_hash_key_" +
-      "table\030\002 \003(\t\022/\n\007records\030\003 \003(\0132\036.kinesisin" +
-      "dexingservice.Record\"!\n\003Tag\022\013\n\003key\030\001 \002(\t" +
-      "\022\r\n\005value\030\002 \001(\t\"\177\n\006Record\022\033\n\023partition_k" +
-      "ey_index\030\001 \002(\004\022\037\n\027explicit_hash_key_inde" +
-      "x\030\002 \001(\004\022\014\n\004data\030\003 \002(\014\022)\n\004tags\030\004 \003(\0132\033.ki" +
-      "nesisindexingservice.TagBD\n*org.apache.d" +
-      "ruid.indexing.kinesis.protobufB\026Aggregat" +
-      "edRecordProtos"
+        "\n\026aggregatedrecord.proto\022\026kinesisindexin" +
+        "gservice\"\201\001\n\020AggregatedRecord\022\033\n\023partiti" +
+        "on_key_table\030\001 \003(\t\022\037\n\027explicit_hash_key_" +
+        "table\030\002 \003(\t\022/\n\007records\030\003 \003(\0132\036.kinesisin" +
+        "dexingservice.Record\"!\n\003Tag\022\013\n\003key\030\001 \002(\t" +
+        "\022\r\n\005value\030\002 \001(\t\"\177\n\006Record\022\033\n\023partition_k" +
+        "ey_index\030\001 \002(\004\022\037\n\027explicit_hash_key_inde" +
+        "x\030\002 \001(\004\022\014\n\004data\030\003 \002(\014\022)\n\004tags\030\004 \003(\0132\033.ki" +
+        "nesisindexingservice.TagBD\n*org.apache.d" +
+        "ruid.indexing.kinesis.protobufB\026Aggregat" +
+        "edRecordProtos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
-        new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
+        new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner()
+        {
           public com.google.protobuf.ExtensionRegistry assignDescriptors(
-              com.google.protobuf.Descriptors.FileDescriptor root) {
+              com.google.protobuf.Descriptors.FileDescriptor root
+          )
+          {
             descriptor = root;
             return null;
           }
         };
     com.google.protobuf.Descriptors.FileDescriptor
-      .internalBuildGeneratedFileFrom(descriptorData,
-        new com.google.protobuf.Descriptors.FileDescriptor[] {
-        }, assigner);
+        .internalBuildGeneratedFileFrom(descriptorData,
+                                        new com.google.protobuf.Descriptors.FileDescriptor[]{
+                                        }, assigner
+        );
     internal_static_kinesisindexingservice_AggregatedRecord_descriptor =
-      getDescriptor().getMessageTypes().get(0);
+        getDescriptor().getMessageTypes().get(0);
     internal_static_kinesisindexingservice_AggregatedRecord_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_kinesisindexingservice_AggregatedRecord_descriptor,
-        new String[] { "PartitionKeyTable", "ExplicitHashKeyTable", "Records", });
+        new String[]{"PartitionKeyTable", "ExplicitHashKeyTable", "Records"}
+    );
     internal_static_kinesisindexingservice_Tag_descriptor =
-      getDescriptor().getMessageTypes().get(1);
+        getDescriptor().getMessageTypes().get(1);
     internal_static_kinesisindexingservice_Tag_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_kinesisindexingservice_Tag_descriptor,
-        new String[] { "Key", "Value", });
+        new String[]{"Key", "Value"}
+    );
     internal_static_kinesisindexingservice_Record_descriptor =
-      getDescriptor().getMessageTypes().get(2);
+        getDescriptor().getMessageTypes().get(2);
     internal_static_kinesisindexingservice_Record_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_kinesisindexingservice_Record_descriptor,
-        new String[] { "PartitionKeyIndex", "ExplicitHashKeyIndex", "Data", "Tags", });
+        new String[]{"PartitionKeyIndex", "ExplicitHashKeyIndex", "Data", "Tags"}
+    );
   }
 
   // @@protoc_insertion_point(outer_class_scope)

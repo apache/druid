@@ -606,22 +606,22 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     List<AggregatedRecordProtos.Record> userRecords = new ArrayList<AggregatedRecordProtos.Record>();
     for (int i = 0; i < 100; i++) {
       userRecords.add(AggregatedRecordProtos.Record.newBuilder()
-          .setPartitionKeyIndex(i % 2)
-          .setData(ByteString.copyFromUtf8("This is record " + i))
-          .addTags(AggregatedRecordProtos.Tag.newBuilder()
-              .setKey("tagKey1")
-              .setValue("tagValue1")
-              .build())
-      .build());
+                                                   .setPartitionKeyIndex(i % 2)
+                                                   .setData(ByteString.copyFromUtf8("This is record " + i))
+                                                   .addTags(AggregatedRecordProtos.Tag.newBuilder()
+                                                                                      .setKey("tagKey1")
+                                                                                      .setValue("tagValue1")
+                                                                                      .build())
+                                                   .build());
     }
     AggregatedRecordProtos.AggregatedRecord aggregatedRecord =
         AggregatedRecordProtos.AggregatedRecord.newBuilder()
-            .addPartitionKeyTable("partitionKey1")
-            .addPartitionKeyTable("partitionKey2")
-            .addExplicitHashKeyTable("explicitHashKey1")
-            .addExplicitHashKeyTable("explicitHashKey2")
-            .addAllRecords(userRecords)
-            .build();
+                                               .addPartitionKeyTable("partitionKey1")
+                                               .addPartitionKeyTable("partitionKey2")
+                                               .addExplicitHashKeyTable("explicitHashKey1")
+                                               .addExplicitHashKeyTable("explicitHashKey2")
+                                               .addAllRecords(userRecords)
+                                               .build();
     byte[] aggregatedRecordBytes = aggregatedRecord.toByteArray();
     //16 bytes for checksum and 4 bytes for magic number
     ByteBuffer buff = ByteBuffer.allocate(aggregatedRecordBytes.length + 16 + 4);
@@ -649,8 +649,10 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     List<byte[]> serializedRecords = recordSupplier.deaggregateKinesisRecord(record);
     Assert.assertEquals(100, serializedRecords.size());
     for (int i = 0; i < 100; i++) {
-      Assert.assertEquals(userRecords.get(i).getData().toStringUtf8(),
-          new String(serializedRecords.get(i), StandardCharsets.UTF_8));
+      Assert.assertEquals(
+          userRecords.get(i).getData().toStringUtf8(),
+          new String(serializedRecords.get(i), StandardCharsets.UTF_8)
+      );
     }
   }
 
@@ -687,11 +689,16 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
       Assert.assertNotNull(pojo.myInt);
     }
   }
+
   @Test
   public void testDeaggregationOfNonAggregatedMessage() throws IOException
   {
-    InputStreamReader reader = new InputStreamReader(new FileInputStream
-        ("src/test/resources/base64nonaggregatedkinesismessage.txt"), Charsets.UTF_8);
+    InputStreamReader reader = new InputStreamReader(
+        new FileInputStream(
+            "src/test/resources/base64nonaggregatedkinesismessage.txt"
+        ),
+        Charsets.UTF_8
+    );
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();
     Assert.assertNotNull(base64EncodedMessage);
@@ -722,7 +729,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   // Verifies that the calculated length of the protobuf message won't be negative (and won't throw
   // a NegativeArrayLengthException).
-  public void testDeaggregationOfSmallNonAggregatedMessage () throws UnsupportedEncodingException, InvalidProtocolBufferException
+  public void testDeaggregationOfSmallNonAggregatedMessage()
+      throws UnsupportedEncodingException, InvalidProtocolBufferException
   {
     //Length of this message is less than (length of checksum + length of magic numbers)
     String message = "a";
