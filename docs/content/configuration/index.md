@@ -543,7 +543,7 @@ This deep storage is used to interface with Amazon's S3. Note that the `druid-s3
 |`druid.s3.secretKey`|The secret key to use to access S3.|none|
 |`druid.storage.bucket`|S3 bucket name.|none|
 |`druid.storage.baseKey`|S3 object key prefix for storage.|none|
-|`druid.storage.disableAcl`|Boolean flag for ACL.|false|
+|`druid.storage.disableAcl`|Boolean flag for ACL. If ACL is _enabled_, the full control would be granted to the bucket owner.|false|
 |`druid.storage.archiveBucket`|S3 bucket name for archiving when running the *archive task*.|none|
 |`druid.storage.archiveBaseKey`|S3 object key prefix for archiving.|none|
 |`druid.storage.useS3aSchema`|If true, use the "s3a" filesystem when using Hadoop-based ingestion. If false, the "s3n" filesystem will be used. Only affects Hadoop-based ingestion.|false|
