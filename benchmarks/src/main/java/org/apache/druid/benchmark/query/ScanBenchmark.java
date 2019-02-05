@@ -173,7 +173,8 @@ public class ScanBenchmark
   /* Just get everything */
   private static Druids.ScanQueryBuilder basicA(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec =
+        new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     return Druids.newScanQueryBuilder()
                  .dataSource("blah")
@@ -182,7 +183,8 @@ public class ScanBenchmark
 
   private static Druids.ScanQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec =
+        new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     List<String> dimHyperUniqueFilterVals = new ArrayList<>();
     int numResults = (int) (100000 * 0.1);
@@ -200,7 +202,8 @@ public class ScanBenchmark
 
   private static Druids.ScanQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec =
+        new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     final String dimName = "dimUniform";
     return Druids.newScanQueryBuilder()
