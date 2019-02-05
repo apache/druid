@@ -176,30 +176,24 @@ public class ScanBenchmark
   /* Just get everything */
   private static Druids.ScanQueryBuilder basicA(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec =
+        new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     return Druids.newScanQueryBuilder()
                  .dataSource("blah")
                  .intervals(intervalSpec)
                  .timeOrder(timeOrdering);
-
   }
 
   private static Druids.ScanQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
-
-    final List<String> dimUniformFilterVals = new ArrayList<>();
-    int resultNum = (int) (100000 * 0.1);
-    int step = 100000 / resultNum;
-    for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
-      dimUniformFilterVals.add(String.valueOf(i));
-    }
+    final QuerySegmentSpec intervalSpec =
+        new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     List<String> dimHyperUniqueFilterVals = new ArrayList<>();
-    resultNum = (int) (100000 * 0.1);
-    step = 100000 / resultNum;
-    for (int i = 0; i < 100001 && dimHyperUniqueFilterVals.size() < resultNum; i += step) {
+    int numResults = (int) (100000 * 0.1);
+    int step = 100000 / numResults;
+    for (int i = 0; i < 100001 && dimHyperUniqueFilterVals.size() < numResults; i += step) {
       dimHyperUniqueFilterVals.add(String.valueOf(i));
     }
 
@@ -213,14 +207,8 @@ public class ScanBenchmark
 
   private static Druids.ScanQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
-
-    final List<String> dimUniformFilterVals = new ArrayList<>();
-    final int resultNum = (int) (100000 * 0.1);
-    final int step = 100000 / resultNum;
-    for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
-      dimUniformFilterVals.add(String.valueOf(i));
-    }
+    final QuerySegmentSpec intervalSpec =
+        new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
 
     final String dimName = "dimUniform";
     return Druids.newScanQueryBuilder()
@@ -235,15 +223,7 @@ public class ScanBenchmark
         Collections.singletonList(basicSchema.getDataInterval())
     );
 
-    final List<String> dimUniformFilterVals = new ArrayList<>();
-    final int resultNum = (int) (100000 * 0.1);
-    final int step = 100000 / resultNum;
-    for (int i = 1; i < 100001 && dimUniformFilterVals.size() < resultNum; i += step) {
-      dimUniformFilterVals.add(String.valueOf(i));
-    }
-
     final String dimName = "dimUniform";
-
 
     return Druids.newScanQueryBuilder()
         .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))

@@ -95,14 +95,14 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         if (scanQuery.getLimit() == Long.MAX_VALUE) {
           return runner.run(queryPlusWithNonNullLegacy, responseContext);
         }
-        return new BaseSequence<>(scanQueryLimitRowIteratorMaker);
+        return new BaseSequence<ScanResultValue, ScanQueryLimitRowIterator>(scanQueryLimitRowIteratorMaker);
       } else if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_ASCENDING) ||
                  scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_DESCENDING)) {
         Comparator priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
 
         // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
         // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-        PriorityQueue q = new PriorityQueue<>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
+        PriorityQueue q = new PriorityQueue<ScanResultValue>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
         Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
 
         while (scanResultIterator.hasNext()) {
