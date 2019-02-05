@@ -31,7 +31,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.13.0-incubating-SNAPSHOT</version>
+    <version>0.14.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
