@@ -85,6 +85,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -107,8 +108,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final PortFinder portFinder;
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
-  // Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting.
-  private final Map<String, ForkingTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
+  /** Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting. */
+  private final ConcurrentMap<String, ForkingTaskRunnerWorkItem> tasks = new ConcurrentHashMap<>();
 
   private volatile boolean stopping = false;
 

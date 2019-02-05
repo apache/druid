@@ -49,7 +49,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   public static final Comparator<DoublesSketch> COMPARATOR =
       Comparator.nullsFirst(Comparator.comparingLong(DoublesSketch::getN));
 
-  private static final int DEFAULT_K = 128;
+  public static final int DEFAULT_K = 128;
 
   // Used for sketch size estimation.
   private static final long MAX_STREAM_LENGTH = 1_000_000_000;

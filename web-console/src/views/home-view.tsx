@@ -21,7 +21,7 @@ import * as React from 'react';
 import * as classNames from 'classnames';
 import { H5, Card, Icon } from "@blueprintjs/core";
 import { IconName, IconNames } from "@blueprintjs/icons";
-import { QueryManager, pluralIfNeeded, queryDruidSql } from '../utils';
+import { QueryManager, pluralIfNeeded, queryDruidSql, getHeadProp } from '../utils';
 import './home-view.scss';
 
 export interface CardOptions {
@@ -147,7 +147,7 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
     this.segmentQueryManager = new QueryManager({
       processQuery: async (query) => {
         const segments = await queryDruidSql({ query });
-        return segments[0].count;
+        return getHeadProp(segments, 'count') || 0;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -211,7 +211,7 @@ GROUP BY 1`);
     this.dataServerQueryManager = new QueryManager({
       processQuery: async (query) => {
         const dataServerCounts = await queryDruidSql({ query });
-        return dataServerCounts[0].count;
+        return getHeadProp(dataServerCounts, 'count') || 0;
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({

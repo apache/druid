@@ -779,7 +779,9 @@ A sample Coordinator dynamic config JSON object is shown below:
   "replicantLifetime": 15,
   "replicationThrottleLimit": 10,
   "emitBalancingStats": false,
-  "killDataSourceWhitelist": ["wikipedia", "testDatasource"]
+  "killDataSourceWhitelist": ["wikipedia", "testDatasource"],
+  "historicalNodesInMaintenance": ["localhost:8182", "localhost:8282"],
+  "nodesInMaintenancePriority": 7
 }
 ```
 
@@ -799,6 +801,8 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`killAllDataSources`|Send kill tasks for ALL dataSources if property `druid.coordinator.kill.on` is true. If this is set to true then `killDataSourceWhitelist` must not be specified or be empty list.|false|
 |`killPendingSegmentsSkipList`|List of dataSources for which pendingSegments are _NOT_ cleaned up if property `druid.coordinator.kill.pendingSegments.on` is true. This can be a list of comma-separated dataSources or a JSON array.|none|
 |`maxSegmentsInNodeLoadingQueue`|The maximum number of segments that could be queued for loading to any given server. This parameter could be used to speed up segments loading process, especially if there are "slow" nodes in the cluster (with low loading speed) or if too much segments scheduled to be replicated to some particular node (faster loading could be preferred to better segments distribution). Desired value depends on segments loading speed, acceptable replication time and number of nodes. Value 1000 could be a start point for a rather big cluster. Default value is 0 (loading queue is unbounded) |0|
+|`historicalNodesInMaintenance`| List of Historical nodes in maintenance mode. Coordinator doesn't assign new segments on those nodes and moves segments from the nodes according to a specified priority.|none|
+|`nodesInMaintenancePriority`| Priority of segments from servers in maintenance. Coordinator takes ceil(maxSegmentsToMove * (priority / 10)) from servers in maitenance during balancing phase, i.e.:<br>0 - no segments from servers in maintenance will be processed during balancing<br>5 - 50% segments from servers in maintenance<br>10 - 100% segments from servers in maintenance<br>By leveraging the priority an operator can prevent general nodes from overload or decrease maitenance time instead.|7|
 
 To view the audit history of Coordinator dynamic config issue a GET request to the URL -
 

@@ -81,7 +81,7 @@ public class FixedBucketsHistogramTopNQueryTest
                     defaultPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -91,7 +91,7 @@ public class FixedBucketsHistogramTopNQueryTest
                     customPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )

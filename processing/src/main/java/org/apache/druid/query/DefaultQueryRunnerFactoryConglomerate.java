@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.google.inject.Inject;
 
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
@@ -30,11 +31,11 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
 
   @Inject
-  public DefaultQueryRunnerFactoryConglomerate(
-      Map<Class<? extends Query>, QueryRunnerFactory> factories
-  )
+  public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
-    this.factories = factories;
+    // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
+    // Class doesn't override Object.equals().
+    this.factories = new IdentityHashMap<>(factories);
   }
 
   @Override

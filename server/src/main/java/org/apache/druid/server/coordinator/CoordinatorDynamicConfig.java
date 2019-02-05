@@ -55,10 +55,12 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
   private final boolean killAllDataSources;
-  private final Set<String> killDataSourceWhitelist;
+  private final Set<String> killableDataSources;
+  private final Set<String> historicalNodesInMaintenance;
+  private final int nodesInMaintenancePriority;
 
   // The pending segments of the dataSources in this list are not killed.
-  private final Set<String> killPendingSegmentsSkipList;
+  private final Set<String> protectedPendingSegmentDatasources;
 
   /**
    * The maximum number of segments that could be queued for loading to any given server.
@@ -82,10 +84,12 @@ public class CoordinatorDynamicConfig
       // Type is Object here so that we can support both string and list as
       // coordinator console can not send array of strings in the update request.
       // See https://github.com/apache/incubator-druid/issues/3055
-      @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
+      @JsonProperty("killDataSourceWhitelist") Object killableDataSources,
       @JsonProperty("killAllDataSources") boolean killAllDataSources,
-      @JsonProperty("killPendingSegmentsSkipList") Object killPendingSegmentsSkipList,
-      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue
+      @JsonProperty("killPendingSegmentsSkipList") Object protectedPendingSegmentDatasources,
+      @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
+      @JsonProperty("historicalNodesInMaintenance") Object historicalNodesInMaintenance,
+      @JsonProperty("nodesInMaintenancePriority") int nodesInMaintenancePriority
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -97,11 +101,17 @@ public class CoordinatorDynamicConfig
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.emitBalancingStats = emitBalancingStats;
     this.killAllDataSources = killAllDataSources;
-    this.killDataSourceWhitelist = parseJsonStringOrArray(killDataSourceWhitelist);
-    this.killPendingSegmentsSkipList = parseJsonStringOrArray(killPendingSegmentsSkipList);
+    this.killableDataSources = parseJsonStringOrArray(killableDataSources);
+    this.protectedPendingSegmentDatasources = parseJsonStringOrArray(protectedPendingSegmentDatasources);
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
+    this.historicalNodesInMaintenance = parseJsonStringOrArray(historicalNodesInMaintenance);
+    Preconditions.checkArgument(
+        nodesInMaintenancePriority >= 0 && nodesInMaintenancePriority <= 10,
+        "nodesInMaintenancePriority should be in range [0, 10]"
+    );
+    this.nodesInMaintenancePriority = nodesInMaintenancePriority;
 
-    if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
+    if (this.killAllDataSources && !this.killableDataSources.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
     }
   }
@@ -188,10 +198,14 @@ public class CoordinatorDynamicConfig
     return balancerComputeThreads;
   }
 
-  @JsonProperty
-  public Set<String> getKillDataSourceWhitelist()
+  /**
+   * List of dataSources for which kill tasks are sent in
+   * {@link org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller}.
+   */
+  @JsonProperty("killDataSourceWhitelist")
+  public Set<String> getKillableDataSources()
   {
-    return killDataSourceWhitelist;
+    return killableDataSources;
   }
 
   @JsonProperty
@@ -200,16 +214,49 @@ public class CoordinatorDynamicConfig
     return killAllDataSources;
   }
 
+  /**
+   * List of dataSources for which pendingSegments are NOT cleaned up
+   * in {@link DruidCoordinatorCleanupPendingSegments}.
+   */
   @JsonProperty
-  public Set<String> getKillPendingSegmentsSkipList()
+  public Set<String> getProtectedPendingSegmentDatasources()
   {
-    return killPendingSegmentsSkipList;
+    return protectedPendingSegmentDatasources;
   }
 
   @JsonProperty
   public int getMaxSegmentsInNodeLoadingQueue()
   {
     return maxSegmentsInNodeLoadingQueue;
+  }
+
+  /**
+   * Historical nodes list in maintenance mode. Coordinator doesn't assign new segments on those nodes and moves
+   * segments from those nodes according to a specified priority.
+   *
+   * @return list of host:port entries
+   */
+  @JsonProperty
+  public Set<String> getHistoricalNodesInMaintenance()
+  {
+    return historicalNodesInMaintenance;
+  }
+
+  /**
+   * Priority of segments from servers in maintenance. Coordinator takes ceil(maxSegmentsToMove * (priority / 10))
+   * from servers in maitenance during balancing phase, i.e.:
+   * 0 - no segments from servers in maintenance will be processed during balancing
+   * 5 - 50% segments from servers in maintenance
+   * 10 - 100% segments from servers in maintenance
+   * By leveraging the priority an operator can prevent general nodes from overload or decrease maitenance time
+   * instead.
+   *
+   * @return number in range [0, 10]
+   */
+  @JsonProperty
+  public int getNodesInMaintenancePriority()
+  {
+    return nodesInMaintenancePriority;
   }
 
   @Override
@@ -224,10 +271,12 @@ public class CoordinatorDynamicConfig
            ", replicationThrottleLimit=" + replicationThrottleLimit +
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", emitBalancingStats=" + emitBalancingStats +
-           ", killDataSourceWhitelist=" + killDataSourceWhitelist +
            ", killAllDataSources=" + killAllDataSources +
-           ", killPendingSegmentsSkipList=" + killPendingSegmentsSkipList +
+           ", killDataSourceWhitelist=" + killableDataSources +
+           ", protectedPendingSegmentDatasources=" + protectedPendingSegmentDatasources +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
+           ", historicalNodesInMaintenance=" + historicalNodesInMaintenance +
+           ", nodesInMaintenancePriority=" + nodesInMaintenancePriority +
            '}';
   }
 
@@ -273,10 +322,16 @@ public class CoordinatorDynamicConfig
     if (maxSegmentsInNodeLoadingQueue != that.maxSegmentsInNodeLoadingQueue) {
       return false;
     }
-    if (!Objects.equals(killDataSourceWhitelist, that.killDataSourceWhitelist)) {
+    if (!Objects.equals(killableDataSources, that.killableDataSources)) {
       return false;
     }
-    return Objects.equals(killPendingSegmentsSkipList, that.killPendingSegmentsSkipList);
+    if (!Objects.equals(protectedPendingSegmentDatasources, that.protectedPendingSegmentDatasources)) {
+      return false;
+    }
+    if (!Objects.equals(historicalNodesInMaintenance, that.historicalNodesInMaintenance)) {
+      return false;
+    }
+    return nodesInMaintenancePriority == that.nodesInMaintenancePriority;
   }
 
   @Override
@@ -293,8 +348,10 @@ public class CoordinatorDynamicConfig
         emitBalancingStats,
         killAllDataSources,
         maxSegmentsInNodeLoadingQueue,
-        killDataSourceWhitelist,
-        killPendingSegmentsSkipList
+        killableDataSources,
+        protectedPendingSegmentDatasources,
+        historicalNodesInMaintenance,
+        nodesInMaintenancePriority
     );
   }
 
@@ -315,6 +372,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
+    private static final int DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY = 7;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
@@ -324,10 +382,12 @@ public class CoordinatorDynamicConfig
     private Integer replicationThrottleLimit;
     private Boolean emitBalancingStats;
     private Integer balancerComputeThreads;
-    private Object killDataSourceWhitelist;
+    private Object killableDataSources;
     private Boolean killAllDataSources;
     private Object killPendingSegmentsSkipList;
     private Integer maxSegmentsInNodeLoadingQueue;
+    private Object maintenanceList;
+    private Integer maintenanceModeSegmentsPriority;
 
     public Builder()
     {
@@ -343,10 +403,12 @@ public class CoordinatorDynamicConfig
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
         @JsonProperty("balancerComputeThreads") @Nullable Integer balancerComputeThreads,
         @JsonProperty("emitBalancingStats") @Nullable Boolean emitBalancingStats,
-        @JsonProperty("killDataSourceWhitelist") @Nullable Object killDataSourceWhitelist,
+        @JsonProperty("killDataSourceWhitelist") @Nullable Object killableDataSources,
         @JsonProperty("killAllDataSources") @Nullable Boolean killAllDataSources,
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object killPendingSegmentsSkipList,
-        @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue
+        @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
+        @JsonProperty("historicalNodesInMaintenance") @Nullable Object maintenanceList,
+        @JsonProperty("nodesInMaintenancePriority") @Nullable Integer maintenanceModeSegmentsPriority
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -358,9 +420,11 @@ public class CoordinatorDynamicConfig
       this.balancerComputeThreads = balancerComputeThreads;
       this.emitBalancingStats = emitBalancingStats;
       this.killAllDataSources = killAllDataSources;
-      this.killDataSourceWhitelist = killDataSourceWhitelist;
+      this.killableDataSources = killableDataSources;
       this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
+      this.maintenanceList = maintenanceList;
+      this.maintenanceModeSegmentsPriority = maintenanceModeSegmentsPriority;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -413,7 +477,7 @@ public class CoordinatorDynamicConfig
 
     public Builder withKillDataSourceWhitelist(Set<String> killDataSourceWhitelist)
     {
-      this.killDataSourceWhitelist = killDataSourceWhitelist;
+      this.killableDataSources = killDataSourceWhitelist;
       return this;
     }
 
@@ -429,6 +493,18 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withMaintenanceList(Set<String> list)
+    {
+      this.maintenanceList = list;
+      return this;
+    }
+
+    public Builder withMaintenanceModeSegmentsPriority(Integer priority)
+    {
+      this.maintenanceModeSegmentsPriority = priority;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -440,12 +516,16 @@ public class CoordinatorDynamicConfig
           replicationThrottleLimit == null ? DEFAULT_REPLICATION_THROTTLE_LIMIT : replicationThrottleLimit,
           balancerComputeThreads == null ? DEFAULT_BALANCER_COMPUTE_THREADS : balancerComputeThreads,
           emitBalancingStats == null ? DEFAULT_EMIT_BALANCING_STATS : emitBalancingStats,
-          killDataSourceWhitelist,
+          killableDataSources,
           killAllDataSources == null ? DEFAULT_KILL_ALL_DATA_SOURCES : killAllDataSources,
           killPendingSegmentsSkipList,
           maxSegmentsInNodeLoadingQueue == null
           ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
-          : maxSegmentsInNodeLoadingQueue
+          : maxSegmentsInNodeLoadingQueue,
+          maintenanceList,
+          maintenanceModeSegmentsPriority == null
+          ? DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY
+          : maintenanceModeSegmentsPriority
       );
     }
 
@@ -460,12 +540,18 @@ public class CoordinatorDynamicConfig
           replicationThrottleLimit == null ? defaults.getReplicationThrottleLimit() : replicationThrottleLimit,
           balancerComputeThreads == null ? defaults.getBalancerComputeThreads() : balancerComputeThreads,
           emitBalancingStats == null ? defaults.emitBalancingStats() : emitBalancingStats,
-          killDataSourceWhitelist == null ? defaults.getKillDataSourceWhitelist() : killDataSourceWhitelist,
+          killableDataSources == null ? defaults.getKillableDataSources() : killableDataSources,
           killAllDataSources == null ? defaults.isKillAllDataSources() : killAllDataSources,
-          killPendingSegmentsSkipList == null ? defaults.getKillPendingSegmentsSkipList() : killPendingSegmentsSkipList,
+          killPendingSegmentsSkipList == null
+          ? defaults.getProtectedPendingSegmentDatasources()
+          : killPendingSegmentsSkipList,
           maxSegmentsInNodeLoadingQueue == null
           ? defaults.getMaxSegmentsInNodeLoadingQueue()
-          : maxSegmentsInNodeLoadingQueue
+          : maxSegmentsInNodeLoadingQueue,
+          maintenanceList == null ? defaults.getHistoricalNodesInMaintenance() : maintenanceList,
+          maintenanceModeSegmentsPriority == null
+          ? defaults.getNodesInMaintenancePriority()
+          : maintenanceModeSegmentsPriority
       );
     }
   }
