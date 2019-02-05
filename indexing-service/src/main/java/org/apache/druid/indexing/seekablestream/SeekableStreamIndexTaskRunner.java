@@ -111,6 +111,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -145,8 +146,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
 
   private final Map<PartitionIdType, SequenceOffsetType> endOffsets;
-  private final Map<PartitionIdType, SequenceOffsetType> currOffsets = new ConcurrentHashMap<>();
-  private final Map<PartitionIdType, SequenceOffsetType> lastPersistedOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<PartitionIdType, SequenceOffsetType> currOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<PartitionIdType, SequenceOffsetType> lastPersistedOffsets = new ConcurrentHashMap<>();
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully

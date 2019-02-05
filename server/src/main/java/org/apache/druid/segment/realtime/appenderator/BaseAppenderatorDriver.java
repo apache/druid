@@ -595,6 +595,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   /**
    * Clears out all our state and also calls {@link Appenderator#clear()} on the underlying Appenderator.
    */
+  @VisibleForTesting
   public void clear() throws InterruptedException
   {
     synchronized (segments) {

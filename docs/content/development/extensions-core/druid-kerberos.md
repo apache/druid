@@ -98,14 +98,14 @@ Druid internal nodes communicate with each other using an escalated http Client.
     curl --negotiate -u:anyUser -b ~/cookies.txt -c ~/cookies.txt -X POST -H'Content-Type: application/json' <HTTP_END_POINT>
     ```
 
-    e.g to send a query from file `query.json` to druid broker use this command -
+    e.g to send a query from file `query.json` to the Druid Broker use this command -
 
     ```
     curl --negotiate -u:anyUser -b ~/cookies.txt -c ~/cookies.txt -X POST -H'Content-Type: application/json'  http://broker-host:port/druid/v2/?pretty -d @query.json
     ```
     Note: Above command will authenticate the user first time using SPNego negotiate mechanism and store the authentication cookie in file. For subsequent requests the cookie will be used for authentication.
 
-## Accessing coordinator or overlord console from web browser
+## Accessing Coordinator or Overlord console from web browser
 To access Coordinator/Overlord console from browser you will need to configure your browser for SPNego authentication as follows -
 
 1. Safari - No configurations required.

@@ -433,7 +433,7 @@ public class IncrementalIndexTest
 
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
@@ -530,7 +530,7 @@ public class IncrementalIndexTest
     final List<ListenableFuture<?>> queryFutures = Lists.newArrayListWithExpectedSize(concurrentThreads);
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(index, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );

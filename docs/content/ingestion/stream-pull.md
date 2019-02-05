@@ -336,7 +336,7 @@ data segments on each of the N nodes, which is not possible with standard Kafka 
 
 For example, let's say your topic is split across Kafka partitions 1, 2, & 3 and you have 2 real-time nodes with linear shard specs 1 & 2.
 Both of the real-time nodes are in the same consumer group. Real-time node 1 may consume data from partitions 1 & 3, and real-time node 2 may consume data from partition 2.
-Querying for your data through the broker will yield correct results.
+Querying for your data through the Broker will yield correct results.
 
 The problem arises if you want to replicate your data by creating real-time nodes 3 & 4. These new real-time nodes also
 have linear shard specs 1 & 2, and they will consume data from Kafka using a different consumer group. In this case,
