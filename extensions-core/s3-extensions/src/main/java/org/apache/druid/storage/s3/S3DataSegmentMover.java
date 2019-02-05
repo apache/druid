@@ -174,6 +174,9 @@ public class S3DataSegmentMover implements DataSegmentMover
               .withPrefix(s3Path)
               .withMaxKeys(1)
       );
+      // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
+      // it is observed that even though the getObjectSummaries returns some data
+      // keyCount is still zero.
       if (listResult.getObjectSummaries().size() == 0) {
         // should never happen
         throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
