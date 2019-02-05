@@ -40,6 +40,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 {
   private static final String bucket = "bucket";
   private static final String indexPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
+  private static final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf('/')) + "/descriptor.json";
 
   private static final DataSegment dataSegment = new DataSegment(
       "test",
@@ -65,6 +66,8 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   public void killTest() throws SegmentLoadingException, IOException
   {
     storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
+    expectLastCall();
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(descriptorPath));
     expectLastCall();
 
     replayAll();
@@ -105,6 +108,8 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
         "test"
     );
     storage.delete(EasyMock.eq(bucket), EasyMock.eq(indexPath));
+    expectLastCall().andThrow(exception).once().andVoid().once();
+    storage.delete(EasyMock.eq(bucket), EasyMock.eq(descriptorPath));
     expectLastCall().andThrow(exception).once().andVoid().once();
 
     replayAll();
