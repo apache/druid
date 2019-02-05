@@ -53,6 +53,7 @@
   <suppress checks="Regexp" id="argumentLineBreaking" files="ProtoTestEventWrapper.java" />
 
   <suppress checks="Indentation" files="AggregatedRecordProtos.java" />
+  <suppress checks=".*" files="AggregatedRecordProtos.java" />
   <suppress checks="Regexp" id="argumentLineBreaking" files="AggregatedRecordProtos.java" />
 
   <suppress checks="OneStatementPerLine" files="[\\/]target[\\/]generated-test-sources[\\/]" />
