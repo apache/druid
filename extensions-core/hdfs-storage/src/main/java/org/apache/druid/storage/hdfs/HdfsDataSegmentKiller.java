@@ -78,17 +78,31 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
         //    - hdfs://nn1/hdfs_base_directory/data_source_name/interval/version/shardNum_UUID_index.zip
         String[] zipParts = filename.split("_");
 
+        Path descriptorPath = new Path(segmentPath.getParent(), "descriptor.json");
         if (zipParts.length > 1) {
           Preconditions.checkState(zipParts.length <= 3 &&
                                    StringUtils.isNumeric(zipParts[0]) &&
                                    "index.zip".equals(zipParts[zipParts.length - 1]),
                                    "Unexpected segmentPath format [%s]", segmentPath
           );
+
+          descriptorPath = new Path(
+              segmentPath.getParent(),
+              org.apache.druid.java.util.common.StringUtils.format(
+                  "%s_%sdescriptor.json",
+                  zipParts[0],
+                  zipParts.length == 2 ? "" : zipParts[1] + "_"
+              )
+          );
         }
 
         if (!fs.delete(segmentPath, false)) {
           throw new SegmentLoadingException("Unable to kill segment, failed to delete [%s]", segmentPath.toString());
         }
+
+        // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
+        // anymore, but we still delete them if exists.
+        fs.delete(descriptorPath, false);
 
         removeEmptyParentDirectories(fs, segmentPath, zipParts.length > 1 ? 2 : 3);
       }

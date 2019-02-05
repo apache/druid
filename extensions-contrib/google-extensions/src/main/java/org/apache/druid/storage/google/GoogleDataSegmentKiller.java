@@ -52,9 +52,13 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
     Map<String, Object> loadSpec = segment.getLoadSpec();
     final String bucket = MapUtils.getString(loadSpec, "bucket");
     final String indexPath = MapUtils.getString(loadSpec, "path");
+    final String descriptorPath = indexPath.substring(0, indexPath.lastIndexOf('/')) + "/descriptor.json";
 
     try {
       deleteIfPresent(bucket, indexPath);
+      // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
+      // anymore, but we still delete them if exists.
+      deleteIfPresent(bucket, descriptorPath);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e.getMessage());
