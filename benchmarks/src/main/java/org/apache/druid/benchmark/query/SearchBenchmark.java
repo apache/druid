@@ -418,10 +418,7 @@ public class SearchBenchmark
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
-    List<SearchHit> hits = results.get(0).getValue().getValue();
-    for (SearchHit hit : hits) {
-      blackhole.consume(hit);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -436,10 +433,7 @@ public class SearchBenchmark
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
-    List<SearchHit> hits = results.get(0).getValue().getValue();
-    for (SearchHit hit : hits) {
-      blackhole.consume(hit);
-    }
+    blackhole.consume(results);
   }
 
 
@@ -472,12 +466,6 @@ public class SearchBenchmark
         new HashMap<>()
     );
     List<Result<SearchResultValue>> results = queryResult.toList();
-
-    for (Result<SearchResultValue> result : results) {
-      List<SearchHit> hits = result.getValue().getValue();
-      for (SearchHit hit : hits) {
-        blackhole.consume(hit);
-      }
-    }
+    blackhole.consume(results);
   }
 }

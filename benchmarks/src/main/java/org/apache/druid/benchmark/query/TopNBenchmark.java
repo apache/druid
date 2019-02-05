@@ -323,9 +323,7 @@ public class TopNBenchmark
     );
 
     List<Result<TopNResultValue>> results = TopNBenchmark.runQuery(factory, runner, query);
-    for (Result<TopNResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -340,9 +338,7 @@ public class TopNBenchmark
     );
 
     List<Result<TopNResultValue>> results = TopNBenchmark.runQuery(factory, runner, query);
-    for (Result<TopNResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -374,9 +370,6 @@ public class TopNBenchmark
         new HashMap<>()
     );
     List<Result<TopNResultValue>> results = queryResult.toList();
-
-    for (Result<TopNResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 }
