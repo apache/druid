@@ -24,7 +24,7 @@ title: "Router Node"
 
 # Router Node
 
-You should only ever need the router node if you have a Druid cluster well into the terabyte range. The router node can be used to route queries to different broker nodes. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.html) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data. 
+You should only ever need the Router node if you have a Druid cluster well into the terabyte range. The Router node can be used to route queries to different Broker nodes. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.html) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data. 
 
 Running
 -------
@@ -36,7 +36,7 @@ org.apache.druid.cli.Main server router
 Example Production Configuration
 --------------------------------
 
-In this example, we have two tiers in our production cluster: `hot` and `_default_tier`. Queries for the `hot` tier are routed through the `broker-hot` set of brokers, and queries for the `_default_tier` are routed through the `broker-cold` set of brokers. If any exceptions or network problems occur, queries are routed to the `broker-cold` set of brokers. In our example, we are running with a c3.2xlarge EC2 node. We assume a `common.runtime.properties` already exists.
+In this example, we have two tiers in our production cluster: `hot` and `_default_tier`. Queries for the `hot` tier are routed through the `broker-hot` set of Brokers, and queries for the `_default_tier` are routed through the `broker-cold` set of Brokers. If any exceptions or network problems occur, queries are routed to the `broker-cold` set of brokers. In our example, we are running with a c3.2xlarge EC2 node. We assume a `common.runtime.properties` already exists.
 
 JVM settings:
 
@@ -74,7 +74,7 @@ druid.router.tierToBrokerMap={"hot":"druid:broker-hot","_default_tier":"druid:br
 druid.router.http.numConnections=50
 druid.router.http.readTimeout=PT5M
 
-# Number of threads used by the router proxy http client
+# Number of threads used by the Router proxy http client
 druid.router.http.numMaxThreads=100
 
 druid.server.http.numThreads=100
@@ -83,22 +83,22 @@ druid.server.http.numThreads=100
 Runtime Configuration
 ---------------------
 
-The router module uses several of the default modules in [Configuration](../configuration/index.html) and has the following set of configurations as well:
+The Router module uses several of the default modules in [Configuration](../configuration/index.html) and has the following set of configurations as well:
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.router.defaultBrokerServiceName`|Any string.|The default broker to connect to in case service discovery fails.|druid/broker|
-|`druid.router.tierToBrokerMap`|An ordered JSON map of tiers to broker names. The priority of brokers is based on the ordering.|Queries for a certain tier of data are routed to their appropriate broker.|{"_default_tier": "<defaultBrokerServiceName>"}|
+|`druid.router.defaultBrokerServiceName`|Any string.|The default Broker to connect to in case service discovery fails.|druid/broker|
+|`druid.router.tierToBrokerMap`|An ordered JSON map of tiers to Broker names. The priority of Brokers is based on the ordering.|Queries for a certain tier of data are routed to their appropriate Broker.|{"_default_tier": "<defaultBrokerServiceName>"}|
 |`druid.router.defaultRule`|Any string.|The default rule for all datasources.|"_default"|
 |`druid.router.pollPeriod`|Any ISO8601 duration.|How often to poll for new rules.|PT1M|
 |`druid.router.strategies`|An ordered JSON array of objects.|All custom strategies to use for routing.|[{"type":"timeBoundary"},{"type":"priority"}]|
-|`druid.router.avatica.balancer.type`|String representing an AvaticaConnectionBalancer name|Class to use for balancing Avatica queries across brokers|rendezvousHash|
-|`druid.router.http.maxRequestBufferSize`|Maximum size of the buffer used to write requests when forwarding them to the broker. This should be set to atleast the maxHeaderSize allowed on the broker|8 * 1024|
+|`druid.router.avatica.balancer.type`|String representing an AvaticaConnectionBalancer name|Class to use for balancing Avatica queries across Brokers|rendezvousHash|
+|`druid.router.http.maxRequestBufferSize`|Maximum size of the buffer used to write requests when forwarding them to the Broker. This should be set to atleast the maxHeaderSize allowed on the Broker|8 * 1024|
 
 
 Router Strategies
 -----------------
-The router has a configurable list of strategies for how it selects which brokers to route queries to. The order of the strategies matter because as soon as a strategy condition is matched, a broker is selected.
+The Router has a configurable list of strategies for how it selects which Brokers to route queries to. The order of the strategies matter because as soon as a strategy condition is matched, a Broker is selected.
 
 ### timeBoundary
 
@@ -108,7 +108,7 @@ The router has a configurable list of strategies for how it selects which broker
 }
 ```
 
-Including this strategy means all timeBoundary queries are always routed to the highest priority broker.
+Including this strategy means all timeBoundary queries are always routed to the highest priority Broker.
 
 ### priority
 
@@ -120,13 +120,13 @@ Including this strategy means all timeBoundary queries are always routed to the 
 }
 ```
 
-Queries with a priority set to less than minPriority are routed to the lowest priority broker. Queries with priority set to greater than maxPriority are routed to the highest priority broker. By default, minPriority is 0 and maxPriority is 1. Using these default values, if a query with priority 0 (the default query priority is 0) is sent, the query skips the priority selection logic.
+Queries with a priority set to less than minPriority are routed to the lowest priority Broker. Queries with priority set to greater than maxPriority are routed to the highest priority Broker. By default, minPriority is 0 and maxPriority is 1. Using these default values, if a query with priority 0 (the default query priority is 0) is sent, the query skips the priority selection logic.
 
 ### JavaScript
 
 Allows defining arbitrary routing rules using a JavaScript function. The function is passed the configuration and the query to be executed, and returns the tier it should be routed to, or null for the default tier.
 
-*Example*: a function that sends queries containing more than three aggregators to the lowest priority broker.
+*Example*: a function that sends queries containing more than three aggregators to the lowest priority Broker.
 
 ```json
 {
@@ -143,15 +143,15 @@ JavaScript-based functionality is disabled by default. Please refer to the Druid
 Avatica Query Balancing
 --------------
 
-All Avatica JDBC requests with a given connection ID must be routed to the same broker, since Druid brokers do not share connection state with each other.
+All Avatica JDBC requests with a given connection ID must be routed to the same Broker, since Druid Brokers do not share connection state with each other.
 
-To accomplish this, Druid provides two built-in balancers that use rendezvous hashing and consistent hashing of a request's connection ID respectively to assign requests to brokers.
+To accomplish this, Druid provides two built-in balancers that use rendezvous hashing and consistent hashing of a request's connection ID respectively to assign requests to Brokers.
 
-Note that when multiple routers are used, all routers should have identical balancer configuration to ensure that they make the same routing decisions.
+Note that when multiple Routers are used, all Routers should have identical balancer configuration to ensure that they make the same routing decisions.
 
 ### Rendezvous Hash Balancer
 
-This balancer uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) on an Avatica request's connection ID to assign the request to a broker.
+This balancer uses [Rendezvous Hashing](https://en.wikipedia.org/wiki/Rendezvous_hashing) on an Avatica request's connection ID to assign the request to a Broker.
 
 To use this balancer, specify the following property:
 
@@ -163,7 +163,7 @@ If no `druid.router.avatica.balancer` property is set, the Router will also defa
 
 ### Consistent Hash Balancer
 
-This balancer uses [Consistent Hashing](https://en.wikipedia.org/wiki/Consistent_hashing) on an Avatica request's connection ID to assign the request to a broker.
+This balancer uses [Consistent Hashing](https://en.wikipedia.org/wiki/Consistent_hashing) on an Avatica request's connection ID to assign the request to a Broker.
 
 To use this balancer, specify the following property:
 
@@ -171,12 +171,12 @@ To use this balancer, specify the following property:
 druid.router.avatica.balancer.type=consistentHash
 ```
 
-This is a non-default implementation that is provided for experimentation purposes. The consistent hasher has longer setup times on initialization and when the set of brokers changes, but has a faster broker assignment time than the rendezous hasher when tested with 5 brokers. Benchmarks for both implementations have been provided in `ConsistentHasherBenchmark` and `RendezvousHasherBenchmark`. The consistent hasher also requires locking, while the rendezvous hasher does not.
+This is a non-default implementation that is provided for experimentation purposes. The consistent hasher has longer setup times on initialization and when the set of Brokers changes, but has a faster Broker assignment time than the rendezous hasher when tested with 5 Brokers. Benchmarks for both implementations have been provided in `ConsistentHasherBenchmark` and `RendezvousHasherBenchmark`. The consistent hasher also requires locking, while the rendezvous hasher does not.
 
 HTTP Endpoints
 --------------
 
-The router node exposes several HTTP endpoints for interactions.
+The Router node exposes several HTTP endpoints for interactions.
 
 ### GET
 
@@ -203,14 +203,14 @@ Returns the metrics of the datasource.
 Router as Management Proxy
 --------------------------
 
-The router can be configured to forward requests to the active coordinator or overlord node. This may be useful for
+The Router can be configured to forward requests to the active Coordinator or Overlord node. This may be useful for
 setting up a highly available cluster in situations where the HTTP redirect mechanism of the inactive -> active
-coordinator/overlord does not function correctly (servers are behind a load balancer, the hostname used in the redirect
+Coordinator/Overlord does not function correctly (servers are behind a load balancer, the hostname used in the redirect
 is only resolvable internally, etc.).
 
 ### Enabling the Management Proxy
 
-To enable this functionality, set the following in the router's runtime.properties:
+To enable this functionality, set the following in the Router's runtime.properties:
 
 ```
 druid.router.managementProxy.enabled=true
@@ -219,13 +219,13 @@ druid.router.managementProxy.enabled=true
 ### Routing
 
 The management proxy supports implicit and explicit routes. Implicit routes are those where the destination can be
-determined from the original request path based on Druid API path conventions. For the coordinator the convention is
-`/druid/coordinator/*` and for the overlord the convention is `/druid/indexer/*`. These are convenient because they mean
-that using the management proxy does not require modifying the API request other than issuing the request to the router
-instead of the coordinator or overlord. Most Druid API requests can be routed implicitly.
+determined from the original request path based on Druid API path conventions. For the Coordinator the convention is
+`/druid/coordinator/*` and for the Overlord the convention is `/druid/indexer/*`. These are convenient because they mean
+that using the management proxy does not require modifying the API request other than issuing the request to the Router
+instead of the Coordinator or Overlord. Most Druid API requests can be routed implicitly.
 
-Explicit routes are those where the request to the router contains a path prefix indicating which node the request
-should be routed to. For the coordinator this prefix is `/proxy/coordinator` and for the overlord it is `/proxy/overlord`.
+Explicit routes are those where the request to the Router contains a path prefix indicating which node the request
+should be routed to. For the Coordinator this prefix is `/proxy/coordinator` and for the Overlord it is `/proxy/overlord`.
 This is required for API calls with an ambiguous destination. For example, the `/status` API is present on all Druid
 nodes, so explicit routing needs to be used to indicate the proxy destination.
 

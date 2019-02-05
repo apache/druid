@@ -26,7 +26,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.http.OverlordProxyServlet;
 import org.apache.druid.server.http.RedirectFilter;
@@ -45,7 +44,6 @@ import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.eclipse.jetty.util.resource.Resource;
-import org.eclipse.jetty.util.resource.ResourceCollection;
 
 import java.util.List;
 import java.util.Properties;
@@ -55,12 +53,10 @@ import java.util.Properties;
 class CoordinatorJettyServerInitializer implements JettyServerInitializer
 {
   private static List<String> UNSECURED_PATHS = Lists.newArrayList(
-      "/favicon.ico",
-      "/css/*",
-      "/druid.js",
-      "/druid.css",
+      "/favicon.png",
       "/pages/*",
-      "/fonts/*",
+      "/coordinator-console/*",
+      "/index.html",
       "/old-console/*",
       "/coordinator/false",
       "/overlord/false",
@@ -68,19 +64,15 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
       "/druid/coordinator/v1/isLeader"
   );
 
-  private static Logger log = new Logger(CoordinatorJettyServerInitializer.class);
-
   private final DruidCoordinatorConfig config;
   private final boolean beOverlord;
-  private final AuthConfig authConfig;
   private final ServerConfig serverConfig;
 
   @Inject
-  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, AuthConfig authConfig, ServerConfig serverConfig)
+  CoordinatorJettyServerInitializer(DruidCoordinatorConfig config, Properties properties, ServerConfig serverConfig)
   {
     this.config = config;
     this.beOverlord = CliCoordinator.isOverlord(properties);
-    this.authConfig = authConfig;
     this.serverConfig = serverConfig;
   }
 
@@ -89,25 +81,15 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
     root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+    root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
+    // index.html is the welcome file for old-console
+    root.setWelcomeFiles(new String[]{"index.html"});
 
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
     root.addServlet(holderPwd, "/");
     if (config.getConsoleStatic() == null) {
-      ResourceCollection staticResources;
-      if (beOverlord) {
-        staticResources = new ResourceCollection(
-            Resource.newClassPathResource("io/druid/console"),
-            Resource.newClassPathResource("static"),
-            Resource.newClassPathResource("indexer_static")
-        );
-      } else {
-        staticResources = new ResourceCollection(
-            Resource.newClassPathResource("io/druid/console"),
-            Resource.newClassPathResource("static")
-        );
-      }
-      root.setBaseResource(staticResources);
+      root.setBaseResource(Resource.newClassPathResource("org/apache/druid/console"));
     } else {
       // used for console development
       root.setResourceBase(config.getConsoleStatic());

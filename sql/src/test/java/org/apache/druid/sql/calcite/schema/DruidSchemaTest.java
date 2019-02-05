@@ -274,4 +274,43 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals(updatedHolder.getNumRows(), currentHolder.getNumRows());
   }
 
+  @Test
+  public void testNullDatasource() throws IOException
+  {
+    Map<DataSegment, SegmentMetadataHolder> segmentMetadatas = schema.getSegmentMetadata();
+    Set<DataSegment> segments = segmentMetadatas.keySet();
+    Assert.assertEquals(segments.size(), 3);
+    // segments contains two segments with datasource "foo" and one with datasource "foo2"
+    // let's remove the only segment with datasource "foo2"
+    final DataSegment segmentToRemove = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertFalse(segmentToRemove == null);
+    schema.removeSegment(segmentToRemove);
+    schema.refreshSegments(segments); // can cause NPE without dataSourceSegments null check in DruidSchema#refreshSegmentsForDataSource
+    segmentMetadatas = schema.getSegmentMetadata();
+    segments = segmentMetadatas.keySet();
+    Assert.assertEquals(segments.size(), 2);
+  }
+
+  @Test
+  public void testNullSegmentMetadataHolder() throws IOException
+  {
+    Map<DataSegment, SegmentMetadataHolder> segmentMetadatas = schema.getSegmentMetadata();
+    Set<DataSegment> segments = segmentMetadatas.keySet();
+    Assert.assertEquals(segments.size(), 3);
+    //remove one of the segments with datasource "foo"
+    final DataSegment segmentToRemove = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertFalse(segmentToRemove == null);
+    schema.removeSegment(segmentToRemove);
+    schema.refreshSegments(segments); // can cause NPE without holder null check in SegmentMetadataHolder#from
+    segmentMetadatas = schema.getSegmentMetadata();
+    segments = segmentMetadatas.keySet();
+    Assert.assertEquals(segments.size(), 2);
+  }
+
 }

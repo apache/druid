@@ -48,14 +48,7 @@ public interface SqlOperatorConversion
    * @see Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)
    */
   @Nullable
-  default DruidExpression toDruidExpression(
-      PlannerContext plannerContext,
-      RowSignature rowSignature,
-      RexNode rexNode
-  )
-  {
-    return null;
-  }
+  DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode);
 
   /**
    * Returns a Druid Aggregation corresponding to a SQL {@link SqlOperator} used to filter rows
