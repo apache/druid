@@ -20,33 +20,21 @@
 package org.apache.druid.query.lookup;
 
 import com.google.common.collect.ImmutableMap;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.core.ClassNamesResourceConfig;
-import com.sun.jersey.spi.container.servlet.WebComponent;
-import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
-import com.sun.jersey.test.framework.JerseyTest;
-import com.sun.jersey.test.framework.WebAppDescriptor;
-import com.sun.jersey.test.framework.spi.container.TestContainerFactory;
-import com.sun.jersey.test.framework.spi.container.grizzly2.GrizzlyTestContainerFactory;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import javax.ws.rs.core.Context;
-import javax.ws.rs.ext.Provider;
-
-public class LookupIntrospectionResourceImplTest extends JerseyTest
+public class LookupIntrospectionResourceImplTest
 {
 
-  static LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
+  LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
+  LookupIntrospectionResource lookupIntrospectionResource = new LookupIntrospectionResource(lookupReferencesManager);
 
-
-  @Override
   @Before
   public void setUp() throws Exception
   {
-    super.setUp();
     EasyMock.reset(lookupReferencesManager);
     LookupExtractorFactory lookupExtractorFactory1 = new MapLookupExtractorFactory(ImmutableMap.of(
         "key",
@@ -63,63 +51,33 @@ public class LookupIntrospectionResourceImplTest extends JerseyTest
     EasyMock.replay(lookupReferencesManager);
   }
 
-  @Provider
-  public static class MockTodoServiceProvider extends
-      SingletonTypeInjectableProvider<Context, LookupReferencesManager>
-  {
-    public MockTodoServiceProvider()
-    {
-      super(LookupReferencesManager.class, lookupReferencesManager);
-    }
-  }
-
-
-  public LookupIntrospectionResourceImplTest()
-  {
-    super(new WebAppDescriptor.Builder().initParam(
-                                            WebComponent.RESOURCE_CONFIG_CLASS,
-                                            ClassNamesResourceConfig.class.getName()
-                                        )
-                                        .initParam(
-                                            ClassNamesResourceConfig.PROPERTY_CLASSNAMES,
-                                            LookupIntrospectionResource.class.getName()
-                                            + ';'
-                                            + MockTodoServiceProvider.class.getName()
-                                            + ';'
-                                            + LookupIntrospectHandler.class.getName()
-                                        )
-                                        .build());
-  }
-
-  @Override
-  protected TestContainerFactory getTestContainerFactory()
-  {
-    return new GrizzlyTestContainerFactory();
-  }
-
-
   @Test
   public void testGetKey()
   {
-
-    WebResource r = resource().path("/druid/v1/lookups/introspect/lookupId1/keys");
-    String s = r.get(String.class);
-    Assert.assertEquals("[key, key2]", s);
+    MapLookupExtractorFactory.MapLookupIntrospectionHandler mapLookupIntrospectionHandler =
+        (MapLookupExtractorFactory.MapLookupIntrospectionHandler) lookupIntrospectionResource
+            .introspectLookup("lookupId1");
+    Assert.assertEquals("[key, key2]", mapLookupIntrospectionHandler.getKeys().getEntity());
   }
 
   @Test
   public void testGetValue()
   {
-    WebResource r = resource().path("/druid/v1/lookups/introspect/lookupId1/values");
-    String s = r.get(String.class);
-    Assert.assertEquals("[value, value2]", s);
+    MapLookupExtractorFactory.MapLookupIntrospectionHandler mapLookupIntrospectionHandler =
+        (MapLookupExtractorFactory.MapLookupIntrospectionHandler) lookupIntrospectionResource
+            .introspectLookup("lookupId1");
+    Assert.assertEquals("[value, value2]", mapLookupIntrospectionHandler.getValues().getEntity());
   }
 
   @Test
   public void testGetMap()
   {
-    WebResource r = resource().path("/druid/v1/lookups/introspect/lookupId1/");
-    String s = r.get(String.class);
-    Assert.assertEquals("{\"key\":\"value\",\"key2\":\"value2\"}", s);
+    MapLookupExtractorFactory.MapLookupIntrospectionHandler mapLookupIntrospectionHandler =
+        (MapLookupExtractorFactory.MapLookupIntrospectionHandler) lookupIntrospectionResource
+            .introspectLookup("lookupId1");
+    Assert.assertEquals(
+        ImmutableMap.of("key", "value", "key2", "value2"),
+        mapLookupIntrospectionHandler.getMap().getEntity()
+    );
   }
 }
