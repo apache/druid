@@ -21,9 +21,8 @@ package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.codec.Charsets;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
@@ -195,7 +194,7 @@ public class MomentSketchAggregatorFactory extends AggregatorFactory
   {
     if (serializedSketch instanceof String) {
       String str = (String) serializedSketch;
-      return deserializeFromByteArray(Base64.decodeBase64(str.getBytes(Charsets.UTF_8)));
+      return deserializeFromByteArray(StringUtils.decodeBase64(StringUtils.toUtf8(str)));
     } else if (serializedSketch instanceof byte[]) {
       return deserializeFromByteArray((byte[]) serializedSketch);
     } else if (serializedSketch instanceof MomentSketchWrapper) {
