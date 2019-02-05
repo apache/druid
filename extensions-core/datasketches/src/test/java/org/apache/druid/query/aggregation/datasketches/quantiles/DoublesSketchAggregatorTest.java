@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -55,8 +54,8 @@ public class DoublesSketchAggregatorTest
 
   public DoublesSketchAggregatorTest(final GroupByQueryConfig config)
   {
-    DruidModule module = new DoublesSketchModule();
-    module.configure(null);
+    DoublesSketchModule.registerSerde();
+    DoublesSketchModule module = new DoublesSketchModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
     timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
