@@ -83,8 +83,8 @@ public class SketchAggregationWithSimpleDataTest
   @Before
   public void setup() throws Exception
   {
+    SketchModule.registerSerde();
     sm = new SketchModule();
-    sm.configure(null);
     try (
         final AggregationTestHelper toolchest = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
             sm.getJacksonModules(),
@@ -264,8 +264,8 @@ public class SketchAggregationWithSimpleDataTest
   @Test
   public void testSimpleDataIngestAndSelectQuery() throws Exception
   {
+    SketchModule.registerSerde();
     SketchModule sm = new SketchModule();
-    sm.configure(null);
     AggregationTestHelper selectQueryAggregationTestHelper = AggregationTestHelper.createSelectQueryAggregationTestHelper(
         sm.getJacksonModules(),
         tempFolder

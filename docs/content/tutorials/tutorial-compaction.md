@@ -97,11 +97,11 @@ After the task finishes, refresh the http://localhost:8081/#/datasources/compact
 
 The original 24 segments will eventually be marked as "unused" by the Coordinator and removed, with the new compacted segment remaining. 
 
-By default, the Druid coordinator will not mark segments as unused until the coordinator process has been up for at least 15 minutes, so you may see the old segment set and the new compacted set at the same time in the coordinator, e.g.:
+By default, the Druid Coordinator will not mark segments as unused until the Coordinator process has been up for at least 15 minutes, so you may see the old segment set and the new compacted set at the same time in the Coordinator, e.g.:
 
 ![Compacted segments intermediate state](../tutorials/img/tutorial-compaction-01.png "Compacted segments intermediate state")
 
-The new compacted segment has a more recent version than the original segments, so even when both sets of segments are shown by the coordinator, queries will only read from the new compacted segment.
+The new compacted segment has a more recent version than the original segments, so even when both sets of segments are shown by the Coordinator, queries will only read from the new compacted segment.
 
 Let's try running a COUNT(*) on `compaction-tutorial` again, where the row count should still be 39,244:
 
@@ -115,7 +115,7 @@ dsql> select count(*) from "compaction-tutorial";
 Retrieved 1 row in 1.30s.
 ```
 
-After the coordinator has been running for at least 15 minutes, the http://localhost:8081/#/datasources/compaction-tutorial page should show there is only 1 segment:
+After the Coordinator has been running for at least 15 minutes, the http://localhost:8081/#/datasources/compaction-tutorial page should show there is only 1 segment:
 
 ![Compacted segments final state](../tutorials/img/tutorial-compaction-02.png "Compacted segments final state")
 

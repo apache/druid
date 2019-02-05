@@ -24,16 +24,16 @@ title: "Retaining or Automatically Dropping Data"
 
 # Retaining or Automatically Dropping Data
 
-Coordinator nodes use rules to determine what data should be loaded to or dropped from the cluster. Rules are used for data retention and query execution, and are set on the coordinator console (http://coordinator_ip:port).
+Coordinator nodes use rules to determine what data should be loaded to or dropped from the cluster. Rules are used for data retention and query execution, and are set on the Coordinator console (http://coordinator_ip:port).
 
 There are three types of rules, i.e., load rules, drop rules, and broadcast rules. Load rules indicate how segments should be assigned to different historical node tiers and how many replicas of a segment should exist in each tier. 
 Drop rules indicate when segments should be dropped entirely from the cluster. Finally, broadcast rules indicate how segments of different data sources should be co-located in historical nodes.
 
-The coordinator loads a set of rules from the metadata storage. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The coordinator will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule.
+The Coordinator loads a set of rules from the metadata storage. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The Coordinator will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule.
 
-Note: It is recommended that the coordinator console is used to configure rules. However, the coordinator node does have HTTP endpoints to programmatically configure rules.
+Note: It is recommended that the Coordinator console is used to configure rules. However, the Coordinator node does have HTTP endpoints to programmatically configure rules.
 
-When a rule is updated, the change may not be reflected until the next time the coordinator runs. This will be fixed in the near future.
+When a rule is updated, the change may not be reflected until the next time the Coordinator runs. This will be fixed in the near future.
 
 Load Rules
 ----------
@@ -173,7 +173,7 @@ The interval of a segment will be compared against the specified period. The per
 Broadcast Rules
 ---------------
 
-Broadcast rules indicate how segments of different data sources should be co-located in historical nodes. 
+Broadcast rules indicate how segments of different data sources should be co-located in Historical nodes. 
 Once a broadcast rule is configured for a data source, all segments of the data source are broadcasted to the servers holding _any segments_ of the co-located data sources.
 
 ### Forever Broadcast Rule
@@ -234,9 +234,9 @@ If you want to always co-locate the segments of some data sources together, it i
 # Permanently Deleting Data
  
 Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments that are 
-marked as unused (segments dropped from the cluster via rules are always marked as unused). You can submit a [kill task](../ingestion/tasks.html) to the [indexing service](../design/indexing-service.html) to do this.
+marked as unused (segments dropped from the cluster via rules are always marked as unused). You can submit a [kill task](../ingestion/tasks.html) to the [Overlord](../design/overlord.html) to do this.
 
 # Reloading Dropped Data
 
 Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid, you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and 
-then enable the datasource in the Druid coordinator console, or through the Druid coordinator endpoints.
+then enable the datasource in the Druid Coordinator console, or through the Druid Coordinator endpoints.

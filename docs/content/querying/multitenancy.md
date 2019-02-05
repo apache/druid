@@ -71,7 +71,7 @@ You can use this in concert with single-dimension partitioning to repartition yo
 
 ## Customizing data distribution
 
-Druid additionally supports multitenancy by providing configurable means of distributing data. Druid's historical nodes 
+Druid additionally supports multitenancy by providing configurable means of distributing data. Druid's Historical nodes 
 can be configured into [tiers](../operations/rule-configuration.html), and [rules](../operations/rule-configuration.html) 
 can be set that determines which segments go into which tiers. One use case of this is that recent data tends to be accessed 
 more frequently than older data. Tiering enables more recent segments to be hosted on more powerful hardware for better performance. 
@@ -95,5 +95,5 @@ Druid queries can optionally set a `priority` flag in the [query context](../que
 slow (download or reporting style queries) can be de-prioritized and more interactive queries can have higher priority. 
 
 Broker nodes can also be dedicated to a given tier. For example, one set of broker nodes can be dedicated to fast interactive queries, 
-and a second set of broker nodes can be dedicated to slower reporting queries. Druid also provides a [router](../development/router.html) 
-node that can route queries to different brokers based on various query parameters (datasource, interval, etc.).  
+and a second set of Broker nodes can be dedicated to slower reporting queries. Druid also provides a [Router](../development/router.html) 
+node that can route queries to different Brokers based on various query parameters (datasource, interval, etc.).  

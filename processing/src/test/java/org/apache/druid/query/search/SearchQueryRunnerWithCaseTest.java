@@ -51,12 +51,12 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import static org.apache.druid.query.QueryRunnerTestHelper.NOOP_QUERYWATCHER;
-import static org.apache.druid.query.QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator;
 import static org.apache.druid.query.QueryRunnerTestHelper.allGran;
 import static org.apache.druid.query.QueryRunnerTestHelper.dataSource;
 import static org.apache.druid.query.QueryRunnerTestHelper.fullOnIntervalSpec;
 import static org.apache.druid.query.QueryRunnerTestHelper.makeQueryRunner;
 import static org.apache.druid.query.QueryRunnerTestHelper.marketDimension;
+import static org.apache.druid.query.QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator;
 import static org.apache.druid.query.QueryRunnerTestHelper.placementDimension;
 import static org.apache.druid.query.QueryRunnerTestHelper.placementishDimension;
 import static org.apache.druid.query.QueryRunnerTestHelper.qualityDimension;
@@ -130,7 +130,7 @@ public class SearchQueryRunnerWithCaseTest
         new SearchStrategySelector(Suppliers.ofInstance(config)),
         new SearchQueryQueryToolChest(
             config,
-            NoopIntervalChunkingQueryRunnerDecorator()
+            noopIntervalChunkingQueryRunnerDecorator()
         ),
         NOOP_QUERYWATCHER
     );

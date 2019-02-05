@@ -178,7 +178,7 @@ The format of the result when resultFormat equals to `compactedList`:
 The biggest difference between select query and scan query is that, scan query doesn't retain all rows in memory before rows can be returned to client.  
 It will cause memory pressure if too many rows required by select query.  
 Scan query doesn't have this issue.  
-Scan query can return all rows without issuing another pagination query, which is extremely useful when query against historical or realtime node directly.
+Scan query can return all rows without issuing another pagination query, which is extremely useful when query against Historical or realtime node directly.
 
 ## Legacy mode
 

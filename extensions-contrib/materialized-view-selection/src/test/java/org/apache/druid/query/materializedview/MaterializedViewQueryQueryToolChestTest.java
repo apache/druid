@@ -58,7 +58,7 @@ public class MaterializedViewQueryQueryToolChestTest
                 .put(
                     TimeseriesQuery.class,
                     new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     )
                 )
                 .build()

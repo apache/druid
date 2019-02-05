@@ -86,7 +86,7 @@ rollup and load your existing data as-is. Rollup in Druid is similar to creating
 (Like OpenTSDB or InfluxDB.)
 
 Similar to time series databases, Druid's data model requires a timestamp. Druid is not a timeseries database, but
-it is a natural choice for storing timeseries data. Its flexible data mdoel allows it to store both timeseries and
+it is a natural choice for storing timeseries data. Its flexible data model allows it to store both timeseries and
 non-timeseries data, even in the same datasource.
 
 To achieve best-case compression and query performance in Druid for timeseries data, it is important to partition and
