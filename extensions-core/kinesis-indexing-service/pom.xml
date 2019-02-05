@@ -120,25 +120,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>com.github.os72</groupId>
-        <artifactId>protoc-jar-maven-plugin</artifactId>
-        <version>3.6.0.2</version>
-        <executions>
-          <execution>
-          <phase>generate-sources</phase>
-          <goals>
-            <goal>run</goal>
-          </goals>
-          <configuration>
-            <addProtoSources>all</addProtoSources>
-            <inputDirectories>
-              <include>src/main/protobuf</include>
-            </inputDirectories>
-          </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <version>3.0.0</version>
