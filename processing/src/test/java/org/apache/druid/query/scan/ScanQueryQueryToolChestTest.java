@@ -46,6 +46,7 @@ public class ScanQueryQueryToolChestTest
   private static ScanQueryQueryToolChest chest;
   private static ScanQueryConfig config;
   private static int numElements;
+  private static QuerySegmentSpec emptySegmentSpec;
 
   @Before
   public void setup()
@@ -55,6 +56,23 @@ public class ScanQueryQueryToolChestTest
     replay(config);
     chest = new ScanQueryQueryToolChest(config, null);
     numElements = 1000;
+    emptySegmentSpec = new QuerySegmentSpec()
+    {
+      @Override
+      public List<Interval> getIntervals()
+      {
+        return null;
+      }
+
+      @Override
+      public <T> QueryRunner<T> lookup(
+          Query<T> query,
+          QuerySegmentWalker walker
+      )
+      {
+        return null;
+      }
+    };
   }
 
   @Test
@@ -76,23 +94,7 @@ public class ScanQueryQueryToolChestTest
         .resultFormat("list")
         .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
         .dataSource("some data source")
-        .intervals(new QuerySegmentSpec()
-        {
-          @Override
-          public List<Interval> getIntervals()
-          {
-            return null;
-          }
-
-          @Override
-          public <T> QueryRunner<T> lookup(
-              Query<T> query,
-              QuerySegmentWalker walker
-          )
-          {
-            return null;
-          }
-        })
+        .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
     Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
@@ -129,23 +131,7 @@ public class ScanQueryQueryToolChestTest
         .resultFormat("list")
         .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
         .dataSource("some data source")
-        .intervals(new QuerySegmentSpec()
-        {
-          @Override
-          public List<Interval> getIntervals()
-          {
-            return null;
-          }
-
-          @Override
-          public <T> QueryRunner<T> lookup(
-              Query<T> query,
-              QuerySegmentWalker walker
-          )
-          {
-            return null;
-          }
-        })
+        .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
     Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
@@ -180,23 +166,7 @@ public class ScanQueryQueryToolChestTest
         .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
         .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
         .dataSource("some data source")
-        .intervals(new QuerySegmentSpec()
-        {
-          @Override
-          public List<Interval> getIntervals()
-          {
-            return null;
-          }
-
-          @Override
-          public <T> QueryRunner<T> lookup(
-              Query<T> query,
-              QuerySegmentWalker walker
-          )
-          {
-            return null;
-          }
-        })
+        .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
     Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
@@ -231,23 +201,7 @@ public class ScanQueryQueryToolChestTest
         .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
         .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
         .dataSource("some data source")
-        .intervals(new QuerySegmentSpec()
-        {
-          @Override
-          public List<Interval> getIntervals()
-          {
-            return null;
-          }
-
-          @Override
-          public <T> QueryRunner<T> lookup(
-              Query<T> query,
-              QuerySegmentWalker walker
-          )
-          {
-            return null;
-          }
-        })
+        .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
     Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
@@ -264,5 +218,4 @@ public class ScanQueryQueryToolChestTest
     }
     Assert.assertEquals(numElements, count);
   }
-
 }

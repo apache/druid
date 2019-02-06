@@ -66,7 +66,6 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- *
  */
 @RunWith(Parameterized.class)
 public class ScanQueryRunnerTest

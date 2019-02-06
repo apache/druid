@@ -200,7 +200,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
     public ScanBatchedTimeOrderedQueueIterator(Iterator<ScanResultValue> iterator, int batchSize)
     {
-      itr = iterator;
+      this.itr = iterator;
       this.batchSize = batchSize;
     }
 

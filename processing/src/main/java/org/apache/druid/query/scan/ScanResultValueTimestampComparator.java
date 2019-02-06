@@ -75,5 +75,4 @@ public class ScanResultValueTimestampComparator implements Comparator<ScanResult
     ScanResultValueTimestampComparator comp = (ScanResultValueTimestampComparator) obj;
     return this.scanQuery.equals(comp.scanQuery);
   }
-
 }

@@ -48,7 +48,6 @@ public class ScanResultValueTimestampComparatorTest
     );
   }
 
-
   @Test
   public void comparisonDescendingListTest()
   {
