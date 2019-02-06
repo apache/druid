@@ -24,15 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -137,30 +134,30 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)
   {
-    return ScanQueryBuilder.copy(this).legacy(legacy != null ? legacy : scanQueryConfig.isLegacy()).build();
+    return Druids.ScanQueryBuilder.copy(this).legacy(legacy != null ? legacy : scanQueryConfig.isLegacy()).build();
   }
 
   @Override
   public Query<ScanResultValue> withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
-    return ScanQueryBuilder.copy(this).intervals(querySegmentSpec).build();
+    return Druids.ScanQueryBuilder.copy(this).intervals(querySegmentSpec).build();
   }
 
   @Override
   public Query<ScanResultValue> withDataSource(DataSource dataSource)
   {
-    return ScanQueryBuilder.copy(this).dataSource(dataSource).build();
+    return Druids.ScanQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
   @Override
   public Query<ScanResultValue> withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
+    return Druids.ScanQueryBuilder.copy(this).context(computeOverriddenContext(getContext(), contextOverrides)).build();
   }
 
   public ScanQuery withDimFilter(DimFilter dimFilter)
   {
-    return ScanQueryBuilder.copy(this).filters(dimFilter).build();
+    return Druids.ScanQueryBuilder.copy(this).filters(dimFilter).build();
   }
 
   @Override
@@ -205,161 +202,5 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            ", columns=" + columns +
            ", legacy=" + legacy +
            '}';
-  }
-
-  /**
-   * A Builder for ScanQuery.
-   * <p/>
-   * Required: dataSource(), intervals() must be called before build()
-   * <p/>
-   * Usage example:
-   * <pre><code>
-   *   ScanQuery query = new ScanQueryBuilder()
-   *                                  .dataSource("Example")
-   *                                  .interval("2010/2013")
-   *                                  .build();
-   * </code></pre>
-   *
-   * @see ScanQuery
-   */
-  public static class ScanQueryBuilder
-  {
-    private DataSource dataSource;
-    private QuerySegmentSpec querySegmentSpec;
-    private VirtualColumns virtualColumns;
-    private Map<String, Object> context;
-    private String resultFormat;
-    private int batchSize;
-    private long limit;
-    private DimFilter dimFilter;
-    private List<String> columns;
-    private Boolean legacy;
-
-    public ScanQueryBuilder()
-    {
-      dataSource = null;
-      querySegmentSpec = null;
-      virtualColumns = null;
-      context = null;
-      resultFormat = null;
-      batchSize = 0;
-      limit = 0;
-      dimFilter = null;
-      columns = new ArrayList<>();
-      legacy = null;
-    }
-
-    public ScanQuery build()
-    {
-      return new ScanQuery(
-          dataSource,
-          querySegmentSpec,
-          virtualColumns,
-          resultFormat,
-          batchSize,
-          limit,
-          dimFilter,
-          columns,
-          legacy,
-          context
-      );
-    }
-
-    public static ScanQueryBuilder copy(ScanQuery query)
-    {
-      return new ScanQueryBuilder()
-          .dataSource(query.getDataSource())
-          .intervals(query.getQuerySegmentSpec())
-          .virtualColumns(query.getVirtualColumns())
-          .resultFormat(query.getResultFormat())
-          .batchSize(query.getBatchSize())
-          .limit(query.getLimit())
-          .filters(query.getFilter())
-          .columns(query.getColumns())
-          .legacy(query.isLegacy())
-          .context(query.getContext());
-    }
-
-    public ScanQueryBuilder dataSource(String ds)
-    {
-      dataSource = new TableDataSource(ds);
-      return this;
-    }
-
-    public ScanQueryBuilder dataSource(DataSource ds)
-    {
-      dataSource = ds;
-      return this;
-    }
-
-    public ScanQueryBuilder intervals(QuerySegmentSpec q)
-    {
-      querySegmentSpec = q;
-      return this;
-    }
-
-    public ScanQueryBuilder virtualColumns(VirtualColumns virtualColumns)
-    {
-      this.virtualColumns = virtualColumns;
-      return this;
-    }
-
-    public ScanQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
-    {
-      return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
-    }
-
-    public ScanQueryBuilder context(Map<String, Object> c)
-    {
-      context = c;
-      return this;
-    }
-
-    public ScanQueryBuilder resultFormat(String r)
-    {
-      resultFormat = r;
-      return this;
-    }
-
-    public ScanQueryBuilder batchSize(int b)
-    {
-      batchSize = b;
-      return this;
-    }
-
-    public ScanQueryBuilder limit(long l)
-    {
-      limit = l;
-      return this;
-    }
-
-    public ScanQueryBuilder filters(DimFilter f)
-    {
-      dimFilter = f;
-      return this;
-    }
-
-    public ScanQueryBuilder columns(List<String> c)
-    {
-      columns = c;
-      return this;
-    }
-
-    public ScanQueryBuilder columns(String... c)
-    {
-      columns = Arrays.asList(c);
-      return this;
-    }
-
-    public ScanQueryBuilder legacy(Boolean legacy)
-    {
-      this.legacy = legacy;
-      return this;
-    }
-  }
-
-  public static ScanQueryBuilder newScanQueryBuilder()
-  {
-    return new ScanQueryBuilder();
   }
 }
