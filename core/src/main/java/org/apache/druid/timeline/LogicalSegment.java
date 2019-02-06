@@ -26,4 +26,6 @@ import org.joda.time.Interval;
 public interface LogicalSegment
 {
   Interval getInterval();
+
+  Interval getTrueInterval();
 }
