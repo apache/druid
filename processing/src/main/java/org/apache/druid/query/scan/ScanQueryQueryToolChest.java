@@ -20,6 +20,7 @@
 package org.apache.druid.query.scan;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.inject.Inject;
@@ -98,24 +99,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         return new BaseSequence<ScanResultValue, ScanQueryLimitRowIterator>(scanQueryLimitRowIteratorMaker);
       } else if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_ASCENDING) ||
                  scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_DESCENDING)) {
-        Comparator priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
-
-        // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
-        // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-        PriorityQueue q = new PriorityQueue<ScanResultValue>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
         Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
-
-        while (scanResultIterator.hasNext()) {
-          ScanResultValue next = scanResultIterator.next();
-          List<Object> events = (List<Object>) next.getEvents();
-          for (Object event : events) {
-            // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
-            // needs to be preserved for queries using the compactedList result format
-            q.offer(new ScanResultValue(null, next.getColumns(), Collections.singletonList(event)));
-          }
-        }
-
-        Iterator queueIterator = q.iterator();
 
         return new BaseSequence(
             new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedTimeOrderedQueueIterator>()
@@ -123,7 +107,10 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
               @Override
               public ScanBatchedTimeOrderedQueueIterator make()
               {
-                return new ScanBatchedTimeOrderedQueueIterator(queueIterator, scanQuery.getBatchSize());
+                return new ScanBatchedTimeOrderedQueueIterator(
+                    heapsortScanResultValues(scanResultIterator, scanQuery),
+                    scanQuery.getBatchSize()
+                );
               }
 
               @Override
@@ -175,6 +162,35 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         return runner.run(queryPlus, responseContext);
       }
     };
+  }
+
+  @VisibleForTesting
+  Iterator<ScanResultValue> heapsortScanResultValues(Iterator<ScanResultValue> inputIterator, ScanQuery scanQuery) {
+    Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
+
+    // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
+    // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
+
+    PriorityQueue<ScanResultValue> q = new PriorityQueue<>
+        (Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
+
+    while (inputIterator.hasNext()) {
+
+      ScanResultValue next = inputIterator.next();
+      List<Object> events = (List<Object>) next.getEvents();
+      for (Object event : events) {
+        // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
+        // needs to be preserved for queries using the compactedList result format
+        q.offer(new ScanResultValue(null, next.getColumns(), Collections.singletonList(event)));
+      }
+    }
+    // Need to convert to a List because Priority Queue's iterator doesn't guarantee that the sorted order
+    // will be maintained
+    List<ScanResultValue> sortedElements = new ArrayList<>(q.size());
+    while (q.size() != 0 ) {
+      sortedElements.add(q.poll());
+    }
+    return sortedElements.iterator();
   }
 
   private class ScanBatchedTimeOrderedQueueIterator implements CloseableIterator<ScanResultValue>
