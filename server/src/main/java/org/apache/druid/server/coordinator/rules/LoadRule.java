@@ -153,8 +153,8 @@ public abstract class LoadRule implements Rule
       log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
       return Collections.emptyList();
     }
-
-    return queue.stream().filter(predicate).collect(Collectors.toList());
+    Predicate<ServerHolder> isNotInMaintenance = s -> !s.isInMaintenance();
+    return queue.stream().filter(isNotInMaintenance.and(predicate)).collect(Collectors.toList());
   }
 
   /**
@@ -382,21 +382,38 @@ public abstract class LoadRule implements Rule
       final BalancerStrategy balancerStrategy
   )
   {
-    int numDropped = 0;
+    Map<Boolean, TreeSet<ServerHolder>> holders = holdersInTier.stream()
+                                                               .filter(s -> s.isServingSegment(segment))
+                                                               .collect(Collectors.partitioningBy(
+                                                                   ServerHolder::isInMaintenance,
+                                                                   Collectors.toCollection(TreeSet::new)
+                                                               ));
+    TreeSet<ServerHolder> maintenanceServers = holders.get(true);
+    TreeSet<ServerHolder> availableServers = holders.get(false);
+    int left = dropSegmentFromServers(balancerStrategy, segment, maintenanceServers, numToDrop);
+    if (left > 0) {
+      left = dropSegmentFromServers(balancerStrategy, segment, availableServers, left);
+    }
+    if (left != 0) {
+      log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getId());
+    }
+    return numToDrop - left;
+  }
 
-    final NavigableSet<ServerHolder> isServingSubset =
-        holdersInTier.stream().filter(s -> s.isServingSegment(segment)).collect(Collectors.toCollection(TreeSet::new));
+  private static int dropSegmentFromServers(
+      BalancerStrategy balancerStrategy,
+      DataSegment segment,
+      NavigableSet<ServerHolder> holders, int numToDrop
+  )
+  {
+    final Iterator<ServerHolder> iterator = balancerStrategy.pickServersToDrop(segment, holders);
 
-    final Iterator<ServerHolder> iterator = balancerStrategy.pickServersToDrop(segment, isServingSubset);
-
-    while (numDropped < numToDrop) {
+    while (numToDrop > 0) {
       if (!iterator.hasNext()) {
-        log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getId());
         break;
       }
 
       final ServerHolder holder = iterator.next();
-
       if (holder.isServingSegment(segment)) {
         log.info(
             "Dropping segment [%s] on server [%s] in tier [%s]",
@@ -405,7 +422,7 @@ public abstract class LoadRule implements Rule
             holder.getServer().getTier()
         );
         holder.getPeon().dropSegment(segment, null);
-        ++numDropped;
+        numToDrop--;
       } else {
         log.warn(
             "Server [%s] is no longer serving segment [%s], skipping drop.",
@@ -414,8 +431,7 @@ public abstract class LoadRule implements Rule
         );
       }
     }
-
-    return numDropped;
+    return numToDrop;
   }
 
   protected static void validateTieredReplicants(final Map<String, Integer> tieredReplicants)

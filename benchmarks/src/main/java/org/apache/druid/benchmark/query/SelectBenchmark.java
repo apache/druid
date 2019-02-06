@@ -233,7 +233,7 @@ public class SelectBenchmark
     factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             JSON_MAPPER,
-            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator(),
+            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator(),
             selectConfigSupplier
         ),
         new SelectQueryEngine(),

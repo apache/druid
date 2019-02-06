@@ -167,7 +167,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
       {
         (!currentRules.length && datasource !== '_default') &&
         <p>
-          This datasource currently has no rule, it will use the cluster defaults (<a onClick={onEditDefaults}>edit cluster defaults</a>)
+          This datasource currently has no rules, it will use the cluster defaults (<a onClick={onEditDefaults}>edit cluster defaults</a>)
         </p>
       }
     </SnitchDialog>;

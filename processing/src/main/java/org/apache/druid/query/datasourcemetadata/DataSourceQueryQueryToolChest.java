@@ -48,9 +48,8 @@ import java.util.Map;
 public class DataSourceQueryQueryToolChest
     extends QueryToolChest<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
-  private static final TypeReference<Result<DataSourceMetadataResultValue>> TYPE_REFERENCE = new TypeReference<Result<DataSourceMetadataResultValue>>()
-  {
-  };
+  private static final TypeReference<Result<DataSourceMetadataResultValue>> TYPE_REFERENCE =
+      new TypeReference<Result<DataSourceMetadataResultValue>>() {};
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
 

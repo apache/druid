@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Provider of {@link DruidNodeDiscovery} instances.
@@ -81,7 +82,7 @@ public abstract class DruidNodeDiscoveryProvider
     private static final Logger log = new Logger(ServiceDruidNodeDiscovery.class);
 
     private final String service;
-    private final Map<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
     private final Collection<DiscoveryDruidNode> unmodifiableNodes = Collections.unmodifiableCollection(nodes.values());
 
     private final List<Listener> listeners = new ArrayList<>();

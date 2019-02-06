@@ -109,7 +109,7 @@ public class MapVirtualColumnGroupByTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
 

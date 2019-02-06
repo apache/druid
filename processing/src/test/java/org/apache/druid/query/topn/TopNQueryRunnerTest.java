@@ -260,7 +260,7 @@ public class TopNQueryRunnerTest
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
     final QueryRunner<Result<TopNResultValue>> mergeRunner = new FinalizeResultsQueryRunner(
         chest.mergeResults(runner),
@@ -4281,7 +4281,7 @@ public class TopNQueryRunnerTest
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
     final QueryRunner<Result<TopNResultValue>> Runner = new FinalizeResultsQueryRunner(
         chest.mergeResults(chest.preMergeQueryDecoration(runner)),
