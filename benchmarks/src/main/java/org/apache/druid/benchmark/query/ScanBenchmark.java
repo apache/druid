@@ -104,7 +104,7 @@ public class ScanBenchmark
   @Param({"2"})
   private int numProcessingThreads;
 
-  @Param({"250000"})
+  @Param({"200000"})
   private int rowsPerSegment;
 
   @Param({"basic.A"})
