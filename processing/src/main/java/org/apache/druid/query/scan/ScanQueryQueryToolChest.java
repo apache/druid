@@ -165,14 +165,14 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @VisibleForTesting
-  Iterator<ScanResultValue> heapsortScanResultValues(Iterator<ScanResultValue> inputIterator, ScanQuery scanQuery) {
+  Iterator<ScanResultValue> heapsortScanResultValues(Iterator<ScanResultValue> inputIterator, ScanQuery scanQuery)
+  {
     Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
 
     // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
     // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
 
-    PriorityQueue<ScanResultValue> q = new PriorityQueue<>
-        (Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
+    PriorityQueue<ScanResultValue> q = new PriorityQueue<>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
 
     while (inputIterator.hasNext()) {
 
@@ -187,7 +187,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     // Need to convert to a List because Priority Queue's iterator doesn't guarantee that the sorted order
     // will be maintained
     List<ScanResultValue> sortedElements = new ArrayList<>(q.size());
-    while (q.size() != 0 ) {
+    while (q.size() != 0) {
       sortedElements.add(q.poll());
     }
     return sortedElements.iterator();

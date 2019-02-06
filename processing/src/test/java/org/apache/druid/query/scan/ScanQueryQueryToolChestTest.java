@@ -86,7 +86,8 @@ public class ScanQueryQueryToolChestTest
 
           @Override
           public <T> QueryRunner<T> lookup(
-              Query<T> query, QuerySegmentWalker walker
+              Query<T> query,
+              QuerySegmentWalker walker
           )
           {
             return null;
@@ -138,7 +139,8 @@ public class ScanQueryQueryToolChestTest
 
           @Override
           public <T> QueryRunner<T> lookup(
-              Query<T> query, QuerySegmentWalker walker
+              Query<T> query,
+              QuerySegmentWalker walker
           )
           {
             return null;
@@ -188,7 +190,8 @@ public class ScanQueryQueryToolChestTest
 
           @Override
           public <T> QueryRunner<T> lookup(
-              Query<T> query, QuerySegmentWalker walker
+              Query<T> query,
+              QuerySegmentWalker walker
           )
           {
             return null;
@@ -199,7 +202,7 @@ public class ScanQueryQueryToolChestTest
     Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
 
     Long previousTime = Long.MAX_VALUE;
-    int count = 0 ;
+    int count = 0;
     while (sorted.hasNext()) {
       count++;
       ScanResultValue curr = sorted.next();
@@ -238,7 +241,8 @@ public class ScanQueryQueryToolChestTest
 
           @Override
           public <T> QueryRunner<T> lookup(
-              Query<T> query, QuerySegmentWalker walker
+              Query<T> query,
+              QuerySegmentWalker walker
           )
           {
             return null;
