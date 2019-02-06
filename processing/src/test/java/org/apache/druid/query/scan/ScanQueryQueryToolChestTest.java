@@ -45,6 +45,7 @@ public class ScanQueryQueryToolChestTest
 {
   private static ScanQueryQueryToolChest chest;
   private static ScanQueryConfig config;
+  private static int numElements;
 
   @Before
   public void setup()
@@ -53,13 +54,14 @@ public class ScanQueryQueryToolChestTest
     expect(config.getMaxRowsTimeOrderedInMemory()).andReturn(100000);
     replay(config);
     chest = new ScanQueryQueryToolChest(config, null);
+    numElements = 1000;
   }
 
   @Test
   public void testDescendingHeapsortListScanResultValues()
   {
     List<ScanResultValue> inputs = new ArrayList<>();
-    for (long i = 0; i < 1000; i++) {
+    for (long i = 0; i < numElements; i++) {
       HashMap<String, Object> event = new HashMap<>();
       event.put("__time", i * 1000);
       inputs.add(
@@ -94,22 +96,24 @@ public class ScanQueryQueryToolChestTest
         .build();
     Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
 
+    int count = 0;
     Long previousTime = Long.MAX_VALUE;
     while (sorted.hasNext()) {
+      count++;
       ScanResultValue curr = sorted.next();
       Long currentTime = (Long)
           ((Map<String, Object>) (((List<Object>) curr.getEvents()).get(0))).get(ColumnHolder.TIME_COLUMN_NAME);
-      Assert.assertTrue("Event timestamp is less than that of the previous event",
-                        currentTime < previousTime);
+      Assert.assertTrue(currentTime < previousTime);
       previousTime = currentTime;
     }
+    Assert.assertEquals(numElements, count);
   }
 
   @Test
   public void testAscendingHeapsortListScanResultValues()
   {
     List<ScanResultValue> inputs = new ArrayList<>();
-    for (long i = 1000; i > 0; i--) {
+    for (long i = numElements; i > 0; i--) {
       HashMap<String, Object> event = new HashMap<>();
       event.put("__time", i * 1000);
       inputs.add(
@@ -144,16 +148,117 @@ public class ScanQueryQueryToolChestTest
         .build();
     Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
 
+    int count = 0;
     Long previousTime = -1L;
     while (sorted.hasNext()) {
+      count++;
       ScanResultValue curr = sorted.next();
       Long currentTime = (Long)
           ((Map<String, Object>) (((List<Object>) curr.getEvents()).get(0))).get(ColumnHolder.TIME_COLUMN_NAME);
-      Assert.assertTrue(
-          "Event timestamp is greater than that of the previous event",
-          currentTime > previousTime
-      );
+      Assert.assertTrue(currentTime > previousTime);
       previousTime = currentTime;
     }
+    Assert.assertEquals(numElements, count);
   }
+
+  @Test
+  public void testDescendingHeapsortCompactedListScanResultValues()
+  {
+    List<ScanResultValue> inputs = new ArrayList<>();
+    for (long i = 0; i < numElements; i++) {
+      inputs.add(
+          new ScanResultValue(
+              "some segment id",
+              Collections.singletonList("__time"),
+              Collections.singletonList(Collections.singletonList(new Long(i * 1000)))
+          )
+      );
+    }
+    ScanQuery scanQuery = new Druids.ScanQueryBuilder()
+        .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+        .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
+        .dataSource("some data source")
+        .intervals(new QuerySegmentSpec()
+        {
+          @Override
+          public List<Interval> getIntervals()
+          {
+            return null;
+          }
+
+          @Override
+          public <T> QueryRunner<T> lookup(
+              Query<T> query, QuerySegmentWalker walker
+          )
+          {
+            return null;
+          }
+        })
+        .limit(99999)
+        .build();
+    Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
+
+    Long previousTime = Long.MAX_VALUE;
+    int count = 0 ;
+    while (sorted.hasNext()) {
+      count++;
+      ScanResultValue curr = sorted.next();
+      Long currentTime = (Long)
+          ((List<Object>) (((List<Object>) curr.getEvents()).get(0))).get(0);
+      Assert.assertTrue(currentTime < previousTime);
+      previousTime = currentTime;
+    }
+    Assert.assertEquals(numElements, count);
+  }
+
+  @Test
+  public void testAscendingHeapsortCompactedListScanResultValues()
+  {
+    List<ScanResultValue> inputs = new ArrayList<>();
+    for (long i = numElements; i > 0; i--) {
+      inputs.add(
+          new ScanResultValue(
+              "some segment id",
+              Collections.singletonList("__time"),
+              Collections.singletonList(Collections.singletonList(new Long(i * 1000)))
+          )
+      );
+    }
+    ScanQuery scanQuery = new Druids.ScanQueryBuilder()
+        .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+        .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
+        .dataSource("some data source")
+        .intervals(new QuerySegmentSpec()
+        {
+          @Override
+          public List<Interval> getIntervals()
+          {
+            return null;
+          }
+
+          @Override
+          public <T> QueryRunner<T> lookup(
+              Query<T> query, QuerySegmentWalker walker
+          )
+          {
+            return null;
+          }
+        })
+        .limit(99999)
+        .build();
+    Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
+
+    Long previousTime = -1L;
+    int count = 0;
+    while (sorted.hasNext()) {
+      count++;
+      ScanResultValue curr = sorted.next();
+      Long currentTime = (Long)
+          ((List<Object>) (((List<Object>) curr.getEvents()).get(0))).get(0);
+      Assert.assertTrue(currentTime > previousTime);
+      previousTime = currentTime;
+    }
+    Assert.assertEquals(numElements, count);
+  }
+
 }
