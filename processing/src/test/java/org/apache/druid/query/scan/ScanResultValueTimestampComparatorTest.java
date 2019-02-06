@@ -61,7 +61,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
 
-    ArrayList<HashMap<String, Object>> events1 = new ArrayList<>();` `
+    ArrayList<HashMap<String, Object>> events1 = new ArrayList<>();
     HashMap<String, Object> event1 = new HashMap<>();
     event1.put(ColumnHolder.TIME_COLUMN_NAME, new Long(42));
     events1.add(event1);
