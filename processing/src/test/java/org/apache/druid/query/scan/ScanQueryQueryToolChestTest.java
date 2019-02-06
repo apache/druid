@@ -27,7 +27,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -48,7 +48,7 @@ public class ScanQueryQueryToolChestTest
   private static int numElements;
   private static QuerySegmentSpec emptySegmentSpec;
 
-  @Before
+  @BeforeClass
   public void setup()
   {
     config = createNiceMock(ScanQueryConfig.class);
