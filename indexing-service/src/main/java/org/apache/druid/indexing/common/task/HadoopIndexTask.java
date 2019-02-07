@@ -430,38 +430,41 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
-    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-    String hadoopJobIdFile = getHadoopJobIdFileName();
+    // To avoid issue of kill command once the ingestion task is actually completed
+    if (!ingestionState.equals(IngestionState.COMPLETED)) {
+      final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+      String hadoopJobIdFile = getHadoopJobIdFileName();
 
-    try {
-      ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
-          taskConfig.getDefaultHadoopCoordinates());
+      try {
+        ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
+            taskConfig.getDefaultHadoopCoordinates());
 
-      Object killMRJobInnerProcessingRunner = getForeignClassloaderObject(
-          "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
-          loader
-      );
+        Object killMRJobInnerProcessingRunner = getForeignClassloaderObject(
+            "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
+            loader
+        );
 
-      String[] buildKillJobInput = new String[]{
-          hadoopJobIdFile
-      };
+        String[] buildKillJobInput = new String[]{
+            hadoopJobIdFile
+        };
 
-      Class<?> buildKillJobRunnerClass = killMRJobInnerProcessingRunner.getClass();
-      Method innerProcessingRunTask = buildKillJobRunnerClass.getMethod("runTask", buildKillJobInput.getClass());
+        Class<?> buildKillJobRunnerClass = killMRJobInnerProcessingRunner.getClass();
+        Method innerProcessingRunTask = buildKillJobRunnerClass.getMethod("runTask", buildKillJobInput.getClass());
 
-      Thread.currentThread().setContextClassLoader(loader);
-      final String killStatusString[] = (String[]) innerProcessingRunTask.invoke(
-          killMRJobInnerProcessingRunner,
-          new Object[]{buildKillJobInput}
-      );
+        Thread.currentThread().setContextClassLoader(loader);
+        final String killStatusString[] = (String[]) innerProcessingRunTask.invoke(
+            killMRJobInnerProcessingRunner,
+            new Object[]{buildKillJobInput}
+        );
 
-      log.info(StringUtils.format("Tried killing job: [%s], status: [%s]", killStatusString[0], killStatusString[1]));
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(oldLoader);
+        log.info(StringUtils.format("Tried killing job: [%s], status: [%s]", killStatusString[0], killStatusString[1]));
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(oldLoader);
+      }
     }
 
   }
