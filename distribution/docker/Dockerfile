@@ -39,7 +39,7 @@ RUN addgroup --gid 1000 druid \
 
 FROM amd64/busybox:1.30.0-glibc as busybox
 FROM gcr.io/distroless/java
-MAINTAINER Don Bowman <don@agilicus.com>
+LABEL maintainer="Don Bowman <don@agilicus.com>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
 RUN ["/busybox/busybox", "--install", "/bin"]
