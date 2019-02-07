@@ -107,7 +107,7 @@ public class ScanBenchmark
   @Param({"200000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.B", "basic.C", "basic.D"})
   private String schemaAndQuery;
 
   @Param({"1000", "99999"})
