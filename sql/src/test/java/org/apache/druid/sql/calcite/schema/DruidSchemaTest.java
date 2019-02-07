@@ -246,32 +246,60 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
   }
 
+  /**
+   * This tests that {@link SegmentMetadataHolder#getNumRows()} is correct in case
+   * of multiple replicas i.e. when {@link DruidSchema#addSegment(DruidServerMetadata, DataSegment)}
+   * is called more than once for same segment
+   */
   @Test
   public void testSegmentMetadataHolderNumRows()
   {
     Map<DataSegment, SegmentMetadataHolder> segmentsMetadata = schema.getSegmentMetadata();
-    Set<DataSegment> segments = segmentsMetadata.keySet();
-    Assert.assertEquals(segments.size(), 3);
-    DataSegment existingSegment = segments.stream().findFirst().orElse(null);
-    Assert.assertFalse(existingSegment == null);
-    SegmentMetadataHolder existingHolder = segmentsMetadata.get(existingSegment);
+    final Set<DataSegment> segments = segmentsMetadata.keySet();
+    Assert.assertEquals(3, segments.size());
+    // find the only segment with datasource "foo2"
+    final DataSegment existingSegment = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertNotNull(existingSegment);
+    final SegmentMetadataHolder existingHolder = segmentsMetadata.get(existingSegment);
+    //update SegmentMetadataHolder of existingSegment with numRows=5
     SegmentMetadataHolder updatedHolder = SegmentMetadataHolder.from(existingHolder).withNumRows(5).build();
     schema.setSegmentMetadataHolder(existingSegment, updatedHolder);
-    ImmutableDruidServer server = null;
-    for (ImmutableDruidServer druidServer : druidServers) {
-      for (DataSegment segment : druidServer.getSegments()) {
-        if (segment == existingSegment) {
-          server = druidServer;
-        }
-      }
-    }
-    Assert.assertFalse(server == null);
+    //find a druidServer holding existingSegment
+    final Pair<ImmutableDruidServer, DataSegment> pair = druidServers.stream()
+                                                                     .flatMap(druidServer -> druidServer.getSegments()
+                                                                                                        .stream()
+                                                                                                        .filter(segment -> segment
+                                                                                                            .equals(
+                                                                                                                existingSegment))
+                                                                                                        .map(segment -> Pair
+                                                                                                            .of(
+                                                                                                                druidServer,
+                                                                                                                segment
+                                                                                                            )))
+                                                                     .findAny()
+                                                                     .orElse(null);
+    Assert.assertNotNull(pair);
+    final ImmutableDruidServer server = pair.lhs;
+    Assert.assertNotNull(server);
     final DruidServerMetadata druidServerMetadata = server.getMetadata();
+    //invoke DruidSchema#addSegment on existingSegment
     schema.addSegment(druidServerMetadata, existingSegment);
     segmentsMetadata = schema.getSegmentMetadata();
-    existingSegment = segments.stream().findFirst().orElse(null);
-    final SegmentMetadataHolder currentHolder = segmentsMetadata.get(existingSegment);
+    // get the only segment with datasource "foo2"
+    final DataSegment currentSegment = segments.stream()
+                                               .filter(segment -> segment.getDataSource().equals("foo2"))
+                                               .findFirst()
+                                               .orElse(null);
+    final SegmentMetadataHolder currentHolder = segmentsMetadata.get(currentSegment);
+    Assert.assertEquals(updatedHolder.getSegmentId(), currentHolder.getSegmentId());
     Assert.assertEquals(updatedHolder.getNumRows(), currentHolder.getNumRows());
+    //numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
+    Assert.assertEquals(updatedHolder.getNumReplicas(), currentHolder.getNumReplicas());
+    Assert.assertEquals(updatedHolder.isAvailable(), currentHolder.isAvailable());
+    Assert.assertEquals(updatedHolder.isPublished(), currentHolder.isPublished());
   }
 
   @Test
