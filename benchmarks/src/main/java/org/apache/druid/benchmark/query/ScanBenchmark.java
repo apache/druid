@@ -94,7 +94,7 @@ import java.util.concurrent.TimeUnit;
 /* Works with 8GB heap size or greater.  Otherwise there's a good chance of an OOME. */
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 25)
+@Warmup(iterations = 10)
 @Measurement(iterations = 25)
 public class ScanBenchmark
 {
