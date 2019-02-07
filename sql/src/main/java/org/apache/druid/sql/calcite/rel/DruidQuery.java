@@ -964,11 +964,12 @@ public class DruidQuery
         ScanQuery.RESULT_FORMAT_COMPACTED_LIST,
         0,
         scanLimit,
+        null, // Will default to "none"
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(outputRowSignature.getRowOrder())),
         false,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext()),
-        null // Will default to "none"
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
+
     );
   }
 

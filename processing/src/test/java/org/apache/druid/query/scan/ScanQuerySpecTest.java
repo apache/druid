@@ -68,11 +68,11 @@ public class ScanQuerySpecTest
         null,
         0,
         3,
+        "none",
         null,
         Arrays.asList("market", "quality", "index"),
         null,
-        null,
-        "none"
+        null
     );
 
     String actual = jsonMapper.writeValueAsString(query);

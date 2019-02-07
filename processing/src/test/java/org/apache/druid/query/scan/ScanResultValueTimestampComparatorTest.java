@@ -39,7 +39,7 @@ public class ScanResultValueTimestampComparatorTest
   private static QuerySegmentSpec intervalSpec;
 
   @BeforeClass
-  public void setup()
+  public static void setup()
   {
     intervalSpec = new MultipleIntervalSegmentSpec(
         Collections.singletonList(

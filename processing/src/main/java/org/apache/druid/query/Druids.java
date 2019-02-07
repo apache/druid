@@ -950,11 +950,11 @@ public class Druids
           resultFormat,
           batchSize,
           limit,
+          timeOrder,
           dimFilter,
           columns,
           legacy,
-          context,
-          timeOrder
+          context
       );
     }
 

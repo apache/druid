@@ -54,7 +54,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
 
   private final ScanQueryConfig scanQueryConfig;
   private final GenericQueryMetricsFactory queryMetricsFactory;
-  private final long maxRowsForInMemoryTimeOrdering;
 
   @Inject
   public ScanQueryQueryToolChest(
@@ -64,7 +63,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   {
     this.scanQueryConfig = scanQueryConfig;
     this.queryMetricsFactory = queryMetricsFactory;
-    this.maxRowsForInMemoryTimeOrdering = scanQueryConfig.getMaxRowsTimeOrderedInMemory();
   }
 
   @Override
@@ -200,7 +198,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return sortedElements.iterator();
   }
 
-  private class ScanBatchedTimeOrderedQueueIterator implements CloseableIterator<ScanResultValue>
+  private static class ScanBatchedTimeOrderedQueueIterator implements CloseableIterator<ScanResultValue>
   {
     private final Iterator<ScanResultValue> itr;
     private final int batchSize;

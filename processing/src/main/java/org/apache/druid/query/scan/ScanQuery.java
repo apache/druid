@@ -61,11 +61,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("resultFormat") String resultFormat,
       @JsonProperty("batchSize") int batchSize,
       @JsonProperty("limit") long limit,
+      @JsonProperty("timeOrder") String timeOrder,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("legacy") Boolean legacy,
-      @JsonProperty("context") Map<String, Object> context,
-      @JsonProperty("timeOrder") String timeOrder
+      @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, false, context);

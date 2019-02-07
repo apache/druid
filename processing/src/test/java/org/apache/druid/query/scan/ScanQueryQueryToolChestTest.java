@@ -49,7 +49,7 @@ public class ScanQueryQueryToolChestTest
   private static QuerySegmentSpec emptySegmentSpec;
 
   @BeforeClass
-  public void setup()
+  public static void setup()
   {
     config = createNiceMock(ScanQueryConfig.class);
     expect(config.getMaxRowsTimeOrderedInMemory()).andReturn(100000);
