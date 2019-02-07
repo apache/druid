@@ -20,3 +20,7 @@
 ## Build
 
 From the root of the repo, run `docker build -t druid:tag -f distribution/docker/Dockerfile .`
+
+## Run
+
+Edit `environment` to suite. Run 'docker-compose -f distribution/docker/docker-compose.yml up`
