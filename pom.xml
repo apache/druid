@@ -1474,6 +1474,7 @@
                                 <exclude>quickstart/tutorial/conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
                                 <exclude>target/**</exclude>
+                                <exclude>licenses/**</exclude>
                                 <exclude>**/test/resources/**</exclude>
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
@@ -1482,6 +1483,11 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>LICENSE</exclude>
+                                <exclude>LICENSE.BINARY</exclude>
+                                <exclude>NOTICE</exclude>
+                                <exclude>NOTICE.BINARY</exclude>
+                                <exclude>LABELS.md</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                             </excludes>
                         </configuration>
