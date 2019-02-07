@@ -570,6 +570,7 @@ The "sys" schema provides visibility into Druid segments, servers and tasks.
 
 ### SEGMENTS table
 Segments table provides details on all Druid segments, whether they are published yet or not.
+Note that if a segment is served by more than one realtime tasks(multiple realtime replicas), then the results may vary between the sys.segments queries for columns such as `size`, `num_rows` etc., until the segment is served by a historical eventually.
 
 
 |Column|Notes|
