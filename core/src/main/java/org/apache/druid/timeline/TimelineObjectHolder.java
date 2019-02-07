@@ -19,6 +19,7 @@
 
 package org.apache.druid.timeline;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Interval;
 
@@ -30,6 +31,12 @@ public class TimelineObjectHolder<VersionType, ObjectType> implements LogicalSeg
   private final Interval trueInterval;
   private final VersionType version;
   private final PartitionHolder<ObjectType> object;
+
+  @VisibleForTesting
+  public TimelineObjectHolder(Interval interval, VersionType version, PartitionHolder<ObjectType> object)
+  {
+    this(interval, interval, version, object);
+  }
 
   public TimelineObjectHolder(
       Interval interval,
