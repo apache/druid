@@ -113,7 +113,7 @@ public class DruidSchema extends AbstractSchema
   // DataSource -> Segment -> SegmentMetadataHolder(contains RowSignature) for that segment.
   // Use TreeMap for segments so they are merged in deterministic order, from older to newer.
   // This data structure need to be accessed in a thread-safe way via lock Object since segments can be added,
-  //removed, refreshed or accessed asynchronously
+  // removed, refreshed or accessed asynchronously
   private final Map<String, TreeMap<DataSegment, SegmentMetadataHolder>> segmentMetadataInfo = new HashMap<>();
   private int totalSegments = 0;
 

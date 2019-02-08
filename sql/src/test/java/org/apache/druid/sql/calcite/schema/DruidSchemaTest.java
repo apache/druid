@@ -264,10 +264,10 @@ public class DruidSchemaTest extends CalciteTestBase
                                                 .orElse(null);
     Assert.assertNotNull(existingSegment);
     final SegmentMetadataHolder existingHolder = segmentsMetadata.get(existingSegment);
-    //update SegmentMetadataHolder of existingSegment with numRows=5
+    // update SegmentMetadataHolder of existingSegment with numRows=5
     SegmentMetadataHolder updatedHolder = SegmentMetadataHolder.from(existingHolder).withNumRows(5).build();
     schema.setSegmentMetadataHolder(existingSegment, updatedHolder);
-    //find a druidServer holding existingSegment
+    // find a druidServer holding existingSegment
     final Pair<ImmutableDruidServer, DataSegment> pair = druidServers.stream()
                                                                      .flatMap(druidServer -> druidServer.getSegments()
                                                                                                         .stream()
@@ -285,7 +285,7 @@ public class DruidSchemaTest extends CalciteTestBase
     final ImmutableDruidServer server = pair.lhs;
     Assert.assertNotNull(server);
     final DruidServerMetadata druidServerMetadata = server.getMetadata();
-    //invoke DruidSchema#addSegment on existingSegment
+    // invoke DruidSchema#addSegment on existingSegment
     schema.addSegment(druidServerMetadata, existingSegment);
     segmentsMetadata = schema.getSegmentMetadata();
     // get the only segment with datasource "foo2"
@@ -296,7 +296,7 @@ public class DruidSchemaTest extends CalciteTestBase
     final SegmentMetadataHolder currentHolder = segmentsMetadata.get(currentSegment);
     Assert.assertEquals(updatedHolder.getSegmentId(), currentHolder.getSegmentId());
     Assert.assertEquals(updatedHolder.getNumRows(), currentHolder.getNumRows());
-    //numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
+    // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
     Assert.assertEquals(updatedHolder.getNumReplicas(), currentHolder.getNumReplicas());
     Assert.assertEquals(updatedHolder.isAvailable(), currentHolder.isAvailable());
     Assert.assertEquals(updatedHolder.isPublished(), currentHolder.isPublished());
@@ -328,7 +328,7 @@ public class DruidSchemaTest extends CalciteTestBase
     Map<DataSegment, SegmentMetadataHolder> segmentMetadatas = schema.getSegmentMetadata();
     Set<DataSegment> segments = segmentMetadatas.keySet();
     Assert.assertEquals(segments.size(), 3);
-    //remove one of the segments with datasource "foo"
+    // remove one of the segments with datasource "foo"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo"))
                                                 .findFirst()

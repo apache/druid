@@ -63,7 +63,7 @@ public class SegmentMetadataHolder
   private final long isPublished;
   private final long isAvailable;
   private final long isRealtime;
-  //set of servers that contain the segment
+  // set of servers that contain the segment
   private final Set<String> segmentServers;
   private final long numRows;
   @Nullable
