@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -231,6 +232,14 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
       }
     }
     return true;
+  }
+
+  @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    if (runner != null) {
+      runner.stopGracefully();
+    }
   }
 
   @Override

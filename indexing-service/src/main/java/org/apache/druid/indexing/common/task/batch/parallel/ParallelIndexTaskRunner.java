@@ -41,6 +41,8 @@ public interface ParallelIndexTaskRunner<T extends Task>
    */
   TaskState run() throws Exception;
 
+  void stopGracefully();
+
   /**
    * {@link PushedSegmentsReport} is the report sent by {@link ParallelIndexSubTask}s. The subTasks call this method to
    * send their reports after pushing generated segments to deep storage.
