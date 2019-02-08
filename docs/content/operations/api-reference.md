@@ -498,6 +498,26 @@ This section documents the API endpoints for the processes that reside on Data s
 
 ### MiddleManager
 
+##### GET
+
+* `/druid/worker/v1/enabled`
+
+Check whether a MiddleManager is in an enabled or disabled state. Returns JSON object keyed by the `druid.host` and the boolean state.
+
+```json
+{"localhost":true}
+```
+
+* `/druid/worker/v1/tasks`
+
+Retrieve a list of active tasks being run on MiddleManager. Returns JSON list of taskid strings.
+
+* `/druid/worker/v1/task/{taskid}/log`
+
+Retrieve task log output stream by task id.
+
+##### POST
+
 * `/druid/worker/v1/disable`
 
 'Disable' a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns JSON  object keyed by the `druid.host`:
@@ -513,18 +533,6 @@ This section documents the API endpoints for the processes that reside on Data s
 {"localhost":"enabled"}
 ```
 
-* `/druid/worker/v1/enabled`
-
-Check whether a MiddleManager is in an enabled or disabled state. Returns JSON object keyed by the `druid.host` and the boolean state.
-
-```json
-{"localhost":true}
-```
-
-* `/druid/worker/v1/tasks`
-
-Retrieve a list of active tasks being run on MiddleManager. Returns JSON list of taskid strings.
-
 * `/druid/worker/v1/task/{taskid}/shutdown`
 
 Shutdown a running task by `taskid`. Returns JSON:
@@ -533,9 +541,6 @@ Shutdown a running task by `taskid`. Returns JSON:
 {"task":"index_kafka_wikiticker-v2_f7011f8ffba384b_fpeclode"}
 ```
 
-* `/druid/worker/v1/task/{taskid}/log`
-
-Retrieve task log output stream by task id.
 
 ### Peon
 
