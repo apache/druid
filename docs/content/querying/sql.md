@@ -570,8 +570,9 @@ The "sys" schema provides visibility into Druid segments, servers and tasks.
 
 ### SEGMENTS table
 Segments table provides details on all Druid segments, whether they are published yet or not.
-Note that if a segment is served by more than one realtime tasks(multiple realtime replicas), then the results may vary between the sys.segments queries for columns such as `size`, `num_rows` etc., until the segment is served by a historical eventually.
 
+#### CAVEAT
+Note that a segment can be served by more than one realtime or historical servers, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple realtime tasks, until a segment is eventually served by a historical, at that point the segment is immutable. And broker prefers to query a segment from historical over realtime server. But if a segment has multiple realtime replicas, for eg. kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks. The columns of segments table that can have inconsistent values during this period include `size`, `num_replicas`, `num_rows`.
 
 |Column|Notes|
 |------|-----|
