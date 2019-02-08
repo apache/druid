@@ -143,7 +143,7 @@ public class SegmentTransactionalInsertActionTest
         actionTestKit.getTaskActionToolbox()
     );
 
-    Assert.assertEquals(SegmentPublishResult.fail("testFailTransactional"), result);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result);
   }
 
   @Test
