@@ -97,7 +97,7 @@ public class ScanQueryQueryToolChestTest
         .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
-    Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
+    Iterator<ScanResultValue> sorted = chest.sortScanResultValues(inputs.iterator(), scanQuery);
 
     int count = 0;
     Long previousTime = Long.MAX_VALUE;
@@ -134,7 +134,7 @@ public class ScanQueryQueryToolChestTest
         .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
-    Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
+    Iterator<ScanResultValue> sorted = chest.sortScanResultValues(inputs.iterator(), scanQuery);
 
     int count = 0;
     Long previousTime = -1L;
@@ -169,7 +169,7 @@ public class ScanQueryQueryToolChestTest
         .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
-    Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
+    Iterator<ScanResultValue> sorted = chest.sortScanResultValues(inputs.iterator(), scanQuery);
 
     Long previousTime = Long.MAX_VALUE;
     int count = 0;
@@ -204,7 +204,7 @@ public class ScanQueryQueryToolChestTest
         .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
-    Iterator<ScanResultValue> sorted = chest.heapsortScanResultValues(inputs.iterator(), scanQuery);
+    Iterator<ScanResultValue> sorted = chest.sortScanResultValues(inputs.iterator(), scanQuery);
 
     Long previousTime = -1L;
     int count = 0;

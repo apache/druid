@@ -106,7 +106,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
               public ScanBatchedTimeOrderedQueueIterator make()
               {
                 return new ScanBatchedTimeOrderedQueueIterator(
-                    heapsortScanResultValues(scanResultIterator, scanQuery),
+                    sortScanResultValues(scanResultIterator, scanQuery),
                     scanQuery.getBatchSize()
                 );
               }
@@ -170,7 +170,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @VisibleForTesting
-  Iterator<ScanResultValue> heapsortScanResultValues(Iterator<ScanResultValue> inputIterator, ScanQuery scanQuery)
+  Iterator<ScanResultValue> sortScanResultValues(Iterator<ScanResultValue> inputIterator, ScanQuery scanQuery)
   {
     Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
 
@@ -180,7 +180,6 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     PriorityQueue<ScanResultValue> q = new PriorityQueue<>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
 
     while (inputIterator.hasNext()) {
-
       ScanResultValue next = inputIterator.next();
       List<Object> events = (List<Object>) next.getEvents();
       for (Object event : events) {
