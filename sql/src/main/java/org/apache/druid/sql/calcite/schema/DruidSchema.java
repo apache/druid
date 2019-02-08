@@ -353,7 +353,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   @VisibleForTesting
-  protected void addSegment(final DruidServerMetadata server, final DataSegment segment)
+  void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
     synchronized (lock) {
       final Map<DataSegment, SegmentMetadataHolder> knownSegments = segmentMetadataInfo.get(segment.getDataSource());
@@ -408,7 +408,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   @VisibleForTesting
-  protected void removeSegment(final DataSegment segment)
+  void removeSegment(final DataSegment segment)
   {
     synchronized (lock) {
       log.debug("Segment[%s] is gone.", segment.getId());
@@ -457,7 +457,7 @@ public class DruidSchema extends AbstractSchema
    * which may be a subset of the asked-for set.
    */
   @VisibleForTesting
-  protected Set<DataSegment> refreshSegments(final Set<DataSegment> segments) throws IOException
+  Set<DataSegment> refreshSegments(final Set<DataSegment> segments) throws IOException
   {
     final Set<DataSegment> retVal = new HashSet<>();
 
@@ -555,7 +555,7 @@ public class DruidSchema extends AbstractSchema
   }
 
   @VisibleForTesting
-  protected void setSegmentMetadataHolder(final DataSegment segment, final SegmentMetadataHolder segmentMetadataHolder)
+  void setSegmentMetadataHolder(final DataSegment segment, final SegmentMetadataHolder segmentMetadataHolder)
   {
     synchronized (lock) {
       TreeMap<DataSegment, SegmentMetadataHolder> dataSourceSegments = segmentMetadataInfo.computeIfAbsent(
