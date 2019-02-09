@@ -33,8 +33,10 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
+import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
@@ -360,43 +362,77 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   {
     final String dataSource = getDataSource();
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
-    final SortedSet<Interval> bucketIntervals = Preconditions.checkNotNull(
-        granularitySpec.bucketIntervals().orNull(),
-        "bucketIntervals"
-    );
+    final Optional<SortedSet<Interval>> bucketIntervals = granularitySpec.bucketIntervals();
+
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
     final Map<Interval, String> versions = toolbox
         .getTaskActionClient()
         .submit(new LockListAction())
         .stream()
+        // FIXME note that the next line is new in this commit --- it's not relevant for fixing #6989,
+        //       it just seems like a bug fix to make the code match its comment
+        .filter(taskLock -> !taskLock.isRevoked())
         .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
 
-    final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
-    if (!maybeInterval.isPresent()) {
-      throw new IAE("Could not find interval for timestamp [%s]", timestamp);
-    }
+    Interval interval;
+    String version;
+    if (bucketIntervals.isPresent()) {
+      // If the granularity spec has explicit intervals, we just need to find the interval (of the segment
+      // granularity); we already tried to lock it at task startup.
+      final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
+      if (!maybeInterval.isPresent()) {
+        throw new IAE("Could not find interval for timestamp [%s]", timestamp);
+      }
 
-    final Interval interval = maybeInterval.get();
-    if (!bucketIntervals.contains(interval)) {
-      throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
+      interval = maybeInterval.get();
+      if (!bucketIntervals.get().contains(interval)) {
+        throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
+      }
+
+      version = findVersion(versions, interval);
+      if (version == null) {
+        // FIXME I'm preserving the existing error message here, but it seems like the message should
+        // be more like "lock on interval has been revoked"?
+        throw new ISE("Cannot find a version for interval[%s]", interval);
+      }
+    } else {
+      // We don't have explicit intervals. We can use the segment granularity to figure out what
+      // interval we need, but we might not have already locked it.
+      interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
+      version = findVersion(versions, interval);
+      if (version == null) {
+        // We don't have a lock for this interval, so we should lock it now.
+        // FIXME should this be doing a LockAcquireAction instead so it can retry if it fails?
+        //       I think not because you really shouldn't be batch ingesting data that overlaps
+        //       with real time.
+        final TaskLock lock = Preconditions.checkNotNull(
+            toolbox.getTaskActionClient().submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)),
+            "Cannot acquire a lock for interval[%s]", interval
+        );
+        if (!interval.equals(lock.getInterval())) {
+          throw new ISE("Lock is for the wrong interval: expected [%s], got [%s]",
+                        interval, lock.getInterval());
+        }
+        version = lock.getVersion();
+      }
     }
 
     final int partitionNum = Counters.incrementAndGetInt(partitionNumCountersPerInterval, interval);
     return new SegmentIdWithShardSpec(
         dataSource,
         interval,
-        findVersion(versions, interval),
+        version,
         new NumberedShardSpec(partitionNum, 0)
     );
   }
 
-  private static String findVersion(Map<Interval, String> versions, Interval interval)
+  private static @Nullable String findVersion(Map<Interval, String> versions, Interval interval)
   {
     return versions.entrySet().stream()
                    .filter(entry -> entry.getKey().contains(interval))
                    .map(Entry::getValue)
                    .findFirst()
-                   .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
+                   .orElse(null);
   }
 
   /**

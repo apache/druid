@@ -49,7 +49,8 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
   void doIndexTestTest(
       String dataSource,
       String indexTaskFilePath,
-      String queryFilePath
+      String queryFilePath,
+      boolean waitForMultipleVersions
   ) throws IOException
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
@@ -59,7 +60,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullDatasourceName
     );
 
-    submitTaskAndWait(taskSpec, fullDatasourceName);
+    submitTaskAndWait(taskSpec, fullDatasourceName, waitForMultipleVersions);
     try {
 
       String queryResponseTemplate;
@@ -107,7 +108,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullReindexDatasourceName
     );
 
-    submitTaskAndWait(taskSpec, fullReindexDatasourceName);
+    submitTaskAndWait(taskSpec, fullReindexDatasourceName, false);
     try {
       String queryResponseTemplate;
       try {
@@ -144,7 +145,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String queryFilePath
   )
   {
-    submitTaskAndWait(indexTaskFilePath, dataSource);
+    submitTaskAndWait(indexTaskFilePath, dataSource, false);
     try {
       sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
     }
@@ -154,11 +155,24 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  private void submitTaskAndWait(String taskSpec, String dataSourceName)
+  private void submitTaskAndWait(String taskSpec, String dataSourceName, boolean waitForMultipleVersions)
   {
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
+
+    // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
+    // data source. For that second round we need to make sure the coordinator actually learned
+    // about the new segments befor waiting for it to report that all segments are loaded; otherwise
+    // this method could return too early because the coordinator is merely reporting that all the
+    // original segments have loaded. Waiting for the coordinator know about more than one version
+    // worth of segments is a simple way to differentiate between only knowing about the first segments
+    // and knowing about the second ones too.
+    if (waitForMultipleVersions) {
+      RetryUtil.retryUntilTrue(
+          () -> coordinator.getSegmentVersions(dataSourceName).size() > 1, "See multiple versions"
+      );
+    }
 
     RetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(dataSourceName), "Segment Load"
