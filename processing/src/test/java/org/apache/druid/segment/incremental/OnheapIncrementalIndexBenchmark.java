@@ -172,8 +172,6 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     @Override
     protected AddToFactsResult addToFacts(
         AggregatorFactory[] metrics,
-        boolean deserializeComplexMetrics,
-        boolean reportParseExceptions,
         InputRow row,
         AtomicInteger numEntries,
         AtomicLong sizeInBytes,
@@ -196,7 +194,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         for (int i = 0; i < metrics.length; i++) {
           final AggregatorFactory agg = metrics[i];
           aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+              makeColumnSelectorFactory(agg, rowSupplier, getDeserializeComplexMetrics())
           );
         }
         Integer rowIndex;
@@ -233,7 +231,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           }
           catch (ParseException e) {
             // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            if (reportParseExceptions) {
+            if (getReportParseExceptions()) {
               throw e;
             }
           }

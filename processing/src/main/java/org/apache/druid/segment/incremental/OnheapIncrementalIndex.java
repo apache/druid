@@ -141,8 +141,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   @Override
   protected AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
       AtomicLong sizeInBytes,

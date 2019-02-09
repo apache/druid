@@ -141,8 +141,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   @Override
   protected AddToFactsResult addToFacts(
       AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
       AtomicLong sizeInBytes, // ignored, added to make abstract class method impl happy
@@ -231,7 +229,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
         catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          if (reportParseExceptions) {
+          if (getReportParseExceptions()) {
             throw new ParseException(e, "Encountered parse error for aggregator[%s]", getMetricAggs()[i].getName());
           } else {
             log.debug(e, "Encountered parse error, skipping aggregator[%s].", getMetricAggs()[i].getName());

@@ -98,6 +98,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 /**
+ *
  */
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
@@ -250,7 +251,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
-   *
+   * <p>
    * Set concurrentEventAdd to true to indicate that adding of input row should be thread-safe (for example, groupBy
    * where the multiple threads can add concurrently to the IncrementalIndex).
    *
@@ -328,6 +329,16 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
+  }
+
+  protected boolean getDeserializeComplexMetrics()
+  {
+    return deserializeComplexMetrics;
+  }
+
+  protected boolean getReportParseExceptions()
+  {
+    return reportParseExceptions;
   }
 
   public static class Builder
@@ -482,12 +493,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   // Note: This method needs to be thread safe.
   protected abstract AddToFactsResult addToFacts(
-      AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
+      AggregatorFactory[] metrics, //replace
       InputRow row,
-      AtomicInteger numEntries,
-      AtomicLong sizeInBytes,
+      AtomicInteger numEntries, // replace
+      AtomicLong sizeInBytes, // maybe replace??
       IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -609,8 +618,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     final AddToFactsResult addToFactsResult = addToFacts(
         metrics,
-        deserializeComplexMetrics,
-        reportParseExceptions,
         row,
         numEntries,
         bytesInMemory,
@@ -625,7 +632,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         incrementalIndexRowResult.getParseExceptionMessages(),
         addToFactsResult.getParseExceptionMessages()
     );
-    return new IncrementalIndexAddResult(addToFactsResult.getRowCount(), addToFactsResult.getBytesInMemory(), parseException);
+    return new IncrementalIndexAddResult(
+        addToFactsResult.getRowCount(),
+        addToFactsResult.getBytesInMemory(),
+        parseException
+    );
   }
 
   @VisibleForTesting
@@ -908,7 +919,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
    * https://github.com/apache/incubator-druid/issues/2011
    */
-  public void loadDimensionIterable(Iterable<String> oldDimensionOrder, Map<String, ColumnCapabilitiesImpl> oldColumnCapabilities)
+  public void loadDimensionIterable(
+      Iterable<String> oldDimensionOrder,
+      Map<String, ColumnCapabilitiesImpl> oldColumnCapabilities
+  )
   {
     synchronized (dimensionDescs) {
       if (!dimensionDescs.isEmpty()) {
@@ -1223,6 +1237,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     /**
      * Get all {@link IncrementalIndexRow} to persist, ordered with {@link Comparator<IncrementalIndexRow>}
+     *
      * @return
      */
     Iterable<IncrementalIndexRow> persistIterable();
@@ -1289,7 +1304,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public Iterator<IncrementalIndexRow> iterator(boolean descending)
     {
       if (descending && sortFacts) {
-        return ((ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow>) facts).descendingMap().keySet().iterator();
+        return ((ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow>) facts).descendingMap()
+                                                                                         .keySet()
+                                                                                         .iterator();
       }
       return keySet().iterator();
     }
@@ -1387,7 +1404,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       if (descending && sortFacts) {
         return timeOrderedConcat(((ConcurrentNavigableMap<Long, Deque<IncrementalIndexRow>>) facts)
-                .descendingMap().values(), true).iterator();
+                                     .descendingMap().values(), true).iterator();
       }
       return timeOrderedConcat(facts.values(), false).iterator();
     }
