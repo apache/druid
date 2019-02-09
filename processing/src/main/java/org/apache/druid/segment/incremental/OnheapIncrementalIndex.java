@@ -300,7 +300,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     final boolean countCheck = size() < maxRowCount;
     // if maxBytesInMemory = -1, then ignore sizeCheck
-    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemoryLong() < maxBytesInMemory;
+    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory().get() < maxBytesInMemory;
     final boolean canAdd = countCheck && sizeCheck;
     if (!countCheck && !sizeCheck) {
       outOfRowsReason = StringUtils.format(

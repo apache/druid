@@ -780,11 +780,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return numEntries.get();
   }
 
-  public AtomicLong getBytesInMemory()
-  {
-    return bytesInMemory;
-  }
-
   public boolean getDeserializeComplexMetrics()
   {
     return deserializeComplexMetrics;
@@ -805,10 +800,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return metrics;
   }
 
-
-  public long getBytesInMemoryLong()
+  public AtomicLong getBytesInMemory()
   {
-    return bytesInMemory.get();
+    return bytesInMemory;
   }
 
   private long getMinTimeMillis()
