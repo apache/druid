@@ -331,16 +331,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     }
   }
 
-  protected boolean getDeserializeComplexMetrics()
-  {
-    return deserializeComplexMetrics;
-  }
-
-  protected boolean getReportParseExceptions()
-  {
-    return reportParseExceptions;
-  }
-
   public static class Builder
   {
     private IncrementalIndexSchema incrementalIndexSchema;
@@ -493,10 +483,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   // Note: This method needs to be thread safe.
   protected abstract AddToFactsResult addToFacts(
-      AggregatorFactory[] metrics, //replace
       InputRow row,
-      AtomicInteger numEntries, // replace
-      AtomicLong sizeInBytes, // maybe replace??
       IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -617,10 +604,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     final AddToFactsResult addToFactsResult = addToFacts(
-        metrics,
         row,
-        numEntries,
-        bytesInMemory,
         incrementalIndexRowResult.getIncrementalIndexRow(),
         in,
         rowSupplier,
@@ -796,7 +780,33 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return numEntries.get();
   }
 
-  public long getBytesInMemory()
+  public AtomicLong getBytesInMemory()
+  {
+    return bytesInMemory;
+  }
+
+  public boolean getDeserializeComplexMetrics()
+  {
+    return deserializeComplexMetrics;
+  }
+
+  public boolean getReportParseExceptions()
+  {
+    return reportParseExceptions;
+  }
+
+  public AtomicInteger getNumEntries()
+  {
+    return numEntries;
+  }
+
+  public AggregatorFactory[] getMetrics()
+  {
+    return metrics;
+  }
+
+
+  public long getBytesInMemoryLong()
   {
     return bytesInMemory.get();
   }

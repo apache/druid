@@ -171,10 +171,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
     @Override
     protected AddToFactsResult addToFacts(
-        AggregatorFactory[] metrics,
         InputRow row,
-        AtomicInteger numEntries,
-        AtomicLong sizeInBytes,
         IncrementalIndexRow key,
         ThreadLocal<InputRow> rowContainer,
         Supplier<InputRow> rowSupplier,
@@ -185,7 +182,9 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
       final Integer priorIdex = getFacts().getPriorIndex(key);
 
       Aggregator[] aggs;
-
+      AggregatorFactory[] metrics = getMetrics();
+      AtomicInteger numEntries = getNumEntries();
+      AtomicLong sizeInBytes = getBytesInMemory();
       if (null != priorIdex) {
         aggs = indexedMap.get(priorIdex);
       } else {

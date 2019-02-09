@@ -46,6 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ *
  */
 public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
@@ -105,7 +106,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     long maxAggregatorIntermediateSize = Integer.BYTES * incrementalIndexSchema.getMetrics().length;
     maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
-                                           .mapToLong(aggregator -> aggregator.getMaxIntermediateSizeWithNulls() + Long.BYTES * 2)
+                                           .mapToLong(aggregator -> aggregator.getMaxIntermediateSizeWithNulls()
+                                                                    + Long.BYTES * 2)
                                            .sum();
     return maxAggregatorIntermediateSize;
   }
@@ -140,10 +142,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   @Override
   protected AddToFactsResult addToFacts(
-      AggregatorFactory[] metrics,
       InputRow row,
-      AtomicInteger numEntries,
-      AtomicLong sizeInBytes,
       IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -154,7 +153,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
-
+    AggregatorFactory[] metrics = getMetrics();
+    AtomicInteger numEntries = getNumEntries();
+    AtomicLong sizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
@@ -299,7 +300,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     final boolean countCheck = size() < maxRowCount;
     // if maxBytesInMemory = -1, then ignore sizeCheck
-    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory() < maxBytesInMemory;
+    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemoryLong() < maxBytesInMemory;
     final boolean canAdd = countCheck && sizeCheck;
     if (!countCheck && !sizeCheck) {
       outOfRowsReason = StringUtils.format(
