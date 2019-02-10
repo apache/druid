@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.amazonaws.annotation.GuardedBy;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
@@ -94,9 +95,9 @@ public class DruidSchema extends AbstractSchema
 
   private static final EmittingLogger log = new EmittingLogger(DruidSchema.class);
   private static final int MAX_SEGMENTS_PER_QUERY = 15000;
-  private static final long IS_PUBLISHED = 0;
-  private static final long IS_AVAILABLE = 1;
-  private static final long NUM_ROWS = 0;
+  private static final long DEFAULT_IS_PUBLISHED = 0;
+  private static final long DEFAULT_IS_AVAILABLE = 1;
+  private static final long DEFAULT_NUM_ROWS = 0;
 
   private final QueryLifecycleFactory queryLifecycleFactory;
   private final PlannerConfig config;
@@ -112,8 +113,7 @@ public class DruidSchema extends AbstractSchema
 
   // DataSource -> Segment -> SegmentMetadataHolder(contains RowSignature) for that segment.
   // Use TreeMap for segments so they are merged in deterministic order, from older to newer.
-  // This data structure need to be accessed in a thread-safe way via lock Object since segments can be added,
-  // removed, refreshed or accessed asynchronously
+  @GuardedBy("lock")
   private final Map<String, TreeMap<DataSegment, SegmentMetadataHolder>> segmentMetadataInfo = new HashMap<>();
   private int totalSegments = 0;
 
@@ -365,12 +365,12 @@ public class DruidSchema extends AbstractSchema
         final Set<String> servers = ImmutableSet.of(server.getName());
         holder = SegmentMetadataHolder.builder(
             segment.getId(),
-            IS_PUBLISHED,
-            IS_AVAILABLE,
+            DEFAULT_IS_PUBLISHED,
+            DEFAULT_IS_AVAILABLE,
             isRealtime,
             servers,
             null,
-            NUM_ROWS
+            DEFAULT_NUM_ROWS
         ).build();
         // Unknown segment.
         setSegmentMetadataHolder(segment, holder);
