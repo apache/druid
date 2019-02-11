@@ -25,7 +25,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
