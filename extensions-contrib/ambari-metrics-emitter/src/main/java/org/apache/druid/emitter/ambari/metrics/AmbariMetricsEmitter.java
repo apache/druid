@@ -52,7 +52,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
   private final List<Emitter> emitterList;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<TimelineMetric> eventsQueue;
-  private static final BlockingQueueHelper<TimelineMetric> blockingQueueHelper = new BlockingQueueHelper();
+  private final BlockingQueueHelper<TimelineMetric> eventsQueueHelper;
   private final AmbariMetricsEmitterConfig config;
   private final String collectorURI;
   private static final long DEFAULT_FLUSH_TIMEOUT_MILLIS = 60000; // default flush wait 1 min
@@ -71,6 +71,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
     this.emitterList = emitterList;
     this.timelineMetricConverter = config.getDruidToTimelineEventConverter();
     this.eventsQueue = new LinkedBlockingQueue<>(config.getMaxQueueSize());
+    this.eventsQueueHelper = new BlockingQueueHelper<>(eventsQueue);
     this.collectorURI = StringUtils.format(
         "%s://%s:%s%s",
         config.getProtocol(),
@@ -112,8 +113,7 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
         return;
       }
       try {
-        blockingQueueHelper.offerAndHandleFailure(
-            eventsQueue,
+        eventsQueueHelper.offerAndHandleFailure(
             timelineEvent,
             config.getEmitWaitTime(),
             TimeUnit.MILLISECONDS,

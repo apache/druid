@@ -173,8 +173,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             );
 
             recordsResult = null;
-            blockingQueueHelper.offerAndHandleFailure(
-                records,
+            recordQueueHelper.offerAndHandleFailure(
                 currRecord,
                 recordBufferOfferTimeout,
                 TimeUnit.MILLISECONDS,
@@ -350,8 +349,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private final ConcurrentMap<StreamPartition<String>, PartitionResource> partitionResources =
       new ConcurrentHashMap<>();
   private BlockingQueue<OrderedPartitionableRecord<String, String>> records;
-  private static final BlockingQueueHelper<OrderedPartitionableRecord<String, String>> blockingQueueHelper =
-      new BlockingQueueHelper<>();
+  private final BlockingQueueHelper<OrderedPartitionableRecord<String, String>> recordQueueHelper;
 
   private volatile boolean checkPartitionsStarted = false;
   private volatile boolean closed = false;
@@ -419,6 +417,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     );
 
     records = new LinkedBlockingQueue<>(recordBufferSize);
+    recordQueueHelper = new BlockingQueueHelper<>(records);
   }
 
   public static AmazonKinesis getAmazonKinesisClient(

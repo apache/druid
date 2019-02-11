@@ -24,12 +24,16 @@ import java.util.concurrent.TimeUnit;
 
 public class BlockingQueueHelper<T>
 {
+  BlockingQueue<T> queue;
+
+  public BlockingQueueHelper(BlockingQueue<T> queue) {
+    this.queue = queue;
+  }
   /**
    * A wrapper method around BlockingQueue#offer that provides users with the capability of adding a method to
    * handle a failure to offer.
    */
   public boolean offerAndHandleFailure (
-      BlockingQueue<T> queue,
       T itemToOffer,
       long waitTime,
       TimeUnit waitTimeUnit,

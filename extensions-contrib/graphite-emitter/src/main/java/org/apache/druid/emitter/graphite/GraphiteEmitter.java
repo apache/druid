@@ -57,7 +57,7 @@ public class GraphiteEmitter implements Emitter
   private final List<Emitter> requestLogEmitters;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<GraphiteEvent> eventsQueue;
-  private static final BlockingQueueHelper<GraphiteEvent> blockingQueueHelper = new BlockingQueueHelper<>();
+  private final BlockingQueueHelper<GraphiteEvent> eventsQueueHelper;
   private static final long FLUSH_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(1); // default flush wait 1 min
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
       .setDaemon(true)
@@ -76,6 +76,7 @@ public class GraphiteEmitter implements Emitter
     this.graphiteEmitterConfig = graphiteEmitterConfig;
     this.graphiteEventConverter = graphiteEmitterConfig.getDruidToGraphiteEventConverter();
     this.eventsQueue = new LinkedBlockingQueue(graphiteEmitterConfig.getMaxQueueSize());
+    this.eventsQueueHelper = new BlockingQueueHelper<>(eventsQueue);
   }
 
   @Override
@@ -108,8 +109,7 @@ public class GraphiteEmitter implements Emitter
         return;
       }
       try {
-        blockingQueueHelper.offerAndHandleFailure(
-          eventsQueue,
+        eventsQueueHelper.offerAndHandleFailure(
           graphiteEvent,
           graphiteEmitterConfig.getEmitWaitTime(),
           TimeUnit.MILLISECONDS,

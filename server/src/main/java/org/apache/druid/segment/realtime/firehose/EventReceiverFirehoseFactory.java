@@ -174,7 +174,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     private final ScheduledExecutorService exec;
     private final ExecutorService idleDetector;
     private final BlockingQueue<InputRow> buffer;
-    private final BlockingQueueHelper<InputRow> blockingQueueHelper = new BlockingQueueHelper<>();
+    private final BlockingQueueHelper<InputRow> bufferHelper;
     private final InputRowParser<Map<String, Object>> parser;
 
     private final Object readLock = new Object();
@@ -189,6 +189,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     public EventReceiverFirehose(InputRowParser<Map<String, Object>> parser)
     {
       this.buffer = new ArrayBlockingQueue<>(bufferSize);
+      this.bufferHelper = new BlockingQueueHelper<>(buffer);
       this.parser = parser;
       exec = Execs.scheduledSingleThreaded("event-receiver-firehose-%d");
       idleDetector = Execs.singleThreaded("event-receiver-firehose-idle-detector-%d");
@@ -375,8 +376,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       for (final InputRow row : rows) {
         boolean added = false;
         while (!closed && !added) {
-          added = blockingQueueHelper.offerAndHandleFailure(
-              buffer,
+          added = bufferHelper.offerAndHandleFailure(
               row,
               500,
               TimeUnit.MILLISECONDS,
