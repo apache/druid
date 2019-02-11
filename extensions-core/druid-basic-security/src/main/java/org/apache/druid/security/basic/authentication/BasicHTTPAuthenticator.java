@@ -147,7 +147,6 @@ public class BasicHTTPAuthenticator implements Authenticator
     @Override
     public void init(FilterConfig filterConfig)
     {
-
     }
 
 
@@ -195,7 +194,6 @@ public class BasicHTTPAuthenticator implements Authenticator
     @Override
     public void destroy()
     {
-
     }
   }
 
