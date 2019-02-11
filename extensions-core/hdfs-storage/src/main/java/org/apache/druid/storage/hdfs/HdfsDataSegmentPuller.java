@@ -20,7 +20,6 @@
 package org.apache.druid.storage.hdfs;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.CompressionUtils;
@@ -215,7 +214,7 @@ public class HdfsDataSegmentPuller implements URIDataPuller
           );
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       } else if (CompressionUtils.isZip(path.getName())) {
 

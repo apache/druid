@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.http.client.pool;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -79,7 +78,7 @@ public class ResourcePool<K, V> implements Closeable
       holder = pool.get(key);
     }
     catch (ExecutionException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     final V value = holder.get();
 
@@ -227,7 +226,7 @@ public class ResourcePool<K, V> implements Closeable
           deficit++;
           this.notifyAll();
         }
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       return retVal;

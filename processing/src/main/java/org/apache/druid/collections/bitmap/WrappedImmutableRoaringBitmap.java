@@ -19,7 +19,6 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.google.common.base.Throwables;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
@@ -63,7 +62,7 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
       return out.toByteArray();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

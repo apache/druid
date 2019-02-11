@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -598,7 +597,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             catch (Exception e) {
               // Must not remove segments here, we aren't sure if our transaction succeeded or not.
               log.warn(e, "Failed publish, not removing segments: %s", segmentsAndMetadata.getSegments());
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
 

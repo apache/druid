@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -129,11 +128,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     return retVal;
                                   }
                                   catch (QueryInterruptedException e) {
-                                    throw Throwables.propagate(e);
+                                    throw new RuntimeException(e);
                                   }
                                   catch (Exception e) {
                                     log.error(e, "Exception with one of the sequences!");
-                                    throw Throwables.propagate(e);
+                                    throw new RuntimeException(e);
                                   }
                                 }
                               }
@@ -167,7 +166,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               throw new QueryInterruptedException(e);
             }
             catch (ExecutionException e) {
-              throw Throwables.propagate(e.getCause());
+              throw new RuntimeException(e);
             }
           }
 
