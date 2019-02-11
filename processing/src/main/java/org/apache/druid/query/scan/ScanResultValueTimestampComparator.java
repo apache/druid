@@ -21,12 +21,21 @@ package org.apache.druid.query.scan;
 
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * This comparator class supports comparisons of ScanResultValues based on the timestamp of their first event.  Since
+ * only the first event is looked at, this Comparator is especially useful for unbatched ScanResultValues (such as in
+ * {@link ScanQueryQueryToolChest#mergeResults(QueryRunner <ScanResultValue>)}.  The comparator takes a scanQuery as
+ * a parameter so that it knows the result format (list or compactedList) of Object ScanResultValue#events.  It uses
+ * this result format to perform a bunch of type casts on the object to get the timestamp then compares the timestamps.
+ */
 public class ScanResultValueTimestampComparator implements Comparator<ScanResultValue>
 {
   private final ScanQuery scanQuery;
