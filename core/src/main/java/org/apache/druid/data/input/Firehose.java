@@ -39,8 +39,8 @@ import java.io.IOException;
  * Concurrency:
  * The three methods {@link #hasMore()}, {@link #nextRow()} and {@link #commit()} are all called from the same thread.
  * {@link #commit()}, however, returns a callback which will be called on another thread. {@link #close()} might be
- * called concurrenly from a thread different than the one where {@link #hasMore()}, {@link #nextRow()} and {@link
- * #commit()} are called.
+ * called concurrenly from a thread different from the thread calling {@link #hasMore()}, {@link #nextRow()} and {@link
+ * #commit()}.
  * </p>
  */
 @ExtensionPoint
@@ -90,9 +90,13 @@ public interface Firehose extends Closeable
   /**
    * Closes the "ingestion side" of the Firehose, potentially concurrently with calls to {@link #hasMore()}, {@link
    * #nextRow()} and {@link #commit()} being made from a different thread. {@link #hasMore()} and {@link #nextRow()}
-   * continue to work after close(), but since the ingestion side is closed rows will eventually run out. The effects
-   * of calling the {@link Runnable} returned from {@link #commit()} (but not {@link #commit()} itself) concurrently or
-   * after close() are unspecified: a commit may not be performed silently, or a error may result.
+   * continue to work after close(), but since the ingestion side is closed rows will eventually run out.
+   *
+   * The effects of calling run() on the {@link Runnable} object returned from {@link #commit()} (in other words,
+   * doing the commit) concurrently or after close() are unspecified: commit may not be performed silently (that is,
+   * run() call completes without an Exception, but the commit is not actually done), or a error may result. Note that
+   * {@link #commit()} method itself can be called concurrently with close(), but it doesn't make much sense, because
+   * run() on the returned Runnable then can't be called.
    */
   @Override
   void close() throws IOException;

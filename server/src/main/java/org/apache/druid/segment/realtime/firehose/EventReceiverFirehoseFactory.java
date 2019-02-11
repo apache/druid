@@ -184,12 +184,18 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
   public class EventReceiverFirehose implements ChatHandler, Firehose, EventReceiverFirehoseMetric
   {
     /**
-     * This field needs to be volatile because it's intialized via double-checked locking in {@link #shutdown}. See
-     * https://github.com/apache/incubator-druid/pull/6662#discussion_r254161160.
+     * How does this thread work (and its interruption policy) is described in the comment for {@link
+     * #createDelayedCloseExecutor}.
      */
-    private volatile @Nullable Thread delayedCloseExecutor;
+    @GuardedBy("this")
+    private @Nullable Thread delayedCloseExecutor;
 
-    /** Contains {@link InputRow} objects, the last one is {@link #FIREHOSE_CLOSED} which is a "poison pill". */
+    /**
+     * Contains {@link InputRow} objects, the last one is {@link #FIREHOSE_CLOSED} which is a "poison pill". Poison pill
+     * is used to notify the thread that calls {@link #hasMore()} and {@link #nextRow()} that the EventReceiverFirehose
+     * is closed without heuristic 500 ms timed blocking in a loop instead of a simple {@link BlockingQueue#take()}
+     * call (see {@link #hasMore} code).
+     */
     private final BlockingQueue<Object> buffer;
     private final InputRowParser<Map<String, Object>> parser;
 
@@ -227,6 +233,29 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       }
     }
 
+    /**
+     * Creates and starts a {@link #delayedCloseExecutor} thread, either right from the EventReceiverFirehose's
+     * constructor if {@link #maxIdleTimeMillis} is specified, or otherwise lazily from {@link #shutdown}.
+     *
+     * The thread sleeps until the time when the Firehose should be closed because either {@link #addAll} was not called
+     * for the specified max idle time (see {@link #idleCloseTimeNsHolder}), or until the shutoff time requested last
+     * via {@link #shutdown} (see {@link #requestedShutdownTimeNsHolder}), whatever is sooner. Then the thread does
+     * two things:
+     *  1. if the Firehose is already closed (or in the process of closing, but {@link #closed} flag is already set), it
+     *    silently exits.
+     *  2. It checks both deadlines again:
+     *       a) if either of them has arrived, it calls {@link #close()} and exits.
+     *       b) otherwise, it sleeps until the nearest deadline again, and so on in a loop.
+     *
+     * This way the thread works predictably and robustly regardless of how both deadlines change (for example, shutoff
+     * time specified via {@link #shutdown} may jump in both directions).
+     *
+     * Other methods notify {@link #delayedCloseExecutor} that the Firehose state in some way that is important for this
+     * thread (that is, when {@link #close()} is called, {@link #delayedCloseExecutor} is no longer needed and should
+     * exit as soon as possible to release system resources; when {@link #shutdown} is called, the thread may need to
+     * wake up sooner if the shutoff time has been moved sooner) by simply interrupting it. The thread wakes up and
+     * continues its loop.
+     */
     @GuardedBy("this")
     private Thread createDelayedCloseExecutor()
     {
@@ -249,6 +278,9 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
                   dueToShutdownRequest = true;
                 }
               }
+              // This is not possible unless there are bugs in the code of EventReceiverFirehose. AssertionError could
+              // have been thrown instead, but it doesn't seem to make a lot of sense in a background thread. Instead,
+              // we long the error and continue a loop after some pause.
               if (closeTimeNs == null) {
                 log.error(
                     "A bug in EventReceiverFirehose code, "
@@ -263,7 +295,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
                 continue;
               }
               long closeTimeoutNs = closeTimeNs - System.nanoTime();
-              if (closeTimeoutNs <= 0) {
+              if (closeTimeoutNs <= 0) { // overflow-aware comparison
                 if (dueToShutdownRequest) {
                   log.info("Closing Firehose after a shutdown request");
                 } else {
@@ -283,6 +315,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
           },
           "event-receiver-firehose-closer"
       );
+      delayedCloseExecutor.setDaemon(true);
       this.delayedCloseExecutor = delayedCloseExecutor;
       delayedCloseExecutor.start();
       return delayedCloseExecutor;
@@ -429,7 +462,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
 
     /**
      * This method is synchronized because it might be called concurrently from multiple threads: from {@link
-     * #delayedCloseExecutor}, and explicitly on this Firehose object.
+     * #delayedCloseExecutor}, and from the thread that creates and uses the Firehose object.
      */
     @Override
     public synchronized void close()
@@ -447,7 +480,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       if (chatHandlerProvider != null) {
         chatHandlerProvider.unregister(serviceName);
       }
-      Thread delayedCloseExecutor = this.delayedCloseExecutor;
       if (delayedCloseExecutor != null && !delayedCloseExecutor.equals(Thread.currentThread())) {
         // Interrupt delayedCloseExecutor to let it discover that closed flag is already set and exit.
         delayedCloseExecutor.interrupt();
@@ -511,21 +543,17 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         long shutoffTimeoutMillis = Math.max(shutoffAt.getMillis() - System.currentTimeMillis(), 0);
 
         requestedShutdownTimeNsHolder.set(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(shutoffTimeoutMillis));
-        Thread delayedCloseExecutor = this.delayedCloseExecutor;
+        Thread delayedCloseExecutor;
         // Need to interrupt delayedCloseExecutor because a newly specified shutdown time might be closer than idle
         // timeout or previously specified shutdown. Interruption of delayedCloseExecutor lets it adjust the sleep time
         // (see the logic of this thread in createDelayedCloseExecutor()).
         boolean needToInterruptDelayedCloseExecutor = true;
-        if (delayedCloseExecutor == null) {
-          // Need double-checked locking protection because many concurrent shutdown requests might arrive at the same
-          // time, we don't want to spin up multiple threads.
-          synchronized (this) {
-            delayedCloseExecutor = this.delayedCloseExecutor;
-            if (delayedCloseExecutor == null) {
-              delayedCloseExecutor = createDelayedCloseExecutor();
-              // Don't need to interrupt a freshly created thread
-              needToInterruptDelayedCloseExecutor = false;
-            }
+        synchronized (this) {
+          delayedCloseExecutor = this.delayedCloseExecutor;
+          if (delayedCloseExecutor == null) {
+            delayedCloseExecutor = createDelayedCloseExecutor();
+            // Don't need to interrupt a freshly created thread
+            needToInterruptDelayedCloseExecutor = false;
           }
         }
         if (needToInterruptDelayedCloseExecutor) {
@@ -557,7 +585,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      * @param req Http request
      * @param responseContentType Response content type
      * @param responseMapper Response object mapper
-     * @return a response to return or null if the request can proceed
+     * @return an error response to return or null if the request can proceed
      */
     @Nullable
     private Response checkProducerSequence(
