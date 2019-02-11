@@ -50,8 +50,8 @@ public class ScanResultValueTimestampComparator implements Comparator<ScanResult
     int comparison;
     if (scanQuery.getResultFormat().equals(ScanQuery.RESULT_FORMAT_LIST)) {
       comparison = Longs.compare(
-          (Long) ((Map<String, Object>) ((List) o1.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME),
-          (Long) ((Map<String, Object>) ((List) o2.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME)
+          (Long) ((Map<String, Object>) ((List<Object>) o1.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME),
+          (Long) ((Map<String, Object>) ((List<Object>) o2.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME)
       );
     } else if (scanQuery.getResultFormat().equals(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)) {
       int val1TimeColumnIndex = o1.getColumns().indexOf(ColumnHolder.TIME_COLUMN_NAME);

@@ -100,19 +100,19 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
 
         return new BaseSequence(
-            new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedTimeOrderedQueueIterator>()
+            new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedTimeOrderedIterator>()
             {
               @Override
-              public ScanBatchedTimeOrderedQueueIterator make()
+              public ScanBatchedTimeOrderedIterator make()
               {
-                return new ScanBatchedTimeOrderedQueueIterator(
+                return new ScanBatchedTimeOrderedIterator(
                     sortScanResultValues(scanResultIterator, scanQuery),
                     scanQuery.getBatchSize()
                 );
               }
 
               @Override
-              public void cleanup(ScanBatchedTimeOrderedQueueIterator iterFromMake)
+              public void cleanup(ScanBatchedTimeOrderedIterator iterFromMake)
               {
                 CloseQuietly.close(iterFromMake);
               }
@@ -197,12 +197,17 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return sortedElements.iterator();
   }
 
-  private static class ScanBatchedTimeOrderedQueueIterator implements CloseableIterator<ScanResultValue>
+  /**
+   * This iterator supports iteration through any Iterable and aggregates events in the Iterable into ScanResultValues
+   * with {int batchSize} events.  The columns from the first event per ScanResultValue will be used to populate the
+   * column section.
+   */
+  private static class ScanBatchedTimeOrderedIterator implements CloseableIterator<ScanResultValue>
   {
     private final Iterator<ScanResultValue> itr;
     private final int batchSize;
 
-    public ScanBatchedTimeOrderedQueueIterator(Iterator<ScanResultValue> iterator, int batchSize)
+    public ScanBatchedTimeOrderedIterator(Iterator<ScanResultValue> iterator, int batchSize)
     {
       this.itr = iterator;
       this.batchSize = batchSize;
