@@ -35,8 +35,8 @@ ingestion method.
 | Parallel indexing | Always parallel | Parallel if firehose is splittable | Always sequential |
 | Supported indexing modes | Replacing mode | Both appending and replacing modes | Both appending and replacing modes |
 | External dependency | Hadoop (it internally submits Hadoop jobs) | No dependency | No dependency |
-| Supported rollup modes | Perfect rollup | Best-effort rollup | Both perfect and best-effort rollup |
-| Supported partitioning methods | Both Hash-based and range partitioning | N/A | Hash-based partitioning |
+| Supported [rollup modes](http://druid.io/docs/latest/ingestion/index.html#roll-up-modes) | Perfect rollup | Best-effort rollup | Both perfect and best-effort rollup |
+| Supported partitioning methods | [Both Hash-based and range partitioning](http://druid.io/docs/latest/ingestion/hadoop.html#partitioning-specification) | N/A | Hash-based partitioning (when `forceGuaranteedRollup` = true) |
 | Supported input locations | All locations accessible via HDFS client or Druid dataSource | All implemented [firehoses](./firehose.html) | All implemented [firehoses](./firehose.html) |
 | Supported file formats | All implemented Hadoop InputFormats | Currently only text file format (CSV, TSV, JSON) | Currently only text file format (CSV, TSV, JSON) |
 | Saving parse exceptions in ingestion report | Currently not supported | Currently not supported | Supported |
