@@ -194,14 +194,14 @@ public class AggregationTestHelper implements Closeable
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
         TestHelper.makeJsonMapper(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
         configSupplier
     );
 
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             TestHelper.makeJsonMapper(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
             configSupplier
         ),
         new SelectQueryEngine(
@@ -241,7 +241,7 @@ public class AggregationTestHelper implements Closeable
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
@@ -283,7 +283,7 @@ public class AggregationTestHelper implements Closeable
 
     TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     final CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(

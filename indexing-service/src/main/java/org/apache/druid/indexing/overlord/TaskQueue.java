@@ -32,6 +32,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -102,8 +103,8 @@ public class TaskQueue
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
 
-  private final Map<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
-  private final Map<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
   private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
   private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 
@@ -519,11 +520,9 @@ public class TaskQueue
                 );
 
                 if (status.isSuccess()) {
-                  totalSuccessfulTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong())
-                                          .incrementAndGet();
+                  Counters.incrementAndGetLong(totalSuccessfulTaskCount, task.getDataSource());
                 } else {
-                  totalFailedTaskCount.computeIfAbsent(task.getDataSource(), k -> new AtomicLong())
-                                      .incrementAndGet();
+                  Counters.incrementAndGetLong(totalFailedTaskCount, task.getDataSource());
                 }
               }
             }

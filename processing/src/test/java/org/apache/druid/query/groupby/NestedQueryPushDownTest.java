@@ -354,7 +354,7 @@ public class NestedQueryPushDownTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            NoopIntervalChunkingQueryRunnerDecorator()
+            noopIntervalChunkingQueryRunnerDecorator()
         )
     );
 
@@ -362,7 +362,7 @@ public class NestedQueryPushDownTest
         strategySelector2,
         new GroupByQueryQueryToolChest(
             strategySelector2,
-            NoopIntervalChunkingQueryRunnerDecorator()
+            noopIntervalChunkingQueryRunnerDecorator()
         )
     );
   }
@@ -919,7 +919,7 @@ public class NestedQueryPushDownTest
     }
   };
 
-  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null)
     {

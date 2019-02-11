@@ -22,6 +22,7 @@ package org.apache.druid.guice;
 import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.bloom.sql.BloomFilterSqlAggregator;
 import org.apache.druid.query.expressions.BloomFilterExprMacro;
 import org.apache.druid.query.filter.sql.BloomFilterOperatorConversion;
 import org.apache.druid.sql.guice.SqlBindings;
@@ -42,7 +43,7 @@ public class BloomFilterExtensionModule implements DruidModule
   public void configure(Binder binder)
   {
     SqlBindings.addOperatorConversion(binder, BloomFilterOperatorConversion.class);
-
+    SqlBindings.addAggregator(binder, BloomFilterSqlAggregator.class);
     ExpressionModule.addExprMacro(binder, BloomFilterExprMacro.class);
   }
 }

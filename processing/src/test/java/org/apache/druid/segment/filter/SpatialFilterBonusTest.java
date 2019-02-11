@@ -507,7 +507,7 @@ public class SpatialFilterBonusTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -595,7 +595,7 @@ public class SpatialFilterBonusTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
@@ -689,7 +689,7 @@ public class SpatialFilterBonusTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );

@@ -28,8 +28,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.query.lookup.namespace.CacheGenerator;
-import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.query.lookup.namespace.UriExtractionNamespaceTest;
 import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
@@ -63,7 +61,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -245,19 +242,13 @@ public class UriCacheGeneratorTest
       Function<Lifecycle, NamespaceExtractionCacheManager> cacheManagerCreator
   )
   {
-    final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceFunctionFactoryMap = new HashMap<>();
     this.suffix = suffix;
     this.outStreamSupplier = outStreamSupplier;
     this.lifecycle = new Lifecycle();
     this.scheduler = new CacheScheduler(
         new NoopServiceEmitter(),
-        namespaceFunctionFactoryMap,
+        ImmutableMap.of(UriExtractionNamespace.class, new UriCacheGenerator(FINDERS)),
         cacheManagerCreator.apply(lifecycle)
-    );
-    namespaceFunctionFactoryMap.put(
-        UriExtractionNamespace.class,
-
-        new UriCacheGenerator(FINDERS)
     );
   }
 

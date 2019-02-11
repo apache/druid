@@ -145,16 +145,15 @@ public class FixedBucketsHistogramAggregatorFactory extends AggregatorFactory
       }
 
       @Override
-      public Class<FixedBucketsHistogram> classOfObject()
-      {
-        return FixedBucketsHistogram.class;
-      }
-
-      @Nullable
-      @Override
       public FixedBucketsHistogram getObject()
       {
         return combined;
+      }
+
+      @Override
+      public Class<FixedBucketsHistogram> classOfObject()
+      {
+        return FixedBucketsHistogram.class;
       }
     };
   }
