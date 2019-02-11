@@ -20,6 +20,7 @@
 package org.apache.druid.emitter.ambari.metrics;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.common.utils.BlockingQueueUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -112,19 +113,21 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
         return;
       }
       try {
-        final boolean isSuccessful = eventsQueue.offer(
-            timelineEvent,
-            config.getEmitWaitTime(),
-            TimeUnit.MILLISECONDS
-        );
-        if (!isSuccessful) {
-          if (countLostEvents.getAndIncrement() % 1000 == 0) {
-            log.error(
-                "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
-                countLostEvents.get()
+        BlockingQueueUtils
+            .offerAndHandleFailure(
+                eventsQueue,
+                timelineEvent,
+                config.getEmitWaitTime(),
+                TimeUnit.MILLISECONDS,
+                () -> {
+                  if (countLostEvents.getAndIncrement() % 1000 == 0) {
+                    log.error(
+                        "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
+                        countLostEvents.get()
+                    );
+                  }
+                }
             );
-          }
-        }
       }
       catch (InterruptedException e) {
         log.error(e, "got interrupted with message [%s]", e.getMessage());
