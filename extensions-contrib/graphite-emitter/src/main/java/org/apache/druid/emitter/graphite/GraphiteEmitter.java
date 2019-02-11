@@ -23,6 +23,7 @@ import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteSender;
 import com.codahale.metrics.graphite.PickledGraphite;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.druid.common.utils.BlockingQueueHelper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
@@ -56,6 +57,7 @@ public class GraphiteEmitter implements Emitter
   private final List<Emitter> requestLogEmitters;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<GraphiteEvent> eventsQueue;
+  private static final BlockingQueueHelper<GraphiteEvent> blockingQueueHelper = new BlockingQueueHelper<>();
   private static final long FLUSH_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(1); // default flush wait 1 min
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
       .setDaemon(true)
@@ -106,19 +108,20 @@ public class GraphiteEmitter implements Emitter
         return;
       }
       try {
-        final boolean isSuccessful = eventsQueue.offer(
-            graphiteEvent,
-            graphiteEmitterConfig.getEmitWaitTime(),
-            TimeUnit.MILLISECONDS
-        );
-        if (!isSuccessful) {
-          if (countLostEvents.getAndIncrement() % 1000 == 0) {
-            log.error(
-                "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
-                countLostEvents.get()
-            );
+        blockingQueueHelper.offerAndHandleFailure(
+          eventsQueue,
+          graphiteEvent,
+          graphiteEmitterConfig.getEmitWaitTime(),
+          TimeUnit.MILLISECONDS,
+          () -> {
+            if (countLostEvents.getAndIncrement() % 1000 == 0) {
+              log.error(
+                  "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
+                  countLostEvents.get()
+              );
+            }
           }
-        }
+        );
       }
       catch (InterruptedException e) {
         log.error(e, "got interrupted with message [%s]", e.getMessage());

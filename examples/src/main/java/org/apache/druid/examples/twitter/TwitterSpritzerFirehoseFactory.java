@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.common.utils.BlockingQueueHelper;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
@@ -86,6 +87,7 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
 {
   private static final Logger log = new Logger(TwitterSpritzerFirehoseFactory.class);
   private static final Pattern sourcePattern = Pattern.compile("<a[^>]*>(.*?)</a>", Pattern.CASE_INSENSITIVE);
+  private static final BlockingQueueHelper<Status> blockingQueueHelper = new BlockingQueueHelper<>();
 
   /**
    * max events to receive, -1 is infinite, 0 means nothing is delivered; use this to prevent
@@ -162,10 +164,13 @@ public class TwitterSpritzerFirehoseFactory implements FirehoseFactory<InputRowP
           throw new RuntimeException("Interrupted, time to stop");
         }
         try {
-          boolean success = queue.offer(status, 15L, TimeUnit.SECONDS);
-          if (!success) {
-            log.warn("queue too slow!");
-          }
+          blockingQueueHelper.offerAndHandleFailure(
+              queue,
+              status,
+              15L,
+              TimeUnit.SECONDS,
+              () -> log.warn("queue too slow!")
+          );
         }
         catch (InterruptedException e) {
           throw new RuntimeException("InterruptedException", e);

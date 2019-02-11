@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
+import org.apache.druid.common.utils.BlockingQueueHelper;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -172,12 +173,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
             );
 
             recordsResult = null;
-
-            if (!records.offer(currRecord, recordBufferOfferTimeout, TimeUnit.MILLISECONDS)) {
-              log.warn("OrderedPartitionableRecord buffer full, retrying in [%,dms]", recordBufferFullWait);
-              rescheduleRunnable(recordBufferFullWait);
-            }
-
+            blockingQueueHelper.offerAndHandleFailure(
+                records,
+                currRecord,
+                recordBufferOfferTimeout,
+                TimeUnit.MILLISECONDS,
+                () -> {
+                  log.warn("OrderedPartitionableRecord buffer full, retrying in [%,dms]", recordBufferFullWait);
+                  rescheduleRunnable(recordBufferFullWait);
+                }
+            );
             return;
           }
 
@@ -345,6 +350,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   private final ConcurrentMap<StreamPartition<String>, PartitionResource> partitionResources =
       new ConcurrentHashMap<>();
   private BlockingQueue<OrderedPartitionableRecord<String, String>> records;
+  private static final BlockingQueueHelper<OrderedPartitionableRecord<String, String>> blockingQueueHelper =
+      new BlockingQueueHelper<>();
 
   private volatile boolean checkPartitionsStarted = false;
   private volatile boolean closed = false;

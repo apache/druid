@@ -32,6 +32,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingInputStream;
+import org.apache.druid.common.utils.BlockingQueueHelper;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
@@ -173,6 +174,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     private final ScheduledExecutorService exec;
     private final ExecutorService idleDetector;
     private final BlockingQueue<InputRow> buffer;
+    private final BlockingQueueHelper<InputRow> blockingQueueHelper = new BlockingQueueHelper<>();
     private final InputRowParser<Map<String, Object>> parser;
 
     private final Object readLock = new Object();
@@ -373,14 +375,19 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       for (final InputRow row : rows) {
         boolean added = false;
         while (!closed && !added) {
-          added = buffer.offer(row, 500, TimeUnit.MILLISECONDS);
-          if (!added) {
-            long currTime = System.currentTimeMillis();
-            long lastTime = lastBufferAddFailMsgTime.get();
-            if (currTime - lastTime > 10000 && lastBufferAddFailMsgTime.compareAndSet(lastTime, currTime)) {
-              log.warn("Failed to add event to buffer with current size [%s] . Retrying...", buffer.size());
-            }
-          }
+          added = blockingQueueHelper.offerAndHandleFailure(
+              buffer,
+              row,
+              500,
+              TimeUnit.MILLISECONDS,
+              () -> {
+                long currTime = System.currentTimeMillis();
+                long lastTime = lastBufferAddFailMsgTime.get();
+                if (currTime - lastTime > 10000 && lastBufferAddFailMsgTime.compareAndSet(lastTime, currTime)) {
+                  log.warn("Failed to add event to buffer with current size [%s] . Retrying...", buffer.size());
+                }
+              }
+          );
         }
 
         if (!added) {

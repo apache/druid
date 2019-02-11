@@ -22,15 +22,15 @@ package org.apache.druid.common.utils;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class BlockingQueueUtils
+public class BlockingQueueHelper<T>
 {
   /**
    * A wrapper method around BlockingQueue#offer that provides users with the capability of adding a method to
    * handle a failure to offer.
    */
-  public static void offerAndHandleFailure (
-      BlockingQueue queue,
-      Object itemToOffer,
+  public boolean offerAndHandleFailure (
+      BlockingQueue<T> queue,
+      T itemToOffer,
       long waitTime,
       TimeUnit waitTimeUnit,
       QueueOfferingFailureHandler handler) throws InterruptedException
@@ -39,6 +39,7 @@ public class BlockingQueueUtils
     if (!successful) {
       handler.handleFailure();
     }
+    return successful;
   }
 
   public interface QueueOfferingFailureHandler {

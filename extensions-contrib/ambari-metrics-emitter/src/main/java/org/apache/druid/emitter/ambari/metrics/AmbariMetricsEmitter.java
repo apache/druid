@@ -20,7 +20,7 @@
 package org.apache.druid.emitter.ambari.metrics;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.druid.common.utils.BlockingQueueUtils;
+import org.apache.druid.common.utils.BlockingQueueHelper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -48,11 +48,11 @@ import java.util.regex.Pattern;
 public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements Emitter
 {
   private static final Logger log = new Logger(AmbariMetricsEmitter.class);
-
   private final DruidToTimelineMetricConverter timelineMetricConverter;
   private final List<Emitter> emitterList;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final LinkedBlockingQueue<TimelineMetric> eventsQueue;
+  private static final BlockingQueueHelper<TimelineMetric> blockingQueueHelper = new BlockingQueueHelper();
   private final AmbariMetricsEmitterConfig config;
   private final String collectorURI;
   private static final long DEFAULT_FLUSH_TIMEOUT_MILLIS = 60000; // default flush wait 1 min
@@ -100,7 +100,6 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
     }
   }
 
-
   @Override
   public void emit(Event event)
   {
@@ -113,21 +112,20 @@ public class AmbariMetricsEmitter extends AbstractTimelineMetricsSink implements
         return;
       }
       try {
-        BlockingQueueUtils
-            .offerAndHandleFailure(
-                eventsQueue,
-                timelineEvent,
-                config.getEmitWaitTime(),
-                TimeUnit.MILLISECONDS,
-                () -> {
-                  if (countLostEvents.getAndIncrement() % 1000 == 0) {
-                    log.error(
-                        "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
-                        countLostEvents.get()
-                    );
-                  }
-                }
-            );
+        blockingQueueHelper.offerAndHandleFailure(
+            eventsQueue,
+            timelineEvent,
+            config.getEmitWaitTime(),
+            TimeUnit.MILLISECONDS,
+            () -> {
+              if (countLostEvents.getAndIncrement() % 1000 == 0) {
+                log.error(
+                    "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
+                    countLostEvents.get()
+                );
+              }
+            }
+        );
       }
       catch (InterruptedException e) {
         log.error(e, "got interrupted with message [%s]", e.getMessage());
