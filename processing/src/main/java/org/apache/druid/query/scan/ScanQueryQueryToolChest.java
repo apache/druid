@@ -198,9 +198,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   /**
-   * This iterator supports iteration through any Iterable and aggregates events in the Iterable into ScanResultValues
-   * with {int batchSize} events.  The columns from the first event per ScanResultValue will be used to populate the
-   * column section.
+   * This iterator supports iteration through any Iterable of unbatched ScanResultValues (1 event/SRV) and aggregates
+   * events into ScanResultValues with {int batchSize} events.  The columns from the first event per ScanResultValue
+   * will be used to populate the column section.
    */
   private static class ScanBatchedTimeOrderedIterator implements CloseableIterator<ScanResultValue>
   {
@@ -227,7 +227,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     @Override
     public ScanResultValue next()
     {
-      // Create new scanresultvalue from event map
+      // Create new ScanResultValue from event map
       List<Object> eventsToAdd = new ArrayList<>(batchSize);
       List<String> columns = new ArrayList<>();
       while (eventsToAdd.size() < batchSize && itr.hasNext()) {
