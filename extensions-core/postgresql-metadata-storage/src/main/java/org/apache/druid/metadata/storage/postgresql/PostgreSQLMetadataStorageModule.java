@@ -19,10 +19,9 @@
 
 package org.apache.druid.metadata.storage.postgresql;
 
-
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import org.apache.druid.firehose.PostgresqlFirehoseDatabaseConnector;
