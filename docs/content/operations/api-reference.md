@@ -494,7 +494,8 @@ Please use the equivalent 'terminate' instead.
 
 ## Data Server
 
-This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/processes.html#server-types).
+This section documents the API endpoints for the processes that reside on Data servers (MiddleManagers/Peons and Historicals) 
+in the suggested [three-server configuration](../design/processes.html#server-types).
 
 ### MiddleManager
 
@@ -502,15 +503,20 @@ This section documents the API endpoints for the processes that reside on Data s
 
 * `/druid/worker/v1/enabled`
 
-Check whether a MiddleManager is in an enabled or disabled state. Returns JSON object keyed by the `druid.host` and the boolean state.
+Check whether a MiddleManager is in an enabled or disabled state. Returns JSON object keyed by the combined `druid.host` 
+and `druid.port` with the boolean state as the value.
 
 ```json
-{"localhost":true}
+{"localhost:8091":true}
 ```
 
 * `/druid/worker/v1/tasks`
 
 Retrieve a list of active tasks being run on MiddleManager. Returns JSON list of taskid strings.
+
+```json
+["index_wikiticker_2019-02-11T02:20:15.316Z"]
+```
 
 * `/druid/worker/v1/task/{taskid}/log`
 
@@ -520,17 +526,20 @@ Retrieve task log output stream by task id.
 
 * `/druid/worker/v1/disable`
 
-'Disable' a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns JSON  object keyed by the `druid.host`:
+'Disable' a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns JSON  object 
+keyed by the combined `druid.host` and `druid.port`:
+
 ```json
-{"localhost":"disabled"}
+{"localhost:8091":"disabled"}
 ```
 
 * `/druid/worker/v1/enable`
 
-'Enable' a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns JSON  object keyed by the `druid.host`:
+'Enable' a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns JSON  object 
+keyed by the combined `druid.host` and `druid.port`:
 
 ```json
-{"localhost":"enabled"}
+{"localhost:8091":"enabled"}
 ```
 
 * `/druid/worker/v1/task/{taskid}/shutdown`
@@ -538,7 +547,7 @@ Retrieve task log output stream by task id.
 Shutdown a running task by `taskid`. Returns JSON:
 
 ```json
-{"task":"index_kafka_wikiticker-v2_f7011f8ffba384b_fpeclode"}
+{"task":"index_kafka_wikiticker_f7011f8ffba384b_fpeclode"}
 ```
 
 
