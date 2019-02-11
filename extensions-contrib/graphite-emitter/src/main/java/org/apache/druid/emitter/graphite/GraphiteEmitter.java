@@ -23,7 +23,7 @@ import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteSender;
 import com.codahale.metrics.graphite.PickledGraphite;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.druid.common.utils.BlockingQueueHelper;
+import org.apache.druid.java.util.common.BlockingQueueHelper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;

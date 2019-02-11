@@ -43,7 +43,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Queues;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSCredentialsUtils;
-import org.apache.druid.common.utils.BlockingQueueHelper;
+import org.apache.druid.java.util.common.BlockingQueueHelper;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;

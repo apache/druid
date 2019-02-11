@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.common.utils;
+package org.apache.druid.java.util.common;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -33,7 +33,7 @@ public class BlockingQueueHelper<T>
       T itemToOffer,
       long waitTime,
       TimeUnit waitTimeUnit,
-      QueueOfferingFailureHandler handler) throws InterruptedException
+      FailureHandler handler) throws InterruptedException
   {
     boolean successful = queue.offer(itemToOffer, waitTime, waitTimeUnit);
     if (!successful) {
@@ -42,7 +42,8 @@ public class BlockingQueueHelper<T>
     return successful;
   }
 
-  public interface QueueOfferingFailureHandler {
+  public interface FailureHandler
+  {
     void handleFailure();
   }
 }

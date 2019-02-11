@@ -32,7 +32,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingInputStream;
-import org.apache.druid.common.utils.BlockingQueueHelper;
+import org.apache.druid.java.util.common.BlockingQueueHelper;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
