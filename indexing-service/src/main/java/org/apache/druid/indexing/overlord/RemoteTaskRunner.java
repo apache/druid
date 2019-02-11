@@ -340,7 +340,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       lifecycleLock.started();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       lifecycleLock.exitStart();
@@ -378,7 +378,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       lifecycleLock.exitStop();
@@ -617,12 +617,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 ).get();
               }
               catch (InterruptedException e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
               catch (ExecutionException e) {
                 // Unwrap if possible
                 Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
           }
@@ -738,7 +738,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         log.info("Tried to delete status path[%s] that didn't exist! Must've gone away already?", statusPath);
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }
@@ -1047,7 +1047,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       return retVal;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -1086,7 +1086,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         scheduleTasksCleanupForWorker(worker.getHost(), getAssignedTasks(worker));
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         try {
@@ -1149,7 +1149,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             }
             catch (Exception e) {
               log.makeAlert("Exception while cleaning up worker[%s]", worker).emit();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         },
@@ -1263,7 +1263,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           }
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
       return getWorkerFromZK(lazyWorkers.values());

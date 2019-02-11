@@ -21,7 +21,6 @@ package org.apache.druid.curator.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
@@ -398,7 +397,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
       }
       catch (Exception ex) {
-        throw Throwables.propagate(ex);
+        throw new RuntimeException(ex);
       }
     }
 

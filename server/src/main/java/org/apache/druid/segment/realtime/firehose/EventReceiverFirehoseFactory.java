@@ -29,7 +29,6 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingInputStream;
 import org.apache.druid.data.input.Firehose;
@@ -275,10 +274,10 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       catch (JsonProcessingException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -296,7 +295,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         }
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
 
         return nextRow != null;
@@ -498,7 +497,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         producerSequences.put(producerId, newSequence);
       }
       catch (JsonProcessingException ex) {
-        throw Throwables.propagate(ex);
+        throw new RuntimeException(ex);
       }
       catch (NumberFormatException ex) {
         return Optional.of(

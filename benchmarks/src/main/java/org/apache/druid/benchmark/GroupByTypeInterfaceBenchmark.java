@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
@@ -442,7 +441,7 @@ public class GroupByTypeInterfaceBenchmark
     }
     catch (IOException e) {
       log.warn(e, "Failed to tear down, temp dir was: %s", tmpDir);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

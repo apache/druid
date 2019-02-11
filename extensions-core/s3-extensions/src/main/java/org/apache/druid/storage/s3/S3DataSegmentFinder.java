@@ -133,7 +133,7 @@ public class S3DataSegmentFinder implements DataSegmentFinder
     }
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     return timestampedSegments.values().stream().map(x -> x.lhs).collect(Collectors.toSet());
   }

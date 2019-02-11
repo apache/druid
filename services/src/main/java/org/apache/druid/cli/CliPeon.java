@@ -20,7 +20,6 @@
 package org.apache.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -303,7 +302,7 @@ public class CliPeon extends GuiceRunnable
               return mapper.readValue(config.getTaskFile(), Task.class);
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
 
@@ -385,7 +384,7 @@ public class CliPeon extends GuiceRunnable
       log.info("Finished peon task");
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

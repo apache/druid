@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
@@ -220,7 +219,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       return true;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

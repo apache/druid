@@ -22,7 +22,6 @@ package org.apache.druid.cli.validate;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CharSource;
@@ -202,7 +201,7 @@ public class DruidJsonValidator extends GuiceRunnable
     }
     catch (Exception e) {
       LOG.error(e, "INVALID JSON!");
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

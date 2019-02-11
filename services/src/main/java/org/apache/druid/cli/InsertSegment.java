@@ -19,7 +19,6 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.inject.Injector;
@@ -98,7 +97,7 @@ public class InsertSegment extends GuiceRunnable
       segments = dataSegmentFinder.findSegments(workingDirPath, Boolean.valueOf(updateDescriptor));
     }
     catch (SegmentLoadingException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     log.info(
@@ -111,7 +110,7 @@ public class InsertSegment extends GuiceRunnable
       insertSegments(segments);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     log.info("Done processing [%d] segments", segments.size());

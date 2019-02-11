@@ -110,7 +110,7 @@ public class GoogleDataSegmentFinder implements DataSegmentFinder
                     }
                   }
                   catch (Exception e) {
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   finally {
                     if (descriptorFile != null) {
@@ -136,7 +136,7 @@ public class GoogleDataSegmentFinder implements DataSegmentFinder
     }
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     return segments;
   }
