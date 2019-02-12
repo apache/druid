@@ -64,3 +64,56 @@ Putting these together, if you wish to build the source and binary distributions
 ```bash
 mvn clean install -Papache-release,dist,rat -DskipTests
 ```
+
+#### Testing
+
+- To run in parallel, add `-Pparallel-test -Dmaven.fork.count={parallelism-level}` arguments to the end of the command. For example:
+
+	```bash
+	# Run unit tests in processing module, in parallel with parallelism of 2.
+	mvn test -pl processing -Pparallel-test -Dmaven.fork.count=2
+	```
+
+- Testing s3-extensions module requires `AWS_REGION` environment variable. If this variable is not defined, please define it explicitly. For example:
+
+	```bash
+	# Run all unit test with `AWS_REGION` environment variable of `us-east-1`.
+	export AWS_REGION=us-east-1 && mvn test
+	```
+
+- For integration tests, see [here](https://github.com/apache/incubator-druid/blob/master/integration-tests/README.md).
+
+##### Run all unit tests
+
+```bash
+mvn test
+```
+
+##### Run specific module unit tests
+
+```bash
+# Run unit tests in processing module
+mvn test -pl processing
+```
+
+##### Run s3-extensions module unit tests
+
+```bash
+# Run unit tests with defined AWS_REGION environment variable.
+mvn test -pl s3-extensions
+
+# Run unit tests with AWS_REGION environment variable of us-east-1.
+export AWS_REGION=us-east-1 && mvn test -pl s3-extensions
+```
+
+##### Run specific test suites
+
+```bash
+mvn test -pl common -pl sql -Dtest=BlockingPoolTest,ExpressionsTest
+```
+
+##### Run specific test methods
+
+```bash
+mvn test -pl common -Dtest=BlockingPoolTest#testTake+testTakeTimeout
+```
