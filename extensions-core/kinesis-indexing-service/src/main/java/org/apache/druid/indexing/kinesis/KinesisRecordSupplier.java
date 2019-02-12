@@ -711,13 +711,16 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     ByteBuffer kinesisRecordData = kinesisRecord.getData();
     int recordSize = kinesisRecordData.position(0).remaining();
-    boolean validAggregateLength = (recordSize > KPL_AGGREGATE_MAGIC_NUMBERS.length + KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES);
+    boolean validAggregateLength = (recordSize
+                                    > KPL_AGGREGATE_MAGIC_NUMBERS.length + KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES);
     if (!validAggregateLength) {
       ByteBuffer kinesisData = (ByteBuffer) kinesisRecord.getData().position(0);
       return Collections.singletonList(toByteArray(kinesisData));
     } else {
       byte[] magicNumbers = new byte[KPL_AGGREGATE_MAGIC_NUMBERS.length];
-      byte[] protobufMessage = new byte[recordSize - KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES - KPL_AGGREGATE_MAGIC_NUMBERS.length];
+      byte[] protobufMessage = new byte[recordSize
+                                        - KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES
+                                        - KPL_AGGREGATE_MAGIC_NUMBERS.length];
       byte[] checksum = new byte[KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES];
 
       kinesisRecordData.get(magicNumbers, 0, magicNumbers.length);
@@ -729,7 +732,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
       if (Arrays.equals(magicNumbers, KPL_AGGREGATE_MAGIC_NUMBERS)
           && Arrays.equals(messageHash, checksum)) {
         List<byte[]> data = new ArrayList<>();
-        AggregatedRecordProtos.AggregatedRecord aggregatedRecord = AggregatedRecordProtos.AggregatedRecord.parseFrom(protobufMessage);
+        AggregatedRecordProtos.AggregatedRecord aggregatedRecord = AggregatedRecordProtos.AggregatedRecord.parseFrom(
+            protobufMessage);
         for (AggregatedRecordProtos.Record userRecord : aggregatedRecord.getRecordsList()) {
           data.add(userRecord.getData().toByteArray());
         }
