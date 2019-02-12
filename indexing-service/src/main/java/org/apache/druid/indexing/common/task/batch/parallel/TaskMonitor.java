@@ -176,11 +176,35 @@ public class TaskMonitor<T extends Task>
     }
   }
 
+  /**
+   * Stop task monitoring and kill all running tasks.
+   */
   public void stop()
   {
     synchronized (startStopLock) {
       running = false;
       taskStatusChecker.shutdownNow();
+
+      if (numRunningTasks > 0) {
+        final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
+        while (iterator.hasNext()) {
+          final MonitorEntry entry = iterator.next();
+          iterator.remove();
+          final String taskId = entry.runningTask.getId();
+          log.info("Request to kill subtask[%s]", taskId);
+          indexingServiceClient.killTask(taskId);
+          numRunningTasks--;
+          numKilledTasks++;
+        }
+
+        if (numRunningTasks > 0) {
+          log.warn(
+              "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
+              numRunningTasks
+          );
+        }
+      }
+
       log.info("Stopped taskMonitor");
     }
   }
@@ -228,36 +252,6 @@ public class TaskMonitor<T extends Task>
                 lastFailedTaskStatus
             )
         );
-      }
-    }
-  }
-
-  /**
-   * Kill all running tasks. This method is thread safe.
-   * This method should be called after {@link #stop()} to make sure no additional tasks are submitted.
-   */
-  void killAllRunningTasks()
-  {
-    Preconditions.checkState(!running, "Cannot kill sub tasks while running");
-
-    if (numRunningTasks > 0) {
-      synchronized (taskCountLock) {
-        if (numRunningTasks > 0) {
-          runningTasks.values().forEach(entry -> {
-            final String taskId = entry.runningTask.getId();
-            log.info("Request to kill subtask[%s]", taskId);
-            indexingServiceClient.killTask(taskId);
-          });
-          numRunningTasks -= runningTasks.size();
-          numKilledTasks += runningTasks.size();
-          runningTasks.clear();
-          if (numRunningTasks > 0) {
-            log.warn(
-                "Inconsistent state: numRunningTasks[%d] is still not zero after kill all running tasks.",
-                numRunningTasks
-            );
-          }
-        }
       }
     }
   }

@@ -223,21 +223,17 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
     stopInternal();
   }
 
+  /**
+   * Stop task scheduling and monitoring, and kill all running tasks.
+   * This method is thread-safe.
+   */
   private void stopInternal()
   {
     log.info("Cleaning up resources");
-    // Cleanup resources
+
     taskCompleteEvents.clear();
     if (taskMonitor != null) {
       taskMonitor.stop();
-      final int numRemainingTasks = taskMonitor.getNumRunningTasks();
-      if (numRemainingTasks > 0) {
-        log.info(
-            "Killing [%d] remaining subtasks.",
-            numRemainingTasks
-        );
-        taskMonitor.killAllRunningTasks();
-      }
     }
   }
 
