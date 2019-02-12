@@ -113,6 +113,13 @@
             <outputDirectory>quickstart/tutorial/conf/druid/middleManager</outputDirectory>
         </fileSet>
         <fileSet>
+            <directory>../examples/quickstart/tutorial/conf/druid/router</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>quickstart/tutorial/conf/druid/router</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>../examples/quickstart/tutorial/conf/tranquility</directory>
             <includes>
                 <include>*</include>
@@ -198,6 +205,13 @@
                 <include>*</include>
             </includes>
             <outputDirectory>conf/druid/middleManager</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf/druid/router</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/router</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/conf/tranquility</directory>
