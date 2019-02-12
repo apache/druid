@@ -196,7 +196,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
                 data
             );
 
-
             log.trace(
                 "Stream[%s] / partition[%s] / sequenceNum[%s] / bufferRemainingCapacity[%d]: %s",
                 currRecord.getStream(),
