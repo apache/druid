@@ -52,10 +52,11 @@ public class BlockingQueueHelperTest
   public void testOfferingFailure() throws InterruptedException
   {
     final int queueCapacity = 3;
+    final int numExtra = 2;
     BlockingQueue<Integer> q = new ArrayBlockingQueue<>(queueCapacity);
     BlockingQueueHelper<Integer> helper = new BlockingQueueHelper<>(q);
     AtomicInteger lambdaCount = new AtomicInteger(0);
-    for (int i = 0; i < queueCapacity + 2; i++) {
+    for (int i = 0; i < queueCapacity + numExtra; i++) {
       helper.offerAndHandleFailure(
           4,
           15L,
@@ -64,6 +65,6 @@ public class BlockingQueueHelperTest
       );
     }
     Assert.assertEquals(0, q.remainingCapacity());
-    Assert.assertEquals(2, lambdaCount.get());
+    Assert.assertEquals(numExtra, lambdaCount.get());
   }
 }
