@@ -18,6 +18,7 @@
 # Issues or Pull Requests with these labels will never be considered stale. Set to `[]` to disable
 exemptLabels:
   - Security
+  - Bug
 
 exemptMilestones: true
 
