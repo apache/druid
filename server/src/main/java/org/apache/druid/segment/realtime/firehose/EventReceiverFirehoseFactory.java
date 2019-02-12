@@ -176,9 +176,13 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
    * called concurrently with any other methods and each other, from arbitrary number of threads: {@link #addAll} and
    * {@link #shutdown}.
    *
-   * This class creates and manages one thread for calling {@link #close()} asynchronously in response to a {@link
-   * #shutdown} request, or after this Firehose has been idle (no calls to {@link #addAll}) for {@link
-   * #maxIdleTimeMillis}.
+   * Concurrent data flow: in {@link #addAll} (can be called concurrently with any other methods and other calls to
+   * {@link #addAll}) rows are pushed into {@link #buffer}. The single Firehose "consumer" thread calls {@link #hasMore}
+   * and {@link #nextRow()}, where rows are taken out from the other end of the {@link #buffer} queue.
+   *
+   * This class creates and manages one thread ({@link #delayedCloseExecutor}) for calling {@link #close()}
+   * asynchronously in response to a {@link #shutdown} request, or after this Firehose has been idle (no calls to {@link
+   * #addAll}) for {@link #maxIdleTimeMillis}.
    */
   @VisibleForTesting
   public class EventReceiverFirehose implements ChatHandler, Firehose, EventReceiverFirehoseMetric
