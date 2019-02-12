@@ -66,6 +66,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -82,7 +83,7 @@ public class AppenderatorPlumber implements Plumber
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifier handoffNotifier;
   private final Object handoffCondition = new Object();
-  private final Map<Long, SegmentIdWithShardSpec> segments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Long, SegmentIdWithShardSpec> segments = new ConcurrentHashMap<>();
   private final Appenderator appenderator;
 
   private volatile boolean shuttingDown = false;
@@ -147,7 +148,8 @@ public class AppenderatorPlumber implements Plumber
   }
 
   @Override
-  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier)
+      throws IndexSizeExceededException
   {
     final SegmentIdWithShardSpec identifier = getSegmentIdentifier(row.getTimestampFromEpoch());
     if (identifier == null) {

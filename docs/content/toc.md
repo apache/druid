@@ -101,13 +101,12 @@ layout: toc
   * [Overview](/docs/VERSION/design/index.html)
   * Storage
     * [Segments](/docs/VERSION/design/segments.html)
-  * Node Types
-    * [Historical](/docs/VERSION/design/historical.html)
-    * [Broker](/docs/VERSION/design/broker.html)
+  * [Processes and Servers](/docs/VERSION/design/processes.html)
     * [Coordinator](/docs/VERSION/design/coordinator.html)
-    * [Indexing Service](/docs/VERSION/design/indexing-service.html)
-      * [Overlord](/docs/VERSION/design/overlord.html)
-      * [MiddleManager](/docs/VERSION/design/middlemanager.html)
+    * [Overlord](/docs/VERSION/design/overlord.html)
+    * [Broker](/docs/VERSION/design/broker.html)
+    * [Historical](/docs/VERSION/design/historical.html)
+    * [MiddleManager](/docs/VERSION/design/middlemanager.html)
       * [Peons](/docs/VERSION/design/peons.html)
     * [Realtime (Deprecated)](/docs/VERSION/design/realtime.html)
   * Dependencies

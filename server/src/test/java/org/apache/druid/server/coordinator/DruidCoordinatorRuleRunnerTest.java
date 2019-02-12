@@ -946,9 +946,9 @@ public class DruidCoordinatorRuleRunnerTest
         ImmutableMap.of(
             "normal",
             Stream.of(
-                new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
-                new ServerHolder(server2.toImmutableDruidServer(), anotherMockPeon),
-                new ServerHolder(server3.toImmutableDruidServer(), anotherMockPeon)
+                new ServerHolder(server1.toImmutableDruidServer(), mockPeon, false),
+                new ServerHolder(server2.toImmutableDruidServer(), anotherMockPeon, false),
+                new ServerHolder(server3.toImmutableDruidServer(), anotherMockPeon, false)
             ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );

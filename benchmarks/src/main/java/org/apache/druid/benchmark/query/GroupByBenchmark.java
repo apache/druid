@@ -495,7 +495,7 @@ public class GroupByBenchmark
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
   }

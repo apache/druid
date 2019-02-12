@@ -37,7 +37,7 @@ Peons should rarely (if ever for testing purposes) be run on their own.
 
 ### Running
 
-The peon should very rarely ever be run independent of the middle manager unless for development purposes.
+The Peon should very rarely ever be run independent of the MiddleManager unless for development purposes.
 
 ```
 org.apache.druid.cli.Main internal peon <task_file> <status_file>

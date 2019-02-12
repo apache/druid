@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -177,9 +178,9 @@ public class MultiSegmentScanQueryTest
     this.batchSize = batchSize;
   }
 
-  private ScanQuery.ScanQueryBuilder newBuilder()
+  private Druids.ScanQueryBuilder newBuilder()
   {
-    return ScanQuery.newScanQueryBuilder()
+    return Druids.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                     .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
                     .batchSize(batchSize)

@@ -53,7 +53,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -82,8 +81,8 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   private final BlockingQueue<SubTaskCompleteEvent<ParallelIndexSubTask>> taskCompleteEvents =
       new LinkedBlockingDeque<>();
 
-  // subTaskId -> report
-  private final ConcurrentMap<String, PushedSegmentsReport> segmentsMap = new ConcurrentHashMap<>();
+  /** subTaskId -> report */
+  private final ConcurrentHashMap<String, PushedSegmentsReport> segmentsMap = new ConcurrentHashMap<>();
 
   private volatile boolean stopped;
   private volatile TaskMonitor<ParallelIndexSubTask> taskMonitor;
