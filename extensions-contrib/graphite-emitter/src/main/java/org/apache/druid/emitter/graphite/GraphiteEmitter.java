@@ -110,17 +110,17 @@ public class GraphiteEmitter implements Emitter
       }
       try {
         eventsQueueHelper.offerAndHandleFailure(
-          graphiteEvent,
-          graphiteEmitterConfig.getEmitWaitTime(),
-          TimeUnit.MILLISECONDS,
-          () -> {
-            if (countLostEvents.getAndIncrement() % 1000 == 0) {
-              log.error(
-                  "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
-                  countLostEvents.get()
-              );
+            graphiteEvent,
+            graphiteEmitterConfig.getEmitWaitTime(),
+            TimeUnit.MILLISECONDS,
+            () -> {
+              if (countLostEvents.getAndIncrement() % 1000 == 0) {
+                log.error(
+                    "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
+                    countLostEvents.get()
+                );
+              }
             }
-          }
         );
       }
       catch (InterruptedException e) {
@@ -154,14 +154,14 @@ public class GraphiteEmitter implements Emitter
     {
       if (graphiteEmitterConfig.getProtocol().equals(GraphiteEmitterConfig.PLAINTEXT_PROTOCOL)) {
         graphite = new Graphite(
-          graphiteEmitterConfig.getHostname(),
-          graphiteEmitterConfig.getPort()
+            graphiteEmitterConfig.getHostname(),
+            graphiteEmitterConfig.getPort()
         );
       } else {
         graphite = new PickledGraphite(
-          graphiteEmitterConfig.getHostname(),
-          graphiteEmitterConfig.getPort(),
-          graphiteEmitterConfig.getBatchSize()
+            graphiteEmitterConfig.getHostname(),
+            graphiteEmitterConfig.getPort(),
+            graphiteEmitterConfig.getBatchSize()
         );
       }
       log.info("Using %s protocol.", graphiteEmitterConfig.getProtocol());

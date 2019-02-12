@@ -26,18 +26,21 @@ public class BlockingQueueHelper<T>
 {
   BlockingQueue<T> queue;
 
-  public BlockingQueueHelper(BlockingQueue<T> queue) {
+  public BlockingQueueHelper(BlockingQueue<T> queue)
+  {
     this.queue = queue;
   }
+
   /**
    * A wrapper method around BlockingQueue#offer that provides users with the capability of adding a method to
    * handle a failure to offer.
    */
-  public boolean offerAndHandleFailure (
+  public boolean offerAndHandleFailure(
       T itemToOffer,
       long waitTime,
       TimeUnit waitTimeUnit,
-      FailureHandler handler) throws InterruptedException
+      FailureHandler handler
+  ) throws InterruptedException
   {
     boolean successful = queue.offer(itemToOffer, waitTime, waitTimeUnit);
     if (!successful) {

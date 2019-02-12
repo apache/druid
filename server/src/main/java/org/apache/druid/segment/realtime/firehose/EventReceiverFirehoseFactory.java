@@ -32,13 +32,13 @@ import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingInputStream;
-import org.apache.druid.java.util.common.BlockingQueueHelper;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.BlockingQueueHelper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -446,9 +446,10 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      * sequence value must be specified as well.  If the incoming sequence is less than or equal to the last seen
      * sequence for that producer ID, the request is ignored
      *
-     * @param req Http request
+     * @param req                 Http request
      * @param responseContentType Response content type
-     * @param responseMapper Response object mapper
+     * @param responseMapper      Response object mapper
+     *
      * @return Optional of a response to return of an empty optional if the request can proceed
      */
     private Optional<Response> checkProducerSequence(
@@ -468,8 +469,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       if (sequenceValue == null) {
         return Optional.of(
             Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ImmutableMap.<String, Object>of("error", "Producer sequence value is missing"))
-                       .build()
+                    .entity(ImmutableMap.<String, Object>of("error", "Producer sequence value is missing"))
+                    .build()
         );
       }
 

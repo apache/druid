@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.ArrayBlockingQueue;
