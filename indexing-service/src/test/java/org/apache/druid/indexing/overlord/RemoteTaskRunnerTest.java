@@ -114,6 +114,25 @@ public class RemoteTaskRunnerTest
   }
 
   @Test
+  public void testRunTaskThatAlreadyPending() throws Exception
+  {
+    doSetup();
+    remoteTaskRunner.addPendingTask(task);
+    Assert.assertFalse(workerRunningTask(task.getId()));
+
+    ListenableFuture<TaskStatus> result = remoteTaskRunner.run(task);
+
+    Assert.assertTrue(taskAnnounced(task.getId()));
+    mockWorkerRunningTask(task);
+    Assert.assertTrue(workerRunningTask(task.getId()));
+    mockWorkerCompleteSuccessfulTask(task);
+    Assert.assertTrue(workerCompletedTask(result));
+
+    Assert.assertEquals(task.getId(), result.get().getId());
+    Assert.assertEquals(TaskState.SUCCESS, result.get().getStatusCode());
+  }
+
+  @Test
   public void testStartWithNoWorker()
   {
     makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
