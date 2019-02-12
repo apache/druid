@@ -27,6 +27,8 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -40,6 +42,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.table.DruidTable;
@@ -83,6 +86,8 @@ public class DruidSchemaTest extends CalciteTestBase
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
+
+  private List<ImmutableDruidServer> druidServers;
 
   @BeforeClass
   public static void setUpClass()
@@ -163,10 +168,12 @@ public class DruidSchemaTest extends CalciteTestBase
         index2
     );
 
+    final TimelineServerView serverView = new TestServerInventoryView(walker.getSegments());
+    druidServers = serverView.getDruidServers();
 
     schema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-        new TestServerInventoryView(walker.getSegments()),
+        serverView,
         PLANNER_CONFIG_DEFAULT,
         new NoopViewManager(),
         new NoopEscalator()
@@ -239,6 +246,62 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals(SqlTypeName.BIGINT, fields.get(2).getType().getSqlTypeName());
   }
 
+  /**
+   * This tests that {@link SegmentMetadataHolder#getNumRows()} is correct in case
+   * of multiple replicas i.e. when {@link DruidSchema#addSegment(DruidServerMetadata, DataSegment)}
+   * is called more than once for same segment
+   */
+  @Test
+  public void testSegmentMetadataHolderNumRows()
+  {
+    Map<DataSegment, SegmentMetadataHolder> segmentsMetadata = schema.getSegmentMetadata();
+    final Set<DataSegment> segments = segmentsMetadata.keySet();
+    Assert.assertEquals(3, segments.size());
+    // find the only segment with datasource "foo2"
+    final DataSegment existingSegment = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
+    Assert.assertNotNull(existingSegment);
+    final SegmentMetadataHolder existingHolder = segmentsMetadata.get(existingSegment);
+    // update SegmentMetadataHolder of existingSegment with numRows=5
+    SegmentMetadataHolder updatedHolder = SegmentMetadataHolder.from(existingHolder).withNumRows(5).build();
+    schema.setSegmentMetadataHolder(existingSegment, updatedHolder);
+    // find a druidServer holding existingSegment
+    final Pair<ImmutableDruidServer, DataSegment> pair = druidServers.stream()
+                                                                     .flatMap(druidServer -> druidServer.getSegments()
+                                                                                                        .stream()
+                                                                                                        .filter(segment -> segment
+                                                                                                            .equals(
+                                                                                                                existingSegment))
+                                                                                                        .map(segment -> Pair
+                                                                                                            .of(
+                                                                                                                druidServer,
+                                                                                                                segment
+                                                                                                            )))
+                                                                     .findAny()
+                                                                     .orElse(null);
+    Assert.assertNotNull(pair);
+    final ImmutableDruidServer server = pair.lhs;
+    Assert.assertNotNull(server);
+    final DruidServerMetadata druidServerMetadata = server.getMetadata();
+    // invoke DruidSchema#addSegment on existingSegment
+    schema.addSegment(druidServerMetadata, existingSegment);
+    segmentsMetadata = schema.getSegmentMetadata();
+    // get the only segment with datasource "foo2"
+    final DataSegment currentSegment = segments.stream()
+                                               .filter(segment -> segment.getDataSource().equals("foo2"))
+                                               .findFirst()
+                                               .orElse(null);
+    final SegmentMetadataHolder currentHolder = segmentsMetadata.get(currentSegment);
+    Assert.assertEquals(updatedHolder.getSegmentId(), currentHolder.getSegmentId());
+    Assert.assertEquals(updatedHolder.getNumRows(), currentHolder.getNumRows());
+    // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
+    Assert.assertEquals(updatedHolder.getNumReplicas(), currentHolder.getNumReplicas());
+    Assert.assertEquals(updatedHolder.isAvailable(), currentHolder.isAvailable());
+    Assert.assertEquals(updatedHolder.isPublished(), currentHolder.isPublished());
+  }
+
   @Test
   public void testNullDatasource() throws IOException
   {
@@ -247,7 +310,10 @@ public class DruidSchemaTest extends CalciteTestBase
     Assert.assertEquals(segments.size(), 3);
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
-    final DataSegment segmentToRemove = segments.stream().filter(segment -> segment.getDataSource().equals("foo2")).findFirst().orElse(null);
+    final DataSegment segmentToRemove = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo2"))
+                                                .findFirst()
+                                                .orElse(null);
     Assert.assertFalse(segmentToRemove == null);
     schema.removeSegment(segmentToRemove);
     schema.refreshSegments(segments); // can cause NPE without dataSourceSegments null check in DruidSchema#refreshSegmentsForDataSource
@@ -262,8 +328,11 @@ public class DruidSchemaTest extends CalciteTestBase
     Map<DataSegment, SegmentMetadataHolder> segmentMetadatas = schema.getSegmentMetadata();
     Set<DataSegment> segments = segmentMetadatas.keySet();
     Assert.assertEquals(segments.size(), 3);
-    //remove one of the segments with datasource "foo"
-    final DataSegment segmentToRemove = segments.stream().filter(segment -> segment.getDataSource().equals("foo")).findFirst().orElse(null);
+    // remove one of the segments with datasource "foo"
+    final DataSegment segmentToRemove = segments.stream()
+                                                .filter(segment -> segment.getDataSource().equals("foo"))
+                                                .findFirst()
+                                                .orElse(null);
     Assert.assertFalse(segmentToRemove == null);
     schema.removeSegment(segmentToRemove);
     schema.refreshSegments(segments); // can cause NPE without holder null check in SegmentMetadataHolder#from

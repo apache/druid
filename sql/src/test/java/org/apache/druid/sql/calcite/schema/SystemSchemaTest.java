@@ -118,6 +118,11 @@ public class SystemSchemaTest extends CalciteTestBase
       CalciteTests.createRow(ImmutableMap.of("t", "2001-01-03", "m1", "6.0"))
   );
 
+  private static final List<InputRow> ROWS3 = ImmutableList.of(
+      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-01", "m1", "7.0", "dim3", ImmutableList.of("x"))),
+      CalciteTests.createRow(ImmutableMap.of("t", "2001-01-02", "m1", "8.0", "dim3", ImmutableList.of("xyz")))
+  );
+
   private SystemSchema schema;
   private SpecificSegmentsQuerySegmentWalker walker;
   private DruidLeaderClient client;
@@ -204,11 +209,22 @@ public class SystemSchemaTest extends CalciteTestBase
                                               )
                                               .rows(ROWS2)
                                               .buildMMappedIndex();
+    final QueryableIndex index3 = IndexBuilder.create()
+                                              .tmpDir(new File(tmpDir, "3"))
+                                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                                              .schema(
+                                                  new IncrementalIndexSchema.Builder()
+                                                      .withMetrics(new LongSumAggregatorFactory("m1", "m1"))
+                                                      .withRollup(false)
+                                                      .build()
+                                              )
+                                              .rows(ROWS3)
+                                              .buildMMappedIndex();
 
     walker = new SpecificSegmentsQuerySegmentWalker(conglomerate)
         .add(segment1, index1)
         .add(segment2, index2)
-        .add(segment3, index2);
+        .add(segment3, index3);
 
     druidSchema = new DruidSchema(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
@@ -469,7 +485,7 @@ public class SystemSchemaTest extends CalciteTestBase
         100L,
         2L, //partition_num
         1L, //num_replicas
-        3L, //numRows
+        2L, //numRows
         0L, //is_published
         1L, //is_available
         0L //is_realtime
@@ -481,7 +497,7 @@ public class SystemSchemaTest extends CalciteTestBase
         100L,
         0L, //partition_num
         1L, //num_replicas
-        0L, //numRows = 3
+        0L, //numRows
         0L, //is_published
         1L, //is_available
         1L //is_realtime
