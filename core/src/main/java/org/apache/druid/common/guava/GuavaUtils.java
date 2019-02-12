@@ -35,13 +35,17 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 
 /**
- *
+ * This class contains a bunch of guava helper functions to bridge compatability problems across guava versions, or
+ * between guava and java standard libraries. Any version compatability related entries should have a reference to
+ * the critical commit(s).
  */
 public class GuavaUtils
 {
   private static final CharMatcher BREAKING_WHITESPACE_INSTANCE;
 
   static {
+    // https://github.com/google/guava/commit/4fbb165ebf208d75100d5d47f56750d247f7d181
+    // Since v19.0
     CharMatcher matcher;
     try {
       final Method m = CharMatcher.class.getDeclaredMethod("breakingWhitespace");
@@ -151,6 +155,8 @@ public class GuavaUtils
    */
   public static String getHostText(HostAndPort hostAndPort)
   {
+    // https://github.com/google/guava/commit/b0babb69b05ed4d15cce74635ae96cf8ba78c85f
+    // Change started in v20.0
     return tryMethods(hostAndPort, String.class, "getHostText", "getHost");
   }
 
