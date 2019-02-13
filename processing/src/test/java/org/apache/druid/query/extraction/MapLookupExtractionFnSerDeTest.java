@@ -61,8 +61,8 @@ public class MapLookupExtractionFnSerDeTest
             mapper.writeValueAsString(renames)
         )
     );
-    for (String key : renames.keySet()) {
-      Assert.assertEquals(renames.get(key), fn.apply(key));
+    for (Map.Entry<String, String> entry : renames.entrySet()) {
+      Assert.assertEquals(entry.getValue(), fn.apply(entry.getKey()));
     }
     final String crazyString = UUID.randomUUID().toString();
     Assert.assertEquals(null, fn.apply(crazyString));

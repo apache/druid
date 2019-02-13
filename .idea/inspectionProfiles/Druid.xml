@@ -357,5 +357,6 @@
       <option name="ADD_NONJAVA_TO_ENTRIES" value="true" />
     </inspection_tool>
     <inspection_tool class="FieldAccessNotGuarded" enabled="true" level="ERROR" enabled_by_default="true" />
-  </profile>
+    <inspection_tool class="KeySetIterationMayUseEntrySet" enabled="true" level="ERROR" enabled_by_default="true" /> 
+ </profile>
 </component>

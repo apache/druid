@@ -27,6 +27,8 @@ import org.apache.druid.java.util.metrics.AbstractMonitor;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+
 
 public class DataSourceOptimizerMonitor extends AbstractMonitor 
 {
@@ -50,13 +52,14 @@ public class DataSourceOptimizerMonitor extends AbstractMonitor
       emitter.emit(builder.build("/materialized/view/query/hitRate", stat.getHitRate()));
       emitter.emit(builder.build("/materialized/view/select/avgCostMS", stat.getOptimizerCost()));
       Map<String, Long> derivativesStats = stat.getDerivativesHitCount();
-      for (String derivative : derivativesStats.keySet()) {
+      for (Map.Entry<String, Long> entry : derivativesStats.entrySet()) {
+        String derivative = entry.getKey();
         builder.setDimension("derivative", derivative);
         emitter.emit(builder.build("/materialized/view/derivative/numSelected", derivativesStats.get(derivative)));
       }
       final ServiceMetricEvent.Builder builder2 = new ServiceMetricEvent.Builder();
       builder2.setDimension("dataSource", stat.getBase());
-      for (Set<String> fields : stat.getMissFields().keySet()) {
+      for (Map.Entry<Set<String>, AtomicLong> fields : stat.getMissFields().entrySet()) {
         builder2.setDimension("fields", fields.toString());
         emitter.emit(builder2.build("/materialized/view/missNum", stat.getMissFields().get(fields).get()));
       }

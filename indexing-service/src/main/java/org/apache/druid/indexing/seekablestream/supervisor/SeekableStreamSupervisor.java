@@ -894,7 +894,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<ListenableFuture<StatsFromTaskResult>> futures = new ArrayList<>();
     final List<Pair<Integer, String>> groupAndTaskIds = new ArrayList<>();
 
-    for (int groupId : activelyReadingTaskGroups.keySet()) {
+    for (Entry<Integer, TaskGroup> entry : activelyReadingTaskGroups.entrySet()) {
+      int groupId = entry.getKey();
       TaskGroup group = activelyReadingTaskGroups.get(groupId);
       for (String taskId : group.taskIds()) {
         futures.add(
@@ -911,7 +912,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    for (int groupId : pendingCompletionTaskGroups.keySet()) {
+    for (Entry<Integer, CopyOnWriteArrayList<TaskGroup>> entry : pendingCompletionTaskGroups.entrySet()) {
+      int groupId = entry.getKey();
       List<TaskGroup> pendingGroups = pendingCompletionTaskGroups.get(groupId);
       for (TaskGroup pendingGroup : pendingGroups) {
         for (String taskId : pendingGroup.taskIds()) {
@@ -2235,7 +2237,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     // check that there is a current task group for each group of partitions in [partitionGroups]
-    for (Integer groupId : partitionGroups.keySet()) {
+    for (Entry<Integer, ConcurrentHashMap<PartitionIdType, SequenceOffsetType>> entry : partitionGroups.entrySet()) {
+      Integer groupId = entry.getKey();
       if (!activelyReadingTaskGroups.containsKey(groupId)) {
         log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
 
