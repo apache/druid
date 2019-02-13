@@ -33,7 +33,7 @@ This section should describe how the proposed changes will impact the operation 
 - Is there a migration path that cluster operators need to be aware of?
 - Will there be any effect on the ability to do a rolling upgrade, or to do a rolling _downgrade_ if an operator wants to switch back to a previous version?
 
-# Test Plan (optional)
+# Test plan (optional)
 
 An optional discussion of how the proposed changes will be tested. This section should focus on higher level system test strategy and not unit tests (as UTs will be implementation dependent). 
 
