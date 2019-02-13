@@ -31,8 +31,6 @@ import java.util.Objects;
 
 public class TaskStatusPlus
 {
-  private static final Logger log = new Logger(TaskStatusPlus.class);
-
   private final String id;
   private final String type;
   private final DateTime createdTime;
@@ -73,7 +71,6 @@ public class TaskStatusPlus
         errorMsg
     );
   }
-
 
   @JsonCreator
   public TaskStatusPlus(
