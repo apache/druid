@@ -330,7 +330,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     };
 
     overlordServerView = new CoordinatorServerView(
-        baseView
+        baseView,
+        new CoordinatorSegmentWatcherConfig()
     );
 
     baseView.start();

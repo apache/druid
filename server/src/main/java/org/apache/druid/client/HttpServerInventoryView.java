@@ -61,7 +61,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -109,8 +108,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private final ObjectMapper smileMapper;
   private final HttpServerInventoryViewConfig config;
 
-  private final CountDownLatch inventoryInitializationLatch = new CountDownLatch(1);
-
   @Inject
   public HttpServerInventoryView(
       final @Smile ObjectMapper smileMapper,
@@ -130,7 +127,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
 
   @LifecycleStart
-  public void start() throws Exception
+  public void start() throws ISE
   {
     synchronized (lifecycleLock) {
       if (!lifecycleLock.canStart()) {
@@ -193,12 +190,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
       finally {
         lifecycleLock.exitStart();
-      }
-
-      log.info("Waiting for Server Inventory Initialization...");
-
-      while (!inventoryInitializationLatch.await(1, TimeUnit.MINUTES)) {
-        log.info("Still waiting for Server Inventory Initialization...");
       }
 
       log.info("Started HttpServerInventoryView.");
@@ -368,8 +359,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         );
       }
     }
-
-    inventoryInitializationLatch.countDown();
 
     log.info("Calling SegmentCallback.segmentViewInitialized() for all callbacks.");
 
