@@ -33,13 +33,7 @@
     <artifactId>druid-momentsketch</artifactId>
     <name>druid-momentsketch</name>
     <description>Aggregators for the approximate quantile moment sketch</description>
-
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <druid.version>0.12.2</druid.version>
-    </properties>
-
+    
     <dependencies>
         <dependency>
             <groupId>com.github.stanford-futuredata.momentsketch</groupId>
