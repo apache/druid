@@ -26,6 +26,8 @@ title: "Ingestion"
 
 ## Overview
 
+<a name="datasources" />
+
 ### Datasources and segments
 
 Druid data is stored in "datasources", which are similar to tables in a traditional RDBMS. Each datasource is
@@ -55,6 +57,8 @@ size, and its location on deep storage. These entries are what the Coordinator u
 available on the cluster.
 
 For details on the segment file format, please see [segment files](../design/segments.html).
+
+For details on modeling your data in Druid, see [schema design](schema-design.html).
 
 #### Segment identifiers
 
@@ -204,6 +208,9 @@ time. For example, you can do a batch backfill from Hadoop while also doing a re
 the backfill data and the real-time data do not need to be written to the same time partitions. (If they do, the
 real-time load will take priority.)
 
+For tips on how partitioning can affect performance and storage footprint, see the
+[schema design](schema-design.html#partitioning) page.
+
 ## Rollup
 
 Druid is able to summarize raw data at ingestion time using a process we refer to as "roll-up".
@@ -241,10 +248,6 @@ timestamp                 srcIP         dstIP          packets     bytes
 2018-01-02T21:35:00Z      7.7.7.7       8.8.8.8            300      3000
 ```
 
-Druid can roll up data as it is ingested to minimize the amount of raw data that needs to be stored.
-In practice, we see that rolling up data can dramatically reduce the size of data that needs to be stored (up to a factor of 100).
-This storage reduction does come at a cost: as we roll up data, we lose the ability to query individual events. 
-
 The rollup granularity is the minimum granularity you will be able to explore data at and events are floored to this granularity. 
 Hence, Druid ingestion specs define this granularity as the `queryGranularity` of the data. The lowest supported `queryGranularity` is millisecond.
 
@@ -253,6 +256,8 @@ The following links may be helpful in further understanding dimensions and metri
 * [https://en.wikipedia.org/wiki/Dimension_(data_warehouse)](https://en.wikipedia.org/wiki/Dimension_(data_warehouse))
 
 * [https://en.wikipedia.org/wiki/Measure_(data_warehouse)](https://en.wikipedia.org/wiki/Measure_(data_warehouse))
+
+For tips on how to use rollup in your Druid schema designs, see the [schema design](schema-design.html#rollup) page.
 
 ### Roll-up modes
 
@@ -286,9 +291,9 @@ For compaction documentation, please see [tasks](../ingestion/tasks.html).
 
 Druid supports retention rules, which are used to define intervals of time where data should be preserved, and intervals where data should be discarded.
 
-Druid also supports separating historical nodes into tiers, and the retention rules can be configured to assign data for specific intervals to specific tiers.
+Druid also supports separating Historical nodes into tiers, and the retention rules can be configured to assign data for specific intervals to specific tiers.
 
-These features are useful for performance/cost management; a common use case is separating historical nodes into a "hot" tier and a "cold" tier.
+These features are useful for performance/cost management; a common use case is separating Historical nodes into a "hot" tier and a "cold" tier.
 
 For more information, please see [Load rules](../operations/rule-configuration.html).
 

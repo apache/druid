@@ -34,7 +34,7 @@ can be enabled at either the Historical and Broker level (it is not recommended 
 
 ## Query caching on Brokers
 
-Enabling caching on the broker can yield faster results than if query caches were enabled on Historicals for small clusters. This is 
+Enabling caching on the Broker can yield faster results than if query caches were enabled on Historicals for small clusters. This is 
 the recommended setup for smaller production clusters (< 20 servers). Take note that when caching is enabled on the Broker, 
 results from Historicals are returned on a per segment basis, and Historicals will not be able to do any local result merging.
 Result level caching is enabled only on the Broker side.

@@ -79,15 +79,21 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
   @Inject
   IntegrationTestingConfig config;
 
+  private String fullDatasourceName;
+
   void doTest()
   {
+    fullDatasourceName = INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix();
+
     LOG.info("Starting test: ITRealtimeIndexTaskTest");
-    try (final Closeable closeable = unloader(INDEX_DATASOURCE)) {
+    try (final Closeable closeable = unloader(fullDatasourceName)) {
       // the task will run for 3 minutes and then shutdown itself
       String task = setShutOffTime(
           getTaskAsString(getTaskResource()),
           DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
+      task = StringUtils.replace(task, "%%DATASOURCE%%", fullDatasourceName);
+
       LOG.info("indexerSpec: [%s]\n", task);
       taskID = indexer.submitTask(task);
 
@@ -119,6 +125,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       queryStr = StringUtils.replace(queryStr, "%%POST_AG_REQUEST_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)));
       String postAgResponseTimestamp = TIMESTAMP_FMT.print(dtGroupBy.withSecondOfMinute(0));
       queryStr = StringUtils.replace(queryStr, "%%POST_AG_RESPONSE_TIMESTAMP%%", postAgResponseTimestamp);
+      queryStr = StringUtils.replace(queryStr, "%%DATASOURCE%%", fullDatasourceName);
 
       // should hit the queries all on realtime task or some on realtime task
       // and some on historical.  Which it is depends on where in the minute we were
@@ -140,7 +147,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
             @Override
             public Boolean call()
             {
-              return coordinator.areSegmentsLoaded(INDEX_DATASOURCE);
+              return coordinator.areSegmentsLoaded(fullDatasourceName);
             }
           },
           true,

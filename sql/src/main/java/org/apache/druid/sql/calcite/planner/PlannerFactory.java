@@ -38,6 +38,7 @@ import org.apache.calcite.tools.Frameworks;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
@@ -88,7 +89,10 @@ public class PlannerFactory
     this.jsonMapper = jsonMapper;
   }
 
-  public DruidPlanner createPlanner(final Map<String, Object> queryContext)
+  public DruidPlanner createPlanner(
+      final Map<String, Object> queryContext,
+      final AuthenticationResult authenticationResult
+  )
   {
     final SchemaPlus rootSchema = Calcites.createRootSchema(
         druidSchema,
@@ -99,7 +103,8 @@ public class PlannerFactory
         operatorTable,
         macroTable,
         plannerConfig,
-        queryContext
+        queryContext,
+        authenticationResult
     );
     final QueryMaker queryMaker = new QueryMaker(queryLifecycleFactory, plannerContext, jsonMapper);
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
@@ -148,8 +153,12 @@ public class PlannerFactory
 
     return new DruidPlanner(
         Frameworks.getPlanner(frameworkConfig),
-        plannerContext,
-        authorizerMapper
+        plannerContext
     );
+  }
+
+  public AuthorizerMapper getAuthorizerMapper()
+  {
+    return authorizerMapper;
   }
 }

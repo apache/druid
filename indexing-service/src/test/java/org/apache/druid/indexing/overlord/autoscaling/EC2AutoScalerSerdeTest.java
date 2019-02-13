@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.BaseEncoding;
 import org.apache.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
@@ -128,8 +127,8 @@ public class EC2AutoScalerSerdeTest
     Assert.assertEquals(
         "VERSION=1234\n",
         StringUtils.fromUtf8(
-            BaseEncoding.base64()
-                        .decode(autoScaler.getEnvConfig().getUserData().withVersion("1234").getUserDataBase64())
+            StringUtils
+                .decodeBase64String(autoScaler.getEnvConfig().getUserData().withVersion("1234").getUserDataBase64())
         )
     );
   }

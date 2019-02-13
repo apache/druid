@@ -23,16 +23,27 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+
+import java.util.Comparator;
 
 public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
 {
+  public static final Comparator<ServerHolder> percentUsedComparator = (ServerHolder a, ServerHolder b) -> {
+    int c = Double.compare(a.getPercentUsed(), b.getPercentUsed());
+    if (c == 0) {
+      return a.getServer().getName().compareTo(b.getServer().getName());
+    }
+    return c;
+  };
+
   public DruidCoordinatorBalancerTester(DruidCoordinator coordinator)
   {
     super(coordinator);
   }
 
   @Override
-  protected void moveSegment(
+  protected boolean moveSegment(
       final BalancerSegmentHolder segment,
       final ImmutableDruidServer toServer,
       final DruidCoordinatorRuntimeParams params
@@ -43,36 +54,32 @@ public class DruidCoordinatorBalancerTester extends DruidCoordinatorBalancer
 
     final String fromServerName = segment.getFromServer().getName();
     final DataSegment segmentToMove = segment.getSegment();
-    final String segmentName = segmentToMove.getIdentifier();
+    final SegmentId segmentId = segmentToMove.getId();
 
     if (!toPeon.getSegmentsToLoad().contains(segmentToMove) &&
-        (toServer.getSegment(segmentName) == null) &&
+        (toServer.getSegment(segmentId) == null) &&
         new ServerHolder(toServer, toPeon).getAvailableSize() > segmentToMove.getSize()) {
       log.info(
           "Moving [%s] from [%s] to [%s]",
-          segmentName,
+          segmentId,
           fromServerName,
           toServerName
       );
       try {
         final LoadQueuePeon loadPeon = params.getLoadManagementPeons().get(toServerName);
 
-        loadPeon.loadSegment(segment.getSegment(), new LoadPeonCallback()
-        {
-          @Override
-          public void execute()
-          {
-          }
-        });
+        loadPeon.loadSegment(segment.getSegment(), () -> {});
 
         final LoadQueuePeon dropPeon = params.getLoadManagementPeons().get(fromServerName);
         dropPeon.markSegmentToDrop(segment.getSegment());
 
-        currentlyMovingSegments.get("normal").put(segmentName, segment);
+        currentlyMovingSegments.get("normal").put(segmentId, segment);
+        return true;
       }
       catch (Exception e) {
-        log.info(e, StringUtils.format("[%s] : Moving exception", segmentName));
+        log.info(e, StringUtils.format("[%s] : Moving exception", segmentId));
       }
     }
+    return false;
   }
 }

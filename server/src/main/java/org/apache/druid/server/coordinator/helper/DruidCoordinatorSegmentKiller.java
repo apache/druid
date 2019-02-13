@@ -83,7 +83,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillAllDataSources();
-    Collection<String> whitelist = params.getCoordinatorDynamicConfig().getKillDataSourceWhitelist();
+    Collection<String> whitelist = params.getCoordinatorDynamicConfig().getKillableDataSources();
 
     if (killAllDataSources && whitelist != null && !whitelist.isEmpty()) {
       log.error("killAllDataSources can't be true when killDataSourceWhitelist is non-empty, No kill tasks are scheduled.");
@@ -91,7 +91,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
     }
 
     if (killAllDataSources) {
-      whitelist = segmentManager.getAllDatasourceNames();
+      whitelist = segmentManager.getAllDataSourceNames();
     }
 
     if (whitelist != null && whitelist.size() > 0 && (lastKillTime + period) < System.currentTimeMillis()) {

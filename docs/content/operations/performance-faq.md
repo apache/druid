@@ -32,16 +32,16 @@ Improper configuration is by far the largest problem we see people trying to dep
 
 The size of the JVM heap really depends on the type of Druid node you are running. Below are a few considerations.
 
-[Broker nodes](../design/broker.html) uses the JVM heap mainly to merge results from historicals and real-times. Brokers also use off-heap memory and processing threads for groupBy queries. We recommend 20G-30G of heap here.
+[Broker nodes](../design/broker.html) uses the JVM heap mainly to merge results from Historicals and real-times. Brokers also use off-heap memory and processing threads for groupBy queries. We recommend 20G-30G of heap here.
 
-[Historical nodes](../design/historical.html) use off-heap memory to store intermediate results, and by default, all segments are memory mapped before they can be queried. Typically, the more memory is available on a historical node, the more segments can be served without the possibility of data being paged on to disk. On historicals, the JVM heap is used for [GroupBy queries](../querying/groupbyquery.html), some data structures used for intermediate computation, and general processing. One way to calculate how much space there is for segments is: memory_for_segments = total_memory - heap - direct_memory - jvm_overhead. Note that total_memory here refers to the memory available to the cgroup (if running on Linux), which for default cases is going to be all the system memory.
+[Historical nodes](../design/historical.html) use off-heap memory to store intermediate results, and by default, all segments are memory mapped before they can be queried. Typically, the more memory is available on a Historical node, the more segments can be served without the possibility of data being paged on to disk. On Historicals, the JVM heap is used for [GroupBy queries](../querying/groupbyquery.html), some data structures used for intermediate computation, and general processing. One way to calculate how much space there is for segments is: memory_for_segments = total_memory - heap - direct_memory - jvm_overhead. Note that total_memory here refers to the memory available to the cgroup (if running on Linux), which for default cases is going to be all the system memory.
 
 We recommend 250mb * (processing.numThreads) for the heap.
 
 [Coordinator nodes](../design/coordinator.html) do not require off-heap memory and the heap is used for loading information about all segments to determine what segments need to be loaded, dropped, moved, or replicated.
 
 ## How much direct memory does Druid use?
-Any Druid node that process queries (brokers, ingestion workers, and historical nodes) use two kinds of direct memory buffers with configurable size: processing buffers and merge buffers.
+Any Druid process that handles queries (Brokers, Peons, and Historicals) uses two kinds of direct memory buffers with configurable size: processing buffers and merge buffers.
 
 Each processing thread is allocated one processing buffer. Additionally, there is a shared pool of merge buffers (only used for GroupBy V2 queries currently).
 

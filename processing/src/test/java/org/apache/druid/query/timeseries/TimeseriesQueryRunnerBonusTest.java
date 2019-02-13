@@ -38,6 +38,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -111,15 +112,14 @@ public class TimeseriesQueryRunnerBonusTest
   private List<Result<TimeseriesResultValue>> runTimeseriesCount(IncrementalIndex index)
   {
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
 
     final QueryRunner<Result<TimeseriesResultValue>> runner = makeQueryRunner(
         factory,
-        new IncrementalIndexSegment(index, null)
+        new IncrementalIndexSegment(index, SegmentId.dummy("ds"))
     );
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
@@ -133,14 +133,8 @@ public class TimeseriesQueryRunnerBonusTest
     return runner.run(QueryPlus.wrap(query), context).toList();
   }
 
-  private static <T> QueryRunner<T> makeQueryRunner(
-      QueryRunnerFactory<T, Query<T>> factory,
-      Segment adapter
-  )
+  private static <T> QueryRunner<T> makeQueryRunner(QueryRunnerFactory<T, Query<T>> factory, Segment adapter)
   {
-    return new FinalizeResultsQueryRunner<T>(
-        factory.createRunner(adapter),
-        factory.getToolchest()
-    );
+    return new FinalizeResultsQueryRunner<>(factory.createRunner(adapter), factory.getToolchest());
   }
 }

@@ -154,7 +154,10 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       final FullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.POST,
-              StringUtils.format("/druid/indexer/v1/task/%s/shutdown", taskId)
+              StringUtils.format(
+                  "/druid/indexer/v1/task/%s/shutdown",
+                  StringUtils.urlEncode(taskId)
+              )
           )
       );
 
@@ -255,7 +258,10 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   {
     try {
       final FullResponseHolder responseHolder = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/task/%s/status", taskId))
+          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format(
+              "/druid/indexer/v1/task/%s/status",
+              StringUtils.urlEncode(taskId)
+          ))
       );
 
       return jsonMapper.readValue(
@@ -303,7 +309,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   {
     final String endPoint = StringUtils.format(
         "/druid/indexer/v1/pendingSegments/%s?interval=%s",
-        dataSource,
+        StringUtils.urlEncode(dataSource),
         new Interval(DateTimes.MIN, end)
     );
     try {

@@ -109,10 +109,7 @@ public class SelectResultValueBuilder
 
   public Result<SelectResultValue> build()
   {
-    return new Result<SelectResultValue>(
-        timestamp,
-        new SelectResultValue(pagingIdentifiers, dimensions, metrics, getEventHolders())
-    );
+    return new Result<>(timestamp, new SelectResultValue(pagingIdentifiers, dimensions, metrics, getEventHolders()));
   }
 
   protected List<EventHolder> getEventHolders()

@@ -110,7 +110,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       );
     }
     catch (AmazonServiceException e) {
-      throw new SegmentLoadingException(e, "Unable to move segment[%s]: [%s]", segment.getIdentifier(), e);
+      throw new SegmentLoadingException(e, "Unable to move segment[%s]: [%s]", segment.getId(), e);
     }
   }
 
@@ -174,7 +174,10 @@ public class S3DataSegmentMover implements DataSegmentMover
               .withPrefix(s3Path)
               .withMaxKeys(1)
       );
-      if (listResult.getKeyCount() == 0) {
+      // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
+      // it is observed that even though the getObjectSummaries returns some data
+      // keyCount is still zero.
+      if (listResult.getObjectSummaries().size() == 0) {
         // should never happen
         throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
       }

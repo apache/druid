@@ -44,6 +44,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
@@ -106,6 +107,13 @@ public class ITKafkaTest extends AbstractIndexerTest
   @Inject
   private IntegrationTestingConfig config;
 
+  private String fullDatasourceName;
+
+  @BeforeSuite
+  public void setFullDatasourceName()
+  {
+    fullDatasourceName = DATASOURCE + config.getExtraDatasourceNameSuffix();
+  }
   @Test
   public void testKafka()
   {
@@ -151,7 +159,7 @@ public class ITKafkaTest extends AbstractIndexerTest
         new StringSerializer()
     );
 
-    DateTimeZone zone = DateTimes.inferTzfromString("UTC");
+    DateTimeZone zone = DateTimes.inferTzFromString("UTC");
     // format for putting into events
     DateTimeFormatter event_fmt = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
@@ -204,7 +212,7 @@ public class ITKafkaTest extends AbstractIndexerTest
       addFilteredProperties(consumerProperties);
 
       indexerSpec = getTaskAsString(INDEXER_FILE);
-      indexerSpec = StringUtils.replace(indexerSpec, "%%DATASOURCE%%", DATASOURCE);
+      indexerSpec = StringUtils.replace(indexerSpec, "%%DATASOURCE%%", fullDatasourceName);
       indexerSpec = StringUtils.replace(indexerSpec, "%%TOPIC%%", TOPIC_NAME);
       indexerSpec = StringUtils.replace(indexerSpec, "%%COUNT%%", Integer.toString(num_events));
       String consumerPropertiesJson = jsonMapper.writeValueAsString(consumerProperties);
@@ -233,7 +241,7 @@ public class ITKafkaTest extends AbstractIndexerTest
             @Override
             public Boolean call()
             {
-              return coordinator.areSegmentsLoaded(DATASOURCE);
+              return coordinator.areSegmentsLoaded(fullDatasourceName);
             }
           },
           true,
@@ -263,7 +271,7 @@ public class ITKafkaTest extends AbstractIndexerTest
     }
 
     String queryStr = queryResponseTemplate;
-    queryStr = StringUtils.replace(queryStr, "%%DATASOURCE%%", DATASOURCE);
+    queryStr = StringUtils.replace(queryStr, "%%DATASOURCE%%", fullDatasourceName);
     // time boundary
     queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst));
     queryStr = StringUtils.replace(queryStr, "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%", TIMESTAMP_FMT.print(dtLast));
@@ -296,7 +304,7 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     // remove segments
     if (segmentsExist) {
-      unloadAndKillData(DATASOURCE);
+      unloadAndKillData(fullDatasourceName);
     }
   }
 

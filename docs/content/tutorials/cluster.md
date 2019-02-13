@@ -27,11 +27,18 @@ title: "Clustering"
 Druid is designed to be deployed as a scalable, fault-tolerant cluster.
 
 In this document, we'll set up a simple cluster and discuss how it can be further configured to meet
-your needs. This simple cluster will feature scalable, fault-tolerant servers for Historicals and MiddleManagers, and a single
-coordination server to host the Coordinator and Overlord processes. In production, we recommend deploying Coordinators and Overlords in a fault-tolerant
-configuration as well.
+your needs. 
+
+This simple cluster will feature:
+ - A single Master server to host the Coordinator and Overlord processes
+ - Scalable, fault-tolerant Data servers running Historical and MiddleManager processes
+ - Query servers, hosting Druid Broker processes
+
+In production, we recommend deploying multiple Master servers with Coordinator and Overlord processes in a fault-tolerant configuration as well.
 
 ## Select hardware
+
+### Master Server
 
 The Coordinator and Overlord processes can be co-located on a single server that is responsible for handling the metadata and coordination needs of your cluster.
 The equivalent of an AWS [m3.xlarge](https://aws.amazon.com/ec2/instance-types/#M3) is sufficient for most clusters. This
@@ -41,6 +48,8 @@ hardware offers:
 - 15 GB RAM
 - 80 GB SSD storage
 
+### Data Server
+
 Historicals and MiddleManagers can be colocated on a single server to handle the actual data in your cluster. These servers benefit greatly from CPU, RAM,
 and SSDs. The equivalent of an AWS [r3.2xlarge](https://aws.amazon.com/ec2/instance-types/#r3) is a
 good starting point. This hardware offers:
@@ -48,6 +57,8 @@ good starting point. This hardware offers:
 - 8 vCPUs
 - 61 GB RAM
 - 160 GB SSD storage
+
+### Query Server
 
 Druid Brokers accept queries and farm them out to the rest of the cluster. They also optionally maintain an
 in-memory query cache. These servers benefit greatly from CPU and RAM, and can also be deployed on
@@ -191,7 +202,7 @@ using this functionality, then at this point you should
 If you will be loading data from a Hadoop cluster, then at this point you should configure Druid to be aware
 of your cluster:
 
-- Update `druid.indexer.task.hadoopWorkingPath` in `conf/middleManager/runtime.properties` to
+- Update `druid.indexer.task.hadoopWorkingPath` in `conf/druid/middleManager/runtime.properties` to
 a path on HDFS that you'd like to use for temporary files required during the indexing process.
 `druid.indexer.task.hadoopWorkingPath=/tmp/druid-indexing` is a common choice.
 
@@ -207,11 +218,18 @@ For more info, please see [batch ingestion](../ingestion/batch-ingestion.html).
 
 ## Configure addresses for Druid coordination
 
-In this simple cluster, you will deploy a single Druid Coordinator, a
-single Druid Overlord, a single ZooKeeper instance, and an embedded Derby metadata store on the same server.
+In this simple cluster, you will deploy a single Master server containing the following:
+- A single Druid Coordinator process
+- A single Druid Overlord process
+- A single ZooKeeper istance
+- An embedded Derby metadata store
+
+The processes on the cluster need to be configured with the addresses of this ZK instance and the metadata store.
 
 In `conf/druid/_common/common.runtime.properties`, replace
-"zk.service.host" with the address of the machine that runs your ZK instance:
+"zk.service.host" with [connection string](https://zookeeper.apache.org/doc/current/zookeeperProgrammers.html)
+containing a comma separated list of host:port pairs, each corresponding to a ZooKeeper server
+(e.g. "127.0.0.1:4545" or "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002"):
 
 - `druid.zk.service.host`
 
@@ -222,13 +240,13 @@ In `conf/druid/_common/common.runtime.properties`, replace
 - `druid.metadata.storage.connector.host`
 
 <div class="note caution">
-In production, we recommend running 2 servers, each running a Druid Coordinator
-and a Druid Overlord. We also recommend running a ZooKeeper cluster on its own dedicated hardware,
+In production, we recommend running 2 Master servers, each running a Druid Coordinator process
+and a Druid Overlord process. We also recommend running a ZooKeeper cluster on its own dedicated hardware,
 as well as replicated <a href = "../dependencies/metadata-storage.html">metadata storage</a>
 such as MySQL or PostgreSQL, on its own dedicated hardware.
 </div>
 
-## Tune Druid processes that serve queries
+## Tune processes on the Data Server
 
 Druid Historicals and MiddleManagers can be co-located on the same hardware. Both Druid processes benefit greatly from
 being tuned to the hardware they run on. If you are running Tranquility Server or Kafka, you can also colocate Tranquility with these two Druid processes.
@@ -255,7 +273,7 @@ Keep -XX:MaxDirectMemory >= numThreads*sizeBytes, otherwise Druid will fail to s
 Please see the Druid [configuration documentation](../configuration/index.html) for a full description of all
 possible configuration options.
 
-## Tune Druid Brokers
+## Tune Druid Brokers on the Query Server
 
 Druid Brokers also benefit greatly from being tuned to the hardware they
 run on. If you are using [r3.2xlarge](https://aws.amazon.com/ec2/instance-types/#r3) EC2 instances,
@@ -284,27 +302,34 @@ possible configuration options.
 If you're using a firewall or some other system that only allows traffic on specific ports, allow
 inbound connections on the following:
 
-- 1527 (Derby on your Coordinator; not needed if you are using a separate metadata store like MySQL or PostgreSQL)
+### Master Server
+- 1527 (Derby metadata store; not needed if you are using a separate metadata store like MySQL or PostgreSQL)
 - 2181 (ZooKeeper; not needed if you are using a separate ZooKeeper cluster)
 - 8081 (Coordinator)
-- 8082 (Broker)
-- 8083 (Historical)
-- 8084 (Standalone Realtime, if used)
-- 8088 (Router, if used)
 - 8090 (Overlord)
+
+### Data Server
+- 8083 (Historical)
 - 8091, 8100&ndash;8199 (Druid Middle Manager; you may need higher than port 8199 if you have a very high `druid.worker.capacity`)
+
+### Query Server
+- 8082 (Broker)
+- 8088 (Router, if used)
+
+### Other
 - 8200 (Tranquility Server, if used)
+- 8084 (Standalone Realtime, if used, deprecated)
 
 <div class="note caution">
 In production, we recommend deploying ZooKeeper and your metadata store on their own dedicated hardware,
-rather than on the Coordinator server.
+rather than on the Master server.
 </div>
 
-## Start Coordinator, Overlord, Zookeeper, and metadata store
+## Start Master Server
 
-Copy the Druid distribution and your edited configurations to your coordination
-server. If you have been editing the configurations on your local machine, you can use *rsync* to
-copy them:
+Copy the Druid distribution and your edited configurations to your Master server. 
+
+If you have been editing the configurations on your local machine, you can use *rsync* to copy them:
 
 ```bash
 rsync -az apache-druid-#{DRUIDVERSION}/ COORDINATION_SERVER:apache-druid-#{DRUIDVERSION}/
@@ -334,18 +359,18 @@ java `cat conf/druid/overlord/jvm.config | xargs` -cp conf/druid/_common:conf/dr
 You should see a log message printed out for each service that starts up. You can view detailed logs
 for any service by looking in the `var/log/druid` directory using another terminal.
 
-## Start Historicals and MiddleManagers
+## Start Data Server
 
-Copy the Druid distribution and your edited configurations to your servers set aside for the Druid Historicals and MiddleManagers.
+Copy the Druid distribution and your edited configurations to your Data servers set aside for the Druid Historicals and MiddleManagers.
 
-On each one, *cd* into the distribution and run this command to start a Data server:
+On each one, *cd* into the distribution and run this command to start the Data server processes:
 
 ```bash
 java `cat conf/druid/historical/jvm.config | xargs` -cp conf/druid/_common:conf/druid/historical:lib/* org.apache.druid.cli.Main server historical
 java `cat conf/druid/middleManager/jvm.config | xargs` -cp conf/druid/_common:conf/druid/middleManager:lib/* org.apache.druid.cli.Main server middleManager
 ```
 
-You can add more servers with Druid Historicals and MiddleManagers as needed.
+You can add more Data servers with Druid Historicals and MiddleManagers as needed.
 
 <div class="note info">
 For clusters with complex resource allocation needs, you can break apart Historicals and MiddleManagers and scale the components individually.
@@ -365,17 +390,17 @@ cd tranquility-distribution-0.8.0
 bin/tranquility <server or kafka> -configFile <path_to_druid_distro>/conf/tranquility/<server or kafka>.json
 ```
 
-## Start Druid Broker
+## Start Query Server
 
-Copy the Druid distribution and your edited configurations to your servers set aside for the Druid Brokers.
+Copy the Druid distribution and your edited configurations to your Query servers set aside for the Druid Brokers.
 
-On each one, *cd* into the distribution and run this command to start a Broker (you may want to pipe the output to a log file):
+On each Query server, *cd* into the distribution and run this command to start the Broker process (you may want to pipe the output to a log file):
 
 ```bash
 java `cat conf/druid/broker/jvm.config | xargs` -cp conf/druid/_common:conf/druid/broker:lib/* org.apache.druid.cli.Main server broker
 ```
 
-You can add more Brokers as needed based on query load.
+You can add more Query servers as needed based on query load.
 
 ## Loading data
 

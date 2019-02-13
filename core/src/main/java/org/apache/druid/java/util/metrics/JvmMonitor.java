@@ -45,6 +45,8 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   private final GcCounters gcCounters = new GcCounters();
 
+  private final AllocationMetricCollector collector;
+
   public JvmMonitor()
   {
     this(ImmutableMap.of());
@@ -66,6 +68,7 @@ public class JvmMonitor extends FeedDefiningMonitor
     Preconditions.checkNotNull(dimensions);
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.pid = Preconditions.checkNotNull(pidDiscoverer).getPid();
+    this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
   }
 
   @Override
@@ -74,8 +77,19 @@ public class JvmMonitor extends FeedDefiningMonitor
     emitJvmMemMetrics(emitter);
     emitDirectMemMetrics(emitter);
     emitGcMetrics(emitter);
+    emitThreadAllocationMetrics(emitter);
 
     return true;
+  }
+
+  private void emitThreadAllocationMetrics(ServiceEmitter emitter)
+  {
+    final ServiceMetricEvent.Builder builder = builder();
+    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+    if (collector != null) {
+      long delta = collector.calculateDelta();
+      emitter.emit(builder.build("jvm/heapAlloc/bytes", delta));
+    }
   }
 
   /**

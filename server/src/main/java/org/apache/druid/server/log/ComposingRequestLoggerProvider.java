@@ -83,12 +83,23 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
     }
 
     @Override
-    public void log(RequestLogLine requestLogLine) throws IOException
+    public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
+    {
+      delegateToAllChildren(requestLogLine, RequestLogger::logNativeQuery);
+    }
+
+    @Override
+    public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+    {
+      delegateToAllChildren(requestLogLine, RequestLogger::logSqlQuery);
+    }
+
+    private void delegateToAllChildren(RequestLogLine requestLogLine, RequestLogLineConsumer consumer) throws IOException
     {
       Exception exception = null;
       for (RequestLogger logger : loggers) {
         try {
-          logger.log(requestLogLine);
+          consumer.accept(logger, requestLogLine);
         }
         catch (Exception e) {
           if (exception == null) {
@@ -110,6 +121,12 @@ public class ComposingRequestLoggerProvider implements RequestLoggerProvider
       return "ComposingRequestLogger{" +
              "loggers=" + loggers +
              '}';
+    }
+
+    private interface RequestLogLineConsumer
+    {
+      @SuppressWarnings("RedundantThrows")
+      void accept(RequestLogger requestLogger, RequestLogLine requestLogLine) throws IOException;
     }
   }
 

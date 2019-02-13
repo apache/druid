@@ -68,6 +68,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -341,7 +342,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
 
   private ScheduledExecutorService scheduledExec;
 
-  private final Map<StreamPartition<String>, PartitionResource> partitionResources = new ConcurrentHashMap<>();
+  private final ConcurrentMap<StreamPartition<String>, PartitionResource> partitionResources =
+      new ConcurrentHashMap<>();
   private BlockingQueue<OrderedPartitionableRecord<String, String>> records;
 
   private volatile boolean checkPartitionsStarted = false;

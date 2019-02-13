@@ -1,0 +1,32 @@
+[
+  {
+    "query": {
+      "query": "SELECT count(*) FROM sys.segments WHERE datasource='wikipedia_index_test'"
+    },
+    "expectedResults": [
+      {
+        "EXPR$0": 4
+      }
+    ]
+  },
+  {
+    "query": {
+      "query": "SELECT server_type FROM sys.servers"
+    },
+    "expectedResults": [
+      {
+        "server_type": "historical"
+      }
+    ]
+  },
+  {
+    "query": {
+      "query": "SELECT status FROM sys.tasks"
+    },
+    "expectedResults": [
+      {
+        "status": "SUCCESS"
+      }
+    ]
+  }
+]
