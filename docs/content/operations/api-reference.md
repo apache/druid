@@ -405,7 +405,7 @@ Retrieve list of tasks. Accepts query string parameters `state`, `datasource`, `
 | `datasource`| return tasks filtered by Druid datasource.|
 | `createdTimeInterval`| return tasks created within the specified interval. | 
 | `max`| maximum number of `"complete"` tasks to return. Only applies when `state` is set to `"complete"`.|
-| `type`| filter tasks by task type.|
+| `type`| filter tasks by task type. See [task documentation](../ingestion/tasks.html) for more details.|
 
 
 * `/druid/indexer/v1/completeTasks`
@@ -414,15 +414,15 @@ Retrieve list of complete tasks. Equivalent to `/druid/indexer/v1/tasks?state=co
 
 * `/druid/indexer/v1/runningTasks`
 
-Retrieve list of complete tasks. Equivalent to `/druid/indexer/v1/tasks?state=running`.
+Retrieve list of running tasks. Equivalent to `/druid/indexer/v1/tasks?state=running`.
 
 * `/druid/indexer/v1/waitingTasks`
 
-Retrieve list of complete tasks. Equivalent to `/druid/indexer/v1/tasks?state=waiting`.
+Retrieve list of waiting tasks. Equivalent to `/druid/indexer/v1/tasks?state=waiting`.
 
 * `/druid/indexer/v1/pendingTasks`
 
-Retrieve list of complete tasks. Equivalent to `/druid/indexer/v1/tasks?state=pending`.
+Retrieve list of pending tasks. Equivalent to `/druid/indexer/v1/tasks?state=pending`.
 
 * `/druid/indexer/v1/task/{taskId}`
 
