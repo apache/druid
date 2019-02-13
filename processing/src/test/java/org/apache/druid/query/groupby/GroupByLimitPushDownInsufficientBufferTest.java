@@ -394,7 +394,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            noopIntervalChunkingQueryRunnerDecorator()
+            NoopIntervalChunkingQueryRunnerDecorator()
         )
     );
 
@@ -402,7 +402,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
         tooSmallStrategySelector,
         new GroupByQueryQueryToolChest(
             tooSmallStrategySelector,
-            noopIntervalChunkingQueryRunnerDecorator()
+            NoopIntervalChunkingQueryRunnerDecorator()
         )
     );
   }
@@ -679,7 +679,7 @@ public class GroupByLimitPushDownInsufficientBufferTest
     }
   };
 
-  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null)
     {

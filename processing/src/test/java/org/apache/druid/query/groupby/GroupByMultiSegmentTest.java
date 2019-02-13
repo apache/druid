@@ -287,7 +287,7 @@ public class GroupByMultiSegmentTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            noopIntervalChunkingQueryRunnerDecorator()
+            NoopIntervalChunkingQueryRunnerDecorator()
         )
     );
   }
@@ -419,7 +419,7 @@ public class GroupByMultiSegmentTest
     }
   };
 
-  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
       @Override

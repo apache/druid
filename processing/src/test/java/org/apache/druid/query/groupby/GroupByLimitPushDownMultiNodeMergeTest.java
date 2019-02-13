@@ -426,7 +426,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            noopIntervalChunkingQueryRunnerDecorator()
+            NoopIntervalChunkingQueryRunnerDecorator()
         )
     );
 
@@ -434,7 +434,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
         strategySelector2,
         new GroupByQueryQueryToolChest(
             strategySelector2,
-            noopIntervalChunkingQueryRunnerDecorator()
+            NoopIntervalChunkingQueryRunnerDecorator()
         )
     );
   }
@@ -780,7 +780,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest
     }
   };
 
-  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null)
     {
