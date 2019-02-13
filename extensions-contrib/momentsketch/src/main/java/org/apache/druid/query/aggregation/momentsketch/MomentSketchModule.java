@@ -76,7 +76,7 @@ public class MomentSketchModule implements DruidModule
   {
     ComplexMetrics.registerSerde(
         MomentSketchAggregatorFactory.TYPE_NAME,
-        MomentSketchComplexMetricSerde::new
+        new MomentSketchComplexMetricSerde()
     );
   }
 }
