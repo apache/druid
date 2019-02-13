@@ -31,7 +31,7 @@ MiddleManager.
 Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.
 
 To run either kind of native batch indexing task, write an ingestion spec as specified below. Then POST it to the
-`/druid/indexer/v1/task` endpoint on your Overlord machine, or use the `post-index-task` script included with Druid.
+[`/druid/indexer/v1/task` endpoint on the Overlord](../operations/api-reference.html#tasks), or use the `post-index-task` script included with Druid.
 
 Parallel Index Task
 --------------------------------

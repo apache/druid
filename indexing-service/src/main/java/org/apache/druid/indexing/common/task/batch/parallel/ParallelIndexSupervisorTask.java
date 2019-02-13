@@ -365,17 +365,20 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     final Optional<SortedSet<Interval>> bucketIntervals = granularitySpec.bucketIntervals();
 
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
-    final Map<Interval, String> versions = toolbox
+    final List<TaskLock> locks = toolbox
         .getTaskActionClient()
-        .submit(new LockListAction())
+        .submit(new LockListAction());
+    final TaskLock revokedLock = locks.stream().filter(TaskLock::isRevoked).findAny().orElse(null);
+    if (revokedLock != null) {
+      throw new ISE("Lock revoked: [%s]", revokedLock);
+    }
+    final Map<Interval, String> versions = locks
         .stream()
-        // FIXME note that the next line is new in this commit --- it's not relevant for fixing #6989,
-        //       it just seems like a bug fix to make the code match its comment
-        .filter(taskLock -> !taskLock.isRevoked())
         .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
 
     Interval interval;
     String version;
+    boolean justLockedInterval = false;
     if (bucketIntervals.isPresent()) {
       // If the granularity spec has explicit intervals, we just need to find the interval (of the segment
       // granularity); we already tried to lock it at task startup.
@@ -391,8 +394,6 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
 
       version = findVersion(versions, interval);
       if (version == null) {
-        // FIXME I'm preserving the existing error message here, but it seems like the message should
-        // be more like "lock on interval has been revoked"?
         throw new ISE("Cannot find a version for interval[%s]", interval);
       }
     } else {
@@ -402,22 +403,22 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
       version = findVersion(versions, interval);
       if (version == null) {
         // We don't have a lock for this interval, so we should lock it now.
-        // FIXME should this be doing a LockAcquireAction instead so it can retry if it fails?
-        //       I think not because you really shouldn't be batch ingesting data that overlaps
-        //       with real time.
         final TaskLock lock = Preconditions.checkNotNull(
             toolbox.getTaskActionClient().submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)),
             "Cannot acquire a lock for interval[%s]", interval
         );
-        if (!interval.equals(lock.getInterval())) {
-          throw new ISE("Lock is for the wrong interval: expected [%s], got [%s]",
-                        interval, lock.getInterval());
-        }
         version = lock.getVersion();
+        justLockedInterval = true;
       }
     }
 
     final int partitionNum = Counters.incrementAndGetInt(partitionNumCountersPerInterval, interval);
+    if (justLockedInterval && partitionNum != 1) {
+      throw new ISE(
+          "Expected partitionNum to be 1 for interval [%s] right after locking, but got [%s]",
+          interval, partitionNum
+      );
+    }
     return new SegmentIdWithShardSpec(
         dataSource,
         interval,
@@ -426,7 +427,8 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     );
   }
 
-  private static @Nullable String findVersion(Map<Interval, String> versions, Interval interval)
+  @Nullable
+  private static String findVersion(Map<Interval, String> versions, Interval interval)
   {
     return versions.entrySet().stream()
                    .filter(entry -> entry.getKey().contains(interval))

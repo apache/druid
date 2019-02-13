@@ -145,7 +145,7 @@ public class CoordinatorResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     return segments.stream().map(s -> s.getVersion()).collect(Collectors.toSet());
   }
