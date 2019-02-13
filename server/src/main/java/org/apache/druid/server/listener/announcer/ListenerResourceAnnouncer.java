@@ -21,7 +21,7 @@ package org.apache.druid.server.listener.announcer;
 
 import com.google.common.base.Throwables;
 import org.apache.curator.utils.ZKPaths;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,11 +42,11 @@ public abstract class ListenerResourceAnnouncer
   private static final Logger LOG = new Logger(ListenerResourceAnnouncer.class);
   private final Object startStopSync = new Object();
   private volatile boolean started = false;
-  private final Announcer announcer;
+  private final NodeAnnouncer announcer;
   private final String announcePath;
 
   public ListenerResourceAnnouncer(
-      Announcer announcer,
+      NodeAnnouncer announcer,
       ListeningAnnouncerConfig listeningAnnouncerConfig,
       String listener_key,
       HostAndPortWithScheme node
@@ -60,7 +60,7 @@ public abstract class ListenerResourceAnnouncer
   }
 
   ListenerResourceAnnouncer(
-      Announcer announcer,
+      NodeAnnouncer announcer,
       String announceBasePath,
       HostAndPortWithScheme node
   )

@@ -36,7 +36,7 @@ import com.google.inject.Provides;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.common.utils.ServletResourceUtils;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.Jerseys;
@@ -216,7 +216,7 @@ class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
 {
   @Inject
   public LookupResourceListenerAnnouncer(
-      Announcer announcer,
+      NodeAnnouncer announcer,
       LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig,
       @Self DruidNode node
   )
