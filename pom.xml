@@ -1482,6 +1482,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
