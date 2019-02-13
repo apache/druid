@@ -43,6 +43,7 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -147,7 +148,8 @@ public class RemoteTaskRunnerTestUtils
         workerId,
         workerId,
         capacity,
-        "0"
+        "0",
+        WorkerConfig.DEFAULT_TIER
     );
 
     cf.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
@@ -163,7 +165,14 @@ public class RemoteTaskRunnerTestUtils
   {
     cf.setData().forPath(
         joiner.join(announcementsPath, worker.getHost()),
-        jsonMapper.writeValueAsBytes(new Worker(worker.getScheme(), worker.getHost(), worker.getIp(), worker.getCapacity(), ""))
+        jsonMapper.writeValueAsBytes(new Worker(
+            worker.getScheme(),
+            worker.getHost(),
+            worker.getIp(),
+            worker.getCapacity(),
+            "",
+            worker.getTier()
+        ))
     );
   }
 

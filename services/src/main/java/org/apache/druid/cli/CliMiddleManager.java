@@ -147,7 +147,8 @@ public class CliMiddleManager extends ServerRunnable
                 node.getHostAndPortToUse(),
                 config.getIp(),
                 config.getCapacity(),
-                config.getVersion()
+                config.getVersion(),
+                config.getTier()
             );
           }
 
@@ -158,7 +159,8 @@ public class CliMiddleManager extends ServerRunnable
             return new WorkerNodeService(
                 workerConfig.getIp(),
                 workerConfig.getCapacity(),
-                workerConfig.getVersion()
+                workerConfig.getVersion(),
+                workerConfig.getTier()
             );
           }
         },

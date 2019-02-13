@@ -1028,6 +1028,37 @@ useful if you want work evenly distributed across your middleManagers.
 |`type`|`equalDistribution`.|required; must be `equalDistribution`|
 |`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
 
+###### Equal Distribution With Tier Spec
+
+This strategy is a variant of `Equal Distribution`, which support `workerTierSpec` field rather than `affinityConfig`. By specifying `workerTierSpec`, you can assign tasks to run on different tiers of MiddleManagers based on the tasks' **taskType** and **dataSource name**.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`equalDistributionWithTierSpec`.|required; must be `equalDistributionWithTierSpec`|
+|`workerTierSpec`|[Worker Tier Spec](#workerTierSpec) object|null (no worker tier spec)|
+
+Example: specify tasks default to run on _tier1_ whose task
+type is "index_kafka", while dataSource "ds1" run on _tier2_.
+
+```json
+{
+  "selectStrategy": {
+    "type": "equalDistributionWithTierSpec",
+    "workerTierSpec": {
+      "strong": false,
+      "tierMap": {
+        "index_kafka": {
+           "defaultTier": "tier1",
+           "tiers": {
+              "ds1": "tier2"
+           }
+        }
+      }
+    }
+  }
+}
+```
+
 ###### Fill Capacity
 
 Tasks are assigned to the worker with the most currently-running tasks at the time the task begins running. This is
@@ -1041,6 +1072,15 @@ middleManagers up to capacity simultaneously, rather than a single middleManager
 |--------|-----------|-------|
 |`type`|`fillCapacity`.|required; must be `fillCapacity`|
 |`affinityConfig`|[Affinity config](#affinity) object|null (no affinity)|
+
+###### Fill Capacity With Tier Spec
+
+This strategy is a variant of `Fill Capacity`, which support `workerTierSpec` field rather than `affinityConfig`. The usage is the same with _equalDistributionWithTierSpec_ strategy.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`type`|`fillCapacityWithTierSpec`.|required; must be `fillCapacityWithTierSpec`|
+|`workerTierSpec`|[Worker Tier Spec](#workerTierSpec) object|null (no worker tier spec)|
 
 ###### Javascript<a id="javascript-worker-select-strategy"></a>
 
@@ -1077,6 +1117,23 @@ field. If not provided, the default is to not use affinity at all.
 |--------|-----------|-------|
 |`affinity`|JSON object mapping a datasource String name to a list of indexing service middleManager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middleManager and what the middleManager announces itself as (examine the Overlord logs to see what your middleManager announces itself as).|{}|
 |`strong`|With weak affinity (the default), tasks for a dataSource may be assigned to other middleManagers if their affinity-mapped middleManagers are not able to run all pending tasks in the queue for that dataSource. With strong affinity, tasks for a dataSource will only ever be assigned to their affinity-mapped middleManagers, and will wait in the pending queue if necessary.|false|
+
+###### WorkerTierSpec
+
+WorkerTierSpec can be provided to the _equalDistributionWithTierSpec_ and _fillCapacityWithTierSpec_ strategies using the "workerTierSpec"
+field. If not provided, the default is to not use it at all.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`tierMap`|A JSON map object mapping a task type String name to a [TierConfig](tierConfig) object, by which you can specify tier config for different task type.|{}|
+|`strong`|With weak workerTierSpec (the default), tasks for a dataSource may be assigned to other middleManagers if the middleManagers specified in `tierMap` are not able to run all pending tasks in the queue for that dataSource. With strong workerTierSpec, tasks for a dataSource will only ever be assigned to their specified middleManagers, and will wait in the pending queue if necessary.|false|
+
+###### TierConfig
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`defaultTier`|Specify default tier for a task type.|null|
+|`tiers`|A JSON map object mapping a datasource String name to a tier String name of the MiddleManager. If tier isn't specified for a datasource, then using the `defaultTier`. If no specified tier and the `defaultTier` is also null, then tasks can run on any available MiddleManagers.|null|
 
 ##### Autoscaler
 
@@ -1127,6 +1184,7 @@ Middle managers pass their configurations down to their child peons. The MiddleM
 |`druid.worker.ip`|The IP of the worker.|localhost|
 |`druid.worker.version`|Version identifier for the MiddleManager.|0|
 |`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of available processors - 1|
+|`druid.worker.tier`|A string to name the tier that the MiddleManager node belongs to.|`_default_worker_tier`|
 
 #### Peon Processing
 

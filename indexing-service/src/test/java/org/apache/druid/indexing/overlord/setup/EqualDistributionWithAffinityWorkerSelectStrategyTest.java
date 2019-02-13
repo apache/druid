@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
@@ -55,28 +56,28 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "localhost0",
                     new ImmutableWorkerInfo(
-                        new Worker("http", "localhost0", "localhost0", 2, "v1"), 0,
+                        new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_TIER), 0,
                         new HashSet<>(),
                         new HashSet<>(),
                         DateTimes.nowUtc()
                     ),
                     "localhost1",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost1", "localhost1", 2, "v1"), 0,
+                            new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_TIER), 0,
                             new HashSet<>(),
                             new HashSet<>(),
                             DateTimes.nowUtc()
                     ),
                     "localhost2",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost2", "localhost2", 2, "v1"), 1,
+                            new Worker("http", "localhost2", "localhost2", 2, "v1", WorkerConfig.DEFAULT_TIER), 1,
                             new HashSet<>(),
                             new HashSet<>(),
                             DateTimes.nowUtc()
                     ),
                     "localhost3",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost3", "localhost3", 2, "v1"), 1,
+                            new Worker("http", "localhost3", "localhost3", 2, "v1", WorkerConfig.DEFAULT_TIER), 1,
                             new HashSet<>(),
                             new HashSet<>(),
                             DateTimes.nowUtc()
@@ -99,14 +100,14 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "lhost",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "lhost", "lhost", 1, "v1"), 0,
+                            new Worker("http", "lhost", "lhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
                             new HashSet<>(),
                             new HashSet<>(),
                             DateTimes.nowUtc()
                     ),
                     "localhost",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost", "localhost", 1, "v1"), 0,
+                            new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
                             new HashSet<>(),
                             new HashSet<>(),
                             DateTimes.nowUtc()
@@ -129,7 +130,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ImmutableMap.of(
                     "localhost",
                     new ImmutableWorkerInfo(
-                            new Worker("http", "localhost", "localhost", 1, "v1"), 0,
+                            new Worker("http", "localhost", "localhost", 1, "v1", WorkerConfig.DEFAULT_TIER), 0,
                             new HashSet<>(),
                             new HashSet<>(),
                             DateTimes.nowUtc()

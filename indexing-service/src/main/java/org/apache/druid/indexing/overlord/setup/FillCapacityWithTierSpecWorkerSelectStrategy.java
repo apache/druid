@@ -26,28 +26,28 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
-import java.util.Comparator;
-import java.util.Map;
+import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
+public class FillCapacityWithTierSpecWorkerSelectStrategy implements WorkerSelectStrategy
 {
-  private final AffinityConfig affinityConfig;
+  private final WorkerTierSpec workerTierSpec;
 
   @JsonCreator
-  public FillCapacityWorkerSelectStrategy(
-      @JsonProperty("affinityConfig") AffinityConfig affinityConfig
+  public FillCapacityWithTierSpecWorkerSelectStrategy(
+      @JsonProperty("workerTierSpec") WorkerTierSpec workerTierSpec
   )
   {
-    this.affinityConfig = affinityConfig;
+    this.workerTierSpec = workerTierSpec;
   }
 
   @JsonProperty
-  public AffinityConfig getAffinityConfig()
+  public WorkerTierSpec getWorkerTierSpec()
   {
-    return affinityConfig;
+    return workerTierSpec;
   }
 
+  @Nullable
   @Override
   public ImmutableWorkerInfo findWorkerForTask(
       final WorkerTaskRunnerConfig config,
@@ -59,16 +59,9 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
         task,
         zkWorkers,
         config,
-        affinityConfig,
+        workerTierSpec,
         FillCapacityWorkerSelectStrategy::selectFromEligibleWorkers
     );
-  }
-
-  static ImmutableWorkerInfo selectFromEligibleWorkers(final Map<String, ImmutableWorkerInfo> eligibleWorkers)
-  {
-    return eligibleWorkers.values().stream().max(
-        Comparator.comparing(ImmutableWorkerInfo::getCurrCapacityUsed)
-    ).orElse(null);
   }
 
   @Override
@@ -80,21 +73,21 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    final FillCapacityWorkerSelectStrategy that = (FillCapacityWorkerSelectStrategy) o;
-    return Objects.equals(affinityConfig, that.affinityConfig);
+    final FillCapacityWithTierSpecWorkerSelectStrategy that = (FillCapacityWithTierSpecWorkerSelectStrategy) o;
+    return Objects.equals(workerTierSpec, that.workerTierSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(affinityConfig);
+    return Objects.hash(workerTierSpec);
   }
 
   @Override
   public String toString()
   {
-    return "FillCapacityWorkerSelectStrategy{" +
-           "affinityConfig=" + affinityConfig +
+    return "FillCapacityWithTierSpecWorkerSelectStrategy{" +
+           "workerTierSpec=" + workerTierSpec +
            '}';
   }
 }

@@ -33,16 +33,19 @@ public class WorkerNodeService extends DruidService
   private final String ip;
   private final int capacity;
   private final String version;
+  private final String tier;
 
   public WorkerNodeService(
       @JsonProperty("ip") String ip,
       @JsonProperty("capacity") int capacity,
-      @JsonProperty("version") String version
+      @JsonProperty("version") String version,
+      @JsonProperty("tier") String tier
   )
   {
     this.ip = ip;
     this.capacity = capacity;
     this.version = version;
+    this.tier = tier;
   }
 
   @Override
@@ -69,6 +72,12 @@ public class WorkerNodeService extends DruidService
     return version;
   }
 
+  @JsonProperty
+  public String getTier()
+  {
+    return tier;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -81,13 +90,14 @@ public class WorkerNodeService extends DruidService
     WorkerNodeService that = (WorkerNodeService) o;
     return capacity == that.capacity &&
            Objects.equals(ip, that.ip) &&
-           Objects.equals(version, that.version);
+           Objects.equals(version, that.version) &&
+           Objects.equals(tier, that.tier);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(ip, capacity, version);
+    return Objects.hash(ip, capacity, version, tier);
   }
 
   @Override
@@ -97,6 +107,7 @@ public class WorkerNodeService extends DruidService
            "ip='" + ip + '\'' +
            ", capacity=" + capacity +
            ", version='" + version + '\'' +
+           ", tier='" + tier + '\'' +
            '}';
   }
 }

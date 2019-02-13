@@ -30,6 +30,8 @@ import javax.validation.constraints.NotNull;
  */
 public class WorkerConfig
 {
+  public static final String DEFAULT_TIER = "_default_worker_tier";
+
   @JsonProperty
   @NotNull
   private String ip = DruidNode.getDefaultHost();
@@ -41,6 +43,10 @@ public class WorkerConfig
   @JsonProperty
   @Min(1)
   private int capacity = Math.max(1, JvmUtils.getRuntimeInfo().getAvailableProcessors() - 1);
+
+  @JsonProperty
+  @NotNull
+  private String tier = DEFAULT_TIER;
 
   public String getIp()
   {
@@ -55,5 +61,10 @@ public class WorkerConfig
   public int getCapacity()
   {
     return capacity;
+  }
+
+  public String getTier()
+  {
+    return tier;
   }
 }
