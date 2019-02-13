@@ -29,6 +29,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Module;
+import org.apache.druid.data.input.Firehose;
+import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -81,7 +83,7 @@ import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.firehose.IngestSegmentFirehose;
+import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -342,27 +344,33 @@ public class IngestSegmentFirehoseFactoryTest
             null,
             ImmutableList.of(METRIC_LONG_NAME, METRIC_FLOAT_NAME)
         )) {
-          final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
-              TASK.getDataSource(),
-              Intervals.ETERNITY,
-              new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
-              dim_names,
-              metric_names,
-              INDEX_IO
-          );
-          factory.setTaskToolbox(taskToolboxFactory.build(TASK));
-          values.add(
-              new Object[]{
-                  StringUtils.format(
-                      "DimNames[%s]MetricNames[%s]ParserDimNames[%s]",
-                      dim_names == null ? "null" : "dims",
-                      metric_names == null ? "null" : "metrics",
-                      parser == ROW_PARSER ? "dims" : "null"
-                  ),
-                  factory,
-                  parser
-              }
-          );
+          for (Boolean wrapInCombining : Arrays.asList(false, true)) {
+            final IngestSegmentFirehoseFactory isfFactory = new IngestSegmentFirehoseFactory(
+                TASK.getDataSource(),
+                Intervals.ETERNITY,
+                new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
+                dim_names,
+                metric_names,
+                INDEX_IO
+            );
+            final FirehoseFactory factory = wrapInCombining
+                                            ? new CombiningFirehoseFactory(ImmutableList.of(isfFactory))
+                                            : isfFactory;
+            factory.setContext(IngestSegmentFirehoseFactory.CONTEXT_TASK_TOOLBOX, taskToolboxFactory.build(TASK));
+            values.add(
+                new Object[]{
+                    StringUtils.format(
+                        "DimNames[%s]MetricNames[%s]ParserDimNames[%s]WrapInCombining[%s]",
+                        dim_names == null ? "null" : "dims",
+                        metric_names == null ? "null" : "metrics",
+                        parser == ROW_PARSER ? "dims" : "null",
+                        wrapInCombining
+                    ),
+                    factory,
+                    parser
+                }
+            );
+          }
         }
       }
     }
@@ -407,7 +415,7 @@ public class IngestSegmentFirehoseFactoryTest
 
   public IngestSegmentFirehoseFactoryTest(
       String testName,
-      IngestSegmentFirehoseFactory factory,
+      FirehoseFactory factory,
       InputRowParser rowParser
   )
   {
@@ -436,7 +444,7 @@ public class IngestSegmentFirehoseFactoryTest
   private static final File persistDir = Paths.get(tmpDir.getAbsolutePath(), "indexTestMerger").toFile();
   private static final List<DataSegment> segmentSet = new ArrayList<>(MAX_SHARD_NUMBER);
 
-  private final IngestSegmentFirehoseFactory factory;
+  private final FirehoseFactory<InputRowParser> factory;
   private final InputRowParser rowParser;
 
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
@@ -518,15 +526,20 @@ public class IngestSegmentFirehoseFactoryTest
   @Test
   public void sanityTest()
   {
-    Assert.assertEquals(TASK.getDataSource(), factory.getDataSource());
-    if (factory.getDimensions() != null) {
-      Assert.assertArrayEquals(new String[]{DIM_NAME}, factory.getDimensions().toArray());
+    if (factory instanceof CombiningFirehoseFactory) {
+      // This method tests IngestSegmentFirehoseFactory-specific methods.
+      return;
     }
-    Assert.assertEquals(Intervals.ETERNITY, factory.getInterval());
-    if (factory.getMetrics() != null) {
+    final IngestSegmentFirehoseFactory isfFactory = (IngestSegmentFirehoseFactory) factory;
+    Assert.assertEquals(TASK.getDataSource(), isfFactory.getDataSource());
+    if (isfFactory.getDimensions() != null) {
+      Assert.assertArrayEquals(new String[]{DIM_NAME}, isfFactory.getDimensions().toArray());
+    }
+    Assert.assertEquals(Intervals.ETERNITY, isfFactory.getInterval());
+    if (isfFactory.getMetrics() != null) {
       Assert.assertEquals(
           ImmutableSet.of(METRIC_LONG_NAME, METRIC_FLOAT_NAME),
-          ImmutableSet.copyOf(factory.getMetrics())
+          ImmutableSet.copyOf(isfFactory.getMetrics())
       );
     }
   }
@@ -536,15 +549,17 @@ public class IngestSegmentFirehoseFactoryTest
   {
     Assert.assertEquals(MAX_SHARD_NUMBER.longValue(), segmentSet.size());
     Integer rowcount = 0;
-    try (final IngestSegmentFirehose firehose =
-             (IngestSegmentFirehose)
-                 factory.connect(rowParser, null)) {
+    try (final Firehose firehose = factory.connect(rowParser, null)) {
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();
         Assert.assertArrayEquals(new String[]{DIM_NAME}, row.getDimensions().toArray());
         Assert.assertArrayEquals(new String[]{DIM_VALUE}, row.getDimension(DIM_NAME).toArray());
         Assert.assertEquals(METRIC_LONG_VALUE.longValue(), row.getMetric(METRIC_LONG_NAME));
-        Assert.assertEquals(METRIC_FLOAT_VALUE, row.getMetric(METRIC_FLOAT_NAME).floatValue(), METRIC_FLOAT_VALUE * 0.0001);
+        Assert.assertEquals(
+            METRIC_FLOAT_VALUE,
+            row.getMetric(METRIC_FLOAT_NAME).floatValue(),
+            METRIC_FLOAT_VALUE * 0.0001
+        );
         ++rowcount;
       }
     }
@@ -563,9 +578,8 @@ public class IngestSegmentFirehoseFactoryTest
         )
     );
     int skipped = 0;
-    try (final IngestSegmentFirehose firehose =
-             (IngestSegmentFirehose)
-                 factory.connect(transformSpec.decorate(rowParser), null)) {
+    try (final Firehose firehose =
+             factory.connect(transformSpec.decorate(rowParser), null)) {
       while (firehose.hasMore()) {
         InputRow row = firehose.nextRow();
         if (row == null) {

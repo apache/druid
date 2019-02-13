@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.Firehose;
@@ -59,6 +60,13 @@ public class ClippedFirehoseFactory implements FirehoseFactory
   public Interval getInterval()
   {
     return interval;
+  }
+
+  @Override
+  @JsonIgnore
+  public void setContext(String key, Object value)
+  {
+    delegate.setContext(key, value);
   }
 
   @Override

@@ -184,11 +184,7 @@ public class ParallelIndexSubTask extends AbstractTask
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-
-    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-      // pass toolbox to Firehose
-      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
-    }
+    firehoseFactory.setContext(IngestSegmentFirehoseFactory.CONTEXT_TASK_TOOLBOX, toolbox);
 
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
     // Firehose temporary directory is automatically removed when this IndexTask completes.

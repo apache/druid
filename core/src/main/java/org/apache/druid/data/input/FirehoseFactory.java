@@ -77,4 +77,14 @@ public interface FirehoseFactory<T extends InputRowParser>
   {
     return false;
   }
+
+  /**
+   * Some FirehoseFactory implementations require additional context from the task that uses them.
+   * For example, IngestSegmentFirehoseFactory needs a TaskToolbox from the indexing-service task.
+   * This method is also implemented by implementations such as CombiningFirehoseFactory which wrap
+   * other implementations.
+   */
+  default void setContext(String key, Object value)
+  {
+  }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
@@ -138,5 +139,12 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
   public DateTime getShutoffTime()
   {
     return shutoffTime;
+  }
+
+  @Override
+  @JsonIgnore
+  public void setContext(String key, Object value)
+  {
+    delegateFactory.setContext(key, value);
   }
 }

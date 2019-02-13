@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -63,6 +64,15 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
   public List<FirehoseFactory> getDelegateFactoryList()
   {
     return delegateFactoryList;
+  }
+
+  @Override
+  @JsonIgnore
+  public void setContext(String key, Object value)
+  {
+    for (FirehoseFactory delegateFactory : delegateFactoryList) {
+      delegateFactory.setContext(key, value);
+    }
   }
 
   class CombiningFirehose implements Firehose
