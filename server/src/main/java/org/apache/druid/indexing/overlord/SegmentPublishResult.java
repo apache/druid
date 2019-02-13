@@ -118,7 +118,7 @@ public class SegmentPublishResult
     return "SegmentPublishResult{" +
            "segments=" + segments +
            ", success=" + success +
-           ", exception=" + errorMsg +
+           ", errorMsg='" + errorMsg + '\'' +
            '}';
   }
 }
