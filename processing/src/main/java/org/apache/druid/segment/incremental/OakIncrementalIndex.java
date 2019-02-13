@@ -324,13 +324,13 @@ public class OakIncrementalIndex extends InternalDataIncrementalIndex<BufferAggr
 
     IncrementalIndexRow from = new IncrementalIndexRow(timeStart, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
     IncrementalIndexRow to = new IncrementalIndexRow(timeEnd + 1, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
-    try (OakMap subMap = oak.subMap(from, true, to, false, descending);
-         OakBufferView bufferView = subMap.createBufferView()) {
+    try (OakMap<IncrementalIndexRow, Row> subMap = oak.subMap(from, true, to, false, descending);
+         OakBufferView<IncrementalIndexRow> bufferView = subMap.createBufferView()) {
 
-      OakIterator<OakRBuffer> keysIterator = bufferView.keysIterator();
+      OakIterator<ByteBuffer> keysIterator = bufferView.keysIterator();
       return () -> Iterators.transform(
           keysIterator,
-          oakRBuffer -> new OakIncrementalIndexRow(oakRBuffer, dimensionDescsList)
+          byteBuffer -> new OakIncrementalIndexRow(byteBuffer, dimensionDescsList)
       );
 
 

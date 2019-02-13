@@ -87,7 +87,7 @@ public class IncrementalIndexReadBenchmark
   @Param({"true", "false"})
   private boolean rollup;
 
-  @Param({"onheap", "oak"})
+  @Param({"oak"})
   private String indexType;
 
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);
@@ -242,7 +242,7 @@ public class IncrementalIndexReadBenchmark
   {
     Options opt = new OptionsBuilder()
             .include(IncrementalIndexReadBenchmark.class.getSimpleName())
-            .forks(1)
+            .forks(0)
             .build();
 
     new Runner(opt).run();

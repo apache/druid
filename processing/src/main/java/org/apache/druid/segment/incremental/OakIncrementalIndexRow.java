@@ -19,20 +19,21 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.oath.oak.OakRBuffer;
+
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
 public class OakIncrementalIndexRow extends IncrementalIndexRow
 {
   static final int NO_LENGTH = -1;
 
-  OakRBuffer oakRBuffer;
+  ByteBuffer oakRBuffer;
   int dimsLength;
 
-  public OakIncrementalIndexRow(OakRBuffer oakRBuffer, List<DimensionDesc> dimensionDescsList)
+  public OakIncrementalIndexRow(ByteBuffer oakRBuffer, List<DimensionDesc> dimensionDescsList)
   {
     this.oakRBuffer = oakRBuffer;
     this.dimensionDescsList = dimensionDescsList;

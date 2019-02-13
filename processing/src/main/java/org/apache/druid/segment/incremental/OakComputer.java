@@ -23,12 +23,12 @@ import org.apache.druid.data.input.InputRow;
 
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
-import com.oath.oak.OakWBuffer;
+
 
 /**
  * For sending as input parameter to the Oak's putifAbsentComputeIfPresent method
  */
-public class OakComputer implements Consumer<OakWBuffer>
+public class OakComputer implements Consumer<ByteBuffer>
 {
   OffheapAggsManager aggsManager;
   boolean reportParseExceptions;
@@ -49,9 +49,8 @@ public class OakComputer implements Consumer<OakWBuffer>
   }
 
   @Override
-  public void accept(OakWBuffer oakWBuffer)
+  public void accept(ByteBuffer byteBuffer)
   {
-    ByteBuffer byteBuffer = oakWBuffer.getByteBuffer();
     aggsManager.aggregate(reportParseExceptions, row, rowContainer, byteBuffer);
   }
 }

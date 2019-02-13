@@ -160,7 +160,7 @@ public class IndexIngestionBenchmark
     Options opt = new OptionsBuilder()
             .include(IndexIngestionBenchmark.class.getSimpleName())
             .threads(1)
-            .forks(1)
+            .forks(0)
             .build();
 
     new Runner(opt).run();
