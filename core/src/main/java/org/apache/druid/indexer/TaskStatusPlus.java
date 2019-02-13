@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
