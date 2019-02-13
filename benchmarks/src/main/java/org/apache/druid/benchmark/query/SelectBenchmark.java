@@ -278,7 +278,8 @@ public class SelectBenchmark
     Map<String, Integer> pagingIdentifiers = prevResult.getPagingIdentifiers();
     Map<String, Integer> newPagingIdentifers = new HashMap<>();
 
-    for (String segmentId : pagingIdentifiers.keySet()) {
+    for (Map.Entry<String, Integer> entry : pagingIdentifiers.entrySet()) {
+      String segmentId = entry.getKey();
       int newOffset = pagingIdentifiers.get(segmentId) + 1;
       newPagingIdentifers.put(segmentId, newOffset);
     }

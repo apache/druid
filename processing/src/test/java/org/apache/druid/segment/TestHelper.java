@@ -311,8 +311,9 @@ public class TestHelper
     final Map<String, Object> actualMap = ((MapBasedRow) actual).getEvent();
 
     Assert.assertEquals(StringUtils.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
-    for (final String key : expectedMap.keySet()) {
-      final Object expectedValue = expectedMap.get(key);
+    for (final Map.Entry<String, Object> entry : expectedMap.entrySet()) {
+      String key = entry.getKey();
+      final Object expectedValue = entry.getValue();
       final Object actualValue = actualMap.get(key);
 
       if (expectedValue instanceof Float || expectedValue instanceof Double) {
