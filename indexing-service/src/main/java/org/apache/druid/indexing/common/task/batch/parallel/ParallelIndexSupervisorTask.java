@@ -413,9 +413,9 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     }
 
     final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, interval);
-    if (justLockedInterval && partitionNum != 1) {
+    if (justLockedInterval && partitionNum != 0) {
       throw new ISE(
-          "Expected partitionNum to be 1 for interval [%s] right after locking, but got [%s]",
+          "Expected partitionNum to be 0 for interval [%s] right after locking, but got [%s]",
           interval, partitionNum
       );
     }
