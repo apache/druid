@@ -251,7 +251,10 @@ public class S3Utils
         .withMaxKeys(1);
     final ListObjectsV2Result result = s3Client.listObjectsV2(request);
 
-    if (result.getKeyCount() == 0) {
+    // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
+    // it is observed that even though the getObjectSummaries returns some data
+    // keyCount is still zero.
+    if (result.getObjectSummaries().size() == 0) {
       throw new ISE("Cannot find object for bucket[%s] and key[%s]", bucket, key);
     }
     final S3ObjectSummary objectSummary = result.getObjectSummaries().get(0);

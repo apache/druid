@@ -2052,6 +2052,44 @@ public class KafkaIndexTaskTest
   }
 
   @Test(timeout = 60_000L)
+  public void testRunWithDuplicateRequest() throws Exception
+  {
+    // Insert data
+    insertData();
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 200L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 500L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null
+        )
+    );
+
+    runTask(task);
+
+    while (!task.getRunner().getStatus().equals(Status.READING)) {
+      Thread.sleep(20);
+    }
+
+    // first setEndOffsets request
+    task.getRunner().pause();
+    task.getRunner().setEndOffsets(ImmutableMap.of(0, 500L), true);
+    Assert.assertEquals(Status.READING, task.getRunner().getStatus());
+
+    // duplicate setEndOffsets request
+    task.getRunner().pause();
+    task.getRunner().setEndOffsets(ImmutableMap.of(0, 500L), true);
+    Assert.assertEquals(Status.READING, task.getRunner().getStatus());
+  }
+
+  @Test(timeout = 60_000L)
   public void testRunTransactionModeRollback() throws Exception
   {
     final KafkaIndexTask task = createTask(
@@ -2160,7 +2198,7 @@ public class KafkaIndexTaskTest
 
   private List<ScanResultValue> scanData(final Task task, QuerySegmentSpec spec)
   {
-    ScanQuery query = new ScanQuery.ScanQueryBuilder().dataSource(
+    ScanQuery query = new Druids.ScanQueryBuilder().dataSource(
         DATA_SCHEMA.getDataSource()).intervals(spec).build();
     List<ScanResultValue> results =
         task.getQueryRunner(query).run(wrap(query), new HashMap<>()).toList();

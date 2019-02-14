@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -367,9 +368,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
   }
 
-  public static ScanQuery.ScanQueryBuilder newScanQueryBuilder()
+  public static Druids.ScanQueryBuilder newScanQueryBuilder()
   {
-    return new ScanQuery.ScanQueryBuilder().resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
                                            .legacy(false);
   }
 

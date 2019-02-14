@@ -430,21 +430,12 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
-    final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
-    File hadoopJobIdFile = new File(getHadoopJobIdFileName());
-    String jobId = null;
+    // To avoid issue of kill command once the ingestion task is actually completed
+    if (!ingestionState.equals(IngestionState.COMPLETED)) {
+      final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
+      String hadoopJobIdFile = getHadoopJobIdFileName();
 
-    try {
-      if (hadoopJobIdFile.exists()) {
-        jobId = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(hadoopJobIdFile, String.class);
-      }
-    }
-    catch (Exception e) {
-      log.warn(e, "exeption while reading Hadoop Job ID from: %s", hadoopJobIdFile);
-    }
-
-    try {
-      if (jobId != null) {
+      try {
         ClassLoader loader = HadoopTask.buildClassLoader(getHadoopDependencyCoordinates(),
             taskConfig.getDefaultHadoopCoordinates());
 
@@ -452,28 +443,28 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             "org.apache.druid.indexing.common.task.HadoopIndexTask$HadoopKillMRJobIdProcessingRunner",
             loader
         );
+
         String[] buildKillJobInput = new String[]{
-            "-kill",
-            jobId
+            hadoopJobIdFile
         };
 
         Class<?> buildKillJobRunnerClass = killMRJobInnerProcessingRunner.getClass();
         Method innerProcessingRunTask = buildKillJobRunnerClass.getMethod("runTask", buildKillJobInput.getClass());
 
         Thread.currentThread().setContextClassLoader(loader);
-        final String killStatusString = (String) innerProcessingRunTask.invoke(
+        final String killStatusString[] = (String[]) innerProcessingRunTask.invoke(
             killMRJobInnerProcessingRunner,
             new Object[]{buildKillJobInput}
         );
 
-        log.info(StringUtils.format("Tried killing job %s , status: %s", jobId, killStatusString));
+        log.info(StringUtils.format("Tried killing job: [%s], status: [%s]", killStatusString[0], killStatusString[1]));
       }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(oldLoader);
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(oldLoader);
+      }
     }
 
   }
@@ -722,10 +713,29 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   @SuppressWarnings("unused")
   public static class HadoopKillMRJobIdProcessingRunner
   {
-    public String runTask(String[] args) throws Exception
+    public String[] runTask(String[] args) throws Exception
     {
-      int res = ToolRunner.run(new JobClient(), args);
-      return res == 0 ? "Success" : "Fail";
+      File hadoopJobIdFile = new File(args[0]);
+      String jobId = null;
+
+      try {
+        if (hadoopJobIdFile.exists()) {
+          jobId = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(hadoopJobIdFile, String.class);
+        }
+      }
+      catch (Exception e) {
+        log.warn(e, "exeption while reading hadoop job id from: [%s]", hadoopJobIdFile);
+      }
+
+      if (jobId != null) {
+        int res = ToolRunner.run(new JobClient(), new String[]{
+            "-kill",
+            jobId
+        });
+
+        return new String[] {jobId, (res == 0 ? "Success" : "Fail")};
+      }
+      return new String[] {jobId, "Fail"};
     }
   }
 

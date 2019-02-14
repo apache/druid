@@ -1393,6 +1393,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             exclusivePartitions) && !finish) ||
             (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end sequences already set for sequences [%s]", sequenceNumbers);
+          resume();
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)

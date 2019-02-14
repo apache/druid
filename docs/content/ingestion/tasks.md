@@ -41,6 +41,10 @@ See [batch ingestion](../ingestion/hadoop.html).
 Druid provides a native index task which doesn't need any dependencies on other systems.
 See [native index tasks](./native_tasks.html) for more details.
 
+<div class="note info">
+Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.
+</div>
+
 ### Kafka Indexing Tasks
 
 Kafka Indexing tasks are automatically created by a Kafka Supervisor and are responsible for pulling data from Kafka streams. These tasks are not meant to be created/submitted directly by users. See [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html) for more details.
