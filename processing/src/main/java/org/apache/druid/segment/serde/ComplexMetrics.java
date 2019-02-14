@@ -24,7 +24,6 @@ import org.apache.druid.java.util.common.ISE;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 /**
  */
@@ -44,12 +43,5 @@ public class ComplexMetrics
       throw new ISE("Serializer for type[%s] already exists.", type);
     }
     complexSerializers.put(type, serde);
-  }
-
-  public static void registerSerde(String type, Supplier<ComplexMetricSerde> serdeSupplier)
-  {
-    if (ComplexMetrics.getSerdeForType(type) == null) {
-      ComplexMetrics.registerSerde(type, serdeSupplier.get());
-    }
   }
 }
