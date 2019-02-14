@@ -76,7 +76,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Builds firehoses that accept events through the {@link EventReceiver} interface. Can also register these
@@ -218,11 +217,15 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     private final ConcurrentHashMap<String, Long> producerSequences = new ConcurrentHashMap<>();
 
     /**
-     * This field and {@link #requestedShutdownTimeNsHolder} use nanoseconds instead of milliseconds not to deal with
-     * the fact that {@link System#currentTimeMillis()} can "go backward", e. g. due to time correction on the server.
+     * This field and {@link #requestedShutdownTimeNs} use nanoseconds instead of milliseconds not to deal with the fact
+     * that {@link System#currentTimeMillis()} can "go backward", e. g. due to time correction on the server.
+     *
+     * This field and {@link #requestedShutdownTimeNs} need to be volatile to ensure visibility of the latest values in
+     * {@link #delayedCloseExecutor} (see {@link #createDelayedCloseExecutor()}). Theoretically speaking, the visibility
+     * is not guaranteed by JLS, but in practice on x86 volatile is just what we need for these fields.
      */
-    private final AtomicReference<Long> idleCloseTimeNsHolder = new AtomicReference<>();
-    private final AtomicReference<Long> requestedShutdownTimeNsHolder = new AtomicReference<>();
+    private volatile Long idleCloseTimeNs = null;
+    private volatile Long requestedShutdownTimeNs = null;
 
     EventReceiverFirehose(InputRowParser<Map<String, Object>> parser)
     {
@@ -230,7 +233,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       this.parser = parser;
 
       if (maxIdleTimeMillis != Long.MAX_VALUE) {
-        idleCloseTimeNsHolder.set(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxIdleTimeMillis));
+        idleCloseTimeNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxIdleTimeMillis);
         synchronized (this) {
           createDelayedCloseExecutor();
         }
@@ -242,8 +245,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      * constructor if {@link #maxIdleTimeMillis} is specified, or otherwise lazily from {@link #shutdown}.
      *
      * The thread sleeps until the time when the Firehose should be closed because either {@link #addAll} was not called
-     * for the specified max idle time (see {@link #idleCloseTimeNsHolder}), or until the shutoff time requested last
-     * via {@link #shutdown} (see {@link #requestedShutdownTimeNsHolder}), whatever is sooner. Then the thread does
+     * for the specified max idle time (see {@link #idleCloseTimeNs}), or until the shutoff time requested last
+     * via {@link #shutdown} (see {@link #requestedShutdownTimeNs}), whatever is sooner. Then the thread does
      * two things:
      *  1. if the Firehose is already closed (or in the process of closing, but {@link #closed} flag is already set), it
      *    silently exits.
@@ -270,12 +273,12 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
             while (!closed) {
               Long closeTimeNs = null;
               Boolean dueToShutdownRequest = null;
-              Long idleCloseTimeNs = idleCloseTimeNsHolder.get();
+              Long idleCloseTimeNs = this.idleCloseTimeNs;
               if (idleCloseTimeNs != null) {
                 closeTimeNs = idleCloseTimeNs;
                 dueToShutdownRequest = false;
               }
-              Long requestedShutdownTimeNs = requestedShutdownTimeNsHolder.get();
+              Long requestedShutdownTimeNs = this.requestedShutdownTimeNs;
               if (requestedShutdownTimeNs != null) {
                 if (closeTimeNs == null || requestedShutdownTimeNs - closeTimeNs <= 0) { // overflow-aware comparison
                   closeTimeNs = requestedShutdownTimeNs;
@@ -339,7 +342,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
     public Response addAll(InputStream in, @Context final HttpServletRequest req) throws JsonProcessingException
     {
-      idleCloseTimeNsHolder.set(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxIdleTimeMillis));
+      idleCloseTimeNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxIdleTimeMillis);
       Access accessResult = AuthorizationUtils.authorizeResourceAction(
           req,
           new ResourceAction(
@@ -546,7 +549,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
         log.info("Setting Firehose shutoffTime to %s", shutoffTimeMillis);
         long shutoffTimeoutMillis = Math.max(shutoffAt.getMillis() - System.currentTimeMillis(), 0);
 
-        requestedShutdownTimeNsHolder.set(System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(shutoffTimeoutMillis));
+        requestedShutdownTimeNs = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(shutoffTimeoutMillis);
         Thread delayedCloseExecutor;
         // Need to interrupt delayedCloseExecutor because a newly specified shutdown time might be closer than idle
         // timeout or previously specified shutdown. Interruption of delayedCloseExecutor lets it adjust the sleep time
