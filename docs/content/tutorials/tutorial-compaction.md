@@ -86,7 +86,7 @@ This will compact all segments for the interval `2015-09-12/2015-09-13` in the `
 
 The parameters in the `tuningConfig` control how many segments will be present in the compacted set of segments. 
 
-In this tutorial example, only one compacted segment will be created per hour, as each hour has less rows than the 5000000 of `maxRowsPerSegment` (note that the total number of rows is 39244).
+In this tutorial example, only one compacted segment will be created per hour, as each hour has less rows than the 5000000 `maxRowsPerSegment` (note that the total number of rows is 39244).
 
 Let's submit this task now:
 
@@ -96,7 +96,7 @@ bin/post-index-task --file quickstart/tutorial/compaction-final-index.json
 
 After the task finishes, refresh the http://localhost:8081/#/datasources/compaction-tutorial page.
 
-The original 51 segments will eventually be marked as "unused" by the Coordinator and removed, with the new compacted segment remaining.
+The original 51 segments will eventually be marked as "unused" by the Coordinator and removed, with the new compacted segments remaining.
 
 By default, the Druid Coordinator will not mark segments as unused until the Coordinator process has been up for at least 15 minutes, so you may see the old segment set and the new compacted set at the same time in the Coordinator, e.g.:
 
