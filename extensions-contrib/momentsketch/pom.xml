@@ -24,7 +24,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>0.14.0-incubating-SNAPSHOT</version>
+        <version>0.15.0-incubating-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -33,12 +33,6 @@
     <artifactId>druid-momentsketch</artifactId>
     <name>druid-momentsketch</name>
     <description>Aggregators for the approximate quantile moment sketch</description>
-
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <druid.version>0.12.2</druid.version>
-    </properties>
 
     <dependencies>
         <dependency>
