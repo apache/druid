@@ -45,11 +45,4 @@ public class ComplexMetrics
     }
     complexSerializers.put(type, serde);
   }
-
-  public static void registerSerde(String type, Supplier<ComplexMetricSerde> serdeSupplier)
-  {
-    if (ComplexMetrics.getSerdeForType(type) == null) {
-      ComplexMetrics.registerSerde(type, serdeSupplier.get());
-    }
-  }
 }
