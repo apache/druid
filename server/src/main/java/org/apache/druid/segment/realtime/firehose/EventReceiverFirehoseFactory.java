@@ -50,6 +50,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.Runnables;
 import org.joda.time.DateTime;
 
@@ -472,7 +473,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      * #delayedCloseExecutor}, and from the thread that creates and uses the Firehose object.
      */
     @Override
-    public synchronized void close()
+    public synchronized void close() throws IOException
     {
       if (closed) {
         return;
@@ -483,9 +484,13 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
       // Critical to add the poison pill to the queue, don't allow interruption.
       Uninterruptibles.putUninterruptibly(buffer, FIREHOSE_CLOSED);
 
-      eventReceiverFirehoseRegister.unregister(serviceName);
       if (chatHandlerProvider != null) {
-        chatHandlerProvider.unregister(serviceName);
+        CloseableUtils.closeBoth(
+            () -> eventReceiverFirehoseRegister.unregister(serviceName),
+            () -> chatHandlerProvider.unregister(serviceName)
+        );
+      } else {
+        eventReceiverFirehoseRegister.unregister(serviceName);
       }
       if (delayedCloseExecutor != null && !delayedCloseExecutor.equals(Thread.currentThread())) {
         // Interrupt delayedCloseExecutor to let it discover that closed flag is already set and exit.
