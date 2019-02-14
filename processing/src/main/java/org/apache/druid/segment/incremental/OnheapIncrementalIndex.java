@@ -153,9 +153,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
-    AggregatorFactory[] metrics = getMetrics();
-    AtomicInteger numEntries = getNumEntries();
-    AtomicLong sizeInBytes = getBytesInMemory();
+    final AggregatorFactory[] metrics = getMetrics();
+    final AtomicInteger numEntries = getNumEntries();
+    final AtomicLong sizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);

@@ -97,9 +97,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-/**
- *
- */
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
   private volatile DateTime maxIngestedEventTime;
@@ -780,22 +777,22 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return numEntries.get();
   }
 
-  public boolean getDeserializeComplexMetrics()
+  boolean getDeserializeComplexMetrics()
   {
     return deserializeComplexMetrics;
   }
 
-  public boolean getReportParseExceptions()
+  boolean getReportParseExceptions()
   {
     return reportParseExceptions;
   }
 
-  public AtomicInteger getNumEntries()
+  AtomicInteger getNumEntries()
   {
     return numEntries;
   }
 
-  public AggregatorFactory[] getMetrics()
+  AggregatorFactory[] getMetrics()
   {
     return metrics;
   }
@@ -1241,7 +1238,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
     /**
      * Get all {@link IncrementalIndexRow} to persist, ordered with {@link Comparator<IncrementalIndexRow>}
-     *
      * @return
      */
     Iterable<IncrementalIndexRow> persistIterable();

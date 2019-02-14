@@ -182,9 +182,9 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
       final Integer priorIdex = getFacts().getPriorIndex(key);
 
       Aggregator[] aggs;
-      AggregatorFactory[] metrics = getMetrics();
-      AtomicInteger numEntries = getNumEntries();
-      AtomicLong sizeInBytes = getBytesInMemory();
+      final AggregatorFactory[] metrics = getMetrics();
+      final AtomicInteger numEntries = getNumEntries();
+      final AtomicLong sizeInBytes = getBytesInMemory();
       if (null != priorIdex) {
         aggs = indexedMap.get(priorIdex);
       } else {
