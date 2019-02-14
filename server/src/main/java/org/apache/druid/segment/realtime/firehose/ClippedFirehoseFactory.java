@@ -64,9 +64,9 @@ public class ClippedFirehoseFactory implements FirehoseFactory
 
   @Override
   @JsonIgnore
-  public void setContext(String key, Object value)
+  public void setTaskToolbox(Object taskToolbox)
   {
-    delegate.setContext(key, value);
+    delegate.setTaskToolbox(taskToolbox);
   }
 
   @Override

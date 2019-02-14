@@ -61,8 +61,6 @@ import java.util.stream.IntStream;
 
 public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowParser>
 {
-  public static final String CONTEXT_TASK_TOOLBOX = "TaskToolbox";
-
   private static final EmittingLogger log = new EmittingLogger(IngestSegmentFirehoseFactory.class);
   private final String dataSource;
   private final Interval interval;
@@ -123,17 +121,9 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   }
 
   @Override
-  public void setContext(String key, Object value)
+  public void setTaskToolbox(Object taskToolbox)
   {
-    if (CONTEXT_TASK_TOOLBOX.equals(key)) {
-      this.taskToolbox = (TaskToolbox) value;
-    }
-  }
-
-  @Deprecated
-  public void setTaskToolbox(TaskToolbox taskToolbox)
-  {
-    this.taskToolbox = taskToolbox;
+    this.taskToolbox = (TaskToolbox) taskToolbox;
   }
 
   @Override

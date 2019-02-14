@@ -68,10 +68,10 @@ public class CombiningFirehoseFactory implements FirehoseFactory<InputRowParser>
 
   @Override
   @JsonIgnore
-  public void setContext(String key, Object value)
+  public void setTaskToolbox(Object taskToolbox)
   {
     for (FirehoseFactory delegateFactory : delegateFactoryList) {
-      delegateFactory.setContext(key, value);
+      delegateFactory.setTaskToolbox(taskToolbox);
     }
   }
 

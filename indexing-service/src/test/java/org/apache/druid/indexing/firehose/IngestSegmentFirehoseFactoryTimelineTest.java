@@ -357,10 +357,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           Arrays.asList(METRICS),
           INDEX_IO
       );
-      factory.setContext(
-          IngestSegmentFirehoseFactory.CONTEXT_TASK_TOOLBOX,
-          taskToolboxFactory.build(NoopTask.create(DATA_SOURCE))
-      );
+      factory.setTaskToolbox(taskToolboxFactory.build(NoopTask.create(DATA_SOURCE)));
 
       constructors.add(
           new Object[]{

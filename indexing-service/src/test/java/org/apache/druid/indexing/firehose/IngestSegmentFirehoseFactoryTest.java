@@ -356,7 +356,7 @@ public class IngestSegmentFirehoseFactoryTest
             final FirehoseFactory factory = wrapInCombining
                                             ? new CombiningFirehoseFactory(ImmutableList.of(isfFactory))
                                             : isfFactory;
-            factory.setContext(IngestSegmentFirehoseFactory.CONTEXT_TASK_TOOLBOX, taskToolboxFactory.build(TASK));
+            factory.setTaskToolbox(taskToolboxFactory.build(TASK));
             values.add(
                 new Object[]{
                     StringUtils.format(

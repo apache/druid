@@ -143,8 +143,8 @@ public class TimedShutoffFirehoseFactory implements FirehoseFactory<InputRowPars
 
   @Override
   @JsonIgnore
-  public void setContext(String key, Object value)
+  public void setTaskToolbox(Object taskToolbox)
   {
-    delegateFactory.setContext(key, value);
+    delegateFactory.setTaskToolbox(taskToolbox);
   }
 }
