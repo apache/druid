@@ -60,8 +60,8 @@ public class DataSourceOptimizerMonitor extends AbstractMonitor
       final ServiceMetricEvent.Builder builder2 = new ServiceMetricEvent.Builder();
       builder2.setDimension("dataSource", stat.getBase());
       for (Map.Entry<Set<String>, AtomicLong> fields : stat.getMissFields().entrySet()) {
-        builder2.setDimension("fields", fields.toString());
-        emitter.emit(builder2.build("/materialized/view/missNum", stat.getMissFields().get(fields).get()));
+        builder2.setDimension("fields", fields.getKey().toString());
+        emitter.emit(builder2.build("/materialized/view/missNum", stat.getMissFields().get(fields.getKey()).get()));
       }
     }
     return true;

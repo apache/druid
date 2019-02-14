@@ -130,8 +130,7 @@ public class SupervisorManager
 
     synchronized (lock) {
       Map<String, SupervisorSpec> supervisors = metadataSupervisorManager.getLatest();
-      for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
-        SupervisorSpec spec = entry.getValue();
+      for (SupervisorSpec spec : supervisors.values()) {
         if (!(spec instanceof NoopSupervisorSpec)) {
           try {
             createAndStartSupervisorInternal(spec, false);

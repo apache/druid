@@ -92,9 +92,8 @@ public class FlattenJSONBenchmark
   public Map<String, Object> baseline(final Blackhole blackhole)
   {
     Map<String, Object> parsed = flatParser.parseToMap(flatInputs.get(flatCounter));
-    for (Map.Entry<String, Object> entry : parsed.entrySet()) {
-      String s = entry.getKey();
-      blackhole.consume(parsed.get(s));
+    for (Object s : parsed.values()) {
+      blackhole.consume(s);
     }
     flatCounter = (flatCounter + 1) % numEvents;
     return parsed;
@@ -106,9 +105,8 @@ public class FlattenJSONBenchmark
   public Map<String, Object> flatten(final Blackhole blackhole)
   {
     Map<String, Object> parsed = nestedParser.parseToMap(nestedInputs.get(nestedCounter));
-    for (Map.Entry<String, Object> entry : parsed.entrySet()) {
-      String s = entry.getKey();
-      blackhole.consume(parsed.get(s));
+    for (Object s : parsed.values()) {
+      blackhole.consume(s);
     }
     nestedCounter = (nestedCounter + 1) % numEvents;
     return parsed;
@@ -120,9 +118,8 @@ public class FlattenJSONBenchmark
   public Map<String, Object> jqflatten(final Blackhole blackhole)
   {
     Map<String, Object> parsed = jqParser.parseToMap(jqInputs.get(jqCounter));
-    for (Map.Entry<String, Object> entry : parsed.entrySet()) {
-      String s = entry.getKey();
-      blackhole.consume(parsed.get(s));
+    for (Object s : parsed.values()) {
+      blackhole.consume(s);
     }
     jqCounter = (jqCounter + 1) % numEvents;
     return parsed;
@@ -134,9 +131,8 @@ public class FlattenJSONBenchmark
   public Map<String, Object> preflattenNestedParser(final Blackhole blackhole)
   {
     Map<String, Object> parsed = fieldDiscoveryParser.parseToMap(flatInputs.get(nestedCounter));
-    for (Map.Entry<String, Object> entry : parsed.entrySet()) {
-      String s = entry.getKey();
-      blackhole.consume(parsed.get(s));
+    for (Object s : parsed.values()) {
+      blackhole.consume(s);
     }
     nestedCounter = (nestedCounter + 1) % numEvents;
     return parsed;
@@ -148,9 +144,8 @@ public class FlattenJSONBenchmark
   public Map<String, Object> forcedRootPaths(final Blackhole blackhole)
   {
     Map<String, Object> parsed = forcedPathParser.parseToMap(flatInputs.get(nestedCounter));
-    for (Map.Entry<String, Object> entry : parsed.entrySet()) {
-      String s = entry.getKey();
-      blackhole.consume(parsed.get(s));
+    for (Object s : parsed.values()) {
+      blackhole.consume(s);
     }
     nestedCounter = (nestedCounter + 1) % numEvents;
     return parsed;

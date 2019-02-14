@@ -32,7 +32,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 // Doesn't assert behavior right now, just generates rows and prints out some distribution numbers
 public class BenchmarkDataGeneratorTest
@@ -432,19 +431,19 @@ public class BenchmarkDataGeneratorTest
     public void printStuff()
     {
       System.out.println();
-      for (Map.Entry<String, Map<Object, Integer>> dim : dimensionMap.entrySet()) {
+      for (Map<Object, Integer> dim : dimensionMap.values()) {
         System.out.println("DIMENSION " + dim + "\n============");
-        Map<Object, Integer> valueMap = dimensionMap.get(dim.getKey());
+        Map<Object, Integer> valueMap = dim;
 
         List<Comparable> valList = new ArrayList<>();
-        for (Object val : valueMap.entrySet()) {
+        for (Integer val : valueMap.values()) {
           valList.add((Comparable) val);
         }
 
         Collections.sort(valList);
 
         for (Comparable val : valList) {
-          System.out.println(" VAL: " + val + " CNT: " + valueMap.get(val));
+          System.out.println(" VAL: " + val + " CNT: " + val);
         }
         System.out.println();
       }
