@@ -134,7 +134,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
         LOG.info("Segment view initialized in [%,d] ms.", System.currentTimeMillis() - startMillis);
       }
       catch (InterruptedException e) {
-        LOG.error("Segment view initialization has been interrupted.");
+        LOG.error(e, "Segment view initialization has been interrupted.");
         Thread.currentThread().interrupt();
       }
     }
