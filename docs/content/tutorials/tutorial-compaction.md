@@ -27,6 +27,7 @@ title: "Tutorial: Compacting segments"
 This tutorial demonstrates how to compact existing segments into fewer but larger segments.
 
 Because there is some per-segment memory and processing overhead, it can sometimes be beneficial to reduce the total number of segments.
+Please check [Segment size optimization](../operations/segment-optimization.html) for details.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
@@ -35,7 +36,7 @@ It will also be helpful to have finished [Tutorial: Loading a file](../tutorials
 
 ## Load the initial data
 
-For this tutorial, we'll be using the Wikipedia edits sample data, with an ingestion task spec that will create a separate segment for each hour in the input data.
+For this tutorial, we'll be using the Wikipedia edits sample data, with an ingestion task spec that will create 1-3 segments per hour in the input data.
 
 The ingestion spec can be found at `quickstart/tutorial/compaction-init-index.json`. Let's submit that spec, which will create a datasource called `compaction-tutorial`:
 
@@ -45,7 +46,7 @@ bin/post-index-task --file quickstart/tutorial/compaction-init-index.json
 
 After the ingestion completes, go to http://localhost:8081/#/datasources/compaction-tutorial in a browser to view information about the new datasource in the Coordinator console.
 
-There will be 24 segments for this datasource, one segment per hour in the input data:
+There will be 51 segments for this datasource, 1-3 segments per hour in the input data:
 
 ![Original segments](../tutorials/img/tutorial-retention-01.png "Original segments")
 
@@ -63,7 +64,7 @@ Retrieved 1 row in 1.38s.
 
 ## Compact the data
 
-Let's now combine these 24 segments into one segment.
+Let's now compact these 51 small segments.
 
 We have included a compaction task spec for this tutorial datasource at `quickstart/tutorial/compaction-final-index.json`:
 
@@ -85,7 +86,7 @@ This will compact all segments for the interval `2015-09-12/2015-09-13` in the `
 
 The parameters in the `tuningConfig` control how many segments will be present in the compacted set of segments. 
 
-In this tutorial example, only one compacted segment will be created, as the 39244 rows in the input is less than the 5000000 `maxRowsPerSegment`.
+In this tutorial example, only one compacted segment will be created per hour, as each hour has less rows than the 5000000 of `maxRowsPerSegment` (note that the total number of rows is 39244).
 
 Let's submit this task now:
 
@@ -95,13 +96,13 @@ bin/post-index-task --file quickstart/tutorial/compaction-final-index.json
 
 After the task finishes, refresh the http://localhost:8081/#/datasources/compaction-tutorial page.
 
-The original 24 segments will eventually be marked as "unused" by the Coordinator and removed, with the new compacted segment remaining. 
+The original 51 segments will eventually be marked as "unused" by the Coordinator and removed, with the new compacted segment remaining.
 
 By default, the Druid Coordinator will not mark segments as unused until the Coordinator process has been up for at least 15 minutes, so you may see the old segment set and the new compacted set at the same time in the Coordinator, e.g.:
 
 ![Compacted segments intermediate state](../tutorials/img/tutorial-compaction-01.png "Compacted segments intermediate state")
 
-The new compacted segment has a more recent version than the original segments, so even when both sets of segments are shown by the Coordinator, queries will only read from the new compacted segment.
+The new compacted segments have a more recent version than the original segments, so even when both sets of segments are shown by the Coordinator, queries will only read from the new compacted segments.
 
 Let's try running a COUNT(*) on `compaction-tutorial` again, where the row count should still be 39,244:
 
