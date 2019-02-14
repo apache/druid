@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.momentsketch;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
@@ -74,9 +75,14 @@ public class MomentSketchModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    ComplexMetrics.registerSerde(
-        MomentSketchAggregatorFactory.TYPE_NAME,
-        new MomentSketchComplexMetricSerde()
-    );
+    registerSerde();
+  }
+
+  @VisibleForTesting
+  public static void registerSerde()
+  {
+    if (ComplexMetrics.getSerdeForType(MomentSketchAggregatorFactory.TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(MomentSketchAggregatorFactory.TYPE_NAME, new MomentSketchComplexMetricSerde());
+    }
   }
 }

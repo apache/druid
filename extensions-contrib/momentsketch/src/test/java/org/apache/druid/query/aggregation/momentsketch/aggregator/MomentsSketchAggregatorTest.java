@@ -55,8 +55,8 @@ public class MomentsSketchAggregatorTest
 
   public MomentsSketchAggregatorTest(final GroupByQueryConfig config)
   {
+    MomentSketchModule.registerSerde();
     DruidModule module = new MomentSketchModule();
-    module.configure(null);
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
   }
