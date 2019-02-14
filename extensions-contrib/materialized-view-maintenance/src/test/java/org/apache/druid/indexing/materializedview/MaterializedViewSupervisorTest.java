@@ -176,6 +176,28 @@ public class MaterializedViewSupervisorTest
     Assert.assertEquals(expectedSegments, toBuildInterval.rhs);
   }
 
+  @Test
+  public void testCheckSegmentsAndSubmitTasks() throws IOException
+  {
+    Set<DataSegment> baseSegments = Sets.newHashSet(
+        new DataSegment(
+            "base",
+            Intervals.of("2015-01-02T00Z/2015-01-03T00Z"),
+            "2015-01-03",
+            ImmutableMap.of(),
+            ImmutableList.of("dim1", "dim2"),
+            ImmutableList.of("m1"),
+            new HashBasedNumberedShardSpec(0, 1, null, null),
+            9,
+            1024
+        )
+    );
+    indexerMetadataStorageCoordinator.announceHistoricalSegments(baseSegments);
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    supervisor.checkSegmentsAndSubmitTasks();
+  }
 
   @Test
   public void testSuspendedDoesntRun()
