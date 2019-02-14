@@ -224,7 +224,7 @@ public class SystemSchema extends AbstractSchema
           Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
       for (SegmentMetadataHolder h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
-            new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(h.getSegmentId()), h.getNumRows());
+            new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(), h.getNumRows());
         partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
       }
 

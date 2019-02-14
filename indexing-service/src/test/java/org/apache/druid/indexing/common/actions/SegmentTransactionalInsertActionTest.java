@@ -101,7 +101,7 @@ public class SegmentTransactionalInsertActionTest
         task,
         actionTestKit.getTaskActionToolbox()
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT1), true), result1);
+    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
 
     SegmentPublishResult result2 = new SegmentTransactionalInsertAction(
         ImmutableSet.of(SEGMENT2),
@@ -111,7 +111,7 @@ public class SegmentTransactionalInsertActionTest
         task,
         actionTestKit.getTaskActionToolbox()
     );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT2), true), result2);
+    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
 
     Assert.assertEquals(
         ImmutableSet.of(SEGMENT1, SEGMENT2),
@@ -143,7 +143,7 @@ public class SegmentTransactionalInsertActionTest
         actionTestKit.getTaskActionToolbox()
     );
 
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(), false), result);
+    Assert.assertEquals(SegmentPublishResult.fail("java.lang.RuntimeException: Aborting transaction!"), result);
   }
 
   @Test
@@ -157,6 +157,6 @@ public class SegmentTransactionalInsertActionTest
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.containsString("are not covered by locks"));
     SegmentPublishResult result = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT3), true), result);
+    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT3)), result);
   }
 }
