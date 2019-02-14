@@ -154,7 +154,7 @@ String functions accept strings, and return a type appropriate to the function.
 
 |Function|Notes|
 |--------|-----|
-|`x &#124;&#124; y`|Concat strings x and y.|
+|`<code>x &#124;&#124; y</code>`|Concat strings x and y.|
 |`CONCAT(expr, expr...)`|Concats a list of expressions.|
 |`TEXTCAT(expr, expr)`|Two argument version of CONCAT.|
 |`LENGTH(expr)`|Length of expr in UTF-16 code units.|
