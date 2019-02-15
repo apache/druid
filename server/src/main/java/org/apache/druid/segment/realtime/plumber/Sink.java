@@ -279,7 +279,7 @@ public class Sink implements Iterable<FireHydrant>
         return 0;
       }
 
-      return currHydrant.getIndex().getBytesInMemory();
+      return currHydrant.getIndex().getBytesInMemory().get();
     }
   }
 
