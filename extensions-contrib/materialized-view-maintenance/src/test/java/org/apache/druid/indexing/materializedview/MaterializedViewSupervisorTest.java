@@ -196,6 +196,7 @@ public class MaterializedViewSupervisorTest
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
     expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
+    
     supervisor.checkSegmentsAndSubmitTasks();
   }
 
