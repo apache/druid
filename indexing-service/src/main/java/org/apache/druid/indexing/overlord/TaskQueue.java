@@ -271,6 +271,11 @@ public class TaskQueue
               }
             }
             taskFutures.put(task.getId(), attachCallbacks(task, runnerTaskFuture));
+          } else if (isTaskPending(task)) {
+            // if the taskFutures contain this task and this task is pending, also let the taskRunner
+            // to run it to guarantee it will be assigned to run
+            // see https://github.com/apache/incubator-druid/pull/6991
+            taskRunner.run(task);
           }
         }
         // Kill tasks that shouldn't be running
@@ -313,6 +318,16 @@ public class TaskQueue
         giant.unlock();
       }
     }
+  }
+
+  private boolean isTaskPending(Task task)
+  {
+    for (TaskRunnerWorkItem workItem : taskRunner.getPendingTasks()) {
+      if (workItem.getTaskId().equals(task.getId())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
