@@ -290,8 +290,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
               // we long the error and continue a loop after some pause.
               if (closeTimeNs == null) {
                 log.error(
-                    "A bug in EventReceiverFirehose code, "
-                          + "either idleCloseTimeNs or requestedShutdownTimeNs must be non-null"
+                    "Either idleCloseTimeNs or requestedShutdownTimeNs must be non-null. "
+                    + "Please file a bug at https://github.com/apache/incubator-druid/issues"
                 );
                 try {
                   Threads.sleepFor(1, TimeUnit.MINUTES);
