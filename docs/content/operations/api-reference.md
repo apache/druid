@@ -74,16 +74,14 @@ Returns the current leader Coordinator of the cluster.
 
 * `/druid/coordinator/v1/isLeader`
 
-Returns true if the Coordinator receiving the request is the current leader.
-
-#### Segment Loading
-
-##### GET
-
 Returns a JSON object with field "leader", either true or false, indicating if this server is the current leader
 Coordinator of the cluster. In addition, returns HTTP 200 if the server is the current leader and HTTP 404 if not.
 This is suitable for use as a load balancer status check if you only want the active leader to be considered in-service
 at the load balancer.
+
+#### Segment Loading
+
+##### GET
 
 * `/druid/coordinator/v1/loadstatus`
 
