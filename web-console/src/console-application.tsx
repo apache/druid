@@ -131,10 +131,10 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   render() {
-    const wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element) => {
+    const wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, scrollable = false) => {
       return <>
         <HeaderBar active={active}/>
-        <div className="view-container">{el}</div>
+        <div className={classNames('view-container', { scrollable })}>{el}</div>
       </>;
     };
 
@@ -148,10 +148,10 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
             return wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql}/>);
           }} />
           <Route path="/tasks" component={() => {
-            return wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager}/>);
+            return wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager}/>, true);
           }} />
           <Route path="/servers" component={() => {
-            return wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask}/>);
+            return wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask}/>, true);
           }} />
           <Route path="/sql" component={() => {
             return wrapInViewContainer('sql', <SqlView initSql={this.initSql}/>);

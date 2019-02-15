@@ -54,6 +54,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -68,11 +69,13 @@ public class DruidMeta extends MetaImpl
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
 
-  // Used to track logical connections.
-  private final Map<String, DruidConnection> connections = new ConcurrentHashMap<>();
+  /** Used to track logical connections. */
+  private final ConcurrentMap<String, DruidConnection> connections = new ConcurrentHashMap<>();
 
-  // Number of connections reserved in "connections". May be higher than the actual number of connections at times,
-  // such as when we're reserving space to open a new one.
+  /**
+   * Number of connections reserved in "connections". May be higher than the actual number of connections at times,
+   * such as when we're reserving space to open a new one.
+   */
   private final AtomicInteger connectionCount = new AtomicInteger();
 
   @Inject

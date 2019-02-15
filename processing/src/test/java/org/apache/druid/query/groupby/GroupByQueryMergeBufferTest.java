@@ -157,12 +157,9 @@ public class GroupByQueryMergeBufferTest
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         strategySelector,
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
-    return new GroupByQueryRunnerFactory(
-        strategySelector,
-        toolChest
-    );
+    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
   }
 
   private static final CloseableStupidPool<ByteBuffer> bufferPool = new CloseableStupidPool<>(

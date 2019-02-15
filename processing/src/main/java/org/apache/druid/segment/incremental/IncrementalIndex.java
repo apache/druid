@@ -1304,7 +1304,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       IncrementalIndexRow end = new IncrementalIndexRow(timeEnd, new Object[]{}, dimensionDescsList);
       ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow> subMap =
           ((ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow>) facts).subMap(start, end);
-      final Map<IncrementalIndexRow, IncrementalIndexRow> rangeMap = descending ? subMap.descendingMap() : subMap;
+      ConcurrentMap<IncrementalIndexRow, IncrementalIndexRow> rangeMap = descending ? subMap.descendingMap() : subMap;
       return rangeMap.keySet();
     }
 
@@ -1397,7 +1397,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       ConcurrentNavigableMap<Long, Deque<IncrementalIndexRow>> subMap =
           ((ConcurrentNavigableMap<Long, Deque<IncrementalIndexRow>>) facts).subMap(timeStart, timeEnd);
-      final Map<Long, Deque<IncrementalIndexRow>> rangeMap = descending ? subMap.descendingMap() : subMap;
+      final ConcurrentMap<Long, Deque<IncrementalIndexRow>> rangeMap = descending ? subMap.descendingMap() : subMap;
       return timeOrderedConcat(rangeMap.values(), descending);
     }
 

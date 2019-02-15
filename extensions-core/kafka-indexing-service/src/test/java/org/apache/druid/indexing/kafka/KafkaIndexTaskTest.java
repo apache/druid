@@ -50,7 +50,6 @@ import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskLock;
@@ -2128,6 +2127,49 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
+  @Test(timeout = 60_000L)
+  public void testRunWithDuplicateRequest() throws Exception
+  {
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : records) {
+        kafkaProducer.send(record).get();
+      }
+    }
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            "sequence0",
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 200L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 500L)),
+            kafkaServer.consumerProperties(),
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null,
+            false
+        )
+    );
+
+    runTask(task);
+
+    while (!task.getRunner().getStatus().equals(Status.READING)) {
+      Thread.sleep(20);
+    }
+
+    // first setEndOffsets request
+    task.getRunner().pause();
+    task.getRunner().setEndOffsets(ImmutableMap.of(0, 500L), true);
+    Assert.assertEquals(Status.READING, task.getRunner().getStatus());
+
+    // duplicate setEndOffsets request
+    task.getRunner().pause();
+    task.getRunner().setEndOffsets(ImmutableMap.of(0, 500L), true);
+    Assert.assertEquals(Status.READING, task.getRunner().getStatus());
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
     try {
@@ -2393,8 +2435,7 @@ public class KafkaIndexTaskTest
             );
             return true;
           }
-        },
-        new Counters()
+        }
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,
