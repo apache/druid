@@ -44,6 +44,11 @@ The ingestion spec can be found at `quickstart/tutorial/compaction-init-index.js
 bin/post-index-task --file quickstart/tutorial/compaction-init-index.json 
 ```
 
+<div class="note caution">
+Please note that `maxRowsPerSegment` in the ingestion spec is set to 1000. This is to generate multiple segments per hour and _NOT_ recommended in production.
+It's 5000000 by default and may need to be adjusted to make your segments optimized.
+</div>
+
 After the ingestion completes, go to http://localhost:8081/#/datasources/compaction-tutorial in a browser to view information about the new datasource in the Coordinator console.
 
 There will be 51 segments for this datasource, 1-3 segments per hour in the input data:
