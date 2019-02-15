@@ -92,7 +92,7 @@ public class ScanQueryQueryToolChestTest
     }
     ScanQuery scanQuery = new Druids.ScanQueryBuilder()
         .resultFormat("list")
-        .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
+        .timeOrder(ScanQuery.TimeOrder.DESCENDING)
         .dataSource("some data source")
         .intervals(emptySegmentSpec)
         .limit(99999)
@@ -129,7 +129,7 @@ public class ScanQueryQueryToolChestTest
     }
     ScanQuery scanQuery = new Druids.ScanQueryBuilder()
         .resultFormat("list")
-        .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
+        .timeOrder(ScanQuery.TimeOrder.ASCENDING)
         .dataSource("some data source")
         .intervals(emptySegmentSpec)
         .limit(99999)
@@ -164,7 +164,7 @@ public class ScanQueryQueryToolChestTest
     }
     ScanQuery scanQuery = new Druids.ScanQueryBuilder()
         .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
-        .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
+        .timeOrder(ScanQuery.TimeOrder.DESCENDING)
         .dataSource("some data source")
         .intervals(emptySegmentSpec)
         .limit(99999)
@@ -199,7 +199,7 @@ public class ScanQueryQueryToolChestTest
     }
     ScanQuery scanQuery = new Druids.ScanQueryBuilder()
         .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
-        .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
+        .timeOrder(ScanQuery.TimeOrder.ASCENDING)
         .dataSource("some data source")
         .intervals(emptySegmentSpec)
         .limit(99999)

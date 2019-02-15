@@ -52,7 +52,7 @@ public class ScanResultValueTimestampComparatorTest
   public void comparisonDescendingListTest()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
+                            .timeOrder(ScanQuery.TimeOrder.DESCENDING)
                             .resultFormat(ScanQuery.RESULT_FORMAT_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -89,7 +89,7 @@ public class ScanResultValueTimestampComparatorTest
   public void comparisonAscendingListTest()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
+                            .timeOrder(ScanQuery.TimeOrder.ASCENDING)
                             .resultFormat(ScanQuery.RESULT_FORMAT_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -126,7 +126,7 @@ public class ScanResultValueTimestampComparatorTest
   public void comparisonDescendingCompactedListTest()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TIME_ORDER_DESCENDING)
+                            .timeOrder(ScanQuery.TimeOrder.DESCENDING)
                             .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -161,7 +161,7 @@ public class ScanResultValueTimestampComparatorTest
   public void comparisonAscendingCompactedListTest()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TIME_ORDER_ASCENDING)
+                            .timeOrder(ScanQuery.TimeOrder.ASCENDING)
                             .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)

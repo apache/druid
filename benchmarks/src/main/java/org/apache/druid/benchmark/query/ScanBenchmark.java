@@ -114,7 +114,7 @@ public class ScanBenchmark
   private int limit;
 
   @Param({"none", "descending", "ascending"})
-  private static String timeOrdering;
+  private static ScanQuery.TimeOrder timeOrdering;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final ObjectMapper JSON_MAPPER;

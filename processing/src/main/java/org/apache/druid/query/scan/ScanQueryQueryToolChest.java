@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -89,43 +90,39 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
             }
           };
 
-      if (scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_NONE)) {
+      if (scanQuery.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
         if (scanQuery.getLimit() == Long.MAX_VALUE) {
           return runner.run(queryPlusWithNonNullLegacy, responseContext);
         }
         return new BaseSequence<ScanResultValue, ScanQueryLimitRowIterator>(scanQueryLimitRowIteratorMaker);
-      } else if ((scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_ASCENDING) ||
-                  scanQuery.getTimeOrder().equals(ScanQuery.TIME_ORDER_DESCENDING))
-                 && scanQuery.getLimit() <= scanQueryConfig.getMaxRowsTimeOrderedInMemory()) {
+      } else if (scanQuery.getLimit() <= scanQueryConfig.getMaxRowsTimeOrderedInMemory()) {
         Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
 
         return new BaseSequence(
-            new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedTimeOrderedIterator>()
+            new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedIterator>()
             {
               @Override
-              public ScanBatchedTimeOrderedIterator make()
+              public ScanBatchedIterator make()
               {
-                return new ScanBatchedTimeOrderedIterator(
+                return new ScanBatchedIterator(
                     sortScanResultValues(scanResultIterator, scanQuery),
                     scanQuery.getBatchSize()
                 );
               }
 
               @Override
-              public void cleanup(ScanBatchedTimeOrderedIterator iterFromMake)
+              public void cleanup(ScanBatchedIterator iterFromMake)
               {
                 CloseQuietly.close(iterFromMake);
               }
             });
-      } else if (scanQuery.getLimit() > scanQueryConfig.getMaxRowsTimeOrderedInMemory()) {
+      } else {
         throw new UOE(
-            "Time ordering for result set limit of %s is not supported.  Try lowering the "
-            + "result set size to less than or equal to the time ordering limit of %s.",
+            "Time ordering for result set limit of %,d is not supported.  Try lowering the "
+            + "result set size to less than or equal to the time ordering limit of %,d.",
             scanQuery.getLimit(),
             scanQueryConfig.getMaxRowsTimeOrderedInMemory()
         );
-      } else {
-        throw new UOE("Time ordering [%s] is not supported", scanQuery.getTimeOrder());
       }
     };
   }
@@ -198,16 +195,16 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   /**
-   * This iterator supports iteration through any Iterable of unbatched ScanResultValues (1 event/SRV) and aggregates
-   * events into ScanResultValues with {int batchSize} events.  The columns from the first event per ScanResultValue
-   * will be used to populate the column section.
+   * This iterator supports iteration through any Iterable of unbatched ScanResultValues (1 event/ScanResultValue) and
+   * aggregates events into ScanResultValues with {@code batchSize} events.  The columns from the first event per
+   * ScanResultValue will be used to populate the column section.
    */
-  private static class ScanBatchedTimeOrderedIterator implements CloseableIterator<ScanResultValue>
+  private static class ScanBatchedIterator implements CloseableIterator<ScanResultValue>
   {
     private final Iterator<ScanResultValue> itr;
     private final int batchSize;
 
-    public ScanBatchedTimeOrderedIterator(Iterator<ScanResultValue> iterator, int batchSize)
+    public ScanBatchedIterator(Iterator<ScanResultValue> iterator, int batchSize)
     {
       this.itr = iterator;
       this.batchSize = batchSize;
@@ -234,7 +231,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         ScanResultValue srv = itr.next();
         // Only replace once using the columns from the first event
         columns = columns.isEmpty() ? srv.getColumns() : columns;
-        eventsToAdd.add(((List) srv.getEvents()).get(0));
+        eventsToAdd.add(Iterables.getOnlyElement((List) srv.getEvents()));
       }
       return new ScanResultValue(null, columns, eventsToAdd);
     }

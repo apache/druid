@@ -924,7 +924,7 @@ public class Druids
     private DimFilter dimFilter;
     private List<String> columns;
     private Boolean legacy;
-    private String timeOrder;
+    private ScanQuery.TimeOrder timeOrder;
 
     public ScanQueryBuilder()
     {
@@ -1051,7 +1051,7 @@ public class Druids
       return this;
     }
 
-    public ScanQueryBuilder timeOrder(String timeOrder)
+    public ScanQueryBuilder timeOrder(ScanQuery.TimeOrder timeOrder)
     {
       this.timeOrder = timeOrder;
       return this;
