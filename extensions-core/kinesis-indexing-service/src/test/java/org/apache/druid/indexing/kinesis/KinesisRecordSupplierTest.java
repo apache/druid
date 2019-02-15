@@ -57,7 +57,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -659,13 +658,12 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testDeaggregationOfKPLAggregatedMessage() throws IOException
   {
-    // TODO Make this a relative path
     InputStreamReader reader = new InputStreamReader(
         new FileInputStream("src/test/resources/base64aggregatedkinesismessage.txt"), Charsets.UTF_8);
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();
     Assert.assertNotNull(base64EncodedMessage);
-    Record record = new Record().withData(ByteBuffer.wrap(Base64.getDecoder().decode(base64EncodedMessage)));
+    Record record = new Record().withData(ByteBuffer.wrap(StringUtils.decodeBase64String(base64EncodedMessage)));
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,
@@ -702,7 +700,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();
     Assert.assertNotNull(base64EncodedMessage);
-    Record record = new Record().withData(ByteBuffer.wrap(Base64.getDecoder().decode(base64EncodedMessage)));
+    Record record = new Record().withData(ByteBuffer.wrap(StringUtils.decodeBase64String(base64EncodedMessage)));
 
     recordSupplier = new KinesisRecordSupplier(
         kinesis,

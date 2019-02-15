@@ -710,12 +710,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   {
     ByteBuffer kinesisRecordData = kinesisRecord.getData();
     int recordSize = kinesisRecordData.position(0).remaining();
-    boolean validAggregateLength = (recordSize
-                                    > KPL_AGGREGATE_MAGIC_NUMBERS.length + KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES);
-    if (!validAggregateLength) {
-      ByteBuffer kinesisData = (ByteBuffer) kinesisRecord.getData().position(0);
-      return Collections.singletonList(toByteArray(kinesisData));
-    } else {
+    // Minimum aggregated empty message length is len(magic numbers) + len(checksum)
+    if (recordSize > KPL_AGGREGATE_MAGIC_NUMBERS.length + KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES) {
       byte[] magicNumbers = new byte[KPL_AGGREGATE_MAGIC_NUMBERS.length];
       byte[] protobufMessage = new byte[recordSize
                                         - KPL_AGGREGATE_CHECKSUM_LENGTH_IN_BYTES
@@ -737,11 +733,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
           data.add(userRecord.getData().toByteArray());
         }
         return data;
-      } else {
-        ByteBuffer kinesisData = (ByteBuffer) kinesisRecord.getData().position(0);
-        return Collections.singletonList(toByteArray(kinesisData));
       }
     }
+    return Collections.singletonList(toByteArray((ByteBuffer) kinesisRecordData.position(0)));
   }
 
   private void checkIfClosed()
