@@ -58,7 +58,7 @@ public class ProtobufInputRowParserTest
   public void setUp()
   {
     parseSpec = new JSONParseSpec(
-        new TimestampSpec("timestamp", "iso", null, null),
+        new TimestampSpec("timestamp", "iso", null),
         new DimensionsSpec(Lists.newArrayList(
             new StringDimensionSchema("event"),
             new StringDimensionSchema("id"),
@@ -181,7 +181,7 @@ public class ProtobufInputRowParserTest
   public void testDisableJavaScript()
   {
     final JavaScriptParseSpec parseSpec = new JavaScriptParseSpec(
-        new TimestampSpec("timestamp", "auto", null, null),
+        new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             DimensionsSpec.getDefaultSchemas(
                 ImmutableList.of(

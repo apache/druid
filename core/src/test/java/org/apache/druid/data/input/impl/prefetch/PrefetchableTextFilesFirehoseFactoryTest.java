@@ -69,7 +69,6 @@ public class PrefetchableTextFilesFirehoseFactoryTest
           new TimestampSpec(
               "timestamp",
               "auto",
-              null,
               null
           ),
           new DimensionsSpec(

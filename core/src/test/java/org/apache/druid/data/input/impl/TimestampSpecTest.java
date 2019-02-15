@@ -31,7 +31,7 @@ public class TimestampSpecTest
   @Test
   public void testExtractTimestamp()
   {
-    TimestampSpec spec = new TimestampSpec("TIMEstamp", "yyyy-MM-dd", null, null);
+    TimestampSpec spec = new TimestampSpec("TIMEstamp", "yyyy-MM-dd", null);
     Assert.assertEquals(
         DateTimes.of("2014-03-01"),
         spec.extractTimestamp(ImmutableMap.of("TIMEstamp", "2014-03-01"))
@@ -41,7 +41,7 @@ public class TimestampSpecTest
   @Test
   public void testExtractTimestampWithMissingTimestampColumn()
   {
-    TimestampSpec spec = new TimestampSpec(null, null, DateTimes.EPOCH, null);
+    TimestampSpec spec = new TimestampSpec(null, null, DateTimes.EPOCH);
     Assert.assertEquals(
         DateTimes.of("1970-01-01"),
         spec.extractTimestamp(ImmutableMap.of("dim", "foo"))
@@ -59,7 +59,7 @@ public class TimestampSpecTest
         "2000-01-01T05:00:02",
         "2000-01-01T05:00:03",
         };
-    TimestampSpec spec = new TimestampSpec("TIMEstamp", DATE_FORMAT, null, null);
+    TimestampSpec spec = new TimestampSpec("TIMEstamp", DATE_FORMAT, null);
 
     DateTimes.UtcFormatter formatter = DateTimes.wrapUtcFormatter(ISODateTimeFormat.dateHourMinuteSecond());
 

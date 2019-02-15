@@ -82,7 +82,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
       new TimestampSpec(
           "ts",
           "auto",
-          null,
           null
       ),
       new DimensionsSpec(

@@ -67,7 +67,6 @@ public class ParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
-            null,
             null
         ),
         new DimensionsSpec(
@@ -91,7 +90,6 @@ public class ParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
-            null,
             null
         ),
         new DimensionsSpec(
@@ -115,7 +113,6 @@ public class ParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
-            null,
             null
         ),
         new DimensionsSpec(
@@ -162,7 +159,6 @@ public class ParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
-            null,
             null
         ),
         null,

@@ -36,7 +36,6 @@ public class JSONLowercaseParseSpecTest
         new TimestampSpec(
             "timestamp",
             "auto",
-            null,
             null
         ),
         new DimensionsSpec(

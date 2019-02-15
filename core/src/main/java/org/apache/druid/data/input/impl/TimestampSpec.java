@@ -21,6 +21,7 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -71,7 +72,23 @@ public class TimestampSpec
   {
     this.timestampColumn = (timestampColumn == null) ? DEFAULT_COLUMN : timestampColumn;
     this.timestampFormat = format == null ? DEFAULT_FORMAT : format;
-    this.timeZone = (StringUtils.isBlank(timeZone)) ? DateTimes.UTC_TIMEZONE : timeZone;
+    this.timeZone = StringUtils.isBlank(timeZone) ? DateTimes.UTC_TIMEZONE : timeZone;
+    this.timestampConverter = TimestampParser.createObjectTimestampParser(timestampFormat, this.timeZone);
+    this.missingValue = missingValue == null
+                        ? DEFAULT_MISSING_VALUE
+                        : missingValue;
+  }
+
+  @VisibleForTesting
+  public TimestampSpec(
+      @JsonProperty("column") String timestampColumn,
+      @JsonProperty("format") String format,
+      @JsonProperty("missingValue") DateTime missingValue
+  )
+  {
+    this.timestampColumn = (timestampColumn == null) ? DEFAULT_COLUMN : timestampColumn;
+    this.timestampFormat = format == null ? DEFAULT_FORMAT : format;
+    this.timeZone = DateTimes.UTC_TIMEZONE;
     this.timestampConverter = TimestampParser.createObjectTimestampParser(timestampFormat, this.timeZone);
     this.missingValue = missingValue == null
                         ? DEFAULT_MISSING_VALUE

@@ -204,7 +204,7 @@ public class IngestSegmentFirehoseTest
 
     final StringInputRowParser parser = new StringInputRowParser(
         new DelimitedParseSpec(
-            new TimestampSpec("timestamp", "yyyyMMddHH", null, null),
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
             DIMENSIONS_SPEC,
             "\t",
             null,

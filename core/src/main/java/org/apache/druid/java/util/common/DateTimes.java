@@ -79,7 +79,7 @@ public final class DateTimes
     public Formatter(String format, String timezone)
     {
       this.innerFormatter = DateTimeFormat.forPattern(format)
-                                          .withChronology(ISOChronology.getInstance(inferTzfromString(timezone)));
+                                          .withChronology(ISOChronology.getInstance(inferTzFromString(timezone)));
     }
 
     @SuppressForbidden(reason = "DateTimeFormatter#parseDateTime")

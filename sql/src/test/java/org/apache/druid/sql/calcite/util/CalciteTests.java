@@ -242,7 +242,7 @@ public class CalciteTests
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null, null),
+          new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
           new DimensionsSpec(
               DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")),
               null,
@@ -424,7 +424,6 @@ public class CalciteTests
           PARSER_NUMERIC_DIMS
       )
   );
-
 
 
   public static final List<InputRow> ROWS2 = ImmutableList.of(
@@ -647,13 +646,14 @@ public class CalciteTests
                    .shardSpec(new LinearShardSpec(0))
                    .build(),
         forbiddenIndex
-    ).add(DataSegment.builder()
-                     .dataSource(DATASOURCE3)
-                     .interval(indexNumericDims.getDataInterval())
-                     .version("1")
-                     .shardSpec(new LinearShardSpec(0))
-                     .build(),
-          indexNumericDims
+    ).add(
+        DataSegment.builder()
+                   .dataSource(DATASOURCE3)
+                   .interval(indexNumericDims.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .build(),
+        indexNumericDims
     );
   }
 

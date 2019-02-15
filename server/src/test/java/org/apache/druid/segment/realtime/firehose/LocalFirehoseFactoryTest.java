@@ -75,7 +75,6 @@ public class LocalFirehoseFactoryTest
             new TimestampSpec(
                 "timestamp",
                 "auto",
-                null,
                 null
             ),
             new DimensionsSpec(

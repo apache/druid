@@ -54,7 +54,7 @@ public class FlattenJSONBenchmarkUtil
   public Parser getFlatParser()
   {
     JSONParseSpec spec = new JSONParseSpec(
-        new TimestampSpec("ts", "iso", null, null),
+        new TimestampSpec("ts", "iso", null),
         new DimensionsSpec(null, null, null),
         null,
         null
@@ -249,10 +249,23 @@ public class FlattenJSONBenchmarkUtil
     String[] dimsArray1 = {String.valueOf(rng.nextInt()), String.valueOf(rng.nextInt()), String.valueOf(rng.nextInt())};
     BenchmarkEvent nestedDims2 = new BenchmarkEvent(
         null,
-        null, null, String.valueOf(rng.nextInt()), String.valueOf(rng.nextInt()), String.valueOf(rng.nextInt()), String.valueOf(rng.nextInt()),
-        null, null, null, null,
-        null, null, null, null,
-        dimsArray1, null, null
+        null,
+        null,
+        String.valueOf(rng.nextInt()),
+        String.valueOf(rng.nextInt()),
+        String.valueOf(rng.nextInt()),
+        String.valueOf(rng.nextInt()),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        dimsArray1,
+        null,
+        null
     );
 
     Long[] metricsArray1 = {rng.nextLong(), rng.nextLong(), rng.nextLong(), rng.nextLong()};
