@@ -84,6 +84,17 @@
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
           </execution>
+
+          <execution>
+            <id>generate-licenses-file</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>run generate-licenses-file</arguments>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>

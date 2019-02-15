@@ -14,6 +14,7 @@
     "pretest": "./script/build",
     "run": "./script/run",
     "test": "jest --silent 2>&1",
+    "generate-licenses-file": "license-checker --production --json --out licenses.json",
     "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;MIT;CC0-1.0' --excludePackages '@blueprintjs/core@3.12.0;@blueprintjs/icons@3.5.1' --summary",
     "start": "webpack-dev-server --hot --open"
   },
