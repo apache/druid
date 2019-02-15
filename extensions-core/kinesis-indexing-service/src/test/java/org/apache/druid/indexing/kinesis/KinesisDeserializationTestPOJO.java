@@ -20,9 +20,14 @@
 
 package org.apache.druid.indexing.kinesis;
 
+/**
+ * This POJO corresponds to the objects that are base64 encoded in test/java/base64aggregatedkinesismessage.txt and
+ * test/java/base64nonaggregatedkinesismessage.txt
+ */
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SerializationPojo
+public class KinesisDeserializationTestPOJO
 {
   @JsonProperty
   public String timestamp;

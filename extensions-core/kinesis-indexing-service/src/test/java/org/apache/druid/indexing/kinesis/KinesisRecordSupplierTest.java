@@ -682,7 +682,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     List<byte[]> recordsFromAggregate = recordSupplier.deaggregateKinesisRecord(record);
     Assert.assertEquals(50, recordsFromAggregate.size());
     for (byte[] bytes : recordsFromAggregate) {
-      SerializationPojo pojo = new ObjectMapper().readValue(bytes, SerializationPojo.class);
+      KinesisDeserializationTestPOJO pojo = new ObjectMapper().readValue(bytes, KinesisDeserializationTestPOJO.class);
       Assert.assertNotNull(pojo.myString);
       Assert.assertNotNull(pojo.timestamp);
       Assert.assertNotNull(pojo.myDouble);
@@ -718,7 +718,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     List<byte[]> recordsFromAggregate = recordSupplier.deaggregateKinesisRecord(record);
     Assert.assertEquals(1, recordsFromAggregate.size());
     for (byte[] bytes : recordsFromAggregate) {
-      SerializationPojo pojo = new ObjectMapper().readValue(bytes, SerializationPojo.class);
+      KinesisDeserializationTestPOJO pojo = new ObjectMapper().readValue(bytes, KinesisDeserializationTestPOJO.class);
       Assert.assertNotNull(pojo.myString);
       Assert.assertNotNull(pojo.timestamp);
       Assert.assertNotNull(pojo.myDouble);
