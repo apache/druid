@@ -291,7 +291,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
               if (closeTimeNs == null) {
                 log.error(
                     "A bug in EventReceiverFirehose code, "
-                          + "either idleCloseTimeNs or requestedShutdownTimeNs should be non-null"
+                          + "either idleCloseTimeNs or requestedShutdownTimeNs must be non-null"
                 );
                 try {
                   Threads.sleepFor(1, TimeUnit.MINUTES);
