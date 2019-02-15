@@ -81,18 +81,12 @@ public class TimestampSpec
 
   @VisibleForTesting
   public TimestampSpec(
-      @JsonProperty("column") String timestampColumn,
-      @JsonProperty("format") String format,
-      @JsonProperty("missingValue") DateTime missingValue
+      String timestampColumn,
+      String format,
+      DateTime missingValue
   )
   {
-    this.timestampColumn = (timestampColumn == null) ? DEFAULT_COLUMN : timestampColumn;
-    this.timestampFormat = format == null ? DEFAULT_FORMAT : format;
-    this.timeZone = DateTimes.UTC_TIMEZONE;
-    this.timestampConverter = TimestampParser.createObjectTimestampParser(timestampFormat, this.timeZone);
-    this.missingValue = missingValue == null
-                        ? DEFAULT_MISSING_VALUE
-                        : missingValue;
+    this(timestampColumn, format, missingValue, null);
   }
 
   @JsonProperty("column")
