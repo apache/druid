@@ -324,7 +324,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 }
               }
 
-              return new SegmentPublishResult(ImmutableSet.copyOf(inserted), true);
+              return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
             }
           },
           3,
@@ -333,7 +333,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
     catch (CallbackFailedException e) {
       if (definitelyNotUpdated.get()) {
-        return SegmentPublishResult.fail();
+        return SegmentPublishResult.fail(e.getMessage());
       } else {
         // Must throw exception if we are not sure if we updated or not.
         throw e;
