@@ -63,7 +63,6 @@ public class ParallelIndexSupervisorTaskSerdeTest
       new TimestampSpec(
           "ts",
           "auto",
-          null,
           null
       ),
       new DimensionsSpec(
