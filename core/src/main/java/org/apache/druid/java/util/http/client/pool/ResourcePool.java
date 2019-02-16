@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.http.client.pool;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -226,6 +227,7 @@ public class ResourcePool<K, V> implements Closeable
           deficit++;
           this.notifyAll();
         }
+        Throwables.propagateIfPossible(e);
         throw new RuntimeException(e);
       }
 

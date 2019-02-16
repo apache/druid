@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.guava;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 
 /**
  */
@@ -58,6 +59,7 @@ final class WrappingSequence<T> implements Sequence<T>
       catch (Exception e) {
         t.addSuppressed(e);
       }
+      Throwables.propagateIfPossible(t);
       throw new RuntimeException(t);
     }
     // "Normal" close
@@ -95,6 +97,7 @@ final class WrappingSequence<T> implements Sequence<T>
       catch (Exception e) {
         t.addSuppressed(e);
       }
+      Throwables.propagateIfPossible(t);
       throw new RuntimeException(t);
     }
   }
