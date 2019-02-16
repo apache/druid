@@ -33,6 +33,7 @@ import org.junit.Assert;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
 
 public class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
@@ -50,7 +51,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath,
-      boolean waitForMultipleVersions
+      boolean waitForNewVersion
   ) throws IOException
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
@@ -60,7 +61,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullDatasourceName
     );
 
-    submitTaskAndWait(taskSpec, fullDatasourceName, waitForMultipleVersions);
+    submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion);
     try {
 
       String queryResponseTemplate;
@@ -155,8 +156,10 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  private void submitTaskAndWait(String taskSpec, String dataSourceName, boolean waitForMultipleVersions)
+  private void submitTaskAndWait(String taskSpec, String dataSourceName, boolean waitForNewVersion)
   {
+    final Set<String> oldVersions = waitForNewVersion ? coordinator.getSegmentVersions(dataSourceName) : null;
+
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
@@ -165,12 +168,10 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     // data source. For that second round we need to make sure the coordinator actually learned
     // about the new segments befor waiting for it to report that all segments are loaded; otherwise
     // this method could return too early because the coordinator is merely reporting that all the
-    // original segments have loaded. Waiting for the coordinator know about more than one version
-    // worth of segments is a simple way to differentiate between only knowing about the first segments
-    // and knowing about the second ones too.
-    if (waitForMultipleVersions) {
+    // original segments have loaded.
+    if (waitForNewVersion) {
       RetryUtil.retryUntilTrue(
-          () -> coordinator.getSegmentVersions(dataSourceName).size() > 1, "See multiple versions"
+          () -> !oldVersions.containsAll(coordinator.getSegmentVersions(dataSourceName)), "See a new version"
       );
     }
 

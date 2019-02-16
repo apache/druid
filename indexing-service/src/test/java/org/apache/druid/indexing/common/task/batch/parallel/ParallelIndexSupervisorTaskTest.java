@@ -165,7 +165,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     final List<DataSegment> newSegments =
         getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
     Assert.assertEquals(1, newSegments.size());
-    Assert.assertNotEquals(oldSegments.get(0).getVersion(), newSegments.get(0).getVersion());
+    Assert.assertTrue(oldSegments.get(0).getVersion().compareTo(newSegments.get(0).getVersion()) < 0);
   }
 
   @Test()
