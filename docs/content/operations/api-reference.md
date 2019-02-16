@@ -466,8 +466,10 @@ Retrieve list of task status objects for list of task id strings in request body
 
 * `/druid/indexer/v1/pendingSegments/{dataSource}`
 
-Cleanup pending segments table in metadata storage for `datasource`. Returns a JSON object response with `numDeleted` 
-and count of rows deleted from the pending segments table.
+Manually clean up pending segments table in metadata storage for `datasource`. Returns a JSON object response with 
+`numDeleted` and count of rows deleted from the pending segments table. This API is used by the 
+`druid.coordinator.kill.pendingSegments.on` [coordinator setting](../configuration/index.html#coordinator-operation)
+which automates this operation to perform periodically.
 
 #### Supervisors
 
