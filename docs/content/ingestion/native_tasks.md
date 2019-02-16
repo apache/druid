@@ -152,7 +152,8 @@ specified when it starts up, and you will learn quickly if the specified interva
 tasks (eg, Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
 learn that the task overlaps with a higher-priority task later in ingestion.  If you specify `intervals` explicitly, any
 rows outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the
-time range of the data so that locking failure happens faster.
+time range of the data so that locking failure happens faster, and so that you don't accidentally replace data outside
+that range if there's some stray data with unexpected timestamps.
 
 #### IOConfig
 
@@ -501,7 +502,8 @@ See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
 If you do not specify `intervals` explicitly in your dataSchema's granularitySpec, the Local Index Task will do an extra
 pass over the data to determine the range to lock when it starts up.  If you specify `intervals` explicitly, any rows
 outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the time
-range of the data because it allows the task to skip the extra pass.
+range of the data because it allows the task to skip the extra pass, and so that you don't accidentally replace data outside
+that range if there's some stray data with unexpected timestamps.
 
 #### IOConfig
 
