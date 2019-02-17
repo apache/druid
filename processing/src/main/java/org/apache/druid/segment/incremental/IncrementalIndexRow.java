@@ -30,13 +30,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public final class IncrementalIndexRow
+public class IncrementalIndexRow
 {
   public static final int EMPTY_ROW_INDEX = -1;
 
   final long timestamp;
   final Object[] dims;
-  private final List<IncrementalIndex.DimensionDesc> dimensionDescsList;
+  protected final List<IncrementalIndex.DimensionDesc> dimensionDescsList;
 
   /**
    * rowIndex is not checked in {@link #equals} and {@link #hashCode} on purpose. IncrementalIndexRow acts as a Map key
@@ -82,6 +82,15 @@ public final class IncrementalIndexRow
     this.dimsKeySize = dimsKeySize;
   }
 
+  public IncrementalIndexRow(int timestamp, List<IncrementalIndex.DimensionDesc> dimensionDescsList)
+  {
+    // Used by OakIncrementalIndex, probablly better to create an interface for both classes
+    // but I tried to avoid many code changes.
+    this.timestamp = timestamp;
+    dims = null;
+    this.dimensionDescsList = dimensionDescsList;
+  }
+
   static IncrementalIndexRow createTimeAndDimswithDimsKeySize(
       long timestamp,
       Object[] dims,
@@ -97,10 +106,19 @@ public final class IncrementalIndexRow
     return timestamp;
   }
 
-  public Object[] getDims()
+  public Object getDim(int index)
   {
-    return dims;
+    if (dims == null || index >= dims.length) {
+      return null;
+    }
+    return dims[index];
   }
+
+  public int getDimsLength()
+  {
+    return dims == null ? 0 : dims.length;
+  }
+
 
   public int getRowIndex()
   {
