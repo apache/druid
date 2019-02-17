@@ -430,7 +430,6 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       if (maxRowCount <= 0) {
         throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
       }
-
       return new OnheapIncrementalIndex(
           Objects.requireNonNull(incrementalIndexSchema, "incrementIndexSchema is null"),
           deserializeComplexMetrics,
@@ -456,6 +455,21 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
           sortFacts,
           maxRowCount,
           Objects.requireNonNull(bufferPool, "bufferPool is null")
+      );
+    }
+
+    public IncrementalIndex buildOak()
+    {
+      if (maxRowCount <= 0) {
+        throw new IllegalArgumentException("Invalid max row count: " + maxRowCount);
+      }
+
+      return new OakIncrementalIndex(
+              Objects.requireNonNull(incrementalIndexSchema, "incrementalIndexSchema is null"),
+              deserializeComplexMetrics,
+              reportParseExceptions,
+              concurrentEventAdd,
+              maxRowCount
       );
     }
   }
@@ -493,15 +507,15 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   protected abstract Object getAggVal(AggregatorType agg, int rowOffset, int aggPosition);
 
-  protected abstract float getMetricFloatValue(int rowOffset, int aggOffset);
+  protected abstract float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract long getMetricLongValue(int rowOffset, int aggOffset);
+  protected abstract long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract Object getMetricObjectValue(int rowOffset, int aggOffset);
+  protected abstract Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
+  protected abstract double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
-  protected abstract boolean isNull(int rowOffset, int aggOffset);
+  protected abstract boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggOffset);
 
   static class IncrementalIndexRowResult
   {
@@ -1007,11 +1021,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             incrementalIndexRow -> {
               final int rowOffset = incrementalIndexRow.getRowIndex();
 
-              Object[] theDims = incrementalIndexRow.getDims();
-
               Map<String, Object> theVals = Maps.newLinkedHashMap();
-              for (int i = 0; i < theDims.length; ++i) {
-                Object dim = theDims[i];
+              for (int i = 0; i < incrementalIndexRow.getDimsLength(); ++i) {
+                Object dim = incrementalIndexRow.getDim(i);
                 DimensionDesc dimensionDesc = dimensions.get(i);
                 if (dimensionDesc == null) {
                   continue;
@@ -1491,7 +1503,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public long getLong()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricLongValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricLongValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1503,7 +1515,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
   }
 
@@ -1528,7 +1540,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public Object getObject()
     {
-      return getMetricObjectValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricObjectValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1559,7 +1571,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public float getFloat()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricFloatValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricFloatValue(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1571,7 +1583,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
   }
 
@@ -1590,13 +1602,13 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public double getDouble()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      return getMetricDoubleValue(currEntry.get().getRowIndex(), metricIndex);
+      return getMetricDoubleValue(currEntry.get(), metricIndex);
     }
 
     @Override
     public boolean isNull()
     {
-      return IncrementalIndex.this.isNull(currEntry.get().getRowIndex(), metricIndex);
+      return IncrementalIndex.this.isNull(currEntry.get(), metricIndex);
     }
 
     @Override
@@ -1604,5 +1616,16 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       inspector.visit("index", IncrementalIndex.this);
     }
+  }
+
+  public List<DimensionDesc> getDimensionDescsList()
+  {
+    //TODO YONIGO - is dimensionDescsList accessed concurrently?
+    return dimensionDescsList;
+  }
+
+  public ThreadLocal<InputRow> getIn()
+  {
+    return in;
   }
 }

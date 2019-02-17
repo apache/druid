@@ -40,8 +40,13 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -60,6 +65,9 @@ public class IndexIngestionBenchmark
 
   @Param({"true", "false"})
   private boolean rollup;
+
+  @Param({"onheap", "oak"})
+  private String indexType;
 
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -98,18 +106,40 @@ public class IndexIngestionBenchmark
     incIndex = makeIncIndex();
   }
 
+  @TearDown(Level.Invocation)
+  public void tearDown()
+  {
+    incIndex.close();
+  }
+
   private IncrementalIndex makeIncIndex()
   {
-    return new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(schemaInfo.getAggsArray())
-                .withRollup(rollup)
-                .build()
-        )
-        .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment * 2)
-        .buildOnheap();
+    switch (indexType) {
+      case "onheap":
+        return new IncrementalIndex.Builder()
+                .setIndexSchema(
+                        new IncrementalIndexSchema.Builder()
+                                .withMetrics(schemaInfo.getAggsArray())
+                                .withRollup(rollup)
+                                .build()
+                )
+                .setReportParseExceptions(false)
+                .setMaxRowCount(rowsPerSegment * 2)
+                .buildOnheap();
+      case "oak":
+        return new IncrementalIndex.Builder()
+                .setIndexSchema(
+                        new IncrementalIndexSchema.Builder()
+                                .withMetrics(schemaInfo.getAggsArray())
+                                .withRollup(rollup)
+                                .build()
+                )
+                .setReportParseExceptions(false)
+                .setMaxRowCount(rowsPerSegment * 2)
+                .buildOak();
+
+    }
+    return null;
   }
 
   @Benchmark
@@ -123,4 +153,18 @@ public class IndexIngestionBenchmark
       blackhole.consume(rv);
     }
   }
+
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+            .include(IndexIngestionBenchmark.class.getSimpleName())
+            .threads(1)
+            .forks(1)
+            .build();
+
+    new Runner(opt).run();
+  }
+
+
 }

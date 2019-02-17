@@ -73,6 +73,14 @@ public final class ArrayBasedIndexedInts implements IndexedInts
     this.size = size;
   }
 
+  /*
+  public void setValues(IncrementalIndexRow row, int dimIndex)
+  {
+    ensureSize(row.calcStringDimSize(dimIndex));
+    this.size = row.copyStringDim(dimIndex, expansion);
+  }
+  */
+
   public void setValue(int index, int value)
   {
     expansion[index] = value;

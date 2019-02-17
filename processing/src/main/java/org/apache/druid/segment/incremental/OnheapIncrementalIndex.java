@@ -337,33 +337,33 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  public float getMetricFloatValue(int rowOffset, int aggOffset)
+  public float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getFloat();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].getFloat();
   }
 
   @Override
-  public long getMetricLongValue(int rowOffset, int aggOffset)
+  public long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getLong();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].getLong();
   }
 
   @Override
-  public Object getMetricObjectValue(int rowOffset, int aggOffset)
+  public Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].get();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].get();
   }
 
   @Override
-  protected double getMetricDoubleValue(int rowOffset, int aggOffset)
+  protected double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].getDouble();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].getDouble();
   }
 
   @Override
-  public boolean isNull(int rowOffset, int aggOffset)
+  public boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggOffset)
   {
-    return concurrentGet(rowOffset)[aggOffset].isNull();
+    return concurrentGet(incrementalIndexRow.getRowIndex())[aggOffset].isNull();
   }
 
   /**

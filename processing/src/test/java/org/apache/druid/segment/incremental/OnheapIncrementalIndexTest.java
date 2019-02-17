@@ -86,7 +86,7 @@ public class OnheapIncrementalIndexTest
       {
         while (!Thread.interrupted()) {
           for (IncrementalIndexRow row : index.getFacts().keySet()) {
-            if (index.getMetricLongValue(row.getRowIndex(), 0) != 1) {
+            if (index.getMetricLongValue(row, 0) != 1) {
               checkFailedCount.addAndGet(1);
             }
           }
