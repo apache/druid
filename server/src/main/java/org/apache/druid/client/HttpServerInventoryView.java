@@ -129,7 +129,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
 
   @LifecycleStart
-  public void start() throws ISE
+  public void start()
   {
     synchronized (lifecycleLock) {
       if (!lifecycleLock.canStart()) {
