@@ -202,7 +202,10 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     private final BlockingQueue<Object> buffer;
     private final InputRowParser<Map<String, Object>> parser;
 
-    /** This field needs to be volatile to ensure progress in {@link #addRows} method where it is read in a loop. */
+    /**
+     * This field needs to be volatile to ensure progress in {@link #addRows} method where it is read in a loop, and
+     * also in testing code calling {@link #isClosed()}.
+     */
     private volatile boolean closed = false;
 
     /**
@@ -238,6 +241,12 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
           createDelayedCloseExecutor();
         }
       }
+    }
+
+    @VisibleForTesting
+    synchronized @Nullable Thread getDelayedCloseExecutor()
+    {
+      return delayedCloseExecutor;
     }
 
     /**
@@ -577,7 +586,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     }
 
     @VisibleForTesting
-    public boolean isClosed()
+    boolean isClosed()
     {
       return closed;
     }
