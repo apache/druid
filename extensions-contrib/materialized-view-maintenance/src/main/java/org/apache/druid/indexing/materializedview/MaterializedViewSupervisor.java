@@ -293,17 +293,7 @@ public class MaterializedViewSupervisor implements Supervisor
       submitTasks(sortedToBuildVersion, baseSegments);
     }
   }
-
-  @VisibleForTesting
-  void setRunningTasks(Map<Interval, HadoopIndexTask> runningTasks, Map<Interval, String> runningVersion)
-  {
-    this.runningTasks.clear();
-    this.runningTasks.putAll(runningTasks);
-
-    this.runningVersion.clear();
-    this.runningVersion.putAll(runningVersion);
-  }
-
+  
   @VisibleForTesting
   Pair<Map<Interval, HadoopIndexTask>, Map<Interval, String>> getRunningTasks()
   {
