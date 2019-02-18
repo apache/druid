@@ -19,10 +19,13 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.vector.VectorSizeInspector;
 
 /**
- * A vectorized value matcher.
+ * An object that returns a boolean indicating if the "current" row should be selected or not. The most prominent use
+ * of this interface is that it is returned by the {@link Filter} "makeVectorMatcher" method, where it is used to
+ * identify selected rows for filtered cursors and filtered aggregators.
  *
  * @see org.apache.druid.query.filter.ValueMatcher, the non-vectorized version
  */
