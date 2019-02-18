@@ -191,7 +191,7 @@ public class SqlBenchmark
     closer.register(walker);
 
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate.lhs, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
 
     plannerFactory = new PlannerFactory(
         druidSchema,

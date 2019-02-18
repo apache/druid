@@ -113,6 +113,14 @@ public class AggregatorUtil
   // Fixed buckets histogram aggregator
   public static final byte FIXED_BUCKET_HIST_CACHE_TYPE_ID = 0x33;
 
+  // bloom filter extension
+  public static final byte BLOOM_FILTER_CACHE_TYPE_ID = 0x34;
+  public static final byte BLOOM_FILTER_MERGE_CACHE_TYPE_ID = 0x35;
+
+  // Quantiles sketch in momentsketch extension
+  public static final byte MOMENTS_SKETCH_BUILD_CACHE_TYPE_ID = 0x36;
+  public static final byte MOMENTS_SKETCH_MERGE_CACHE_TYPE_ID = 0x37;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *

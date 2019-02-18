@@ -67,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -271,7 +272,7 @@ public class HttpRemoteTaskRunnerTest
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
-    Map<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
 
     Task task1 = NoopTask.create("task-id-1", 0);
     Task task2 = NoopTask.create("task-id-2", 0);
@@ -424,7 +425,7 @@ public class HttpRemoteTaskRunnerTest
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
-    Map<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
@@ -600,7 +601,7 @@ public class HttpRemoteTaskRunnerTest
             .andReturn(druidNodeDiscovery);
     EasyMock.replay(druidNodeDiscoveryProvider);
 
-    Map<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),
@@ -777,7 +778,7 @@ public class HttpRemoteTaskRunnerTest
     Task task1 = NoopTask.create("task-id-1", 0);
     Task task2 = NoopTask.create("task-id-2", 0);
 
-    Map<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, CustomFunction> workerHolders = new ConcurrentHashMap<>();
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
         TestHelper.makeJsonMapper(),

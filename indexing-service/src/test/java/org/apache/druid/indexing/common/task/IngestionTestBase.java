@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
@@ -122,8 +121,7 @@ public abstract class IngestionTestBase
         taskStorage,
         storageCoordinator,
         new NoopServiceEmitter(),
-        null,
-        new Counters()
+        null
     );
   }
 

@@ -422,7 +422,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     String hyperLogLogCollectorClassName = HLLC_STRING;
     testQuery(
+        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -474,7 +477,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 "abcd",
                 9999.0f,
                 NullHandling.defaultDoubleValue(),
-                HLLC_STRING
+                "\"AQAAAQAAAALFBA==\""
             }
         )
     );
@@ -521,7 +524,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithLimit() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo LIMIT 2",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -568,7 +574,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithLimitTimeDescending() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo ORDER BY __time DESC LIMIT 2",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -592,7 +601,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithoutLimitTimeAscending() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo ORDER BY __time",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newSelectQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1873,7 +1885,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithDimFilter() throws Exception
   {
     testQuery(
+        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo WHERE dim1 > 'd' OR dim2 = 'a'",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)

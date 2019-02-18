@@ -19,13 +19,16 @@
 
 package org.apache.druid.segment.realtime.plumber;
 
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -90,7 +93,19 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry = itr.next();
         SegmentDescriptor descriptor = entry.getKey();
         try {
-          if (coordinatorClient.isHandOffComplete(dataSource, descriptor)) {
+          Boolean handOffComplete = coordinatorClient.isHandOffComplete(dataSource, descriptor);
+          if (handOffComplete == null) {
+            log.warn(
+                "Failed to call the new coordinator API for checking segment handoff. Falling back to the old API"
+            );
+            final List<ImmutableSegmentLoadInfo> loadedSegments = coordinatorClient.fetchServerView(
+                dataSource,
+                descriptor.getInterval(),
+                true
+            );
+            handOffComplete = isHandOffComplete(loadedSegments, descriptor);
+          }
+          if (handOffComplete) {
             log.info("Segment Handoff complete for dataSource[%s] Segment[%s]", dataSource, descriptor);
             entry.getValue().lhs.execute(entry.getValue().rhs);
             itr.remove();
@@ -118,6 +133,20 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
           pollDurationMillis
       );
     }
+  }
+
+  static boolean isHandOffComplete(List<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
+  {
+    for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
+      if (segmentLoadInfo.getSegment().getInterval().contains(descriptor.getInterval())
+          && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum()
+             == descriptor.getPartitionNumber()
+          && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
+          && segmentLoadInfo.getServers().stream().anyMatch(DruidServerMetadata::segmentReplicatable)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

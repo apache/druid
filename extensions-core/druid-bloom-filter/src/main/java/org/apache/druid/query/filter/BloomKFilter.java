@@ -27,18 +27,26 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 
 /**
  * This is a direct modification of the Apache Hive 'BloomKFilter', found at:
- * https://github.com/apache/hive/blob/master/storage-api/src/java/org/apache/hive/common/util/BloomKFilter.java
+ * https://github.com/apache/hive/blob/rel/storage-release-2.7.0/storage-api/src/java/org/apache/hive/common/util/BloomKFilter.java
  * modified to store variables which are re-used instead of re-allocated per call as {@link ThreadLocal} so multiple
  * threads can share the same filter object. Note that this is snapshot at hive-storag-api version 2.7.0, latest
  * versions break compatibility with how int/float are stored in a bloom filter in this commit:
  * https://github.com/apache/hive/commit/87ce36b458350db141c4cb4b6336a9a01796370f#diff-e65fc506757ee058dc951d15a9a526c3L238
  * and this linked issue https://issues.apache.org/jira/browse/HIVE-20101.
  *
- * Todo: remove this and begin using hive-storage-api version again once https://issues.apache.org/jira/browse/HIVE-20893 is released
+ * Addtionally, a handful of methods have been added to in situ work with BloomKFilters that have been serialized to a
+ * ByteBuffer, e.g. all add and merge methods. Test methods were not added because we don't need them.. but would
+ * probably be chill to do so it is symmetrical.
+ *
+ * Todo: remove this and begin using hive-storage-api version again once
+ *  https://issues.apache.org/jira/browse/HIVE-20893 is released and if/when static ByteBuffer methods have been merged
+ *  (or alternatively, move them to some sort of utils class)
  *
  * begin copy-pasta:
  *
@@ -62,7 +70,7 @@ public class BloomKFilter
   private static final int DEFAULT_BLOCK_SIZE_BITS = (int) (Math.log(DEFAULT_BLOCK_SIZE) / Math.log(2));
   private static final int DEFAULT_BLOCK_OFFSET_MASK = DEFAULT_BLOCK_SIZE - 1;
   private static final int DEFAULT_BIT_OFFSET_MASK = Long.SIZE - 1;
-  private final ThreadLocal<byte[]> BYTE_ARRAY_4 = ThreadLocal.withInitial(() -> new byte[4]);
+  private static final ThreadLocal<byte[]> BYTE_ARRAY_4 = ThreadLocal.withInitial(() -> new byte[4]);
   private final BitSet bitSet;
   private final int m;
   private final int k;
@@ -172,6 +180,8 @@ public class BloomKFilter
     }
   }
 
+  // custom Druid ByteBuffer methods start here
+
   /**
    * Merges BloomKFilter bf2 into bf1.
    * Assumes 2 BloomKFilters with the same size/hash functions are serialized to byte arrays
@@ -209,6 +219,259 @@ public class BloomKFilter
       bf1Bytes[bf1Start + idx] |= bf2Bytes[bf2Start + idx];
     }
   }
+
+  public static void serialize(ByteBuffer out, BloomKFilter bloomFilter)
+  {
+    serialize(out, out.position(), bloomFilter);
+  }
+
+  /**
+   * Serialize a bloom filter to a ByteBuffer. Does not mutate buffer position.
+   *
+   * @param out         output buffer to write to
+   * @param position    output buffer position
+   * @param bloomFilter BloomKFilter that needs to be seralized
+   */
+  public static void serialize(ByteBuffer out, int position, BloomKFilter bloomFilter)
+  {
+    /**
+     * Serialized BloomKFilter format:
+     * 1 byte for the number of hash functions.
+     * 1 big endian int(to match OutputStream) for the number of longs in the bitset
+     * big endian longs in the BloomKFilter bitset
+     */
+    ByteBuffer view = out.duplicate().order(ByteOrder.BIG_ENDIAN);
+    view.position(position);
+    view.put((byte) bloomFilter.k);
+    view.putInt(bloomFilter.getBitSet().length);
+    for (long value : bloomFilter.getBitSet()) {
+      view.putLong(value);
+    }
+  }
+
+  public static BloomKFilter deserialize(ByteBuffer in) throws IOException
+  {
+    return deserialize(in, in.position());
+  }
+
+  /**
+   * Deserialize a bloom filter
+   * Read a byte buffer, which was written by {@linkplain #serialize(OutputStream, BloomKFilter)} or
+   * {@linkplain #serialize(ByteBuffer, int, BloomKFilter)}
+   * into a {@code BloomKFilter}. Does not mutate buffer position.
+   *
+   * @param in input ByteBuffer
+   *
+   * @return deserialized BloomKFilter
+   */
+  public static BloomKFilter deserialize(ByteBuffer in, int position) throws IOException
+  {
+    if (in == null) {
+      throw new IOException("Input stream is null");
+    }
+
+    try {
+      ByteBuffer dataBuffer = in.duplicate().order(ByteOrder.BIG_ENDIAN);
+      dataBuffer.position(position);
+      int numHashFunc = dataBuffer.get();
+      int bitsetArrayLen = dataBuffer.getInt();
+      long[] data = new long[bitsetArrayLen];
+      for (int i = 0; i < bitsetArrayLen; i++) {
+        data[i] = dataBuffer.getLong();
+      }
+      return new BloomKFilter(data, numHashFunc);
+    }
+    catch (RuntimeException e) {
+      throw new IOException("Unable to deserialize BloomKFilter", e);
+    }
+  }
+
+  /**
+   * Merges BloomKFilter bf2Buffer into bf1Buffer in place. Does not mutate buffer positions.
+   * Assumes 2 BloomKFilters with the same size/hash functions are serialized to ByteBuffers
+   *
+   * @param bf1Buffer
+   * @param bf1Start
+   * @param bf2Buffer
+   * @param bf2Start
+   */
+  public static void mergeBloomFilterByteBuffers(
+      ByteBuffer bf1Buffer,
+      int bf1Start,
+      ByteBuffer bf2Buffer,
+      int bf2Start
+  )
+  {
+    ByteBuffer view1 = bf1Buffer.duplicate().order(ByteOrder.BIG_ENDIAN);
+    ByteBuffer view2 = bf2Buffer.duplicate().order(ByteOrder.BIG_ENDIAN);
+    final int bf1Length = START_OF_SERIALIZED_LONGS + (view1.getInt(1 + bf1Start) * Long.BYTES);
+    final int bf2Length = START_OF_SERIALIZED_LONGS + (view2.getInt(1 + bf2Start) * Long.BYTES);
+
+    if (bf1Length != bf2Length) {
+      throw new IllegalArgumentException("bf1Length " + bf1Length + " does not match bf2Length " + bf2Length);
+    }
+
+    // Validation on the bitset size/3 hash functions.
+    for (int idx = 0; idx < START_OF_SERIALIZED_LONGS; ++idx) {
+      if (view1.get(bf1Start + idx) != view2.get(bf2Start + idx)) {
+        throw new IllegalArgumentException("bf1 NumHashFunctions/NumBits does not match bf2");
+      }
+    }
+
+    // Just bitwise-OR the bits together - size/# functions should be the same,
+    // rest of the data is serialized long values for the bitset which are supposed to be bitwise-ORed.
+    for (int idx = START_OF_SERIALIZED_LONGS; idx < bf1Length; ++idx) {
+      final int pos1 = bf1Start + idx;
+      final int pos2 = bf2Start + idx;
+      view1.put(pos1, (byte) (view1.get(pos1) | view2.get(pos2)));
+    }
+  }
+
+  /**
+   * ByteBuffer based copy of logic of {@link BloomKFilter#getNumSetBits()}
+   * @param bfBuffer
+   * @param start
+   * @return
+   */
+  public static int getNumSetBits(ByteBuffer bfBuffer, int start)
+  {
+    ByteBuffer view = bfBuffer.duplicate().order(ByteOrder.BIG_ENDIAN);
+    view.position(start);
+    int numLongs = view.getInt(1 + start);
+    int setBits = 0;
+    for (int i = 0, pos = START_OF_SERIALIZED_LONGS + start; i < numLongs; i++, pos += Long.BYTES) {
+      setBits += Long.bitCount(view.getLong(pos));
+    }
+    return setBits;
+  }
+
+  /**
+   * Calculate size in bytes of a BloomKFilter for a given number of entries
+   */
+  public static int computeSizeBytes(long maxNumEntries)
+  {
+    // copied from constructor
+    checkArgument(maxNumEntries > 0, "expectedEntries should be > 0");
+    long numBits = optimalNumOfBits(maxNumEntries, DEFAULT_FPP);
+
+    int nLongs = (int) Math.ceil((double) numBits / (double) Long.SIZE);
+    int padLongs = DEFAULT_BLOCK_SIZE - nLongs % DEFAULT_BLOCK_SIZE;
+    return START_OF_SERIALIZED_LONGS + ((nLongs + padLongs) * Long.BYTES);
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#add(byte[])} that adds a value to the ByteBuffer in place.
+   */
+  public static void add(ByteBuffer buffer, byte[] val)
+  {
+    addBytes(buffer, val);
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addBytes(byte[], int, int)} that adds a value to the ByteBuffer
+   * in place.
+   */
+  public static void addBytes(ByteBuffer buffer, byte[] val, int offset, int length)
+  {
+    long hash64 = val == null ? Murmur3.NULL_HASHCODE :
+                  Murmur3.hash64(val, offset, length);
+    addHash(buffer, hash64);
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addBytes(byte[])} that adds a value to the ByteBuffer in place.
+   */
+  public static void addBytes(ByteBuffer buffer, byte[] val)
+  {
+    addBytes(buffer, val, 0, val.length);
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addHash(long)} that adds a value to the ByteBuffer in place.
+   */
+  public static void addHash(ByteBuffer buffer, long hash64)
+  {
+    final int hash1 = (int) hash64;
+    final int hash2 = (int) (hash64 >>> 32);
+
+    int firstHash = hash1 + hash2;
+    // hashcode should be positive, flip all the bits if it's negative
+    if (firstHash < 0) {
+      firstHash = ~firstHash;
+    }
+
+    ByteBuffer view = buffer.duplicate().order(ByteOrder.BIG_ENDIAN);
+    int startPosition = view.position();
+    int numHashFuncs = view.get(startPosition);
+    int totalBlockCount = view.getInt(startPosition + 1) / DEFAULT_BLOCK_SIZE;
+    // first hash is used to locate start of the block (blockBaseOffset)
+    // subsequent K hashes are used to generate K bits within a block of words
+    final int blockIdx = firstHash % totalBlockCount;
+    final int blockBaseOffset = blockIdx << DEFAULT_BLOCK_SIZE_BITS;
+    for (int i = 1; i <= numHashFuncs; i++) {
+      int combinedHash = hash1 + ((i + 1) * hash2);
+      // hashcode should be positive, flip all the bits if it's negative
+      if (combinedHash < 0) {
+        combinedHash = ~combinedHash;
+      }
+      // LSB 3 bits is used to locate offset within the block
+      final int absOffset = blockBaseOffset + (combinedHash & DEFAULT_BLOCK_OFFSET_MASK);
+      // Next 6 bits are used to locate offset within a long/word
+      final int bitPos = (combinedHash >>> DEFAULT_BLOCK_SIZE_BITS) & DEFAULT_BIT_OFFSET_MASK;
+
+      final int bufPos = startPosition + START_OF_SERIALIZED_LONGS + (absOffset * Long.BYTES);
+      view.putLong(bufPos, view.getLong(bufPos) | (1L << bitPos));
+    }
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addString(String)} that adds a value to the ByteBuffer in place.
+   */
+  public static void addString(ByteBuffer buffer, String val)
+  {
+    addBytes(buffer, StringUtils.toUtf8(val));
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addByte(byte)} that adds a value to the ByteBuffer in place.
+   */
+  public static void addByte(ByteBuffer buffer, byte val)
+  {
+    addBytes(buffer, new byte[]{val});
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addInt(int)} that adds a value to the ByteBuffer in place.
+   */
+  public static void addInt(ByteBuffer buffer, int val)
+  {
+    addBytes(buffer, intToByteArrayLE(val));
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addLong(long)} that adds a value to the ByteBuffer in place.
+   */
+  public static void addLong(ByteBuffer buffer, long val)
+  {
+    addHash(buffer, Murmur3.hash64(val));
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addFloat(float)} that adds a value to the ByteBuffer in place.
+   */
+  public static void addFloat(ByteBuffer buffer, float val)
+  {
+    addInt(buffer, Float.floatToIntBits(val));
+  }
+
+  /**
+   * ByteBuffer based copy of {@link BloomKFilter#addDouble(double)}
+   */
+  public static void addDouble(ByteBuffer buffer, double val)
+  {
+    addLong(buffer, Double.doubleToLongBits(val));
+  }
+  // custom Druid ByteBuffer methods end here
 
   public void add(byte[] val)
   {
@@ -381,7 +644,7 @@ public class BloomKFilter
     return testLong(Double.doubleToLongBits(val));
   }
 
-  private byte[] intToByteArrayLE(int val)
+  private static byte[] intToByteArrayLE(int val)
   {
     byte[] bytes = BYTE_ARRAY_4.get();
     bytes[0] = (byte) (val >> 0);
@@ -399,6 +662,15 @@ public class BloomKFilter
   public int getBitSize()
   {
     return bitSet.getData().length * Long.SIZE;
+  }
+
+  public int getNumSetBits()
+  {
+    int setCount = 0;
+    for (long datum : bitSet.getData()) {
+      setCount += Long.bitCount(datum);
+    }
+    return setCount;
   }
 
   public int getNumHashFunctions()
