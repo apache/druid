@@ -294,6 +294,22 @@ public class MaterializedViewSupervisor implements Supervisor
     }
   }
 
+  @VisibleForTesting
+  void setRunningTasks(Map<Interval, HadoopIndexTask> runningTasks, Map<Interval, String> runningVersion)
+  {
+    this.runningTasks.clear();
+    this.runningTasks.putAll(runningTasks);
+
+    this.runningVersion.clear();
+    this.runningVersion.putAll(runningVersion);
+  }
+
+  @VisibleForTesting
+  Pair<Map<Interval, HadoopIndexTask>, Map<Interval, String>> getRunningTasks()
+  {
+    return new Pair<>(runningTasks, runningVersion);
+  }
+
   /**
    * Find infomation about the intervals in which derived dataSource data should be rebuilt.
    * The infomation includes the version and DataSegments list of a interval.
