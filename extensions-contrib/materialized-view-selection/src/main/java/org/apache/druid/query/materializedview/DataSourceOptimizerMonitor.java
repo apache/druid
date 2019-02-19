@@ -53,9 +53,8 @@ public class DataSourceOptimizerMonitor extends AbstractMonitor
       emitter.emit(builder.build("/materialized/view/select/avgCostMS", stat.getOptimizerCost()));
       Map<String, Long> derivativesStats = stat.getDerivativesHitCount();
       for (Map.Entry<String, Long> entry : derivativesStats.entrySet()) {
-        String derivative = entry.getKey();
-        builder.setDimension("derivative", derivative);
-        emitter.emit(builder.build("/materialized/view/derivative/numSelected", derivativesStats.get(derivative)));
+        builder.setDimension("derivative", entry.getKey());
+        emitter.emit(builder.build("/materialized/view/derivative/numSelected", derivativesStats.get(entry.getKey())));
       }
       final ServiceMetricEvent.Builder builder2 = new ServiceMetricEvent.Builder();
       builder2.setDimension("dataSource", stat.getBase());

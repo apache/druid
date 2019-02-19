@@ -280,7 +280,7 @@ public class SelectBenchmark
 
     for (Map.Entry<String, Integer> entry : pagingIdentifiers.entrySet()) {
       String segmentId = entry.getKey();
-      int newOffset = pagingIdentifiers.get(segmentId) + 1;
+      int newOffset = entry.getValue() + 1;
       newPagingIdentifers.put(segmentId, newOffset);
     }
 
