@@ -270,13 +270,18 @@ public class MaterializedViewSupervisor implements Supervisor
   void checkSegmentsAndSubmitTasks()
   {
     synchronized (taskLock) {
+      List<Interval> intervalsToRemove = new ArrayList<>();
       for (Map.Entry<Interval, HadoopIndexTask> entry : runningTasks.entrySet()) {
         Optional<TaskStatus> taskStatus = taskStorage.getStatus(entry.getValue().getId());
         if (!taskStatus.isPresent() || !taskStatus.get().isRunnable()) {
-          runningTasks.remove(entry.getKey());
-          runningVersion.remove(entry.getKey());
+          intervalsToRemove.add(entry.getKey());
         }
       }
+      for (Interval interval : intervalsToRemove) {
+        runningTasks.remove(interval);
+        runningVersion.remove(interval);
+      }
+
       if (runningTasks.size() == maxTaskCount) {
         //if the number of running tasks reach the max task count, supervisor won't submit new tasks.
         return;
@@ -287,6 +292,12 @@ public class MaterializedViewSupervisor implements Supervisor
       missInterval = sortedToBuildVersion.keySet();
       submitTasks(sortedToBuildVersion, baseSegments);
     }
+  }
+  
+  @VisibleForTesting
+  Pair<Map<Interval, HadoopIndexTask>, Map<Interval, String>> getRunningTasks()
+  {
+    return new Pair<>(runningTasks, runningVersion);
   }
 
   /**
