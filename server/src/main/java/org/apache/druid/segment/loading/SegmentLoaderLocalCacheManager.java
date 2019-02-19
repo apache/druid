@@ -58,6 +58,9 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     }
   };
 
+  // Note that we only create this via injection in historical and realtime nodes. Peons create these
+  // objects via SegmentLoaderFactory objects, so that they can store segments in task-specific
+  // directories rather than statically configured directories.
   @Inject
   public SegmentLoaderLocalCacheManager(
       IndexIO indexIO,
@@ -77,11 +80,6 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
           locationConfig.getFreeSpacePercent()
       ));
     }
-  }
-
-  public SegmentLoaderLocalCacheManager withConfig(SegmentLoaderConfig config)
-  {
-    return new SegmentLoaderLocalCacheManager(indexIO, config, jsonMapper);
   }
 
   @Override

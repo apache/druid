@@ -28,11 +28,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.FullResponseHolder;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.core.MediaType;
 import java.util.List;
 
 public class CoordinatorClient
@@ -95,13 +97,15 @@ public class CoordinatorClient
   {
     try {
       FullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET,
-                                        StringUtils.format(
-                                            "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
-                                            dataSource,
-                                            interval.toString().replace('/', '_'),
-                                            incompleteOk
-                                        ))
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format(
+                  "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?partial=%s",
+                  StringUtils.urlEncode(dataSource),
+                  interval.toString().replace('/', '_'),
+                  incompleteOk
+              )
+          )
       );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
@@ -113,6 +117,37 @@ public class CoordinatorClient
       }
       return jsonMapper.readValue(
           response.getContent(), new TypeReference<List<ImmutableSegmentLoadInfo>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+  {
+    try {
+      FullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.POST,
+              StringUtils.format(
+                  "/druid/coordinator/v1/metadata/datasources/%s/segments?full",
+                  StringUtils.urlEncode(dataSource)
+              )
+          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(intervals))
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching database segment data source segments status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      return jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<DataSegment>>()
           {
           }
       );

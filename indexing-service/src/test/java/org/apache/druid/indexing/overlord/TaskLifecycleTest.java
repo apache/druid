@@ -106,7 +106,6 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
@@ -611,9 +610,7 @@ public class TaskLifecycleTest
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         Execs.directExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
-        new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, new DefaultObjectMapper())
-        ),
+        new SegmentLoaderFactory(null, new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,
         MapCache.create(0),
