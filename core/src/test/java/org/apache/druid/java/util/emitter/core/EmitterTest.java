@@ -21,7 +21,6 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.BaseEncoding;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -454,7 +453,7 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
             Assert.assertEquals(
-                "Basic " + BaseEncoding.base64().encode(StringUtils.toUtf8("foo:bar")),
+                "Basic " + StringUtils.encodeBase64String(StringUtils.toUtf8("foo:bar")),
                 request.getHeaders().get(HttpHeaders.Names.AUTHORIZATION)
             );
             Assert.assertEquals(

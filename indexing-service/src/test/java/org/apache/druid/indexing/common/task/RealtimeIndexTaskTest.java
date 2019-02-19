@@ -45,7 +45,6 @@ import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
@@ -600,7 +599,7 @@ public class RealtimeIndexTaskTest
       );
 
       // Trigger graceful shutdown.
-      task1.stopGracefully();
+      task1.stopGracefully(taskToolbox.getConfig());
 
       // Wait for the task to finish. The status doesn't really matter, but we'll check it anyway.
       final TaskStatus taskStatus = statusFuture.get();
@@ -708,7 +707,7 @@ public class RealtimeIndexTaskTest
       Assert.assertEquals(1, sumMetric(task1, null, "rows").longValue());
 
       // Trigger graceful shutdown.
-      task1.stopGracefully();
+      task1.stopGracefully(taskToolbox.getConfig());
 
       // Wait for the task to finish. The status doesn't really matter.
       while (!statusFuture.isDone()) {
@@ -788,7 +787,7 @@ public class RealtimeIndexTaskTest
       );
 
       // Trigger graceful shutdown.
-      task1.stopGracefully();
+      task1.stopGracefully(taskToolbox.getConfig());
 
       // Wait for the task to finish. The status doesn't really matter, but we'll check it anyway.
       final TaskStatus taskStatus = statusFuture.get();
@@ -837,9 +836,9 @@ public class RealtimeIndexTaskTest
     final File directory = tempFolder.newFolder();
     final RealtimeIndexTask task1 = makeRealtimeTask(null);
 
-    task1.stopGracefully();
     final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
     final TaskToolbox taskToolbox = makeToolbox(task1, mdc, directory);
+    task1.stopGracefully(taskToolbox.getConfig());
     final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
 
     // Wait for the task to finish.
@@ -970,7 +969,7 @@ public class RealtimeIndexTaskTest
       final File directory
   )
   {
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
+    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null);
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -984,8 +983,7 @@ public class RealtimeIndexTaskTest
         taskStorage,
         mdc,
         emitter,
-        EasyMock.createMock(SupervisorManager.class),
-        new Counters()
+        EasyMock.createMock(SupervisorManager.class)
     );
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskStorage,

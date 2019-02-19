@@ -208,6 +208,11 @@ public class IndexGeneratorJob implements Jobby
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
 
+      // Store the jobId in the file
+      if (job.getJobID() != null) {
+        JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), job.getJobID().toString());
+      }
+
       boolean success = job.waitForCompletion(true);
 
       Counters counters = job.getCounters();

@@ -21,7 +21,7 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.yahoo.sketches.quantiles.DoublesSketch;
 import com.yahoo.sketches.quantiles.UpdateDoublesSketch;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.BufferedWriter;
 import java.nio.charset.StandardCharsets;
@@ -63,7 +63,7 @@ public class GenerateTestData
       sketchData.write('\t');
       sketchData.write(Integer.toString(product)); // product dimension
       sketchData.write('\t');
-      sketchData.write(Base64.encodeBase64String(sketch.toByteArray(true)));
+      sketchData.write(StringUtils.encodeBase64String(sketch.toByteArray(true)));
       sketchData.newLine();
     }
     buildData.close();

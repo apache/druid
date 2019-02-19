@@ -47,7 +47,6 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
-import java.util.Base64;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
@@ -747,7 +746,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
         final String[] parts = config.getBasicAuthentication().split(":", 2);
         final String user = parts[0];
         final String password = parts.length > 1 ? parts[1] : "";
-        String encoded = Base64.getEncoder().encodeToString((user + ':' + password).getBytes(StandardCharsets.UTF_8));
+        String encoded = StringUtils.encodeBase64String((user + ':' + password).getBytes(StandardCharsets.UTF_8));
         request.setHeader(HttpHeaders.Names.AUTHORIZATION, "Basic " + encoded);
       }
 

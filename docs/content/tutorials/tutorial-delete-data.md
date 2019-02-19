@@ -108,7 +108,7 @@ On http://localhost:8081/#/datasources/deletion-tutorial, click one of the remai
 
 The top of the info box shows the full segment ID, e.g. `deletion-tutorial_2016-06-27T14:00:00.000Z_2016-06-27T15:00:00.000Z_2018-07-27T22:57:00.110Z` for the segment of hour 14.
 
-Let's disable the hour 14 segment by sending the following DELETE request to the coordinator, where {SEGMENT-ID} is the full segment ID shown in the info box:
+Let's disable the hour 14 segment by sending the following DELETE request to the Coordinator, where {SEGMENT-ID} is the full segment ID shown in the info box:
 
 ```bash
 curl -XDELETE http://localhost:8081/druid/coordinator/v1/datasources/deletion-tutorial/segments/{SEGMENT-ID}

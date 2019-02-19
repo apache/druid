@@ -195,6 +195,6 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segments, commitMetadata) -> new SegmentPublishResult(ImmutableSet.of(), true);
+    return (segments, commitMetadata) -> SegmentPublishResult.ok(ImmutableSet.of());
   }
 }

@@ -56,9 +56,8 @@ public class DruidConnection
 
   // Typically synchronized by connectionLock, except in one case: the onClose function passed
   // into DruidStatements contained by the map.
-  private final ConcurrentMap<Integer, DruidStatement> statements;
-
   @GuardedBy("connectionLock")
+  private final ConcurrentMap<Integer, DruidStatement> statements;
   private final Object connectionLock = new Object();
 
   @GuardedBy("connectionLock")
@@ -94,6 +93,7 @@ public class DruidConnection
           e -> !SENSITIVE_CONTEXT_FIELDS.contains(e.getKey())
       );
 
+      @SuppressWarnings("GuardedBy")
       final DruidStatement statement = new DruidStatement(
           connectionId,
           statementId,
