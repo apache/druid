@@ -23,9 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.ClientAppendQuery;
 import org.apache.druid.client.indexing.ClientKillQuery;
-import org.apache.druid.client.indexing.ClientMergeQuery;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
@@ -37,7 +35,6 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -47,7 +44,6 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
@@ -57,7 +53,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
-import java.util.List;
 
 public class TaskSerdeTest
 {
@@ -330,100 +325,6 @@ public class TaskSerdeTest
   }
 
   @Test
-  public void testMergeTaskSerde() throws Exception
-  {
-    final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(Intervals.of("2010-01-01/P1D"))
-                   .version("1234")
-                   .shardSpec(NoneShardSpec.instance())
-                   .build()
-    );
-    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
-    final MergeTask task = new MergeTask(
-        null,
-        "foo",
-        segments,
-        aggregators,
-        true,
-        indexSpec,
-        true,
-        null,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final MergeTask task2 = (MergeTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getSegments(), task2.getSegments());
-    Assert.assertEquals(
-        task.getAggregators().get(0).getName(),
-        task2.getAggregators().get(0).getName()
-    );
-
-    final MergeTask task3 = (MergeTask) jsonMapper.readValue(
-        jsonMapper.writeValueAsString(
-            new ClientMergeQuery(
-                "foo",
-                segments,
-                aggregators
-            )
-        ), Task.class
-    );
-
-    Assert.assertEquals("foo", task3.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task3.getInterval());
-    Assert.assertEquals(segments, task3.getSegments());
-    Assert.assertEquals(aggregators, task3.getAggregators());
-  }
-
-  @Test
-  public void testSameIntervalMergeTaskSerde() throws Exception
-  {
-    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
-    final SameIntervalMergeTask task = new SameIntervalMergeTask(
-        null,
-        "foo",
-        Intervals.of("2010-01-01/P1D"),
-        aggregators,
-        true,
-        indexSpec,
-        true,
-        null,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final SameIntervalMergeTask task2 = (SameIntervalMergeTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getRollup(), task2.getRollup());
-    Assert.assertEquals(task.getIndexSpec(), task2.getIndexSpec());
-    Assert.assertEquals(
-        task.getAggregators().get(0).getName(),
-        task2.getAggregators().get(0).getName()
-    );
-  }
-
-  @Test
   public void testKillTaskSerde() throws Exception
   {
     final KillTask task = new KillTask(
@@ -537,65 +438,6 @@ public class TaskSerdeTest
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
         task2.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
-  }
-
-  @Test
-  public void testAppendTaskSerde() throws Exception
-  {
-    final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(Intervals.of("2010-01-01/P1D"))
-                   .version("1234")
-                   .shardSpec(NoneShardSpec.instance())
-                   .build(),
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(Intervals.of("2010-01-02/P1D"))
-                   .version("5678")
-                   .shardSpec(NoneShardSpec.instance())
-                   .build()
-    );
-    final AppendTask task = new AppendTask(
-        null,
-        "foo",
-        segments,
-        ImmutableList.of(
-            new CountAggregatorFactory("cnt")
-        ),
-        indexSpec,
-        true,
-        null,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final AppendTask task2 = (AppendTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P2D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getSegments(), task2.getSegments());
-
-    final AppendTask task3 = (AppendTask) jsonMapper.readValue(
-        jsonMapper.writeValueAsString(
-            new ClientAppendQuery(
-                "foo",
-                segments
-            )
-        ), Task.class
-    );
-
-    Assert.assertEquals("foo", task3.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P2D"), task3.getInterval());
-    Assert.assertEquals(task3.getSegments(), segments);
-    Assert.assertEquals(task.getAggregators(), task2.getAggregators());
   }
 
   @Test
