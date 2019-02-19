@@ -75,6 +75,10 @@ public abstract class DruidCoordinatorConfig
     return "curator";
   }
 
+  @Config("druid.coordinator.curator.create.zknode.numThreads")
+  @Default("20")
+  public abstract int getCreateZkNodeNumThreads();
+
   @Config("druid.coordinator.loadqueuepeon.http.repeatDelay")
   public Duration getHttpLoadQueuePeonRepeatDelay()
   {
