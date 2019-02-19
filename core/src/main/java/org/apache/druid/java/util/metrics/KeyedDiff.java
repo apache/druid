@@ -46,7 +46,7 @@ public class KeyedDiff
     assert xs.keySet().equals(ys.keySet());
     final Map<String, Long> zs = new HashMap<String, Long>();
     for (Map.Entry<String, Long> entry : xs.entrySet()) {
-      zs.put(entry.getKey(), xs.get(entry.getValue()) - ys.get(entry.getKey()));
+      zs.put(entry.getKey(), entry.getValue() - ys.get(entry.getKey()));
     }
     return zs;
   }
