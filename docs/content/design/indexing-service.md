@@ -26,7 +26,7 @@ title: "Indexing Service"
 
 The indexing service is a highly-available, distributed service that runs indexing related tasks. 
 
-Indexing tasks [tasks](../ingestion/tasks.html) create (and sometimes destroy) Druid [segments](../design/segments.html). The indexing service has a master/slave like architecture.
+Indexing [tasks](../ingestion/tasks.html) create (and sometimes destroy) Druid [segments](../design/segments.html). The indexing service has a master/slave like architecture.
 
 The indexing service is composed of three main components: a [Peon](../design/peons.html) component that can run a single task, a [Middle Manager](../design/middlemanager.html) component that manages Peons, and an [Overlord](../design/overlord.html) component that manages task distribution to MiddleManagers.
 Overlords and MiddleManagers may run on the same node or across multiple nodes while MiddleManagers and Peons always run on the same node.

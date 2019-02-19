@@ -52,6 +52,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class DataSourceMetadataQueryTest
 {
@@ -137,7 +138,7 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataQuery dataSourceMetadataQuery = Druids.newDataSourceMetadataQueryBuilder()
                                                             .dataSource("testing")
                                                             .build();
-    Map<String, Object> context = new ConcurrentHashMap<>();
+    ConcurrentMap<String, Object> context = new ConcurrentHashMap<>();
     context.put(Result.MISSING_SEGMENTS_KEY, new ArrayList<>());
     Iterable<Result<DataSourceMetadataResultValue>> results =
         runner.run(QueryPlus.wrap(dataSourceMetadataQuery), context).toList();
@@ -163,6 +164,12 @@ public class DataSourceMetadataQueryTest
                   {
                     return Intervals.of("2012-01-01/P1D");
                   }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return getInterval();
+                  }
                 },
                 new LogicalSegment()
                 {
@@ -170,6 +177,12 @@ public class DataSourceMetadataQueryTest
                   public Interval getInterval()
                   {
                     return Intervals.of("2012-01-01T01/PT1H");
+                  }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return getInterval();
                   }
                 },
                 new LogicalSegment()
@@ -179,6 +192,12 @@ public class DataSourceMetadataQueryTest
                   {
                     return Intervals.of("2013-01-01/P1D");
                   }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return getInterval();
+                  }
                 },
                 new LogicalSegment()
                 {
@@ -187,6 +206,12 @@ public class DataSourceMetadataQueryTest
                   {
                     return Intervals.of("2013-01-01T01/PT1H");
                   }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return getInterval();
+                  }
                 },
                 new LogicalSegment()
                 {
@@ -194,6 +219,12 @@ public class DataSourceMetadataQueryTest
                   public Interval getInterval()
                   {
                     return Intervals.of("2013-01-01T02/PT1H");
+                  }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return getInterval();
                   }
                 }
             )
@@ -209,6 +240,12 @@ public class DataSourceMetadataQueryTest
           {
             return Intervals.of("2013-01-01/P1D");
           }
+
+          @Override
+          public Interval getTrueInterval()
+          {
+            return getInterval();
+          }
         },
         new LogicalSegment()
         {
@@ -217,11 +254,154 @@ public class DataSourceMetadataQueryTest
           {
             return Intervals.of("2013-01-01T02/PT1H");
           }
+
+          @Override
+          public Interval getTrueInterval()
+          {
+            return getInterval();
+          }
         }
     );
 
     for (int i = 0; i < segments.size(); i++) {
       Assert.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
+    }
+  }
+
+  @Test
+  public void testFilterOverlappingSegments()
+  {
+    final GenericQueryMetricsFactory queryMetricsFactory = DefaultGenericQueryMetricsFactory.instance();
+    final DataSourceQueryQueryToolChest toolChest = new DataSourceQueryQueryToolChest(queryMetricsFactory);
+    final List<LogicalSegment> segments = toolChest
+        .filterSegments(
+            null,
+            ImmutableList.of(
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2015/2016-08-01");
+                  }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return Intervals.of("2015/2016-08-01");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2016-08-01/2017");
+                  }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return Intervals.of("2016-08-01/2017");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2017/2017-08-01");
+                  }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return Intervals.of("2017/2018");
+                  }
+                },
+                new LogicalSegment()
+                {
+
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2017-08-01/2017-08-02");
+                  }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return Intervals.of("2017-08-01/2017-08-02");
+                  }
+                },
+                new LogicalSegment()
+                {
+                  @Override
+                  public Interval getInterval()
+                  {
+                    return Intervals.of("2017-08-02/2018");
+                  }
+
+                  @Override
+                  public Interval getTrueInterval()
+                  {
+                    return Intervals.of("2017/2018");
+                  }
+                }
+            )
+        );
+
+    final List<LogicalSegment> expected = ImmutableList.of(
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return Intervals.of("2017/2017-08-01");
+          }
+
+          @Override
+          public Interval getTrueInterval()
+          {
+            return Intervals.of("2017/2018");
+          }
+        },
+        new LogicalSegment()
+        {
+
+          @Override
+          public Interval getInterval()
+          {
+            return Intervals.of("2017-08-01/2017-08-02");
+          }
+
+          @Override
+          public Interval getTrueInterval()
+          {
+            return Intervals.of("2017-08-01/2017-08-02");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return Intervals.of("2017-08-02/2018");
+          }
+
+          @Override
+          public Interval getTrueInterval()
+          {
+            return Intervals.of("2017/2018");
+          }
+        }
+    );
+
+    Assert.assertEquals(expected.size(), segments.size());
+
+    for (int i = 0; i < expected.size(); i++) {
+      Assert.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
+      Assert.assertEquals(expected.get(i).getTrueInterval(), segments.get(i).getTrueInterval());
     }
   }
 

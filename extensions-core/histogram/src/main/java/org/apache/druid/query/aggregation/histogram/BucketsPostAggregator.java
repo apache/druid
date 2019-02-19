@@ -82,7 +82,7 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
   @JsonProperty
   public float getOffset()
   {
-    return bucketSize;
+    return offset;
   }
 
   @Override

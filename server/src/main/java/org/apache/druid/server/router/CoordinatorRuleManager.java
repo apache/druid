@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -167,14 +168,16 @@ public class CoordinatorRuleManager
 
   public List<Rule> getRulesWithDefault(final String dataSource)
   {
-    List<Rule> retVal = new ArrayList<>();
-    Map<String, List<Rule>> theRules = rules.get();
-    if (theRules.get(dataSource) != null) {
-      retVal.addAll(theRules.get(dataSource));
+    List<Rule> rulesWithDefault = new ArrayList<>();
+    ConcurrentMap<String, List<Rule>> theRules = rules.get();
+    List<Rule> dataSourceRules = theRules.get(dataSource);
+    if (dataSourceRules != null) {
+      rulesWithDefault.addAll(dataSourceRules);
     }
-    if (theRules.get(config.get().getDefaultRule()) != null) {
-      retVal.addAll(theRules.get(config.get().getDefaultRule()));
+    List<Rule> defaultRules = theRules.get(config.get().getDefaultRule());
+    if (defaultRules != null) {
+      rulesWithDefault.addAll(defaultRules);
     }
-    return retVal;
+    return rulesWithDefault;
   }
 }

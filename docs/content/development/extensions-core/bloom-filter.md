@@ -89,9 +89,9 @@ This string can then be used in the native or sql Druid query.
 
 Note: `org.apache.hive.common.util.BloomKFilter` provides a serialize method which can be used to serialize bloom filters to outputStream.
 
-### SQL Queries
+### Filtering SQL Queries
 
-Bloom filters are supported in SQL via the `bloom_filter_test` operator:
+Bloom filters can be used in SQL `WHERE` clauses via the `bloom_filter_test` operator:
 
 ```sql
 SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
@@ -108,7 +108,11 @@ bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
 
 ## Bloom Filter Query Aggregator
 
-Input for a `bloomKFilter` can also be created from a druid query with the `bloom` aggregator.
+Input for a `bloomKFilter` can also be created from a druid query with the `bloom` aggregator. Note that it is very 
+important to set a reasonable value for the `maxNumEntries` parameter, which is the maximum number of distinct entries 
+that the bloom filter can represent without increasing the false postive rate. It may be worth performing a query using
+one of the unique count sketches to calculate the value for this parameter in order to build a bloom filter appropriate 
+for the query. 
 
 ### JSON Specification of Bloom Filter Aggregator
 
@@ -157,8 +161,19 @@ response
 [{"timestamp":"2015-09-12T00:00:00.000Z","result":{"userBloom":"BAAAJhAAAA..."}}]
 ```
 
-These values can then be set in the filter specification above. 
+These values can then be set in the filter specification described above. 
 
 Ordering results by a bloom filter aggregator, for example in a TopN query, will perform a comparatively expensive 
 linear scan _of the filter itself_ to count the number of set bits as a means of approximating how many items have been 
 added to the set. As such, ordering by an alternate aggregation is recommended if possible. 
+
+
+### SQL Bloom Filter Aggregator
+Bloom filters can be computed in SQL expressions with the `bloom_filter` aggregator:
+
+```sql
+SELECT BLOOM_FILTER(<expression>, <max number of entries>) FROM druid.foo WHERE dim2 = 'abc'
+```
+
+but requires the setting `druid.sql.planner.serializeComplexValues` to be set to `true`. Bloom filter results in an SQL
+ response are serialized into a base64 string, which can then be used in subsequent queries as a filter.

@@ -104,6 +104,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -123,8 +124,8 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   private static final EmittingLogger log = new EmittingLogger(LegacyKafkaIndexTaskRunner.class);
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
 
-  private final Map<Integer, Long> endOffsets = new ConcurrentHashMap<>();
-  private final Map<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Integer, Long> endOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
@@ -412,23 +413,6 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
             }
 
             if (record.offset() < endOffsets.get(record.partition())) {
-              if (record.offset() != nextOffsets.get(record.partition())) {
-                if (ioConfig.isSkipOffsetGaps()) {
-                  log.warn(
-                      "Skipped to offset[%,d] after offset[%,d] in partition[%d].",
-                      record.offset(),
-                      nextOffsets.get(record.partition()),
-                      record.partition()
-                  );
-                } else {
-                  throw new ISE(
-                      "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
-                      record.offset(),
-                      nextOffsets.get(record.partition()),
-                      record.partition()
-                  );
-                }
-              }
 
               try {
                 final byte[] valueBytes = record.value();
@@ -488,7 +472,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
               nextOffsets.put(record.partition(), record.offset() + 1);
             }
 
-            if (nextOffsets.get(record.partition()).equals(endOffsets.get(record.partition()))
+            if (nextOffsets.get(record.partition()) >= (endOffsets.get(record.partition()))
                 && assignment.remove(record.partition())) {
               log.info("Finished reading topic[%s], partition[%,d].", record.topic(), record.partition());
               KafkaIndexTask.assignPartitions(consumer, topic, assignment);

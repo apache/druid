@@ -475,7 +475,7 @@ public class QueryRunnerTestHelper
         .applyPostMergeDecoration();
   }
 
-  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null)
     {
@@ -518,7 +518,7 @@ public class QueryRunnerTestHelper
   public static TimeseriesQueryRunnerFactory newTimeseriesQueryRunnerFactory()
   {
     return new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(noopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
