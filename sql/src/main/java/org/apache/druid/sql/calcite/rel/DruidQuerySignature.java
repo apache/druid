@@ -38,11 +38,11 @@ import java.util.TreeSet;
 public class DruidQuerySignature
 {
   private final RowSignature rowSignature;
+  private final boolean isAggregateSignature;
 
   private final Map<String, VirtualColumn> virtualColumnsByExpression;
   private final Map<String, VirtualColumn> virtualColumnsByName;
   private final String virtualColumnPrefix;
-  private final boolean isAggregateSignature;
   private int virtualColumnCounter;
 
   public DruidQuerySignature(RowSignature rowSignature)
