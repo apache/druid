@@ -34,7 +34,8 @@ Derby is the default metadata store for Druid, however, it is not suitable for p
 <div class="note caution">
 The Metadata Storage stores the entire metadata which is essential for a Druid cluster to work.
 For production clusters, consider using MySQL or PostgreSQL instead of Derby.
-Also, it's highly recommended to set up a high availability environment.
+Also, it's highly recommended to set up a high availability environment
+because there is no way to restore if you lose any metadata.
 </div>
 
 ## Using derby
