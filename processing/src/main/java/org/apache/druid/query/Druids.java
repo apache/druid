@@ -918,7 +918,7 @@ public class Druids
     private QuerySegmentSpec querySegmentSpec;
     private VirtualColumns virtualColumns;
     private Map<String, Object> context;
-    private String resultFormat;
+    private ScanQuery.ResultFormat resultFormat;
     private int batchSize;
     private long limit;
     private DimFilter dimFilter;
@@ -1009,7 +1009,7 @@ public class Druids
       return this;
     }
 
-    public ScanQueryBuilder resultFormat(String r)
+    public ScanQueryBuilder resultFormat(ScanQuery.ResultFormat r)
     {
       resultFormat = r;
       return this;

@@ -53,7 +53,7 @@ public class ScanResultValueTimestampComparatorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .timeOrder(ScanQuery.TimeOrder.DESCENDING)
-                            .resultFormat(ScanQuery.RESULT_FORMAT_LIST)
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
                             .build();
@@ -82,7 +82,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(1, comparator.compare(s1, s2));
+    Assert.assertEquals(-1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -90,7 +90,7 @@ public class ScanResultValueTimestampComparatorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .timeOrder(ScanQuery.TimeOrder.ASCENDING)
-                            .resultFormat(ScanQuery.RESULT_FORMAT_LIST)
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
                             .build();
@@ -119,7 +119,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(-1, comparator.compare(s1, s2));
+    Assert.assertEquals(1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -127,7 +127,42 @@ public class ScanResultValueTimestampComparatorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .timeOrder(ScanQuery.TimeOrder.DESCENDING)
-                            .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                            .dataSource("some src")
+                            .intervals(intervalSpec)
+                            .build();
+
+    ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
+
+    List<List<Object>> events1 = new ArrayList<>();
+    List<Object> event1 = Collections.singletonList(new Long(42));
+    events1.add(event1);
+
+    ScanResultValue s1 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events1
+    );
+
+    List<List<Object>> events2 = new ArrayList<>();
+    List<Object> event2 = Collections.singletonList(new Long(43));
+    events2.add(event2);
+
+    ScanResultValue s2 = new ScanResultValue(
+        "segmentId",
+        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
+        events2
+    );
+
+    Assert.assertEquals(-1, comparator.compare(s1, s2));
+  }
+
+  @Test
+  public void comparisonAscendingCompactedListTest()
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .timeOrder(ScanQuery.TimeOrder.ASCENDING)
+                            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
                             .build();
@@ -155,40 +190,5 @@ public class ScanResultValueTimestampComparatorTest
     );
 
     Assert.assertEquals(1, comparator.compare(s1, s2));
-  }
-
-  @Test
-  public void comparisonAscendingCompactedListTest()
-  {
-    ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TimeOrder.ASCENDING)
-                            .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
-                            .dataSource("some src")
-                            .intervals(intervalSpec)
-                            .build();
-
-    ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
-
-    List<List<Object>> events1 = new ArrayList<>();
-    List<Object> event1 = Collections.singletonList(new Long(42));
-    events1.add(event1);
-
-    ScanResultValue s1 = new ScanResultValue(
-        "segmentId",
-        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
-        events1
-    );
-
-    List<List<Object>> events2 = new ArrayList<>();
-    List<Object> event2 = Collections.singletonList(new Long(43));
-    events2.add(event2);
-
-    ScanResultValue s2 = new ScanResultValue(
-        "segmentId",
-        Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME),
-        events2
-    );
-
-    Assert.assertEquals(-1, comparator.compare(s1, s2));
   }
 }

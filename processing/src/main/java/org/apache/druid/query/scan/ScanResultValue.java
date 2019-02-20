@@ -73,13 +73,14 @@ public class ScanResultValue implements Comparable<ScanResultValue>
     return events;
   }
 
-  public long getFirstEventTimestamp(ScanQuery query) {
-    if (query.getResultFormat().equals(ScanQuery.RESULT_FORMAT_LIST)) {
+  public long getFirstEventTimestamp(ScanQuery query)
+  {
+    if (query.getResultFormat().equals(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)) {
       return (Long) ((Map<String, Object>) ((List<Object>) this.getEvents()).get(0)).get(ColumnHolder.TIME_COLUMN_NAME);
-    } else if (query.getResultFormat().equals(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)) {
+    } else if (query.getResultFormat().equals(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)) {
       int timeColumnIndex = this.getColumns().indexOf(ColumnHolder.TIME_COLUMN_NAME);
       List<Object> firstEvent = (List<Object>) ((List<Object>) this.getEvents()).get(0);
-      return (Long)firstEvent.get(timeColumnIndex);
+      return (Long) firstEvent.get(timeColumnIndex);
     }
     throw new UOE("Unable to get first event timestamp using result format of [%s]", query.getResultFormat());
   }

@@ -216,7 +216,7 @@ public class ScanQueryRunnerTest
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .virtualColumns(EXPR_COLUMN)
-        .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -322,7 +322,7 @@ public class ScanQueryRunnerTest
     ScanQuery query = newTestQuery()
         .intervals(I_0112_0114)
         .columns(QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.indexMetric)
-        .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .build();
 
     HashMap<String, Object> context = new HashMap<String, Object>();
@@ -524,7 +524,7 @@ public class ScanQueryRunnerTest
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
           .limit(limit)
-          .timeOrder("ascending")
+          .timeOrder(ScanQuery.TimeOrder.ASCENDING)
           .build();
 
       HashMap<String, Object> context = new HashMap<>();
@@ -582,7 +582,7 @@ public class ScanQueryRunnerTest
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
           .limit(limit)
-          .timeOrder("descending")
+          .timeOrder(ScanQuery.TimeOrder.DESCENDING)
           .build();
 
       HashMap<String, Object> context = new HashMap<>();
@@ -664,8 +664,8 @@ public class ScanQueryRunnerTest
           .intervals(I_0112_0114)
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
-          .resultFormat("compactedList")
-          .timeOrder("ascending")
+          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+          .timeOrder(ScanQuery.TimeOrder.ASCENDING)
           .limit(limit)
           .build();
 
@@ -725,8 +725,8 @@ public class ScanQueryRunnerTest
           .intervals(I_0112_0114)
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
-          .resultFormat("compactedList")
-          .timeOrder("descending")
+          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+          .timeOrder(ScanQuery.TimeOrder.DESCENDING)
           .limit(limit)
           .build();
 

@@ -47,8 +47,8 @@ public class ScanResultValueTimestampComparator implements Comparator<ScanResult
         o1.getFirstEventTimestamp(scanQuery),
         o2.getFirstEventTimestamp(scanQuery));
     if (scanQuery.getTimeOrder().equals(ScanQuery.TimeOrder.DESCENDING)) {
-      return comparison * -1;
+      return comparison;
     }
-    return comparison;
+    return comparison * -1;
   }
 }

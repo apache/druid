@@ -23,29 +23,28 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
-public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultValue>
+public class ScanQueryNoLimitRowIterator implements CloseableIterator<ScanResultValue>
 {
   private Yielder<ScanResultValue> yielder;
   private ScanQuery.ResultFormat resultFormat;
-  private long limit;
-  private long count = 0;
 
-  public ScanQueryLimitRowIterator(
+  public ScanQueryNoLimitRowIterator(
       QueryRunner<ScanResultValue> baseRunner,
       QueryPlus<ScanResultValue> queryPlus,
       Map<String, Object> responseContext
   )
   {
-    ScanQuery query = (ScanQuery) queryPlus.getQuery();
+    ScanQuery query = Druids.ScanQueryBuilder.copy((ScanQuery) queryPlus.getQuery()).limit(Long.MAX_VALUE).timeOrder(
+        ScanQuery.TimeOrder.NONE).build();
     resultFormat = query.getResultFormat();
-    limit = query.getLimit();
+    queryPlus = queryPlus.withQuery(query);
     Sequence<ScanResultValue> baseSequence = baseRunner.run(queryPlus, responseContext);
     yielder = baseSequence.toYielder(
         null,
@@ -64,7 +63,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
   @Override
   public boolean hasNext()
   {
-    return !yielder.isDone() && count < limit;
+    return !yielder.isDone();
   }
 
   @Override
@@ -73,18 +72,8 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
     ScanResultValue batch = yielder.get();
     if (ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat) ||
         ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
-      List events = (List) batch.getEvents();
-      if (events.size() <= limit - count) {
-        count += events.size();
-        yielder = yielder.next(null);
-        return batch;
-      } else {
-        // last batch
-        // single batch length is <= Integer.MAX_VALUE, so this should not overflow
-        int left = (int) (limit - count);
-        count = limit;
-        return new ScanResultValue(batch.getSegmentId(), batch.getColumns(), events.subList(0, left));
-      }
+      yielder = yielder.next(null);
+      return batch;
     }
     throw new UnsupportedOperationException(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
   }

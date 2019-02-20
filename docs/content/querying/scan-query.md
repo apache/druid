@@ -27,8 +27,11 @@ title: "Scan query"
 The Scan query returns raw Druid rows in streaming mode.  The biggest difference between the Select query and the Scan
 query is that the Scan query does not retain all the returned rows in memory before they are returned to the client
 (except when time-ordering is used).  The Select query _will_ retain the rows in memory, causing memory pressure if too
-many rows are returned.  The Scan query can return all the rows without issuing another pagination query, which is
-extremely useful when directly querying against historical or realtime nodes.
+many rows are returned.  The Scan query can return all the rows without issuing another pagination query.
+
+In addition to straightforward usage where a Scan query is issued to the Broker, the Scan query can also be issued
+directly to Historical processes or streaming ingestion tasks. This can be useful if you want to retrieve large 
+amounts of data in parallel.
 
 An example Scan query object is shown below:
 

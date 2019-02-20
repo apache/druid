@@ -39,9 +39,11 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -74,29 +76,42 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       // the same way, even if they have different default legacy values.
       final ScanQuery scanQuery = ((ScanQuery) queryPlus.getQuery()).withNonNullLegacy(scanQueryConfig);
       final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
-      final BaseSequence.IteratorMaker scanQueryLimitRowIteratorMaker =
-          new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
-          {
-            @Override
-            public ScanQueryLimitRowIterator make()
-            {
-              return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
-            }
-
-            @Override
-            public void cleanup(ScanQueryLimitRowIterator iterFromMake)
-            {
-              CloseQuietly.close(iterFromMake);
-            }
-          };
-
       if (scanQuery.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
         if (scanQuery.getLimit() == Long.MAX_VALUE) {
           return runner.run(queryPlusWithNonNullLegacy, responseContext);
+        } else {
+          return new BaseSequence<>(
+              new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
+              {
+                @Override
+                public ScanQueryLimitRowIterator make()
+                {
+                  return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
+                }
+
+                @Override
+                public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+                {
+                  CloseQuietly.close(iterFromMake);
+                }
+              });
         }
-        return new BaseSequence<ScanResultValue, ScanQueryLimitRowIterator>(scanQueryLimitRowIteratorMaker);
       } else if (scanQuery.getLimit() <= scanQueryConfig.getMaxRowsTimeOrderedInMemory()) {
-        Iterator<ScanResultValue> scanResultIterator = scanQueryLimitRowIteratorMaker.make();
+        ScanQueryNoLimitRowIterator scanResultIterator =
+            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryNoLimitRowIterator>()
+            {
+              @Override
+              public ScanQueryNoLimitRowIterator make()
+              {
+                return new ScanQueryNoLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
+              }
+
+              @Override
+              public void cleanup(ScanQueryNoLimitRowIterator iterFromMake)
+              {
+                CloseQuietly.close(iterFromMake);
+              }
+            }.make();
 
         return new BaseSequence(
             new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedIterator>()
@@ -105,7 +120,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
               public ScanBatchedIterator make()
               {
                 return new ScanBatchedIterator(
-                    sortScanResultValues(scanResultIterator, scanQuery),
+                    sortAndLimitScanResultValues(scanResultIterator, scanQuery),
                     scanQuery.getBatchSize()
                 );
               }
@@ -167,14 +182,14 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   }
 
   @VisibleForTesting
-  Iterator<ScanResultValue> sortScanResultValues(Iterator<ScanResultValue> inputIterator, ScanQuery scanQuery)
+  Iterator<ScanResultValue> sortAndLimitScanResultValues(Iterator<ScanResultValue> inputIterator, ScanQuery scanQuery)
   {
     Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
 
     // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
     // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-
-    PriorityQueue<ScanResultValue> q = new PriorityQueue<>(Math.toIntExact(scanQuery.getLimit()), priorityQComparator);
+    int limit = Math.toIntExact(scanQuery.getLimit());
+    PriorityQueue<ScanResultValue> q = new PriorityQueue<>(limit, priorityQComparator);
 
     while (inputIterator.hasNext()) {
       ScanResultValue next = inputIterator.next();
@@ -183,14 +198,19 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
         // needs to be preserved for queries using the compactedList result format
         q.offer(new ScanResultValue(null, next.getColumns(), Collections.singletonList(event)));
+        if (q.size() > limit) {
+          q.poll();
+        }
       }
     }
     // Need to convert to a List because Priority Queue's iterator doesn't guarantee that the sorted order
     // will be maintained
-    List<ScanResultValue> sortedElements = new ArrayList<>(q.size());
+    final Deque<ScanResultValue> sortedElements = new ArrayDeque<>(q.size());
     while (q.size() != 0) {
-      sortedElements.add(q.poll());
+      // We add at the front of the list because poll removes the tail of the queue.
+      sortedElements.addFirst(q.poll());
     }
+
     return sortedElements.iterator();
   }
 

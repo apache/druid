@@ -113,7 +113,7 @@ public class ScanBenchmark
   @Param({"1000", "99999"})
   private int limit;
 
-  @Param({"none", "descending", "ascending"})
+  @Param({"NONE", "DESCENDING", "ASCENDING"})
   private static ScanQuery.TimeOrder timeOrdering;
 
   private static final Logger log = new Logger(ScanBenchmark.class);

@@ -91,13 +91,13 @@ public class ScanQueryQueryToolChestTest
       );
     }
     ScanQuery scanQuery = new Druids.ScanQueryBuilder()
-        .resultFormat("list")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
         .timeOrder(ScanQuery.TimeOrder.DESCENDING)
         .dataSource("some data source")
         .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
-    Iterator<ScanResultValue> sorted = chest.sortScanResultValues(inputs.iterator(), scanQuery);
+    Iterator<ScanResultValue> sorted = chest.sortAndLimitScanResultValues(inputs.iterator(), scanQuery);
 
     int count = 0;
     Long previousTime = Long.MAX_VALUE;
@@ -128,13 +128,13 @@ public class ScanQueryQueryToolChestTest
       );
     }
     ScanQuery scanQuery = new Druids.ScanQueryBuilder()
-        .resultFormat("list")
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
         .timeOrder(ScanQuery.TimeOrder.ASCENDING)
         .dataSource("some data source")
         .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
-    Iterator<ScanResultValue> sorted = chest.sortScanResultValues(inputs.iterator(), scanQuery);
+    Iterator<ScanResultValue> sorted = chest.sortAndLimitScanResultValues(inputs.iterator(), scanQuery);
 
     int count = 0;
     Long previousTime = -1L;
@@ -163,13 +163,13 @@ public class ScanQueryQueryToolChestTest
       );
     }
     ScanQuery scanQuery = new Druids.ScanQueryBuilder()
-        .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .timeOrder(ScanQuery.TimeOrder.DESCENDING)
         .dataSource("some data source")
         .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
-    Iterator<ScanResultValue> sorted = chest.sortScanResultValues(inputs.iterator(), scanQuery);
+    Iterator<ScanResultValue> sorted = chest.sortAndLimitScanResultValues(inputs.iterator(), scanQuery);
 
     Long previousTime = Long.MAX_VALUE;
     int count = 0;
@@ -198,13 +198,13 @@ public class ScanQueryQueryToolChestTest
       );
     }
     ScanQuery scanQuery = new Druids.ScanQueryBuilder()
-        .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .timeOrder(ScanQuery.TimeOrder.ASCENDING)
         .dataSource("some data source")
         .intervals(emptySegmentSpec)
         .limit(99999)
         .build();
-    Iterator<ScanResultValue> sorted = chest.sortScanResultValues(inputs.iterator(), scanQuery);
+    Iterator<ScanResultValue> sorted = chest.sortAndLimitScanResultValues(inputs.iterator(), scanQuery);
 
     Long previousTime = -1L;
     int count = 0;

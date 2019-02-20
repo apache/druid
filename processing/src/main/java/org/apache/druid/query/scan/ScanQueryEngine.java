@@ -178,13 +178,13 @@ public class ScanQueryEngine
                             }
                             final long lastOffset = offset;
                             final Object events;
-                            final String resultFormat = query.getResultFormat();
-                            if (ScanQuery.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
+                            final ScanQuery.ResultFormat resultFormat = query.getResultFormat();
+                            if (ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
                               events = rowsToCompactedList();
-                            } else if (ScanQuery.RESULT_FORMAT_LIST.equals(resultFormat)) {
+                            } else if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
                               events = rowsToList();
                             } else {
-                              throw new UOE("resultFormat[%s] is not supported", resultFormat);
+                              throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                             }
                             responseContext.put(
                                 ScanQueryRunnerFactory.CTX_COUNT,
