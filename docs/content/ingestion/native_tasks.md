@@ -28,6 +28,8 @@ Druid currently has two types of native batch indexing tasks, `index_parallel` w
 in parallel on multiple MiddleManager nodes, and `index` which will run a single indexing task locally on a single
 MiddleManager.
 
+Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.
+
 Parallel Index Task
 --------------------------------
 
