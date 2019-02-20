@@ -1,7 +1,7 @@
 ---
 name: Feature/Change Request
 about: A template for Druid feature and change requests
-title: ""
+title: "[REQUEST]"
 labels: Wish list
 assignees: ''
 
