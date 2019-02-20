@@ -120,14 +120,13 @@ public class DruidQuery
   private final DefaultLimitSpec limitSpec;
 
   @Nullable
-  private final RowSignature outputRowSignature;
-
-  @Nullable
   private final RelDataType outputRowType;
 
   private final Query query;
 
   private final DruidQuerySignature sourceQuerySignature;
+
+  private final RowSignature outputRowSignature;
 
   public DruidQuery(
       final PartialDruidQuery partialQuery,
@@ -149,7 +148,6 @@ public class DruidQuery
     this.grouping = computeGrouping(partialQuery, plannerContext, sourceQuerySignature, rexBuilder, finalizeAggregations);
 
     final RowSignature sortingInputRowSignature;
-
     if (this.selectProjection != null) {
       sortingInputRowSignature = this.selectProjection.getOutputRowSignature();
     } else if (this.grouping != null) {
@@ -160,7 +158,6 @@ public class DruidQuery
 
     this.sortProject = computeSortProject(partialQuery, plannerContext, sortingInputRowSignature);
 
-    // outputRowSignature is used only for scan and select query, and thus sort and grouping must be null
     this.outputRowSignature = sortProject == null ? sortingInputRowSignature : sortProject.getOutputRowSignature();
 
     this.limitSpec = computeLimitSpec(partialQuery, sortingInputRowSignature);
@@ -310,11 +307,11 @@ public class DruidQuery
         aggregate.getRowType()
     );
 
-    DruidQuerySignature aggregateContext = queryColumns.withRowSignature(aggregateRowSignature).asImmutable();
+    DruidQuerySignature aggregateSignature = queryColumns.asAggregateSignature(aggregateRowSignature);
     final DimFilter havingFilter = computeHavingFilter(
         partialQuery,
         plannerContext,
-        aggregateContext
+        aggregateSignature
     );
 
     if (aggregateProject == null) {

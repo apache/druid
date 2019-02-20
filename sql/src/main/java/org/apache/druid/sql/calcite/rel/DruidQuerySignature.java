@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -43,13 +42,12 @@ public class DruidQuerySignature
   private final Map<String, VirtualColumn> virtualColumnsByExpression;
   private final Map<String, VirtualColumn> virtualColumnsByName;
   private final String virtualColumnPrefix;
+  private final boolean isAggregateSignature;
   private int virtualColumnCounter;
-
-  private final boolean isImmutable;
 
   public DruidQuerySignature(RowSignature rowSignature)
   {
-    this.isImmutable = false;
+    this.isAggregateSignature = false;
     this.rowSignature = rowSignature;
     this.virtualColumnPrefix = rowSignature == null ? "v" : Calcites.findUnusedPrefix(
         "v",
@@ -64,10 +62,10 @@ public class DruidQuerySignature
       String prefix,
       Map<String, VirtualColumn> virtualColumnsByExpression,
       Map<String, VirtualColumn> virtualColumnsByName,
-      boolean isImmutable
+      boolean isAggregateSignature
   )
   {
-    this.isImmutable = isImmutable;
+    this.isAggregateSignature = isAggregateSignature;
     this.rowSignature = rowSignature;
     this.virtualColumnPrefix = prefix;
     this.virtualColumnsByExpression = virtualColumnsByExpression;
@@ -92,7 +90,7 @@ public class DruidQuerySignature
 
 
   /**
-   * Get existing or create new (if not {@link DruidQuerySignature#isImmutable}) {@link VirtualColumn} for a given
+   * Get existing or create new (if not {@link DruidQuerySignature#isAggregateSignature}) {@link VirtualColumn} for a given
    * {@link DruidExpression}
    */
   @Nullable
@@ -102,7 +100,7 @@ public class DruidQuerySignature
       SqlTypeName typeName
   )
   {
-    if (!isImmutable && !virtualColumnsByExpression.containsKey(expression.getExpression())) {
+    if (!isAggregateSignature && !virtualColumnsByExpression.containsKey(expression.getExpression())) {
       final String virtualColumnName = virtualColumnPrefix + virtualColumnCounter++;
       final VirtualColumn virtualColumn = expression.toVirtualColumn(
           virtualColumnName,
@@ -132,30 +130,17 @@ public class DruidQuerySignature
   }
 
   /**
-   * Create a copy of existing state with new {@link RowSignature}, retaining virtual column definitions
+   * Create as an "immutable" aggregate signature for a grouping
+   * @param sourceSignature
+   * @return
    */
-  public DruidQuerySignature withRowSignature(RowSignature signature)
+  public DruidQuerySignature asAggregateSignature(RowSignature sourceSignature)
   {
     return new DruidQuerySignature(
-        signature,
+        sourceSignature,
         virtualColumnPrefix,
         virtualColumnsByExpression,
         virtualColumnsByName,
-        isImmutable
-    );
-  }
-
-  /**
-   * Create an immutable copy of existing state, which allows re-use of predefined virtual columns, but doesn't allow
-   * new definitions
-   */
-  public DruidQuerySignature asImmutable()
-  {
-    return new DruidQuerySignature(
-        rowSignature,
-        virtualColumnPrefix,
-        ImmutableMap.copyOf(virtualColumnsByExpression),
-        ImmutableMap.copyOf(virtualColumnsByName),
         true
     );
   }
