@@ -15,4 +15,4 @@ Please describe the feature or change with as much detail as possible.
 
 Please provide the following for the desired feature or change:
 - A detailed description of the intended use case, if applicable
-- Rationale for why the desired change would be beneficial
+- Rationale for why the desired feature/change would be beneficial
