@@ -435,12 +435,6 @@ public class BenchmarkDataGeneratorTest
       for (Map<Object, Integer> valueMap : dimensionMap.values()) {
         System.out.println("DIMENSION " + valueMap + "\n============");
 
-        List<Comparable> valList = new ArrayList<>();
-        for (Integer val : valueMap.values()) {
-          valList.add((Comparable) val);
-        }
-
-        Collections.sort(valList);
         new TreeMap<>(valueMap).forEach((val, cnt) -> System.out.println(" VAL: " + val + " CNT: " + cnt));
 
       }
