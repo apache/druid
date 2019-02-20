@@ -119,12 +119,7 @@ public class DruidQuerySignature
       );
     }
 
-    VirtualColumn virtualColumn = virtualColumnsByExpression.get(expression.getExpression());
-
-    if (virtualColumn == null) {
-      return null;
-    }
-    return virtualColumn;
+    return virtualColumnsByExpression.get(expression.getExpression());
   }
 
   /**
