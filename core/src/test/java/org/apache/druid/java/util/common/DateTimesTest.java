@@ -41,13 +41,19 @@ public class DateTimesTest
   @Test
   public void testStringTimestampToDateTimeConversion()
   {
-    Long milis = System.currentTimeMillis();
-    DateTime dt1 = DateTimes.of(milis.toString());
-    Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt1.toString()).matches());
+    String seconds = "1517292000";
+    DateTime dt2 = DateTimes.of(seconds);
+    Assert.assertEquals("2018-01-30T06:00:00.000Z", dt2.toString());
 
-    Long seconds = milis / 1000;
-    DateTime dt2 = DateTimes.of(seconds.toString());
-    Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt2.toString()).matches());
+    String milis = "1517292000000";
+    DateTime dt1 = DateTimes.of(milis);
+    Assert.assertEquals("2018-01-30T06:00:00.000Z", dt1.toString());
+  }
 
+  @Test(expected = NumberFormatException.class)
+  public void testStringTimestampToDateTimeConverstion_RethrowInitialException()
+  {
+    String invalid = "51729200AZ";
+    DateTimes.of(invalid);
   }
 }
