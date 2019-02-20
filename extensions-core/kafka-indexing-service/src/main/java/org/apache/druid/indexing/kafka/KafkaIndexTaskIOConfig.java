@@ -45,8 +45,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       @JsonProperty("pollTimeout") Long pollTimeout,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
-      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
-      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps
+      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime
   )
   {
     super(
@@ -57,7 +56,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
         useTransaction,
         minimumMessageTime,
         maximumMessageTime,
-        skipOffsetGaps,
         null
     );
 
@@ -100,7 +98,6 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
            ", useTransaction=" + isUseTransaction() +
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +
-           ", skipOffsetGaps=" + isSkipOffsetGaps() +
            '}';
   }
 }

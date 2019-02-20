@@ -66,7 +66,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         useTransaction,
         minimumMessageTime,
         maximumMessageTime,
-        true,
         exclusiveStartSequenceNumberPartitions
     );
     Preconditions.checkArgument(endPartitions.getPartitionSequenceNumberMap()

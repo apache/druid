@@ -88,7 +88,6 @@ public class KinesisIOConfigTest
     Assert.assertEquals(Collections.emptySet(), config.getExclusiveStartSequenceNumberPartitions());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
-    Assert.assertTrue(config.isSkipOffsetGaps());
   }
 
   @Test
@@ -143,7 +142,6 @@ public class KinesisIOConfigTest
     Assert.assertEquals(1000, config.getFetchDelayMillis());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
     Assert.assertEquals("awsexternalid", config.getAwsExternalId());
-    Assert.assertTrue(config.isSkipOffsetGaps());
   }
 
   @Test

@@ -30,6 +30,7 @@ import java.util.List;
 
 /**
  */
+@Deprecated
 public class KafkaEightDruidModule implements DruidModule
 {
   @Override
