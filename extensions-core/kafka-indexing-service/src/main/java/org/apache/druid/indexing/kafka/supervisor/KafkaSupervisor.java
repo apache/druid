@@ -212,8 +212,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         kafkaIoConfig.getPollTimeout(),
         true,
         minimumMessageTime,
-        maximumMessageTime,
-        kafkaIoConfig.isSkipOffsetGaps()
+        maximumMessageTime
     );
   }
 

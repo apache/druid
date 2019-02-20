@@ -301,6 +301,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   {
     return new TimelineObjectHolder<>(
         entry.getTrueInterval(),
+        entry.getTrueInterval(),
         entry.getVersion(),
         new PartitionHolder<>(entry.getPartitionHolder())
     );
@@ -586,10 +587,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
       if (timelineInterval.overlaps(interval)) {
         retVal.add(
-            new TimelineObjectHolder<VersionType, ObjectType>(
+            new TimelineObjectHolder<>(
                 timelineInterval,
+                val.getTrueInterval(),
                 val.getVersion(),
-                new PartitionHolder<ObjectType>(val.getPartitionHolder())
+                new PartitionHolder<>(val.getPartitionHolder())
             )
         );
       }
@@ -604,8 +606,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
                                                                .isAfter(firstEntry.getInterval().getStart())) {
       retVal.set(
           0,
-          new TimelineObjectHolder<VersionType, ObjectType>(
+          new TimelineObjectHolder<>(
               new Interval(interval.getStart(), firstEntry.getInterval().getEnd()),
+              firstEntry.getTrueInterval(),
               firstEntry.getVersion(),
               firstEntry.getObject()
           )
@@ -616,8 +619,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     if (interval.overlaps(lastEntry.getInterval()) && interval.getEnd().isBefore(lastEntry.getInterval().getEnd())) {
       retVal.set(
           retVal.size() - 1,
-          new TimelineObjectHolder<VersionType, ObjectType>(
+          new TimelineObjectHolder<>(
               new Interval(lastEntry.getInterval().getStart(), interval.getEnd()),
+              lastEntry.getTrueInterval(),
               lastEntry.getVersion(),
               lastEntry.getObject()
           )
