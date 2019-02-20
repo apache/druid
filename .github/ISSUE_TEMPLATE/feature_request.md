@@ -1,7 +1,7 @@
 ---
 name: Feature/Change Request
 about: A template for Druid feature and change requests
-title: "[REQUEST]"
+title: ""
 labels: Wish list
 assignees: ''
 
@@ -9,7 +9,9 @@ assignees: ''
 
 # Description
 
-Please describe the feature or change with as much detail as possible.
+Please describe the feature or change with as much detail as possible. 
+
+If you have a detailed implementation in mind and wish to contribute that implementation yourself, please open a Proposal issue instead.
 
 # Motivation
 
