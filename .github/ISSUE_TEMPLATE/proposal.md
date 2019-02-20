@@ -7,25 +7,6 @@ assignees: ''
 
 ---
 
-<!--
-  ~ Licensed to the Apache Software Foundation (ASF) under one
-  ~ or more contributor license agreements.  See the NOTICE file
-  ~ distributed with this work for additional information
-  ~ regarding copyright ownership.  The ASF licenses this file
-  ~ to you under the Apache License, Version 2.0 (the
-  ~ "License"); you may not use this file except in compliance
-  ~ with the License.  You may obtain a copy of the License at
-  ~
-  ~   http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing,
-  ~ software distributed under the License is distributed on an
-  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-  ~ KIND, either express or implied.  See the License for the
-  ~ specific language governing permissions and limitations
-  ~ under the License.
-  -->
-
 # Motivation
 
 A description of the problem.
@@ -52,7 +33,7 @@ This section should describe how the proposed changes will impact the operation 
 - Is there a migration path that cluster operators need to be aware of?
 - Will there be any effect on the ability to do a rolling upgrade, or to do a rolling _downgrade_ if an operator wants to switch back to a previous version?
 
-# Test Plan (optional)
+# Test plan (optional)
 
 An optional discussion of how the proposed changes will be tested. This section should focus on higher level system test strategy and not unit tests (as UTs will be implementation dependent). 
 

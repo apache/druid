@@ -47,7 +47,9 @@ import java.util.Properties;
 import java.util.Set;
 
 /**
+ * This class is deprecated and kafka-eight module should be removed completely
  */
+@Deprecated
 public class KafkaEightFirehoseFactory implements FirehoseFactory<InputRowParser<ByteBuffer>>
 {
   private static final Logger log = new Logger(KafkaEightFirehoseFactory.class);
