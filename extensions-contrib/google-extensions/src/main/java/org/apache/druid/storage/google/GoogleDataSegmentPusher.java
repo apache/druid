@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.http.FileContent;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -39,7 +38,6 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
@@ -49,18 +47,15 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
 
   private final GoogleStorage storage;
   private final GoogleAccountConfig config;
-  private final ObjectMapper jsonMapper;
 
   @Inject
   public GoogleDataSegmentPusher(
       final GoogleStorage storage,
-      final GoogleAccountConfig config,
-      final ObjectMapper jsonMapper
+      final GoogleAccountConfig config
   )
   {
     this.storage = storage;
     this.config = config;
-    this.jsonMapper = jsonMapper;
 
     LOG.info("Configured Google as deep storage");
   }
@@ -82,16 +77,6 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
   public List<String> getAllowedPropertyPrefixesForHadoop()
   {
     return ImmutableList.of("druid.google");
-  }
-
-  public File createDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment)
-      throws IOException
-  {
-    File descriptorFile = File.createTempFile("descriptor", ".json");
-    // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
-    // runtime, and because Guava deletes methods over time, that causes incompatibilities.
-    Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(segment));
-    return descriptorFile;
   }
 
   public void insert(final File file, final String contentType, final String path)
@@ -125,24 +110,19 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
 
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
     File indexFile = null;
-    File descriptorFile = null;
 
     try {
       indexFile = File.createTempFile("index", ".zip");
       final long indexSize = CompressionUtils.zip(indexFilesDir, indexFile);
       final String storageDir = this.getStorageDir(segment, useUniquePath);
       final String indexPath = buildPath(storageDir + "/" + "index.zip");
-      final String descriptorPath = buildPath(storageDir + "/" + "descriptor.json");
 
       final DataSegment outSegment = segment
           .withSize(indexSize)
           .withLoadSpec(makeLoadSpec(config.getBucket(), indexPath))
           .withBinaryVersion(version);
 
-      descriptorFile = createDescriptorFile(jsonMapper, outSegment);
-
       insert(indexFile, "application/zip", indexPath);
-      insert(descriptorFile, "application/json", descriptorPath);
 
       return outSegment;
     }
@@ -153,11 +133,6 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
       if (indexFile != null) {
         LOG.info("Deleting file [%s]", indexFile);
         indexFile.delete();
-      }
-
-      if (descriptorFile != null) {
-        LOG.info("Deleting file [%s]", descriptorFile);
-        descriptorFile.delete();
       }
     }
   }
