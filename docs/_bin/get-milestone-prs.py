@@ -56,7 +56,7 @@ for commit_id in all_release_commits.splitlines():
         # wait 3 seconds between calls to avoid hitting the rate limit
         time.sleep(3)
 
-        search_url = "https://api.github.com/search/issues?q=type:pr+repo:apache/incubator-druid+SHA:{}"
+        search_url = "https://api.github.com/search/issues?q=type:pr+is:merged+is:closed+repo:apache/incubator-druid+SHA:{}"
         resp = requests.get(search_url.format(commit_id), auth=(github_username, os.environ["GIT_TOKEN"]))
         resp_json = resp.json()
 
@@ -67,12 +67,11 @@ for commit_id in all_release_commits.splitlines():
             continue
 
         for pr in resp_json["items"]:
-            if pr["state"] == "closed":
-                closed_pr_nums.append(pr["number"])
-                milestone = pr["milestone"]
-                if milestone is not None:
-                    milestone_found = True
-                    print("COMMIT: {},  PR#: {},  MILESTONE: {}".format(commit_id, pr["number"], pr["milestone"]["url"]))
+            closed_pr_nums.append(pr["number"])
+            milestone = pr["milestone"]
+            if milestone is not None:
+                milestone_found = True
+                print("COMMIT: {},  PR#: {},  MILESTONE: {}".format(commit_id, pr["number"], pr["milestone"]["url"]))
         if not milestone_found:
             print("NO MILESTONE FOUND FOR COMMIT: {}, CLOSED PRs: {}".format(commit_id, closed_pr_nums))
 
