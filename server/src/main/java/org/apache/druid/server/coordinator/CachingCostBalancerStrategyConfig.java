@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class CachingCostBalancerStrategyConfig
 {
   @JsonProperty
-  private boolean awaitInitialization = true;
+  private boolean awaitInitialization = false;
 
   public boolean isAwaitInitialization()
   {
