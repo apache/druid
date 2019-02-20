@@ -132,7 +132,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   {
     super(dataSource, querySegmentSpec, false, context);
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
-    this.resultFormat = resultFormat;
+    this.resultFormat = resultFormat == null ? ResultFormat.RESULT_FORMAT_LIST : resultFormat;
     this.batchSize = (batchSize == 0) ? 4096 * 5 : batchSize;
     this.limit = (limit == 0) ? Long.MAX_VALUE : limit;
     Preconditions.checkArgument(this.batchSize > 0, "batchSize must be greater than 0");
