@@ -111,8 +111,27 @@ public class TestIndex
       new StringDimensionSchema("null_column")
   );
 
+  public static final List<DimensionSchema> DIMENSION_SCHEMAS_NO_BITMAP = Arrays.asList(
+      new StringDimensionSchema("market", null, false),
+      new StringDimensionSchema("quality", null, false),
+      new LongDimensionSchema("qualityLong"),
+      new FloatDimensionSchema("qualityFloat"),
+      new DoubleDimensionSchema("qualityDouble"),
+      new StringDimensionSchema("qualityNumericString", null, false),
+      new StringDimensionSchema("placement", null, false),
+      new StringDimensionSchema("placementish", null, false),
+      new StringDimensionSchema("partial_null_column", null, false),
+      new StringDimensionSchema("null_column", null, false)
+  );
+
   public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DIMENSION_SCHEMAS,
+      null,
+      null
+  );
+
+  public static final DimensionsSpec DIMENSIONS_SPEC_NO_BITMAPS = new DimensionsSpec(
+      DIMENSION_SCHEMAS_NO_BITMAP,
       null,
       null
   );
@@ -149,9 +168,11 @@ public class TestIndex
 
   private static IncrementalIndex realtimeIndex = null;
   private static IncrementalIndex noRollupRealtimeIndex = null;
+  private static IncrementalIndex noBitmapRealtimeIndex = null;
   private static QueryableIndex mmappedIndex = null;
   private static QueryableIndex noRollupMmappedIndex = null;
   private static QueryableIndex mergedRealtime = null;
+  private static QueryableIndex noBitmapMmappedIndex = null;
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
@@ -173,6 +194,17 @@ public class TestIndex
     }
 
     return noRollupRealtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv", false);
+  }
+
+  public static IncrementalIndex getNoBitmapIncrementalTestIndex()
+  {
+    synchronized (log) {
+      if (noBitmapRealtimeIndex != null) {
+        return noBitmapRealtimeIndex;
+      }
+    }
+
+    return noBitmapRealtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv", false, false);
   }
 
   public static QueryableIndex getMMappedTestIndex()
@@ -201,6 +233,20 @@ public class TestIndex
     noRollupMmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
 
     return noRollupMmappedIndex;
+  }
+
+  public static QueryableIndex getNoBitmapMMappedTestIndex()
+  {
+    synchronized (log) {
+      if (noBitmapMmappedIndex != null) {
+        return noBitmapMmappedIndex;
+      }
+    }
+
+    IncrementalIndex incrementalIndex = getNoBitmapIncrementalTestIndex();
+    noBitmapMmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
+
+    return noBitmapMmappedIndex;
   }
 
   public static QueryableIndex mergedRealtimeIndex()
@@ -257,26 +303,31 @@ public class TestIndex
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename, boolean rollup)
   {
+    return makeRealtimeIndex(resourceFilename, rollup, true);
+  }
+
+  public static IncrementalIndex makeRealtimeIndex(final String resourceFilename, boolean rollup, boolean bitmap)
+  {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     if (resource == null) {
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
     }
     log.info("Realtime loading index file[%s]", resource);
     CharSource stream = Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
-    return makeRealtimeIndex(stream, rollup);
+    return makeRealtimeIndex(stream, rollup, bitmap);
   }
 
   public static IncrementalIndex makeRealtimeIndex(final CharSource source)
   {
-    return makeRealtimeIndex(source, true);
+    return makeRealtimeIndex(source, true, true);
   }
 
-  public static IncrementalIndex makeRealtimeIndex(final CharSource source, boolean rollup)
+  public static IncrementalIndex makeRealtimeIndex(final CharSource source, boolean rollup, boolean bitmap)
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
         .withTimestampSpec(new TimestampSpec("ds", "auto", null))
-        .withDimensionsSpec(DIMENSIONS_SPEC)
+        .withDimensionsSpec(bitmap ? DIMENSIONS_SPEC : DIMENSIONS_SPEC_NO_BITMAPS)
         .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)

@@ -83,10 +83,15 @@ public class SegmentMetadataQueryTest
   public static QueryRunner makeMMappedQueryRunner(
       SegmentId segmentId,
       boolean rollup,
+      boolean bitmaps,
       QueryRunnerFactory factory
   )
   {
-    QueryableIndex index = rollup ? TestIndex.getMMappedTestIndex() : TestIndex.getNoRollupMMappedTestIndex();
+    QueryableIndex index = bitmaps
+                           ? rollup
+                             ? TestIndex.getMMappedTestIndex()
+                             : TestIndex.getNoRollupMMappedTestIndex()
+                           : TestIndex.getNoBitmapMMappedTestIndex();
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
         segmentId,
@@ -99,10 +104,15 @@ public class SegmentMetadataQueryTest
   public static QueryRunner makeIncrementalIndexQueryRunner(
       SegmentId segmentId,
       boolean rollup,
+      boolean bitmaps,
       QueryRunnerFactory factory
   )
   {
-    IncrementalIndex index = rollup ? TestIndex.getIncrementalTestIndex() : TestIndex.getNoRollupIncrementalTestIndex();
+    IncrementalIndex index = bitmaps
+                             ? rollup
+                               ? TestIndex.getIncrementalTestIndex()
+                               : TestIndex.getNoRollupIncrementalTestIndex()
+                             : TestIndex.getNoBitmapIncrementalTestIndex();
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
         segmentId,
@@ -121,17 +131,19 @@ public class SegmentMetadataQueryTest
   private final SegmentMetadataQuery testQuery;
   private final SegmentAnalysis expectedSegmentAnalysis1;
   private final SegmentAnalysis expectedSegmentAnalysis2;
+  private final boolean bitmaps;
 
-  @Parameterized.Parameters(name = "mmap1 = {0}, mmap2 = {1}, rollup1 = {2}, rollup2 = {3}, differentIds = {4}")
+  @Parameterized.Parameters(name = "mmap1 = {0}, mmap2 = {1}, rollup1 = {2}, rollup2 = {3}, differentIds = {4}, bitmaps={5}")
   public static Collection<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{true, true, true, true, false},
-        new Object[]{true, false, true, false, false},
-        new Object[]{false, true, true, false, false},
-        new Object[]{false, false, false, false, false},
-        new Object[]{false, false, true, true, false},
-        new Object[]{false, false, false, true, true}
+        new Object[]{true, true, true, true, false, true},
+        new Object[]{true, false, true, false, false, true},
+        new Object[]{false, true, true, false, false, true},
+        new Object[]{false, false, false, false, false, true},
+        new Object[]{false, false, true, true, false, true},
+        new Object[]{false, false, false, true, true, true},
+        new Object[]{true, true, false, false, false, false}
     );
   }
 
@@ -140,22 +152,24 @@ public class SegmentMetadataQueryTest
       boolean mmap2,
       boolean rollup1,
       boolean rollup2,
-      boolean differentIds
+      boolean differentIds,
+      boolean bitmaps
   )
   {
     final SegmentId id1 = SegmentId.dummy(differentIds ? "testSegment1" : "testSegment");
     final SegmentId id2 = SegmentId.dummy(differentIds ? "testSegment2" : "testSegment");
     this.runner1 = mmap1
-                   ? makeMMappedQueryRunner(id1, rollup1, FACTORY)
-                   : makeIncrementalIndexQueryRunner(id1, rollup1, FACTORY);
+                   ? makeMMappedQueryRunner(id1, rollup1, bitmaps, FACTORY)
+                   : makeIncrementalIndexQueryRunner(id1, rollup1, bitmaps, FACTORY);
     this.runner2 = mmap2
-                   ? makeMMappedQueryRunner(id2, rollup2, FACTORY)
-                   : makeIncrementalIndexQueryRunner(id2, rollup2, FACTORY);
+                   ? makeMMappedQueryRunner(id2, rollup2, bitmaps, FACTORY)
+                   : makeIncrementalIndexQueryRunner(id2, rollup2, bitmaps, FACTORY);
     this.mmap1 = mmap1;
     this.mmap2 = mmap2;
     this.rollup1 = rollup1;
     this.rollup2 = rollup2;
     this.differentIds = differentIds;
+    this.bitmaps = bitmaps;
     testQuery = Druids.newSegmentMetadataQueryBuilder()
                       .dataSource("testing")
                       .intervals("2013/2014")
@@ -187,7 +201,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
-                mmap1 ? 10881 : 10764,
+                mmap1 ? (bitmaps ? 10881 : 9) : 10764,
                 1,
                 "preferred",
                 "preferred",
@@ -203,7 +217,7 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        ), mmap1 ? 167493 : 168188,
+        ), mmap1 ? (bitmaps ? 167493 : 119872) : 168188,
         1209,
         null,
         null,
@@ -228,7 +242,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
-                mmap2 ? 10881 : 0,
+                mmap2 ? (bitmaps ? 10881 : 9) : 0,
                 1,
                 null,
                 null,
@@ -245,7 +259,7 @@ public class SegmentMetadataQueryTest
                 null
             )
             // null_column will be included only for incremental index, which makes a little bigger result than expected
-        ), mmap2 ? 167493 : 168188,
+        ), mmap2 ? (bitmaps ? 167493 : 119872) : 168188,
         1209,
         null,
         null,
@@ -473,7 +487,7 @@ public class SegmentMetadataQueryTest
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
         false,
-        (mmap1 ? 10881 : 10764) + (mmap2 ? 10881 : 10764),
+        (mmap1 ? bitmaps ? 10881 : 9 : 10764) + (mmap2 ? bitmaps ? 10881 : 9 : 10764),
         1,
         "preferred",
         "preferred",
@@ -488,7 +502,7 @@ public class SegmentMetadataQueryTest
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
         false,
-        (mmap1 ? 6882 : 6808) + (mmap2 ? 6882 : 6808),
+        (mmap1 ? bitmaps ? 6882 : 23 : 6808) + (mmap2 ? bitmaps ? 6882 : 23 : 6808),
         3,
         "spot",
         "upfront",
@@ -503,7 +517,7 @@ public class SegmentMetadataQueryTest
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
         false,
-        (mmap1 ? 9765 : 9660) + (mmap2 ? 9765 : 9660),
+        (mmap1 ? bitmaps ? 9765 : 73 : 9660) + (mmap2 ? bitmaps ? 9765 : 73 : 9660),
         9,
         "automotive",
         "travel",

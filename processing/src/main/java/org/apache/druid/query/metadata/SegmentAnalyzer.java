@@ -42,6 +42,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
+import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -198,26 +199,43 @@ public class SegmentAnalyzer
 
     Comparable min = null;
     Comparable max = null;
+    int cardinality = 0;
+    if (capabilities.hasBitmapIndexes()) {
+      final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
+      cardinality = bitmapIndex.getCardinality();
 
-    if (!capabilities.hasBitmapIndexes()) {
-      return ColumnAnalysis.error("string_no_bitmap");
-    }
-
-    final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
-    final int cardinality = bitmapIndex.getCardinality();
-
-    if (analyzingSize()) {
-      for (int i = 0; i < cardinality; ++i) {
-        String value = bitmapIndex.getValue(i);
-        if (value != null) {
-          size += StringUtils.estimatedBinaryLengthAsUTF8(value) * bitmapIndex.getBitmap(bitmapIndex.getIndex(value)).size();
+      if (analyzingSize()) {
+        for (int i = 0; i < cardinality; ++i) {
+          String value = bitmapIndex.getValue(i);
+          if (value != null) {
+            size += StringUtils.estimatedBinaryLengthAsUTF8(value) * bitmapIndex.getBitmap(bitmapIndex.getIndex(value))
+                                                                                .size();
+          }
         }
       }
-    }
 
-    if (analyzingMinMax() && cardinality > 0) {
-      min = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(0));
-      max = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(cardinality - 1));
+      if (analyzingMinMax() && cardinality > 0) {
+        min = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(0));
+        max = NullHandling.nullToEmptyIfNeeded(bitmapIndex.getValue(cardinality - 1));
+      }
+    } else if (capabilities.isDictionaryEncoded()) {
+      // fallback if no bitmap index
+      DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) columnHolder.getColumn();
+      cardinality = theColumn.getCardinality();
+      theColumn.lookupName(0);
+
+      if (analyzingSize()) {
+        for (int i = 0; i < cardinality; ++i) {
+          String value = theColumn.lookupName(i);
+          if (value != null && !value.isEmpty()) {
+            size += StringUtils.estimatedBinaryLengthAsUTF8(value);
+          }
+        }
+      }
+      if (analyzingMinMax() && cardinality > 0) {
+        min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
+        max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+      }
     }
 
     return new ColumnAnalysis(
