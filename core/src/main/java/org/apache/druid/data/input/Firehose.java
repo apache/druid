@@ -39,7 +39,7 @@ import java.io.IOException;
  * Concurrency:
  * The three methods {@link #hasMore()}, {@link #nextRow()} and {@link #commit()} are all called from the same thread.
  * {@link #commit()}, however, returns a callback which will be called on another thread. {@link #close()} might be
- * called concurrenly from a thread different from the thread calling {@link #hasMore()}, {@link #nextRow()} and {@link
+ * called concurrently from a thread different from the thread calling {@link #hasMore()}, {@link #nextRow()} and {@link
  * #commit()}.
  * </p>
  */
