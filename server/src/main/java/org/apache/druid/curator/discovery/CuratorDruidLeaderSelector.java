@@ -20,6 +20,7 @@
 package org.apache.druid.curator.discovery;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
@@ -155,7 +156,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
       return null;
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -189,7 +190,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
       lifecycleLock.started();
     }
     catch (Exception ex) {
-      throw new RuntimeException(ex);
+      throw Throwables.propagate(ex);
     }
     finally {
       lifecycleLock.exitStart();

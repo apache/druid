@@ -19,6 +19,7 @@
 
 package org.apache.druid.concurrent;
 
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -88,7 +89,7 @@ public class ExecsTest
                         taskCompletedSignal.countDown();
                       }
                       catch (Exception e) {
-                        throw new RuntimeException(e);
+                        throw Throwables.propagate(e);
                       }
                       log.info("Completed task: %s", taskID);
                     }

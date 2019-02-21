@@ -21,6 +21,7 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -128,10 +129,10 @@ public class IndexGeneratorJob implements Jobby
           + " either there was no input data to process or all the input events were discarded due to some error",
           e.getMessage()
       );
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
 
@@ -726,7 +727,7 @@ public class IndexGeneratorJob implements Jobby
                         }
                         catch (Exception e) {
                           log.error(e, "persist index error");
-                          throw new RuntimeException(e);
+                          throw Throwables.propagate(e);
                         }
                         finally {
                           // close this index
@@ -855,7 +856,7 @@ public class IndexGeneratorJob implements Jobby
         }
       }
       catch (ExecutionException | TimeoutException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       finally {
         index.close();

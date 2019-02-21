@@ -129,12 +129,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     return retVal;
                                   }
                                   catch (QueryInterruptedException e) {
-                                    throw new RuntimeException(e);
+                                    throw Throwables.propagate(e);
                                   }
                                   catch (Exception e) {
                                     log.error(e, "Exception with one of the sequences!");
-                                    Throwables.propagateIfPossible(e.getCause());
-                                    throw new RuntimeException(e);
+                                    throw Throwables.propagate(e);
                                   }
                                 }
                               }
@@ -168,8 +167,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               throw new QueryInterruptedException(e);
             }
             catch (ExecutionException e) {
-              Throwables.propagateIfPossible(e.getCause());
-              throw new RuntimeException(e);
+              throw Throwables.propagate(e.getCause());
             }
           }
 

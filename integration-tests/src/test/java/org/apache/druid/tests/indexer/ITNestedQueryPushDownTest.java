@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -90,7 +91,7 @@ public class ITNestedQueryPushDownTest extends AbstractIndexerTest
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

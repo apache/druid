@@ -59,15 +59,14 @@ final class WrappingSequence<T> implements Sequence<T>
       catch (Exception e) {
         t.addSuppressed(e);
       }
-      Throwables.propagateIfPossible(t);
-      throw new RuntimeException(t);
+      throw Throwables.propagate(t);
     }
     // "Normal" close
     try {
       wrapper.after(true, null);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     return result;
   }
@@ -97,8 +96,7 @@ final class WrappingSequence<T> implements Sequence<T>
       catch (Exception e) {
         t.addSuppressed(e);
       }
-      Throwables.propagateIfPossible(t);
-      throw new RuntimeException(t);
+      throw Throwables.propagate(t);
     }
   }
 }

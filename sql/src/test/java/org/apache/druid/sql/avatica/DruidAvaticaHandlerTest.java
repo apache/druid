@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.avatica;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -630,7 +631,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
               return ((Number) Iterables.getOnlyElement(rows).get("ci")).intValue();
             }
             catch (SQLException e) {
-              throw new RuntimeException(e);
+              throw Throwables.propagate(e);
             }
           })
       );

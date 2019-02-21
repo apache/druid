@@ -22,6 +22,7 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.cache.CacheConfig;
@@ -416,7 +417,7 @@ public class ServerManagerTest
       factory.clearAdapters();
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -723,7 +724,7 @@ public class ServerManagerTest
         waitYieldLatch.await(1000, TimeUnit.MILLISECONDS);
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
 
       final Yielder<OutType> baseYielder = baseSequence.toYielder(initValue, accumulator);
@@ -736,7 +737,7 @@ public class ServerManagerTest
             waitLatch.await(1000, TimeUnit.MILLISECONDS);
           }
           catch (Exception e) {
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
           }
           return baseYielder.get();
         }

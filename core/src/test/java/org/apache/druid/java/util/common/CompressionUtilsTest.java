@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Predicates;
+import com.google.common.base.Throwables;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
@@ -76,7 +77,7 @@ public class CompressionUtilsTest
       }
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     content = builder.toString();
     expected = StringUtils.toUtf8(content);
@@ -88,7 +89,7 @@ public class CompressionUtilsTest
       }
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     gzBytes = gzByteStream.toByteArray();
   }

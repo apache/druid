@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4BlockOutputStream;
@@ -176,7 +177,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
         return DISK_FULL;
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
 
       // Try again.
@@ -318,7 +319,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
       );
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

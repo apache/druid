@@ -20,6 +20,7 @@
 package org.apache.druid.storage.cloudfiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.CompressionUtils;
@@ -123,7 +124,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
       );
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     finally {
       if (zipOutFile != null) {

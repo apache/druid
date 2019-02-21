@@ -19,6 +19,7 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -71,7 +72,7 @@ public class ValidateSegments extends GuiceRunnable
       log.info("Segments [%s] and [%s] are identical", dir1, dir2);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

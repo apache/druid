@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Committer;
@@ -244,7 +245,7 @@ public class RealtimeManager implements QuerySegmentWalker
         return fireDepartment.connect();
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
 
@@ -318,7 +319,7 @@ public class RealtimeManager implements QuerySegmentWalker
         }
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
 

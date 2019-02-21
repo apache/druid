@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
 import com.google.common.io.Resources;
@@ -244,7 +245,7 @@ public class TestIndex
         return mergedRealtime;
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -294,7 +295,7 @@ public class TestIndex
       } else {
         noRollupRealtimeIndex = null;
       }
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -370,7 +371,7 @@ public class TestIndex
       return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

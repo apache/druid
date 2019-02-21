@@ -531,7 +531,7 @@ public class ITTLSTest
       return response;
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

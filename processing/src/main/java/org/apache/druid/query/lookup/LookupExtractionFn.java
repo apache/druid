@@ -23,6 +23,7 @@ package org.apache.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionCacheHelper;
 import org.apache.druid.query.extraction.FunctionalExtraction;
@@ -115,7 +116,7 @@ public class LookupExtractionFn extends FunctionalExtraction
     }
     catch (IOException ex) {
       // If ByteArrayOutputStream.write has problems, that is a very bad thing
-      throw new RuntimeException(ex);
+      throw Throwables.propagate(ex);
     }
   }
 

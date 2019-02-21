@@ -21,6 +21,7 @@ package org.apache.druid.server.lookup.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.SearchableVersionedDataFinder;
@@ -96,7 +97,7 @@ public class UriCacheGeneratorTest
             );
           }
           catch (URISyntaxException e) {
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
           }
           return newURI;
         }
@@ -132,7 +133,7 @@ public class UriCacheGeneratorTest
                   return new FileOutputStream(outFile);
                 }
                 catch (IOException ex) {
-                  throw new RuntimeException(ex);
+                  throw Throwables.propagate(ex);
                 }
               }
             }
@@ -162,7 +163,7 @@ public class UriCacheGeneratorTest
                   };
                 }
                 catch (IOException ex) {
-                  throw new RuntimeException(ex);
+                  throw Throwables.propagate(ex);
                 }
               }
             }

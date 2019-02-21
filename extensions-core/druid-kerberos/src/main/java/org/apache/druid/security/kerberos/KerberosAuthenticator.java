@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -605,7 +606,7 @@ public class KerberosAuthenticator implements Authenticator
         }
       }
       catch (Exception ex) {
-        throw new RuntimeException(ex);
+        Throwables.propagate(ex);
       }
     }
 

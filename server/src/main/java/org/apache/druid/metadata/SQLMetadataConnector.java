@@ -133,8 +133,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       return RetryUtils.retry(() -> getDBI().withHandle(callback), myShouldRetry, DEFAULT_MAX_TRIES);
     }
     catch (Exception e) {
-      Throwables.propagateIfPossible(e);
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -149,8 +148,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       return RetryUtils.retry(() -> getDBI().inTransaction(TransactionIsolationLevel.READ_COMMITTED, callback), shouldRetry, quietTries, maxTries);
     }
     catch (Exception e) {
-      Throwables.propagateIfPossible(e);
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

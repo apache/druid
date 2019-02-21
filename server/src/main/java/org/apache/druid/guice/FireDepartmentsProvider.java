@@ -21,6 +21,7 @@ package org.apache.druid.guice;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.druid.segment.realtime.FireDepartment;
@@ -46,7 +47,7 @@ public class FireDepartmentsProvider implements Provider<List<FireDepartment>>
       );
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

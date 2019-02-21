@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -85,7 +86,7 @@ public class SQLMetadataRuleManagerProvider implements MetadataRuleManagerProvid
       );
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
     return new SQLMetadataRuleManager(jsonMapper, config, dbTables, connector, auditManager);

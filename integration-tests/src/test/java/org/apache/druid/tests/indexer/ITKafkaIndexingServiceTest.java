@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.indexer;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import kafka.admin.AdminUtils;
 import kafka.admin.RackAwareMode;
@@ -203,7 +204,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
         producer.send(new ProducerRecord<String, String>(TOPIC_NAME, event)).get();
       }
       catch (Exception ioe) {
-        throw new RuntimeException(ioe);
+        throw Throwables.propagate(ioe);
       }
 
       dtLast = dt;
@@ -252,7 +253,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       this.queryHelper.testQueriesFromString(queryStr, 2);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
     LOG.info("Shutting down Kafka Supervisor");
@@ -290,7 +291,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       );
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     LOG.info("segments are present");
     segmentsExist = true;
@@ -300,7 +301,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       this.queryHelper.testQueriesFromString(queryStr, 2);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

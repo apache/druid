@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.hadoop;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -69,7 +70,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
     }
     catch (Exception e) {
       LOG.error("could not read and modify indexer file: %s", e.getMessage());
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
     try {
@@ -94,7 +95,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
     }
     catch (Exception e) {
       LOG.error("data could not be loaded: %s", e.getMessage());
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

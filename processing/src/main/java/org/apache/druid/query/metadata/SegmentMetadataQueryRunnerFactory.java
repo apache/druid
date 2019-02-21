@@ -20,6 +20,7 @@
 package org.apache.druid.query.metadata;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -239,7 +240,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       throw new QueryInterruptedException(e);
                     }
                     catch (ExecutionException e) {
-                      throw new RuntimeException(e);
+                      throw Throwables.propagate(e.getCause());
                     }
                   }
                 };

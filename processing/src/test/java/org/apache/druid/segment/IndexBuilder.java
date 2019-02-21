@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
@@ -122,7 +123,7 @@ public class IndexBuilder
       );
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -187,7 +188,7 @@ public class IndexBuilder
       return merged;
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -208,7 +209,7 @@ public class IndexBuilder
         incrementalIndex.add(row);
       }
       catch (IndexSizeExceededException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
     return incrementalIndex;

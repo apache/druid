@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
@@ -124,7 +125,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       );
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -277,7 +278,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                             );
                           }
                           catch (IOException e) {
-                            throw new RuntimeException(e);
+                            throw Throwables.propagate(e);
                           }
                         }
                       }
@@ -300,7 +301,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                                          return retVal;
                                        }
                                        catch (Exception e) {
-                                         throw new RuntimeException(e);
+                                         throw Throwables.propagate(e);
                                        }
                                      }
                                    }

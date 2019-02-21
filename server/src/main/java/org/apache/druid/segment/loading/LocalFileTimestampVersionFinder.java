@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.java.util.common.RetryUtils;
 
@@ -87,7 +88,7 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
       if (e instanceof FileNotFoundException) {
         return null;
       }
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

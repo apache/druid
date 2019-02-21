@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.data;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -553,7 +554,7 @@ public class IncrementalIndexTest
                   }
                   catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                   }
                   currentlyRunning.incrementAndGet();
                   try {
@@ -563,7 +564,7 @@ public class IncrementalIndexTest
                     }
                   }
                   catch (IndexSizeExceededException e) {
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                   }
                   currentlyRunning.decrementAndGet();
                 }
@@ -590,7 +591,7 @@ public class IncrementalIndexTest
                   }
                   catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                   }
                   while (concurrentlyRan.get() == 0) {
                     QueryRunner<Result<TimeseriesResultValue>> runner = new FinalizeResultsQueryRunner<Result<TimeseriesResultValue>>(

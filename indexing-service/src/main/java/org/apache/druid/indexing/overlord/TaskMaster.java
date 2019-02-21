@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
@@ -151,7 +152,7 @@ public class TaskMaster implements TaskCountStatsProvider
           leaderLifecycle.start();
         }
         catch (Exception e) {
-          throw new RuntimeException(e);
+          throw Throwables.propagate(e);
         }
         finally {
           giant.unlock();

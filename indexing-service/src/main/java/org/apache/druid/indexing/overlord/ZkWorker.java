@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -69,7 +70,7 @@ public class ZkWorker implements Closeable
           return jsonMapper.readValue(input.getData(), TaskAnnouncement.class);
         }
         catch (Exception e) {
-          throw new RuntimeException(e);
+          throw Throwables.propagate(e);
         }
       }
     };

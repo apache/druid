@@ -22,6 +22,7 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -418,7 +419,7 @@ public class ParallelCombiner<KeyType>
               }
             }
             catch (IOException e) {
-              throw new RuntimeException(e);
+              throw Throwables.propagate(e);
             }
 
             grouper.finish();

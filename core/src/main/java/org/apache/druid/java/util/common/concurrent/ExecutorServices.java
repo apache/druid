@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.concurrent;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
 import java.util.concurrent.ExecutorService;
@@ -46,7 +47,7 @@ public class ExecutorServices
       );
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
     return service;
   }

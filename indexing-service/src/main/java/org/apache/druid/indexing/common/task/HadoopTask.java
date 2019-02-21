@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
@@ -91,7 +92,7 @@ public abstract class HadoopTask extends AbstractTask
         return fName.startsWith("druid") && fName.endsWith(".jar") && !fName.endsWith("selfcontained.jar");
       }
       catch (URISyntaxException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   };
@@ -216,7 +217,7 @@ public abstract class HadoopTask extends AbstractTask
       return (OutputType) method.invoke(null, input);
     }
     catch (IllegalAccessException | InvocationTargetException | ClassNotFoundException | NoSuchMethodException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     finally {
       Thread.currentThread().setContextClassLoader(oldLoader);
@@ -244,7 +245,7 @@ public abstract class HadoopTask extends AbstractTask
       return clazz.newInstance();
     }
     catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     finally {
       Thread.currentThread().setContextClassLoader(oldLoader);

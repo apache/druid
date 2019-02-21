@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.emitter.core;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
@@ -50,7 +51,7 @@ public abstract class GoHandler
     }
     catch (Throwable e) {
       succeeded = false;
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

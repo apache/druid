@@ -151,7 +151,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       started = true;
       log.info("Started.");
@@ -171,7 +171,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         serverAnnouncer.unannounce();
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       finally {
         started = false;

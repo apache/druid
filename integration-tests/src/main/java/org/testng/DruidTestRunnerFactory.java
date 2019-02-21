@@ -19,6 +19,7 @@
 
 package /*CHECKSTYLE.OFF: PackageName*/org.testng/*CHECKSTYLE.ON: PackageName*/;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.java.util.common.StringUtils;
@@ -104,7 +105,7 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
       }
       catch (Exception e) {
         LOG.error(e, "");
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       finally {
         lifecycle.stop();

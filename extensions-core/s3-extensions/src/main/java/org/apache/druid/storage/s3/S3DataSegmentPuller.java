@@ -25,6 +25,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
@@ -99,7 +100,7 @@ public class S3DataSegmentPuller implements URIDataPuller
                 throw new IOException("Recoverable exception", e);
               }
             }
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
           }
         }
       };
@@ -314,7 +315,7 @@ public class S3DataSegmentPuller implements URIDataPuller
       throw new SegmentLoadingException(e, "S3 fail! Key[%s]", coords);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
