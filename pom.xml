@@ -168,6 +168,7 @@
         <module>extensions-contrib/opentsdb-emitter</module>
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
+        <module>extensions-contrib/momentsketch</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -695,7 +696,7 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.6.4</version>
+                <version>1.7.25</version>
             </dependency>
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
@@ -1481,6 +1482,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

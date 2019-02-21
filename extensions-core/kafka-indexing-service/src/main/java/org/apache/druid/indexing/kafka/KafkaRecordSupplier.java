@@ -36,6 +36,7 @@ import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import javax.annotation.Nonnull;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -110,7 +111,7 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   public List<OrderedPartitionableRecord<Integer, Long>> poll(long timeout)
   {
     List<OrderedPartitionableRecord<Integer, Long>> polledRecords = new ArrayList<>();
-    for (ConsumerRecord<byte[], byte[]> record : consumer.poll(timeout)) {
+    for (ConsumerRecord<byte[], byte[]> record : consumer.poll(Duration.ofMillis(timeout))) {
       polledRecords.add(new OrderedPartitionableRecord<>(
           record.topic(),
           record.partition(),

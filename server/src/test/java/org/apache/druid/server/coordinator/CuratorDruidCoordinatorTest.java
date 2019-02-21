@@ -29,6 +29,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.BatchServerInventoryView;
+import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -472,7 +473,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       }
     };
 
-    serverView = new CoordinatorServerView(baseView);
+    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig());
 
     baseView.start();
 

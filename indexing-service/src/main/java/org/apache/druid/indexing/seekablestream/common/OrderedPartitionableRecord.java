@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  * @param <PartitionIdType>    partition id
  * @param <SequenceOffsetType> sequence number
  */
-public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>
+public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType extends Comparable>
 {
   private final String stream;
   private final PartitionIdType partitionId;

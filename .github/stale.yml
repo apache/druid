@@ -1,0 +1,47 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Configuration for probot-stale - https://github.com/probot/stale
+
+# Issues or Pull Requests with these labels will never be considered stale. Set to `[]` to disable
+exemptLabels:
+  - Security
+  - Bug
+
+exemptMilestones: true
+
+# Limit to only `issues` or `pulls`
+only: pulls
+
+# Label applied when closing
+staleLabel: stale
+
+# Configuration settings that are specific to just 'issues' or 'pulls':
+pulls:
+  daysUntilStale: 60
+  daysUntilClose: 7
+  markComment: >
+    This pull request has been marked as stale due to 60 days of inactivity.
+    It will be closed in 1 week if no further activity occurs. If you think
+    that’s incorrect or this pull request requires a review, please simply
+    write any comment. If closed, you can revive the PR at any time and @mention
+    a reviewer or discuss it on the dev@druid.apache.org list.
+    Thank you for your contributions.
+  unmarkComment: >
+    This pull request is no longer marked as stale.
+  closeComment: >
+    This pull request has been closed due to lack of activity. If you think that
+    is incorrect, or the pull request requires review, you can revive the PR at
+    any time.
