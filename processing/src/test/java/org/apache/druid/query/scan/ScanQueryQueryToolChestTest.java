@@ -52,7 +52,7 @@ public class ScanQueryQueryToolChestTest
   public static void setup()
   {
     config = createNiceMock(ScanQueryConfig.class);
-    expect(config.getMaxRowsTimeOrderedInMemory()).andReturn(100000);
+    expect(config.getMaxRowsQueuedForTimeOrdering()).andReturn(100000);
     replay(config);
     chest = new ScanQueryQueryToolChest(config, null);
     numElements = 1000;

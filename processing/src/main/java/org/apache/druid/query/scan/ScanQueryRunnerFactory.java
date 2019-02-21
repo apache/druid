@@ -33,6 +33,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.Segment;
 
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -75,6 +76,11 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           final QueryPlus<ScanResultValue> queryPlus, final Map<String, Object> responseContext
       )
       {
+        int numSegments = 0;
+        final Iterator<QueryRunner<ScanResultValue>> segmentIt = queryRunners.iterator();
+        for (; segmentIt.hasNext(); numSegments++) {
+          segmentIt.next();
+        }
         // Note: this variable is effective only when queryContext has a timeout.
         // See the comment of CTX_TIMEOUT_AT.
         final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());

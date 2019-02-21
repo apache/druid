@@ -96,7 +96,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
                 }
               });
         }
-      } else if (scanQuery.getLimit() <= scanQueryConfig.getMaxRowsTimeOrderedInMemory()) {
+      } else if (scanQuery.getLimit() <= scanQueryConfig.getMaxRowsQueuedForTimeOrdering()) {
         ScanQueryNoLimitRowIterator scanResultIterator =
             new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryNoLimitRowIterator>()
             {
@@ -136,7 +136,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
             "Time ordering for result set limit of %,d is not supported.  Try lowering the "
             + "result set size to less than or equal to the time ordering limit of %,d.",
             scanQuery.getLimit(),
-            scanQueryConfig.getMaxRowsTimeOrderedInMemory()
+            scanQueryConfig.getMaxRowsQueuedForTimeOrdering()
         );
       }
     };
