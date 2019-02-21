@@ -2902,7 +2902,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
       ));
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

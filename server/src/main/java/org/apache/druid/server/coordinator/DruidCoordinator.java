@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -410,14 +411,14 @@ public class DruidCoordinator
                 }
               }
               catch (Exception e) {
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
               }
             }
         );
       }
       catch (Exception e) {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
-        throw new RuntimeException(e);
+        Throwables.propagate(e);
       }
     }
     catch (Exception e) {

@@ -19,6 +19,7 @@
 
 package org.apache.druid.curator.discovery;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
@@ -70,7 +71,7 @@ public class CuratorServiceAnnouncer implements ServiceAnnouncer
               .build();
         }
         catch (Exception e) {
-          throw new RuntimeException(e);
+          throw Throwables.propagate(e);
         }
 
         instanceMap.put(serviceName, instance);

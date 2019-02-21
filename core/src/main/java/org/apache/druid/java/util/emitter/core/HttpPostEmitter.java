@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import io.netty.handler.codec.http.HttpHeaders;
 import org.apache.druid.concurrent.ConcurrentAwaitableCounter;
@@ -275,7 +276,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       return jsonMapper.writeValueAsBytes(event);
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

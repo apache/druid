@@ -28,6 +28,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -1149,7 +1150,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
           catch (IOException e) {
             log.error("Resetting DataSourceMetadata failed [%s]", e.getMessage());
-            throw new RuntimeException(e);
+            Throwables.propagate(e);
           }
         }
         if (metadataUpdateSuccess) {
@@ -1679,7 +1680,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       tuningConfig = sortingMapper.writeValueAsString(taskTuningConfig);
     }
     catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
     String hashCode = DigestUtils.sha1Hex(dataSchema
@@ -2029,7 +2030,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
             catch (Exception e) {
               log.error("Something bad happened [%s]", e.getMessage());
-              throw new RuntimeException(e);
+              Throwables.propagate(e);
             }
 
             if (taskGroup.tasks.isEmpty()) {
@@ -2551,7 +2552,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
       catch (Exception e) {
         log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getStream());
-        throw new RuntimeException(e);
+        Throwables.propagate(e);
       }
 
       Set<StreamPartition<PartitionIdType>> partitions = partitionIds

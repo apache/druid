@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Days;
@@ -94,7 +95,7 @@ public class ReferenceCountingSegmentTest
             closeable.close();
           }
           catch (Exception e) {
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
           }
         }
     ).get();
@@ -109,7 +110,7 @@ public class ReferenceCountingSegmentTest
             segment.close();
           }
           catch (Exception e) {
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
           }
         }
     ).get();

@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
@@ -137,7 +138,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           );
                         }
                         catch (IOException e) {
-                          throw new RuntimeException(e);
+                          throw Throwables.propagate(e);
                         }
                       }
                     }
@@ -163,7 +164,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           return retVal;
                         }
                         catch (Exception e) {
-                          throw new RuntimeException(e);
+                          throw Throwables.propagate(e);
                         }
                       }
                     }
@@ -210,7 +211,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           );
                         }
                         catch (IOException e) {
-                          throw new RuntimeException(e);
+                          throw Throwables.propagate(e);
                         }
                       }
                     }
@@ -231,7 +232,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           return retVal;
                         }
                         catch (Exception e) {
-                          throw new RuntimeException(e);
+                          throw Throwables.propagate(e);
                         }
                       }
                     }

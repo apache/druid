@@ -22,6 +22,7 @@ package org.apache.druid.indexer.updater;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -204,7 +205,7 @@ public class HadoopConverterJob
       );
     }
     catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -319,13 +320,13 @@ public class HadoopConverterJob
                     }
                   }
                   catch (final IOException e) {
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                   }
                   try (final InputStream stream = fs.open(input)) {
                     return HadoopDruidConverterConfig.jsonMapper.readValue(stream, DataSegment.class);
                   }
                   catch (final IOException e) {
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                   }
                 }
               }
@@ -343,7 +344,9 @@ public class HadoopConverterJob
       }
     }
     catch (InterruptedException | ClassNotFoundException e) {
-      throw new RuntimeException(e);
+      RuntimeException exception = Throwables.propagate(e);
+      throwable = exception;
+      throw exception;
     }
     catch (Throwable t) {
       throwable = t;

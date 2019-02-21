@@ -74,7 +74,7 @@ public class Yielders
           }
           catch (Exception e) {
             Throwables.propagateIfInstanceOf(e, IOException.class);
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
           }
         }
       }

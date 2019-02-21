@@ -79,7 +79,7 @@ public class ResourcePool<K, V> implements Closeable
       holder = pool.get(key);
     }
     catch (ExecutionException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     final V value = holder.get();
 
@@ -227,8 +227,7 @@ public class ResourcePool<K, V> implements Closeable
           deficit++;
           this.notifyAll();
         }
-        Throwables.propagateIfPossible(e);
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
 
       return retVal;

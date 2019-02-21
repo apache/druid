@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
@@ -312,7 +313,7 @@ public class RealtimeIndexTask extends AbstractTask
           return lock.getVersion();
         }
         catch (IOException e) {
-          throw new RuntimeException(e);
+          throw Throwables.propagate(e);
         }
       }
     };
@@ -516,7 +517,7 @@ public class RealtimeIndexTask extends AbstractTask
         }
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }

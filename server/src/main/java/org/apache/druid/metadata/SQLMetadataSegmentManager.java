@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -612,7 +613,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                 result.add(iter.next());
               }
               catch (Exception e) {
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
               }
             }
             return result;

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -949,7 +950,7 @@ public class RealtimeManagerTest
         Thread.sleep(1000);
       }
       catch (InterruptedException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       return true;
     }

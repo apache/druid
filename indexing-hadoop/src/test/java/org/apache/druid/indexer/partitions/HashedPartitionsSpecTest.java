@@ -20,6 +20,7 @@
 package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
@@ -47,7 +48,7 @@ public class HashedPartitionsSpecTest
         );
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
 
       Assert.assertEquals(
@@ -93,7 +94,7 @@ public class HashedPartitionsSpecTest
       );
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
     Assert.assertEquals(
@@ -135,7 +136,7 @@ public class HashedPartitionsSpecTest
       return jsonMapper.readValue(jsonMapper.writeValueAsBytes(jsonMapper.readValue(s, klass)), klass);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

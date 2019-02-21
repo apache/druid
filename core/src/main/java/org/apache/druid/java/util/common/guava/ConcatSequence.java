@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import com.google.common.base.Throwables;
+
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -91,7 +93,7 @@ public class ConcatSequence<T> implements Sequence<T>
         yielder.close();
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
 
       yielderYielder = yielderYielder.next(null);
@@ -112,7 +114,7 @@ public class ConcatSequence<T> implements Sequence<T>
         yielder.close();
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
 
       return makeYielder(yielderYielder.next(null), nextInit, accumulator);

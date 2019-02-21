@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -451,7 +452,7 @@ public class QueryResourceTest
                 // When the query is cancelled the control will reach here,
                 // countdown the latch and rethrow the exception so that error response is returned for the query
                 cancelledCountDownLatch.countDown();
-                throw new RuntimeException(e);
+                Throwables.propagate(e);
               }
               return new Access(true);
             } else {
@@ -504,7 +505,7 @@ public class QueryResourceTest
               Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
             }
             catch (IOException e) {
-              throw new RuntimeException(e);
+              Throwables.propagate(e);
             }
             waitFinishLatch.countDown();
           }
@@ -572,7 +573,7 @@ public class QueryResourceTest
                 waitForCancellationLatch.await();
               }
               catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                Throwables.propagate(e);
               }
               return new Access(true);
             } else {
@@ -626,7 +627,7 @@ public class QueryResourceTest
               Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
             }
             catch (IOException e) {
-              throw new RuntimeException(e);
+              Throwables.propagate(e);
             }
             waitFinishLatch.countDown();
           }

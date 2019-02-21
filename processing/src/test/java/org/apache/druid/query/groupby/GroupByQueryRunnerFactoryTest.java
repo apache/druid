@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -118,7 +119,8 @@ public class GroupByQueryRunnerFactoryTest
                       );
                     }
                     catch (Exception e) {
-                      throw new RuntimeException(e);
+                      Throwables.propagate(e);
+                      return null;
                     }
                   }
                 }

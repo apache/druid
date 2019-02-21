@@ -21,6 +21,7 @@ package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -183,7 +184,7 @@ public class Initialization
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
-          throw new RuntimeException(e);
+          throw Throwables.propagate(e);
         }
       }
     }
@@ -358,7 +359,7 @@ public class Initialization
       return urls;
     }
     catch (IOException ex) {
-      throw new RuntimeException(ex);
+      throw Throwables.propagate(ex);
     }
   }
 

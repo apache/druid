@@ -20,6 +20,7 @@
 package org.apache.druid.curator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -90,11 +91,11 @@ public class CuratorTestBase
                .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
       }
       catch (Exception e1) {
-        throw new RuntimeException(e1);
+        Throwables.propagate(e1);
       }
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
   }
 
@@ -120,11 +121,11 @@ public class CuratorTestBase
                .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(ImmutableSet.of(segment)));
       }
       catch (Exception e1) {
-        throw new RuntimeException(e1);
+        Throwables.propagate(e1);
       }
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
   }
 
@@ -159,11 +160,11 @@ public class CuratorTestBase
                .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(segments));
       }
       catch (Exception e1) {
-        throw new RuntimeException(e1);
+        Throwables.propagate(e1);
       }
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
 
     return segmentAnnouncementPath;

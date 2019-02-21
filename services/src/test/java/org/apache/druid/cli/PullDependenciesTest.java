@@ -19,6 +19,7 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.druid.guice.ExtensionsConfig;
@@ -121,7 +122,7 @@ public class PullDependenciesTest
         jarFile.createNewFile();
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        Throwables.propagate(e);
       }
       artifacts.add(new DefaultArtifact(null, jarName, null, "jar", "1.0", null, jarFile));
     }

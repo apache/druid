@@ -93,7 +93,7 @@ public class RetryUtils
           awaitNextRetry(e, messageOnRetry, nTry, maxRetries, nTry <= quietTries);
         } else {
           Throwables.propagateIfInstanceOf(e, Exception.class);
-          throw new RuntimeException(e);
+          throw Throwables.propagate(e);
         }
       }
     }

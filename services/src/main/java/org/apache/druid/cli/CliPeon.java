@@ -304,7 +304,7 @@ public class CliPeon extends GuiceRunnable
               return mapper.readValue(config.getTaskFile(), Task.class);
             }
             catch (IOException e) {
-              throw new RuntimeException(e);
+              throw Throwables.propagate(e);
             }
           }
 
@@ -388,7 +388,7 @@ public class CliPeon extends GuiceRunnable
       System.out.println("Finished peon task");
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

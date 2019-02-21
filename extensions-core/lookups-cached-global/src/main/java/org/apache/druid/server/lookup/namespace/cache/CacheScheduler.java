@@ -216,7 +216,7 @@ public final class CacheScheduler
           t.addSuppressed(e);
         }
         if (Thread.currentThread().isInterrupted() || t instanceof InterruptedException || t instanceof Error) {
-          throw new RuntimeException(t);
+          throw Throwables.propagate(t);
         }
       }
     }
@@ -448,7 +448,7 @@ public final class CacheScheduler
             catch (Exception e) {
               log.error(e, "Error emitting namespace stats");
               if (Thread.currentThread().isInterrupted()) {
-                throw new RuntimeException(e);
+                throw Throwables.propagate(e);
               }
             }
           }

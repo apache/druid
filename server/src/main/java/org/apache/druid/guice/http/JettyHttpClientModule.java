@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice.http;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -144,14 +145,14 @@ public class JettyHttpClientModule implements Module
                   httpClient.stop();
                 }
                 catch (Exception e) {
-                  throw new RuntimeException(e);
+                  throw Throwables.propagate(e);
                 }
               }
             }
         );
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
 
       return httpClient;

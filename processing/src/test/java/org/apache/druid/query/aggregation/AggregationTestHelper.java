@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import org.apache.commons.io.IOUtils;
@@ -584,7 +585,7 @@ public class AggregationTestHelper implements Closeable
               return new QueryableIndexSegment(indexIO.loadIndex(segmentDir), SegmentId.dummy(""));
             }
             catch (IOException ex) {
-              throw new RuntimeException(ex);
+              throw Throwables.propagate(ex);
             }
           }
         }
@@ -623,7 +624,7 @@ public class AggregationTestHelper implements Closeable
                                   );
                                 }
                                 catch (Exception ex) {
-                                  throw new RuntimeException(ex);
+                                  throw Throwables.propagate(ex);
                                 }
                               }
                             }
@@ -675,7 +676,7 @@ public class AggregationTestHelper implements Closeable
           return Sequences.simple(resultRows);
         }
         catch (Exception ex) {
-          throw new RuntimeException(ex);
+          throw Throwables.propagate(ex);
         }
       }
     };

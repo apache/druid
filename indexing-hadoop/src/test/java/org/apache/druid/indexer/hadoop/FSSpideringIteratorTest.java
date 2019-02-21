@@ -20,6 +20,7 @@
 package org.apache.druid.indexer.hadoop;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
@@ -82,14 +83,14 @@ public class FSSpideringIteratorTest
       Assert.assertTrue(files.isEmpty());
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
     finally {
       try {
         FileUtils.deleteDirectory(baseDir);
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        Throwables.propagate(e);
       }
     }
   }

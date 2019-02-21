@@ -20,6 +20,7 @@
 package org.apache.druid.common.config;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -158,10 +159,10 @@ public class ConfigManager
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       catch (ExecutionException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
 

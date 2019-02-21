@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -584,7 +585,7 @@ public class TaskQueue
     }
     catch (Exception e) {
       log.warn(e, "Failed to sync tasks from storage!");
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     finally {
       giant.unlock();

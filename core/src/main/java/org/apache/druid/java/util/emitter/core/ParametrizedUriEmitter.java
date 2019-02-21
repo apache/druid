@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -176,7 +177,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
           if (thrown != null) {
             e.addSuppressed(thrown);
           }
-          throw new RuntimeException(e);
+          throw Throwables.propagate(e);
         }
         if (thrown == null) {
           thrown = e;
@@ -188,7 +189,7 @@ public class ParametrizedUriEmitter implements Flushable, Closeable, Emitter
       }
     }
     if (thrown != null) {
-      throw new RuntimeException(thrown);
+      throw Throwables.propagate(thrown);
     }
   }
 

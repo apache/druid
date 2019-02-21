@@ -20,6 +20,7 @@
 package org.apache.druid.storage.azure;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.microsoft.azure.storage.StorageException;
@@ -76,7 +77,7 @@ public class AzureTaskLogs implements TaskLogs
       );
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

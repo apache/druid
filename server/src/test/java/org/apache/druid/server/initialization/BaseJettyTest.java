@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.initialization;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
@@ -122,7 +123,7 @@ public abstract class BaseJettyTest
         );
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
 

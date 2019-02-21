@@ -908,7 +908,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       }
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
   }
 
@@ -1160,7 +1160,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       return Response.ok().entity(objectMapper.writeValueAsString(getCurrentOffsets())).build();
     }
     catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

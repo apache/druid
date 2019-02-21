@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.CountingOutputStream;
@@ -226,7 +227,7 @@ public class QueryResource implements QueryCountStatsProvider
                     catch (Exception ex) {
                       e = ex;
                       log.error(ex, "Unable to send query response.");
-                      throw new RuntimeException(ex);
+                      throw Throwables.propagate(ex);
                     }
                     finally {
                       Thread.currentThread().setName(currThreadName);
@@ -268,7 +269,7 @@ public class QueryResource implements QueryCountStatsProvider
       catch (Exception e) {
         // make sure to close yielder if anything happened before starting to serialize the response.
         yielder.close();
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       finally {
         // do not close yielder here, since we do not want to close the yielder prior to

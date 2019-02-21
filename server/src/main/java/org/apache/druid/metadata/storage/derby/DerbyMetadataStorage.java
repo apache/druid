@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata.storage.derby;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.derby.drda.NetworkServerControl;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,7 +41,7 @@ public class DerbyMetadataStorage extends MetadataStorage
       this.server = new NetworkServerControl(InetAddress.getByName(config.getHost()), config.getPort());
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
   }
@@ -53,7 +54,7 @@ public class DerbyMetadataStorage extends MetadataStorage
       server.start(null);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -64,7 +65,7 @@ public class DerbyMetadataStorage extends MetadataStorage
       server.shutdown();
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

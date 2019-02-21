@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -100,7 +101,7 @@ public class JsonParserIterator<T> implements Iterator<T>, Closeable
       return retVal;
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

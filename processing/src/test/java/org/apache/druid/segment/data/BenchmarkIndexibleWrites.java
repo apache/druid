@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.carrotsearch.junitbenchmarks.Clock;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -269,7 +270,7 @@ public class BenchmarkIndexibleWrites extends AbstractBenchmark
                     start.await();
                   }
                   catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    throw Throwables.propagate(e);
                   }
                   final Random rndGen = ThreadLocalRandom.current();
                   while (!done.get()) {

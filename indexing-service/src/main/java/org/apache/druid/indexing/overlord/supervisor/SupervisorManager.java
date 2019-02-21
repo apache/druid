@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.Pair;
@@ -301,7 +302,7 @@ public class SupervisorManager
       if (persistSpec) {
         metadataSupervisorManager.insert(id, new NoopSupervisorSpec(null, spec.getDataSources()));
       }
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
     supervisors.put(id, Pair.of(supervisor, spec));

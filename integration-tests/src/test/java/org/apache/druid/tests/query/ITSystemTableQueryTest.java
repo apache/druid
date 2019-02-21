@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.query;
 
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
@@ -64,7 +65,7 @@ public class ITSystemTableQueryTest
       this.queryHelper.testQueriesFromFile(SYSTEM_QUERIES_RESOURCE, 2);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -79,7 +80,7 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
           }
         }
         catch (ExecutionException | InterruptedException | TimeoutException ex) {
-          throw new RuntimeException(ex);
+          throw Throwables.propagate(ex);
         }
       }
     });

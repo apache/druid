@@ -1244,7 +1244,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
   }
 
@@ -1551,7 +1551,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       return Response.ok().entity(toolbox.getObjectMapper().writeValueAsString(getCurrentOffsets())).build();
     }
     catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

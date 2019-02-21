@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -227,7 +228,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         index.add(row);
       }
       catch (IndexSizeExceededException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
 
@@ -235,7 +236,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       INDEX_MERGER_V9.persist(index, persistDir, new IndexSpec(), null);
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
     return ImmutableMap.of(

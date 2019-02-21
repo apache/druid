@@ -20,6 +20,7 @@
 package org.apache.druid.curator.announcement;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorTransaction;
 import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
@@ -325,7 +326,7 @@ public class Announcer
         createAnnouncement(path, bytes);
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -361,7 +362,7 @@ public class Announcer
         }
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -404,7 +405,7 @@ public class Announcer
       log.info("node[%s] didn't exist anyway...", path);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -415,7 +416,7 @@ public class Announcer
     }
     catch (Exception e) {
       CloseQuietly.close(cache);
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 

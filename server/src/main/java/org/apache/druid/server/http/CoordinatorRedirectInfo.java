@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
@@ -68,7 +69,7 @@ public class CoordinatorRedirectInfo implements RedirectInfo
       return new URL(location);
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

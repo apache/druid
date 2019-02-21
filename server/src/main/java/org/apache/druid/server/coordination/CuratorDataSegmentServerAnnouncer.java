@@ -21,6 +21,7 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.announcement.Announcer;
@@ -72,7 +73,7 @@ public class CuratorDataSegmentServerAnnouncer implements DataSegmentServerAnnou
         announcer.announce(path, jsonMapper.writeValueAsBytes(server), false);
       }
       catch (JsonProcessingException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
 
       announced = true;

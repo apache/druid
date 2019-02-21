@@ -20,6 +20,7 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -142,7 +143,7 @@ public class JettyQosTest extends BaseJettyTest
             }
             catch (Exception e) {
               e.printStackTrace();
-              throw new RuntimeException(e);
+              throw Throwables.propagate(e);
             }
           }
         }
@@ -178,7 +179,7 @@ public class JettyQosTest extends BaseJettyTest
             }
             catch (Exception e) {
               e.printStackTrace();
-              throw new RuntimeException(e);
+              throw Throwables.propagate(e);
             }
           }
         }

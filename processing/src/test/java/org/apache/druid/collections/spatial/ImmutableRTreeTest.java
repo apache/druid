@@ -20,6 +20,7 @@
 package org.apache.druid.collections.spatial;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Bytes;
@@ -593,7 +594,7 @@ public class ImmutableRTreeTest
         System.out.printf(Locale.ENGLISH, "[%,d]: union of %,d points in %,d ms%n", numPoints, finalSet.size(), stop);
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -649,7 +650,7 @@ public class ImmutableRTreeTest
         System.out.printf(Locale.ENGLISH, "[%,d]: union of %,d points in %,d ms%n", numPoints, finalSet.size(), stop);
       }
       catch (Exception e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }

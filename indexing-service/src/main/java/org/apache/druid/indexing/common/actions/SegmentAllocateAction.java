@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -196,7 +197,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
           }
           catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
+            throw Throwables.propagate(e);
           }
         } else {
           log.error(

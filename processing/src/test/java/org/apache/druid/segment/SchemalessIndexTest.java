@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -174,7 +175,7 @@ public class SchemalessIndexTest
           theIndex.add(new MapBasedInputRow(timestamp, dims, event));
         }
         catch (IndexSizeExceededException e) {
-          throw new RuntimeException(e);
+          Throwables.propagate(e);
         }
 
         count++;
@@ -228,7 +229,7 @@ public class SchemalessIndexTest
       }
       catch (IOException e) {
         mergedIndex = null;
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -276,7 +277,7 @@ public class SchemalessIndexTest
         return index;
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -307,7 +308,7 @@ public class SchemalessIndexTest
         );
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -347,7 +348,7 @@ public class SchemalessIndexTest
       }
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
   }
 
@@ -394,7 +395,7 @@ public class SchemalessIndexTest
         }
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
     }
   }
@@ -440,7 +441,7 @@ public class SchemalessIndexTest
     }
     catch (IOException e) {
       index = null;
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
 
     return retVal;
@@ -511,7 +512,7 @@ public class SchemalessIndexTest
                                 );
                               }
                               catch (IOException e) {
-                                throw new RuntimeException(e);
+                                throw Throwables.propagate(e);
                               }
                             }
                           }
@@ -525,7 +526,7 @@ public class SchemalessIndexTest
       return indexIO.loadIndex(indexMerger.append(adapters, null, mergedFile, indexSpec, null));
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -554,7 +555,7 @@ public class SchemalessIndexTest
                             return indexIO.loadIndex(input);
                           }
                           catch (IOException e) {
-                            throw new RuntimeException(e);
+                            throw Throwables.propagate(e);
                           }
                         }
                       }
@@ -569,7 +570,7 @@ public class SchemalessIndexTest
       );
     }
     catch (IOException e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

@@ -21,6 +21,7 @@ package org.apache.druid.tests.security;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
 import org.apache.druid.guice.annotations.Client;
@@ -372,7 +373,7 @@ public class ITBasicAuthConfigurationTest
       return response;
     }
     catch (Exception e) {
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
   }
 }

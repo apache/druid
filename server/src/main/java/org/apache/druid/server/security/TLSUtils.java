@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.PasswordProvider;
 import org.eclipse.jetty.util.ssl.AliasedX509ExtendedKeyManager;
@@ -238,7 +239,7 @@ public class TLSUtils
       );
     }
     catch (CertificateException | KeyManagementException | IOException | KeyStoreException | NoSuchAlgorithmException | UnrecoverableKeyException e) {
-      throw new RuntimeException(e);
+      Throwables.propagate(e);
     }
     return sslContext;
   }

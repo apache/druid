@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -62,7 +63,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
     catch (InterruptedException e) {
       log.error(e, "Queue appending interrupted");
       Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
+      throw Throwables.propagate(e);
     }
     byteCount.addAndGet(response.getContent().readableBytes());
     return ClientResponse.finished(
@@ -88,7 +89,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
                 catch (InterruptedException e) {
                   log.warn(e, "Thread interrupted while taking from queue");
                   Thread.currentThread().interrupt();
-                  throw new RuntimeException(e);
+                  throw Throwables.propagate(e);
                 }
               }
             }
@@ -114,7 +115,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
       catch (InterruptedException e) {
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       byteCount.addAndGet(bytes);
     } else {
@@ -136,12 +137,12 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
       catch (InterruptedException e) {
         log.warn(e, "Thread interrupted while adding to queue");
         Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       catch (IOException e) {
         // This should never happen
         log.wtf(e, "The empty stream threw an IOException");
-        throw new RuntimeException(e);
+        throw Throwables.propagate(e);
       }
       finally {
         log.debug("Done after adding %d bytes of streams", byteCount.get());

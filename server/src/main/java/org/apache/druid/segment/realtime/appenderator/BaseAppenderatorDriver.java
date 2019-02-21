@@ -598,8 +598,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
             catch (Exception e) {
               // Must not remove segments here, we aren't sure if our transaction succeeded or not.
               log.warn(e, "Failed publish, not removing segments: %s", segmentsAndMetadata.getSegments());
-              Throwables.propagateIfPossible(e);
-              throw new RuntimeException(e);
+              throw Throwables.propagate(e);
             }
           }
 
