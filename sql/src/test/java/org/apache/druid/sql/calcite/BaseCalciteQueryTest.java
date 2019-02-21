@@ -261,7 +261,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return (int) (Intervals.utc(t("1970"), t(dayString)).toDurationMillis() / (86400L * 1000L));
   }
 
-  public static QuerySegmentSpec qss(final Interval... intervals)
+  public static QuerySegmentSpec querySegmentSpec(final Interval... intervals)
   {
     return new MultipleIntervalSegmentSpec(Arrays.asList(intervals));
   }
@@ -291,7 +291,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new SelectorDimFilter(fieldName, value, extractionFn);
   }
 
-  public static ExpressionDimFilter expression_Filter(final String expression)
+  public static ExpressionDimFilter expressionFilter(final String expression)
   {
     return new ExpressionDimFilter(expression, CalciteTests.createExprMacroTable());
   }
@@ -319,7 +319,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new BoundDimFilter(fieldName, lower, upper, lowerStrict, upperStrict, null, extractionFn, comparator);
   }
 
-  public static BoundDimFilter time_Bound(final Object intervalObj)
+  public static BoundDimFilter timeBound(final Object intervalObj)
   {
     final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
     return new BoundDimFilter(
@@ -339,12 +339,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new CascadeExtractionFn(fns);
   }
 
-  public static List<DimensionSpec> dims(final DimensionSpec... dimensionSpecs)
+  public static List<DimensionSpec> dimensionSpec(final DimensionSpec... dimensionSpecs)
   {
     return Arrays.asList(dimensionSpecs);
   }
 
-  public static List<AggregatorFactory> aggs(final AggregatorFactory... aggregators)
+  public static List<AggregatorFactory> aggregators(final AggregatorFactory... aggregators)
   {
     return Arrays.asList(aggregators);
   }
@@ -363,7 +363,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
-  public static ExpressionPostAggregator expresion_Post_Agg(final String name, final String expression)
+  public static ExpressionPostAggregator expresionPostAgg(final String name, final String expression)
   {
     return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
   }
