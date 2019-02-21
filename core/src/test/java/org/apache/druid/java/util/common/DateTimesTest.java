@@ -39,9 +39,9 @@ public class DateTimesTest
   }
 
   @Test
-  public void testStringTimestampToDateTimeConversion()
+  public void testStringToDateTimeConversion()
   {
-    String seconds = "1517292000";
+    String seconds = "2018-01-30T06:00:00";
     DateTime dt2 = DateTimes.of(seconds);
     Assert.assertEquals("2018-01-30T06:00:00.000Z", dt2.toString());
 
@@ -50,8 +50,8 @@ public class DateTimesTest
     Assert.assertEquals("2018-01-30T06:00:00.000Z", dt1.toString());
   }
 
-  @Test(expected = NumberFormatException.class)
-  public void testStringTimestampToDateTimeConverstion_RethrowInitialException()
+  @Test(expected = IllegalArgumentException.class)
+  public void testStringToDateTimeConverstion_RethrowInitialException()
   {
     String invalid = "51729200AZ";
     DateTimes.of(invalid);

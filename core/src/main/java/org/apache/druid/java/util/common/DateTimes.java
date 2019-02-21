@@ -108,20 +108,14 @@ public final class DateTimes
   public static DateTime of(String instant)
   {
     try {
-      Integer seconds = Integer.valueOf(instant);
-      return new DateTime(seconds * 1000L, ISOChronology.getInstanceUTC());
+      return new DateTime(instant, ISOChronology.getInstanceUTC());
     }
-    catch (NumberFormatException ex) {
+    catch (IllegalArgumentException ex) {
       try {
         return new DateTime(Long.valueOf(instant), ISOChronology.getInstanceUTC());
       }
       catch (IllegalArgumentException ex2) {
-        try {
-          return new DateTime(instant, ISOChronology.getInstanceUTC());
-        }
-        catch (Exception ex3) {
-          throw ex;
-        }
+        throw ex;
       }
     }
   }
