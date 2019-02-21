@@ -835,8 +835,10 @@ These configuration options control the behavior of the Lookup dynamic configura
 
 ##### Compaction Dynamic Configuration
 
-Compaction configurations can also be set or updated dynamically without restarting Coordinators. For segment compaction,
-please see [Compacting Segments](../design/coordinator.html#compacting-segments).
+Compaction configurations can also be set or updated dynamically using
+[Coordinator's API](../operations/api-reference.html#compaction-configuration) without restarting Coordinators.
+
+For details about segment compaction, please check [Segment Size Optimization](../operations/segment-optimization.html).
 
 A description of the compaction config is:
 

@@ -66,7 +66,7 @@ To ensure an even distribution of segments across Historical nodes in the cluste
 ### Compacting Segments
 
 Each run, the Druid Coordinator compacts small segments abutting each other. This is useful when you have a lot of small
-segments which may degrade the query performance as well as increasing the disk space usage.
+segments which may degrade the query performance as well as increasing the disk space usage. See [Segment Size Optimization](../operations/segment-optimization.html) for details.
 
 The Coordinator first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
 Once some segments are found, it launches a [compaction task](../ingestion/tasks.html#compaction-task) to compact those segments.
