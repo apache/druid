@@ -148,10 +148,10 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     return !handle.createQuery(
         "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename ILIKE :tableName"
     )
-                 .bind("tableName", tableName)
-                 .map(StringMapper.FIRST)
-                 .list()
-                 .isEmpty();
+                  .bind("tableName", tableName)
+                  .map(StringMapper.FIRST)
+                  .list()
+                  .isEmpty();
   }
 
   @Override
@@ -184,10 +184,14 @@ public class PostgreSQLConnector extends SQLMetadataConnector
             } else {
               handle.createStatement(
                   StringUtils.format(
-                      "BEGIN;\n" +
-                      "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n" +
-                      "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n" +
-                      "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;" +
+                      "BEGIN;\n"
+                      +
+                      "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n"
+                      +
+                      "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n"
+                      +
+                      "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;"
+                      +
                       "COMMIT;",
                       tableName,
                       keyColumn,

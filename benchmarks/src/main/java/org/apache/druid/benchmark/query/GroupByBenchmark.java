@@ -562,10 +562,7 @@ public class GroupByBenchmark
     );
 
     List<Row> results = GroupByBenchmark.runQuery(factory, runner, query);
-
-    for (Row result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -580,10 +577,7 @@ public class GroupByBenchmark
     );
 
     List<Row> results = GroupByBenchmark.runQuery(factory, runner, query);
-
-    for (Row result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -601,10 +595,7 @@ public class GroupByBenchmark
 
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
-
-    for (Row result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -625,10 +616,7 @@ public class GroupByBenchmark
     );
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(spillingQuery), new HashMap<>());
     List<Row> results = queryResult.toList();
-
-    for (Row result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -652,10 +640,7 @@ public class GroupByBenchmark
 
     Sequence<Row> queryResult = theRunner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Row> results = queryResult.toList();
-
-    for (Row result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   private List<QueryRunner<Row>> makeMultiRunners()

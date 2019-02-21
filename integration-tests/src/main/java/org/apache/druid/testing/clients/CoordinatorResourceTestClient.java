@@ -31,6 +31,7 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
+import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
@@ -40,6 +41,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class CoordinatorResourceTestClient
 {
@@ -77,6 +80,11 @@ public class CoordinatorResourceTestClient
   private String getIntervalsURL(String dataSource)
   {
     return StringUtils.format("%sdatasources/%s/intervals", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
+  }
+
+  private String getFullSegmentsURL(String dataSource)
+  {
+    return StringUtils.format("%sdatasources/%s/segments?full", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
   }
 
   private String getLoadStatusURL()
@@ -120,6 +128,25 @@ public class CoordinatorResourceTestClient
       throw new RuntimeException(e);
     }
     return segments;
+  }
+
+  // return a set of the segment versions for the specified datasource
+  public Set<String> getSegmentVersions(final String dataSource)
+  {
+    ArrayList<DataSegment> segments;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsURL(dataSource));
+
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<List<DataSegment>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return segments.stream().map(s -> s.getVersion()).collect(Collectors.toSet());
   }
 
   private Map<String, Integer> getLoadStatus()

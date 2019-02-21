@@ -165,11 +165,7 @@ public class KafkaRecordSupplierTest
   {
 
     // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-    }
+    insertData();
 
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(
         StreamPartition.of(topic, 0),
@@ -194,11 +190,7 @@ public class KafkaRecordSupplierTest
   {
 
     // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-    }
+    insertData();
 
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(
         StreamPartition.of(topic, 0),
@@ -231,10 +223,13 @@ public class KafkaRecordSupplierTest
   public void testPollAfterMoreDataAdded() throws InterruptedException, ExecutionException
   {
     // Insert data
-
-    KafkaProducer<byte[], byte[]> producer = kafkaServer.newProducer();
-    for (ProducerRecord<byte[], byte[]> record : records.subList(0, 13)) {
-      producer.send(record).get();
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+      for (ProducerRecord<byte[], byte[]> record : records.subList(0, 13)) {
+        kafkaProducer.send(record).get();
+      }
+      kafkaProducer.commitTransaction();
     }
 
     Set<StreamPartition<Integer>> partitions = ImmutableSet.of(
@@ -256,8 +251,13 @@ public class KafkaRecordSupplierTest
     }
 
     // Insert data
-    for (ProducerRecord<byte[], byte[]> rec : records.subList(13, 15)) {
-      producer.send(rec).get();
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+      for (ProducerRecord<byte[], byte[]> record : records.subList(13, 15)) {
+        kafkaProducer.send(record).get();
+      }
+      kafkaProducer.commitTransaction();
     }
 
 
@@ -269,8 +269,28 @@ public class KafkaRecordSupplierTest
     List<OrderedPartitionableRecord<Integer, Long>> initialRecords = createOrderedPartitionableRecords();
 
     Assert.assertEquals(records.size(), polledRecords.size());
-    Assert.assertTrue(initialRecords.containsAll(polledRecords));
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
 
+    final int initialRecordsPartition0Size = initialRecords.stream()
+                                                           .filter(r -> r.getPartitionId().equals(0))
+                                                           .collect(Collectors.toSet())
+                                                           .size();
+    final int initialRecordsPartition1Size = initialRecords.stream()
+                                                           .filter(r -> r.getPartitionId().equals(1))
+                                                           .collect(Collectors.toSet())
+                                                           .size();
+
+    final int polledRecordsPartition0Size = polledRecords.stream()
+                                                         .filter(r -> r.getPartitionId().equals(0))
+                                                         .collect(Collectors.toSet())
+                                                         .size();
+    final int polledRecordsPartition1Size = polledRecords.stream()
+                                                         .filter(r -> r.getPartitionId().equals(1))
+                                                         .collect(Collectors.toSet())
+                                                         .size();
+
+    Assert.assertEquals(initialRecordsPartition0Size, polledRecordsPartition0Size);
+    Assert.assertEquals(initialRecordsPartition1Size, polledRecordsPartition1Size);
 
     recordSupplier.close();
   }
@@ -279,11 +299,7 @@ public class KafkaRecordSupplierTest
   public void testSeek() throws InterruptedException, ExecutionException
   {
     // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-    }
+    insertData();
 
     StreamPartition<Integer> partition0 = StreamPartition.of(topic, 0);
     StreamPartition<Integer> partition1 = StreamPartition.of(topic, 1);
@@ -325,11 +341,7 @@ public class KafkaRecordSupplierTest
   public void testSeekToLatest() throws InterruptedException, ExecutionException
   {
     // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-    }
+    insertData();
 
     StreamPartition<Integer> partition0 = StreamPartition.of(topic, 0);
     StreamPartition<Integer> partition1 = StreamPartition.of(topic, 1);
@@ -387,11 +399,7 @@ public class KafkaRecordSupplierTest
   public void testPosition() throws ExecutionException, InterruptedException
   {
     // Insert data
-    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
-      for (ProducerRecord<byte[], byte[]> record : records) {
-        kafkaProducer.send(record).get();
-      }
-    }
+    insertData();
 
     StreamPartition<Integer> partition0 = StreamPartition.of(topic, 0);
     StreamPartition<Integer> partition1 = StreamPartition.of(topic, 1);
@@ -419,7 +427,7 @@ public class KafkaRecordSupplierTest
     Assert.assertEquals(0L, (long) recordSupplier.getPosition(partition0));
 
     recordSupplier.seekToLatest(Collections.singleton(partition0));
-    Assert.assertEquals(11L, (long) recordSupplier.getPosition(partition0));
+    Assert.assertEquals(12L, (long) recordSupplier.getPosition(partition0));
 
     long prevPos = recordSupplier.getPosition(partition0);
     recordSupplier.getEarliestSequenceNumber(partition0);
@@ -432,5 +440,16 @@ public class KafkaRecordSupplierTest
     recordSupplier.close();
   }
 
+  private void insertData() throws ExecutionException, InterruptedException
+  {
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
+      for (ProducerRecord<byte[], byte[]> record : records) {
+        kafkaProducer.send(record).get();
+      }
+      kafkaProducer.commitTransaction();
+    }
+  }
 
 }

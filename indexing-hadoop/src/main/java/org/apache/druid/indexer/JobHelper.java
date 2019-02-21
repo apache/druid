@@ -93,7 +93,6 @@ public class JobHelper
   }
 
   public static final String INDEX_ZIP = "index.zip";
-  public static final String DESCRIPTOR_JSON = "descriptor.json";
 
   /**
    * Dose authenticate against a secured hadoop cluster
@@ -422,7 +421,6 @@ public class JobHelper
       final Progressable progressable,
       final File mergedBase,
       final Path finalIndexZipFilePath,
-      final Path finalDescriptorPath,
       final Path tmpPath,
       DataSegmentPusher dataSegmentPusher
   )
@@ -471,12 +469,6 @@ public class JobHelper
       );
     }
 
-    writeSegmentDescriptor(
-        outputFS,
-        finalSegment,
-        finalDescriptorPath,
-        progressable
-    );
     return finalSegment;
   }
 

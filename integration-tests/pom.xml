@@ -32,7 +32,7 @@
     </parent>
 
     <properties>
-        <apache.kafka.version>0.10.2.2</apache.kafka.version>
+        <apache.kafka.version>2.1.0</apache.kafka.version>
     </properties>
 
     <dependencies>
@@ -50,17 +50,6 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-datasketches</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-kafka-eight</artifactId>
-            <version>${project.parent.version}</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>kafka_2.10</artifactId>
-                    <groupId>org.apache.kafka</groupId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>

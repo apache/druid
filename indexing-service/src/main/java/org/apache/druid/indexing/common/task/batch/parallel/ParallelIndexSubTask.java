@@ -235,9 +235,8 @@ public class ParallelIndexSubTask extends AbstractTask
   )
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
-    final boolean explicitIntervals = dataSchema.getGranularitySpec().bucketIntervals().isPresent();
     final ParallelIndexIOConfig ioConfig = ingestionSchema.getIOConfig();
-    if (ioConfig.isAppendToExisting() || !explicitIntervals) {
+    if (ioConfig.isAppendToExisting()) {
       return new ActionBasedSegmentAllocator(
           toolbox.getTaskActionClient(),
           dataSchema,
