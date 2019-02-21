@@ -113,15 +113,7 @@ If it finds such segments, it simply skips them.
 
 ### The Coordinator Console
 
-The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. After the Coordinator starts, the console can be accessed at:
-
-```
-http://<COORDINATOR_IP>:<COORDINATOR_PORT>
-```
-
- There exists a full cluster view (which shows only the realtime and Historical nodes), as well as views for individual Historical nodes, datasources and segments themselves. Segment information can be displayed in raw JSON form or as part of a sortable and filterable table.
-
-The Coordinator console also exposes an interface to creating and editing rules. All valid datasources configured in the segment database, along with a default datasource, are available for configuration. Rules of different types can be added, deleted or edited.
+The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, please see [coordinator console](../operations/web-consoles.html#coordinator-console).
 
 ### FAQ
 
