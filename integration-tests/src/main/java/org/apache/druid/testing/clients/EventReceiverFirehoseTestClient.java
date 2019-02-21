@@ -22,7 +22,6 @@ package org.apache.druid.testing.clients;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -109,7 +108,7 @@ public class EventReceiverFirehoseTestClient
       return responseData.get("eventCount");
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -156,7 +155,7 @@ public class EventReceiverFirehoseTestClient
       return totalEventsPosted;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
   }

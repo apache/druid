@@ -22,7 +22,6 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -364,7 +363,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         );
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -378,7 +377,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.remove(segment);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count++;
@@ -394,7 +393,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.removeAll(segments);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count += segments.size();
@@ -410,7 +409,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.add(segment);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count--;

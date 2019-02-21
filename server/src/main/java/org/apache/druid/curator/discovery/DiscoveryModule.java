@@ -19,7 +19,6 @@
 
 package org.apache.druid.curator.discovery;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -291,7 +290,7 @@ public class DiscoveryModule implements Module
               serviceDiscovery.close();
             }
             catch (Exception e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         }

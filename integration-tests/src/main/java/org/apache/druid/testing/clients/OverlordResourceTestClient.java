@@ -22,7 +22,6 @@ package org.apache.druid.testing.clients;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskState;
@@ -108,7 +107,7 @@ public class OverlordResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -134,7 +133,7 @@ public class OverlordResourceTestClient
       return taskStatusResponse.getStatus().getStatusCode();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -168,7 +167,7 @@ public class OverlordResourceTestClient
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -225,7 +224,7 @@ public class OverlordResourceTestClient
       return id;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -246,7 +245,7 @@ public class OverlordResourceTestClient
       LOG.info("Shutdown supervisor with id[%s]", id);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -262,7 +261,7 @@ public class OverlordResourceTestClient
     }
     catch (Exception e) {
       LOG.error(e, "Exception while sending request");
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

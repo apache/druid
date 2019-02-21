@@ -19,7 +19,6 @@
 
 package org.apache.druid.guice.http;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
 public class LifecycleUtils
@@ -44,7 +43,7 @@ public class LifecycleUtils
       });
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     return metamxLifecycle;

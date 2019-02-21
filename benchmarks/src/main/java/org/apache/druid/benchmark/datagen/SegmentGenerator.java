@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.datagen;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
@@ -170,7 +169,7 @@ public class SegmentGenerator implements Closeable
         return merged;
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }
