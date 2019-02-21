@@ -87,11 +87,12 @@ public class SegmentMetadataQueryTest
       QueryRunnerFactory factory
   )
   {
-    QueryableIndex index = bitmaps
-                           ? rollup
-                             ? TestIndex.getMMappedTestIndex()
-                             : TestIndex.getNoRollupMMappedTestIndex()
-                           : TestIndex.getNoBitmapMMappedTestIndex();
+    QueryableIndex index;
+    if (bitmaps) {
+      index = rollup ? TestIndex.getMMappedTestIndex() : TestIndex.getNoRollupMMappedTestIndex();
+    } else {
+      index = TestIndex.getNoBitmapMMappedTestIndex();
+    }
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
         segmentId,
@@ -108,11 +109,12 @@ public class SegmentMetadataQueryTest
       QueryRunnerFactory factory
   )
   {
-    IncrementalIndex index = bitmaps
-                             ? rollup
-                               ? TestIndex.getIncrementalTestIndex()
-                               : TestIndex.getNoRollupIncrementalTestIndex()
-                             : TestIndex.getNoBitmapIncrementalTestIndex();
+    IncrementalIndex index;
+    if (bitmaps) {
+      index = rollup ? TestIndex.getIncrementalTestIndex() : TestIndex.getNoRollupIncrementalTestIndex();
+    } else {
+      index = TestIndex.getNoBitmapIncrementalTestIndex();
+    }
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
         segmentId,
