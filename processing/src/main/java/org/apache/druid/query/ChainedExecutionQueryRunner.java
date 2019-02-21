@@ -133,7 +133,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                   }
                                   catch (Exception e) {
                                     log.error(e, "Exception with one of the sequences!");
-                                    Throwables.propagateIfPossible(e.getCause());
+                                    Throwables.propagateIfPossible(e);
                                     throw new RuntimeException(e);
                                   }
                                 }
@@ -169,7 +169,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
             }
             catch (ExecutionException e) {
               Throwables.propagateIfPossible(e.getCause());
-              throw new RuntimeException(e);
+              throw new RuntimeException(e.getCause());
             }
           }
 

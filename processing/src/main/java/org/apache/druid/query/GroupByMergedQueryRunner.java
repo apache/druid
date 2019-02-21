@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
@@ -127,6 +128,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                             }
                             catch (Exception e) {
                               log.error(e, "Exception with one of the sequences!");
+                              Throwables.propagateIfPossible(e);
                               throw new RuntimeException(e);
                             }
                           }
@@ -201,7 +203,8 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     }
     catch (ExecutionException e) {
       closeOnFailure.close();
-      throw new RuntimeException(e);
+      Throwables.propagateIfPossible(e.getCause());
+      throw new RuntimeException(e.getCause());
     }
   }
 }
