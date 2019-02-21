@@ -183,6 +183,16 @@ public class SegmentMetadataQueryTest
                       .merge(true)
                       .build();
 
+    int preferedSize1 = 0;
+    int placementSize2 = 0;
+    int overallSize1 = 119691;
+    int overallSize2 = 119691;
+    if (bitmaps) {
+      preferedSize1 = mmap1 ? 10881 : 10764;
+      placementSize2 = mmap2 ? 10881 : 0;
+      overallSize1 = mmap1 ? 167493 : 168188;
+      overallSize2 = mmap2 ? 167493 : 168188;
+    }
     expectedSegmentAnalysis1 = new SegmentAnalysis(
         id1.toString(),
         ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
@@ -201,7 +211,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
-                mmap1 ? (bitmaps ? 10881 : 9) : 10764,
+                preferedSize1,
                 1,
                 "preferred",
                 "preferred",
@@ -217,7 +227,7 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        ), mmap1 ? (bitmaps ? 167493 : 119872) : 168188,
+        ), overallSize1,
         1209,
         null,
         null,
@@ -242,7 +252,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
-                mmap2 ? (bitmaps ? 10881 : 9) : 0,
+                placementSize2,
                 1,
                 null,
                 null,
@@ -259,7 +269,7 @@ public class SegmentMetadataQueryTest
                 null
             )
             // null_column will be included only for incremental index, which makes a little bigger result than expected
-        ), mmap2 ? (bitmaps ? 167493 : 119872) : 168188,
+        ), overallSize2,
         1209,
         null,
         null,
@@ -484,10 +494,16 @@ public class SegmentMetadataQueryTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge()
   {
+    int size1 = 0;
+    int size2 = 0;
+    if (bitmaps) {
+      size1 = mmap1 ? 10881 : 10764;
+      size2 = mmap2 ? 10881 : 10764;
+    }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
         false,
-        (mmap1 ? bitmaps ? 10881 : 9 : 10764) + (mmap2 ? bitmaps ? 10881 : 9 : 10764),
+        size1 + size2,
         1,
         "preferred",
         "preferred",
@@ -499,10 +515,16 @@ public class SegmentMetadataQueryTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge2()
   {
+    int size1 = 0;
+    int size2 = 0;
+    if (bitmaps) {
+      size1 = mmap1 ? 6882 : 6808;
+      size2 = mmap2 ? 6882 : 6808;
+    }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
         false,
-        (mmap1 ? bitmaps ? 6882 : 23 : 6808) + (mmap2 ? bitmaps ? 6882 : 23 : 6808),
+        size1 + size2,
         3,
         "spot",
         "upfront",
@@ -514,10 +536,16 @@ public class SegmentMetadataQueryTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge3()
   {
+    int size1 = 0;
+    int size2 = 0;
+    if (bitmaps) {
+      size1 = mmap1 ? 9765 : 9660;
+      size2 = mmap2 ? 9765 : 9660;
+    }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ValueType.STRING.toString(),
         false,
-        (mmap1 ? bitmaps ? 9765 : 73 : 9660) + (mmap2 ? bitmaps ? 9765 : 73 : 9660),
+        size1 + size2,
         9,
         "automotive",
         "travel",

@@ -222,15 +222,6 @@ public class SegmentAnalyzer
       // fallback if no bitmap index
       DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) columnHolder.getColumn();
       cardinality = theColumn.getCardinality();
-
-      if (analyzingSize()) {
-        for (int i = 0; i < cardinality; ++i) {
-          String value = theColumn.lookupName(i);
-          if (value != null && !value.isEmpty()) {
-            size += StringUtils.estimatedBinaryLengthAsUTF8(value);
-          }
-        }
-      }
       if (analyzingMinMax() && cardinality > 0) {
         min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
         max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
