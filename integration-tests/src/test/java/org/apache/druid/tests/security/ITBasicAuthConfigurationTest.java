@@ -221,7 +221,7 @@ public class ITBasicAuthConfigurationTest
 
     LOG.info("Testing Avatica query on broker with incorrect credentials.");
     testAvaticaAuthFailure(brokerUrl);
-    
+
     LOG.info("Testing Avatica query on router with incorrect credentials.");
     testAvaticaAuthFailure(routerUrl);
 
@@ -280,7 +280,7 @@ public class ITBasicAuthConfigurationTest
     catch (AvaticaSqlException ase) {
       Assert.assertEquals(
           ase.getErrorMessage(),
-          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: ForbiddenException: Authentication failed."
+          "Error while executing SQL \"SELECT * FROM INFORMATION_SCHEMA.COLUMNS\": Remote driver error: BasicSecurityAuthenticationException: User DB authentication failed username[admin]."
       );
       return;
     }

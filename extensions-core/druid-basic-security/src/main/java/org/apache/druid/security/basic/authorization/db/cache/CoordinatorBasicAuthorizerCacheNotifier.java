@@ -58,7 +58,7 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
         getAuthorizerConfigMap(authorizerMapper),
         discoveryProvider,
         httpClient,
-        "/druid-ext/basic-security/authorization/listen/%s",
+        "/druid-ext/basic-security/authorization/listen/users/%s",
         "CoordinatorBasicAuthorizerCacheNotifier"
     );
     cacheGroupMappingNotifier = new CommonCacheNotifier(

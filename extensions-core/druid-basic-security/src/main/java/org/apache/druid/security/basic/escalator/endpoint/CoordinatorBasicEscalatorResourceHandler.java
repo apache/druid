@@ -91,7 +91,17 @@ public class CoordinatorBasicEscalatorResourceHandler implements BasicEscalatorR
   @Override
   public Response getCachedSerializedEscalatorCredential()
   {
-    return Response.ok(storageUpdater.getCachedSerializedEscalatorCredential()).build();
+    byte[] cachedSerializedEscalatorCredential = storageUpdater.getCachedSerializedEscalatorCredential();
+    if (cachedSerializedEscalatorCredential != null) {
+      return Response.ok(storageUpdater.getCachedSerializedEscalatorCredential()).build();
+    } else {
+      return Response.status(Response.Status.NOT_FOUND)
+                     .entity(ImmutableMap.<String, Object>of(
+                         "error",
+                         "Escalator credential does not exist."
+                     ))
+                     .build();
+    }
   }
 
   @Override

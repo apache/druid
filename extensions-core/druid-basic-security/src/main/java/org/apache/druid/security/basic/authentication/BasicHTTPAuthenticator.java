@@ -114,7 +114,7 @@ public class BasicHTTPAuthenticator implements Authenticator
     } else {
       this.credentialsValidator = credentialsValidator;
     }
-    this.skipOnFailure = skipOnFailure;
+    this.skipOnFailure = skipOnFailure == null ? false : skipOnFailure;
   }
 
   @Override

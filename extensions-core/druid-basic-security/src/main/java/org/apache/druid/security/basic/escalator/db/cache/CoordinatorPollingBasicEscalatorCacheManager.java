@@ -43,6 +43,7 @@ import org.apache.druid.security.basic.authentication.BytesFullResponseHolder;
 import org.apache.druid.security.basic.escalator.entity.BasicEscalatorCredential;
 import org.apache.druid.server.security.Escalator;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -187,9 +188,12 @@ public class CoordinatorPollingBasicEscalatorCacheManager implements BasicEscala
         req,
         new BytesFullResponseHandler()
     );
-    byte[] escalatorCredentialBytes = responseHolder.getBytes();
-
-    return objectMapper.readValue(escalatorCredentialBytes, BasicEscalatorCredential.class);
+    if (responseHolder.getStatus().equals(HttpResponseStatus.NOT_FOUND)) {
+      return null;
+    } else {
+      byte[] escalatorCredentialBytes = responseHolder.getBytes();
+      return objectMapper.readValue(escalatorCredentialBytes, BasicEscalatorCredential.class);
+    }
   }
 
   private void initEscalatorCredential()
