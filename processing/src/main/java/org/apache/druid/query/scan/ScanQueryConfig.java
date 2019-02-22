@@ -41,7 +41,7 @@ public class ScanQueryConfig
   }
 
   @JsonProperty
-  private int maxRowsQueuedForTimeOrdering = 100000;
+  private int maxRowsQueuedForTimeOrdering = 1;
 
   public int getMaxRowsQueuedForTimeOrdering()
   {

@@ -116,7 +116,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         ));
         return sortBatchAndLimitScanResultValues(queryResults, query);
       } else if (numSegments <= scanQueryConfig.getMaxSegmentsTimeOrderedInMemory()) {
-        // Use flatMerge strategy
+        // Use n-way merge strategy
         return Sequences.map(
             Sequences.simple(queryRunners),
             (input) -> Sequences.concat(

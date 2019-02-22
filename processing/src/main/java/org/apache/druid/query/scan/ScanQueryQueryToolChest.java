@@ -121,94 +121,13 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public QueryRunner<ScanResultValue> preMergeQueryDecoration(final QueryRunner<ScanResultValue> runner)
   {
-    return new QueryRunner<ScanResultValue>()
-    {
-      @Override
-      public Sequence<ScanResultValue> run(QueryPlus<ScanResultValue> queryPlus, Map<String, Object> responseContext)
-      {
-        ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
-        if (scanQuery.getFilter() != null) {
-          scanQuery = scanQuery.withDimFilter(scanQuery.getFilter().optimize());
-          queryPlus = queryPlus.withQuery(scanQuery);
-        }
-        return runner.run(queryPlus, responseContext);
+    return (queryPlus, responseContext) -> {
+      ScanQuery scanQuery = (ScanQuery) queryPlus.getQuery();
+      if (scanQuery.getFilter() != null) {
+        scanQuery = scanQuery.withDimFilter(scanQuery.getFilter().optimize());
+        queryPlus = queryPlus.withQuery(scanQuery);
       }
+      return runner.run(queryPlus, responseContext);
     };
-  }
-
-  @VisibleForTesting
-  Iterator<ScanResultValue> sortAndLimitScanResultValues(Iterator<ScanResultValue> inputIterator, ScanQuery scanQuery)
-  {
-    Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
-
-    // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
-    // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
-    int limit = Math.toIntExact(scanQuery.getLimit());
-    PriorityQueue<ScanResultValue> q = new PriorityQueue<>(limit, priorityQComparator);
-
-    while (inputIterator.hasNext()) {
-      ScanResultValue next = inputIterator.next();
-      List<Object> events = (List<Object>) next.getEvents();
-      for (Object event : events) {
-        // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
-        // needs to be preserved for queries using the compactedList result format
-        q.offer(new ScanResultValue(null, next.getColumns(), Collections.singletonList(event)));
-        if (q.size() > limit) {
-          q.poll();
-        }
-      }
-    }
-    // Need to convert to a List because Priority Queue's iterator doesn't guarantee that the sorted order
-    // will be maintained
-    final Deque<ScanResultValue> sortedElements = new ArrayDeque<>(q.size());
-    while (q.size() != 0) {
-      // We add at the front of the list because poll removes the tail of the queue.
-      sortedElements.addFirst(q.poll());
-    }
-
-    return sortedElements.iterator();
-  }
-
-  /**
-   * This iterator supports iteration through any Iterable of unbatched ScanResultValues (1 event/ScanResultValue) and
-   * aggregates events into ScanResultValues with {@code batchSize} events.  The columns from the first event per
-   * ScanResultValue will be used to populate the column section.
-   */
-  private static class ScanBatchedIterator implements CloseableIterator<ScanResultValue>
-  {
-    private final Iterator<ScanResultValue> itr;
-    private final int batchSize;
-
-    public ScanBatchedIterator(Iterator<ScanResultValue> iterator, int batchSize)
-    {
-      this.itr = iterator;
-      this.batchSize = batchSize;
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      return itr.hasNext();
-    }
-
-    @Override
-    public ScanResultValue next()
-    {
-      // Create new ScanResultValue from event map
-      List<Object> eventsToAdd = new ArrayList<>(batchSize);
-      List<String> columns = new ArrayList<>();
-      while (eventsToAdd.size() < batchSize && itr.hasNext()) {
-        ScanResultValue srv = itr.next();
-        // Only replace once using the columns from the first event
-        columns = columns.isEmpty() ? srv.getColumns() : columns;
-        eventsToAdd.add(Iterables.getOnlyElement((List) srv.getEvents()));
-      }
-      return new ScanResultValue(null, columns, eventsToAdd);
-    }
   }
 }
