@@ -25,6 +25,7 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.joda.time.DateTime;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -43,7 +44,7 @@ public class MapBasedRow implements Row
   )
   {
     this.timestamp = timestamp;
-    this.event = event;
+    this.event = Collections.unmodifiableMap(event);
   }
 
   public MapBasedRow(
