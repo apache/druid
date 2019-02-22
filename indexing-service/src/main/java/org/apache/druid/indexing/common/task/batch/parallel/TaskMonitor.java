@@ -89,7 +89,6 @@ public class TaskMonitor<T extends Task>
   // Currently, this metric only represents # of killed tasks by ParallelIndexTaskRunner.
   // See killAllRunningTasks(), SinglePhaseParallelIndexTaskRunner.run(), and
   // SinglePhaseParallelIndexTaskRunner.stopGracefully()
-  @VisibleForTesting
   private int numKilledTasks;
 
   private boolean running = false;
@@ -294,6 +293,7 @@ public class TaskMonitor<T extends Task>
     }
   }
 
+  @VisibleForTesting
   int getNumKilledTasks()
   {
     return numKilledTasks;
