@@ -33,6 +33,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -110,45 +112,34 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         );
       } else if (query.getLimit() <= scanQueryConfig.getMaxRowsQueuedForTimeOrdering()) {
         // Use priority queue strategy
-        Sequence<ScanResultValue> queryResults = Sequences.concat(Sequences.map(
-            Sequences.simple(queryRunners),
-            input -> input.run(queryPlus, responseContext)
-        ));
-        return sortBatchAndLimitScanResultValues(queryResults, query);
-      } else if (numSegments <= scanQueryConfig.getMaxSegmentsTimeOrderedInMemory()) {
-        List<Sequence<ScanResultValue>> list = Sequences.map(
-            Sequences.simple(queryRunners),
-            (input) -> Sequences.concat(
-                Sequences.map(
-                    input.run(queryPlus, responseContext),
-                    srv -> Sequences.simple(srv.toSingleEventScanResultValues())
-                )
-            )
-        ).toList();
-
-        for(Sequence<ScanResultValue> srv : list) {
-          List<ScanResultValue> asdf = srv.toList();
-          asdf.add(null);
-        }
-        // Use n-way merge strategy
-        return Sequences.map(
-            Sequences.simple(queryRunners),
-            (input) -> Sequences.concat(
-                Sequences.map(
-                    input.run(queryPlus, responseContext),
-                    srv -> Sequences.simple(srv.toSingleEventScanResultValues())
-                )
-            )
-        ).flatMerge(
-            seq -> seq,
-            Ordering.from(new ScanResultValueTimestampComparator(
-                query
-            )).reverse() // TODO Figure out why this needs to be reversed
-        ).limit(
-            Math.toIntExact(query.getLimit())
+        return sortBatchAndLimitScanResultValues(
+            Sequences.concat(Sequences.map(
+                Sequences.simple(queryRunners),
+                input -> input.run(queryPlus, responseContext)
+            )),
+            query
         );
+      } else if (numSegments <= scanQueryConfig.getMaxSegmentsTimeOrderedInMemory()) {
+        // Use n-way merge strategy
+        final Sequence<ScanResultValue> unbatched =
+            Sequences.map(
+                Sequences.simple(queryRunners),
+                (input) -> Sequences.concat(
+                    Sequences.map(
+                        input.run(queryPlus, responseContext),
+                        srv -> Sequences.simple(srv.toSingleEventScanResultValues())
+                    )
+                )
+            ).flatMerge(
+                seq -> seq,
+                Ordering.from(new ScanResultValueTimestampComparator(
+                    query
+                )).reverse() // TODO Figure out why this needs to be reversed
+            ).limit(
+                Math.toIntExact(query.getLimit())
+            );
 
-        // Need to batch
+        // Batch the scan result values
       } else {
         throw new UOE(
             "Time ordering for result set limit of %,d is not supported.  Try lowering the "
@@ -262,12 +253,14 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       return engine.process((ScanQuery) query, segment, responseContext);
     }
   }
+
   /**
    * This iterator supports iteration through any Iterable of unbatched ScanResultValues (1 event/ScanResultValue) and
    * aggregates events into ScanResultValues with {@code batchSize} events.  The columns from the first event per
    * ScanResultValue will be used to populate the column section.
    */
-  private static class ScanBatchedIterator implements CloseableIterator<ScanResultValue>
+  @VisibleForTesting
+  static class ScanBatchedIterator implements CloseableIterator<ScanResultValue>
   {
     private final Iterator<ScanResultValue> itr;
     private final int batchSize;
