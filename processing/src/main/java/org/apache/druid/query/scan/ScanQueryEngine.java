@@ -68,7 +68,7 @@ public class ScanQueryEngine
 
     if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) != null) {
       long count = (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
-      if (count >= query.getLimit()) {
+      if (count >= query.getLimit() && query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
         return Sequences.empty();
       }
     }
@@ -123,7 +123,9 @@ public class ScanQueryEngine
     if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) == null) {
       responseContext.put(ScanQueryRunnerFactory.CTX_COUNT, 0L);
     }
-    final long limit = query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
+    final long limit = query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE) ?
+                       query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) :
+                       Long.MAX_VALUE;
     return Sequences.concat(
             adapter
                 .makeCursors(

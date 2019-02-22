@@ -509,7 +509,8 @@ public class CalciteTests
                         new ScanQueryConfig(),
                         new DefaultGenericQueryMetricsFactory(TestHelper.makeJsonMapper())
                     ),
-                    new ScanQueryEngine()
+                    new ScanQueryEngine(),
+                    new ScanQueryConfig()
                 )
             )
             .put(

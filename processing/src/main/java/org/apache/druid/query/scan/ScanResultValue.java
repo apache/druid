@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -84,6 +86,17 @@ public class ScanResultValue implements Comparable<ScanResultValue>
     }
     throw new UOE("Unable to get first event timestamp using result format of [%s]", query.getResultFormat());
   }
+
+  public List<ScanResultValue> toSingleEventScanResultValues()
+  {
+    List<ScanResultValue> singleEventScanResultValues = new ArrayList<>();
+    List<Object> events = (List<Object>) this.getEvents();
+    for (Object event : events) {
+      singleEventScanResultValues.add(new ScanResultValue(segmentId, columns, Collections.singletonList(event)));
+    }
+    return singleEventScanResultValues;
+  }
+
 
   @Override
   public boolean equals(Object o)

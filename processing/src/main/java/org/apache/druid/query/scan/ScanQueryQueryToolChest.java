@@ -76,69 +76,24 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       // the same way, even if they have different default legacy values.
       final ScanQuery scanQuery = ((ScanQuery) queryPlus.getQuery()).withNonNullLegacy(scanQueryConfig);
       final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
-      if (scanQuery.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
-        if (scanQuery.getLimit() == Long.MAX_VALUE) {
-          return runner.run(queryPlusWithNonNullLegacy, responseContext);
-        } else {
-          return new BaseSequence<>(
-              new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
-              {
-                @Override
-                public ScanQueryLimitRowIterator make()
-                {
-                  return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
-                }
-
-                @Override
-                public void cleanup(ScanQueryLimitRowIterator iterFromMake)
-                {
-                  CloseQuietly.close(iterFromMake);
-                }
-              });
-        }
-      } else if (scanQuery.getLimit() <= scanQueryConfig.getMaxRowsQueuedForTimeOrdering()) {
-        ScanQueryNoLimitRowIterator scanResultIterator =
-            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryNoLimitRowIterator>()
+      if (scanQuery.getTimeOrder().equals(ScanQuery.TimeOrder.NONE) && scanQuery.getLimit() != Long.MAX_VALUE) {
+        return new BaseSequence<>(
+            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
             {
               @Override
-              public ScanQueryNoLimitRowIterator make()
+              public ScanQueryLimitRowIterator make()
               {
-                return new ScanQueryNoLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
+                return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
               }
 
               @Override
-              public void cleanup(ScanQueryNoLimitRowIterator iterFromMake)
-              {
-                CloseQuietly.close(iterFromMake);
-              }
-            }.make();
-
-        return new BaseSequence(
-            new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedIterator>()
-            {
-              @Override
-              public ScanBatchedIterator make()
-              {
-                return new ScanBatchedIterator(
-                    sortAndLimitScanResultValues(scanResultIterator, scanQuery),
-                    scanQuery.getBatchSize()
-                );
-              }
-
-              @Override
-              public void cleanup(ScanBatchedIterator iterFromMake)
+              public void cleanup(ScanQueryLimitRowIterator iterFromMake)
               {
                 CloseQuietly.close(iterFromMake);
               }
             });
-      } else {
-        throw new UOE(
-            "Time ordering for result set limit of %,d is not supported.  Try lowering the "
-            + "result set size to less than or equal to the time ordering limit of %,d.",
-            scanQuery.getLimit(),
-            scanQueryConfig.getMaxRowsQueuedForTimeOrdering()
-        );
       }
+      return runner.run(queryPlusWithNonNullLegacy, responseContext);
     };
   }
 

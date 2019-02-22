@@ -122,7 +122,8 @@ public class ScanQueryRunnerTest
         QueryRunnerTestHelper.makeQueryRunners(
             new ScanQueryRunnerFactory(
                 toolChest,
-                new ScanQueryEngine()
+                new ScanQueryEngine(),
+                new ScanQueryConfig()
             )
         ),
         ImmutableList.of(false, true)
