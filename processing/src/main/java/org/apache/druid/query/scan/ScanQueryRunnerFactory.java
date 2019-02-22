@@ -116,6 +116,20 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         ));
         return sortBatchAndLimitScanResultValues(queryResults, query);
       } else if (numSegments <= scanQueryConfig.getMaxSegmentsTimeOrderedInMemory()) {
+        List<Sequence<ScanResultValue>> list = Sequences.map(
+            Sequences.simple(queryRunners),
+            (input) -> Sequences.concat(
+                Sequences.map(
+                    input.run(queryPlus, responseContext),
+                    srv -> Sequences.simple(srv.toSingleEventScanResultValues())
+                )
+            )
+        ).toList();
+
+        for(Sequence<ScanResultValue> srv : list) {
+          List<ScanResultValue> asdf = srv.toList();
+          asdf.add(null);
+        }
         // Use n-way merge strategy
         return Sequences.map(
             Sequences.simple(queryRunners),
@@ -129,10 +143,12 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             seq -> seq,
             Ordering.from(new ScanResultValueTimestampComparator(
                 query
-            ))
+            )).reverse() // TODO Figure out why this needs to be reversed
         ).limit(
             Math.toIntExact(query.getLimit())
         );
+
+        // Need to batch
       } else {
         throw new UOE(
             "Time ordering for result set limit of %,d is not supported.  Try lowering the "
