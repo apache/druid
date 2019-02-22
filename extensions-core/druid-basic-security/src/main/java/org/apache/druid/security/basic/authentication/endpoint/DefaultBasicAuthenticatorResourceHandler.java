@@ -132,7 +132,7 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
-      String errMsg = StringUtils.format("Received update for unknown authenticator[%s]", authenticatorName);
+      String errMsg = StringUtils.format("Received user update for unknown authenticator[%s]", authenticatorName);
       log.error(errMsg);
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(ImmutableMap.<String, Object>of(
@@ -151,7 +151,7 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
   {
     final BasicHTTPAuthenticator authenticator = authenticatorMap.get(authenticatorName);
     if (authenticator == null) {
-      String errMsg = StringUtils.format("Received update for unknown authenticator[%s]", authenticatorName);
+      String errMsg = StringUtils.format("Received config update for unknown authenticator[%s]", authenticatorName);
       log.error(errMsg);
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(ImmutableMap.<String, Object>of(
@@ -170,11 +170,10 @@ public class DefaultBasicAuthenticatorResourceHandler implements BasicAuthentica
   {
     Map<String, Boolean> loadStatus = new HashMap<>();
     authenticatorMap.forEach(
-        (authenticatorName, authenticator) -> {
+        (authenticatorName, authenticator) ->
           loadStatus.put(authenticatorName, cacheManager.getUserMap(authenticatorName) != null &&
                                             cacheManager.getConfig(authenticatorName) != null
-          );
-        }
+          )
     );
     return Response.ok(loadStatus).build();
   }

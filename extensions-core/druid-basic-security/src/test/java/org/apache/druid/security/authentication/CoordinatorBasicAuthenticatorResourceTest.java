@@ -62,8 +62,6 @@ public class CoordinatorBasicAuthenticatorResourceTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private TestDerbyConnector connector;
-  private MetadataStorageTablesConfig tablesConfig;
   private BasicAuthenticatorResource resource;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater storageUpdater;
   private HttpServletRequest req;
@@ -75,8 +73,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
     req = EasyMock.createStrictMock(HttpServletRequest.class);
 
     objectMapper = new ObjectMapper(new SmileFactory());
-    connector = derbyConnectorRule.getConnector();
-    tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
 
     ObjectMapper objectMapper = new ObjectMapper(new SmileFactory());

@@ -60,15 +60,14 @@ public class BasicRoleBasedAuthorizerTest
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private BasicRoleBasedAuthorizer authorizer;
-  private TestDerbyConnector connector;
-  private MetadataStorageTablesConfig tablesConfig;
+
   private CoordinatorBasicAuthorizerMetadataStorageUpdater updater;
 
   @Before
   public void setUp()
   {
-    connector = derbyConnectorRule.getConnector();
-    tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
 
     updater = new CoordinatorBasicAuthorizerMetadataStorageUpdater(

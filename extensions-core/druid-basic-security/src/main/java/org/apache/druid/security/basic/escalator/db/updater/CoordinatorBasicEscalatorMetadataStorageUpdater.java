@@ -44,8 +44,6 @@ import org.apache.druid.security.basic.escalator.entity.BasicEscalatorCredential
 import org.joda.time.Duration;
 
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
@@ -66,10 +64,9 @@ public class CoordinatorBasicEscalatorMetadataStorageUpdater implements BasicEsc
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ObjectMapper objectMapper;
   private final BasicEscalatorCacheNotifier cacheNotifier;
-  private final int numRetries = 5;
+
 
   private final AtomicReference<BasicEscalatorCredentialBundle> cachedEscalatorCredential;
-  private final Set<String> authenticatorPrefixes;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
   private final ScheduledExecutorService exec;
@@ -92,7 +89,6 @@ public class CoordinatorBasicEscalatorMetadataStorageUpdater implements BasicEsc
     this.objectMapper = objectMapper;
     this.cacheNotifier = cacheNotifier;
     this.cachedEscalatorCredential = new AtomicReference<>();
-    this.authenticatorPrefixes = new HashSet<>();
   }
 
   @LifecycleStart
@@ -218,6 +214,7 @@ public class CoordinatorBasicEscalatorMetadataStorageUpdater implements BasicEsc
 
   private void updateEscalatorCredentialInternal(BasicEscalatorCredential credential)
   {
+    int numRetries = 5;
     int attempts = 0;
     while (attempts < numRetries) {
       if (updateEscalatorCredentialOnce(credential)) {

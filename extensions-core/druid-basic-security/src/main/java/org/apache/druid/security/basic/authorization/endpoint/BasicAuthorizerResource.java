@@ -45,7 +45,7 @@ import java.util.List;
 @LazySingleton
 public class BasicAuthorizerResource
 {
-  private BasicAuthorizerResourceHandler resourceHandler;
+  private final BasicAuthorizerResourceHandler resourceHandler;
 
   @Inject
   public BasicAuthorizerResource(

@@ -41,7 +41,7 @@ public class CoordinatorBasicEscalatorCacheNotifier implements BasicEscalatorCac
 {
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private CommonCacheNotifier escalatorCredentialCacheNotifier;
+  private final CommonCacheNotifier escalatorCredentialCacheNotifier;
 
   @Inject
   public CoordinatorBasicEscalatorCacheNotifier(

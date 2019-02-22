@@ -53,16 +53,14 @@ public class BasicEscalatorCredential
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (o == null || !getClass().equals(o.getClass())) {
       return false;
     }
 
     BasicEscalatorCredential that = (BasicEscalatorCredential) o;
 
-    if (getUsername() != null ? !getUsername().equals(that.getUsername()) : that.getUsername() != null) {
-      return false;
-    }
-    return getPassword() != null ? getPassword().equals(that.getPassword()) : that.getPassword() == null;
+    return (getUsername() != null ? getUsername().equals(that.getUsername()) : that.getUsername() == null)
+           && (getPassword() != null ? getPassword().equals(that.getPassword()) : that.getPassword() == null);
   }
 
   @Override

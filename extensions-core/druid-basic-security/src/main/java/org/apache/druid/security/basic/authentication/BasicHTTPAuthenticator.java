@@ -55,7 +55,6 @@ public class BasicHTTPAuthenticator implements Authenticator
 {
   private static final Logger LOG = new Logger(BasicHTTPAuthenticator.class);
 
-  private final Provider<BasicAuthenticatorCacheManager> cacheManager;
   private final String name;
   private final String authorizerName;
   private final BasicAuthDBConfig dbConfig;
@@ -108,9 +107,8 @@ public class BasicHTTPAuthenticator implements Authenticator
         credentialMaxDuration,
         credentialCacheSize
     );
-    this.cacheManager = cacheManager;
     if (credentialsValidator == null) {
-      this.credentialsValidator = new DBCredentialsValidator(this.cacheManager);
+      this.credentialsValidator = new DBCredentialsValidator(cacheManager);
     } else {
       this.credentialsValidator = credentialsValidator;
     }

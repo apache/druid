@@ -44,7 +44,7 @@ public class BasicAuthorizerPermission
     this.resourceNamePattern = resourceNamePattern;
   }
 
-  public BasicAuthorizerPermission(
+  private BasicAuthorizerPermission(
       ResourceAction resourceAction
   )
   {

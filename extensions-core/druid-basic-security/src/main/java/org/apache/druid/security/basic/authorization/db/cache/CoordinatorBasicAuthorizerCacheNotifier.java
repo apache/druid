@@ -44,8 +44,8 @@ public class CoordinatorBasicAuthorizerCacheNotifier implements BasicAuthorizerC
 {
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private CommonCacheNotifier cacheUserNotifier;
-  private CommonCacheNotifier cacheGroupMappingNotifier;
+  private final CommonCacheNotifier cacheUserNotifier;
+  private final CommonCacheNotifier cacheGroupMappingNotifier;
 
   @Inject
   public CoordinatorBasicAuthorizerCacheNotifier(

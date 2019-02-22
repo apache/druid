@@ -48,11 +48,11 @@ public class DBCredentialsValidatorTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  public static BasicAuthenticatorCredentials USER_A_CREDENTIALS = new BasicAuthenticatorCredentials(
+  private static BasicAuthenticatorCredentials USER_A_CREDENTIALS = new BasicAuthenticatorCredentials(
       new BasicAuthenticatorCredentialUpdate("helloworld", 20)
   );
 
-  public static Provider<BasicAuthenticatorCacheManager> CACHE_MANAGER_PROVIDER = Providers.of(
+  private static Provider<BasicAuthenticatorCacheManager> CACHE_MANAGER_PROVIDER = Providers.of(
       new BasicAuthenticatorCacheManager()
       {
         @Override

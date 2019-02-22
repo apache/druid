@@ -263,9 +263,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
         continue;
       }
 
-      if (!allowedLdapGroup(ln, groupFilters)) {
-        continue;
-      } else {
+      if (allowedLdapGroup(ln, groupFilters)) {
         groups.add(ln);
       }
 

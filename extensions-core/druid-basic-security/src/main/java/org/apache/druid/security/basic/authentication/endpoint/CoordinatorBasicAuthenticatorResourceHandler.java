@@ -253,10 +253,9 @@ public class CoordinatorBasicAuthenticatorResourceHandler implements BasicAuthen
   {
     Map<String, Boolean> loadStatus = new HashMap<>();
     authenticatorMap.forEach(
-        (authenticatorName, authenticator) -> {
+        (authenticatorName, authenticator) ->
           loadStatus.put(authenticatorName, storageUpdater.getCachedUserMap(authenticatorName) != null &&
-                                            storageUpdater.getCachedConfig(authenticatorName) != null);
-        }
+                                            storageUpdater.getCachedConfig(authenticatorName) != null)
     );
     return Response.ok(loadStatus).build();
   }

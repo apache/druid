@@ -72,8 +72,6 @@ public class CoordinatorBasicAuthorizerResourceTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private TestDerbyConnector connector;
-  private MetadataStorageTablesConfig tablesConfig;
   private BasicAuthorizerResource resource;
   private CoordinatorBasicAuthorizerMetadataStorageUpdater storageUpdater;
   private HttpServletRequest req;
@@ -83,8 +81,8 @@ public class CoordinatorBasicAuthorizerResourceTest
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
 
-    connector = derbyConnectorRule.getConnector();
-    tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
 
     AuthorizerMapper authorizerMapper = new AuthorizerMapper(

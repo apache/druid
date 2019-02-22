@@ -53,8 +53,6 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private TestDerbyConnector connector;
-  private MetadataStorageTablesConfig tablesConfig;
   private CoordinatorBasicAuthenticatorMetadataStorageUpdater updater;
   private ObjectMapper objectMapper;
 
@@ -62,8 +60,8 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
   public void setUp()
   {
     objectMapper = new ObjectMapper(new SmileFactory());
-    connector = derbyConnectorRule.getConnector();
-    tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    TestDerbyConnector connector = derbyConnectorRule.getConnector();
+    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
     updater = new CoordinatorBasicAuthenticatorMetadataStorageUpdater(
         new AuthenticatorMapper(

@@ -390,12 +390,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       } else {
         attempts++;
       }
-      try {
-        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
-      }
-      catch (InterruptedException ie) {
-        throw new RuntimeException(ie);
-      }
+      updateRetryDelay();
     }
     throw new ISE("Could not create user[%s] due to concurrent update contention.", userName);
   }
@@ -409,14 +404,19 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
       } else {
         attempts++;
       }
-      try {
-        Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
-      }
-      catch (InterruptedException ie) {
-        throw new RuntimeException(ie);
-      }
+      updateRetryDelay();
     }
     throw new ISE("Could not delete user[%s] due to concurrent update contention.", userName);
+  }
+
+  private void updateRetryDelay()
+  {
+    try {
+      Thread.sleep(ThreadLocalRandom.current().nextLong(UPDATE_RETRY_DELAY));
+    }
+    catch (InterruptedException ie) {
+      throw new RuntimeException(ie);
+    }
   }
 
   private void setUserCredentialsInternal(String prefix, String userName, BasicAuthenticatorCredentialUpdate update)

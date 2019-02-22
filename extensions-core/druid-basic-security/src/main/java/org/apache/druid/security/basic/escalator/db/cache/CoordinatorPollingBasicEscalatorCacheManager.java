@@ -76,7 +76,7 @@ public class CoordinatorPollingBasicEscalatorCacheManager implements BasicEscala
       @Coordinator DruidLeaderClient druidLeaderClient
   )
   {
-    this.exec = Execs.scheduledSingleThreaded("BasicAuthenticatorCacheManager-Exec--%d");
+    this.exec = Execs.scheduledSingleThreaded("BasicEscalatorCacheManager-Exec--%d");
     this.injector = injector;
     this.commonCacheConfig = commonCacheConfig;
     this.objectMapper = objectMapper;

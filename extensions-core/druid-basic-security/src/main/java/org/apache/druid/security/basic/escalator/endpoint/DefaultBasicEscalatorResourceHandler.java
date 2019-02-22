@@ -20,7 +20,6 @@
 package org.apache.druid.security.basic.escalator.endpoint;
 
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.escalator.db.cache.BasicEscalatorCacheManager;
 import org.apache.druid.security.basic.escalator.entity.BasicEscalatorCredential;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -29,7 +28,6 @@ import javax.ws.rs.core.Response;
 
 public class DefaultBasicEscalatorResourceHandler implements BasicEscalatorResourceHandler
 {
-  private static final Logger LOG = new Logger(DefaultBasicEscalatorResourceHandler.class);
   private static final Response NOT_FOUND_RESPONSE = Response.status(Response.Status.NOT_FOUND).build();
 
   private final BasicEscalatorCacheManager cacheManager;

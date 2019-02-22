@@ -49,7 +49,7 @@ public class BasicAuthorizerGroupMappingFull
     return name;
   }
 
-  public String getGroupPattern()
+  private String getGroupPattern()
   {
     return groupPattern;
   }

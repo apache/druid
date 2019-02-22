@@ -43,8 +43,8 @@ import java.util.concurrent.TimeUnit;
 public class CoordinatorBasicAuthenticatorCacheNotifier implements BasicAuthenticatorCacheNotifier
 {
   private final LifecycleLock lifecycleLock = new LifecycleLock();
-  private CommonCacheNotifier userCacheNotifier;
-  private CommonCacheNotifier configCacheNotifier;
+  private final CommonCacheNotifier userCacheNotifier;
+  private final CommonCacheNotifier configCacheNotifier;
 
   @Inject
   public CoordinatorBasicAuthenticatorCacheNotifier(
