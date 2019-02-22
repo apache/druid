@@ -19,12 +19,16 @@
 
 package org.apache.druid.java.util.common;
 
+import com.google.common.base.Preconditions;
+
 import java.net.URI;
 
 public final class URIs
 {
   public static URI parse(String strUri, String defaultScheme)
   {
+    Preconditions.checkNotNull(strUri, "strUri");
+    Preconditions.checkNotNull(defaultScheme, "defaultScheme");
     final String[] tokens = strUri.split("://");
     if (tokens.length == 1) {
       return URI.create(StringUtils.format("%s://%s", defaultScheme, strUri));
