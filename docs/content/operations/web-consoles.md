@@ -37,7 +37,7 @@ In addition, the following cluster settings must be enabled:
 - the Router's [management proxy](../development/router.html#enabling-the-management-proxy) must be enabled.
 - the Broker processes in the cluster must have [Druid SQL](../querying/sql.html) enabled.
 
-After enabling Druid SQL on the Brokers and deploying a Router with the managment proxy enabled, the unified console can be accessed at:
+After enabling Druid SQL on the Brokers and deploying a Router with the managment proxy enabled, the Druid console can be accessed at:
 
 ```
 http://<ROUTER_IP>:<ROUTER_PORT>
