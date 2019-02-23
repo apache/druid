@@ -21,7 +21,6 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -38,7 +37,6 @@ import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Use {@link org.apache.druid.server.coordinator.HttpLoadQueuePeon} for segment load/drops.
@@ -58,7 +56,7 @@ public class ZkCoordinator
 
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started = false;
-  private final ExecutorService loadSegmentService;
+  private final ExecutorService segmentLoadUnloadService;
 
   @Inject
   public ZkCoordinator(
@@ -75,11 +73,8 @@ public class ZkCoordinator
     this.zkPaths = zkPaths;
     this.me = me;
     this.curator = curator;
-    this.loadSegmentService = Executors.newFixedThreadPool(
-        config.getNumLoadingThreads(),
-        new ThreadFactoryBuilder().setNameFormat(
-            "ZKCoordinator-LoadSegment--%d").build()
-    );
+    this.segmentLoadUnloadService = Execs.multiThreaded(
+        config.getNumLoadingThreads(), "ZKCoordinator--%d");
   }
 
   @LifecycleStart
@@ -115,18 +110,18 @@ public class ZkCoordinator
               @Override
               public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
               {
-                loadSegmentService.submit(() -> {
-                  final ChildData child = event.getData();
-                  switch (event.getType()) {
-                    case CHILD_ADDED:
+                final ChildData child = event.getData();
+                switch (event.getType()) {
+                  case CHILD_ADDED:
+                    log.info("Child zNode added at [%s]", event.getData().getPath());
+                    segmentLoadUnloadService.submit(() -> {
                       final String path = child.getPath();
                       DataSegmentChangeRequest request = new SegmentChangeRequestNoop();
                       try {
-                        request = jsonMapper.readValue(
+                        final DataSegmentChangeRequest finalRequest = jsonMapper.readValue(
                             child.getData(), DataSegmentChangeRequest.class
                         );
-                        final DataSegmentChangeRequest finalRequest = request;
-                        log.info("New request[%s] with zNode[%s].", request.asString(), path);
+                        log.info("Starting request[%s] with zNode[%s]", finalRequest.asString(), path);
 
                         finalRequest.go(
                             dataSegmentChangeHandler,
@@ -166,15 +161,14 @@ public class ZkCoordinator
                            .addData("nodeProperties", request)
                            .emit();
                       }
-
-                      break;
-                    case CHILD_REMOVED:
-                      log.info("zNode[%s] was removed", event.getData().getPath());
-                      break;
-                    default:
-                      log.info("Ignoring event[%s]", event);
-                  }
-                });
+                    });
+                    break;
+                  case CHILD_REMOVED:
+                    log.info("zNode[%s] was removed", event.getData().getPath());
+                    break;
+                  default:
+                    log.info("Ignoring event[%s]", event);
+                }
               }
             }
 

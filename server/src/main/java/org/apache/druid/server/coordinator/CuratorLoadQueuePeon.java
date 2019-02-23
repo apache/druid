@@ -21,19 +21,20 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentId;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
 import java.util.ArrayList;
@@ -41,10 +42,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -59,19 +65,11 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   private static final int DROP = 0;
   private static final int LOAD = 1;
 
-  private static void executeCallbacks(List<LoadPeonCallback> callbacks)
-  {
-    for (LoadPeonCallback callback : callbacks) {
-      if (callback != null) {
-        callback.execute();
-      }
-    }
-  }
-
   private final CuratorFramework curator;
   private final String basePath;
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService processingExecutor;
+  private final ScheduledExecutorService checkNodeRemovedExecutor;
   private final ExecutorService callBackExecutor;
   private final DruidCoordinatorConfig config;
 
@@ -88,10 +86,10 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
 
-  private final Object lock = new Object();
-
-  private volatile SegmentHolder currentlyProcessing = null;
-  private boolean stopped = false;
+  private final int numProcessingQueues;
+  private final LinkedBlockingQueue<SegmentHolder>[] segmentProcessingQueues;
+  // Max number of segments to process in every round
+  private final int batchSizePerTask;
 
   CuratorLoadQueuePeon(
       CuratorFramework curator,
@@ -108,6 +106,28 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     this.callBackExecutor = callbackExecutor;
     this.processingExecutor = processingExecutor;
     this.config = config;
+    this.checkNodeRemovedExecutor =
+        Executors.newScheduledThreadPool(
+            config.getCuratorNumMonitorThreads(),
+            Execs.makeThreadFactory("LoadQueuePeon")
+        );
+    // One processing queue per thread
+    Preconditions.checkArgument(config.getCreateZkNodeNumThreads() > 0);
+    this.numProcessingQueues = config.getCreateZkNodeNumThreads();
+
+    Preconditions.checkArgument(config.getCuratorCreateZkNodeBatchSize() > 0);
+    this.batchSizePerTask = (config.getCuratorCreateZkNodeBatchSize() / numProcessingQueues);
+
+    this.segmentProcessingQueues = new LinkedBlockingQueue[numProcessingQueues];
+    for (int i = 0; i < numProcessingQueues; i++) {
+      segmentProcessingQueues[i] = new LinkedBlockingQueue<>();
+      processingExecutor.scheduleAtFixedRate(
+          new SegmentChangeProcessor(segmentProcessingQueues[i]),
+          0,
+          config.getCuratorCreateZkNodesRepeatDelay().getMillis(),
+          TimeUnit.MILLISECONDS
+      );
+    }
   }
 
   @JsonProperty
@@ -152,29 +172,19 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   @Override
   public void loadSegment(final DataSegment segment, final LoadPeonCallback callback)
   {
-    synchronized (lock) {
-      if ((currentlyProcessing != null) &&
-          currentlyProcessing.getSegmentId().equals(segment.getId())) {
-        if (callback != null) {
-          currentlyProcessing.addCallback(callback);
-        }
-        return;
-      }
-    }
 
-    synchronized (lock) {
-      final SegmentHolder existingHolder = segmentsToLoad.get(segment);
-      if (existingHolder != null) {
-        if ((callback != null)) {
-          existingHolder.addCallback(callback);
-        }
-        return;
+    final SegmentHolder existingHolder = segmentsToLoad.get(segment);
+    if (existingHolder != null) {
+      if ((callback != null)) {
+        existingHolder.addCallback(callback);
       }
+      return;
     }
-
     log.debug("Asking server peon[%s] to load segment[%s]", basePath, segment.getId());
     queuedSize.addAndGet(segment.getSize());
-    segmentsToLoad.put(segment, new SegmentHolder(segment, LOAD, Collections.singletonList(callback)));
+    SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
+    segmentsToLoad.put(segment, segmentHolder);
+    segmentProcessingQueues[getSegmentQueueIndex()].offer(segmentHolder);
   }
 
   @Override
@@ -183,28 +193,17 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       final LoadPeonCallback callback
   )
   {
-    synchronized (lock) {
-      if ((currentlyProcessing != null) &&
-          currentlyProcessing.getSegmentId().equals(segment.getId())) {
-        if (callback != null) {
-          currentlyProcessing.addCallback(callback);
-        }
-        return;
+    final SegmentHolder existingHolder = segmentsToDrop.get(segment);
+    if (existingHolder != null) {
+      if (callback != null) {
+        existingHolder.addCallback(callback);
       }
+      return;
     }
-
-    synchronized (lock) {
-      final SegmentHolder existingHolder = segmentsToDrop.get(segment);
-      if (existingHolder != null) {
-        if (callback != null) {
-          existingHolder.addCallback(callback);
-        }
-        return;
-      }
-    }
-
     log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getId());
-    segmentsToDrop.put(segment, new SegmentHolder(segment, DROP, Collections.singletonList(callback)));
+    SegmentHolder segmentHolder = new SegmentHolder(segment, DROP, Collections.singletonList(callback));
+    segmentsToDrop.put(segment, segmentHolder);
+    segmentProcessingQueues[getSegmentQueueIndex()].offer(segmentHolder);
   }
 
   @Override
@@ -219,42 +218,64 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     segmentsMarkedToDrop.remove(dataSegment);
   }
 
-  private void processSegmentChangeRequest()
+  private int getSegmentQueueIndex()
   {
-    if (currentlyProcessing != null) {
-      log.debug(
-          "Server[%s] skipping processSegmentChangeRequest because something is currently loading[%s].",
-          basePath,
-          currentlyProcessing.getSegmentId()
-      );
+    return ThreadLocalRandom.current().nextInt(0, numProcessingQueues);
+  }
 
-      return;
+  private class SegmentChangeProcessor implements Runnable
+  {
+    private final BlockingQueue<SegmentHolder> segmentQueue;
+
+    private SegmentChangeProcessor(BlockingQueue<SegmentHolder> segmentQueue)
+    {
+      this.segmentQueue = segmentQueue;
     }
 
-    if (!segmentsToDrop.isEmpty()) {
-      currentlyProcessing = segmentsToDrop.firstEntry().getValue();
-      log.debug("Server[%s] dropping [%s]", basePath, currentlyProcessing.getSegmentId());
-    } else if (!segmentsToLoad.isEmpty()) {
-      currentlyProcessing = segmentsToLoad.firstEntry().getValue();
-      log.debug("Server[%s] loading [%s]", basePath, currentlyProcessing.getSegmentId());
-    } else {
-      return;
+    @Override
+    public void run()
+    {
+      try {
+        int numProcessed = 0;
+        while (numProcessed++ < batchSizePerTask && !segmentQueue.isEmpty()) {
+          // Instead of calling poll for every element, drain the batch to a list.
+          List<SegmentHolder> batch = new ArrayList<>(batchSizePerTask);
+          segmentQueue.drainTo(batch, batchSizePerTask);
+          for (SegmentHolder s : batch) {
+            processSegmentChangeRequest(s);
+          }
+        }
+      }
+      catch (Throwable e) {
+        // Swallow all errors so that the executor thread doesn't die
+        log.error(e, "Throwable caught and ignored when processing segments from the queue");
+      }
     }
+  }
 
+  private void processSegmentChangeRequest(SegmentHolder segmentHolder)
+  {
     try {
-      final String path = ZKPaths.makePath(basePath, currentlyProcessing.getSegmentId().toString());
-      final byte[] payload = jsonMapper.writeValueAsBytes(currentlyProcessing.getChangeRequest());
+      final String path = ZKPaths.makePath(basePath, segmentHolder.getSegmentIdentifier());
+      final byte[] payload = jsonMapper.writeValueAsBytes(segmentHolder.getChangeRequest());
       curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
-
-      processingExecutor.schedule(
+      log.debug(
+          "ZKNode created for server to [%s] %s [%s]",
+          basePath,
+          segmentHolder.getType() == LOAD ? "load" : "drop",
+          segmentHolder.getSegmentIdentifier()
+      );
+      final ScheduledFuture<?> future = checkNodeRemovedExecutor.schedule(
           () -> {
             try {
               if (curator.checkExists().forPath(path) != null) {
-                failAssign(new ISE("%s was never removed! Failing this operation!", path));
+                failAssign(segmentHolder, new ISE("%s was never removed! Failing this operation!", path));
+              } else {
+                log.debug("%s detected to be removed. ", path);
               }
             }
             catch (Exception e) {
-              failAssign(e);
+              failAssign(segmentHolder, e);
             }
           },
           config.getLoadTimeoutDelay().getMillis(),
@@ -265,7 +286,10 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
           (CuratorWatcher) watchedEvent -> {
             switch (watchedEvent.getType()) {
               case NodeDeleted:
-                entryRemoved(watchedEvent.getPath());
+                // Cancel the check node deleted task since we have already
+                // been notified by the zk watcher
+                future.cancel(true);
+                entryRemoved(segmentHolder, watchedEvent.getPath());
                 break;
               default:
                 // do nothing
@@ -290,119 +314,97 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         // We do not create the existence watcher first, because then it will fire when we create the
         // node and we'll have the same race when trying to refresh that watcher.
         curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
-
-        entryRemoved(path);
+        entryRemoved(segmentHolder, path);
       }
+    }
+    catch (KeeperException.NodeExistsException ne) {
+      // This is expected when historicals haven't yet picked up processing this segment and coordinator
+      // tries reassigning it to the same node.
+      log.warn(ne, "ZK node already exists because segment change request hasn't yet been processed");
+      failAssign(segmentHolder);
     }
     catch (Exception e) {
-      failAssign(e);
+      failAssign(segmentHolder, e);
     }
   }
 
-  private void actionCompleted()
+  private void actionCompleted(SegmentHolder segmentHolder)
   {
-    if (currentlyProcessing != null) {
-      switch (currentlyProcessing.getType()) {
-        case LOAD:
-          segmentsToLoad.remove(currentlyProcessing.getSegment());
-          queuedSize.addAndGet(-currentlyProcessing.getSegmentSize());
-          break;
-        case DROP:
-          segmentsToDrop.remove(currentlyProcessing.getSegment());
-          break;
-        default:
-          throw new UnsupportedOperationException();
-      }
-
-      final List<LoadPeonCallback> callbacks = currentlyProcessing.getCallbacks();
-      currentlyProcessing = null;
-      callBackExecutor.execute(
-          () -> executeCallbacks(callbacks)
-      );
+    switch (segmentHolder.getType()) {
+      case LOAD:
+        segmentsToLoad.remove(segmentHolder.getSegment());
+        queuedSize.addAndGet(-segmentHolder.getSegmentSize());
+        break;
+      case DROP:
+        segmentsToDrop.remove(segmentHolder.getSegment());
+        break;
+      default:
+        throw new UnsupportedOperationException();
     }
+
+    callBackExecutor.execute(
+        () -> executeCallbacks(segmentHolder)
+    );
   }
+
 
   @Override
   public void start()
-  {
-    ScheduledExecutors.scheduleAtFixedRate(
-        processingExecutor,
-        config.getLoadQueuePeonRepeatDelay(),
-        config.getLoadQueuePeonRepeatDelay(),
-        () -> {
-          processSegmentChangeRequest();
-
-          if (stopped) {
-            return ScheduledExecutors.Signal.STOP;
-          } else {
-            return ScheduledExecutors.Signal.REPEAT;
-          }
-        }
-    );
-  }
+  { }
 
   @Override
   public void stop()
   {
-    synchronized (lock) {
-      if (currentlyProcessing != null) {
-        executeCallbacks(currentlyProcessing.getCallbacks());
-        currentlyProcessing = null;
-      }
-
-      if (!segmentsToDrop.isEmpty()) {
-        for (SegmentHolder holder : segmentsToDrop.values()) {
-          executeCallbacks(holder.getCallbacks());
-        }
-      }
-      segmentsToDrop.clear();
-
-      if (!segmentsToLoad.isEmpty()) {
-        for (SegmentHolder holder : segmentsToLoad.values()) {
-          executeCallbacks(holder.getCallbacks());
-        }
-      }
-      segmentsToLoad.clear();
-
-      queuedSize.set(0L);
-      failedAssignCount.set(0);
-      stopped = true;
+    for (SegmentHolder holder : segmentsToDrop.values()) {
+      executeCallbacks(holder);
     }
+    segmentsToDrop.clear();
+
+    for (SegmentHolder holder : segmentsToLoad.values()) {
+      executeCallbacks(holder);
+    }
+    segmentsToLoad.clear();
+
+    queuedSize.set(0L);
+    failedAssignCount.set(0);
+    processingExecutor.shutdown();
+    callBackExecutor.shutdown();
+    checkNodeRemovedExecutor.shutdown();
   }
 
-  private void entryRemoved(String path)
+  private void entryRemoved(SegmentHolder segmentHolder, String path)
   {
-    synchronized (lock) {
-      if (currentlyProcessing == null) {
-        log.warn("Server[%s] an entry[%s] was removed even though it wasn't loading!?", basePath, path);
-        return;
-      }
-      if (!ZKPaths.getNodeFromPath(path).equals(currentlyProcessing.getSegmentId().toString())) {
-        log.warn(
-            "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
-            basePath, path, currentlyProcessing
-        );
-        return;
-      }
-      log.debug(
-          "Server[%s] done processing %s of segment [%s]",
-          basePath,
-          currentlyProcessing.getType() == LOAD ? "load" : "drop",
-          path
+    if (!ZKPaths.getNodeFromPath(path).equals(segmentHolder.getSegmentIdentifier())) {
+      log.warn(
+          "Server[%s] entry [%s] was removed even though it's not what is currently loading[%s]",
+          basePath, path, segmentHolder
       );
-      actionCompleted();
+      return;
     }
+    actionCompleted(segmentHolder);
+    log.debug(
+        "Server[%s] done processing %s of segment [%s]",
+        basePath,
+        segmentHolder.getType() == LOAD ? "load" : "drop",
+        path
+    );
   }
 
-  private void failAssign(Exception e)
+  private void failAssign(SegmentHolder segmentHolder)
   {
-    synchronized (lock) {
-      log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, currentlyProcessing);
-      failedAssignCount.getAndIncrement();
-      // Act like it was completed so that the coordinator gives it to someone else
-      actionCompleted();
-    }
+    failAssign(segmentHolder, null);
   }
+
+  private void failAssign(SegmentHolder segmentHolder, Exception e)
+  {
+    if (e != null) {
+      log.error(e, "Server[%s], throwable caught when submitting [%s].", basePath, segmentHolder);
+    }
+    failedAssignCount.getAndIncrement();
+    // Act like it was completed so that the coordinator gives it to someone else
+    actionCompleted(segmentHolder);
+  }
+
 
   private static class SegmentHolder
   {
@@ -411,7 +413,11 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     private final int type;
     private final List<LoadPeonCallback> callbacks = new ArrayList<>();
 
-    private SegmentHolder(DataSegment segment, int type, Collection<LoadPeonCallback> callbacks)
+    private SegmentHolder(
+        DataSegment segment,
+        int type,
+        Collection<LoadPeonCallback> callbacks
+    )
     {
       this.segment = segment;
       this.type = type;
@@ -431,21 +437,14 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       return type;
     }
 
-    public SegmentId getSegmentId()
+    public String getSegmentIdentifier()
     {
-      return segment.getId();
+      return segment.getId().toString();
     }
 
     public long getSegmentSize()
     {
       return segment.getSize();
-    }
-
-    public void addCallbacks(Collection<LoadPeonCallback> newCallbacks)
-    {
-      synchronized (callbacks) {
-        callbacks.addAll(newCallbacks);
-      }
     }
 
     public void addCallback(LoadPeonCallback newCallback)
@@ -455,10 +454,11 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       }
     }
 
-    public List<LoadPeonCallback> getCallbacks()
+    LoadPeonCallback[] getCallbacks()
     {
       synchronized (callbacks) {
-        return callbacks;
+        // Return a copy so that callers get a consistent view
+        return callbacks.toArray(new LoadPeonCallback[0]);
       }
     }
 
@@ -471,6 +471,15 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     public String toString()
     {
       return changeRequest.toString();
+    }
+  }
+
+  private void executeCallbacks(SegmentHolder holder)
+  {
+    for (LoadPeonCallback callback : holder.getCallbacks()) {
+      if (callback != null) {
+        callBackExecutor.submit(() -> callback.execute());
+      }
     }
   }
 }

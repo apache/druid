@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.ImmutableDruidServer;
@@ -28,7 +27,6 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -68,15 +66,11 @@ public class LoadQueueTaskMaster
     if ("http".equalsIgnoreCase(config.getLoadQueuePeonType())) {
       return new HttpLoadQueuePeon(server.getURL(), jsonMapper, httpClient, config, peonExec, callbackExec);
     } else {
-      return new CuratorLoadQueuePeonV2(
+      return new CuratorLoadQueuePeon(
           curator,
           ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName()),
           jsonMapper,
-          Executors.newFixedThreadPool(
-              config.getCreateZkNodeNumThreads(),
-              new ThreadFactoryBuilder().setNameFormat(
-                  "CuratorLoadQueuePeon--%d").build()
-          ),
+          peonExec,
           callbackExec,
           config
       );

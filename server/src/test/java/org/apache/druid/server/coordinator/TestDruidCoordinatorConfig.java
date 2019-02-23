@@ -34,7 +34,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final int coordinatorKillMaxSegments;
 
   private final String consoleStatic;
-  private final int createZkNodeNumThreads;
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -47,8 +46,7 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       String consoleStatic,
       boolean mergeSegments,
       boolean convertSegments,
-      Duration getLoadQueuePeonRepeatDelay,
-      int createZkNodeNumThreads
+      Duration getLoadQueuePeonRepeatDelay
   )
   {
     this.coordinatorStartDelay = coordinatorStartDelay;
@@ -60,7 +58,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.consoleStatic = consoleStatic;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
-    this.createZkNodeNumThreads = createZkNodeNumThreads;
   }
 
   @Override
@@ -116,9 +113,4 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     return getLoadQueuePeonRepeatDelay;
   }
 
-  @Override
-  public int getCreateZkNodeNumThreads()
-  {
-    return createZkNodeNumThreads;
-  }
 }
