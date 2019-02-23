@@ -1255,7 +1255,11 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.segmentCache.infoDir`|Historical processes keep track of the segments they are serving so that when the process is restarted they can reload the same segments without waiting for the Coordinator to reassign. This path defines where this metadata is kept. Directory will be created if needed.|${first_location}/info_dir|
 |`druid.segmentCache.announceIntervalMillis`|How frequently to announce segments while segments are loading from cache. Set this value to zero to wait for all segments to be loaded before announcing.|5000 (5 seconds)|
 |`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from from deep storage.|10|
-|`druid.segmentCache.numBootstrapThreads`|How many segments to load concurrently from local storage at startup.|Same as numLoadingThreads|
+|`druid.coordinator.loadqueuepeon.curator.numCreateThreads`|How many threads to use for concurrently creating zk nodes corresponding to segments that need to be loaded or dropped.|10|
+|`druid.coordinator.loadqueuepeon.curator.numCallbackThreads`|How many threads to use for concurrently executing callback actions associated with loading or dropping segments.|2|
+|`druid.coordinator.loadqueuepeon.curator.numMonitorThreads`|How many threads to use for monitoring deletion of zk nodes corresponding to segments that need to loaded or dropped|1|
+|`druid.coordinator.curator.create.zknode.batchSize`|How many zk nodes to create in one iteration.|5000|
+|`druid.coordinator.curator.create.zknode.repeatDelay`|How long to wait for creating next batch of zk nodes|PT1M|
 
 In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
 

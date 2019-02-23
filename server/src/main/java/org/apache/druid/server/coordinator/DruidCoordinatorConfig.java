@@ -84,7 +84,7 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.loadqueuepeon.curator.numCallbackThreads")
   public int getCuratorNumCallBackThreads()
   {
-    return 10;
+    return 2;
   }
 
   @Config("druid.coordinator.loadqueuepeon.curator.numMonitorThreads")
