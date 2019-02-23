@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -553,16 +554,26 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
             try {
               final Object metadata = segmentsAndMetadata.getCommitMetadata();
-              final boolean published = publisher.publishSegments(
+              final SegmentPublishResult publishResult = publisher.publishSegments(
                   ImmutableSet.copyOf(segmentsAndMetadata.getSegments()),
                   metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
-              ).isSuccess();
+              );
 
-              if (published) {
+              if (publishResult.isSuccess()) {
                 log.info("Published segments.");
               } else {
-                log.info("Transaction failure while publishing segments, removing them from deep storage "
-                         + "and checking if someone else beat us to publishing.");
+                if (publishResult.getErrorMsg() == null) {
+                  log.warn(
+                      "Transaction failure while publishing segments. Please check the overlord log."
+                      + " Removing them from deep storage and checking if someone else beat us to publishing."
+                  );
+                } else {
+                  log.warn(
+                      "Transaction failure while publishing segments because of [%s]. Please check the overlord log."
+                      + " Removing them from deep storage and checking if someone else beat us to publishing.",
+                      publishResult.getErrorMsg()
+                  );
+                }
 
                 segmentsAndMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
 
@@ -576,7 +587,11 @@ public abstract class BaseAppenderatorDriver implements Closeable
                                       .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
                   log.info("Our segments really do exist, awaiting handoff.");
                 } else {
-                  throw new ISE("Failed to publish segments.");
+                  if (publishResult.getErrorMsg() != null) {
+                    throw new ISE("Failed to publish segments because of [%s].", publishResult.getErrorMsg());
+                  } else {
+                    throw new ISE("Failed to publish segments.");
+                  }
                 }
               }
             }
@@ -595,6 +610,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
   /**
    * Clears out all our state and also calls {@link Appenderator#clear()} on the underlying Appenderator.
    */
+  @VisibleForTesting
   public void clear() throws InterruptedException
   {
     synchronized (segments) {

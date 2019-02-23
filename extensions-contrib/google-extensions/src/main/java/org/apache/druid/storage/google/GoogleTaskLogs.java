@@ -24,6 +24,8 @@ import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.IOE;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.tasklogs.TaskLogs;
 
@@ -51,7 +53,7 @@ public class GoogleTaskLogs implements TaskLogs
   {
     final String taskKey = getTaskLogKey(taskid);
     LOG.info("Pushing task log %s to: %s", logFile, taskKey);
-    pushTaskFile(taskid, logFile, taskKey);
+    pushTaskFile(logFile, taskKey);
   }
 
   @Override
@@ -59,17 +61,33 @@ public class GoogleTaskLogs implements TaskLogs
   {
     final String taskKey = getTaskReportKey(taskid);
     LOG.info("Pushing task reports %s to: %s", reportFile, taskKey);
-    pushTaskFile(taskid, reportFile, taskKey);
+    pushTaskFile(reportFile, taskKey);
   }
 
-  private void pushTaskFile(final String taskid, final File logFile, final String taskKey) throws IOException
+  private void pushTaskFile(final File logFile, final String taskKey) throws IOException
   {
-    FileInputStream fileSteam = new FileInputStream(logFile);
+    FileInputStream fileStream = new FileInputStream(logFile);
 
-    InputStreamContent mediaContent = new InputStreamContent("text/plain", fileSteam);
+    InputStreamContent mediaContent = new InputStreamContent("text/plain", fileStream);
     mediaContent.setLength(logFile.length());
 
-    storage.insert(config.getBucket(), taskKey, mediaContent);
+    try {
+      RetryUtils.retry(
+          (RetryUtils.Task<Void>) () -> {
+            storage.insert(config.getBucket(), taskKey, mediaContent);
+            return null;
+          },
+          GoogleUtils::isRetryable,
+          1,
+          5
+      );
+    }
+    catch (IOException e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RE(e, "Failed to upload [%s] to [%s]", logFile, taskKey);
+    }
   }
 
   @Override

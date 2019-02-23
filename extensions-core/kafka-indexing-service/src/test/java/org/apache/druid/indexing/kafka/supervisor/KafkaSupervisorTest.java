@@ -258,7 +258,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testNoInitialState() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -289,7 +289,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
     Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
-    Assert.assertFalse("skipOffsetGaps", taskConfig.isSkipOffsetGaps());
 
     Assert.assertEquals(topic, taskConfig.getStartPartitions().getStream());
     Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
@@ -305,7 +304,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testSkipOffsetGaps() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, true);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -328,13 +327,12 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaIndexTask task = captured.getValue();
     KafkaIndexTaskIOConfig taskConfig = task.getIOConfig();
 
-    Assert.assertTrue("skipOffsetGaps", taskConfig.isSkipOffsetGaps());
   }
 
   @Test
   public void testMultiTask() throws Exception
   {
-    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 2, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance(CaptureType.ALL);
@@ -380,7 +378,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testReplicas() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance(CaptureType.ALL);
@@ -417,7 +415,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testLateMessageRejectionPeriod() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", new Period("PT1H"), null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1H", new Period("PT1H"), null);
     addSomeEvents(1);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance(CaptureType.ALL);
@@ -456,7 +454,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testEarlyMessageRejectionPeriod() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, new Period("PT1H"), false);
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, new Period("PT1H"));
     addSomeEvents(1);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance(CaptureType.ALL);
@@ -498,7 +496,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
    */
   public void testLatestOffset() throws Exception
   {
-    supervisor = getSupervisor(1, 1, false, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, false, "PT1H", null, null);
     addSomeEvents(1100);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -518,9 +516,9 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
 
     KafkaIndexTask task = captured.getValue();
-    Assert.assertEquals(1100L, (long) task.getIOConfig().getStartPartitions().getPartitionSequenceNumberMap().get(0));
-    Assert.assertEquals(1100L, (long) task.getIOConfig().getStartPartitions().getPartitionSequenceNumberMap().get(1));
-    Assert.assertEquals(1100L, (long) task.getIOConfig().getStartPartitions().getPartitionSequenceNumberMap().get(2));
+    Assert.assertEquals(1101L, (long) task.getIOConfig().getStartPartitions().getPartitionSequenceNumberMap().get(0));
+    Assert.assertEquals(1101L, (long) task.getIOConfig().getStartPartitions().getPartitionSequenceNumberMap().get(1));
+    Assert.assertEquals(1101L, (long) task.getIOConfig().getStartPartitions().getPartitionSequenceNumberMap().get(2));
   }
 
   @Test
@@ -530,7 +528,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
    */
   public void testDatasourceMetadata() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(100);
 
     Capture<KafkaIndexTask> captured = Capture.newInstance();
@@ -560,7 +558,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test(expected = ISE.class)
   public void testBadMetadataOffsets() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
@@ -579,7 +577,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testKillIncompatibleTasks() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     // unexpected # of partitions (kill)
@@ -684,7 +682,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testKillBadPartitionAssignment() throws Exception
   {
-    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 2, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -791,7 +789,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testRequeueTaskWhenFailed() throws Exception
   {
-    supervisor = getSupervisor(2, 2, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -880,7 +878,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testRequeueAdoptedTaskWhenFailed() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     DateTime now = DateTimes.nowUtc();
@@ -981,7 +979,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testQueueNextTasksOnSuccess() throws Exception
   {
-    supervisor = getSupervisor(2, 2, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1083,7 +1081,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(2, 2, true, "PT1M", null, null, false);
+    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
     addSomeEvents(100);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1178,7 +1176,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Task task = createKafkaIndexTask(
@@ -1284,7 +1282,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Task task = createKafkaIndexTask(
@@ -1383,7 +1381,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     addSomeEvents(6);
 
     Task id1 = createKafkaIndexTask(
@@ -1474,23 +1472,23 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(startTime, activeReport.getStartTime());
     Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L), activeReport.getStartingOffsets());
     Assert.assertEquals(ImmutableMap.of(0, 4L, 1, 5L, 2, 6L), activeReport.getCurrentOffsets());
-    Assert.assertEquals(ImmutableMap.of(0, 2L, 1, 1L, 2, 0L), activeReport.getLag());
+    Assert.assertEquals(ImmutableMap.of(0, 3L, 1, 2L, 2, 1L), activeReport.getLag());
 
     Assert.assertEquals("id1", publishingReport.getId());
     Assert.assertEquals(ImmutableMap.of(0, 0L, 1, 0L, 2, 0L), publishingReport.getStartingOffsets());
     Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 2L, 2, 3L), publishingReport.getCurrentOffsets());
     Assert.assertEquals(null, publishingReport.getLag());
 
-    Assert.assertEquals(ImmutableMap.of(0, 6L, 1, 6L, 2, 6L), payload.getLatestOffsets());
-    Assert.assertEquals(ImmutableMap.of(0, 2L, 1, 1L, 2, 0L), payload.getMinimumLag());
-    Assert.assertEquals(3L, (long) payload.getAggregateLag());
+    Assert.assertEquals(ImmutableMap.of(0, 7L, 1, 7L, 2, 7L), payload.getLatestOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 3L, 1, 2L, 2, 1L), payload.getMinimumLag());
+    Assert.assertEquals(6L, (long) payload.getAggregateLag());
     Assert.assertTrue(payload.getOffsetsLastUpdated().plusMinutes(1).isAfterNow());
   }
 
   @Test
   public void testKillUnresponsiveTasksWhileGettingStartTime() throws Exception
   {
-    supervisor = getSupervisor(2, 2, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1549,7 +1547,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(2, 2, true, "PT1M", null, null, false);
+    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
     addSomeEvents(100);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1635,7 +1633,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(2, 2, true, "PT1M", null, null, false);
+    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
     addSomeEvents(100);
 
     Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
@@ -1726,7 +1724,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test(expected = IllegalStateException.class)
   public void testStopNotStarted()
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     supervisor.stop(false);
   }
 
@@ -1738,7 +1736,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.unregisterListener(StringUtils.format("KafkaSupervisor-%s", DATASOURCE));
     replayAll();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     supervisor.start();
     supervisor.stop(false);
 
@@ -1752,7 +1750,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -1864,7 +1862,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
     replayAll();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
@@ -1881,7 +1879,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResetDataSourceMetadata() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
@@ -1937,7 +1935,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testResetNoDataSourceMetadata() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
@@ -1970,7 +1968,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -2068,7 +2066,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testNoDataIngestionTasks() throws Exception
   {
     final DateTime startTime = DateTimes.nowUtc();
-    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1S", null, null);
     //not adding any events
     Task id1 = createKafkaIndexTask(
         "id1",
@@ -2164,7 +2162,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testCheckpointForInactiveTaskGroup()
       throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
-    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1S", null, null);
     //not adding any events
     final Task id1 = createKafkaIndexTask(
         "id1",
@@ -2267,7 +2265,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testCheckpointForUnknownTaskGroup()
       throws InterruptedException
   {
-    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
+    supervisor = getSupervisor(2, 1, true, "PT1S", null, null);
     //not adding any events
     final Task id1 = createKafkaIndexTask(
         "id1",
@@ -2346,7 +2344,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   public void testCheckpointWithNullTaskGroupId()
       throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
-    supervisor = getSupervisor(1, 3, true, "PT1S", null, null, false);
+    supervisor = getSupervisor(1, 3, true, "PT1S", null, null);
     //not adding any events
     final Task id1 = createKafkaIndexTask(
         "id1",
@@ -2438,7 +2436,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testSuspendedNoRunningTasks() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false, true, kafkaHost);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, true, kafkaHost);
     addSomeEvents(1);
 
     expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -2471,7 +2469,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, false, true, kafkaHost);
+    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, true, kafkaHost);
     addSomeEvents(1);
 
     Task id1 = createKafkaIndexTask(
@@ -2579,7 +2577,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
     replayAll();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, false, true, kafkaHost);
+    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, true, kafkaHost);
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
@@ -2603,7 +2601,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         "PT1H",
         null,
         null,
-        false,
         false,
         StringUtils.format("badhostname:%d", kafkaServer.getPort())
     );
@@ -2670,7 +2667,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
     Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
-    Assert.assertFalse("skipOffsetGaps", taskConfig.isSkipOffsetGaps());
 
     Assert.assertEquals(topic, taskConfig.getStartPartitions().getStream());
     Assert.assertEquals(0L, (long) taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(0));
@@ -2686,7 +2682,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   @Test
   public void testGetCurrentTotalStats()
   {
-    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition(0),
         ImmutableMap.of(0, 0L),
@@ -2734,6 +2730,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     AdminUtils.createTopic(zkUtils, topic, NUM_PARTITIONS, 1, new Properties(), RackAwareMode.Enforced$.MODULE$);
 
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      kafkaProducer.initTransactions();
+      kafkaProducer.beginTransaction();
       for (int i = 0; i < NUM_PARTITIONS; i++) {
         for (int j = 0; j < numEventsPerPartition; j++) {
           kafkaProducer.send(
@@ -2746,6 +2744,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
           ).get();
         }
       }
+      kafkaProducer.commitTransaction();
     }
   }
 
@@ -2755,8 +2754,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       boolean useEarliestOffset,
       String duration,
       Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod,
-      boolean skipOffsetGaps
+      Period earlyMessageRejectionPeriod
   )
   {
     return getSupervisor(
@@ -2766,7 +2764,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
         duration,
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
-        skipOffsetGaps,
         false,
         kafkaHost
     );
@@ -2779,7 +2776,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
       String duration,
       Period lateMessageRejectionPeriod,
       Period earlyMessageRejectionPeriod,
-      boolean skipOffsetGaps,
       boolean suspended,
       String kafkaHost
   )
@@ -2787,6 +2783,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Map<String, Object> consumerProperties = new HashMap<>();
     consumerProperties.put("myCustomKey", "myCustomValue");
     consumerProperties.put("bootstrap.servers", kafkaHost);
+    consumerProperties.put("isolation.level", "read_committed");
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaSupervisorIOConfig(
         topic,
         replicas,
@@ -2799,8 +2796,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         useEarliestOffset,
         new Period("PT30M"),
         lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        skipOffsetGaps
+        earlyMessageRejectionPeriod
     );
 
     KafkaIndexTaskClientFactory taskClientFactory = new KafkaIndexTaskClientFactory(
@@ -2908,8 +2904,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             minimumMessageTime,
-            maximumMessageTime,
-            false
+            maximumMessageTime
         ),
         Collections.emptyMap(),
         null,

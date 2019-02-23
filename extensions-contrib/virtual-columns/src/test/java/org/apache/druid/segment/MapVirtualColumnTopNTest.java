@@ -69,7 +69,7 @@ public class MapVirtualColumnTopNTest
         new StupidPool<>("map-virtual-column-test", () -> ByteBuffer.allocate(1024)),
         new TopNQueryQueryToolChest(
             new TopNQueryConfig(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         ),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );

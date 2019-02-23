@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-incubating-SNAPSHOT</version>
+    <version>0.15.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -123,6 +123,7 @@
         <module>aws-common</module>
         <module>extendedset</module>
         <module>hll</module>
+        <module>web-console</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -167,6 +168,7 @@
         <module>extensions-contrib/opentsdb-emitter</module>
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
+        <module>extensions-contrib/momentsketch</module>
         <module>extensions-contrib/moving-average-query</module>
         <!-- distribution packaging -->
         <module>distribution</module>
@@ -695,7 +697,7 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.6.4</version>
+                <version>1.7.25</version>
             </dependency>
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
@@ -1280,6 +1282,15 @@
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>com.github.eirslett</groupId>
+                    <artifactId>frontend-maven-plugin</artifactId>
+                    <version>1.6</version>
+                    <configuration>
+                        <nodeVersion>v10.13.0</nodeVersion>
+                        <npmVersion>6.4.1</npmVersion>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -1472,6 +1483,7 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

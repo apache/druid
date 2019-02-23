@@ -32,7 +32,10 @@ Derby is the default metadata store for Druid, however, it is not suitable for p
 [MySQL](../development/extensions-core/mysql.html) and [PostgreSQL](../development/extensions-core/postgresql.html) are more production suitable metadata stores.
 
 <div class="note caution">
-Derby is not suitable for production use as a metadata store. Use MySQL or PostgreSQL instead.
+The Metadata Storage stores the entire metadata which is essential for a Druid cluster to work.
+For production clusters, consider using MySQL or PostgreSQL instead of Derby.
+Also, it's highly recommended to set up a high availability environment
+because there is no way to restore if you lose any metadata.
 </div>
 
 ## Using derby
@@ -122,8 +125,7 @@ parameters across the cluster at runtime.
 
 ### Task-related Tables
 
-There are also a number of tables created and used by the [Indexing
-Service](../design/indexing-service.html) in the course of its work.
+There are also a number of tables created and used by the [Overlord](../design/overlord.html) and [MiddleManager](../design/middlemanager.html) when managing tasks.
 
 ### Audit Table
 

@@ -299,7 +299,10 @@ public class TopNTypeInterfaceBenchmark
             0,
             Integer.MAX_VALUE
         ),
-        new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TopNQueryQueryToolChest(
+            new TopNQueryConfig(),
+            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
+        ),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
   }

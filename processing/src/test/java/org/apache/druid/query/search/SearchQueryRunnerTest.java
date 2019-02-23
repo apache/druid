@@ -79,7 +79,7 @@ public class SearchQueryRunnerTest
   private static final SearchQueryConfig config = new SearchQueryConfig();
   private static final SearchQueryQueryToolChest toolChest = new SearchQueryQueryToolChest(
       config,
-      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+      QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
   );
   private static final SearchStrategySelector selector = new SearchStrategySelector(Suppliers.ofInstance(config));
 

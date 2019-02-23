@@ -667,6 +667,36 @@ public class TaskLockboxTest
     Assert.assertTrue(lowLockPosse.getTaskLock().isRevoked());
   }
 
+  @Test
+  public void testLockPosseEquals()
+  {
+    final Task task1 = NoopTask.create();
+    final Task task2 = NoopTask.create();
+
+    TaskLock taskLock1 = new TaskLock(TaskLockType.EXCLUSIVE,
+        task1.getGroupId(),
+        task1.getDataSource(),
+        Intervals.of("2018/2019"),
+        "v1",
+        task1.getPriority());
+
+    TaskLock taskLock2 = new TaskLock(TaskLockType.EXCLUSIVE,
+        task2.getGroupId(),
+        task2.getDataSource(),
+        Intervals.of("2018/2019"),
+        "v2",
+        task2.getPriority());
+
+    TaskLockPosse taskLockPosse1 = new TaskLockPosse(taskLock1);
+    TaskLockPosse taskLockPosse2 = new TaskLockPosse(taskLock2);
+    TaskLockPosse taskLockPosse3 = new TaskLockPosse(taskLock1);
+
+    Assert.assertNotEquals(taskLockPosse1, null);
+    Assert.assertNotEquals(null, taskLockPosse1);
+    Assert.assertNotEquals(taskLockPosse1, taskLockPosse2);
+    Assert.assertEquals(taskLockPosse1, taskLockPosse3);
+  }
+
   private Set<TaskLock> getAllLocks(List<Task> tasks)
   {
     return tasks.stream()
