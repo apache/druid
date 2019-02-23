@@ -349,8 +349,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           {
             return deepStorageDir;
           }
-        },
-        objectMapper
+        }
     )
     {
       @Override

@@ -336,9 +336,7 @@ public class SelectBenchmark
       if (result.getEvents().size() == 0) {
         done = true;
       } else {
-        for (EventHolder eh : result.getEvents()) {
-          blackhole.consume(eh);
-        }
+        blackhole.consume(result);
         queryCopy = incrementQueryPagination(queryCopy, result);
       }
     }
@@ -382,9 +380,7 @@ public class SelectBenchmark
       if (result.getEvents().size() == 0) {
         done = true;
       } else {
-        for (EventHolder eh : result.getEvents()) {
-          blackhole.consume(eh);
-        }
+        blackhole.consume(result);
         queryCopy = incrementQueryPagination(queryCopy, result);
       }
     }

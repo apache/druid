@@ -21,7 +21,6 @@ package org.apache.druid.storage.s3;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -36,7 +35,6 @@ import org.apache.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
@@ -46,18 +44,15 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
-  private final ObjectMapper jsonMapper;
 
   @Inject
   public S3DataSegmentPusher(
       ServerSideEncryptingAmazonS3 s3Client,
-      S3DataSegmentPusherConfig config,
-      ObjectMapper jsonMapper
+      S3DataSegmentPusherConfig config
   )
   {
     this.s3Client = s3Client;
     this.config = config;
-    this.jsonMapper = jsonMapper;
 
     log.info("Configured S3 as deep storage");
   }
@@ -99,20 +94,10 @@ public class S3DataSegmentPusher implements DataSegmentPusher
                                             .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
                                             .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
-    final File descriptorFile = File.createTempFile("druid", "descriptor.json");
-    // Avoid using Guava in DataSegmentPushers because they might be used with very diverse Guava versions in
-    // runtime, and because Guava deletes methods over time, that causes incompatibilities.
-    Files.write(descriptorFile.toPath(), jsonMapper.writeValueAsBytes(outSegment));
-
     try {
       return S3Utils.retryS3Operation(
           () -> {
             uploadFileIfPossible(config.getBucket(), s3Path, zipOutFile);
-            uploadFileIfPossible(
-                config.getBucket(),
-                S3Utils.descriptorPathForSegmentPath(s3Path),
-                descriptorFile
-            );
 
             return outSegment;
           }
@@ -127,8 +112,6 @@ public class S3DataSegmentPusher implements DataSegmentPusher
     finally {
       log.info("Deleting temporary cached index.zip");
       zipOutFile.delete();
-      log.info("Deleting temporary cached descriptor.json");
-      descriptorFile.delete();
     }
   }
 

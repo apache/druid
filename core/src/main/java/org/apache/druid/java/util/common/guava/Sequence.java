@@ -72,7 +72,10 @@ public interface Sequence<T>
   }
 
   /**
-   * This will materialize the entire sequence
+   * This will materialize the entire sequence.  Use at your own risk.
+   *
+   * Several benchmarks rely on this method to eagerly accumulate Sequences to ArrayLists.  e.g.
+   * GroupByBenchmark.
    */
   default List<T> toList()
   {

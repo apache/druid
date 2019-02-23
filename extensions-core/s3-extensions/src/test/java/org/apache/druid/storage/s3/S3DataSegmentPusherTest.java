@@ -24,25 +24,18 @@ import com.amazonaws.services.s3.model.CanonicalGrantee;
 import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
-import org.apache.commons.io.IOUtils;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.easymock.IAnswer;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.regex.Pattern;
@@ -94,34 +87,13 @@ public class S3DataSegmentPusherTest
             .andReturn(new PutObjectResult())
             .once();
 
-    EasyMock.expect(s3Client.getBucketAcl(EasyMock.eq("bucket"))).andReturn(acl).once();
-
-    Capture<PutObjectRequest> capturedPutRequest = Capture.newInstance();
-    ValueContainer<String> capturedS3SegmentJson = new ValueContainer<>();
-    EasyMock.expect(s3Client.putObject(EasyMock.capture(capturedPutRequest)))
-            .andAnswer(
-                new IAnswer<PutObjectResult>()
-                {
-                  @Override
-                  public PutObjectResult answer() throws Throwable
-                  {
-                    capturedS3SegmentJson.setValue(
-                        IOUtils.toString(new FileInputStream(capturedPutRequest.getValue().getFile()), "utf-8")
-                    );
-                    return new PutObjectResult();
-                  }
-                }
-            )
-            .once();
-
     EasyMock.replay(s3Client);
 
     S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
     config.setBucket("bucket");
     config.setBaseKey("key");
 
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, objectMapper);
+    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config);
 
     // Create a mock segment on disk
     File tmp = tempFolder.newFile("version.bin");
@@ -152,10 +124,6 @@ public class S3DataSegmentPusherTest
         Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches()
     );
     Assert.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
-
-    // Verify that the pushed S3Object contains the correct data
-    String segmentJson = objectMapper.writeValueAsString(segment);
-    Assert.assertEquals(segmentJson, capturedS3SegmentJson.getValue());
 
     EasyMock.verify(s3Client);
   }
