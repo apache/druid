@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
@@ -166,134 +167,95 @@ public class TestIndex
     }
   }
 
-  private static IncrementalIndex realtimeIndex = null;
-  private static IncrementalIndex noRollupRealtimeIndex = null;
-  private static IncrementalIndex noBitmapRealtimeIndex = null;
-  private static QueryableIndex mmappedIndex = null;
-  private static QueryableIndex noRollupMmappedIndex = null;
-  private static QueryableIndex mergedRealtime = null;
-  private static QueryableIndex noBitmapMmappedIndex = null;
+  private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(
+      () -> makeRealtimeIndex("druid.sample.numeric.tsv")
+  );
+  private static Supplier<IncrementalIndex> noRollupRealtimeIndex = Suppliers.memoize(
+      () -> makeRealtimeIndex("druid.sample.numeric.tsv", false)
+  );
+  private static Supplier<IncrementalIndex> noBitmapRealtimeIndex = Suppliers.memoize(
+      () -> makeRealtimeIndex("druid.sample.numeric.tsv", false, false)
+  );
+  private static Supplier<QueryableIndex> mmappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(realtimeIndex.get())
+  );
+  private static Supplier<QueryableIndex> noRollupMmappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(noRollupRealtimeIndex.get())
+  );
+  private static Supplier<QueryableIndex> noBitmapMmappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(noBitmapRealtimeIndex.get())
+  );
+  private static Supplier<QueryableIndex> mergedRealtime = Suppliers.memoize(() -> {
+    try {
+      IncrementalIndex top = makeRealtimeIndex("druid.sample.numeric.tsv.top");
+      IncrementalIndex bottom = makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
+
+      File tmpFile = File.createTempFile("yay", "who");
+      tmpFile.delete();
+
+      File topFile = new File(tmpFile, "top");
+      File bottomFile = new File(tmpFile, "bottom");
+      File mergedFile = new File(tmpFile, "merged");
+
+      topFile.mkdirs();
+      topFile.deleteOnExit();
+      bottomFile.mkdirs();
+      bottomFile.deleteOnExit();
+      mergedFile.mkdirs();
+      mergedFile.deleteOnExit();
+
+      INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, indexSpec, null);
+      INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec, null);
+
+      return INDEX_IO.loadIndex(
+          INDEX_MERGER.mergeQueryableIndex(
+              Arrays.asList(INDEX_IO.loadIndex(topFile), INDEX_IO.loadIndex(bottomFile)),
+              true,
+              METRIC_AGGS,
+              mergedFile,
+              indexSpec,
+              null
+          )
+      );
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+  });
 
   public static IncrementalIndex getIncrementalTestIndex()
   {
-    synchronized (log) {
-      if (realtimeIndex != null) {
-        return realtimeIndex;
-      }
-    }
-
-    return realtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv");
+    return realtimeIndex.get();
   }
 
   public static IncrementalIndex getNoRollupIncrementalTestIndex()
   {
-    synchronized (log) {
-      if (noRollupRealtimeIndex != null) {
-        return noRollupRealtimeIndex;
-      }
-    }
-
-    return noRollupRealtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv", false);
+    return noRollupRealtimeIndex.get();
   }
 
   public static IncrementalIndex getNoBitmapIncrementalTestIndex()
   {
-    synchronized (log) {
-      if (noBitmapRealtimeIndex != null) {
-        return noBitmapRealtimeIndex;
-      }
-    }
-
-    return noBitmapRealtimeIndex = makeRealtimeIndex("druid.sample.numeric.tsv", false, false);
+    return noBitmapRealtimeIndex.get();
   }
 
   public static QueryableIndex getMMappedTestIndex()
   {
-    synchronized (log) {
-      if (mmappedIndex != null) {
-        return mmappedIndex;
-      }
-    }
-
-    IncrementalIndex incrementalIndex = getIncrementalTestIndex();
-    mmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
-
-    return mmappedIndex;
+    return mmappedIndex.get();
   }
 
   public static QueryableIndex getNoRollupMMappedTestIndex()
   {
-    synchronized (log) {
-      if (noRollupMmappedIndex != null) {
-        return noRollupMmappedIndex;
-      }
-    }
-
-    IncrementalIndex incrementalIndex = getNoRollupIncrementalTestIndex();
-    noRollupMmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
-
-    return noRollupMmappedIndex;
+    return noRollupMmappedIndex.get();
   }
 
   public static QueryableIndex getNoBitmapMMappedTestIndex()
   {
-    synchronized (log) {
-      if (noBitmapMmappedIndex != null) {
-        return noBitmapMmappedIndex;
-      }
-    }
-
-    IncrementalIndex incrementalIndex = getNoBitmapIncrementalTestIndex();
-    noBitmapMmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
-
-    return noBitmapMmappedIndex;
+    return noBitmapMmappedIndex.get();
   }
 
   public static QueryableIndex mergedRealtimeIndex()
   {
-    synchronized (log) {
-      if (mergedRealtime != null) {
-        return mergedRealtime;
-      }
-
-      try {
-        IncrementalIndex top = makeRealtimeIndex("druid.sample.numeric.tsv.top");
-        IncrementalIndex bottom = makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
-
-        File tmpFile = File.createTempFile("yay", "who");
-        tmpFile.delete();
-
-        File topFile = new File(tmpFile, "top");
-        File bottomFile = new File(tmpFile, "bottom");
-        File mergedFile = new File(tmpFile, "merged");
-
-        topFile.mkdirs();
-        topFile.deleteOnExit();
-        bottomFile.mkdirs();
-        bottomFile.deleteOnExit();
-        mergedFile.mkdirs();
-        mergedFile.deleteOnExit();
-
-        INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, indexSpec, null);
-        INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, indexSpec, null);
-
-        mergedRealtime = INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
-                Arrays.asList(INDEX_IO.loadIndex(topFile), INDEX_IO.loadIndex(bottomFile)),
-                true,
-                METRIC_AGGS,
-                mergedFile,
-                indexSpec,
-                null
-            )
-        );
-
-        return mergedRealtime;
-      }
-      catch (IOException e) {
-        throw Throwables.propagate(e);
-      }
-    }
+    return mergedRealtime.get();
   }
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
