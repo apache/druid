@@ -130,7 +130,8 @@ public class DruidQuerySignature
   }
 
   /**
-   * Create as an "immutable" aggregate signature for a grouping
+   * Create as an "immutable" "aggregate" signature for a grouping, so that post aggregations and having filters
+   * can not define new virtual columns
    * @param sourceSignature
    * @return
    */
