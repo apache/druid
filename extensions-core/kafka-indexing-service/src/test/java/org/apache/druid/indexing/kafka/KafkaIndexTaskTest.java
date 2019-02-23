@@ -2423,7 +2423,8 @@ public class KafkaIndexTaskTest
                         new ScanQueryConfig(),
                         new DefaultGenericQueryMetricsFactory(TestHelper.makeJsonMapper())
                     ),
-                    new ScanQueryEngine()
+                    new ScanQueryEngine(),
+                    new ScanQueryConfig()
                 )
             )
             .build()

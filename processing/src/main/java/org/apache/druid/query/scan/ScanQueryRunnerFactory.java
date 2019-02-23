@@ -137,7 +137,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                 Math.toIntExact(query.getLimit())
             );
 
-        // Batch the scan result values
         return new ScanResultValueBatchingSequence(unbatched, query.getBatchSize());
       } else if (query.getLimit() > scanQueryConfig.getMaxRowsQueuedForTimeOrdering()) {
         throw new UOE(
@@ -307,7 +306,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     Yielder<ScanResultValue> inputYielder;
     int batchSize;
 
-    public ScanResultValueBatchingSequence(Sequence<ScanResultValue> inputSequence, int batchSize) {
+    public ScanResultValueBatchingSequence(Sequence<ScanResultValue> inputSequence, int batchSize)
+    {
       this.inputYielder = inputSequence.toYielder(
           null,
           new YieldingAccumulator<ScanResultValue, ScanResultValue>()
@@ -324,9 +324,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     }
 
     @Override
-    @Nullable
     public <OutType> Yielder<OutType> toYielder(
-        OutType initValue, YieldingAccumulator<OutType, ScanResultValue> accumulator
+        OutType initValue,
+        YieldingAccumulator<OutType, ScanResultValue> accumulator
     )
     {
       return makeYielder(initValue, accumulator);
@@ -354,7 +354,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           }
           try {
             return (OutType) new ScanResultValue(null, columns, eventsToAdd);
-          } catch (ClassCastException e) {
+          }
+          catch (ClassCastException e) {
             return initVal;
           }
         }

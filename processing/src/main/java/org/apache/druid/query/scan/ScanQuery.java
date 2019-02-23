@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -205,6 +206,12 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public Boolean isLegacy()
   {
     return legacy;
+  }
+
+  @Override
+  public Ordering<ScanResultValue> getResultOrdering()
+  {
+    return Ordering.from(new ScanResultValueTimestampComparator(this));
   }
 
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)

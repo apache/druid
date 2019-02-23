@@ -299,7 +299,8 @@ public class ScanBenchmark
             config,
             DefaultGenericQueryMetricsFactory.instance()
         ),
-        new ScanQueryEngine()
+        new ScanQueryEngine(),
+        new ScanQueryConfig()
     );
   }
 

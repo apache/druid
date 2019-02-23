@@ -969,7 +969,6 @@ public class DruidQuery
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(outputRowSignature.getRowOrder())),
         false,
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
-
     );
   }
 
