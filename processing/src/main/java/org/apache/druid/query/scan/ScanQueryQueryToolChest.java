@@ -60,24 +60,21 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       // the same way, even if they have different default legacy values.
       final ScanQuery scanQuery = ((ScanQuery) queryPlus.getQuery()).withNonNullLegacy(scanQueryConfig);
       final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
-      if (scanQuery.getTimeOrder().equals(ScanQuery.TimeOrder.NONE) && scanQuery.getLimit() != Long.MAX_VALUE) {
-        return new BaseSequence<>(
-            new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
+      return new BaseSequence<>(
+          new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
+          {
+            @Override
+            public ScanQueryLimitRowIterator make()
             {
-              @Override
-              public ScanQueryLimitRowIterator make()
-              {
-                return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
-              }
+              return new ScanQueryLimitRowIterator(runner, queryPlusWithNonNullLegacy, responseContext);
+            }
 
-              @Override
-              public void cleanup(ScanQueryLimitRowIterator iterFromMake)
-              {
-                CloseQuietly.close(iterFromMake);
-              }
-            });
-      }
-      return runner.run(queryPlusWithNonNullLegacy, responseContext);
+            @Override
+            public void cleanup(ScanQueryLimitRowIterator iterFromMake)
+            {
+              CloseQuietly.close(iterFromMake);
+            }
+          });
     };
   }
 
