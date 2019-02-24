@@ -66,6 +66,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       "/",
       "/coordinator-console/*",
       "/public/*",
+      "/assets/*",
       "/old-console/*",
       "/pages/*",
       "/unified-console.html",
