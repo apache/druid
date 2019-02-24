@@ -35,6 +35,7 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/extensions-core/orc-extensions/pom.xml" />
       </list>
     </option>
   </component>
