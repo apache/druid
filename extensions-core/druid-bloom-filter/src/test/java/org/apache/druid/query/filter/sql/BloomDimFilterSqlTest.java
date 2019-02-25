@@ -179,13 +179,13 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns(EXPRESSION_VIRTUAL_COLUMN("v0", "concat(\"dim1\",'-foo')", ValueType.STRING))
+                  .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim1\",'-foo')", ValueType.STRING))
                   .filters(
                       new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -212,7 +212,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
-                      EXPRESSION_VIRTUAL_COLUMN("v0", "(2 * CAST(\"dim1\", 'DOUBLE'))", ValueType.FLOAT)
+                      expressionVirtualColumn("v0", "(2 * CAST(\"dim1\", 'DOUBLE'))", ValueType.FLOAT)
                   )
                   .filters(
                       new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
