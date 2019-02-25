@@ -38,7 +38,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -146,7 +145,7 @@ public final class SpecializationService
   static class PerPrototypeClassState<T>
   {
     private final Class<T> prototypeClass;
-    private final ConcurrentMap<SpecializationId, SpecializationState<T>> specializationStates =
+    private final ConcurrentHashMap<SpecializationId, SpecializationState<T>> specializationStates =
         new ConcurrentHashMap<>();
     private final String prototypeClassBytecodeName;
     private final String specializedClassNamePrefix;
@@ -164,6 +163,8 @@ public final class SpecializationService
     SpecializationState<T> getSpecializationState(String runtimeShape, ImmutableMap<Class<?>, Class<?>> classRemapping)
     {
       SpecializationId specializationId = new SpecializationId(runtimeShape, classRemapping);
+      // get() before computeIfAbsent() is an optimization to avoid locking in computeIfAbsent() if not needed.
+      // See https://github.com/apache/incubator-druid/pull/6898#discussion_r251384586.
       SpecializationState<T> alreadyExistingState = specializationStates.get(specializationId);
       if (alreadyExistingState != null) {
         return alreadyExistingState;
@@ -278,7 +279,7 @@ public final class SpecializationService
     private final PerPrototypeClassState<T> perPrototypeClassState;
     private final SpecializationId specializationId;
     /** A map with the number of iterations per each minute during the last hour */
-    private final ConcurrentMap<Long, AtomicLong> perMinuteIterations = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, AtomicLong> perMinuteIterations = new ConcurrentHashMap<>();
     private final AtomicBoolean specializationScheduled = new AtomicBoolean(false);
 
     WindowedLoopIterationCounter(

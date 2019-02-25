@@ -517,7 +517,7 @@ public class CalciteTests
                 new SelectQueryRunnerFactory(
                     new SelectQueryQueryToolChest(
                         TestHelper.makeJsonMapper(),
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
                         SELECT_CONFIG_SUPPLIER
                     ),
                     new SelectQueryEngine(),
@@ -527,9 +527,7 @@ public class CalciteTests
             .put(
                 TimeseriesQuery.class,
                 new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                    ),
+                    new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
                     new TimeseriesQueryEngine(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -540,7 +538,7 @@ public class CalciteTests
                     stupidPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )

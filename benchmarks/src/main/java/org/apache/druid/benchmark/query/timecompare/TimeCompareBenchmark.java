@@ -229,7 +229,10 @@ public class TimeCompareBenchmark
               0,
               Integer.MAX_VALUE
           ),
-          new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
+          new TopNQueryQueryToolChest(
+              new TopNQueryConfig(),
+              QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
+          ),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
     }
@@ -270,7 +273,7 @@ public class TimeCompareBenchmark
 
       timeseriesQuery = timeseriesQueryBuilder.build();
       timeseriesFactory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()),
           new TimeseriesQueryEngine(),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
@@ -419,10 +422,7 @@ public class TimeCompareBenchmark
   {
     Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(QueryPlus.wrap(topNQuery), new HashMap<>());
     List<Result<TopNResultValue>> results = queryResult.toList();
-
-    for (Result<TopNResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
 
@@ -436,9 +436,6 @@ public class TimeCompareBenchmark
         new HashMap<>()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
-
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 }

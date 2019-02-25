@@ -22,10 +22,11 @@ package org.apache.druid.indexer.hadoop;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -33,7 +34,6 @@ import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -46,17 +46,22 @@ public class DatasourceRecordReaderTest
   @Test
   public void testSanity() throws Exception
   {
-    URL segmentDesciptor = this.getClass().getClassLoader().getResource("test-segment/descriptor.json");
-    DataSegment segment = HadoopDruidIndexerConfig.JSON_MAPPER
-        .readValue(segmentDesciptor, DataSegment.class)
-        .withLoadSpec(
-            ImmutableMap.of(
-                "type",
-                "local",
-                "path",
-                this.getClass().getClassLoader().getResource("test-segment/index.zip").getPath()
-            )
-        );
+    final DataSegment segment = new DataSegment(
+        "testds",
+        Intervals.of("2014-10-22T00:00:00.000Z/2014-10-23T00:00:00.000Z"),
+        "2015-07-15T22:02:40.171Z",
+        ImmutableMap.of(
+            "type",
+            "local",
+            "path",
+            this.getClass().getClassLoader().getResource("test-segment/index.zip").getPath()
+        ),
+        ImmutableList.of("host"),
+        ImmutableList.of("visited_sum", "unique_hosts"),
+        new NumberedShardSpec(0, 1),
+        9,
+        4096
+    );
     InputSplit split = new DatasourceInputSplit(Collections.singletonList(WindowedDataSegment.of(segment)), null);
 
     Configuration config = new Configuration();

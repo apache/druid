@@ -396,13 +396,7 @@ public class GroupByQueryRunnerTest
     final Closer closer = Closer.create();
     closer.register(bufferPool);
     closer.register(mergeBufferPool);
-    return Pair.of(
-        new GroupByQueryRunnerFactory(
-            strategySelector,
-            toolChest
-        ),
-        closer
-    );
+    return Pair.of(new GroupByQueryRunnerFactory(strategySelector, toolChest), closer);
   }
 
   @Parameterized.Parameters(name = "{0}")

@@ -91,7 +91,6 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
@@ -109,7 +108,6 @@ import org.eclipse.jetty.server.Server;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -255,12 +253,6 @@ public class CliPeon extends GuiceRunnable
                   .to(CoordinatorBasedSegmentHandoffNotifierFactory.class)
                   .in(LazySingleton.class);
 
-            // Override the default SegmentLoaderConfig because we don't actually care about the
-            // configuration based locations.  This will override them anyway.  This is also stopping
-            // configuration of other parameters, but I don't think that's actually a problem.
-            // Note, if that is actually not a problem, then that probably means we have the wrong abstraction.
-            binder.bind(SegmentLoaderConfig.class)
-                  .toInstance(new SegmentLoaderConfig().withLocations(Collections.emptyList()));
             binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);

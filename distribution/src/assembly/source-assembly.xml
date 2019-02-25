@@ -45,6 +45,7 @@
                 <exclude>%regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?release\.properties]</exclude>
 
                 <exclude>.gitignore</exclude>
+                <exclude>.dockerignore</exclude>
                 <exclude>.travis.yml</exclude>
                 <exclude>publications/**</exclude>
                 <exclude>upload.sh</exclude>

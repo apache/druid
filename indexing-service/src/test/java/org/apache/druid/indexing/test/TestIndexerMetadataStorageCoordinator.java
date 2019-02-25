@@ -116,7 +116,7 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   )
   {
     // Don't actually compare metadata, just do it!
-    return new SegmentPublishResult(announceHistoricalSegments(segments), true);
+    return SegmentPublishResult.ok(announceHistoricalSegments(segments));
   }
 
   @Override
