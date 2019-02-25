@@ -51,6 +51,7 @@ import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -792,7 +793,7 @@ public class CompactionTask extends AbstractTask
 
         final double avgRowsPerByte = totalNumRows / (double) totalSizeBytes;
         final long maxRowsPerSegmentLong = Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes);
-        final int maxRowsPerSegment = toIntExact(
+        final int maxRowsPerSegment = Numbers.toIntExact(
             maxRowsPerSegmentLong,
             StringUtils.format(
                 "Estimated maxRowsPerSegment[%s] is out of integer value range. "
@@ -814,13 +815,6 @@ public class CompactionTask extends AbstractTask
       } else {
         return tuningConfig;
       }
-    }
-
-    private static int toIntExact(long value, String error) {
-      if ((int)value != value) {
-        throw new ArithmeticException(error);
-      }
-      return (int)value;
     }
 
     /**
