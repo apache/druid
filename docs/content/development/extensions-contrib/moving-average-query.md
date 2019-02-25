@@ -106,8 +106,6 @@ These are properties which are common to all Averagers:
   * longMeanNoNulls
   * longMax
   * longMin
-* [Sketch averagers](#sketch-averagers):
-  * sketchUnion
 
 #### Standard averagers
 
@@ -125,24 +123,6 @@ However, this also means that empty days in a sparse dataset will also be ignore
 Example of usage:
 ```json
 { "type" : "doubleMean", "name" : <output_name>, "fieldName": <input_name> }
-```
-
-#### Sketch averagers
-
-Sketch averager are meant to perform merge operations on [DataSketches](../extensions-core/datasketches-extension.html) (When using a Sketch averager, please include the [DataSketches](../extensions-core/datasketches-extension.html) extension as well).
-
-Extra properties for Sketch averagers:
-
-|property|description|required?|
-|--------|-----------|---------|
-|size|Sketch size; See [DataSketches aggregator](../extensions-core/datasketches-aggregators.html)|no, defaults to 4096|
-
-Available functions: 
-* sketchUnion
-
-Example of usage:
-```json
-{ "type" : "sketchUnion", "name" : <output_name>, "fieldName": <input_name> }
 ```
 
 ### Cycle size (Day of Week)

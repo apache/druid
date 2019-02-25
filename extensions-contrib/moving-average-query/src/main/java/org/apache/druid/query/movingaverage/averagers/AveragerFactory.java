@@ -41,8 +41,7 @@ import java.util.List;
     @JsonSubTypes.Type(name = "longMean", value = LongMeanAveragerFactory.class),
     @JsonSubTypes.Type(name = "longMeanNoNulls", value = LongMeanNoNullAveragerFactory.class),
     @JsonSubTypes.Type(name = "longMax", value = LongMaxAveragerFactory.class),
-    @JsonSubTypes.Type(name = "longMin", value = LongMinAveragerFactory.class),
-    @JsonSubTypes.Type(name = "sketchUnion", value = SketchUnionAveragerFactory.class)
+    @JsonSubTypes.Type(name = "longMin", value = LongMinAveragerFactory.class)
 })
 public interface AveragerFactory<R, F>
 {
