@@ -40,7 +40,9 @@ public class HttpFirehoseFactoryTest
         1024L,
         512L,
         100L,
-        5
+        5,
+        "testUser",
+        "testPassword"
     );
 
     final HttpFirehoseFactory outputFact = mapper.readValue(

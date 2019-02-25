@@ -36,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -46,6 +47,8 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   private static final Logger log = new Logger(HttpFirehoseFactory.class);
   private final List<URI> uris;
   private final boolean supportContentRange;
+  private final String httpAuthenticationUsername;
+  private final String httpAuthenticationPassword;
 
   @JsonCreator
   public HttpFirehoseFactory(
@@ -54,7 +57,9 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
-      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
+      @JsonProperty("httpAuthenticationUsername") String httpAuthenticationUsername,
+      @JsonProperty("httpAuthenticationPassword") String httpAuthenticationPassword
   ) throws IOException
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
@@ -64,6 +69,20 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
     final URLConnection connection = uris.get(0).toURL().openConnection();
     final String acceptRanges = connection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
     this.supportContentRange = acceptRanges != null && "bytes".equalsIgnoreCase(acceptRanges);
+    this.httpAuthenticationUsername = httpAuthenticationUsername == null ? "" : httpAuthenticationUsername;
+    this.httpAuthenticationPassword = httpAuthenticationPassword == null ? "" : httpAuthenticationPassword;
+  }
+
+  @JsonProperty
+  public String getHttpAuthenticationUsername()
+  {
+    return httpAuthenticationUsername;
+  }
+
+  @JsonProperty
+  public String getHttpAuthenticationPassword()
+  {
+    return httpAuthenticationPassword;
   }
 
   @JsonProperty
@@ -81,7 +100,13 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   @Override
   protected InputStream openObjectStream(URI object) throws IOException
   {
-    return object.toURL().openConnection().getInputStream();
+    URLConnection urlConnection = object.toURL().openConnection();
+    if (!"".equals(httpAuthenticationUsername) && !"".equals(httpAuthenticationPassword)) {
+      String userPass = httpAuthenticationUsername + ":" + httpAuthenticationPassword;
+      String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
+      urlConnection.setRequestProperty("Authorization", basicAuthString);
+    }
+    return urlConnection.getInputStream();
   }
 
   @Override
@@ -129,7 +154,9 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
            getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
            getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
            getFetchTimeout() == that.getFetchTimeout() &&
-           getMaxFetchRetry() == that.getMaxFetchRetry();
+           getMaxFetchRetry() == that.getMaxFetchRetry() &&
+           httpAuthenticationUsername.equals(that.getHttpAuthenticationUsername()) &&
+           httpAuthenticationPassword.equals(that.getHttpAuthenticationPassword());
   }
 
   @Override
@@ -141,7 +168,9 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
         getMaxFetchCapacityBytes(),
         getPrefetchTriggerBytes(),
         getFetchTimeout(),
-        getMaxFetchRetry()
+        getMaxFetchRetry(),
+        httpAuthenticationUsername,
+        httpAuthenticationPassword
     );
   }
 
@@ -161,7 +190,9 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
           getMaxFetchCapacityBytes(),
           getPrefetchTriggerBytes(),
           getFetchTimeout(),
-          getMaxFetchRetry()
+          getMaxFetchRetry(),
+          getHttpAuthenticationUsername(),
+          getHttpAuthenticationPassword()
       );
     }
     catch (IOException e) {

@@ -74,6 +74,15 @@ A sample http firehose spec is shown below:
 }
 ```
 
+The below configurations can be optionally used if the URIs specified in the spec require a Basic Authentication Header.
+Omitting these fields from your spec will result in HTTP requests with no Basic Authentication Header.
+
+|property|description|default|
+|--------|-----------|-------|
+|httpAuthenticationUsername|Username to use for authentication with specified URIs|None|
+|httpAuthenticationPassword|Password to use for authentication with specified URIs|None|
+
+
 The below configurations can be optionally used for tuning the firehose performance.
 
 |property|description|default|
