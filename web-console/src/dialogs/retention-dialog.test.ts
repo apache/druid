@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+import * as React from 'react';
+(React as any).PropTypes = require('prop-types'); // Trick blueprint 1.0.1 into accepting React 16 as React 15.
+
 import { reorderArray } from './retention-dialog';
 
 describe('reorderArray', () => {
