@@ -62,7 +62,6 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.datasketches.theta.SketchModule;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.movingaverage.test.TestConfig;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -221,7 +220,6 @@ public class MovingAverageQueryTest
   {
     List<Module> list = new ArrayList<>();
 
-    list.add(new SketchModule());
     list.add(new QueryRunnerFactoryModule());
     list.add(new QueryableModule());
     list.add(new DruidProcessingModule());
