@@ -69,7 +69,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   private final String basePath;
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService processingExecutor;
-  private final ScheduledExecutorService checkNodeRemovedExecutor;
+  private final ScheduledExecutorService monitorNodeRemovedExecutor;
   private final ExecutorService callBackExecutor;
   private final DruidCoordinatorConfig config;
 
@@ -106,10 +106,10 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     this.callBackExecutor = callbackExecutor;
     this.processingExecutor = processingExecutor;
     this.config = config;
-    this.checkNodeRemovedExecutor =
+    this.monitorNodeRemovedExecutor =
         Executors.newScheduledThreadPool(
             config.getCuratorNumMonitorThreads(),
-            Execs.makeThreadFactory("LoadQueuePeon")
+            Execs.makeThreadFactory("LoadQueuePeon-NodeRemovedMonitor--%d")
         );
     // One processing queue per thread
     Preconditions.checkArgument(config.getCreateZkNodeNumThreads() > 0);
@@ -117,16 +117,9 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
     Preconditions.checkArgument(config.getCuratorCreateZkNodeBatchSize() > 0);
     this.batchSizePerTask = (config.getCuratorCreateZkNodeBatchSize() / numProcessingQueues);
-
     this.segmentProcessingQueues = new LinkedBlockingQueue[numProcessingQueues];
     for (int i = 0; i < numProcessingQueues; i++) {
       segmentProcessingQueues[i] = new LinkedBlockingQueue<>();
-      processingExecutor.scheduleAtFixedRate(
-          new SegmentChangeProcessor(segmentProcessingQueues[i]),
-          0,
-          config.getCuratorCreateZkNodesRepeatDelay().getMillis(),
-          TimeUnit.MILLISECONDS
-      );
     }
   }
 
@@ -265,7 +258,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
           segmentHolder.getType() == LOAD ? "load" : "drop",
           segmentHolder.getSegmentIdentifier()
       );
-      final ScheduledFuture<?> future = checkNodeRemovedExecutor.schedule(
+      final ScheduledFuture<?> future = monitorNodeRemovedExecutor.schedule(
           () -> {
             try {
               if (curator.checkExists().forPath(path) != null) {
@@ -350,7 +343,16 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   @Override
   public void start()
-  { }
+  {
+    for (int i = 0; i < numProcessingQueues; i++) {
+      processingExecutor.scheduleAtFixedRate(
+          new SegmentChangeProcessor(segmentProcessingQueues[i]),
+          0,
+          config.getCuratorCreateZkNodesRepeatDelay().getMillis(),
+          TimeUnit.MILLISECONDS
+      );
+    }
+  }
 
   @Override
   public void stop()
@@ -369,7 +371,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     failedAssignCount.set(0);
     processingExecutor.shutdown();
     callBackExecutor.shutdown();
-    checkNodeRemovedExecutor.shutdown();
+    monitorNodeRemovedExecutor.shutdown();
   }
 
   private void entryRemoved(SegmentHolder segmentHolder, String path)

@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Duration;
 
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -29,7 +30,26 @@ public class LoadQueuePeonTester extends CuratorLoadQueuePeon
 
   public LoadQueuePeonTester()
   {
-    super(null, null, null, null, null, null);
+    super(
+        null,
+        null,
+        null,
+        null,
+        null,
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            null,
+            new Duration(1),
+            null,
+            null,
+            10,
+            null,
+            false,
+            false,
+            new Duration("PT1s")
+        )
+    );
   }
 
   @Override
