@@ -195,11 +195,10 @@ public class SegmentAnalyzer
       final ColumnHolder columnHolder
   )
   {
-    long size = 0;
-
     Comparable min = null;
     Comparable max = null;
-    int cardinality = 0;
+    long size = 0;
+    final int cardinality;
     if (capabilities.hasBitmapIndexes()) {
       final BitmapIndex bitmapIndex = columnHolder.getBitmapIndex();
       cardinality = bitmapIndex.getCardinality();
@@ -226,6 +225,8 @@ public class SegmentAnalyzer
         min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
         max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
       }
+    } else {
+      cardinality = 0;
     }
 
     return new ColumnAnalysis(
