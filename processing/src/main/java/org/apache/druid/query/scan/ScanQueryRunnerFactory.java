@@ -42,7 +42,6 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.Segment;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -287,7 +286,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     @Override
     public ScanResultValue next()
     {
+      ScanResultValue srv = itr.next();
+      return srv;
       // Create new ScanResultValue from event map
+      /*
       List<Object> eventsToAdd = new ArrayList<>(batchSize);
       List<String> columns = new ArrayList<>();
       while (eventsToAdd.size() < batchSize && itr.hasNext()) {
@@ -297,6 +299,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         eventsToAdd.add(Iterables.getOnlyElement((List) srv.getEvents()));
       }
       return new ScanResultValue(null, columns, eventsToAdd);
+      */
     }
   }
 
@@ -342,6 +345,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         @Override
         public OutType get()
         {
+          ScanResultValue srv = inputYielder.get();
+          inputYielder = inputYielder.next(null);
+          return (OutType) srv;
+          /*
           // Create new ScanResultValue from event map
           List<Object> eventsToAdd = new ArrayList<>(batchSize);
           List<String> columns = new ArrayList<>();
@@ -357,7 +364,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           }
           catch (ClassCastException e) {
             return initVal;
-          }
+          }*/
         }
 
         @Override
