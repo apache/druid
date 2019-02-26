@@ -17,12 +17,9 @@
  */
 
 import * as React from 'react';
-import {
-  Button,
-  Classes,
-  AnchorButton, NavbarGroup, Alignment, NavbarHeading, NavbarDivider, Popover, Position, Navbar, Menu, MenuItem
-} from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import classNames from 'classnames';
+import { Button, Classes, AnchorButton, Popover, Position, Menu, MenuItem } from "@blueprintjs/core";
+import { IconNames, NavbarGroup, Alignment, NavbarDivider, Navbar } from "../components/filler";
 import { AboutDialog } from "../dialogs/about-dialog";
 import { CoordinatorDynamicConfigDialog } from '../dialogs/coordinator-dynamic-config';
 import "./header-bar.scss";
@@ -90,19 +87,19 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
     const { aboutDialogOpen, coordinatorDynamicConfigDialogOpen } = this.state;
 
     const legacyMenu = <Menu>
-      <MenuItem icon={IconNames.GRAPH} text="Legacy coordinator console" href={LEGACY_COORDINATOR_CONSOLE} target="_blank" />
-      <MenuItem icon={IconNames.MAP} text="Legacy overlord console" href={LEGACY_OVERLORD_CONSOLE} target="_blank" />
+      <MenuItem iconName={IconNames.GRAPH} text="Legacy coordinator console" href={LEGACY_COORDINATOR_CONSOLE} target="_blank" />
+      <MenuItem iconName={IconNames.MAP} text="Legacy overlord console" href={LEGACY_OVERLORD_CONSOLE} target="_blank" />
     </Menu>;
 
     const helpMenu  = <Menu>
-      <MenuItem icon={IconNames.GRAPH} text="About" onClick={() => this.setState({ aboutDialogOpen: true })} />
-      <MenuItem icon={IconNames.TH} text="Docs" href={DRUID_DOCS} target="_blank" />
-      <MenuItem icon={IconNames.USER} text="User group" href={DRUID_USER_GROUP} target="_blank" />
-      <MenuItem icon={IconNames.GIT_BRANCH} text="GitHub" href={DRUID_GITHUB} target="_blank" />
+      <MenuItem iconName={IconNames.GRAPH} text="About" onClick={() => this.setState({ aboutDialogOpen: true })} />
+      <MenuItem iconName={IconNames.TH} text="Docs" href={DRUID_DOCS} target="_blank" />
+      <MenuItem iconName={IconNames.USER} text="User group" href={DRUID_USER_GROUP} target="_blank" />
+      <MenuItem iconName={IconNames.GIT_BRANCH} text="GitHub" href={DRUID_GITHUB} target="_blank" />
     </Menu>;
 
     const configMenu = <Menu>
-      <MenuItem icon={IconNames.COG} text="Coordinator dynamic config" onClick={() => this.setState({ coordinatorDynamicConfigDialogOpen: true })}/>
+      <MenuItem iconName={IconNames.COG} text="Coordinator dynamic config" onClick={() => this.setState({ coordinatorDynamicConfigDialogOpen: true })}/>
     </Menu>;
 
     return <Navbar className="header-bar">
@@ -111,32 +108,30 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
           {this.renderLogo()}
         </a>
         <NavbarDivider />
-        <AnchorButton className={Classes.MINIMAL} icon={IconNames.MULTI_SELECT} text="Datasources" href="#datasources" active={active === 'datasources'} />
-        <AnchorButton className={Classes.MINIMAL} icon={IconNames.FULL_STACKED_CHART} text="Segments" href="#segments" active={active === 'segments'} />
-        <AnchorButton className={Classes.MINIMAL} icon={IconNames.GANTT_CHART} text="Tasks" href="#tasks" active={active === 'tasks'} />
-        <AnchorButton className={Classes.MINIMAL} icon={IconNames.DATABASE} text="Data servers" href="#servers" active={active === 'servers'} />
+        <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'datasources' })} iconName={IconNames.MULTI_SELECT} text="Datasources" href="#datasources" />
+        <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'segments' })} iconName={IconNames.STACKED_CHART} text="Segments" href="#segments" />
+        <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'tasks' })} iconName={IconNames.GANTT_CHART} text="Tasks" href="#tasks" />
+        <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'servers' })} iconName={IconNames.DATABASE} text="Data servers" href="#servers" />
         <NavbarDivider />
-        <AnchorButton className={Classes.MINIMAL} icon={IconNames.CONSOLE} text="SQL" href="#sql" active={active === 'sql'} />
-        <Popover content={configMenu} position={Position.BOTTOM_LEFT}>
-          <Button className={Classes.MINIMAL} icon={IconNames.SETTINGS} text="Config"/>
+        <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'sql' })} iconName={IconNames.APPLICATION} text="SQL" href="#sql" />
+        <Popover className="config-popover" content={configMenu} position={Position.BOTTOM_LEFT} inline>
+          <Button className={Classes.MINIMAL} iconName={IconNames.SETTINGS} text="Config"/>
         </Popover>
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
-        <Popover content={legacyMenu} position={Position.BOTTOM_LEFT}>
-          <Button className={Classes.MINIMAL} icon={IconNames.SHARE} text="Legacy" />
+        <Popover className="legacy-popover" content={legacyMenu} position={Position.BOTTOM_RIGHT} inline>
+          <Button className={Classes.MINIMAL} iconName={IconNames.SHARE} text="Legacy" />
         </Popover>
-        <Popover content={helpMenu} position={Position.BOTTOM_LEFT}>
-          <Button className={Classes.MINIMAL} icon={IconNames.LIFESAVER} text="Help" />
+        <Popover className="help-popover" content={helpMenu} position={Position.BOTTOM_RIGHT} inline>
+          <Button className={Classes.MINIMAL} iconName={IconNames.HELP} text="Help" />
         </Popover>
       </NavbarGroup>
-      <AboutDialog
-        isOpen={aboutDialogOpen}
+      { aboutDialogOpen ? <AboutDialog
         onClose={() => this.setState({ aboutDialogOpen: false })}
-      />
-      <CoordinatorDynamicConfigDialog
-        isOpen={coordinatorDynamicConfigDialogOpen}
+      /> : null }
+      { coordinatorDynamicConfigDialogOpen ? <CoordinatorDynamicConfigDialog
         onClose={() => this.setState({ coordinatorDynamicConfigDialogOpen: false })}
-      />
+      /> : null }
     </Navbar>;
   }
 }

@@ -45,4 +45,7 @@ public class PostAggregatorIds
   public static final byte ZTEST = 21;
   public static final byte PVALUE_FROM_ZTEST = 22;
   public static final byte THETA_SKETCH_CONSTANT = 23;
+  public static final byte MOMENTS_SKETCH_TO_QUANTILES_CACHE_TYPE_ID = 24;
+  public static final byte MOMENTS_SKETCH_TO_MIN_CACHE_TYPE_ID = 25;
+  public static final byte MOMENTS_SKETCH_TO_MAX_CACHE_TYPE_ID = 26;
 }

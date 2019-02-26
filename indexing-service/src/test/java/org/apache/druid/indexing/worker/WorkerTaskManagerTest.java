@@ -41,7 +41,6 @@ import org.apache.druid.indexing.overlord.TestTaskRunner;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
@@ -120,7 +119,7 @@ public class WorkerTaskManagerTest
                 null,
                 null,
                 null,
-                new SegmentLoaderFactory(new SegmentLoaderLocalCacheManager(null, loaderConfig, jsonMapper)),
+                new SegmentLoaderFactory(null, jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,

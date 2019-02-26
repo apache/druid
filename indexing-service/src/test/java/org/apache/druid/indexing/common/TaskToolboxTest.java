@@ -76,6 +76,7 @@ public class TaskToolboxTest
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
   private ExecutorService mockQueryExecutorService = EasyMock.createMock(ExecutorService.class);
   private ObjectMapper ObjectMapper = new ObjectMapper();
+  private SegmentLoaderFactory mockSegmentLoaderFactory = EasyMock.createMock(SegmentLoaderFactory.class);
   private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
   private IndexMergerV9 mockIndexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
@@ -107,7 +108,7 @@ public class TaskToolboxTest
         () -> mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         mockMonitorScheduler,
-        new SegmentLoaderFactory(mockSegmentLoaderLocalCacheManager),
+        mockSegmentLoaderFactory,
         ObjectMapper,
         mockIndexIO,
         mockCache,
@@ -163,12 +164,12 @@ public class TaskToolboxTest
   {
     File expectedFile = temporaryFolder.newFile();
     EasyMock
+        .expect(mockSegmentLoaderFactory.manufacturate(EasyMock.anyObject()))
+        .andReturn(mockSegmentLoaderLocalCacheManager).anyTimes();
+    EasyMock
         .expect(mockSegmentLoaderLocalCacheManager.getSegmentFiles(EasyMock.anyObject()))
         .andReturn(expectedFile).anyTimes();
-    EasyMock
-        .expect(mockSegmentLoaderLocalCacheManager.withConfig(EasyMock.anyObject()))
-        .andReturn(mockSegmentLoaderLocalCacheManager).anyTimes();
-    EasyMock.replay(mockSegmentLoaderLocalCacheManager);
+    EasyMock.replay(mockSegmentLoaderFactory, mockSegmentLoaderLocalCacheManager);
     DataSegment dataSegment = DataSegment.builder().dataSource("source").interval(Intervals.of("2012-01-01/P1D")).version("1").size(1).build();
     List<DataSegment> segments = ImmutableList.of
         (

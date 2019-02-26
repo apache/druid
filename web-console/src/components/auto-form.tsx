@@ -19,20 +19,8 @@
 import { resolveSrv } from 'dns';
 import * as React from 'react';
 import axios from 'axios';
-import {
-  FormGroup,
-  Button,
-  InputGroup,
-  Dialog,
-  NumericInput,
-  Classes,
-  Tooltip,
-  AnchorButton,
-  TagInput,
-  Intent,
-  ButtonGroup,
-  HTMLSelect
-} from "@blueprintjs/core";
+import { InputGroup } from "@blueprintjs/core";
+import { HTMLSelect, FormGroup, NumericInput, TagInput } from "../components/filler";
 
 interface Field {
   name: string;
@@ -67,7 +55,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
     const { model, onChange } = this.props;
     return <NumericInput
       value={(model as any)[field.name]}
-      onValueChange={v => {
+      onValueChange={(v: any) => {
         if (isNaN(v)) return;
         onChange(Object.assign({}, model, { [field.name]: v }));
       }}
@@ -79,7 +67,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
     const { model, onChange } = this.props;
     return <NumericInput
       value={(model as any)[field.name]}
-      onValueChange={v => {
+      onValueChange={(v: number) => {
         if (isNaN(v)) return;
         onChange(Object.assign({}, model, { [field.name]: v }));
       }}
@@ -102,12 +90,14 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
   private renderBooleanInput(field: Field): JSX.Element {
     const { model, onChange } = this.props;
     return <HTMLSelect
-      options={["True", "False"]}
       value={(model as any)[field.name] === true ? "True" : "False"}
-      onChange={e => {
+      onChange={(e: any) => {
         onChange(Object.assign({}, model, { [field.name]: e.currentTarget.value === "True" }));
       }}
-    />
+    >
+      <option value="True">True</option>
+      <option value="False">False</option>
+    </HTMLSelect>
   }
 
   private renderStringArrayInput(field: Field): JSX.Element {
@@ -118,7 +108,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
       onChange={(v: any) => {
         onChange(Object.assign({}, model, { [field.name]: v }));
       }}
-      addOnBlur={true}
+      fill
     />;
   }
 

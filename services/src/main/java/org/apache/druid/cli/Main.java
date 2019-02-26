@@ -78,7 +78,6 @@ public class Main
         DruidJsonValidator.class,
         PullDependencies.class,
         CreateTables.class,
-        InsertSegment.class,
         DumpSegment.class,
         ResetCluster.class,
         ValidateSegments.class

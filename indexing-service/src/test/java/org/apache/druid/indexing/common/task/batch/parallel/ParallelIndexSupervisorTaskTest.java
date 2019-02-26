@@ -36,6 +36,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -51,6 +52,7 @@ import java.nio.file.Files;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSupervisorTaskTest
@@ -126,8 +128,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     }
   }
 
-  @Test
-  public void testWithoutInterval() throws Exception
+  private void runTestWithoutIntervalTask() throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
         null,
@@ -142,6 +143,29 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
+    shutdownTask(task);
+  }
+
+  @Test
+  public void testWithoutInterval() throws Exception
+  {
+    // Ingest all data.
+    runTestWithoutIntervalTask();
+
+    // Read the segments for one day.
+    final Interval interval = Intervals.of("2017-12-24/P1D");
+    final List<DataSegment> oldSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    Assert.assertEquals(1, oldSegments.size());
+
+    // Reingest the same data. Each segment should get replaced by a segment with a newer version.
+    runTestWithoutIntervalTask();
+
+    // Verify that the segment has been replaced.
+    final List<DataSegment> newSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    Assert.assertEquals(1, newSegments.size());
+    Assert.assertTrue(oldSegments.get(0).getVersion().compareTo(newSegments.get(0).getVersion()) < 0);
   }
 
   @Test()

@@ -19,10 +19,8 @@
 
 package org.apache.druid.storage.google;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -47,11 +45,9 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
 
   private static final String bucket = "bucket";
   private static final String prefix = "prefix";
-  private static final String path = "prefix/test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
 
   private GoogleStorage storage;
   private GoogleAccountConfig googleAccountConfig;
-  private ObjectMapper jsonMapper;
 
   @Before
   public void before()
@@ -60,8 +56,6 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
     googleAccountConfig = new GoogleAccountConfig();
     googleAccountConfig.setBucket(bucket);
     googleAccountConfig.setPrefix(prefix);
-
-    jsonMapper = new DefaultObjectMapper();
   }
 
   @Test
@@ -86,28 +80,18 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
         size
     );
 
-    GoogleDataSegmentPusher pusher = createMockBuilder(
-        GoogleDataSegmentPusher.class
-    ).withConstructor(
-        storage,
-        googleAccountConfig,
-         jsonMapper
-    ).addMockedMethod("insert", File.class, String.class, String.class).createMock();
+    GoogleDataSegmentPusher pusher = createMockBuilder(GoogleDataSegmentPusher.class)
+        .withConstructor(storage, googleAccountConfig)
+        .addMockedMethod("insert", File.class, String.class, String.class)
+        .createMock();
 
     final String storageDir = pusher.getStorageDir(segmentToPush, false);
     final String indexPath = prefix + "/" + storageDir + "/" + "index.zip";
-    final String descriptorPath = prefix + "/" + storageDir + "/" + "descriptor.json";
 
     pusher.insert(
         EasyMock.anyObject(File.class),
         EasyMock.eq("application/zip"),
         EasyMock.eq(indexPath)
-    );
-    expectLastCall();
-    pusher.insert(
-        EasyMock.anyObject(File.class),
-        EasyMock.eq("application/json"),
-        EasyMock.eq(descriptorPath)
     );
     expectLastCall();
 
@@ -136,11 +120,7 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
     StringBuilder sb = new StringBuilder();
     sb.setLength(0);
     config.setPrefix(sb.toString()); // avoid cached empty string
-    GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(
-        storage,
-        config,
-        jsonMapper
-    );
+    GoogleDataSegmentPusher pusher = new GoogleDataSegmentPusher(storage, config);
     Assert.assertEquals("/path", pusher.buildPath("/path"));
     config.setPrefix(null);
     Assert.assertEquals("/path", pusher.buildPath("/path"));

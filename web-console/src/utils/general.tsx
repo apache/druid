@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Intent, HTMLSelect } from '@blueprintjs/core';
-import { IconNames } from "@blueprintjs/icons";
+import { Button, InputGroup, Intent } from '@blueprintjs/core';
+import { IconNames, HTMLSelect } from "../components/filler";
 import * as numeral from "numeral";
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
@@ -43,7 +43,7 @@ export function makeTextFilter(placeholder: string = ''): FilterRender {
       key={key}
       onChange={(e: any) => onChange(e.target.value)}
       value={filterValue}
-      rightElement={filterValue ? <Button icon={IconNames.CROSS} intent={Intent.NONE} minimal={true} onClick={() => onChange('')} /> : undefined}
+      rightElement={filterValue ? <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} /> : undefined}
       placeholder={placeholder}
     />
   }
@@ -55,7 +55,7 @@ export function makeBooleanFilter(): FilterRender {
     return <HTMLSelect
       key={key}
       style={{ width: '100%' }}
-      onChange={event => onChange(event.target.value)}
+      onChange={(event: any) => onChange(event.target.value)}
       value={filterValue || "all"}
       fill={true}
     >
