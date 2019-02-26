@@ -50,8 +50,6 @@ public class RowBucketIterableTest
   private static final DateTime JAN_4 = new DateTime(2017, 1, 4, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
   private static final DateTime JAN_5 = new DateTime(2017, 1, 5, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
   private static final DateTime JAN_6 = new DateTime(2017, 1, 6, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
-  private static final DateTime JAN_7 = new DateTime(2017, 1, 7, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
-  private static final DateTime JAN_8 = new DateTime(2017, 1, 8, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
   private static final DateTime JAN_9 = new DateTime(2017, 1, 9, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
 
   private static final Map<String, Object> EVENT_M_10 = new HashMap<>();

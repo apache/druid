@@ -207,7 +207,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
 
     // Apply any postAveragers
     Sequence<Row> movingAvgResultsWithPostAveragers =
-        Sequences.map(movingAvgResults, new PostAveragerCalculator(maq));
+        Sequences.map(movingAvgResults, new PostAveragerAggregatorCalculator(maq));
 
     // remove rows outside the reporting window
     List<Interval> reportingIntervals = maq.getIntervals();

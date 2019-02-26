@@ -46,11 +46,11 @@ import static org.junit.Assert.assertNull;
 /**
  * Unit tests for PostAveragerCalcualtor
  */
-public class PostAveragerCalculatorTest
+public class PostAveragerAggregatorCalculatorTest
 {
 
   private MovingAverageQuery query;
-  private PostAveragerCalculator pac;
+  private PostAveragerAggregatorCalculator pac;
   private Map<String, Object> event;
   private MapBasedRow row;
 
@@ -80,7 +80,7 @@ public class PostAveragerCalculatorTest
         null
     );
 
-    pac = new PostAveragerCalculator(query);
+    pac = new PostAveragerAggregatorCalculator(query);
     event = new HashMap<>();
     row = new MapBasedRow(new DateTime(ISOChronology.getInstanceUTC()), event);
   }

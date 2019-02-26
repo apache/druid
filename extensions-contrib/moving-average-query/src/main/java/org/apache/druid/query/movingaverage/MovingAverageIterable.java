@@ -195,7 +195,7 @@ public class MovingAverageIterable implements Iterable<Row>
         cacheIter = cache.getRows().iterator();
       }
 
-      Row r = null;
+      Row r;
 
       // return rows from the cached RowBucket
       if (cacheIter != null) {

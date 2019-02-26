@@ -176,7 +176,7 @@ public abstract class BaseAverager<I, R extends Object> implements Averager<R>
    */
   protected I[] getBuckets()
   {
-    return (I[]) buckets;
+    return buckets;
   }
 
   /**

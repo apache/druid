@@ -30,7 +30,7 @@ public class DoubleMaxAveragerTest
 {
 
   @Test
-  public void testComputeResult() throws Exception
+  public void testComputeResult()
   {
     BaseAverager<Number, Double> avg = new DoubleMaxAverager(3, "test", "field", 1);
 

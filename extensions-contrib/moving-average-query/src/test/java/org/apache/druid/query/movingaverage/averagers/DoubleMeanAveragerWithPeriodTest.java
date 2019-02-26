@@ -30,7 +30,7 @@ public class DoubleMeanAveragerWithPeriodTest
 {
 
   @Test
-  public void testComputeResult() throws Exception
+  public void testComputeResult()
   {
     BaseAverager<Number, Double> averager = new DoubleMeanAverager(14, "test", "field", 7);
 

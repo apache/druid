@@ -52,7 +52,7 @@ public class BaseAveragerFactoryTest
   }
 
   @Test
-  public void testGetDependentFields() throws Exception
+  public void testGetDependentFields()
   {
     List<String> dependentFields = fac.getDependentFields();
     assertEquals(1, dependentFields.size());
