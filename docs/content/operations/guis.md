@@ -22,7 +22,7 @@ title: "Web Consoles"
   ~ under the License.
   -->
 
-# Web Consoles
+# GUIs
 
 Druid has a few console UIs that provide cluster management functionality, described below.
 
@@ -45,9 +45,14 @@ http://<ROUTER_IP>:<ROUTER_PORT>
 
 This console subsumes the functionality provided by the older consoles described below, which are still available if needed.
 
-## Coordinator Consoles
 
-### Version 2
+## Legacy Consoles
+
+These older consoles provide a subset of the functionality of the Druid Console. We recommend using the Druid Console if possible. These consoles may be removed in future releases.
+
+### Coordinator Consoles
+
+#### Version 2
 
 The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. After the Coordinator starts, the console can be accessed at:
 
@@ -59,7 +64,7 @@ There exists a full cluster view (which shows indexing tasks and Historical proc
 
 The Coordinator console also exposes an interface to creating and editing rules. All valid datasources configured in the segment database, along with a default datasource, are available for configuration. Rules of different types can be added, deleted or edited.
 
-### Version 1
+#### Version 1
 
 The oldest version of Druid's Coordinator console is still available for backwards compatibility at:
 
@@ -67,7 +72,7 @@ The oldest version of Druid's Coordinator console is still available for backwar
 http://<COORDINATOR_IP>:<COORDINATOR_PORT>/old-console
 ```
 
-## Overlord Console
+### Overlord Console
 
 The Overlord console can be used to view pending tasks, running tasks, available workers, and recent worker creation and termination. The console can be accessed at:
 

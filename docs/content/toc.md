@@ -130,7 +130,7 @@ layout: toc
   * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
   * [High Availability](/docs/VERSION/operations/high-availability.html)
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
-  * [Web Consoles](/docs/VERSION/operations/web-consoles.html)
+  * [GUIs](/docs/VERSION/operations/web-consoles.html)
   * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
   * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
   * [Pull Dependencies Tool](/docs/VERSION/operations/pull-deps.html)
