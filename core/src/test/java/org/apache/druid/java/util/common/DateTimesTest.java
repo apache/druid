@@ -37,4 +37,23 @@ public class DateTimesTest
       Assert.assertTrue(DateTimes.COMMON_DATE_TIME_PATTERN.matcher(dt.toString()).matches());
     }
   }
+
+  @Test
+  public void testStringToDateTimeConversion()
+  {
+    String seconds = "2018-01-30T06:00:00";
+    DateTime dt2 = DateTimes.of(seconds);
+    Assert.assertEquals("2018-01-30T06:00:00.000Z", dt2.toString());
+
+    String milis = "1517292000000";
+    DateTime dt1 = DateTimes.of(milis);
+    Assert.assertEquals("2018-01-30T06:00:00.000Z", dt1.toString());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testStringToDateTimeConverstion_RethrowInitialException()
+  {
+    String invalid = "51729200AZ";
+    DateTimes.of(invalid);
+  }
 }

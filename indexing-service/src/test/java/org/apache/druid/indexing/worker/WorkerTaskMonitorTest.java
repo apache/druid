@@ -46,9 +46,6 @@ import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -62,10 +59,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
+ *
  */
 public class WorkerTaskMonitorTest
 {
@@ -169,20 +166,8 @@ public class WorkerTaskMonitorTest
             new TaskToolboxFactory(
                 taskConfig,
                 taskActionClientFactory,
-                null, null, null, null, null, null, null, notifierFactory, null, null, null, new SegmentLoaderFactory(
-                new SegmentLoaderLocalCacheManager(
-                    null,
-                    new SegmentLoaderConfig()
-                    {
-                      @Override
-                      public List<StorageLocationConfig> getLocations()
-                      {
-                        return new ArrayList<>();
-                      }
-                    },
-                    jsonMapper
-                )
-            ),
+                null, null, null, null, null, null, null, notifierFactory, null, null, null,
+                new SegmentLoaderFactory(null, jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,
