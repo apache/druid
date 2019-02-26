@@ -19,19 +19,8 @@
 @import "./variables";
 
 .console-application {
+  position: relative;
   height: 100%;
-
-  .bp3-navbar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-  }
-
-  .bp3-navbar-group > a {
-    text-decoration: inherit;
-    color: inherit;
-  }
 
   .view-container {
     position: absolute;
@@ -43,6 +32,10 @@
 
     &.scrollable {
       overflow-y: scroll;
+    }
+
+    .app-view {
+      position: relative;
     }
   }
 
@@ -65,10 +58,6 @@
     .control-label {
       font-size: 35px;
       line-height: 35px;
-    }
-
-    label.bp3-label {
-      margin-bottom: 7px;
     }
   }
 }

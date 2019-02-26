@@ -19,22 +19,14 @@
 import classNames from 'classnames';
 import * as React from 'react';
 import {
-  FormGroup,
   Button,
   InputGroup,
   Dialog,
-  NumericInput,
   Classes,
-  Tooltip,
-  AnchorButton,
-  TagInput,
   Intent,
-  ButtonGroup,
-  ProgressBar,
-  MaybeElement,
-  Icon,
-  IconName
+  ProgressBar
 } from "@blueprintjs/core";
+import { Icon, FormGroup, ButtonGroup, NumericInput, TagInput } from '../components/filler';
 import { AppToaster } from '../singletons/toaster';
 
 export interface AsyncAlertDialogProps extends React.Props<any> {
@@ -43,7 +35,7 @@ export interface AsyncAlertDialogProps extends React.Props<any> {
   confirmButtonText: string;
   cancelButtonText?: string;
   className?: string,
-  icon?: IconName | MaybeElement;
+  icon?: string;
   intent?: Intent;
   successText: string;
   failText: string;
@@ -88,17 +80,19 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
   render() {
     const { action, onClose, className, icon, intent, confirmButtonText, cancelButtonText, children } = this.props;
     const { working } = this.state;
+    if (!action) return null;
 
     const handleClose = () => onClose(false);
 
     return <Dialog
-      isOpen={Boolean(action)}
+      isOpen
+      inline
       className={classNames(Classes.ALERT, 'async-alert-dialog', className)}
       canEscapeKeyClose={!working}
       onClose={handleClose}
     >
       <div className={Classes.ALERT_BODY}>
-        { icon && <Icon icon={icon} iconSize={40} intent={intent} /> }
+        { icon && <Icon icon={icon} /> }
         { !working && <div className={Classes.ALERT_CONTENTS}>{children}</div> }
       </div>
       {
