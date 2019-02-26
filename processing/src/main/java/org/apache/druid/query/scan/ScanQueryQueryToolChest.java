@@ -58,7 +58,8 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
     return (queryPlus, responseContext) -> {
       // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
       // the same way, even if they have different default legacy values.
-      final ScanQuery scanQuery = ((ScanQuery) queryPlus.getQuery()).withNonNullLegacy(scanQueryConfig);
+      final ScanQuery scanQuery = ((ScanQuery) (queryPlus.getQuery()))
+          .withNonNullLegacy(scanQueryConfig);
       final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
       return new BaseSequence<>(
           new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()

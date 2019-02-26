@@ -20,20 +20,15 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.BaseSequence;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
-import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
@@ -42,9 +37,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.Segment;
 
-import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.Iterator;
@@ -99,6 +92,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       // See the comment of CTX_TIMEOUT_AT.
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
       responseContext.put(CTX_TIMEOUT_AT, timeoutAt);
+      queryPlus.getQuery().getContext().put(ScanQuery.CTX_KEY_OUTERMOST, false);
       if (query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
         // Use normal strategy
         return Sequences.concat(
@@ -109,7 +103,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         );
       } else if (query.getLimit() <= scanQueryConfig.getMaxRowsQueuedForTimeOrdering()) {
         // Use priority queue strategy
-        return sortBatchAndLimitScanResultValues(
+        return sortAndLimitScanResultValues(
             Sequences.concat(Sequences.map(
                 Sequences.simple(queryRunners),
                 input -> input.run(queryPlus, responseContext)
@@ -136,7 +130,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                 Math.toIntExact(query.getLimit())
             );
 
-        return new ScanResultValueBatchingSequence(unbatched, query.getBatchSize());
+        return unbatched;
       } else if (query.getLimit() > scanQueryConfig.getMaxRowsQueuedForTimeOrdering()) {
         throw new UOE(
             "Time ordering for query result set limit of %,d is not supported.  Try lowering the result "
@@ -155,7 +149,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   }
 
   @VisibleForTesting
-  Sequence<ScanResultValue> sortBatchAndLimitScanResultValues(
+  Sequence<ScanResultValue> sortAndLimitScanResultValues(
       Sequence<ScanResultValue> inputSequence,
       ScanQuery scanQuery
   )
@@ -200,25 +194,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       // addFirst is used since PriorityQueue#poll() dequeues the low-priority (timestamp-wise) events first.
       sortedElements.addFirst(q.poll());
     }
-
-    return new BaseSequence(
-        new BaseSequence.IteratorMaker<ScanResultValue, ScanBatchedIterator>()
-        {
-          @Override
-          public ScanBatchedIterator make()
-          {
-            return new ScanBatchedIterator(
-                sortedElements.iterator(),
-                scanQuery.getBatchSize()
-            );
-          }
-
-          @Override
-          public void cleanup(ScanBatchedIterator iterFromMake)
-          {
-            CloseQuietly.close(iterFromMake);
-          }
-        });
+    return Sequences.simple(sortedElements);
   }
 
   @Override
@@ -252,139 +228,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         responseContext.put(CTX_TIMEOUT_AT, JodaUtils.MAX_INSTANT);
       }
       return engine.process((ScanQuery) query, segment, responseContext);
-    }
-  }
-
-  /**
-   * This iterator supports iteration through any Iterable of unbatched ScanResultValues (1 event/ScanResultValue) and
-   * aggregates events into ScanResultValues with {@code batchSize} events.  The columns from the first event per
-   * ScanResultValue will be used to populate the column section.
-   */
-  @VisibleForTesting
-  static class ScanBatchedIterator implements CloseableIterator<ScanResultValue>
-  {
-    private final Iterator<ScanResultValue> itr;
-    private final int batchSize;
-
-    public ScanBatchedIterator(Iterator<ScanResultValue> iterator, int batchSize)
-    {
-      this.itr = iterator;
-      this.batchSize = batchSize;
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      return itr.hasNext();
-    }
-
-    @Override
-    public ScanResultValue next()
-    {
-      ScanResultValue srv = itr.next();
-      return srv;
-      // Create new ScanResultValue from event map
-      /*
-      List<Object> eventsToAdd = new ArrayList<>(batchSize);
-      List<String> columns = new ArrayList<>();
-      while (eventsToAdd.size() < batchSize && itr.hasNext()) {
-        ScanResultValue srv = itr.next();
-        // Only replace once using the columns from the first event
-        columns = columns.isEmpty() ? srv.getColumns() : columns;
-        eventsToAdd.add(Iterables.getOnlyElement((List) srv.getEvents()));
-      }
-      return new ScanResultValue(null, columns, eventsToAdd);
-      */
-    }
-  }
-
-  @VisibleForTesting
-  static class ScanResultValueBatchingSequence extends YieldingSequenceBase<ScanResultValue>
-  {
-    Yielder<ScanResultValue> inputYielder;
-    int batchSize;
-
-    public ScanResultValueBatchingSequence(Sequence<ScanResultValue> inputSequence, int batchSize)
-    {
-      this.inputYielder = inputSequence.toYielder(
-          null,
-          new YieldingAccumulator<ScanResultValue, ScanResultValue>()
-          {
-            @Override
-            public ScanResultValue accumulate(ScanResultValue accumulated, ScanResultValue in)
-            {
-              yield();
-              return in;
-            }
-          }
-      );
-      this.batchSize = batchSize;
-    }
-
-    @Override
-    public <OutType> Yielder<OutType> toYielder(
-        OutType initValue,
-        YieldingAccumulator<OutType, ScanResultValue> accumulator
-    )
-    {
-      return makeYielder(initValue, accumulator);
-    }
-
-    private <OutType> Yielder<OutType> makeYielder(
-        OutType initVal,
-        final YieldingAccumulator<OutType, ScanResultValue> accumulator
-    )
-    {
-      return new Yielder<OutType>()
-      {
-        @Override
-        public OutType get()
-        {
-          ScanResultValue srv = inputYielder.get();
-          inputYielder = inputYielder.next(null);
-          return (OutType) srv;
-          /*
-          // Create new ScanResultValue from event map
-          List<Object> eventsToAdd = new ArrayList<>(batchSize);
-          List<String> columns = new ArrayList<>();
-          while (eventsToAdd.size() < batchSize && !inputYielder.isDone()) {
-            ScanResultValue srv = inputYielder.get();
-            // Only replace once using the columns from the first event
-            columns = columns.isEmpty() ? srv.getColumns() : columns;
-            eventsToAdd.add(Iterables.getOnlyElement((List) srv.getEvents()));
-            inputYielder = inputYielder.next(null);
-          }
-          try {
-            return (OutType) new ScanResultValue(null, columns, eventsToAdd);
-          }
-          catch (ClassCastException e) {
-            return initVal;
-          }*/
-        }
-
-        @Override
-        public Yielder<OutType> next(OutType initValue)
-        {
-          accumulator.reset();
-          return makeYielder(initValue, accumulator);
-        }
-
-        @Override
-        public boolean isDone()
-        {
-          return inputYielder.isDone();
-        }
-
-        @Override
-        public void close()
-        {
-        }
-      };
     }
   }
 }

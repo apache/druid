@@ -107,6 +107,12 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
+  /**
+   * This context flag corresponds to whether the query is running on a Broker or Historical.  Specifically, this is
+   * used to perform batching exclusively at the broker level for time-ordered scans.
+   */
+  public static final String CTX_KEY_OUTERMOST = "scanOutermost";
+
   private final VirtualColumns virtualColumns;
   private final ResultFormat resultFormat;
   private final int batchSize;

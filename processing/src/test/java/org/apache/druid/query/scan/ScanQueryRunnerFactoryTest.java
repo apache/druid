@@ -21,7 +21,6 @@ package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -38,8 +37,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 
 @RunWith(Parameterized.class)
@@ -73,6 +72,7 @@ public class ScanQueryRunnerFactoryTest
                        .timeOrder(timeOrder)
                        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                        .dataSource("some datasource")
+                       .resultFormat(resultFormat)
                        .build();
     this.resultFormat = resultFormat;
   }
@@ -102,12 +102,12 @@ public class ScanQueryRunnerFactoryTest
   }
 
   @Test
-  public void testSortBatchAndLimitScanResultValues()
+  public void testSortAndLimitScanResultValues()
   {
     List<ScanResultValue> srvs = new ArrayList<>(numElements);
     List<Long> expectedEventTimestamps = new ArrayList<>();
     for (int i = 0; i < numElements; i++) {
-      long timestamp = (long) (Math.random() * Long.MAX_VALUE);
+      long timestamp = (long) (ThreadLocalRandom.current().nextLong());
       expectedEventTimestamps.add(timestamp);
       srvs.add(generateOneEventScanResultValue(timestamp, resultFormat));
     }
@@ -125,39 +125,33 @@ public class ScanQueryRunnerFactoryTest
     });
     Sequence<ScanResultValue> inputSequence = Sequences.simple(srvs);
     List<ScanResultValue> output =
-        factory.sortBatchAndLimitScanResultValues(
+        factory.sortAndLimitScanResultValues(
             inputSequence,
             query
         ).toList();
 
-    // check numBatches is as expected
-    int expectedNumBatches = (int) Math.ceil((double) numElements / query.getBatchSize());
-    Assert.assertEquals(expectedNumBatches, output.size());
-
-    // check no batch has more than batchSize elements
+    // check each scan result value has one event
     for (ScanResultValue srv : output) {
       if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)) {
-        Assert.assertTrue(getEventsCompactedListResultFormat(srv).size() <= query.getBatchSize());
+        Assert.assertTrue(getEventsCompactedListResultFormat(srv).size() == 1);
       } else if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)) {
-        Assert.assertTrue(getEventsListResultFormat(srv).size() <= query.getBatchSize());
+        Assert.assertTrue(getEventsListResultFormat(srv).size() == 1);
       }
     }
 
     // check total # of rows <= limit
-    int numRows = 0;
-    for (ScanResultValue srv : output) {
-      if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)) {
-        numRows += getEventsCompactedListResultFormat(srv).size();
-      } else if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)) {
-        numRows += getEventsListResultFormat(srv).size();
-      } else {
-        throw new UOE("Invalid result format [%s] not supported", resultFormat.toString());
-      }
-    }
-    Assert.assertTrue(numRows <= query.getLimit());
+    Assert.assertTrue(output.size() <= query.getLimit());
 
     // check ordering and values are correct
-
+    for (int i = 1; i < output.size(); i++) {
+      if (query.getTimeOrder().equals(ScanQuery.TimeOrder.DESCENDING)) {
+        Assert.assertTrue(output.get(i).getFirstEventTimestamp(resultFormat) <
+                          output.get(i - 1).getFirstEventTimestamp(resultFormat));
+      } else {
+        Assert.assertTrue(output.get(i).getFirstEventTimestamp(resultFormat) >
+                          output.get(i - 1).getFirstEventTimestamp(resultFormat));
+      }
+    }
   }
 
   private ScanResultValue generateOneEventScanResultValue(long timestamp, ScanQuery.ResultFormat resultFormat)

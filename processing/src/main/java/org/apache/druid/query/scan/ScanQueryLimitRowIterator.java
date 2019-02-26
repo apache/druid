@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.scan;
 
+import com.google.common.collect.Iterables;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
@@ -27,15 +29,18 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultValue>
 {
+  private static final String TIME_ORDERING_SEGMENT_ID = "No segment ID available when using time ordering";
   private Yielder<ScanResultValue> yielder;
   private ScanQuery.ResultFormat resultFormat;
   private long limit;
   private long count = 0;
+  private ScanQuery query;
 
   public ScanQueryLimitRowIterator(
       QueryRunner<ScanResultValue> baseRunner,
@@ -43,11 +48,11 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
       Map<String, Object> responseContext
   )
   {
-    ScanQuery query = (ScanQuery) queryPlus.getQuery();
-    resultFormat = query.getResultFormat();
-    limit = query.getLimit();
+    this.query = (ScanQuery) queryPlus.getQuery();
+    this.resultFormat = query.getResultFormat();
+    this.limit = query.getLimit();
     Sequence<ScanResultValue> baseSequence = baseRunner.run(queryPlus, responseContext);
-    yielder = baseSequence.toYielder(
+    this.yielder = baseSequence.toYielder(
         null,
         new YieldingAccumulator<ScanResultValue, ScanResultValue>()
         {
@@ -70,9 +75,14 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
   @Override
   public ScanResultValue next()
   {
-    ScanResultValue batch = yielder.get();
-    if (ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat) ||
-        ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
+    if (ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR.equals(resultFormat)) {
+      throw new UOE(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
+    }
+
+    // We don't want to perform batching at the historical-level if we're performing time ordering
+    if (query.getTimeOrder() == ScanQuery.TimeOrder.NONE ||
+        !query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
+      ScanResultValue batch = yielder.get();
       List events = (List) batch.getEvents();
       if (events.size() <= limit - count) {
         count += events.size();
@@ -85,8 +95,21 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
         count = limit;
         return new ScanResultValue(batch.getSegmentId(), batch.getColumns(), events.subList(0, left));
       }
+    } else {
+      // Perform single-event ScanResultValue batching.  Each scan result value in this case will only have one event
+      // so there's no need to iterate through events.
+      int batchSize = query.getBatchSize();
+      List<Object> eventsToAdd = new ArrayList<>(batchSize);
+      List<String> columns = new ArrayList<>();
+      while (eventsToAdd.size() < batchSize && !yielder.isDone()) {
+        ScanResultValue srv = yielder.get();
+        // Only replace once using the columns from the first event
+        columns = columns.isEmpty() ? srv.getColumns() : columns;
+        eventsToAdd.add(Iterables.getOnlyElement((List) srv.getEvents()));
+        yielder = yielder.next(null);
+      }
+      return new ScanResultValue(TIME_ORDERING_SEGMENT_ID, columns, eventsToAdd);
     }
-    throw new UnsupportedOperationException(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
   }
 
   @Override
