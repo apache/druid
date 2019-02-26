@@ -42,7 +42,7 @@ public class LongMeanAveragerTest
     avg.addElement(Collections.singletonMap("field", 3L), new HashMap<>());
     assertEquals(2.0, avg.computeResult(), 0.0);
 
-    avg.addElement(Collections.singletonMap("field", new Integer(3)), new HashMap<>());
+    avg.addElement(Collections.singletonMap("field", 3), new HashMap<>());
     assertEquals(3.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 2L), new HashMap<>());

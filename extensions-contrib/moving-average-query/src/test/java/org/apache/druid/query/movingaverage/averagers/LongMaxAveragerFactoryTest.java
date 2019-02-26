@@ -28,7 +28,7 @@ public class LongMaxAveragerFactoryTest
 {
 
   @Test
-  public void testCreateAverager() throws Exception
+  public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new LongMaxAveragerFactory("test", 5, 1, "field");
     assertThat(fac.createAverager(), instanceOf(LongMaxAverager.class));

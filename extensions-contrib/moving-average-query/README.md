@@ -27,9 +27,3 @@ Overview
 Documentation 
 =============
 See the druid.io website or under [Druid Github Repo](https://github.com/apache/incubator-druid/tree/master/docs/content/development/extensions-contrib/moving-average-query.md).
-
-Thanks
-===========
-
-This module was created by [Will Lauer](https://github.com/will-lauer) and [Mangesh Pardeshi](https://github.com/mangesh-pardeshi), with additional contributions by: [Deepak Babu](https://github.com/deepakb91), [Asif Mansoor](https://github.com/asifmansoora), [Ke Wang](https://github.com/kenuiuc), [Eyal Yurman](https://github.com/yurmix).
-Thanks to all contributors!

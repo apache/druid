@@ -49,8 +49,6 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
   private final RequestLogger requestLogger;
   private QueryToolChestWarehouse warehouse;
 
-  public static final String MOVING_AVERAGE_MERGE_KEY = "movingAverageMerge";
-
   private final MovingAverageQueryMetricsFactory movingAverageQueryMetricsFactory;
 
   /**
@@ -100,7 +98,7 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
       public Row apply(Row result)
       {
         MapBasedRow mRow = (MapBasedRow) result;
-        final Map<String, Object> values = new HashMap(mRow.getEvent());
+        final Map<String, Object> values = new HashMap<>(mRow.getEvent());
 
         for (AggregatorFactory agg : query.getAggregatorSpecs()) {
           Object aggVal = values.get(agg.getName());
@@ -114,7 +112,7 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
         for (AveragerFactory<?, ?> avg : query.getAveragerSpecs()) {
           Object aggVal = values.get(avg.getName());
           if (aggVal != null) {
-            values.put(avg.getName(), fn.manipulate(new AveragerFactoryWrapper(avg, avg.getName() + "_"), aggVal));
+            values.put(avg.getName(), fn.manipulate(new AveragerFactoryWrapper<>(avg, avg.getName() + "_"), aggVal));
           } else {
             values.put(avg.getName(), null);
           }

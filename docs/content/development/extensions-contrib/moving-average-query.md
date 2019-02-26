@@ -51,34 +51,34 @@ It runs the query in two main phases:
 ## Operations
 To use this extension, make sure to [load](../../operations/including-extensions.html) `druid-moving-average-query` only to the Broker.
 
-##Configuration
+## Configuration
 There are currently no configuration properties specific to Moving Average.
 
-##Limitations
+## Limitations
 * movingAverage is missing support for the following groupBy properties: `subtotalsSpec`, `virtualColumns`.
 * movingAverage is missing support for the following timeseries properties: `descending`.
 * movingAverage is missing support for [SQL-compatible null handling](https://github.com/apache/incubator-druid/issues/4349) (So setting druid.generic.useDefaultValueForNull in configuration will give an error). 
 
 ##Query spec:
-* Most properties in the For the query spec derived from  [groupBy query](../../querying/groupbyquery.html) / [timeseries](../../querying/timeseriesquery.html), see documentation for these query types.
+* Most properties in the query spec derived from  [groupBy query](../../querying/groupbyquery.html) / [timeseries](../../querying/timeseriesquery.html), see documentation for these query types.
 
 |property|description|required?|
 |--------|-----------|---------|
-|queryType|This String should always be "movingAverage"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
-|dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../../querying/datasource.html) for more information |yes|
-|dimensions|A JSON list of dimensions to do the groupBy over; can be ommitted for using timeseries back-engine; or see [DimensionSpec](../../querying/dimensionspecs.html) for ways to extract dimensions |no|
-|limitSpec|See [LimitSpec](../../querying/limitspec.html).|no|
-|having|See [Having](../../querying/having.html).|no|
-|granularity|Granularity type must be:`period`; See [Granularities](../../querying/granularities.html)|yes|
+|queryType|This String should always be "movingAverage"; this is the first thing Druid looks at to figure out how to interpret the query.|yes|
+|dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../../querying/datasource.html) for more information.|yes|
+|dimensions|A JSON list of [DimensionSpec](../../querying/dimensionspecs.html)|no|
+|limitSpec|See [LimitSpec](../../querying/limitspec.html)|no|
+|having|See [Having](../../querying/having.html)|no|
+|granularity|A period granilarity; See [Period Granularities](../../querying/granularities.html#period-granularities)|yes|
 |filter|See [Filters](../../querying/filters.html)|no|
 |aggregations|Aggregations forms the input to Averagers; See [Aggregations](../../querying/aggregations.html)|yes|
 |postAggregations|Supports only aggregations as input; See [Post Aggregations](../../querying/post-aggregations.html)|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |context|An additional JSON Object which can be used to specify certain flags.|no|
-|averagers|Defines the moving average function; See [Aggregations](../../querying/aggregations.html)|yes|
+|averagers|Defines the moving average function; See [Averagers](#averagers)|yes|
 |postAveragers|Support input of both averagers and aggregations; Syntax is identical to postAggregations (See [Post Aggregations](../../querying/post-aggregations.html))|no|
 
-##Averagers
+## Averagers
 
 Averagers are used to define the Moving-Average function. Averagers are not limited to an average - they can also provide other types of window functions such as MAX()/MIN().
 
@@ -95,7 +95,7 @@ These are properties which are common to all Averagers:
 |cycleSize|Cycle size; Used to calculate day-of-week option; See [Cycle size (Day of Week)](#cycle-size-day-of-week)|no, defaults to 1|
 
 
-###Averager types:
+### Averager types:
 
 * [Standard averagers](#standard-averagers):
   * doubleMean

@@ -66,7 +66,6 @@ public class MovingAverageIterableTest
   private static final DateTime JAN_4 = new DateTime(2017, 1, 4, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
   private static final DateTime JAN_5 = new DateTime(2017, 1, 5, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
   private static final DateTime JAN_6 = new DateTime(2017, 1, 6, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
-  private static final DateTime JAN_7 = new DateTime(2017, 1, 7, 0, 0, 0, 0, ISOChronology.getInstanceUTC());
 
   private static final String GENDER = "gender";
   private static final String AGE = "age";

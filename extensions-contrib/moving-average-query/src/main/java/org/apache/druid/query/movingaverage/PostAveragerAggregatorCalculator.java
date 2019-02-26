@@ -30,12 +30,12 @@ import java.util.Map;
 /**
  * Function that can be applied to a Sequence to calculate PostAverager results
  */
-public class PostAveragerCalculator implements Function<Row, Row>
+public class PostAveragerAggregatorCalculator implements Function<Row, Row>
 {
 
   private final List<PostAggregator> postAveragers;
 
-  public PostAveragerCalculator(MovingAverageQuery maq)
+  public PostAveragerAggregatorCalculator(MovingAverageQuery maq)
   {
     this.postAveragers = maq.getPostAveragerSpecs();
   }

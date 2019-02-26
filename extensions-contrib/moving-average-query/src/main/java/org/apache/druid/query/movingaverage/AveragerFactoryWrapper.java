@@ -33,6 +33,10 @@ import java.util.List;
  * This is necessary purely to allow existing common druid code that only knows
  * about aggregators to work with the MovingAverageQuery query as well.
  *
+ * NOTE: The {@link AggregatorFactory} abstract class is only partially extended.
+ * Most methods are not implemented and throw {@link UnsupportedOperationException} if called.
+ * This is becsuse these methods are invalid for the AveragerFactoryWrapper.
+ *
  * @param <T> Result type
  * @param <R> Finalized Result type
  */
@@ -55,21 +59,21 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public Aggregator factorize(ColumnSelectorFactory metricFactory) throws UnsupportedOperationException
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /* (non-Javadoc)
@@ -82,43 +86,43 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public Object deserialize(Object object)
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @SuppressWarnings("unchecked")
   @Override
@@ -137,39 +141,39 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public List<String> requiredFields()
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public byte[] getCacheKey()
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public String getTypeName()
   {
-    return null;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
   /**
-   * Returns null because Averagers aren't actually Aggregators
+   * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
   public int getMaxIntermediateSize()
   {
-    return 0;
+    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
   }
 
 }
