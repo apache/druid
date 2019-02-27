@@ -107,25 +107,25 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     }
 
     /*
-      Take as much segments from maintenance servers as priority allows and find the best location for them on
+      Take as many segments from decommissioned servers as priority allows and find the best location for them on
       available servers. After that, balance segments within available servers pool.
      */
     Map<Boolean, List<ServerHolder>> partitions =
-        servers.stream().collect(Collectors.partitioningBy(ServerHolder::isInMaintenance));
-    final List<ServerHolder> maintenanceServers = partitions.get(true);
+        servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioned));
+    final List<ServerHolder> decommssionedServers = partitions.get(true);
     final List<ServerHolder> availableServers = partitions.get(false);
     log.info(
-        "Found %d servers in maintenance, %d available servers servers",
-        maintenanceServers.size(),
+        "Found %d decomissioned servers, %d available servers servers",
+        decommssionedServers.size(),
         availableServers.size()
     );
 
-    if (maintenanceServers.isEmpty()) {
+    if (decommssionedServers.isEmpty()) {
       if (availableServers.size() <= 1) {
         log.info("[%s]: %d available servers servers found.  Cannot balance.", tier, availableServers.size());
       }
     } else if (availableServers.isEmpty()) {
-      log.info("[%s]: no available servers servers found during maintenance.  Cannot balance.", tier);
+      log.info("[%s]: no available servers servers found during decommissioning.  Cannot balance.", tier);
     }
 
     int numSegments = 0;
@@ -139,18 +139,18 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     }
 
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
-    int priority = params.getCoordinatorDynamicConfig().getNodesInMaintenancePriority();
-    int maxMaintenanceSegmentsToMove = (int) Math.ceil(maxSegmentsToMove * priority / 10.0);
-    log.info("Processing %d segments from servers in maintenance mode", maxMaintenanceSegmentsToMove);
-    Pair<Integer, Integer> maintenanceResult =
-        balanceServers(params, maintenanceServers, availableServers, maxMaintenanceSegmentsToMove);
-    int maxGeneralSegmentsToMove = maxSegmentsToMove - maintenanceResult.lhs;
-    log.info("Processing %d segments from servers in general mode", maxGeneralSegmentsToMove);
+    int priority = params.getCoordinatorDynamicConfig().getDecommissionPriority();
+    int maxDecommissionedSegmentsToMove = (int) Math.ceil(maxSegmentsToMove * priority / 10.0);
+    log.info("Processing %d segments from decommissioned servers", maxDecommissionedSegmentsToMove);
+    Pair<Integer, Integer> decommissionedResult =
+        balanceServers(params, decommssionedServers, availableServers, maxDecommissionedSegmentsToMove);
+    int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissionedResult.lhs;
+    log.info("Processing %d segments for balancing", maxGeneralSegmentsToMove);
     Pair<Integer, Integer> generalResult =
         balanceServers(params, availableServers, availableServers, maxGeneralSegmentsToMove);
 
-    int moved = generalResult.lhs + maintenanceResult.lhs;
-    int unmoved = generalResult.rhs + maintenanceResult.rhs;
+    int moved = generalResult.lhs + decommissionedResult.lhs;
+    int unmoved = generalResult.rhs + decommissionedResult.rhs;
     if (unmoved == maxSegmentsToMove) {
       // Cluster should be alive and constantly adjusting
       log.info("No good moves found in tier [%s]", tier);

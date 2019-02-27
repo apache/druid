@@ -153,8 +153,8 @@ public abstract class LoadRule implements Rule
       log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
       return Collections.emptyList();
     }
-    Predicate<ServerHolder> isNotInMaintenance = s -> !s.isInMaintenance();
-    return queue.stream().filter(isNotInMaintenance.and(predicate)).collect(Collectors.toList());
+    Predicate<ServerHolder> isNotDecommissioned = s -> !s.isDecommissioned();
+    return queue.stream().filter(isNotDecommissioned.and(predicate)).collect(Collectors.toList());
   }
 
   /**
@@ -385,12 +385,12 @@ public abstract class LoadRule implements Rule
     Map<Boolean, TreeSet<ServerHolder>> holders = holdersInTier.stream()
                                                                .filter(s -> s.isServingSegment(segment))
                                                                .collect(Collectors.partitioningBy(
-                                                                   ServerHolder::isInMaintenance,
+                                                                   ServerHolder::isDecommissioned,
                                                                    Collectors.toCollection(TreeSet::new)
                                                                ));
-    TreeSet<ServerHolder> maintenanceServers = holders.get(true);
+    TreeSet<ServerHolder> decommissionedServers = holders.get(true);
     TreeSet<ServerHolder> availableServers = holders.get(false);
-    int left = dropSegmentFromServers(balancerStrategy, segment, maintenanceServers, numToDrop);
+    int left = dropSegmentFromServers(balancerStrategy, segment, decommissionedServers, numToDrop);
     if (left > 0) {
       left = dropSegmentFromServers(balancerStrategy, segment, availableServers, left);
     }

@@ -56,8 +56,8 @@ public class CoordinatorDynamicConfig
   private final boolean emitBalancingStats;
   private final boolean killAllDataSources;
   private final Set<String> killableDataSources;
-  private final Set<String> historicalNodesInMaintenance;
-  private final int nodesInMaintenancePriority;
+  private final Set<String> decommissionNodes;
+  private final int decommissionPriority;
 
   // The pending segments of the dataSources in this list are not killed.
   private final Set<String> protectedPendingSegmentDatasources;
@@ -88,8 +88,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killAllDataSources") boolean killAllDataSources,
       @JsonProperty("killPendingSegmentsSkipList") Object protectedPendingSegmentDatasources,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
-      @JsonProperty("historicalNodesInMaintenance") Object historicalNodesInMaintenance,
-      @JsonProperty("nodesInMaintenancePriority") int nodesInMaintenancePriority
+      @JsonProperty("decommissionNodes") Object decommissionNodes,
+      @JsonProperty("decommissionPriority") int decommissionPriority
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -104,12 +104,12 @@ public class CoordinatorDynamicConfig
     this.killableDataSources = parseJsonStringOrArray(killableDataSources);
     this.protectedPendingSegmentDatasources = parseJsonStringOrArray(protectedPendingSegmentDatasources);
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
-    this.historicalNodesInMaintenance = parseJsonStringOrArray(historicalNodesInMaintenance);
+    this.decommissionNodes = parseJsonStringOrArray(decommissionNodes);
     Preconditions.checkArgument(
-        nodesInMaintenancePriority >= 0 && nodesInMaintenancePriority <= 10,
-        "nodesInMaintenancePriority should be in range [0, 10]"
+        decommissionPriority >= 0 && decommissionPriority <= 10,
+        "decommissionPriority should be in range [0, 10]"
     );
-    this.nodesInMaintenancePriority = nodesInMaintenancePriority;
+    this.decommissionPriority = decommissionPriority;
 
     if (this.killAllDataSources && !this.killableDataSources.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -231,32 +231,33 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * Historical nodes list in maintenance mode. Coordinator doesn't assign new segments on those nodes and moves
+   * List of historical nodes to 'decommission'. Coordinator doesn't assign new segments on those nodes and moves
    * segments from those nodes according to a specified priority.
    *
    * @return list of host:port entries
    */
   @JsonProperty
-  public Set<String> getHistoricalNodesInMaintenance()
+  public Set<String> getDecommissionNodes()
   {
-    return historicalNodesInMaintenance;
+    return decommissionNodes;
   }
 
   /**
-   * Priority of segments from servers in maintenance. Coordinator takes ceil(maxSegmentsToMove * (priority / 10))
-   * from servers in maitenance during balancing phase, i.e.:
-   * 0 - no segments from servers in maintenance will be processed during balancing
-   * 5 - 50% segments from servers in maintenance
-   * 10 - 100% segments from servers in maintenance
-   * By leveraging the priority an operator can prevent general nodes from overload or decrease maitenance time
+   * Priority of how many of 'move' operations will be spent towards 'decommissioning' servers by moving segments from
+   * them to non-decommissioned servers, instead of 'balancing' segments between servers.
+   * Coordinator takes ceil(maxSegmentsToMove * (priority / 10)) from servers in maitenance during balancing phase:
+   * 0 - no segments from decommissioned servers will be processed during balancing
+   * 5 - 50% segments from decommissioned servers
+   * 10 - 100% segments from decommissioned servers
+   * By leveraging the priority an operator can prevent general nodes from overload or decrease 'decommissioning' time
    * instead.
    *
    * @return number in range [0, 10]
    */
   @JsonProperty
-  public int getNodesInMaintenancePriority()
+  public int getDecommissionPriority()
   {
-    return nodesInMaintenancePriority;
+    return decommissionPriority;
   }
 
   @Override
@@ -275,8 +276,8 @@ public class CoordinatorDynamicConfig
            ", killDataSourceWhitelist=" + killableDataSources +
            ", protectedPendingSegmentDatasources=" + protectedPendingSegmentDatasources +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
-           ", historicalNodesInMaintenance=" + historicalNodesInMaintenance +
-           ", nodesInMaintenancePriority=" + nodesInMaintenancePriority +
+           ", decommissionNodes=" + decommissionNodes +
+           ", decommissionPriority=" + decommissionPriority +
            '}';
   }
 
@@ -328,10 +329,10 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(protectedPendingSegmentDatasources, that.protectedPendingSegmentDatasources)) {
       return false;
     }
-    if (!Objects.equals(historicalNodesInMaintenance, that.historicalNodesInMaintenance)) {
+    if (!Objects.equals(decommissionNodes, that.decommissionNodes)) {
       return false;
     }
-    return nodesInMaintenancePriority == that.nodesInMaintenancePriority;
+    return decommissionPriority == that.decommissionPriority;
   }
 
   @Override
@@ -350,8 +351,8 @@ public class CoordinatorDynamicConfig
         maxSegmentsInNodeLoadingQueue,
         killableDataSources,
         protectedPendingSegmentDatasources,
-        historicalNodesInMaintenance,
-        nodesInMaintenancePriority
+        decommissionNodes,
+        decommissionPriority
     );
   }
 
@@ -372,7 +373,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
-    private static final int DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY = 7;
+    private static final int DEFAULT_DECOMMISSIONING_PRIORITY = 7;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
@@ -386,8 +387,8 @@ public class CoordinatorDynamicConfig
     private Boolean killAllDataSources;
     private Object killPendingSegmentsSkipList;
     private Integer maxSegmentsInNodeLoadingQueue;
-    private Object maintenanceList;
-    private Integer maintenanceModeSegmentsPriority;
+    private Object decommissionNodes;
+    private Integer decommissionPriority;
 
     public Builder()
     {
@@ -407,8 +408,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("killAllDataSources") @Nullable Boolean killAllDataSources,
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object killPendingSegmentsSkipList,
         @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
-        @JsonProperty("historicalNodesInMaintenance") @Nullable Object maintenanceList,
-        @JsonProperty("nodesInMaintenancePriority") @Nullable Integer maintenanceModeSegmentsPriority
+        @JsonProperty("decommissionNodes") @Nullable Object decommissionNodes,
+        @JsonProperty("decommissionPriority") @Nullable Integer decommissionPriority
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -423,8 +424,8 @@ public class CoordinatorDynamicConfig
       this.killableDataSources = killableDataSources;
       this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
-      this.maintenanceList = maintenanceList;
-      this.maintenanceModeSegmentsPriority = maintenanceModeSegmentsPriority;
+      this.decommissionNodes = decommissionNodes;
+      this.decommissionPriority = decommissionPriority;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -493,15 +494,15 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withMaintenanceList(Set<String> list)
+    public Builder withDecommissionNodes(Set<String> decommissioned)
     {
-      this.maintenanceList = list;
+      this.decommissionNodes = decommissioned;
       return this;
     }
 
-    public Builder withMaintenanceModeSegmentsPriority(Integer priority)
+    public Builder withDecommissionPriority(Integer priority)
     {
-      this.maintenanceModeSegmentsPriority = priority;
+      this.decommissionPriority = priority;
       return this;
     }
 
@@ -522,10 +523,10 @@ public class CoordinatorDynamicConfig
           maxSegmentsInNodeLoadingQueue == null
           ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
           : maxSegmentsInNodeLoadingQueue,
-          maintenanceList,
-          maintenanceModeSegmentsPriority == null
-          ? DEFAULT_MAINTENANCE_MODE_SEGMENTS_PRIORITY
-          : maintenanceModeSegmentsPriority
+          decommissionNodes,
+          decommissionPriority == null
+          ? DEFAULT_DECOMMISSIONING_PRIORITY
+          : decommissionPriority
       );
     }
 
@@ -548,10 +549,10 @@ public class CoordinatorDynamicConfig
           maxSegmentsInNodeLoadingQueue == null
           ? defaults.getMaxSegmentsInNodeLoadingQueue()
           : maxSegmentsInNodeLoadingQueue,
-          maintenanceList == null ? defaults.getHistoricalNodesInMaintenance() : maintenanceList,
-          maintenanceModeSegmentsPriority == null
-          ? defaults.getNodesInMaintenancePriority()
-          : maintenanceModeSegmentsPriority
+          decommissionNodes == null ? defaults.getDecommissionNodes() : decommissionNodes,
+          decommissionPriority == null
+          ? defaults.getDecommissionPriority()
+          : decommissionPriority
       );
     }
   }

@@ -687,11 +687,11 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 servers in different tiers, the first is in maitenance mode.
-   * Should not load a segment to the server in maintenance mode.
+   * 2 servers in different tiers, the first is decommissioned.
+   * Should not load a segment to the server that is decommissioned
    */
   @Test
-  public void testLoadDuringMaitenance()
+  public void testLoadDecommissioned()
   {
     final LoadQueuePeon mockPeon1 = createEmptyPeon();
     final LoadQueuePeon mockPeon2 = createOneCallPeonMock();
@@ -737,8 +737,8 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 tiers, 2 servers each, 1 server of the second tier is in maintenance.
-   * Should not load a segment to the server in maintenance mode.
+   * 2 tiers, 2 servers each, 1 server of the second tier is decommissioned.
+   * Should not load a segment to the server that is decommssioned.
    */
   @Test
   public void testLoadReplicaDuringMaitenance()
@@ -796,11 +796,11 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 servers with a segment, one server in maintenance mode.
+   * 2 servers with a segment, one server decommissioned.
    * Should drop a segment from both.
    */
   @Test
-  public void testDropDuringMaintenance()
+  public void testDropDuringDecommssion()
   {
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -859,12 +859,12 @@ public class LoadRuleTest
 
   /**
    * 3 servers hosting 3 replicas of the segment.
-   * 1 servers is in maitenance.
+   * 1 servers is decommissioned.
    * 1 replica is redundant.
-   * Should drop from the server in maintenance.
+   * Should drop from the decommissioned server.
    */
   @Test
-  public void testRedundantReplicaDropDuringMaintenance()
+  public void testRedundantReplicaDropDuringDecommissioned()
   {
     final LoadQueuePeon mockPeon1 = new LoadQueuePeonTester();
     final LoadQueuePeon mockPeon2 = new LoadQueuePeonTester();
@@ -1019,12 +1019,12 @@ public class LoadRuleTest
     return mockPeon2;
   }
 
-  private static ServerHolder createServerHolder(String tier, LoadQueuePeon mockPeon1, boolean maintenance)
+  private static ServerHolder createServerHolder(String tier, LoadQueuePeon mockPeon1, boolean decommission)
   {
     return new ServerHolder(
         createServer(tier).toImmutableDruidServer(),
         mockPeon1,
-        maintenance
+        decommission
     );
   }
 }

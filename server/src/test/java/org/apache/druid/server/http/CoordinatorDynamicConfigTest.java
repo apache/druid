@@ -50,8 +50,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
-                     + "  \"historicalNodesInMaintenance\": [\"host1\", \"host2\"],\n"
-                     + "  \"nodesInMaintenancePriority\": 9\n"
+                     + "  \"decommissionNodes\": [\"host1\", \"host2\"],\n"
+                     + "  \"decommissionPriority\": 9\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -63,19 +63,19 @@ public class CoordinatorDynamicConfigTest
         ),
         CoordinatorDynamicConfig.class
     );
-    ImmutableSet<String> maintenance = ImmutableSet.of("host1", "host2");
+    ImmutableSet<String> decommissioned = ImmutableSet.of("host1", "host2");
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, maintenance, 9);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioned, 9);
 
-    actual = CoordinatorDynamicConfig.builder().withMaintenanceList(ImmutableSet.of("host1")).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissionNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 9);
 
-    actual = CoordinatorDynamicConfig.builder().withMaintenanceModeSegmentsPriority(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissionPriority(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
   @Test
-  public void testMaintenanceParametersBackwardCompatibility() throws Exception
+  public void testDecommissionParametersBackwardCompatibility() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
@@ -99,14 +99,14 @@ public class CoordinatorDynamicConfigTest
         ),
         CoordinatorDynamicConfig.class
     );
-    ImmutableSet<String> maintenance = ImmutableSet.of();
+    ImmutableSet<String> decommissioned = ImmutableSet.of();
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, maintenance, 0);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioned, 0);
 
-    actual = CoordinatorDynamicConfig.builder().withMaintenanceList(ImmutableSet.of("host1")).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissionNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0);
 
-    actual = CoordinatorDynamicConfig.builder().withMaintenanceModeSegmentsPriority(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissionPriority(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
@@ -257,8 +257,8 @@ public class CoordinatorDynamicConfigTest
       Set<String> expectedKillableDatasources,
       boolean expectedKillAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
-      Set<String> maintenanceList,
-      int maintenancePriority
+      Set<String> decommissioned,
+      int decommissionPriority
   )
   {
     Assert.assertEquals(expectedMillisToWaitBeforeDeleting, config.getMillisToWaitBeforeDeleting());
@@ -272,7 +272,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedKillableDatasources, config.getKillableDataSources());
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
-    Assert.assertEquals(maintenanceList, config.getHistoricalNodesInMaintenance());
-    Assert.assertEquals(maintenancePriority, config.getNodesInMaintenancePriority());
+    Assert.assertEquals(decommissioned, config.getDecommissionNodes());
+    Assert.assertEquals(decommissionPriority, config.getDecommissionPriority());
   }
 }
