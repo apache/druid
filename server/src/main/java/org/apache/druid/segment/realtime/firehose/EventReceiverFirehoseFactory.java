@@ -96,6 +96,14 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
 
   private final String serviceName;
   private final int bufferSize;
+
+  /**
+   * Doesn't really support max idle times finer than 1 second due to how {@link
+   * EventReceiverFirehose#delayedCloseExecutor} is implemented, see a comment inside {@link
+   * EventReceiverFirehose#createDelayedCloseExecutor()}. This aspect is not reflected in docs because it's unlikely
+   * that anybody configures or cares about finer max idle times, and also because this is an implementation detail of
+   * {@link EventReceiverFirehose} that may change in the future.
+   */
   private final long maxIdleTimeMillis;
   private final @Nullable ChatHandlerProvider chatHandlerProvider;
   private final ObjectMapper jsonMapper;
@@ -107,6 +115,8 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
   public EventReceiverFirehoseFactory(
       @JsonProperty("serviceName") String serviceName,
       @JsonProperty("bufferSize") Integer bufferSize,
+      // Keeping the legacy 'maxIdleTime' property name for backward compatibility. When the project is updated to
+      // Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
       @JsonProperty("maxIdleTime") @Nullable Long maxIdleTimeMillis,
       @JacksonInject ChatHandlerProvider chatHandlerProvider,
       @JacksonInject @Json ObjectMapper jsonMapper,
@@ -164,8 +174,12 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
     return bufferSize;
   }
 
-  @JsonProperty
-  public long getMaxIdleTime()
+  /**
+   * Keeping the legacy 'maxIdleTime' property name for backward compatibility. When the project is updated to Jackson
+   * 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
+   */
+  @JsonProperty("maxIdleTime")
+  public long getMaxIdleTimeMillis()
   {
     return maxIdleTimeMillis;
   }
@@ -253,7 +267,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      * Creates and starts a {@link #delayedCloseExecutor} thread, either right from the EventReceiverFirehose's
      * constructor if {@link #maxIdleTimeMillis} is specified, or otherwise lazily from {@link #shutdown}.
      *
-     * The thread sleeps until the time when the Firehose should be closed because either {@link #addAll} was not called
+     * The thread waits until the time when the Firehose should be closed because either {@link #addAll} was not called
      * for the specified max idle time (see {@link #idleCloseTimeNs}), or until the shutoff time requested last
      * via {@link #shutdown} (see {@link #requestedShutdownTimeNs}), whatever is sooner. Then the thread does
      * two things:
@@ -261,7 +275,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      *    silently exits.
      *  2. It checks both deadlines again:
      *       a) if either of them has arrived, it calls {@link #close()} and exits.
-     *       b) otherwise, it sleeps until the nearest deadline again, and so on in a loop.
+     *       b) otherwise, it waits until the nearest deadline again, and so on in a loop.
      *
      * This way the thread works predictably and robustly regardless of how both deadlines change (for example, shutoff
      * time specified via {@link #shutdown} may jump in both directions).
@@ -280,52 +294,36 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
             // The closed = true is visible after close() because there is a happens-before edge between
             // delayedCloseExecutor.interrupt() call in close() and catching InterruptedException below in this loop.
             while (!closed) {
-              Long closeTimeNs = null;
-              Boolean dueToShutdownRequest = null;
+              // Reading idleCloseTimeNs and requestedShutdownTimeNs to locals for absolute confidence that there
+              // couldn't be NPE in comparisons with nanoTime() below.
               Long idleCloseTimeNs = this.idleCloseTimeNs;
-              if (idleCloseTimeNs != null) {
-                closeTimeNs = idleCloseTimeNs;
-                dueToShutdownRequest = false;
-              }
               Long requestedShutdownTimeNs = this.requestedShutdownTimeNs;
-              if (requestedShutdownTimeNs != null) {
-                if (closeTimeNs == null || requestedShutdownTimeNs - closeTimeNs <= 0) { // overflow-aware comparison
-                  closeTimeNs = requestedShutdownTimeNs;
-                  dueToShutdownRequest = true;
-                }
-              }
-              // This is not possible unless there are bugs in the code of EventReceiverFirehose. AssertionError could
-              // have been thrown instead, but it doesn't seem to make a lot of sense in a background thread. Instead,
-              // we long the error and continue a loop after some pause.
-              if (closeTimeNs == null) {
+              if (idleCloseTimeNs == null && requestedShutdownTimeNs == null) {
+                // This is not possible unless there are bugs in the code of EventReceiverFirehose. AssertionError could
+                // have been thrown instead, but it doesn't seem to make a lot of sense in a background thread. Instead,
+                // we long the error and continue a loop after some pause.
                 log.error(
                     "Either idleCloseTimeNs or requestedShutdownTimeNs must be non-null. "
                     + "Please file a bug at https://github.com/apache/incubator-druid/issues"
                 );
-                try {
-                  Threads.sleepFor(1, TimeUnit.MINUTES);
-                }
-                catch (InterruptedException ignore) {
-                  // Interruption is a wakeup, continue the loop
-                }
-                continue;
               }
-              long closeTimeoutNs = closeTimeNs - System.nanoTime();
-              if (closeTimeoutNs <= 0) { // overflow-aware comparison
-                if (dueToShutdownRequest) {
-                  log.info("Closing Firehose after a shutdown request");
-                } else {
-                  log.info("Firehose has been idle for %d ms, closing.", maxIdleTimeMillis);
-                }
+              if (idleCloseTimeNs != null && idleCloseTimeNs - System.nanoTime() <= 0) { // overflow-aware comparison
+                log.info("Closing Firehose after a shutdown request");
                 close();
-                return;
-              } else {
-                try {
-                  Threads.sleepFor(closeTimeoutNs, TimeUnit.NANOSECONDS);
-                }
-                catch (InterruptedException ignore) {
-                  // Interruption is a wakeup, continue the loop
-                }
+              } else if (requestedShutdownTimeNs != null &&
+                         requestedShutdownTimeNs - System.nanoTime() <= 0) { // overflow-aware comparison
+                log.info("Firehose has been idle for %d ms, closing.", maxIdleTimeMillis);
+                close();
+              }
+              try {
+                // It is possible to write code that sleeps until the next the next idleCloseTimeNs or
+                // requestedShutdownTimeNs, whatever is non-null and sooner, but that's fairly complicated code. That
+                // complexity perhaps overweighs the minor inefficiency of simply waking up every second.
+                // perhaps doesn't justify minor inefficiency of waking
+                Threads.sleepFor(1, TimeUnit.SECONDS);
+              }
+              catch (InterruptedException ignore) {
+                // Interruption is a wakeup, continue the loop
               }
             }
           },
