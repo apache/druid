@@ -87,7 +87,8 @@ The below configurations can be optionally used for tuning the firehose performa
 ### IngestSegmentFirehose
 
 This Firehose can be used to read the data from existing druid segments.
-It can be used ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
+It can be used to ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
+This firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
 A sample ingest firehose spec is shown below -
 
 ```json
@@ -102,10 +103,12 @@ A sample ingest firehose spec is shown below -
 |--------|-----------|---------|
 |type|This should be "ingestSegment".|yes|
 |dataSource|A String defining the data source to fetch rows from, very similar to a table in a relational database|yes|
-|interval|A String representing ISO-8601 Interval. This defines the time range to fetch the data over.|yes|
+|interval|A String representing ISO-8601 Interval. This defines the time range to fetch the data over. You must specify exactly one of this and `segments`.|no|
+|segments|A list of JSON objects describing specific segments to include. Each object must have a `segmentId` field naming a segment to ingest, and may have an `intervals` field which is a list of ISO-8601 Interval strings telling what intervals on the segment to read. You must specify exactly one of this and `interval`.
 |dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](../querying/filters.html)|no|
+|maxInputSegmentBytesPerTask|When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
 
 #### SqlFirehose
 

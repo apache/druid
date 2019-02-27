@@ -506,10 +506,14 @@ public class CompactionTask extends AbstractTask
         new IngestSegmentFirehoseFactory(
             dataSchema.getDataSource(),
             interval,
+            // FIXME It might be possible to pass in segmentIds instead of interval here (because the caller
+            // does have a timeline) but I don't know if it would actually improve anything.
+            null,
             null, // no filter
             // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
             dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
             Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
+            null, // FIXME allow maxInputSegmentBytesPerTask to be tweaked?
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,

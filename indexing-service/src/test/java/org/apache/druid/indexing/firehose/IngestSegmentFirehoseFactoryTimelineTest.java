@@ -290,9 +290,11 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
           DATA_SOURCE,
           testCase.interval,
+          null,
           new TrueDimFilter(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
+          null,
           INDEX_IO,
           cc,
           slf,
