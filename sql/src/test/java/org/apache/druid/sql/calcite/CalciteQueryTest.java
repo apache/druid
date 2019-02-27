@@ -157,8 +157,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
-                               .intervals(querySegmentSpec(Intervals.of(
-                                   "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                               .intervals(querySegmentSpec(Intervals.of("2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                                .granularity(Granularities.ALL)
                                .aggregators(aggregators(
                                    new CountAggregatorFactory("a0"),
@@ -309,7 +308,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "servers", "SYSTEM_TABLE"})
             .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE"})
-            .build()
+        .build()
     );
   }
 
@@ -1715,8 +1714,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(expressionFilter("case_searched((\"dim2\" == 'a'),"
-                                            + (NullHandling.replaceWithDefault() ? "1" : "0")
-                                            + ",(\"dim2\" == ''))"))
+                                             + (NullHandling.replaceWithDefault() ? "1" : "0")
+                                             + ",(\"dim2\" == ''))"))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -1744,8 +1743,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(expressionFilter("case_searched((\"dim2\" == 'a'),"
-                                            + (NullHandling.replaceWithDefault() ? "1" : "0")
-                                            + ",(\"dim2\" == null))"))
+                                             + (NullHandling.replaceWithDefault() ? "1" : "0")
+                                             + ",(\"dim2\" == null))"))
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
@@ -4284,11 +4283,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     ValueType.LONG
                                                 )
                                             )
-                                            .setDimensions(dimensionSpec(new DefaultDimensionSpec(
-                                                "d0:v",
-                                                "d0",
-                                                ValueType.LONG
-                                            )))
+                                            .setDimensions(dimensionSpec(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
                                             .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                                             .setContext(QUERY_CONTEXT_DEFAULT)
                                             .build()
@@ -4347,21 +4342,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     ValueType.LONG
                                                 )
                                             )
-                                            .setDimensions(dimensionSpec(new DefaultDimensionSpec(
-                                                "d0:v",
-                                                "d0",
-                                                ValueType.LONG
-                                            )))
+                                            .setDimensions(dimensionSpec(new DefaultDimensionSpec("d0:v", "d0", ValueType.LONG)))
                                             .setAggregatorSpecs(
                                                 aggregators(
                                                     new CardinalityAggregatorFactory(
                                                         "a0:a",
                                                         null,
-                                                        dimensionSpec(new DefaultDimensionSpec(
-                                                            "cnt",
-                                                            "cnt",
-                                                            ValueType.LONG
-                                                        )),
+                                                        dimensionSpec(new DefaultDimensionSpec("cnt", "cnt", ValueType.LONG)),
                                                         false,
                                                         true
                                                     )
@@ -7460,10 +7447,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
-                        .setInterval(querySegmentSpec(Intervals.utc(
-                            DateTimes.of("2000-01-01").getMillis(),
-                            JodaUtils.MAX_INSTANT
-                        )))
+                        .setInterval(querySegmentSpec(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
                         .setGranularity(Granularities.ALL)
                         .setDimFilter(not(selector("dim1", "", null)))
                         .setDimensions(dimensionSpec(new ExtractionDimensionSpec(
@@ -7475,10 +7459,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build(),
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(querySegmentSpec(Intervals.utc(
-                      DateTimes.of("2000-01-01").getMillis(),
-                      JodaUtils.MAX_INSTANT
-                  )))
+                  .intervals(querySegmentSpec(Intervals.utc(DateTimes.of("2000-01-01").getMillis(), JodaUtils.MAX_INSTANT)))
                   .granularity(Granularities.ALL)
                   .filters(in(
                       "dim2",
@@ -7562,20 +7543,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim1")
-            << << << < HEAD
-        .filters(SELECTOR("f1", "0.1", null))
-        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-    =======
                 .filters(selector("f1", "0.1", null))
-                     .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
-                 >>>>>>>master
-      .limit(1)
-      .context(QUERY_CONTEXT_DEFAULT)
-      .build()
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
-    ImmutableList.of(
-        new Object[]{"10.1"}
-    )
+        ImmutableList.of(
+            new Object[]{"10.1"}
+        )
     );
   }
 
@@ -7589,20 +7565,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim1")
-            << << << < HEAD
-        .filters(SELECTOR("d1", "1.7", null))
-        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-    =======
                 .filters(selector("d1", "1.7", null))
-                     .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
-                 >>>>>>>master
-      .limit(1)
-      .context(QUERY_CONTEXT_DEFAULT)
-      .build()
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
         ),
-    ImmutableList.of(
-        new Object[]{"10.1"}
-    )
+        ImmutableList.of(
+            new Object[]{"10.1"}
+        )
     );
   }
 
