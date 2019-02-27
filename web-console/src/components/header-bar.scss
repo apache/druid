@@ -17,9 +17,10 @@
  */
 
 .header-bar {
-  overflow: hidden;
+  z-index: 10;
 
   .logo {
+    position: relative;
     width: 100px;
     height: 50px;
 
@@ -30,5 +31,14 @@
       transform: translate(-50%,-50%);
       height: 75px;
     }
+  }
+
+  .config-popover .pt-popover-content,
+  .legacy-popover .pt-popover-content {
+    width: 240px;
+  }
+
+  .help-popover .pt-popover-content {
+    width: 180px;
   }
 }

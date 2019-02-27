@@ -279,7 +279,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                               null,
                               null
                           ),
-                          BaseCalciteQueryTest.NOT(BaseCalciteQueryTest.SELECTOR("dim2", "", null))
+                          BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
                       ),
                       new HllSketchBuildAggregatorFactory(
                           "a3",

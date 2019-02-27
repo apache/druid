@@ -173,10 +173,7 @@ public class SqlBenchmark
   {
     final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, new HashMap<>());
     final List<Row> resultList = resultSequence.toList();
-
-    for (Row row : resultList) {
-      blackhole.consume(row);
-    }
+    blackhole.consume(resultList);
   }
 
   @Benchmark

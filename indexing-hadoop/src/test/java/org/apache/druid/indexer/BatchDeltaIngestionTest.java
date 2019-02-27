@@ -386,27 +386,11 @@ public class BatchDeltaIngestionTest
 
     Assert.assertTrue(segmentFolder.exists());
 
-    File descriptor = new File(segmentFolder, "descriptor.json");
     File indexZip = new File(segmentFolder, "index.zip");
-    Assert.assertTrue(descriptor.exists());
     Assert.assertTrue(indexZip.exists());
 
-    DataSegment dataSegment = MAPPER.readValue(descriptor, DataSegment.class);
-    Assert.assertEquals("website", dataSegment.getDataSource());
-    Assert.assertEquals(config.getSchema().getTuningConfig().getVersion(), dataSegment.getVersion());
-    Assert.assertEquals(INTERVAL_FULL, dataSegment.getInterval());
-    Assert.assertEquals("local", dataSegment.getLoadSpec().get("type"));
-    Assert.assertEquals(indexZip.getCanonicalPath(), dataSegment.getLoadSpec().get("path"));
-    Assert.assertEquals(expectedDimensions, dataSegment.getDimensions());
-    Assert.assertEquals(expectedMetrics, dataSegment.getMetrics());
-    Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());
-
-    HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
-    Assert.assertEquals(0, spec.getPartitionNum());
-    Assert.assertEquals(1, spec.getPartitions());
-
     File tmpUnzippedSegmentDir = temporaryFolder.newFolder();
-    new LocalDataSegmentPuller().getSegmentFiles(dataSegment, tmpUnzippedSegmentDir);
+    new LocalDataSegmentPuller().getSegmentFiles(indexZip, tmpUnzippedSegmentDir);
 
     QueryableIndex index = INDEX_IO.loadIndex(tmpUnzippedSegmentDir);
     StorageAdapter adapter = new QueryableIndexStorageAdapter(index);

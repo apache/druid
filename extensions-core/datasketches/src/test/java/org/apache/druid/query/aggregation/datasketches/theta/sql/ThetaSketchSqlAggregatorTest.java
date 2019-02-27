@@ -283,7 +283,7 @@ public class ThetaSketchSqlAggregatorTest extends CalciteTestBase
                               null,
                               null
                           ),
-                          BaseCalciteQueryTest.NOT(BaseCalciteQueryTest.SELECTOR("dim2", "", null))
+                          BaseCalciteQueryTest.not(BaseCalciteQueryTest.selector("dim2", "", null))
                       ),
                       new SketchMergeAggregatorFactory(
                           "a3",
