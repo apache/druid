@@ -28,7 +28,7 @@ title: "Management GUIs"
 
 Druid provides a console for managing datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
-To use this console, it is necessary to run a [Router](../development/router.html) process. We recommend running this process on your Query server.
+The Druid Console is hosted by the [Router](../development/router.html) process. We recommend running the Router process on your [Query server](../design/processes.html).
 
 In addition, the following cluster settings must be enabled:
 
@@ -41,7 +41,7 @@ After enabling Druid SQL on the Brokers and deploying a Router with the managmen
 http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
-This console subsumes the functionality provided by the older consoles described below, which are still available if needed.
+The Druid Console contains all of the functionality provided by the older consoles described below, which are still available if needed. The legacy consoles may be replaced by the Druid Console in the future.
 
 ## Legacy Consoles
 
