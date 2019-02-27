@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.QueryMetrics;
@@ -59,10 +60,10 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
    * @param requestLogger
    */
   @Inject
-  public MovingAverageQueryToolChest(@Nullable QuerySegmentWalker walker, RequestLogger requestLogger)
+  public MovingAverageQueryToolChest(Provider<QuerySegmentWalker> walker, RequestLogger requestLogger)
   {
 
-    this.walker = walker;
+    this.walker = walker.get();
     this.requestLogger = requestLogger;
     this.movingAverageQueryMetricsFactory = DefaultMovingAverageQueryMetricsFactory.instance();
   }
@@ -76,7 +77,7 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
   @Override
   public QueryRunner<Row> mergeResults(QueryRunner<Row> runner)
   {
-    return new MovingAverageQueryRunner(warehouse, walker, requestLogger);
+    return new MovingAverageQueryRunner(walker, requestLogger);
   }
 
   @Override

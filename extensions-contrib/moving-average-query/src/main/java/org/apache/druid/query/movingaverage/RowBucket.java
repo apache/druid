@@ -23,6 +23,7 @@ import org.apache.druid.data.input.Row;
 import org.joda.time.DateTime;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Represents a set of rows for a specific date
@@ -30,10 +31,10 @@ import java.util.Collection;
 public class RowBucket
 {
   private final DateTime dateTime;
-  private final Collection<Row> rows;
+  private final List<Row> rows;
   private RowBucket nextBucket = null;
 
-  public RowBucket(DateTime dateTime, Collection<Row> rows)
+  public RowBucket(DateTime dateTime, List<Row> rows)
   {
     this.dateTime = dateTime;
     this.rows = rows;
@@ -44,7 +45,7 @@ public class RowBucket
     return dateTime;
   }
 
-  public Collection<Row> getRows()
+  public List<Row> getRows()
   {
     return rows;
   }
