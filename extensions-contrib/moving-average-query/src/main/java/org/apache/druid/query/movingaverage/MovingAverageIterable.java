@@ -34,7 +34,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
-import java.util.Collection;
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -55,16 +55,16 @@ public class MovingAverageIterable implements Iterable<Row>
 {
 
   private final Sequence<RowBucket> seq;
-  private final Collection<DimensionSpec> dims;
-  private final Collection<AveragerFactory<?, ?>> factories;
+  private final List<DimensionSpec> dims;
+  private final List<AveragerFactory<?, ?>> factories;
   private final Map<String, PostAggregator> postAggMap;
   private final Map<String, AggregatorFactory> aggMap;
   private final Map<String, Object> fakeEvents;
 
   public MovingAverageIterable(
       Sequence<RowBucket> buckets,
-      Collection<DimensionSpec> dims,
-      Collection<AveragerFactory<?, ?>> factories,
+      List<DimensionSpec> dims,
+      List<AveragerFactory<?, ?>> factories,
       List<PostAggregator> postAggList,
       List<AggregatorFactory> aggList
   )
@@ -119,9 +119,9 @@ public class MovingAverageIterable implements Iterable<Row>
   static class MovingAverageIterator implements Iterator<Row>
   {
 
-    private final Collection<DimensionSpec> dims;
-    private final Map<Map<String, Object>, Collection<Averager<?>>> averagers = new HashMap<>();
-    private final Collection<AveragerFactory<?, ?>> factories;
+    private final List<DimensionSpec> dims;
+    private final Map<Map<String, Object>, List<Averager<?>>> averagers = new HashMap<>();
+    private final List<AveragerFactory<?, ?>> factories;
 
     private Yielder<RowBucket> yielder;
     private RowBucket cache = null;
@@ -134,8 +134,8 @@ public class MovingAverageIterable implements Iterable<Row>
 
     public MovingAverageIterator(
         Sequence<RowBucket> rows,
-        Collection<DimensionSpec> dims,
-        Collection<AveragerFactory<?, ?>> factories,
+        List<DimensionSpec> dims,
+        List<AveragerFactory<?, ?>> factories,
         Map<String, Object> fakeEvents,
         Map<String, AggregatorFactory> aggMap
     )
@@ -238,7 +238,7 @@ public class MovingAverageIterable implements Iterable<Row>
         cache = null;
       }
 
-      if (cacheIter == null && averagersKeysIter == null && yielder.isDone()) {
+      if (cacheIter == null && yielder.isDone()) {
         // we should never get here. For some reason, there is
         // no more work to do, so continuing to iterate will infinite loop
         throw new NoSuchElementException();
@@ -267,12 +267,13 @@ public class MovingAverageIterable implements Iterable<Row>
      *
      * @return The updated row containing averager results, or null if no averagers computed a result
      */
+    @Nullable
     private Row computeMovingAverage(Map<String, Object> key, Row r, boolean skip)
     {
       Map<String, Object> event = ((MapBasedRow) r).getEvent();
       Map<String, Object> result = new HashMap<>(event);
 
-      Collection<Averager<?>> avg = averagers.get(key);
+      List<Averager<?>> avg = averagers.get(key);
 
       if (avg == null) {
         avg = factories.stream().map(af -> af.createAverager()).collect(Collectors.toList());

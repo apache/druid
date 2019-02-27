@@ -93,7 +93,7 @@ public class MovingAverageIterableTest
   public void testNext()
   {
 
-    Collection<DimensionSpec> dims = Arrays.asList(
+    List<DimensionSpec> dims = Arrays.asList(
         new DefaultDimensionSpec(GENDER, GENDER),
         new DefaultDimensionSpec(AGE, AGE),
         new DefaultDimensionSpec(COUNTRY, COUNTRY)

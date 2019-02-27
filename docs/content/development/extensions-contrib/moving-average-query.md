@@ -66,7 +66,7 @@ There are currently no configuration properties specific to Moving Average.
 |--------|-----------|---------|
 |queryType|This String should always be "movingAverage"; this is the first thing Druid looks at to figure out how to interpret the query.|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../../querying/datasource.html) for more information.|yes|
-|dimensions|A JSON list of [DimensionSpec](../../querying/dimensionspecs.html)|no|
+|dimensions|A JSON list of [DimensionSpec](../../querying/dimensionspecs.html) (Notice that property is optional)|no|
 |limitSpec|See [LimitSpec](../../querying/limitspec.html)|no|
 |having|See [Having](../../querying/having.html)|no|
 |granularity|A period granilarity; See [Period Granularities](../../querying/granularities.html#period-granularities)|yes|
