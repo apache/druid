@@ -28,10 +28,10 @@ import java.util.Map;
 
 public class KafkaDataSourceMetadataTest
 {
-  private static final KafkaDataSourceMetadata KM0 = KM("foo", ImmutableMap.of());
-  private static final KafkaDataSourceMetadata KM1 = KM("foo", ImmutableMap.of(0, 2L, 1, 3L));
-  private static final KafkaDataSourceMetadata KM2 = KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L));
-  private static final KafkaDataSourceMetadata KM3 = KM("foo", ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata KM0 = km("foo", ImmutableMap.of());
+  private static final KafkaDataSourceMetadata KM1 = km("foo", ImmutableMap.of(0, 2L, 1, 3L));
+  private static final KafkaDataSourceMetadata KM2 = km("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L));
+  private static final KafkaDataSourceMetadata KM3 = km("foo", ImmutableMap.of(0, 2L, 2, 5L));
 
   @Test
   public void testMatches()
@@ -70,27 +70,27 @@ public class KafkaDataSourceMetadataTest
   public void testPlus()
   {
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
+        km("foo", ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
         KM1.plus(KM3)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        km("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
         KM0.plus(KM2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        km("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
         KM1.plus(KM2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
+        km("foo", ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
         KM2.plus(KM1)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        km("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
         KM2.plus(KM2)
     );
   }
@@ -99,32 +99,32 @@ public class KafkaDataSourceMetadataTest
   public void testMinus()
   {
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(1, 3L)),
+        km("foo", ImmutableMap.of(1, 3L)),
         KM1.minus(KM3)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of()),
+        km("foo", ImmutableMap.of()),
         KM0.minus(KM2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of()),
+        km("foo", ImmutableMap.of()),
         KM1.minus(KM2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(2, 5L)),
+        km("foo", ImmutableMap.of(2, 5L)),
         KM2.minus(KM1)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of()),
+        km("foo", ImmutableMap.of()),
         KM2.minus(KM2)
     );
   }
 
-  private static KafkaDataSourceMetadata KM(String topic, Map<Integer, Long> offsets)
+  private static KafkaDataSourceMetadata km(String topic, Map<Integer, Long> offsets)
   {
     return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, offsets));
   }

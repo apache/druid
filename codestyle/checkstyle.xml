@@ -291,5 +291,10 @@ codestyle/checkstyle.xml.&#10;"/>
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Duplicate line"/>
     </module>
+    
+     <!-- Added as per the issue #6936 - Prohibit method names starting with capital letters -->
+	 <module name="MethodName">
+	   <property name = "format" value = "^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
+	 </module>
   </module>
 </module>
