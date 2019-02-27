@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Management GUIs"
+title: "Management UIs"
 ---
 
 <!--
@@ -22,7 +22,7 @@ title: "Management GUIs"
   ~ under the License.
   -->
 
-# Management GUIs
+# Management UIs
 
 ## Druid Console
 
@@ -51,7 +51,7 @@ These older consoles provide a subset of the functionality of the Druid Console.
 
 #### Version 2
 
-The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. After the Coordinator starts, the console can be accessed at:
+The Druid Coordinator exposes a web console for displaying cluster information and rule configuration. After the Coordinator starts, the console can be accessed at:
 
 ```
 http://<COORDINATOR_IP>:<COORDINATOR_PORT>
