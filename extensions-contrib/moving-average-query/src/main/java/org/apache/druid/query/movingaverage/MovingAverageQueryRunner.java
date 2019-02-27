@@ -76,7 +76,6 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
   private final RequestLogger requestLogger;
 
   public MovingAverageQueryRunner(
-      QueryToolChestWarehouse warehouse,
       @Nullable QuerySegmentWalker walker,
       RequestLogger requestLogger
   )

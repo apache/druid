@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Works together with {@link RowBucketIterable} to group all the rows for a specific day together.
@@ -37,7 +38,7 @@ public class BucketingAccumulator extends YieldingAccumulator<RowBucket, Row>
   @Override
   public RowBucket accumulate(RowBucket accumulated, Row in)
   {
-    Collection<Row> rows;
+    List<Row> rows;
 
     if (accumulated == null) {
       // first row, initializing

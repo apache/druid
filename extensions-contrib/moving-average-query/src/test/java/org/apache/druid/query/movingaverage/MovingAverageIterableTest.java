@@ -266,17 +266,17 @@ public class MovingAverageIterableTest
     List<DimensionSpec> ds = new ArrayList<>();
     ds.add(new DefaultDimensionSpec("gender", "gender"));
 
-    Row jan_1_row1 = new MapBasedRow(JAN_1, event1);
-    Row jan_1_row2 = new MapBasedRow(JAN_1, event2);
-    Row jan_1_row3 = new MapBasedRow(JAN_1, event3);
+    Row jan1Row1 = new MapBasedRow(JAN_1, event1);
+    Row jan1Row2 = new MapBasedRow(JAN_1, event2);
+    Row jan1Row3 = new MapBasedRow(JAN_1, event3);
 
-    Row jan_2_row1 = new MapBasedRow(JAN_2, event1);
-    Row jan_2_row2 = new MapBasedRow(JAN_2, event2);
-    Row jan_2_row3 = new MapBasedRow(JAN_2, event3);
+    Row jan2Row1 = new MapBasedRow(JAN_2, event1);
+    Row jan2Row2 = new MapBasedRow(JAN_2, event2);
+    Row jan2Row3 = new MapBasedRow(JAN_2, event3);
 
     Sequence<RowBucket> seq = Sequences.simple(Arrays.asList(
-        new RowBucket(JAN_1, Arrays.asList(jan_1_row1, jan_1_row2, jan_1_row3)),
-        new RowBucket(JAN_2, Arrays.asList(jan_2_row1, jan_2_row2, jan_2_row3))
+        new RowBucket(JAN_1, Arrays.asList(jan1Row1, jan1Row2, jan1Row3)),
+        new RowBucket(JAN_2, Arrays.asList(jan2Row1, jan2Row2, jan2Row3))
     ));
 
     Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
@@ -340,15 +340,15 @@ public class MovingAverageIterableTest
     List<DimensionSpec> ds = new ArrayList<>();
     ds.add(new DefaultDimensionSpec("gender", "gender"));
 
-    Row jan_1_row1 = new MapBasedRow(JAN_1, event1);
+    Row jan1Row1 = new MapBasedRow(JAN_1, event1);
 
-    Row jan_2_row1 = new MapBasedRow(JAN_2, event1);
-    Row jan_2_row2 = new MapBasedRow(JAN_2, event2);
-    Row jan_2_row3 = new MapBasedRow(JAN_2, event3);
+    Row jan2Row1 = new MapBasedRow(JAN_2, event1);
+    Row jan2Row2 = new MapBasedRow(JAN_2, event2);
+    Row jan2Row3 = new MapBasedRow(JAN_2, event3);
 
     Sequence<RowBucket> seq = Sequences.simple(Arrays.asList(
-        new RowBucket(JAN_1, Collections.singletonList(jan_1_row1)),
-        new RowBucket(JAN_2, Arrays.asList(jan_2_row1, jan_2_row2, jan_2_row3))
+        new RowBucket(JAN_1, Collections.singletonList(jan1Row1)),
+        new RowBucket(JAN_2, Arrays.asList(jan2Row1, jan2Row2, jan2Row3))
     ));
 
     Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
@@ -401,14 +401,14 @@ public class MovingAverageIterableTest
     List<DimensionSpec> ds = new ArrayList<>();
     ds.add(new DefaultDimensionSpec("gender", "gender"));
 
-    Row jan_1_row1 = new MapBasedRow(JAN_1, event1);
-    Row jan_1_row2 = new MapBasedRow(JAN_1, event2);
-    Row jan_1_row3 = new MapBasedRow(JAN_1, event3);
-    Row jan_2_row1 = new MapBasedRow(JAN_2, event1);
+    Row jan1Row1 = new MapBasedRow(JAN_1, event1);
+    Row jan1Row2 = new MapBasedRow(JAN_1, event2);
+    Row jan1Row3 = new MapBasedRow(JAN_1, event3);
+    Row jan2Row1 = new MapBasedRow(JAN_2, event1);
 
     Sequence<RowBucket> seq = Sequences.simple(Arrays.asList(
-        new RowBucket(JAN_1, Arrays.asList(jan_1_row1, jan_1_row2, jan_1_row3)),
-        new RowBucket(JAN_2, Collections.singletonList(jan_2_row1))
+        new RowBucket(JAN_1, Arrays.asList(jan1Row1, jan1Row2, jan1Row3)),
+        new RowBucket(JAN_2, Collections.singletonList(jan2Row1))
     ));
 
     Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
@@ -472,20 +472,20 @@ public class MovingAverageIterableTest
     List<DimensionSpec> ds = new ArrayList<>();
     ds.add(new DefaultDimensionSpec("gender", "gender"));
 
-    Row jan_1_row1 = new MapBasedRow(JAN_1, event1);
-    Row jan_1_row2 = new MapBasedRow(JAN_1, event2);
-    Row jan_1_row3 = new MapBasedRow(JAN_1, event3);
-    Row jan_2_row1 = new MapBasedRow(JAN_2, event1);
-    Row jan_3_row1 = new MapBasedRow(JAN_3, event1);
-    Row jan_3_row2 = new MapBasedRow(JAN_3, event2);
-    Row jan_3_row3 = new MapBasedRow(JAN_3, event3);
-    Row jan_4_row1 = new MapBasedRow(JAN_4, event1);
+    Row jan1Row1 = new MapBasedRow(JAN_1, event1);
+    Row jan1Row2 = new MapBasedRow(JAN_1, event2);
+    Row jan1Row3 = new MapBasedRow(JAN_1, event3);
+    Row jan2Row1 = new MapBasedRow(JAN_2, event1);
+    Row jan3Row1 = new MapBasedRow(JAN_3, event1);
+    Row jan3Row2 = new MapBasedRow(JAN_3, event2);
+    Row jan3Row3 = new MapBasedRow(JAN_3, event3);
+    Row jan4Row1 = new MapBasedRow(JAN_4, event1);
 
     Sequence<RowBucket> seq = Sequences.simple(Arrays.asList(
-        new RowBucket(JAN_1, Arrays.asList(jan_1_row1, jan_1_row2, jan_1_row3)),
-        new RowBucket(JAN_2, Collections.singletonList(jan_2_row1)),
-        new RowBucket(JAN_3, Arrays.asList(jan_3_row1, jan_3_row2, jan_3_row3)),
-        new RowBucket(JAN_4, Collections.singletonList(jan_4_row1))
+        new RowBucket(JAN_1, Arrays.asList(jan1Row1, jan1Row2, jan1Row3)),
+        new RowBucket(JAN_2, Collections.singletonList(jan2Row1)),
+        new RowBucket(JAN_3, Arrays.asList(jan3Row1, jan3Row2, jan3Row3)),
+        new RowBucket(JAN_4, Collections.singletonList(jan4Row1))
     ));
 
     Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(

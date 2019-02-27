@@ -24,8 +24,11 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.PostAggregator;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Function that can be applied to a Sequence to calculate PostAverager results
@@ -47,7 +50,7 @@ public class PostAveragerAggregatorCalculator implements Function<Row, Row>
   public Row apply(Row input)
   {
     MapBasedRow row = (MapBasedRow) input;
-    Map<String, Object> event = row.getEvent();
+    Map<String, Object> event = new HashMap<>(row.getEvent());
 
     for (PostAggregator postAverager : postAveragers) {
       boolean allColsPresent = postAverager.getDependentFields().stream().allMatch(c -> event.get(c) != null);
