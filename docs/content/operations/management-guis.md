@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Web Consoles"
+title: "Management GUIs"
 ---
 
 <!--
@@ -22,15 +22,13 @@ title: "Web Consoles"
   ~ under the License.
   -->
 
-# GUIs
-
-Druid has a few console UIs that provide cluster management functionality, described below.
+# Management GUIs
 
 ## Druid Console
 
 Druid provides a console for managing datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
 
-To use this console, it is necessary to run a [Router](../development/router.html) process.
+To use this console, it is necessary to run a [Router](../development/router.html) process. We recommend running this process on your Query server.
 
 In addition, the following cluster settings must be enabled:
 
@@ -45,10 +43,9 @@ http://<ROUTER_IP>:<ROUTER_PORT>
 
 This console subsumes the functionality provided by the older consoles described below, which are still available if needed.
 
-
 ## Legacy Consoles
 
-These older consoles provide a subset of the functionality of the Druid Console. We recommend using the Druid Console if possible. These consoles may be removed in future releases.
+These older consoles provide a subset of the functionality of the Druid Console. We recommend using the Druid Console if possible.
 
 ### Coordinator Consoles
 
