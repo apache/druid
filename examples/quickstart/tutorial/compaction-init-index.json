@@ -56,8 +56,7 @@
     },
     "tuningConfig" : {
       "type" : "index",
-      "maxRowsPerSegment" : 5000000,
-      "maxRowsInMemory" : 25000,
+      "maxRowsPerSegment" : 1000,
       "forceExtendableShardSpecs" : true
     }
   }
