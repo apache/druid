@@ -184,8 +184,7 @@ public class IndexTaskTest
           {
             return deepStorageDir;
           }
-        },
-        jsonMapper
+        }
     )
     {
       @Override

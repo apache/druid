@@ -41,11 +41,7 @@ This mode is recommended if you intend to use the indexing service as the single
 
 ### Overlord Console
 
-The Overlord console can be used to view pending tasks, running tasks, available workers, and recent worker creation and termination. The console can be accessed at:
-
-```
-http://<OVERLORD_IP>:<port>/console.html
-```
+The Overlord provides a UI for managing tasks and workers. For more details, please see [overlord console](../operations/web-consoles.html#overlord-console).
 
 ### Blacklisted Workers
 

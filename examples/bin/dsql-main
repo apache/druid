@@ -136,6 +136,10 @@ def raise_friendly_error(e):
       if error_obj['host']:
         error_text = error_text + ' (' + str(error_obj['host']) + ')'
       raise DruidSqlException(error_text)
+    elif e.code == 405:
+      error_text = 'HTTP Error {0}: {1}\n{2}'.format(e.code, e.reason + " - Are you using the correct broker URL and " +\
+      "is druid.sql.enabled set to true on your broker?", text)
+      raise DruidSqlException(error_text)
     else:
       raise DruidSqlException("HTTP Error {0}: {1}\n{2}".format(e.code, e.reason, text))
   else:

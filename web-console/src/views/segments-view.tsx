@@ -21,8 +21,8 @@ import * as React from 'react';
 import * as classNames from 'classnames';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
-import { H5, Button } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Button } from "@blueprintjs/core";
+import { H5, IconNames } from "../components/filler";
 import {
   addFilter,
   makeBooleanFilter,
@@ -261,12 +261,12 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       <div className="control-bar">
         <div className="control-label">Segments</div>
         <Button
-          icon={IconNames.REFRESH}
+          iconName={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.segmentsQueryManager.rerunLastQuery()}
         />
         <Button
-          icon={IconNames.CONSOLE}
+          iconName={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.segmentsQueryManager.getLastQuery().query)}
         />

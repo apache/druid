@@ -172,11 +172,6 @@ public class S3Utils
     ) + "/index.zip";
   }
 
-  static String descriptorPathForSegmentPath(String s3Path)
-  {
-    return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/descriptor.json";
-  }
-
   static String indexZipForSegmentPath(String s3Path)
   {
     return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/index.zip";

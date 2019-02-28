@@ -30,6 +30,9 @@ MiddleManager.
 
 Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.
 
+To run either kind of native batch indexing task, write an ingestion spec as specified below. Then POST it to the
+[`/druid/indexer/v1/task` endpoint on the Overlord](../operations/api-reference.html#tasks), or use the `post-index-task` script included with Druid.
+
 Parallel Index Task
 --------------------------------
 
@@ -124,6 +127,11 @@ An example ingestion spec is:
 }
 ```
 
+By default, batch ingestion replaces all data in any segment that it writes to. If you'd like to add to the segment
+instead, set the appendToExisting flag in ioConfig. Note that it only replaces data in segments where it actively adds
+data: if there are segments in your granularitySpec's intervals that have no data written by this task, they will be
+left alone.
+
 #### Task Properties
 
 |property|description|required?|
@@ -138,6 +146,14 @@ An example ingestion spec is:
 This field is required.
 
 See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
+
+If you specify `intervals` explicitly in your dataSchema's granularitySpec, batch ingestion will lock the full intervals
+specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
+tasks (eg, Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
+learn that the task overlaps with a higher-priority task later in ingestion.  If you specify `intervals` explicitly, any
+rows outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the
+time range of the data so that locking failure happens faster, and so that you don't accidentally replace data outside
+that range if there's some stray data with unexpected timestamps.
 
 #### IOConfig
 
@@ -461,6 +477,11 @@ The Local Index Task is designed to be used for smaller data sets. The task exec
 }
 ```
 
+By default, batch ingestion replaces all data in any segment that it writes to. If you'd like to add to the segment
+instead, set the appendToExisting flag in ioConfig. Note that it only replaces data in segments where it actively adds
+data: if there are segments in your granularitySpec's intervals that have no data written by this task, they will be
+left alone.
+
 #### Task Properties
 
 |property|description|required?|
@@ -475,6 +496,12 @@ The Local Index Task is designed to be used for smaller data sets. The task exec
 This field is required.
 
 See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
+
+If you do not specify `intervals` explicitly in your dataSchema's granularitySpec, the Local Index Task will do an extra
+pass over the data to determine the range to lock when it starts up.  If you specify `intervals` explicitly, any rows
+outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the time
+range of the data because it allows the task to skip the extra pass, and so that you don't accidentally replace data outside
+that range if there's some stray data with unexpected timestamps.
 
 #### IOConfig
 

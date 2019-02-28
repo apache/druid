@@ -71,6 +71,10 @@ public interface Sequence<T>
     return new MappedSequence<>(this, mapper);
   }
 
+  /**
+   * Several benchmarks rely on this method to eagerly accumulate Sequences to ArrayLists.  e.g.
+   * GroupByBenchmark.
+   */
   default List<T> toList()
   {
     return accumulate(new ArrayList<>(), Accumulators.list());
