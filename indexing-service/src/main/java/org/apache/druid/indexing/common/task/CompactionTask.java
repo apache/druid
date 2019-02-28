@@ -54,8 +54,10 @@ import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -845,7 +847,16 @@ public class CompactionTask extends AbstractTask
         }
 
         final double avgRowsPerByte = totalNumRows / (double) totalSizeBytes;
-        final int maxRowsPerSegment = Math.toIntExact(Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes));
+        final long maxRowsPerSegmentLong = Math.round(avgRowsPerByte * nonNullTargetCompactionSizeBytes);
+        final int maxRowsPerSegment = Numbers.toIntExact(
+            maxRowsPerSegmentLong,
+            StringUtils.format(
+                "Estimated maxRowsPerSegment[%s] is out of integer value range. "
+                + "Please consider reducing targetCompactionSizeBytes[%s].",
+                maxRowsPerSegmentLong,
+                targetCompactionSizeBytes
+            )
+        );
         Preconditions.checkState(maxRowsPerSegment > 0, "Negative maxRowsPerSegment[%s]", maxRowsPerSegment);
 
         log.info(
