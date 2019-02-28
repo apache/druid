@@ -32,18 +32,18 @@ public class ServerHolder implements Comparable<ServerHolder>
   private static final Logger log = new Logger(ServerHolder.class);
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
-  private final boolean isDecommissioned;
+  private final boolean isDecommissioning;
 
   public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
   {
     this(server, peon, false);
   }
 
-  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioned)
+  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean isDecommissioning)
   {
     this.server = server;
     this.peon = peon;
-    this.isDecommissioned = isDecommissioned;
+    this.isDecommissioning = isDecommissioning;
   }
 
   public ImmutableDruidServer getServer()
@@ -83,13 +83,13 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   /**
    * Historical nodes can be 'decommissioned', which instructs Coordinator to move segments from them
-   * according to a specified priority. The mechanism allows draining segments from nodes which are planned for
-   * replacement.
-   * @return true if the node is being decommissioned
+   * according to a specified velocity which diverts normal balancer moves for this purpose. The mechanism allows
+   * draining segments from nodes which are planned for replacement.
+   * @return true if the node is decommissioning
    */
-  public boolean isDecommissioned()
+  public boolean isDecommissioning()
   {
-    return isDecommissioned;
+    return isDecommissioning;
   }
 
   public long getAvailableSize()

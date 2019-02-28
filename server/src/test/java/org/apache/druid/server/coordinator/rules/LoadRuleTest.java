@@ -687,11 +687,11 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 servers in different tiers, the first is decommissioned.
-   * Should not load a segment to the server that is decommissioned
+   * 2 servers in different tiers, the first is decommissioning.
+   * Should not load a segment to the server that is decommissioning
    */
   @Test
-  public void testLoadDecommissioned()
+  public void testLoadDecommissioning()
   {
     final LoadQueuePeon mockPeon1 = createEmptyPeon();
     final LoadQueuePeon mockPeon2 = createOneCallPeonMock();
@@ -737,8 +737,8 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 tiers, 2 servers each, 1 server of the second tier is decommissioned.
-   * Should not load a segment to the server that is decommssioned.
+   * 2 tiers, 2 servers each, 1 server of the second tier is decommissioning.
+   * Should not load a segment to the server that is decommssioning.
    */
   @Test
   public void testLoadReplicaDuringMaitenance()
@@ -796,11 +796,11 @@ public class LoadRuleTest
   }
 
   /**
-   * 2 servers with a segment, one server decommissioned.
+   * 2 servers with a segment, one server decommissioning.
    * Should drop a segment from both.
    */
   @Test
-  public void testDropDuringDecommssion()
+  public void testDropDuringDecommissioning()
   {
     final LoadQueuePeon mockPeon = createEmptyPeon();
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -859,12 +859,12 @@ public class LoadRuleTest
 
   /**
    * 3 servers hosting 3 replicas of the segment.
-   * 1 servers is decommissioned.
+   * 1 servers is decommissioning.
    * 1 replica is redundant.
-   * Should drop from the decommissioned server.
+   * Should drop from the decommissioning server.
    */
   @Test
-  public void testRedundantReplicaDropDuringDecommissioned()
+  public void testRedundantReplicaDropDuringDecommissioning()
   {
     final LoadQueuePeon mockPeon1 = new LoadQueuePeonTester();
     final LoadQueuePeon mockPeon2 = new LoadQueuePeonTester();

@@ -153,8 +153,8 @@ public abstract class LoadRule implements Rule
       log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
       return Collections.emptyList();
     }
-    Predicate<ServerHolder> isNotDecommissioned = s -> !s.isDecommissioned();
-    return queue.stream().filter(isNotDecommissioned.and(predicate)).collect(Collectors.toList());
+    Predicate<ServerHolder> isActive = s -> !s.isDecommissioning();
+    return queue.stream().filter(isActive.and(predicate)).collect(Collectors.toList());
   }
 
   /**
@@ -385,14 +385,14 @@ public abstract class LoadRule implements Rule
     Map<Boolean, TreeSet<ServerHolder>> holders = holdersInTier.stream()
                                                                .filter(s -> s.isServingSegment(segment))
                                                                .collect(Collectors.partitioningBy(
-                                                                   ServerHolder::isDecommissioned,
+                                                                   ServerHolder::isDecommissioning,
                                                                    Collectors.toCollection(TreeSet::new)
                                                                ));
-    TreeSet<ServerHolder> decommissionedServers = holders.get(true);
-    TreeSet<ServerHolder> availableServers = holders.get(false);
-    int left = dropSegmentFromServers(balancerStrategy, segment, decommissionedServers, numToDrop);
+    TreeSet<ServerHolder> decommissioningServers = holders.get(true);
+    TreeSet<ServerHolder> activeServers = holders.get(false);
+    int left = dropSegmentFromServers(balancerStrategy, segment, decommissioningServers, numToDrop);
     if (left > 0) {
-      left = dropSegmentFromServers(balancerStrategy, segment, availableServers, left);
+      left = dropSegmentFromServers(balancerStrategy, segment, activeServers, left);
     }
     if (left != 0) {
       log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getId());

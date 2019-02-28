@@ -50,8 +50,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
-                     + "  \"decommissionNodes\": [\"host1\", \"host2\"],\n"
-                     + "  \"decommissionPriority\": 9\n"
+                     + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
+                     + "  \"decommissioningVelocity\": 9\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -63,19 +63,19 @@ public class CoordinatorDynamicConfigTest
         ),
         CoordinatorDynamicConfig.class
     );
-    ImmutableSet<String> decommissioned = ImmutableSet.of("host1", "host2");
+    ImmutableSet<String> decommissioning = ImmutableSet.of("host1", "host2");
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioned, 9);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioning, 9);
 
     actual = CoordinatorDynamicConfig.builder().withDecommissionNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 9);
 
-    actual = CoordinatorDynamicConfig.builder().withDecommissionPriority(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissionVelocity(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
   @Test
-  public void testDecommissionParametersBackwardCompatibility() throws Exception
+  public void testDecommissioningParametersBackwardCompatibility() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
@@ -99,14 +99,14 @@ public class CoordinatorDynamicConfigTest
         ),
         CoordinatorDynamicConfig.class
     );
-    ImmutableSet<String> decommissioned = ImmutableSet.of();
+    ImmutableSet<String> decommissioning = ImmutableSet.of();
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
-    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioned, 0);
+    assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioning, 0);
 
     actual = CoordinatorDynamicConfig.builder().withDecommissionNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0);
 
-    actual = CoordinatorDynamicConfig.builder().withDecommissionPriority(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissionVelocity(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
@@ -257,7 +257,7 @@ public class CoordinatorDynamicConfigTest
       Set<String> expectedKillableDatasources,
       boolean expectedKillAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
-      Set<String> decommissioned,
+      Set<String> decommissioning,
       int decommissionPriority
   )
   {
@@ -272,7 +272,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedKillableDatasources, config.getKillableDataSources());
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
-    Assert.assertEquals(decommissioned, config.getDecommissionNodes());
-    Assert.assertEquals(decommissionPriority, config.getDecommissionPriority());
+    Assert.assertEquals(decommissioning, config.getDecommissioningNodes());
+    Assert.assertEquals(decommissionPriority, config.getDecommissioningVelocity());
   }
 }

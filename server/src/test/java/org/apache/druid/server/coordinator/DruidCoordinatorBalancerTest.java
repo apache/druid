@@ -201,14 +201,14 @@ public class DruidCoordinatorBalancerTest
 
   /**
    * Server 1 has 2 segments.
-   * Server 2 (decommissioned) has 2 segments.
+   * Server 2 (decommissioning) has 2 segments.
    * Server 3 is empty.
-   * Decommission has priority 7.
+   * Decommissioning has velocity 7.
    * Max segments to move is 3.
    * 2 (of 2) segments should be moved from Server 2 and 1 (of 2) from Server 1.
    */
   @Test
-  public void testMoveDecommissionPriority()
+  public void testMoveDecommissioningVelocity()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, Arrays.asList(segment1, segment2));
     mockDruidServer(druidServer2, "2", "normal", 30L, 100L, Arrays.asList(segment3, segment4));
@@ -239,8 +239,8 @@ public class DruidCoordinatorBalancerTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(3)
-                                    .withDecommissionPriority(6)
-                                    .build() // ceil(3 * 0.6) = 2 segments from decommissioned servers
+                                    .withDecommissionVelocity(6)
+                                    .build() // ceil(3 * 0.6) = 2 segments from decommissioning servers
         )
         .withBalancerStrategy(strategy)
         .build();
@@ -251,28 +251,28 @@ public class DruidCoordinatorBalancerTest
   }
 
   @Test
-  public void testZeroDecommissionPriority()
+  public void testZeroDecommissioningVelocity()
   {
-    DruidCoordinatorRuntimeParams params = setupParamsForMaintenancePriority(0);
+    DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningVelocity(0);
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
     Assert.assertThat(peon3.getSegmentsToLoad(), is(equalTo(ImmutableSet.of(segment1))));
   }
 
   @Test
-  public void testMaxDecommissionPriority()
+  public void testMaxDecommissioningVelocity()
   {
-    DruidCoordinatorRuntimeParams params = setupParamsForMaintenancePriority(10);
+    DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningVelocity(10);
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
     Assert.assertThat(peon3.getSegmentsToLoad(), is(equalTo(ImmutableSet.of(segment2))));
   }
 
   /**
-   * Should balance segments as usual (ignoring priority) with empty decommissionedList.
+   * Should balance segments as usual (ignoring velocity) with empty decommissioningList.
    */
   @Test
-  public void testMoveDecommissionPriorityWithNoDecommission()
+  public void testMoveDecommissioningVelocityWithNoDecommissioning()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, Arrays.asList(segment1, segment2));
     mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Arrays.asList(segment3, segment4));
@@ -300,7 +300,7 @@ public class DruidCoordinatorBalancerTest
         ImmutableList.of(false, false, false)
     )
         .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(3).withDecommissionPriority(9).build()
+            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(3).withDecommissionVelocity(9).build()
         )
         .withBalancerStrategy(strategy)
         .build();
@@ -311,10 +311,10 @@ public class DruidCoordinatorBalancerTest
   }
 
   /**
-   * Shouldn't move segments to a decommissioned server.
+   * Shouldn't move segments to a decommissioning server.
    */
   @Test
-  public void testMoveToDecommissionedServer()
+  public void testMoveToDecommissioningServer()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
     mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyList());
@@ -347,7 +347,7 @@ public class DruidCoordinatorBalancerTest
   }
 
   @Test
-  public void testMoveFromDecommissionedServer()
+  public void testMoveFromDecommissioningServer()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, segments);
     mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Collections.emptyList());
@@ -512,7 +512,7 @@ public class DruidCoordinatorBalancerTest
   private DruidCoordinatorRuntimeParams.Builder defaultRuntimeParamsBuilder(
       List<ImmutableDruidServer> druidServers,
       List<LoadQueuePeon> peons,
-      List<Boolean> decommissioned
+      List<Boolean> decommissioning
   )
   {
     return DruidCoordinatorRuntimeParams
@@ -524,7 +524,7 @@ public class DruidCoordinatorBalancerTest
                     "normal",
                     IntStream
                         .range(0, druidServers.size())
-                        .mapToObj(i -> new ServerHolder(druidServers.get(i), peons.get(i), decommissioned.get(i)))
+                        .mapToObj(i -> new ServerHolder(druidServers.get(i), peons.get(i), decommissioning.get(i)))
                         .collect(Collectors.toSet())
                 )
             )
@@ -622,7 +622,7 @@ public class DruidCoordinatorBalancerTest
     }
   }
 
-  private DruidCoordinatorRuntimeParams setupParamsForMaintenancePriority(int priority)
+  private DruidCoordinatorRuntimeParams setupParamsForDecommissioningVelocity(int velocity)
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, Arrays.asList(segment1, segment3));
     mockDruidServer(druidServer2, "2", "normal", 30L, 100L, Arrays.asList(segment2, segment3));
@@ -632,7 +632,7 @@ public class DruidCoordinatorBalancerTest
 
     mockCoordinator(coordinator);
 
-    // either decommissioned servers list or general ones (ie servers list is [2] or [1, 3])
+    // either decommissioning servers list or general ones (ie servers list is [2] or [1, 3])
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
     EasyMock.expect(strategy.pickSegmentToMove(ImmutableList.of(new ServerHolder(druidServer2, peon2, true))))
             .andReturn(new BalancerSegmentHolder(druidServer2, segment2));
@@ -651,7 +651,7 @@ public class DruidCoordinatorBalancerTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(1)
-                                    .withDecommissionPriority(priority)
+                                    .withDecommissionVelocity(velocity)
                                     .build()
         )
         .withBalancerStrategy(strategy)

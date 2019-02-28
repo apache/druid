@@ -95,37 +95,38 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
   {
 
     if (params.getAvailableSegments().size() == 0) {
-      log.info("Metadata segments are not available. Cannot balance.");
+      log.warn("Metadata segments are not available. Cannot balance.");
       return;
     }
     currentlyMovingSegments.computeIfAbsent(tier, t -> new ConcurrentHashMap<>());
 
     if (!currentlyMovingSegments.get(tier).isEmpty()) {
       reduceLifetimes(tier);
-      log.info("[%s]: Still waiting on %,d segments to be moved", tier, currentlyMovingSegments.get(tier).size());
+      log.info(
+          "[%s]: Still waiting on %,d segments to be moved. Skipping balance.",
+          tier,
+          currentlyMovingSegments.get(tier).size()
+      );
       return;
     }
 
     /*
-      Take as many segments from decommissioned servers as priority allows and find the best location for them on
-      available servers. After that, balance segments within available servers pool.
+      Take as many segments from decommissioning servers as velocity allows and find the best location for them on
+      active servers. After that, balance segments within active servers pool.
      */
     Map<Boolean, List<ServerHolder>> partitions =
-        servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioned));
-    final List<ServerHolder> decommssionedServers = partitions.get(true);
-    final List<ServerHolder> availableServers = partitions.get(false);
+        servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
+    final List<ServerHolder> decommissioningServers = partitions.get(true);
+    final List<ServerHolder> activeServers = partitions.get(false);
     log.info(
-        "Found %d decomissioned servers, %d available servers servers",
-        decommssionedServers.size(),
-        availableServers.size()
+        "Found %d active servers, %d decommissioning servers",
+        activeServers.size(),
+        decommissioningServers.size()
     );
 
-    if (decommssionedServers.isEmpty()) {
-      if (availableServers.size() <= 1) {
-        log.info("[%s]: %d available servers servers found.  Cannot balance.", tier, availableServers.size());
-      }
-    } else if (availableServers.isEmpty()) {
-      log.info("[%s]: no available servers servers found during decommissioning.  Cannot balance.", tier);
+    if ((decommissioningServers.isEmpty() && activeServers.size() <= 1) || activeServers.isEmpty()) {
+      log.warn("[%s]: insufficient active servers. Cannot balance.", tier);
+      return;
     }
 
     int numSegments = 0;
@@ -134,23 +135,24 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     }
 
     if (numSegments == 0) {
-      log.info("No segments found.  Cannot balance.");
+      log.info("No segments found. Cannot balance.");
       return;
     }
 
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
-    int priority = params.getCoordinatorDynamicConfig().getDecommissionPriority();
-    int maxDecommissionedSegmentsToMove = (int) Math.ceil(maxSegmentsToMove * priority / 10.0);
-    log.info("Processing %d segments from decommissioned servers", maxDecommissionedSegmentsToMove);
-    Pair<Integer, Integer> decommissionedResult =
-        balanceServers(params, decommssionedServers, availableServers, maxDecommissionedSegmentsToMove);
-    int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissionedResult.lhs;
-    log.info("Processing %d segments for balancing", maxGeneralSegmentsToMove);
-    Pair<Integer, Integer> generalResult =
-        balanceServers(params, availableServers, availableServers, maxGeneralSegmentsToMove);
+    int decommissioningVelocity = params.getCoordinatorDynamicConfig().getDecommissioningVelocity();
+    int maxSegmentsToMoveFromDecommissioningNodes = (int) Math.ceil(maxSegmentsToMove * decommissioningVelocity / 10.0);
+    log.info("Processing %d segments for moving from decommissioning servers", maxSegmentsToMoveFromDecommissioningNodes);
+    Pair<Integer, Integer> decommissioningResult =
+        balanceServers(params, decommissioningServers, activeServers, maxSegmentsToMoveFromDecommissioningNodes);
 
-    int moved = generalResult.lhs + decommissionedResult.lhs;
-    int unmoved = generalResult.rhs + decommissionedResult.rhs;
+    int maxGeneralSegmentsToMove = maxSegmentsToMove - decommissioningResult.lhs;
+    log.info("Processing %d segments for balancing between active servers", maxGeneralSegmentsToMove);
+    Pair<Integer, Integer> generalResult =
+        balanceServers(params, activeServers, activeServers, maxGeneralSegmentsToMove);
+
+    int moved = generalResult.lhs + decommissioningResult.lhs;
+    int unmoved = generalResult.rhs + decommissioningResult.rhs;
     if (unmoved == maxSegmentsToMove) {
       // Cluster should be alive and constantly adjusting
       log.info("No good moves found in tier [%s]", tier);

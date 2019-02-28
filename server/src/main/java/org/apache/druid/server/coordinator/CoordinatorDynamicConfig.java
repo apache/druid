@@ -56,8 +56,8 @@ public class CoordinatorDynamicConfig
   private final boolean emitBalancingStats;
   private final boolean killAllDataSources;
   private final Set<String> killableDataSources;
-  private final Set<String> decommissionNodes;
-  private final int decommissionPriority;
+  private final Set<String> decommissioningNodes;
+  private final int decommissioningVelocity;
 
   // The pending segments of the dataSources in this list are not killed.
   private final Set<String> protectedPendingSegmentDatasources;
@@ -88,8 +88,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killAllDataSources") boolean killAllDataSources,
       @JsonProperty("killPendingSegmentsSkipList") Object protectedPendingSegmentDatasources,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
-      @JsonProperty("decommissionNodes") Object decommissionNodes,
-      @JsonProperty("decommissionPriority") int decommissionPriority
+      @JsonProperty("decommissioningNodes") Object decommissioningNodes,
+      @JsonProperty("decommissioningVelocity") int decommissioningVelocity
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -104,12 +104,12 @@ public class CoordinatorDynamicConfig
     this.killableDataSources = parseJsonStringOrArray(killableDataSources);
     this.protectedPendingSegmentDatasources = parseJsonStringOrArray(protectedPendingSegmentDatasources);
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
-    this.decommissionNodes = parseJsonStringOrArray(decommissionNodes);
+    this.decommissioningNodes = parseJsonStringOrArray(decommissioningNodes);
     Preconditions.checkArgument(
-        decommissionPriority >= 0 && decommissionPriority <= 10,
-        "decommissionPriority should be in range [0, 10]"
+        decommissioningVelocity >= 0 && decommissioningVelocity <= 10,
+        "decommissioningVelocity should be in range [0, 10]"
     );
-    this.decommissionPriority = decommissionPriority;
+    this.decommissioningVelocity = decommissioningVelocity;
 
     if (this.killAllDataSources && !this.killableDataSources.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -232,32 +232,33 @@ public class CoordinatorDynamicConfig
 
   /**
    * List of historical nodes to 'decommission'. Coordinator doesn't assign new segments on those nodes and moves
-   * segments from those nodes according to a specified priority.
+   * segments from those nodes according to a specified velocity.
    *
    * @return list of host:port entries
    */
   @JsonProperty
-  public Set<String> getDecommissionNodes()
+  public Set<String> getDecommissioningNodes()
   {
-    return decommissionNodes;
+    return decommissioningNodes;
   }
 
   /**
-   * Priority of how many of 'move' operations will be spent towards 'decommissioning' servers by moving segments from
-   * them to non-decommissioned servers, instead of 'balancing' segments between servers.
-   * Coordinator takes ceil(maxSegmentsToMove * (priority / 10)) from servers in maitenance during balancing phase:
-   * 0 - no segments from decommissioned servers will be processed during balancing
-   * 5 - 50% segments from decommissioned servers
-   * 10 - 100% segments from decommissioned servers
-   * By leveraging the priority an operator can prevent general nodes from overload or decrease 'decommissioning' time
+   * Decommissioning velocity indicates what proportion of balancer 'move' operations out of
+   * {@link CoordinatorDynamicConfig#getMaxSegmentsToMove()} total will be spent towards 'decommissioning' servers
+   * by moving their segments to active servers, instead of normal 'balancing' segments between servers.
+   * Coordinator takes ceil(maxSegmentsToMove * (velocity / 10)) from servers in maitenance during balancing phase:
+   * 0 - no segments from decommissioning servers will be processed during balancing
+   * 5 - 50% segments from decommissioning servers
+   * 10 - 100% segments from decommissioning servers
+   * By leveraging the velocity an operator can prevent general nodes from overload or decrease 'decommissioning' time
    * instead.
    *
    * @return number in range [0, 10]
    */
   @JsonProperty
-  public int getDecommissionPriority()
+  public int getDecommissioningVelocity()
   {
-    return decommissionPriority;
+    return decommissioningVelocity;
   }
 
   @Override
@@ -276,8 +277,8 @@ public class CoordinatorDynamicConfig
            ", killDataSourceWhitelist=" + killableDataSources +
            ", protectedPendingSegmentDatasources=" + protectedPendingSegmentDatasources +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
-           ", decommissionNodes=" + decommissionNodes +
-           ", decommissionPriority=" + decommissionPriority +
+           ", decommissioningNodes=" + decommissioningNodes +
+           ", decommissioningVelocity=" + decommissioningVelocity +
            '}';
   }
 
@@ -329,10 +330,10 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(protectedPendingSegmentDatasources, that.protectedPendingSegmentDatasources)) {
       return false;
     }
-    if (!Objects.equals(decommissionNodes, that.decommissionNodes)) {
+    if (!Objects.equals(decommissioningNodes, that.decommissioningNodes)) {
       return false;
     }
-    return decommissionPriority == that.decommissionPriority;
+    return decommissioningVelocity == that.decommissioningVelocity;
   }
 
   @Override
@@ -351,8 +352,8 @@ public class CoordinatorDynamicConfig
         maxSegmentsInNodeLoadingQueue,
         killableDataSources,
         protectedPendingSegmentDatasources,
-        decommissionNodes,
-        decommissionPriority
+        decommissioningNodes,
+        decommissioningVelocity
     );
   }
 
@@ -373,7 +374,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
-    private static final int DEFAULT_DECOMMISSIONING_PRIORITY = 7;
+    private static final int DEFAULT_DECOMMISSIONING_VELOCITY = 7;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
@@ -387,8 +388,8 @@ public class CoordinatorDynamicConfig
     private Boolean killAllDataSources;
     private Object killPendingSegmentsSkipList;
     private Integer maxSegmentsInNodeLoadingQueue;
-    private Object decommissionNodes;
-    private Integer decommissionPriority;
+    private Object decommissioningNodes;
+    private Integer decommissioningVelocity;
 
     public Builder()
     {
@@ -408,8 +409,8 @@ public class CoordinatorDynamicConfig
         @JsonProperty("killAllDataSources") @Nullable Boolean killAllDataSources,
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object killPendingSegmentsSkipList,
         @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
-        @JsonProperty("decommissionNodes") @Nullable Object decommissionNodes,
-        @JsonProperty("decommissionPriority") @Nullable Integer decommissionPriority
+        @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
+        @JsonProperty("decommissioningVelocity") @Nullable Integer decommissioningVelocity
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -424,8 +425,8 @@ public class CoordinatorDynamicConfig
       this.killableDataSources = killableDataSources;
       this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
-      this.decommissionNodes = decommissionNodes;
-      this.decommissionPriority = decommissionPriority;
+      this.decommissioningNodes = decommissioningNodes;
+      this.decommissioningVelocity = decommissioningVelocity;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -494,15 +495,15 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withDecommissionNodes(Set<String> decommissioned)
+    public Builder withDecommissionNodes(Set<String> decommissioning)
     {
-      this.decommissionNodes = decommissioned;
+      this.decommissioningNodes = decommissioning;
       return this;
     }
 
-    public Builder withDecommissionPriority(Integer priority)
+    public Builder withDecommissionVelocity(Integer velocity)
     {
-      this.decommissionPriority = priority;
+      this.decommissioningVelocity = velocity;
       return this;
     }
 
@@ -523,10 +524,10 @@ public class CoordinatorDynamicConfig
           maxSegmentsInNodeLoadingQueue == null
           ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
           : maxSegmentsInNodeLoadingQueue,
-          decommissionNodes,
-          decommissionPriority == null
-          ? DEFAULT_DECOMMISSIONING_PRIORITY
-          : decommissionPriority
+          decommissioningNodes,
+          decommissioningVelocity == null
+          ? DEFAULT_DECOMMISSIONING_VELOCITY
+          : decommissioningVelocity
       );
     }
 
@@ -549,10 +550,10 @@ public class CoordinatorDynamicConfig
           maxSegmentsInNodeLoadingQueue == null
           ? defaults.getMaxSegmentsInNodeLoadingQueue()
           : maxSegmentsInNodeLoadingQueue,
-          decommissionNodes == null ? defaults.getDecommissionNodes() : decommissionNodes,
-          decommissionPriority == null
-          ? defaults.getDecommissionPriority()
-          : decommissionPriority
+          decommissioningNodes == null ? defaults.getDecommissioningNodes() : decommissioningNodes,
+          decommissioningVelocity == null
+          ? defaults.getDecommissioningVelocity()
+          : decommissioningVelocity
       );
     }
   }
