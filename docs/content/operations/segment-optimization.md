@@ -28,16 +28,38 @@ In Druid, it's important to optimize the segment size because
 
   1. Druid stores data in segments. If you're using the [best-effort roll-up](../design/index.html#roll-up-modes) mode,
   increasing the segment size might introduce further aggregation which reduces the dataSource size.
-  2. When a query is submitted, that query is distributed to all Historicals and realtimes
+  2. When a query is submitted, that query is distributed to all Historicals and realtime tasks
   which hold the input segments of the query. Each node has a processing threads pool and use one thread per segment to
-  process it. If the segment size is too large, data might not be well distributed over the
-  whole cluster, thereby decreasing the degree of parallelism. If the segment size is too small,
-  each processing thread might process too small data. This can reduce the overall processing speed because
-  parallel processing involves some overhead like thread scheduling.
+  process it. If segment sizes are too large, data might not be well distributed between data
+  servers, decreasing the degree of parallelism possible during query processing.
+  At the other extreme where segment sizes are too small, the scheduling
+  overhead of processing a larger number of segments per query can reduce
+  performance, as the threads that process each segment compete for the fixed
+  slots of the processing pool.
 
 It would be best if you can optimize the segment size at ingestion time, but sometimes it's not easy
 especially when it comes to stream ingestion because the amount of data ingested might vary over time. In this case,
 you can create segments with a sub-optimzed size first and optimize them later.
+
+You may need to consider the followings to optimize your segments.
+
+  - Number of rows per segment: it's generally recommended for each segment to have around 5 million rows.
+  This setting is usually _more_ important than the below "segment byte size".
+  This is because Druid uses a single thread to process each segment,
+  and thus this setting can directly control how many rows each thread processes,
+  which in turn means how well the query execution is parallelized.
+  - Segment byte size: it's recommended to set 300 ~ 700MB. If this value
+  doesn't match with the "number of rows per segment", please consider optimizing
+  number of rows per segment rather than this value.
+
+<div class="note">
+The above recommendation works in general, but the optimal setting can
+vary based on your workload. For example, if most of your queries
+are heavy and take a long time to process each row, you may want to make
+segments smaller so that the query processing can be more parallelized.
+If you still see some performance issue after optimizing segment size,
+you may need to find the optimal settings for your workload.
+</div>
 
 There might be several ways to check if the compaction is necessary. One way
 is using the [System Schema](../querying/sql.html#system-schema). The
@@ -66,17 +88,7 @@ ORDER BY 1, 2, 3 DESC;
 Please note that the query result might include overshadowed segments.
 In this case, you may want to see only rows of the max version per interval (pair of `start` and `end`).
 
-The recomended number of rows per segment and segment size are 5 million rows and 300 ~ 700MB, respectively.
-If you see way different numbers, you may need to compact your segments.
-
-<div class="note">
-The above values are generally good for most use cases, but the optimal
-values can vary based on your workload. For example, if most of your queries
-are heavy and take a long time to process each row, you may want to make
-segments smaller so that the query processing can be more parallelized.
-</div>
-
-You have two options for segment compaction:
+Once you find your segments need compaction, you can consider the below two options:
 
   - Turning on the [automatic compaction of Coordinators](../design/coordinator.html#compacting-segments).
   The Coordinator periodically submits [compaction tasks](../ingestion/tasks.html#compaction-task) to re-index small segments.
