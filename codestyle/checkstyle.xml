@@ -205,7 +205,7 @@
     </module>
 
     <module name="Regexp">
-      <property name="format" value='^((?!throw).)* Throwables.propagate\('/>
+      <property name="format" value='^Throwables.propagate\('/>
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Throwables.propagate() shouldn't be used in new code"/>
     </module>
