@@ -19,12 +19,14 @@
 
 package org.apache.druid.query.scan;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 
@@ -51,7 +53,9 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
     this.query = (ScanQuery) queryPlus.getQuery();
     this.resultFormat = query.getResultFormat();
     this.limit = query.getLimit();
-    Sequence<ScanResultValue> baseSequence = baseRunner.run(queryPlus, responseContext);
+    Query<ScanResultValue> historicalQuery =
+        queryPlus.getQuery().withOverriddenContext(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false));
+    Sequence<ScanResultValue> baseSequence = baseRunner.run(QueryPlus.wrap(historicalQuery), responseContext);
     this.yielder = baseSequence.toYielder(
         null,
         new YieldingAccumulator<ScanResultValue, ScanResultValue>()
@@ -101,12 +105,13 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
       int batchSize = query.getBatchSize();
       List<Object> eventsToAdd = new ArrayList<>(batchSize);
       List<String> columns = new ArrayList<>();
-      while (eventsToAdd.size() < batchSize && !yielder.isDone()) {
+      while (eventsToAdd.size() < batchSize && !yielder.isDone() && count < limit) {
         ScanResultValue srv = yielder.get();
         // Only replace once using the columns from the first event
         columns = columns.isEmpty() ? srv.getColumns() : columns;
         eventsToAdd.add(Iterables.getOnlyElement((List) srv.getEvents()));
         yielder = yielder.next(null);
+        count++;
       }
       return new ScanResultValue(TIME_ORDERING_SEGMENT_ID, columns, eventsToAdd);
     }

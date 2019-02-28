@@ -92,7 +92,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       // See the comment of CTX_TIMEOUT_AT.
       final long timeoutAt = System.currentTimeMillis() + QueryContexts.getTimeout(queryPlus.getQuery());
       responseContext.put(CTX_TIMEOUT_AT, timeoutAt);
-      queryPlus.getQuery().getContext().put(ScanQuery.CTX_KEY_OUTERMOST, false);
       if (query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
         // Use normal strategy
         return Sequences.concat(

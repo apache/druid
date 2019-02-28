@@ -21,6 +21,7 @@ package org.apache.druid.query.scan;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.ObjectArrays;
@@ -518,7 +519,7 @@ public class ScanQueryRunnerTest
   @Test
   public void testFullOnSelectWithFilterLimitAndAscendingTimeOrderingListFormat()
   {
-    // limits
+    // limits shouldn't matter -> all rows should be returned if time-ordering on the broker is occurring
     for (int limit : new int[]{3, 1, 5, 7, 0}) {
       ScanQuery query = newTestQuery()
           .intervals(I_0112_0114)
@@ -526,6 +527,7 @@ public class ScanQueryRunnerTest
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
           .limit(limit)
           .timeOrder(ScanQuery.TimeOrder.ASCENDING)
+          .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .build();
 
       HashMap<String, Object> context = new HashMap<>();
@@ -567,7 +569,7 @@ public class ScanQueryRunnerTest
           ascendingEvents,
           legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
-          limit
+          seg1Results.length + seg2Results.length
       );
       verify(ascendingExpectedResults, results);
     }
@@ -576,7 +578,7 @@ public class ScanQueryRunnerTest
   @Test
   public void testFullOnSelectWithFilterLimitAndDescendingTimeOrderingListFormat()
   {
-    // limits
+    // limits shouldn't matter -> all rows should be returned if time-ordering on the broker is occurring
     for (int limit : new int[]{3, 1, 5, 7, 0}) {
       ScanQuery query = newTestQuery()
           .intervals(I_0112_0114)
@@ -627,7 +629,7 @@ public class ScanQueryRunnerTest
           descendingEvents,
           legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
-          limit
+          seg1Results.length + seg2Results.length
       );
       verify(descendingExpectedResults, results);
     }
@@ -658,8 +660,8 @@ public class ScanQueryRunnerTest
         "2011-01-13T00:00:00.000Z\tspot\ttechnology\tpreferred\ttpreferred\t111.356672",
         "2011-01-13T00:00:00.000Z\tspot\ttravel\tpreferred\ttpreferred\t106.236928"
     };
-    // limits
-    for (int limit : new int[]{3, 1, 5, 7, 0}) {
+    // limits shouldn't matter -> all rows should be returned if time-ordering on the broker is occurring
+    for (int limit : new int[]{3, 0}) {
       /* Ascending */
       ScanQuery query = newTestQuery()
           .intervals(I_0112_0114)
@@ -687,7 +689,7 @@ public class ScanQueryRunnerTest
           ascendingEvents,
           legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
-          limit
+          seg1Results.length + seg2Results.length
       );
       results = compactedListToRow(results);
       verify(ascendingExpectedResults, results);
@@ -719,8 +721,8 @@ public class ScanQueryRunnerTest
         "2011-01-13T00:00:00.000Z\tspot\ttechnology\tpreferred\ttpreferred\t111.356672",
         "2011-01-13T00:00:00.000Z\tspot\ttravel\tpreferred\ttpreferred\t106.236928"
     };
-    // limits
-    for (int limit : new int[]{3, 1, 5, 7, 0}) {
+    // limits shouldn't matter -> all rows should be returned if time-ordering on the broker is occurring
+    for (int limit : new int[]{3, 1}) {
       /* Descending */
       ScanQuery query = newTestQuery()
           .intervals(I_0112_0114)
@@ -728,6 +730,7 @@ public class ScanQueryRunnerTest
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
           .timeOrder(ScanQuery.TimeOrder.DESCENDING)
+          .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .limit(limit)
           .build();
 
@@ -750,7 +753,7 @@ public class ScanQueryRunnerTest
           descendingEvents,
           legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
-          limit
+          expectedRet.length
       );
       results = compactedListToRow(results);
       verify(descendingExpectedResults, results);
