@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Router Node"
+title: "Router Process"
 ---
 
 <!--
@@ -22,9 +22,14 @@ title: "Router Node"
   ~ under the License.
   -->
 
-# Router Node
+# Router Process
 
-You should only ever need the Router node if you have a Druid cluster well into the terabyte range. The Router node can be used to route queries to different Broker nodes. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.html) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data. 
+The Router process can be used to route queries to different Broker processes. By default, the broker routes queries based on how [Rules](../operations/rule-configuration.html) are set up. For example, if 1 month of recent data is loaded into a `hot` cluster, queries that fall within the recent month can be routed to a dedicated set of brokers. Queries outside this range are routed to another set of brokers. This set up provides query isolation such that queries for more important data are not impacted by queries for less important data. 
+
+For query routing purposes, you should only ever need the Router process if you have a Druid cluster well into the terabyte range. 
+
+In addition to query routing, the Router also runs the [Druid Console](../operations/management-uis.html#druid-console), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
+
 
 Running
 -------
@@ -36,7 +41,7 @@ org.apache.druid.cli.Main server router
 Example Production Configuration
 --------------------------------
 
-In this example, we have two tiers in our production cluster: `hot` and `_default_tier`. Queries for the `hot` tier are routed through the `broker-hot` set of Brokers, and queries for the `_default_tier` are routed through the `broker-cold` set of Brokers. If any exceptions or network problems occur, queries are routed to the `broker-cold` set of brokers. In our example, we are running with a c3.2xlarge EC2 node. We assume a `common.runtime.properties` already exists.
+In this example, we have two tiers in our production cluster: `hot` and `_default_tier`. Queries for the `hot` tier are routed through the `broker-hot` set of Brokers, and queries for the `_default_tier` are routed through the `broker-cold` set of Brokers. If any exceptions or network problems occur, queries are routed to the `broker-cold` set of brokers. In our example, we are running with a c3.2xlarge EC2 instance. We assume a `common.runtime.properties` already exists.
 
 JVM settings:
 
@@ -176,13 +181,13 @@ This is a non-default implementation that is provided for experimentation purpos
 HTTP Endpoints
 --------------
 
-The Router node exposes several HTTP endpoints for interactions.
+The Router process exposes several HTTP endpoints for interactions.
 
 ### GET
 
 * `/status`
 
-Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
+Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the process.
 
 * `/druid/v2/datasources`
 
@@ -203,7 +208,7 @@ Returns the metrics of the datasource.
 Router as Management Proxy
 --------------------------
 
-The Router can be configured to forward requests to the active Coordinator or Overlord node. This may be useful for
+The Router can be configured to forward requests to the active Coordinator or Overlord process. This may be useful for
 setting up a highly available cluster in situations where the HTTP redirect mechanism of the inactive -> active
 Coordinator/Overlord does not function correctly (servers are behind a load balancer, the hostname used in the redirect
 is only resolvable internally, etc.).
@@ -224,10 +229,10 @@ determined from the original request path based on Druid API path conventions. F
 that using the management proxy does not require modifying the API request other than issuing the request to the Router
 instead of the Coordinator or Overlord. Most Druid API requests can be routed implicitly.
 
-Explicit routes are those where the request to the Router contains a path prefix indicating which node the request
+Explicit routes are those where the request to the Router contains a path prefix indicating which process the request
 should be routed to. For the Coordinator this prefix is `/proxy/coordinator` and for the Overlord it is `/proxy/overlord`.
 This is required for API calls with an ambiguous destination. For example, the `/status` API is present on all Druid
-nodes, so explicit routing needs to be used to indicate the proxy destination.
+processes, so explicit routing needs to be used to indicate the proxy destination.
 
 This is summarized in the table below:
 
