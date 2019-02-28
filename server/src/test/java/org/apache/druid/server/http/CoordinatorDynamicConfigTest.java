@@ -258,7 +258,7 @@ public class CoordinatorDynamicConfigTest
       boolean expectedKillAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> decommissioning,
-      int decommissionPriority
+      int decommissioningVelocity
   )
   {
     Assert.assertEquals(expectedMillisToWaitBeforeDeleting, config.getMillisToWaitBeforeDeleting());
@@ -273,6 +273,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
     Assert.assertEquals(decommissioning, config.getDecommissioningNodes());
-    Assert.assertEquals(decommissionPriority, config.getDecommissioningVelocity());
+    Assert.assertEquals(decommissioningVelocity, config.getDecommissioningVelocity());
   }
 }

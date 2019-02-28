@@ -251,7 +251,7 @@ public class CoordinatorDynamicConfig
    * 5 - 50% segments from decommissioning servers
    * 10 - 100% segments from decommissioning servers
    * By leveraging the velocity an operator can prevent general nodes from overload or decrease 'decommissioning' time
-   * instead.
+   * instead. Decommissioning can become stalled if there are no available active servers to place the segments.
    *
    * @return number in range [0, 10]
    */
