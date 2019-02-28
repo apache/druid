@@ -495,13 +495,13 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withDecommissionNodes(Set<String> decommissioning)
+    public Builder withDecommissioningNodes(Set<String> decommissioning)
     {
       this.decommissioningNodes = decommissioning;
       return this;
     }
 
-    public Builder withDecommissionVelocity(Integer velocity)
+    public Builder withDecommissioningVelocity(Integer velocity)
     {
       this.decommissioningVelocity = velocity;
       return this;

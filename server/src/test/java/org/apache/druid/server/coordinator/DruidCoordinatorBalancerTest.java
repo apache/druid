@@ -239,7 +239,7 @@ public class DruidCoordinatorBalancerTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(3)
-                                    .withDecommissionVelocity(6)
+                                    .withDecommissioningVelocity(6)
                                     .build() // ceil(3 * 0.6) = 2 segments from decommissioning servers
         )
         .withBalancerStrategy(strategy)
@@ -300,7 +300,7 @@ public class DruidCoordinatorBalancerTest
         ImmutableList.of(false, false, false)
     )
         .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(3).withDecommissionVelocity(9).build()
+            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(3).withDecommissioningVelocity(9).build()
         )
         .withBalancerStrategy(strategy)
         .build();
@@ -651,7 +651,7 @@ public class DruidCoordinatorBalancerTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(1)
-                                    .withDecommissionVelocity(velocity)
+                                    .withDecommissioningVelocity(velocity)
                                     .build()
         )
         .withBalancerStrategy(strategy)

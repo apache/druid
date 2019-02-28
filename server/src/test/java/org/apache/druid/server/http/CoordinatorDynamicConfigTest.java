@@ -67,10 +67,10 @@ public class CoordinatorDynamicConfigTest
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioning, 9);
 
-    actual = CoordinatorDynamicConfig.builder().withDecommissionNodes(ImmutableSet.of("host1")).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 9);
 
-    actual = CoordinatorDynamicConfig.builder().withDecommissionVelocity(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningVelocity(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
@@ -103,10 +103,10 @@ public class CoordinatorDynamicConfigTest
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, decommissioning, 0);
 
-    actual = CoordinatorDynamicConfig.builder().withDecommissionNodes(ImmutableSet.of("host1")).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0);
 
-    actual = CoordinatorDynamicConfig.builder().withDecommissionVelocity(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningVelocity(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
