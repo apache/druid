@@ -18,11 +18,10 @@
 
 import * as React from 'react';
 import { Button, Dialog, Classes, AnchorButton, Intent } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { IconNames } from "../components/filler";
 import { DRUID_COMMUNITY, DRUID_DEVELOPER_GROUP, DRUID_USER_GROUP, DRUID_WEBSITE } from '../variables';
 
 export interface AboutDialogProps extends React.Props<any> {
-  isOpen: boolean,
   onClose: () => void
 }
 
@@ -36,15 +35,15 @@ export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogSt
   }
 
   render() {
-    const { isOpen, onClose } = this.props;
+    const { onClose } = this.props;
 
     return <Dialog
-      icon={IconNames.INFO_SIGN}
+      iconName={IconNames.GRAPH}
       onClose={onClose}
       title="Apache Druid"
-      isOpen={isOpen}
-      usePortal={true}
-      canEscapeKeyClose={true}
+      isOpen
+      inline
+      canEscapeKeyClose
     >
       <div className={Classes.DIALOG_BODY}>
         <p>

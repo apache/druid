@@ -19,14 +19,13 @@
 import axios from 'axios';
 import * as React from 'react';
 import * as classNames from 'classnames';
-import { H5, Card, Icon } from "@blueprintjs/core";
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { H5, Card, Icon, IconNames } from "../components/filler";
 import { QueryManager, pluralIfNeeded, queryDruidSql, getHeadProp } from '../utils';
 import './home-view.scss';
 
 export interface CardOptions {
   href: string;
-  icon: IconName;
+  icon: string;
   title: string;
   loading?: boolean;
   content: JSX.Element | string;
@@ -268,7 +267,7 @@ GROUP BY 1`);
     return <div className="home-view app-view">
       {this.renderCard({
         href: "/status",
-        icon: IconNames.INFO_SIGN,
+        icon: IconNames.GRAPH,
         title: "Status",
         loading: state.statusLoading,
         content: state.status ? `Apache Druid is running version ${state.status.version}` : '',
@@ -286,7 +285,7 @@ GROUP BY 1`);
 
       {this.renderCard({
         href: "#segments",
-        icon: IconNames.FULL_STACKED_CHART,
+        icon: IconNames.STACKED_CHART,
         title: "Segments",
         loading: state.segmentCountLoading,
         content: pluralIfNeeded(state.segmentCount, 'segment'),

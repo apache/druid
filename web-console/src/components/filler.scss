@@ -16,23 +16,12 @@
  * limitations under the License.
  */
 
-.segments-view {
-  height: 100%;
-  width: 100%;
-
-  .ReactTable {
-    position: absolute;
-    top: 50px;
-    bottom: 0;
-    width: 100%;
-
-    .-totalPages {
-      display: none;
-    }
-
-    .segment-detail {
-      padding: 20px;
-      background: #212d36;
-    }
+.pt-select {
+  &.pt-fill {
+    flex: 1;
   }
+}
+
+.form-group {
+  margin: 0 0 15px;
 }
