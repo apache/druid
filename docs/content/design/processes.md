@@ -78,6 +78,8 @@ caller. End users typically query Brokers rather than querying Historicals or Mi
 Overlords, and Coordinators. They are optional since you can also simply contact the Druid Brokers, Overlords, and
 Coordinators directly.
 
+The Router also runs the [Druid Console](../operations/management-uis.html#druid-console), a management UI for datasources, segments, tasks, data processes (Historicals and MiddleManagers), and coordinator dynamic configuration. The user can also run SQL and native Druid queries within the console.
+
 ### Data server
 
 A Data server executes ingestion jobs and stores queryable data.
