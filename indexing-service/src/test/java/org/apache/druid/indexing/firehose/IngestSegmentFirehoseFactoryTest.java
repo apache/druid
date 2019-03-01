@@ -77,7 +77,11 @@ import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.PartitionHolder;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
@@ -455,11 +459,13 @@ public class IngestSegmentFirehoseFactoryTest
   {
     final int numSegmentsPerPartitionChunk = 5;
     final int numPartitionChunksPerTimelineObject = 10;
+    final int numSegments = numSegmentsPerPartitionChunk * numPartitionChunksPerTimelineObject;
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final String version = "1";
 
-    final List<WindowedSegment> windowedSegments = new ArrayList<>();
+    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = new ArrayList<>();
     for (int i = 0; i < numPartitionChunksPerTimelineObject; i++) {
+      final List<PartitionChunk<DataSegment>> chunks = new ArrayList<>();
       for (int j = 0; j < numSegmentsPerPartitionChunk; j++) {
         final List<String> dims = IntStream.range(i, i + numSegmentsPerPartitionChunk)
                                            .mapToObj(suffix -> "dim" + suffix)
@@ -478,8 +484,20 @@ public class IngestSegmentFirehoseFactoryTest
             1,
             1
         );
-        windowedSegments.add(new WindowedSegment(segment, null));
+
+        final PartitionChunk<DataSegment> partitionChunk = new NumberedPartitionChunk<>(
+            i,
+            numPartitionChunksPerTimelineObject,
+            segment
+        );
+        chunks.add(partitionChunk);
       }
+      final TimelineObjectHolder<String, DataSegment> timelineHolder = new TimelineObjectHolder<>(
+          interval,
+          version,
+          new PartitionHolder<>(chunks)
+      );
+      timelineSegments.add(timelineHolder);
     }
 
     final String[] expectedDims = new String[]{
@@ -516,11 +534,11 @@ public class IngestSegmentFirehoseFactoryTest
     };
     Assert.assertEquals(
         Arrays.asList(expectedDims),
-        IngestSegmentFirehoseFactory.getUniqueDimensions(windowedSegments, null)
+        IngestSegmentFirehoseFactory.getUniqueDimensions(timelineSegments, null)
     );
     Assert.assertEquals(
         Arrays.asList(expectedMetrics),
-        IngestSegmentFirehoseFactory.getUniqueMetrics(windowedSegments)
+        IngestSegmentFirehoseFactory.getUniqueMetrics(timelineSegments)
     );
   }
 

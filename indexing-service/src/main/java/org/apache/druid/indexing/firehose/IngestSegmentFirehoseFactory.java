@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.filter.DimFilter;
@@ -55,6 +56,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.PartitionHolder;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -67,6 +69,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -93,6 +97,8 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   public IngestSegmentFirehoseFactory(
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("interval") Interval interval,
+      // Specifying "segments" is intended only for when this FirehoseFactory has split itself,
+      // not for direct end user use.
       @JsonProperty("segments") List<WindowedSegmentId> segmentIds,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("dimensions") List<String> dimensions,
@@ -188,13 +194,17 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     );
 
     try {
-      final List<WindowedSegment> windowedSegments = getWindowedSegments();
+      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = getTimeline();
 
       final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
       Map<DataSegment, File> segmentFileMap = Maps.newLinkedHashMap();
-      for (WindowedSegment windowedSegment : windowedSegments) {
-        final DataSegment segment = windowedSegment.getSegment();
-        segmentFileMap.put(segment, segmentLoader.getSegmentFiles(segment));
+      for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
+        for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+          final DataSegment segment = chunk.getObject();
+          if (!segmentFileMap.containsKey(segment)) {
+            segmentFileMap.put(segment, segmentLoader.getSegmentFiles(segment));
+          }
+        }
       }
 
       final List<String> dims;
@@ -204,35 +214,31 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
         dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
       } else {
         dims = getUniqueDimensions(
-            windowedSegments,
+            timeLineSegments,
             inputRowParser.getParseSpec().getDimensionsSpec().getDimensionExclusions()
         );
       }
 
-      final List<String> metricsList = metrics == null ? getUniqueMetrics(windowedSegments) : metrics;
+      final List<String> metricsList = metrics == null ? getUniqueMetrics(timeLineSegments) : metrics;
 
-      // FIXME If we have a segment A that goes from 1 to 4, and a segment B from 2 to 3 with a later
-      // version, then this list of adapters will be: A[1-2], A[3-4], B[2-3]. Before this PR it would
-      // be A[1-2], B[2-3], A[3-4]. Is this change OK, or should we endeavor to keep things in order?
-      // Can we just do a sort on the list at the end to fix this?
       final List<WindowedStorageAdapter> adapters = Lists.newArrayList(
           Iterables.concat(
               Iterables.transform(
-                  windowedSegments,
-                  new Function<WindowedSegment, Iterable<WindowedStorageAdapter>>()
+                  timeLineSegments,
+                  new Function<TimelineObjectHolder<String, DataSegment>, Iterable<WindowedStorageAdapter>>()
                   {
                     @Override
-                    public Iterable<WindowedStorageAdapter> apply(final WindowedSegment windowedSegment)
+                    public Iterable<WindowedStorageAdapter> apply(final TimelineObjectHolder<String, DataSegment> holder)
                     {
                       return
                           Iterables.transform(
-                              windowedSegment.getIntervals(),
-                              new Function<Interval, WindowedStorageAdapter>()
+                              holder.getObject(),
+                              new Function<PartitionChunk<DataSegment>, WindowedStorageAdapter>()
                               {
                                 @Override
-                                public WindowedStorageAdapter apply(final Interval interval)
+                                public WindowedStorageAdapter apply(final PartitionChunk<DataSegment> input)
                                 {
-                                  final DataSegment segment = windowedSegment.getSegment();
+                                  final DataSegment segment = input.getObject();
                                   try {
                                     return new WindowedStorageAdapter(
                                         new QueryableIndexStorageAdapter(
@@ -243,7 +249,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
                                                 )
                                             )
                                         ),
-                                        interval
+                                        holder.getInterval()
                                     );
                                   }
                                   catch (IOException e) {
@@ -273,10 +279,19 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     return retval < 0 ? 0 : retval;
   }
 
-  // Returns each segment in the interval, along with the sub-intervals from that segment which contribute
-  // to the timeline. Segments are sorted by the first instant which contributes to the timeline.
-  private List<WindowedSegment> getWindowedSegmentsForInterval(Interval interval)
+  private List<TimelineObjectHolder<String, DataSegment>> getTimeline()
   {
+    if (interval == null) {
+      return getTimelineForSegmentIds();
+    } else {
+      return getTimelineForInterval();
+    }
+  }
+
+  private List<TimelineObjectHolder<String, DataSegment>> getTimelineForInterval()
+  {
+    Preconditions.checkNotNull(interval);
+
     // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
     // as TaskActionClient.
     final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
@@ -305,79 +320,55 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       }
     }
 
-    final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = VersionedIntervalTimeline
-        .forSegments(usedSegments)
-        .lookup(interval);
+    return VersionedIntervalTimeline.forSegments(usedSegments).lookup(interval);
+  }
 
-    final List<WindowedSegment> windowedSegments = new ArrayList<>();
-    final Map<DataSegment, WindowedSegment> windowedSegmentsBySegment = new HashMap<>();
-
-    for (TimelineObjectHolder<String, DataSegment> timelineHolder : timeLineSegments) {
-      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
-        final DataSegment segment = chunk.getObject();
-        if (timelineHolder.getInterval().isEqual(timelineHolder.getTrueInterval())) {
-          // This is the simple case: the entirety of the segment is used: no overshadowing or clipping
-          // from the beginning or end of the full interval. We aren't going to see it again.
-          if (windowedSegmentsBySegment.containsKey(segment)) {
-            throw new ISE("unclipped segment[%s] seen more than once on timeline", segment);
+  private List<TimelineObjectHolder<String, DataSegment>> getTimelineForSegmentIds()
+  {
+    final SortedMap<Interval, TimelineObjectHolder<String, DataSegment>> timeline = new TreeMap<>(
+        Comparators.intervalsByStartThenEnd()
+    );
+    for (WindowedSegmentId windowedSegmentId : Preconditions.checkNotNull(segmentIds)) {
+      final DataSegment segment = coordinatorClient.getDatabaseSegmentDataSourceSegment(
+          dataSource,
+          windowedSegmentId.getSegmentId()
+      );
+      for (Interval interval : windowedSegmentId.getIntervals()) {
+        final TimelineObjectHolder<String, DataSegment> existingHolder = timeline.get(interval);
+        if (existingHolder != null) {
+          if (!existingHolder.getVersion().equals(segment.getVersion())) {
+            throw new ISE("Timeline segments with the same interval should have the same version: " +
+                          "existing version[%s] vs new segment[%s]", existingHolder.getVersion(), segment);
           }
-          final WindowedSegment windowedSegment = new WindowedSegment(segment, null);
-          windowedSegments.add(windowedSegment);
-          windowedSegmentsBySegment.put(segment, windowedSegment);
+          existingHolder.getObject().add(segment.getShardSpec().createChunk(segment));
         } else {
-          // Some part of the segment is overshadowed or clipped. This WindowedSegment will need
-          // to have explicit intervals.
-          final WindowedSegment existingWindowedSegment = windowedSegmentsBySegment.get(segment);
-          if (existingWindowedSegment == null) {
-            final List<Interval> intervals = new ArrayList<>();
-            intervals.add(timelineHolder.getInterval());
-            final WindowedSegment newWindowedSegment = new WindowedSegment(segment, intervals);
-            windowedSegments.add(newWindowedSegment);
-            windowedSegmentsBySegment.put(segment, newWindowedSegment);
-          } else {
-            if (!existingWindowedSegment.hasExplicitIntervals()) {
-              throw new ISE("unclipped segment[%s] seen later clipped on timeline", segment);
-            }
-            existingWindowedSegment.getIntervals().add(timelineHolder.getInterval());
-          }
+          timeline.put(interval, new TimelineObjectHolder<>(
+              interval,
+              segment.getInterval(),
+              segment.getVersion(),
+              new PartitionHolder<DataSegment>(segment.getShardSpec().createChunk(segment))
+          ));
         }
       }
     }
 
-    return windowedSegments;
-  }
-
-  private List<WindowedSegment> getWindowedSegmentsForIds(List<WindowedSegmentId> ids)
-  {
-    // FIXME This is doing a series of single HTTP calls for each segment. It could instead do a single
-    // GET /metadata/datasources/DATASOURCE/segments call to download all DataSegments. I'm erring on the
-    // side of avoiding single unboundedly-large calls, in favor of more smaller roundtrip --- after all,
-    // we're going to later fetch each of these segments in series, so the additional coordinator calls
-    // in series here don't feel that bad. And adding a new "get multiple segments by ID" HTTP call seems
-    // like overkill.
-    //
-    // Also: If the only use of WindowedSegments and the "segments" field on this FirehoseFactory is for internal
-    // use by parallel ingestion, then it might make sense to get rid of WindowedSegmentId entirely and just put
-    // WindowedSegments directly into this class's 'segments' parameter. Then we wouldn't even need to do this fetch
-    // at all. But if we think people might actually appreciate being able to write ingestSegment firehoses specifying
-    // specific segments by hand, then WindowedSegmentIds still makes sense. Plus would it be safe to trust the
-    // DataSegment written in a spec isntead of one fetched from the DB? I note that CompactionTask has an undocumented
-    // "segments" parameter which has similar semantics, though I'm not really sure in what context it is used.
-    return ids.stream()
-              .map(wsi -> new WindowedSegment(
-                  coordinatorClient.getDatabaseSegmentDataSourceSegment(dataSource, wsi.getSegmentId()),
-                  wsi.getIntervals()
-              ))
-              .collect(Collectors.toList());
-  }
-
-  private List<WindowedSegment> getWindowedSegments()
-  {
-    if (segmentIds == null) {
-      return getWindowedSegmentsForInterval(Preconditions.checkNotNull(interval));
-    } else {
-      return getWindowedSegmentsForIds(segmentIds);
+    // Validate that none of the given windows overlaps (except for when multiple segments share exactly the
+    // same interval).
+    Interval lastInterval = null;
+    for (Interval interval : timeline.keySet()) {
+      if (lastInterval != null) {
+        if (interval.overlaps(lastInterval)) {
+          throw new IAE(
+              "Distinct intervals in input segments may not overlap: [%s] vs [%s]",
+              lastInterval,
+              interval
+          );
+        }
+      }
+      lastInterval = interval;
     }
+
+    return new ArrayList<>(timeline.values());
   }
 
   private void initializeSplitsIfNeeded()
@@ -386,7 +377,8 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
       return;
     }
 
-    List<WindowedSegment> windowedSegments = getWindowedSegments();
+    // isSplittable() ensures this is only called when we have an interval.
+    final List<TimelineObjectHolder<String, DataSegment>> timelineSegments = getTimelineForInterval();
 
     // We do the simplest possible greedy algorithm here instead of anything cleverer. The general bin packing
     // problem is NP-hard, and we'd like to get segments from the same interval into the same split so that their
@@ -394,22 +386,41 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
 
     List<InputSplit<List<WindowedSegmentId>>> newSplits = new ArrayList<>();
     List<WindowedSegmentId> currentSplit = new ArrayList<>();
+    Map<DataSegment, WindowedSegmentId> windowedSegmentIds = new HashMap<>();
     long bytesInCurrentSplit = 0;
-    for (WindowedSegment windowedSegment : windowedSegments) {
-      final long segmentBytes = windowedSegment.getSegment().getSize();
-      if (bytesInCurrentSplit + segmentBytes > maxInputSegmentBytesPerTask && !currentSplit.isEmpty()) {
-        // This segment won't fit in the current (non-empty) split, so this split is done.
-        newSplits.add(new InputSplit<>(currentSplit));
-        currentSplit = new ArrayList<>();
-        bytesInCurrentSplit = 0;
-      }
-      if (segmentBytes > maxInputSegmentBytesPerTask) {
-        // If this segment is itself bigger than our max, just put it in its own split.
-        Preconditions.checkState(currentSplit.isEmpty() && bytesInCurrentSplit == 0);
-        newSplits.add(new InputSplit<>(Collections.singletonList(windowedSegment.toWindowedSegmentId())));
-      } else {
-        currentSplit.add(windowedSegment.toWindowedSegmentId());
-        bytesInCurrentSplit += segmentBytes;
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : timelineSegments) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        final DataSegment segment = chunk.getObject();
+        final WindowedSegmentId existingWindowedSegmentId = windowedSegmentIds.get(segment);
+        if (existingWindowedSegmentId != null) {
+          // We've already seen this segment in the timeline, so just add this interval to it. It has already
+          // been placed into a split.
+          existingWindowedSegmentId.getIntervals().add(timelineHolder.getInterval());
+        } else {
+          // It's the first time we've seen this segment, so create a new WindowedSegmentId.
+          List<Interval> intervals = new ArrayList<>();
+          // Use the interval that contributes to the timeline, not the entire segment's true interval.
+          intervals.add(timelineHolder.getInterval());
+          final WindowedSegmentId newWindowedSegmentId = new WindowedSegmentId(segment.getId().toString(), intervals);
+          windowedSegmentIds.put(segment, newWindowedSegmentId);
+
+          // Now figure out if it goes in the current split or not.
+          final long segmentBytes = segment.getSize();
+          if (bytesInCurrentSplit + segmentBytes > maxInputSegmentBytesPerTask && !currentSplit.isEmpty()) {
+            // This segment won't fit in the current non-empty split, so this split is done.
+            newSplits.add(new InputSplit<>(currentSplit));
+            currentSplit = new ArrayList<>();
+            bytesInCurrentSplit = 0;
+          }
+          if (segmentBytes > maxInputSegmentBytesPerTask) {
+            // If this segment is itself bigger than our max, just put it in its own split.
+            Preconditions.checkState(currentSplit.isEmpty() && bytesInCurrentSplit == 0);
+            newSplits.add(new InputSplit<>(Collections.singletonList(newWindowedSegmentId)));
+          } else {
+            currentSplit.add(newWindowedSegmentId);
+            bytesInCurrentSplit += segmentBytes;
+          }
+        }
       }
     }
     if (!currentSplit.isEmpty()) {
@@ -417,6 +428,14 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     }
 
     splits = newSplits;
+  }
+
+  @Override
+  public boolean isSplittable()
+  {
+    // Specifying 'segments' to this factory instead of 'interval' is intended primarily for internal use by
+    // parallel batch injection: we don't need to support splitting a list of segments.
+    return interval != null;
   }
 
   @Override
@@ -435,7 +454,7 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
 
   @VisibleForTesting
   static List<String> getUniqueDimensions(
-      List<WindowedSegment> windowedSegments,
+      List<TimelineObjectHolder<String, DataSegment>> timelineSegments,
       @Nullable Set<String> excludeDimensions
   )
   {
@@ -446,13 +465,15 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     // Dimensions are extracted from the recent segments to olders because recent segments are likely to be queried more
     // frequently, and thus the performance should be optimized for recent ones rather than old ones.
 
-    // windowedSegments are sorted in order of their first interval
+    // timelineSegments are sorted in order of interval
     int index = 0;
-    for (WindowedSegment windowedSegment : Lists.reverse(windowedSegments)) {
-      for (String dimension : windowedSegment.getSegment().getDimensions()) {
-        if (!uniqueDims.containsKey(dimension) &&
-            (excludeDimensions == null || !excludeDimensions.contains(dimension))) {
-          uniqueDims.put(dimension, index++);
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        for (String dimension : chunk.getObject().getDimensions()) {
+          if (!uniqueDims.containsKey(dimension) &&
+              (excludeDimensions == null || !excludeDimensions.contains(dimension))) {
+            uniqueDims.put(dimension, index++);
+          }
         }
       }
     }
@@ -464,19 +485,21 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   }
 
   @VisibleForTesting
-  static List<String> getUniqueMetrics(List<WindowedSegment> windowedSegments)
+  static List<String> getUniqueMetrics(List<TimelineObjectHolder<String, DataSegment>> timelineSegments)
   {
     final BiMap<String, Integer> uniqueMetrics = HashBiMap.create();
 
     // Here, we try to retain the order of metrics as they were specified. Metrics are extracted from the recent
     // segments to olders.
 
-    // windowedSegments are sorted in order of their first interval
+    // timelineSegments are sorted in order of interval
     int index = 0;
-    for (WindowedSegment windowedSegment : Lists.reverse(windowedSegments)) {
-      for (String metric : windowedSegment.getSegment().getMetrics()) {
-        if (!uniqueMetrics.containsKey(metric)) {
-          uniqueMetrics.put(metric, index++);
+    for (TimelineObjectHolder<String, DataSegment> timelineHolder : Lists.reverse(timelineSegments)) {
+      for (PartitionChunk<DataSegment> chunk : timelineHolder.getObject()) {
+        for (String metric : chunk.getObject().getMetrics()) {
+          if (!uniqueMetrics.containsKey(metric)) {
+            uniqueMetrics.put(metric, index++);
+          }
         }
       }
     }
