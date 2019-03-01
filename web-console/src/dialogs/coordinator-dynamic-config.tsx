@@ -19,15 +19,14 @@
 import { Intent } from '@blueprintjs/core';
 import * as React from 'react';
 import axios from 'axios';
-import { IconNames } from "@blueprintjs/icons";
 import { AppToaster } from '../singletons/toaster';
+import { IconNames } from '../components/filler';
 import { AutoForm } from '../components/auto-form';
 import { getDruidErrorMessage } from '../utils';
 import { SnitchDialog } from './snitch-dialog';
 import './coordinator-dynamic-config.scss';
 
 export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
-  isOpen: boolean,
   onClose: () => void
 }
 
@@ -43,6 +42,10 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     }
   }
 
+  componentDidMount(): void {
+    this.getClusterConfig();
+  }
+
   async getClusterConfig() {
     let config: Record<string, any> | null = null;
     try {
@@ -50,7 +53,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
       config = configResp.data
     } catch (e) {
       AppToaster.show({
-        icon: IconNames.ERROR,
+        iconName: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not load coordinator dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -73,7 +76,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
       });
     } catch (e) {
       AppToaster.show({
-        icon: IconNames.ERROR,
+        iconName: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not save coordinator dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -87,15 +90,14 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
   }
 
   render() {
-    const { isOpen, onClose } = this.props;
+    const { onClose } = this.props;
     const { dynamicConfig } = this.state;
 
     return <SnitchDialog
       className="coordinator-dynamic-config"
-      isOpen={ isOpen }
+      isOpen
       onSave={this.saveClusterConfig}
-      onOpening={() => {this.getClusterConfig()}}
-      onClose={ onClose }
+      onClose={onClose}
       title="Coordinator dynamic config"
     >
       <p>

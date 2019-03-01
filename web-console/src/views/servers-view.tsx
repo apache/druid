@@ -22,8 +22,8 @@ import * as classNames from 'classnames';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 import { sum } from "d3-array";
-import { Button, H1, Switch } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Button, Switch } from "@blueprintjs/core";
+import { IconNames } from '../components/filler';
 import { addFilter, formatBytes, formatBytesCompact, QueryManager, queryDruidSql } from "../utils";
 import "./servers-view.scss";
 
@@ -334,12 +334,12 @@ WHERE "server_type" = 'historical'`);
       <div className="control-bar">
         <div className="control-label">Historicals</div>
         <Button
-          icon={IconNames.REFRESH}
+          iconName={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.serverQueryManager.rerunLastQuery()}
         />
         <Button
-          icon={IconNames.CONSOLE}
+          iconName={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
         />
@@ -356,7 +356,7 @@ WHERE "server_type" = 'historical'`);
       <div className="control-bar">
         <div className="control-label">MiddleManagers</div>
         <Button
-          icon={IconNames.REFRESH}
+          iconName={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.middleManagerQueryManager.rerunLastQuery()}
         />

@@ -17,12 +17,8 @@
  */
 
 @import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
+@import '../lib/blueprint';
 @import '../lib/react-table';
-
-* {
-  position: relative;
-}
 
 html,
 body {
@@ -33,7 +29,7 @@ body {
 }
 
 body {
-  &.bp3-dark {
+  &.pt-dark {
     background: rgb(41, 55, 66);
   }
 

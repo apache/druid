@@ -29,8 +29,8 @@ In Druid, it's important to optimize the segment size because
   1. Druid stores data in segments. If you're using the [best-effort roll-up](../design/index.html#roll-up-modes) mode,
   increasing the segment size might introduce further aggregation which reduces the dataSource size.
   2. When a query is submitted, that query is distributed to all Historicals and realtime tasks
-  which hold the input segments of the query. Each node has a processing threads pool and use one thread per segment to
-  process it. If segment sizes are too large, data might not be well distributed between data
+  which hold the input segments of the query. Each process and task picks a thread from its own processing thread pool
+  to process a single segment. If segment sizes are too large, data might not be well distributed between data
   servers, decreasing the degree of parallelism possible during query processing.
   At the other extreme where segment sizes are too small, the scheduling
   overhead of processing a larger number of segments per query can reduce

@@ -18,6 +18,11 @@
 
 .post-spec-dialog {
   .post-spec-dialog-textarea {
-    margin: 20px;
+    background-color: #232C35;
+    margin-bottom: 10px;
+
+    .ace_gutter {
+      background-color: #232C35;
+    }
   }
 }
