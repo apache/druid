@@ -432,12 +432,8 @@ public class BenchmarkDataGeneratorTest
     public void printStuff()
     {
       System.out.println();
-      for (Map<Object, Integer> valueMap : dimensionMap.values()) {
-        System.out.println("DIMENSION " + valueMap + "\n============");
-
-        new TreeMap<>(valueMap).forEach((val, cnt) -> System.out.println(" VAL: " + val + " CNT: " + cnt));
-
-      }
+      
+      dimensionMap.forEach((key, valueMap) -> new TreeMap<>(valueMap).forEach((val, cnt) -> System.out.println(" VAL: " + val + " CNT: " + cnt)));
     }
   }
 }

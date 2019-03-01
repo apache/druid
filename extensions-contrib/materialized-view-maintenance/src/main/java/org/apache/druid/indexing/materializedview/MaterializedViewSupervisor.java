@@ -335,8 +335,7 @@ public class MaterializedViewSupervisor implements Supervisor
     Map<Interval, String> toDropInterval = new HashMap<>(difference.entriesOnlyOnRight());
     // if some intervals are in running tasks and the versions are the same, remove it from toBuildInterval
     // if some intervals are in running tasks, but the versions are different, stop the task. 
-    for (Map.Entry<Interval, String> entry : runningVersion.entrySet()) {
-      Interval interval = entry.getKey();
+    for (Interval interval : runningVersion.keySet()) {
       if (toBuildInterval.containsKey(interval) 
           && toBuildInterval.get(interval).equals(runningVersion.get(interval))
           ) {
@@ -353,8 +352,7 @@ public class MaterializedViewSupervisor implements Supervisor
       }
     }
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
-    for (Map.Entry<Interval, String> entry : toDropInterval.entrySet()) {
-      Interval interval = entry.getKey();
+    for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
         segmentManager.removeSegment(segment.getId());
       }
