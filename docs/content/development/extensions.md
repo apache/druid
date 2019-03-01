@@ -52,7 +52,7 @@ Core extensions are maintained by Druid committers.
 |druid-kafka-extraction-namespace|Kafka-based namespaced lookup. Requires namespace lookup extension.|[link](../development/extensions-core/kafka-extraction-namespace.html)|
 |druid-kafka-indexing-service|Supervised exactly-once Kafka ingestion for the indexing service.|[link](../development/extensions-core/kafka-ingestion.html)|
 |druid-kinesis-indexing-service|Supervised exactly-once Kinesis ingestion for the indexing service.|[link](../development/extensions-core/kinesis-ingestion.html)|
-|druid-kerberos|Kerberos authentication for druid nodes.|[link](../development/extensions-core/druid-kerberos.html)|
+|druid-kerberos|Kerberos authentication for druid processes.|[link](../development/extensions-core/druid-kerberos.html)|
 |druid-lookups-cached-global|A module for [lookups](../querying/lookups.html) providing a jvm-global eager caching for lookups. It provides JDBC and URI implementations for fetching lookup data.|[link](../development/extensions-core/lookups-cached-global.html)|
 |druid-lookups-cached-single| Per lookup caching module to support the use cases where a lookup need to be isolated from the global pool of lookups |[link](../development/extensions-core/druid-lookups.html)|
 |druid-parquet-extensions|Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-core/parquet.html)|
@@ -61,7 +61,7 @@ Core extensions are maintained by Druid committers.
 |druid-stats|Statistics related module including variance and standard deviation.|[link](../development/extensions-core/stats.html)|
 |mysql-metadata-storage|MySQL metadata store.|[link](../development/extensions-core/mysql.html)|
 |postgresql-metadata-storage|PostgreSQL metadata store.|[link](../development/extensions-core/postgresql.html)|
-|simple-client-sslcontext|Simple SSLContext provider module to be used by internal HttpClient talking to other nodes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.html)|
+|simple-client-sslcontext|Simple SSLContext provider module to be used by Druid's internal HttpClient when talking to other Druid processes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.html)|
 
 # Community Extensions
 
