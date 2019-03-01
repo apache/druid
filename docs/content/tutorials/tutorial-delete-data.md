@@ -41,7 +41,7 @@ Let's load this initial data:
 bin/post-index-task --file quickstart/tutorial/deletion-index.json 
 ```
 
-When the load finishes, open http://localhost:8081/#/datasources/deletion-tutorial in a browser.
+When the load finishes, open [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser.
 
 ## How to permanently delete data
 
@@ -56,15 +56,17 @@ Let's drop some segments now, first with load rules, then manually.
 
 As with the previous retention tutorial, there are currently 24 segments in the `deletion-tutorial` datasource.
 
-Click the `edit rules` button with a pencil icon at the upper left corner of the page.
+click the blue pencil icon next to `Cluster default: loadForever` for the `deletion-tutorial` datasource.
 
-A rule configuration window will appear. Enter `tutorial` for both the user and changelog comment field.
+A rule configuration window will appear. 
 
-Now click the `+ Add a rule` button twice. 
+Now click the `+ New rule` button twice. 
 
-In the `rule #1` box at the top, click `Load`, `Interval`, enter `2015-09-12T12:00:00.000Z/2015-09-13T00:00:00.000Z` in the interval box, and click `+ _default_tier replicant`.
+In the upper rule box, select `Load` and `by interval`, and then enter `2015-09-12T12:00:00.000Z/2015-09-13T00:00:00.000Z` in field next to `by interval`. Replicants can remain at 2 in the `_default_tier`.
 
-In the `rule #2` box at the bottom, click `Drop` and `Forever`.
+In the lower rule box, select `Drop` and `forever`.
+
+Now click `Next` and enter `tutorial` for both the user and changelog comment field.
 
 This will cause the first 12 segments of `deletion-tutorial` to be dropped. However, these dropped segments are not removed from deep storage.
 
@@ -102,11 +104,11 @@ $ ls -l1 var/druid/segments/deletion-tutorial/
 
 Let's manually disable a segment now. This will mark a segment as "unused", but not remove it from deep storage.
 
-On http://localhost:8081/#/datasources/deletion-tutorial, click one of the remaining segments on the left for full details about the segment:
+In the [segments view](http://localhost:8888/unified-console.html#segments), click the arrow on the left side of one of the remaining segments to expand the segment entry:
 
 ![Segments](../tutorials/img/tutorial-deletion-01.png "Segments")
 
-The top of the info box shows the full segment ID, e.g. `deletion-tutorial_2016-06-27T14:00:00.000Z_2016-06-27T15:00:00.000Z_2018-07-27T22:57:00.110Z` for the segment of hour 14.
+The top of the info box shows the full segment ID, e.g. `deletion-tutorial_2015-09-12T14:00:00.000Z_2015-09-12T15:00:00.000Z_2019-02-28T01:11:51.606Z` for the segment of hour 14.
 
 Let's disable the hour 14 segment by sending the following DELETE request to the Coordinator, where {SEGMENT-ID} is the full segment ID shown in the info box:
 

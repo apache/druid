@@ -29,8 +29,8 @@ title: "Cassandra Deep Storage"
 Druid can use Cassandra as a deep storage mechanism. Segments and their metadata are stored in Cassandra in two tables:
 `index_storage` and `descriptor_storage`.  Underneath the hood, the Cassandra integration leverages Astyanax.  The
 index storage table is a [Chunked Object](https://github.com/Netflix/astyanax/wiki/Chunked-Object-Store) repository. It contains
-compressed segments for distribution to Historical nodes.  Since segments can be large, the Chunked Object storage allows the integration to multi-thread
-the write to Cassandra, and spreads the data across all the nodes in a cluster.  The descriptor storage table is a normal C* table that
+compressed segments for distribution to Historical processes.  Since segments can be large, the Chunked Object storage allows the integration to multi-thread
+the write to Cassandra, and spreads the data across all the processes in a cluster.  The descriptor storage table is a normal C* table that
 stores the segment metadatak.
 
 ## Schema

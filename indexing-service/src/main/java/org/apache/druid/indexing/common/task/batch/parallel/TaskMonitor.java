@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -84,6 +85,11 @@ public class TaskMonitor<T extends Task>
   private int numRunningTasks;
   private int numSucceededTasks;
   private int numFailedTasks;
+  // This metric is used only for unit tests because the current taskStatus system doesn't track the killed task status.
+  // Currently, this metric only represents # of killed tasks by ParallelIndexTaskRunner.
+  // See killAllRunningTasks(), SinglePhaseParallelIndexTaskRunner.run(), and
+  // SinglePhaseParallelIndexTaskRunner.stopGracefully()
+  private int numKilledTasks;
 
   private boolean running = false;
 
@@ -169,11 +175,35 @@ public class TaskMonitor<T extends Task>
     }
   }
 
+  /**
+   * Stop task monitoring and kill all running tasks.
+   */
   public void stop()
   {
     synchronized (startStopLock) {
       running = false;
       taskStatusChecker.shutdownNow();
+
+      if (numRunningTasks > 0) {
+        final Iterator<MonitorEntry> iterator = runningTasks.values().iterator();
+        while (iterator.hasNext()) {
+          final MonitorEntry entry = iterator.next();
+          iterator.remove();
+          final String taskId = entry.runningTask.getId();
+          log.info("Request to kill subtask[%s]", taskId);
+          indexingServiceClient.killTask(taskId);
+          numRunningTasks--;
+          numKilledTasks++;
+        }
+
+        if (numRunningTasks > 0) {
+          log.warn(
+              "Inconsistent state: numRunningTasks[%d] is still not zero after trying to kill all running tasks.",
+              numRunningTasks
+          );
+        }
+      }
+
       log.info("Stopped taskMonitor");
     }
   }
@@ -225,27 +255,14 @@ public class TaskMonitor<T extends Task>
     }
   }
 
-  /**
-   * This method should be called after {@link #stop()} to make sure no additional tasks are submitted.
-   */
-  void killAll()
-  {
-    runningTasks.values().forEach(entry -> {
-      final String taskId = entry.runningTask.getId();
-      log.info("Request to kill subtask[%s]", taskId);
-      indexingServiceClient.killTask(taskId);
-    });
-    runningTasks.clear();
-  }
-
-  void incrementNumRunningTasks()
+  private void incrementNumRunningTasks()
   {
     synchronized (taskCountLock) {
       numRunningTasks++;
     }
   }
 
-  void incrementNumSucceededTasks()
+  private void incrementNumSucceededTasks()
   {
     synchronized (taskCountLock) {
       numRunningTasks--;
@@ -254,7 +271,7 @@ public class TaskMonitor<T extends Task>
     }
   }
 
-  void incrementNumFailedTasks()
+  private void incrementNumFailedTasks()
   {
     synchronized (taskCountLock) {
       numRunningTasks--;
@@ -274,6 +291,12 @@ public class TaskMonitor<T extends Task>
     synchronized (taskCountLock) {
       return numRunningTasks;
     }
+  }
+
+  @VisibleForTesting
+  int getNumKilledTasks()
+  {
+    return numKilledTasks;
   }
 
   SinglePhaseParallelIndexingProgress getProgress()
@@ -336,7 +359,7 @@ public class TaskMonitor<T extends Task>
     @Nullable
     private volatile TaskStatusPlus runningStatus;
 
-    MonitorEntry(
+    private MonitorEntry(
         SubTaskSpec<T> spec,
         T runningTask,
         @Nullable TaskStatusPlus runningStatus,
