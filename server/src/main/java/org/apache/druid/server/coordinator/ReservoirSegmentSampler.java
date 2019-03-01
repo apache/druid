@@ -21,34 +21,54 @@ package org.apache.druid.server.coordinator;
 
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Spliterator;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 final class ReservoirSegmentSampler
 {
+  final static int SPLITERATOR_SIZE_THRESHOLD = 10;
 
   static BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
   {
-    ServerHolder fromServerHolder = null;
+    ServerHolder fromServerHolder = getRandomElementFromList(serverHolders);
+    Collection<DataSegment> segments = fromServerHolder.getServer().getSegments();
+    Spliterator<DataSegment> chosenSpliterator = segments.spliterator();
     DataSegment proposalSegment = null;
-    int numSoFar = 0;
 
-    for (ServerHolder server : serverHolders) {
-      for (DataSegment segment : server.getServer().getSegments()) {
-        int randNum = ThreadLocalRandom.current().nextInt(numSoFar + 1);
-        // w.p. 1 / (numSoFar+1), swap out the server and segment
-        if (randNum == numSoFar) {
-          fromServerHolder = server;
-          proposalSegment = segment;
-        }
-        numSoFar++;
+    for (int i = 0; i < Math.log(segments.size()); i++) {
+      Spliterator<DataSegment> newSpliterator = chosenSpliterator.trySplit();
+
+      // Choose between itself or the new spliterator with equal probability
+      if (ThreadLocalRandom.current().nextBoolean()) {
+        chosenSpliterator = newSpliterator;
+      }
+
+      if (chosenSpliterator.estimateSize() < SPLITERATOR_SIZE_THRESHOLD) {
+        List<DataSegment> finalList = StreamSupport
+            .stream(chosenSpliterator, false)
+            .collect(Collectors.toList());
+
+        proposalSegment = getRandomElementFromList(finalList);
       }
     }
+
     if (fromServerHolder != null) {
       return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
     } else {
       return null;
     }
+  }
+
+  static <T> T getRandomElementFromList(List<T> list)
+  {
+    if (list.size() == 0) {
+      return null;
+    }
+    return list.get(ThreadLocalRandom.current().nextInt(list.size()));
   }
 
   private ReservoirSegmentSampler()
