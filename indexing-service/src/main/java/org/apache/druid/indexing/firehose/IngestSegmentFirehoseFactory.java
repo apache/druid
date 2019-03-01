@@ -159,6 +159,12 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     return interval;
   }
 
+  @JsonProperty
+  public List<WindowedSegmentId> getSegments()
+  {
+    return segmentIds;
+  }
+
   @JsonProperty("filter")
   public DimFilter getDimensionsFilter()
   {
@@ -178,9 +184,9 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   }
 
   @JsonProperty
-  public List<WindowedSegmentId> getSegments()
+  public long getMaxInputSegmentBytesPerTask()
   {
-    return segmentIds;
+    return maxInputSegmentBytesPerTask;
   }
 
   @Override
