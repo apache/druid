@@ -37,4 +37,4 @@ fast in Druid, whereas updates of older data is higher latency. This is by desig
 and does not need to be updated too frequently. Kudu supports arbitrary primary keys with uniqueness constraints, and 
 efficient lookup by ranges of those keys. Kudu chooses not to include the execution engine, but supports sufficient 
 operations so as to allow node-local processing from the execution engines. This means that Kudu can support multiple frameworks on the same data (eg MR, Spark, and SQL). 
-Druid includes its own query layer that allows it to push down aggregations and computations directly to data nodes for faster query processing.
+Druid includes its own query layer that allows it to push down aggregations and computations directly to data processes for faster query processing.
