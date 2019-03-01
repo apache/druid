@@ -129,6 +129,7 @@ layout: toc
   * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
   * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
+  * [Management UIs](/docs/VERSION/operations/management-uis.html)
   * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
   * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
   * [Pull Dependencies Tool](/docs/VERSION/operations/pull-deps.html)
