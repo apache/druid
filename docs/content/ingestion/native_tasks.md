@@ -25,7 +25,7 @@ title: "Native Index Tasks"
 # Native Index Tasks
 
 Druid currently has two types of native batch indexing tasks, `index_parallel` which runs tasks
-in parallel on multiple MiddleManager nodes, and `index` which will run a single indexing task locally on a single
+in parallel on multiple MiddleManager processes, and `index` which will run a single indexing task locally on a single
 MiddleManager.
 
 Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.
@@ -574,12 +574,12 @@ the Index task supports two segment pushing modes, i.e., _bulk pushing mode_ and
 [perfect rollup and best-effort rollup](../ingestion/index.html#roll-up-modes), respectively.
 
 In the bulk pushing mode, every segment is pushed at the very end of the index task. Until then, created segments
-are stored in the memory and local storage of the node running the index task. As a result, this mode might cause a
+are stored in the memory and local storage of the process running the index task. As a result, this mode might cause a
 problem due to limited storage capacity, and is not recommended to use in production.
 
 On the contrary, in the incremental pushing mode, segments are incrementally pushed, that is they can be pushed
 in the middle of the index task. More precisely, the index task collects data and stores created segments in the memory
-and disks of the node running that task until the total number of collected rows exceeds `maxTotalRows`. Once it exceeds,
+and disks of the process running that task until the total number of collected rows exceeds `maxTotalRows`. Once it exceeds,
 the index task immediately pushes all segments created until that moment, cleans all pushed segments up, and
 continues to ingest remaining data.
 

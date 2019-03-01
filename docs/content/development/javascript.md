@@ -59,7 +59,7 @@ unpredictable results if global variables are used.
 ## Performance
 
 Simple JavaScript functions typically have a slight performance penalty to native speed. More complex JavaScript
-functions can have steeper performance penalties. Druid compiles JavaScript functions once per node per query.
+functions can have steeper performance penalties. Druid compiles JavaScript functions once on each data process per query.
 
 You may need to pay special attention to garbage collection when making heavy use of JavaScript functions, especially
 garbage collection of the compiled classes themselves. Be sure to use a garbage collector configuration that supports

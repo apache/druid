@@ -29,9 +29,9 @@ A cache implementation for Druid based on [Redis](https://github.com/antirez/red
 # Configuration
 Below are the configuration options known to this module.
 
-Note that just adding these properties does not enable the cache. You still need to add the `druid.<nodetype>.cache.useCache` and `druid.<nodetype>.cache.populateCache` properties for the nodes you want to enable the cache on as described in the [cache configuration docs](../../configuration/index.html#cache-configuration).
+Note that just adding these properties does not enable the cache. You still need to add the `druid.<process-type>.cache.useCache` and `druid.<process-type>.cache.populateCache` properties for the processes you want to enable the cache on as described in the [cache configuration docs](../../configuration/index.html#cache-configuration).
 
-A possible configuration would be to keep the properties below in your `common.runtime.properties` file (present on all nodes) and then add `druid.<nodetype>.cache.useCache` and `druid.<nodetype>.cache.populateCache` in the `runtime.properties` file of the node types you want to enable caching on.
+A possible configuration would be to keep the properties below in your `common.runtime.properties` file (present on all processes) and then add `druid.<nodetype>.cache.useCache` and `druid.<nodetype>.cache.populateCache` in the `runtime.properties` file of the process types you want to enable caching on.
 
 
 |`common.runtime.properties`|Description|Default|Required|
