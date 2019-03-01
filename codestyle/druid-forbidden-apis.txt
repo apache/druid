@@ -38,3 +38,4 @@ org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.Tempora
 @defaultMessage For performance reasons, use the utf8Base64 / encodeBase64 / encodeBase64String / decodeBase64 / decodeBase64String methods in StringUtils
 org.apache.commons.codec.binary.Base64
 com.google.common.io.BaseEncoding.base64
+javax.annotations.concurrent.GuardedBy @ Use com.google.errorprone.annotations.concurrent.GuardedBy
