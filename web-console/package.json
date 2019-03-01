@@ -35,7 +35,7 @@
     "react-dom": "^16.8.3",
     "react-router": "^4.3.1",
     "react-router-dom": "^4.3.1",
-    "react-table": "^6.9.2",
+    "react-table": "~6.8.6",
     "tslib": "^1.9.3"
   },
   "devDependencies": {
