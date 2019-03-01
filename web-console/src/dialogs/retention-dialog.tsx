@@ -18,11 +18,8 @@
 
 import * as React from 'react';
 import axios from 'axios';
-import {
-  FormGroup,
-  Button,
-} from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Button } from "@blueprintjs/core";
+import { FormGroup, IconNames } from '../components/filler';
 import { RuleEditor, Rule } from '../components/rule-editor';
 import { SnitchDialog } from './snitch-dialog';
 
@@ -148,6 +145,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
       saveDisabled={false}
       canOutsideClickClose={false}
       isOpen
+      inline
       onClose={onCancel}
       title={`Edit retention rules: ${datasource}${datasource === '_default' ? ' (cluster defaults)' : ''}`}
       onReset={this.reset}
@@ -162,7 +160,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
         {(currentRules || []).map(this.renderRule)}
       </FormGroup>
       <FormGroup className="right">
-        <Button icon={IconNames.PLUS} onClick={this.addRule}>New rule</Button>
+        <Button iconName={IconNames.PLUS} onClick={this.addRule}>New rule</Button>
       </FormGroup>
       {
         (!currentRules.length && datasource !== '_default') &&

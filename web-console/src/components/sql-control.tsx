@@ -18,11 +18,14 @@
 
 import * as React from 'react';
 import * as classNames from 'classnames';
-import {
-  TextArea,
-  Intent,
-  Button
-} from "@blueprintjs/core";
+import * as ace from 'brace'
+import AceEditor from "react-ace";
+import 'brace/mode/sql';
+import 'brace/mode/hjson';
+import 'brace/theme/solarized_dark';
+import 'brace/ext/language_tools';
+import { Intent, Button } from "@blueprintjs/core";
+import { IconNames } from './filler';
 
 export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
@@ -31,39 +34,56 @@ export interface SqlControlProps extends React.Props<any> {
 
 export interface SqlControlState {
   query: string;
+  autoCompleteOn: boolean;
 }
 
 export class SqlControl extends React.Component<SqlControlProps, SqlControlState> {
   constructor(props: SqlControlProps, context: any) {
     super(props, context);
     this.state = {
-      query: props.initSql || ''
+      query: props.initSql || '',
+      autoCompleteOn: true
     };
   }
 
-  private handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  private handleChange = (newValue: string): void => {
     this.setState({
-      query: e.target.value
-    });
+      query: newValue
+    })
   }
 
   render() {
     const { onRun } = this.props;
-    const { query } = this.state;
+    const { query, autoCompleteOn } = this.state;
 
     const isRune = query.trim().startsWith('{');
 
-    // Maybe use: https://github.com/securingsincity/react-ace/blob/master/docs/Ace.md
+    // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return <div className="sql-control">
-      <TextArea
-        className="bp3-fill"
-        large={true}
-        intent={Intent.PRIMARY}
+      <AceEditor
+        key={isRune ? "hjson" : "sql"}
+        mode={isRune ? "hjson" : "sql"}
+        theme="solarized_dark"
+        name="ace-editor"
         onChange={this.handleChange}
+        focus={true}
+        fontSize={14}
+        width={'100%'}
+        height={"30vh"}
+        showPrintMargin={false}
         value={query}
+        editorProps={{
+          $blockScrolling: Infinity
+        }}
+        setOptions={{
+          enableBasicAutocompletion: isRune ? false : autoCompleteOn,
+          enableLiveAutocompletion: isRune ? false : autoCompleteOn,
+          showLineNumbers: true,
+          tabSize: 2,
+        }}
       />
       <div className="buttons">
-        <Button rightIcon="caret-right" onClick={() => onRun(query)}>{isRune ? 'Rune' : 'Run'}</Button>
+        <Button rightIconName={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>{isRune ? 'Rune' : 'Run'}</Button>
       </div>
     </div>
   }
