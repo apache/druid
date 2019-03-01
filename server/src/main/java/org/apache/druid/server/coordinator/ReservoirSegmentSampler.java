@@ -40,19 +40,20 @@ final class ReservoirSegmentSampler
     DataSegment proposalSegment = null;
 
     for (int i = 0; i < Math.log(segments.size()); i++) {
-      Spliterator<DataSegment> newSpliterator = chosenSpliterator.trySplit();
-
-      // Choose between itself or the new spliterator with equal probability
-      if (ThreadLocalRandom.current().nextBoolean()) {
-        chosenSpliterator = newSpliterator;
-      }
-
       if (chosenSpliterator.estimateSize() < SPLITERATOR_SIZE_THRESHOLD) {
         List<DataSegment> finalList = StreamSupport
             .stream(chosenSpliterator, false)
             .collect(Collectors.toList());
 
         proposalSegment = getRandomElementFromList(finalList);
+        break;
+      }
+
+      Spliterator<DataSegment> newSpliterator = chosenSpliterator.trySplit();
+
+      // Choose between itself or the new spliterator with equal probability
+      if (ThreadLocalRandom.current().nextBoolean()) {
+        chosenSpliterator = newSpliterator;
       }
     }
 
