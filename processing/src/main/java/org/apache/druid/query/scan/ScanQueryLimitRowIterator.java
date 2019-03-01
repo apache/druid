@@ -35,6 +35,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+
+/**
+ * This iterator supports iteration through a Sequence returned by a ScanResultValue QueryRunner.  Its behaviour
+ * varies depending on whether the query is returning time-ordered values and whether the CTX_KEY_OUTERMOST flag is
+ * set as false.
+ *
+ * Behaviours:
+ * 1) No time ordering: expects a Sequence of ScanResultValues which each contain up to query.batchSize events.
+ *    The iterator will be "done" when the limit of events is reached.  The final ScanResultValue might contain
+ *    fewer than batchSize events so that the limit number of events is returned.
+ * 2) Time Ordering, CTX_KEY_OUTERMOST==null or true: Same behaviour as no time ordering
+ * 3) Time Ordering, CTX_KEY_OUTERMOST=false: The Sequence returned in this case should contain ScanResultValues
+ *    that contain only one event each.  This iterator will perform batching according to query.batchSize until
+ *    the limit is reached.
+ */
 public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultValue>
 {
   private static final String TIME_ORDERING_SEGMENT_ID = "No segment ID available when using time ordering";
@@ -83,7 +98,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
       throw new UOE(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
     }
 
-    // We don't want to perform batching at the historical-level if we're performing time ordering
+    // We don't want to perform batching at the historical-level if we're time ordering
     if (query.getTimeOrder() == ScanQuery.TimeOrder.NONE ||
         !query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
       ScanResultValue batch = yielder.get();
@@ -95,9 +110,9 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
       } else {
         // last batch
         // single batch length is <= Integer.MAX_VALUE, so this should not overflow
-        int left = (int) (limit - count);
+        int numLeft = (int) (limit - count);
         count = limit;
-        return new ScanResultValue(batch.getSegmentId(), batch.getColumns(), events.subList(0, left));
+        return new ScanResultValue(batch.getSegmentId(), batch.getColumns(), events.subList(0, numLeft));
       }
     } else {
       // Perform single-event ScanResultValue batching.  Each scan result value in this case will only have one event

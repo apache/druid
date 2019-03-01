@@ -20,24 +20,18 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 
@@ -109,7 +103,7 @@ public class ScanQueryRunnerFactoryTest
     for (int i = 0; i < numElements; i++) {
       long timestamp = (long) (ThreadLocalRandom.current().nextLong());
       expectedEventTimestamps.add(timestamp);
-      srvs.add(generateOneEventScanResultValue(timestamp, resultFormat));
+      srvs.add(ScanQueryTestHelper.generateScanResultValue(timestamp, resultFormat, 1));
     }
     expectedEventTimestamps.sort((o1, o2) -> {
       int retVal = 0;
@@ -133,9 +127,9 @@ public class ScanQueryRunnerFactoryTest
     // check each scan result value has one event
     for (ScanResultValue srv : output) {
       if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)) {
-        Assert.assertTrue(getEventsCompactedListResultFormat(srv).size() == 1);
+        Assert.assertTrue(ScanQueryTestHelper.getEventsCompactedListResultFormat(srv).size() == 1);
       } else if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)) {
-        Assert.assertTrue(getEventsListResultFormat(srv).size() == 1);
+        Assert.assertTrue(ScanQueryTestHelper.getEventsListResultFormat(srv).size() == 1);
       }
     }
 
@@ -152,38 +146,5 @@ public class ScanQueryRunnerFactoryTest
                           output.get(i - 1).getFirstEventTimestamp(resultFormat));
       }
     }
-  }
-
-  private ScanResultValue generateOneEventScanResultValue(long timestamp, ScanQuery.ResultFormat resultFormat)
-  {
-    String segmentId = "some_segment_id";
-    List<String> columns = new ArrayList<>(Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, "name", "count"));
-    Object event;
-    if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)) {
-      Map<String, Object> eventMap = new HashMap<>();
-      eventMap.put(ColumnHolder.TIME_COLUMN_NAME, timestamp);
-      eventMap.put("name", "Feridun");
-      eventMap.put("count", 4);
-      event = eventMap;
-    } else if (resultFormat.equals(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)) {
-      event = new ArrayList<>(Arrays.asList(
-          timestamp,
-          "Feridun",
-          4
-      ));
-    } else {
-      throw new UOE("Result format [%s] not supported yet", resultFormat.toString());
-    }
-    return new ScanResultValue(segmentId, columns, Collections.singletonList(event));
-  }
-
-  private List<Map<String, Object>> getEventsListResultFormat(ScanResultValue scanResultValue)
-  {
-    return (List<Map<String, Object>>) scanResultValue.getEvents();
-  }
-
-  private List<List<Object>> getEventsCompactedListResultFormat(ScanResultValue scanResultValue)
-  {
-    return (List<List<Object>>) scanResultValue.getEvents();
   }
 }
