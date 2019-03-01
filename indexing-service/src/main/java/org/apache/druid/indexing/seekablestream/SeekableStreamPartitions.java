@@ -31,7 +31,7 @@ import java.util.Objects;
 /**
  * class that encapsulates a partitionIdToSequenceNumberMap of partitionId -> sequenceNumber.
  * To be backward compatible with both Kafka and Kinesis datasource metadata when
- * serializing and deserializing json, redundant constructor fields stream, topic and
+ * serializing and deserializing json, redundant constructor fields stream, topic,
  * partitionSequenceNumberMap and partitionOffsetMap are created. Only one of topic, stream
  * should have a non-null value and only one of partitionOffsetMap and partitionSequenceNumberMap
  * should have a non-null value.
