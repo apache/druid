@@ -51,10 +51,10 @@ Available Metrics
 |------|-----------|----------|------------|
 |`query/time`|Milliseconds taken to complete a query.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|< 1s|
 |`query/bytes`|number of bytes returned in query response.|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.| |
-|`query/node/time`|Milliseconds taken to query individual historical/realtime nodes.|id, status, server.|< 1s|
-|`query/node/bytes`|number of bytes returned from querying individual historical/realtime nodes.|id, status, server.| |
-|`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime nodes.|id, status, server.|< 1s|
-|`query/node/backpressure`|Milliseconds that the channel to this node has spent suspended due to backpressure.|id, status, server.| |
+|`query/node/time`|Milliseconds taken to query individual historical/realtime processes.|id, status, server.|< 1s|
+|`query/node/bytes`|number of bytes returned from querying individual historical/realtime processes.|id, status, server.| |
+|`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|id, status, server.|< 1s|
+|`query/node/backpressure`|Milliseconds that the channel to this process has spent suspended due to backpressure.|id, status, server.| |
 |`query/intervalChunk/time`|Only emitted if interval chunking is enabled. Milliseconds required to query an interval chunk. This metric is deprecated and will be removed in the future because interval chunking is deprecated. See [Query Context](../querying/query-context.html).|id, status, chunkInterval (if interval chunking is enabled).|< 1s|
 |`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
@@ -69,7 +69,7 @@ Available Metrics
 |`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|id, status, segment.|several hundred milliseconds|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|< several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
-|`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the Historical node).|id, segment.|several hundred milliseconds|
+|`query/segmentAndCache/time`|Milliseconds taken to query individual segment or hit the cache (if it is enabled on the Historical process).|id, segment.|several hundred milliseconds|
 |`query/cpu/time`|Microseconds of CPU time taken to complete a query|Common: dataSource, type, interval, hasFilters, duration, context, remoteAddress, id. Aggregation Queries: numMetrics, numComplexMetrics. GroupBy: numDimensions. TopN: threshold, dimension.|Varies|
 |`query/count`|number of total queries|This metric is only available if the QueryCountStatsMonitor module is included.||
 |`query/success/count`|number of queries successfully processed|This metric is only available if the QueryCountStatsMonitor module is included.||
@@ -145,9 +145,9 @@ These metrics are applicable for the Kafka Indexing Service.
 |`ingest/kafka/maxLag`|Max lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 |`ingest/kafka/avgLag`|Average lag between the offsets consumed by the Kafka indexing tasks and latest offsets in Kafka brokers across all partitions. Minimum emission period for this metric is a minute.|dataSource.|Greater than 0, should not be a very high number |
 
-## Ingestion Metrics (Realtime node)
+## Ingestion Metrics (Realtime process)
 
-These metrics are only available if the RealtimeMetricsMonitor is included in the monitors list for the Realtime node. These metrics are deltas for each emission period.
+These metrics are only available if the RealtimeMetricsMonitor is included in the monitors list for the Realtime process. These metrics are deltas for each emission period.
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
