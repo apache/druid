@@ -122,6 +122,26 @@ interface Function
     }
   }
 
+  class Pi implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "pi";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() >= 1) {
+        throw new IAE("Function[%s] needs 0 argument", name());
+      }
+
+      return ExprEval.of(Math.PI);
+    }
+
+  }
+
   class Abs extends SingleParamMath
   {
     @Override
@@ -247,6 +267,22 @@ interface Function
       return ExprEval.of(Math.cosh(param));
     }
   }
+
+  class Cot extends SingleParamMath
+  {
+    @Override
+    public String name()
+    {
+      return "cot";
+    }
+
+    @Override
+    protected ExprEval eval(double param)
+    {
+      return ExprEval.of(Math.cos(param) / Math.sin(param));
+    }
+  }
+
 
   class Div extends DoubleParamMath
   {
