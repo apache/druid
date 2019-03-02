@@ -19,8 +19,11 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.math.IntMath;
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 
+import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.List;
 import java.util.Spliterator;
@@ -34,12 +37,20 @@ final class ReservoirSegmentSampler
 
   static BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
   {
-    ServerHolder fromServerHolder = getRandomElementFromList(serverHolders);
+    ServerHolder fromServerHolder = reservoirSampleServer(serverHolders);
+    if (fromServerHolder == null) {
+      return null;
+    }
+
     Collection<DataSegment> segments = fromServerHolder.getServer().getSegments();
     Spliterator<DataSegment> chosenSpliterator = segments.spliterator();
+    if (chosenSpliterator == null) {
+      return null;
+    }
+
     DataSegment proposalSegment = null;
 
-    for (int i = 0; i < Math.log(segments.size()); i++) {
+    for (int i = 0; i < IntMath.log2(segments.size(), RoundingMode.DOWN); i++) {
       if (chosenSpliterator.estimateSize() < SPLITERATOR_SIZE_THRESHOLD) {
         List<DataSegment> finalList = StreamSupport
             .stream(chosenSpliterator, false)
@@ -57,16 +68,35 @@ final class ReservoirSegmentSampler
       }
     }
 
-    if (fromServerHolder != null) {
-      return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
-    } else {
+    return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
+  }
+
+  static ServerHolder reservoirSampleServer(final List<ServerHolder> serverHolders)
+  {
+    if (serverHolders.isEmpty()) {
       return null;
     }
+
+    ServerHolder sampledServer = null;
+    long total = 0;
+
+    for (ServerHolder serverHolder : serverHolders) {
+      ImmutableDruidServer server = serverHolder.getServer();
+      long numSegments = server.getSegments().size();
+      long randomIndex = ThreadLocalRandom.current().nextLong(total + numSegments);
+
+      if (randomIndex >= total && randomIndex < total + numSegments) {
+        sampledServer = serverHolder;
+      }
+      total += numSegments;
+    }
+
+    return sampledServer;
   }
 
   static <T> T getRandomElementFromList(List<T> list)
   {
-    if (list.size() == 0) {
+    if (list.isEmpty()) {
       return null;
     }
     return list.get(ThreadLocalRandom.current().nextInt(list.size()));
