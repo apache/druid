@@ -32,6 +32,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -43,20 +44,24 @@ public class ReservoirSegmentSamplerTest
   private ImmutableDruidServer druidServer2;
   private ImmutableDruidServer druidServer3;
   private ImmutableDruidServer druidServer4;
+  private ImmutableDruidServer druidServerEmpty;
 
   private ServerHolder holder1;
   private ServerHolder holder2;
   private ServerHolder holder3;
   private ServerHolder holder4;
+  private ServerHolder holderEmpty;
 
   private DataSegment segment1;
   private DataSegment segment2;
   private DataSegment segment3;
   private DataSegment segment4;
+  private DataSegment segment5;
+  private DataSegment segment6;
   List<DataSegment> segments1;
   List<DataSegment> segments2;
   List<DataSegment> segments3;
-  List<DataSegment> segments4;
+  List<DataSegment> multipleSegments;
   List<DataSegment> segments;
 
   @Before
@@ -66,14 +71,18 @@ public class ReservoirSegmentSamplerTest
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer3 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer4 = EasyMock.createMock(ImmutableDruidServer.class);
+    druidServerEmpty = EasyMock.createMock(ImmutableDruidServer.class);
     holder1 = EasyMock.createMock(ServerHolder.class);
     holder2 = EasyMock.createMock(ServerHolder.class);
     holder3 = EasyMock.createMock(ServerHolder.class);
     holder4 = EasyMock.createMock(ServerHolder.class);
+    holderEmpty = EasyMock.createMock(ServerHolder.class);
     segment1 = EasyMock.createMock(DataSegment.class);
     segment2 = EasyMock.createMock(DataSegment.class);
     segment3 = EasyMock.createMock(DataSegment.class);
     segment4 = EasyMock.createMock(DataSegment.class);
+    segment5 = EasyMock.createMock(DataSegment.class);
+    segment6 = EasyMock.createMock(DataSegment.class);
 
     DateTime start1 = DateTimes.of("2012-01-01");
     DateTime start2 = DateTimes.of("2012-02-01");
@@ -122,13 +131,35 @@ public class ReservoirSegmentSamplerTest
         0,
         8L
     );
+    segment5 = new DataSegment(
+        "datasource3",
+        new Interval(start1, start1.plusHours(1)),
+        version.toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        0,
+        10L
+    );
+    segment6 = new DataSegment(
+        "datasource3",
+        new Interval(start2, start2.plusHours(1)),
+        version.toString(),
+        new HashMap<>(),
+        new ArrayList<>(),
+        new ArrayList<>(),
+        NoneShardSpec.instance(),
+        0,
+        11L
+    );
 
-    segments = Lists.newArrayList(segment1, segment2, segment3, segment4);
+    segments = Lists.newArrayList(segment1, segment2, segment3, segment4, segment5, segment6);
 
     segments1 = Collections.singletonList(segment1);
     segments2 = Collections.singletonList(segment2);
     segments3 = Collections.singletonList(segment3);
-    segments4 = Collections.singletonList(segment4);
+    multipleSegments = Collections.unmodifiableList(Arrays.asList(segment4, segment5, segment6));
   }
 
   //checks if every segment is selected at least once out of 5000 trials
@@ -162,9 +193,17 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer4.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer4.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer4.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer4.getSegments()).andReturn(segments4).anyTimes();
+    EasyMock.expect(druidServer4.getSegments()).andReturn(multipleSegments).anyTimes();
     EasyMock.expect(druidServer4.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer4);
+
+    EasyMock.expect(druidServerEmpty.getName()).andReturn("4").atLeastOnce();
+    EasyMock.expect(druidServerEmpty.getTier()).andReturn("normal").anyTimes();
+    EasyMock.expect(druidServerEmpty.getCurrSize()).andReturn(30L).atLeastOnce();
+    EasyMock.expect(druidServerEmpty.getMaxSize()).andReturn(100L).atLeastOnce();
+    EasyMock.expect(druidServerEmpty.getSegments()).andReturn(Collections.emptyList()).anyTimes();
+    EasyMock.expect(druidServerEmpty.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
+    EasyMock.replay(druidServerEmpty);
 
     EasyMock.expect(holder1.getServer()).andReturn(druidServer1).anyTimes();
     EasyMock.replay(holder1);
@@ -177,11 +216,15 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(holder4.getServer()).andReturn(druidServer4).anyTimes();
     EasyMock.replay(holder4);
 
+    EasyMock.expect(holderEmpty.getServer()).andReturn(druidServerEmpty).anyTimes();
+    EasyMock.replay(holderEmpty);
+
     List<ServerHolder> holderList = new ArrayList<>();
     holderList.add(holder1);
     holderList.add(holder2);
     holderList.add(holder3);
     holderList.add(holder4);
+    holderList.add(holderEmpty);
 
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
     for (int i = 0; i < 5000; i++) {
@@ -189,7 +232,7 @@ public class ReservoirSegmentSamplerTest
     }
 
     for (DataSegment segment : segments) {
-      Assert.assertEquals(segmentCountMap.get(segment), new Integer(1));
+      Assert.assertEquals(new Integer(1), segmentCountMap.get(segment));
     }
   }
 }

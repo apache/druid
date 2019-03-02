@@ -33,7 +33,7 @@ import java.util.stream.StreamSupport;
 
 final class ReservoirSegmentSampler
 {
-  final static int SPLITERATOR_SIZE_THRESHOLD = 10;
+  private static final int SPLITERATOR_SIZE_THRESHOLD = 20;
 
   static BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
   {
@@ -42,32 +42,35 @@ final class ReservoirSegmentSampler
       return null;
     }
 
-    Collection<DataSegment> segments = fromServerHolder.getServer().getSegments();
-    Spliterator<DataSegment> chosenSpliterator = segments.spliterator();
-    if (chosenSpliterator == null) {
-      return null;
-    }
-
     DataSegment proposalSegment = null;
+    Collection<DataSegment> segments = fromServerHolder.getServer().getSegments();
 
-    for (int i = 0; i < IntMath.log2(segments.size(), RoundingMode.DOWN); i++) {
-      if (chosenSpliterator.estimateSize() < SPLITERATOR_SIZE_THRESHOLD) {
-        List<DataSegment> finalList = StreamSupport
-            .stream(chosenSpliterator, false)
-            .collect(Collectors.toList());
-
-        proposalSegment = getRandomElementFromList(finalList);
-        break;
+    if (segments.size() == 1) {
+      proposalSegment = segments.iterator().next();
+    } else {
+      Spliterator<DataSegment> chosenSpliterator = segments.spliterator();
+      if (chosenSpliterator == null) {
+        return null;
       }
 
-      Spliterator<DataSegment> newSpliterator = chosenSpliterator.trySplit();
+      for (int i = 0; i < IntMath.log2(segments.size(), RoundingMode.UP); i++) {
+        if (chosenSpliterator.estimateSize() < SPLITERATOR_SIZE_THRESHOLD) {
+          List<DataSegment> finalList = StreamSupport
+              .stream(chosenSpliterator, false)
+              .collect(Collectors.toList());
 
-      // Choose between itself or the new spliterator with equal probability
-      if (ThreadLocalRandom.current().nextBoolean()) {
-        chosenSpliterator = newSpliterator;
+          proposalSegment = getRandomElementFromList(finalList);
+          break;
+        }
+
+        Spliterator<DataSegment> newSpliterator = chosenSpliterator.trySplit();
+
+        // Choose between itself or the new spliterator with equal probability
+        if (ThreadLocalRandom.current().nextBoolean()) {
+          chosenSpliterator = newSpliterator;
+        }
       }
     }
-
     return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
   }
 
