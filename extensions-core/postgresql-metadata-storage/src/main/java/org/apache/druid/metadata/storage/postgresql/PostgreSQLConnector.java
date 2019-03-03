@@ -48,6 +48,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
 
   private volatile Boolean canUpsert;
 
+  private final String dbTableSchema;
+  
   @Inject
   public PostgreSQLConnector(
       Supplier<MetadataStorageConnectorConfig> config,
@@ -104,7 +106,8 @@ public class PostgreSQLConnector extends SQLMetadataConnector
     }
 
     this.dbi = new DBI(datasource);
-
+    this.dbTableSchema = connectorConfig.getDbTableSchema();
+    
     log.info("Configured PostgreSQL as metadata storage");
   }
 
@@ -146,8 +149,9 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   public boolean tableExists(final Handle handle, final String tableName)
   {
     return !handle.createQuery(
-        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename ILIKE :tableName"
+        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = :dbTableSchema AND tablename ILIKE :tableName"
     )
+                  .bind("dbTableSchema", dbTableSchema)
                   .bind("tableName", tableName)
                   .map(StringMapper.FIRST)
                   .list()

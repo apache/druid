@@ -53,7 +53,9 @@ public class PostgreSQLConnectorConfig
 
   @JsonProperty
   private String sslPasswordCallback;
-
+  
+  @JsonProperty
+  private String dbTableSchema = "public";
 
   public boolean isUseSSL()
   {
@@ -105,6 +107,11 @@ public class PostgreSQLConnectorConfig
     return sslPasswordCallback;
   }
 
+  public String getDbTableSchema()
+  {
+    return dbTableSchema;
+  }
+
   @Override
   public String toString()
   {
@@ -118,6 +125,7 @@ public class PostgreSQLConnectorConfig
            ", sslRootCert='" + sslRootCert + '\'' +
            ", sslHostNameVerifier='" + sslHostNameVerifier + '\'' +
            ", sslPasswordCallback='" + sslPasswordCallback + '\'' +
-           '}';
+           ", dbTableSchema='" + dbTableSchema + '\'' +
+          '}';
   }
 }
