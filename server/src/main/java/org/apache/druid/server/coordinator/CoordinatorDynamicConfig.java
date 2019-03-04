@@ -232,7 +232,8 @@ public class CoordinatorDynamicConfig
 
   /**
    * List of historical nodes to 'decommission'. Coordinator doesn't assign new segments on those nodes and moves
-   * segments from those nodes according to a specified velocity.
+   * segments away from the 'decommissioning' servers at the maximum rate specified by
+   * {@link CoordinatorDynamicConfig#getDecommissioningVelocity}.
    *
    * @return list of host:port entries
    */
@@ -246,7 +247,7 @@ public class CoordinatorDynamicConfig
    * Decommissioning velocity indicates what proportion of balancer 'move' operations out of
    * {@link CoordinatorDynamicConfig#getMaxSegmentsToMove()} total will be spent towards 'decommissioning' servers
    * by moving their segments to active servers, instead of normal 'balancing' segments between servers.
-   * Coordinator takes ceil(maxSegmentsToMove * (velocity / 10)) from servers in maitenance during balancing phase:
+   * Coordinator takes ceil(maxSegmentsToMove * (velocity / 10)) from decommissioning servers during balancing phase:
    * 0 - no segments from decommissioning servers will be processed during balancing
    * 5 - 50% segments from decommissioning servers
    * 10 - 100% segments from decommissioning servers

@@ -741,7 +741,7 @@ public class LoadRuleTest
    * Should not load a segment to the server that is decommssioning.
    */
   @Test
-  public void testLoadReplicaDuringMaitenance()
+  public void testLoadReplicaDuringDecomissioning()
   {
     EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(true).anyTimes();
 
@@ -1019,12 +1019,12 @@ public class LoadRuleTest
     return mockPeon2;
   }
 
-  private static ServerHolder createServerHolder(String tier, LoadQueuePeon mockPeon1, boolean decommission)
+  private static ServerHolder createServerHolder(String tier, LoadQueuePeon mockPeon1, boolean isDecommissioning)
   {
     return new ServerHolder(
         createServer(tier).toImmutableDruidServer(),
         mockPeon1,
-        decommission
+        isDecommissioning
     );
   }
 }

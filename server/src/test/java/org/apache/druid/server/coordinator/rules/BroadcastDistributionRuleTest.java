@@ -317,12 +317,12 @@ public class BroadcastDistributionRuleTest
    * Servers:
    * name             | segments
    * -----------------+--------------
-   * general          | large segment
+   * active           | large segment
    * decommissioning1 | small segment
    * decommissioning2 | large segment
    *
    * After running the rule for the small segment:
-   * general          | large & small segments
+   * active           | large & small segments
    * decommissioning1 |
    * decommissionint2 | large segment
    */
