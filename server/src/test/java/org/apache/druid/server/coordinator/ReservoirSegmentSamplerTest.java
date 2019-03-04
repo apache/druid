@@ -228,11 +228,16 @@ public class ReservoirSegmentSamplerTest
 
     Map<DataSegment, Integer> segmentCountMap = new HashMap<>();
     for (int i = 0; i < 5000; i++) {
-      segmentCountMap.put(ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList).getSegment(), 1);
+      DataSegment randomSegment = ReservoirSegmentSampler.getRandomBalancerSegmentHolder(holderList).getSegment();
+      if (segmentCountMap.containsKey(randomSegment)) {
+        segmentCountMap.put(randomSegment, segmentCountMap.get(randomSegment) + 1);
+      } else {
+        segmentCountMap.put(randomSegment, 1);
+      }
     }
 
     for (DataSegment segment : segments) {
-      Assert.assertEquals(new Integer(1), segmentCountMap.get(segment));
+      Assert.assertTrue(segmentCountMap.get(segment).intValue() > 1);
     }
   }
 }

@@ -33,7 +33,7 @@ import java.util.stream.StreamSupport;
 
 final class ReservoirSegmentSampler
 {
-  private static final int SPLITERATOR_SIZE_THRESHOLD = 20;
+  private static final int SPLITERATOR_SIZE_THRESHOLD = 25;
 
   static BalancerSegmentHolder getRandomBalancerSegmentHolder(final List<ServerHolder> serverHolders)
   {
