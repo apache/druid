@@ -124,6 +124,8 @@ interface Function
 
   class Pi implements Function
   {
+    private static final double PI = Math.PI;
+
     @Override
     public String name()
     {
@@ -137,9 +139,8 @@ interface Function
         throw new IAE("Function[%s] needs 0 argument", name());
       }
 
-      return ExprEval.of(Math.PI);
+      return ExprEval.of(PI);
     }
-
   }
 
   class Abs extends SingleParamMath
