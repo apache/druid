@@ -237,9 +237,10 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
      * This field and {@link #requestedShutdownTimeNs} use nanoseconds instead of milliseconds not to deal with the fact
      * that {@link System#currentTimeMillis()} can "go backward", e. g. due to time correction on the server.
      *
-     * This field and {@link #requestedShutdownTimeNs} need to be volatile to ensure visibility of the latest values in
-     * {@link #delayedCloseExecutor} (see {@link #createDelayedCloseExecutor()}). Theoretically speaking, the visibility
-     * is not guaranteed by JLS, but in practice on x86 volatile is just what we need for these fields.
+     * This field and {@link #requestedShutdownTimeNs} must be volatile because they are de facto lazily initialized
+     * fields that are used concurrently in {@link #delayedCloseExecutor} (see {@link #createDelayedCloseExecutor()}).
+     * If they were not volatile, NPE would be possible in {@link #delayedCloseExecutor}. See
+     * https://shipilev.net/blog/2016/close-encounters-of-jmm-kind/#wishful-hb-actual for explanations.
      */
     private volatile Long idleCloseTimeNs = null;
     private volatile Long requestedShutdownTimeNs = null;
@@ -294,10 +295,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
             // The closed = true is visible after close() because there is a happens-before edge between
             // delayedCloseExecutor.interrupt() call in close() and catching InterruptedException below in this loop.
             while (!closed) {
-              // Reading idleCloseTimeNs and requestedShutdownTimeNs to locals for absolute confidence that there
-              // couldn't be NPE in comparisons with nanoTime() below.
-              Long idleCloseTimeNs = this.idleCloseTimeNs;
-              Long requestedShutdownTimeNs = this.requestedShutdownTimeNs;
               if (idleCloseTimeNs == null && requestedShutdownTimeNs == null) {
                 // This is not possible unless there are bugs in the code of EventReceiverFirehose. AssertionError could
                 // have been thrown instead, but it doesn't seem to make a lot of sense in a background thread. Instead,
@@ -308,11 +305,11 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
                 );
               }
               if (idleCloseTimeNs != null && idleCloseTimeNs - System.nanoTime() <= 0) { // overflow-aware comparison
-                log.info("Closing Firehose after a shutdown request");
+                log.info("Firehose has been idle for %d ms, closing.", maxIdleTimeMillis);
                 close();
               } else if (requestedShutdownTimeNs != null &&
                          requestedShutdownTimeNs - System.nanoTime() <= 0) { // overflow-aware comparison
-                log.info("Firehose has been idle for %d ms, closing.", maxIdleTimeMillis);
+                log.info("Closing Firehose after a shutdown request");
                 close();
               }
               try {
