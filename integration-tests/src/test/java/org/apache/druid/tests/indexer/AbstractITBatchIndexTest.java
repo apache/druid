@@ -123,7 +123,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,
           "%%DATASOURCE%%",
-          fullBaseDatasourceName
+          fullReindexDatasourceName
       );
 
       queryHelper.testQueriesFromString(queryResponseTemplate, 2);

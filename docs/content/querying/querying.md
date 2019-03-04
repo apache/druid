@@ -24,11 +24,11 @@ title: "Querying"
 
 # Querying
 
-Queries are made using an HTTP REST style request to queryable nodes ([Broker](../design/broker.html),
+Queries are made using an HTTP REST style request to queryable processes ([Broker](../design/broker.html),
 [Historical](../design/historical.html). [Peons](../design/peons.html)) that are running stream ingestion tasks can also accept queries. The
-query is expressed in JSON and each of these node types expose the same
-REST query interface. For normal Druid operations, queries should be issued to the Broker nodes. Queries can be posted
-to the queryable nodes like this -
+query is expressed in JSON and each of these process types expose the same
+REST query interface. For normal Druid operations, queries should be issued to the Broker processes. Queries can be posted
+to the queryable processes like this -
 
  ```bash
  curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>

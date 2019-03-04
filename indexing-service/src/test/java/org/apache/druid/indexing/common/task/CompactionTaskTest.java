@@ -62,6 +62,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -1133,6 +1134,27 @@ public class CompactionTaskTest
         .tuningConfig(createTuningConfig())
         .context(ImmutableMap.of("testKey", "testContext"))
         .build();
+  }
+
+  @Test
+  public void testHugeTargetCompactionSize()
+  {
+    final PartitionConfigurationManager manager = new PartitionConfigurationManager(Long.MAX_VALUE, TUNING_CONFIG);
+    final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
+    final Map<File, QueryableIndex> queryableIndexMap = indexIO.getQueryableIndexMap();
+    final List<Pair<QueryableIndex, DataSegment>> segments = new ArrayList<>();
+
+    for (Entry<DataSegment, File> entry : segmentMap.entrySet()) {
+      final DataSegment segment = entry.getKey();
+      final File file = entry.getValue();
+      segments.add(Pair.of(Preconditions.checkNotNull(queryableIndexMap.get(file)), segment));
+    }
+
+    expectedException.expect(ArithmeticException.class);
+    expectedException.expectMessage(
+        CoreMatchers.startsWith("Estimated maxRowsPerSegment[922337203685477632] is out of integer value range.")
+    );
+    manager.computeTuningConfig(segments);
   }
 
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration(boolean keepSegmentGranularity)
