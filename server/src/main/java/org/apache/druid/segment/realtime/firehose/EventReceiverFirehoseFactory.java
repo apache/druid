@@ -316,7 +316,6 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<InputRowPar
                 // It is possible to write code that sleeps until the next the next idleCloseTimeNs or
                 // requestedShutdownTimeNs, whatever is non-null and sooner, but that's fairly complicated code. That
                 // complexity perhaps overweighs the minor inefficiency of simply waking up every second.
-                // perhaps doesn't justify minor inefficiency of waking
                 Threads.sleepFor(1, TimeUnit.SECONDS);
               }
               catch (InterruptedException ignore) {
