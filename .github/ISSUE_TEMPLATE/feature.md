@@ -12,7 +12,7 @@ assignees: ''
 Please describe the feature or change with as much detail as possible. 
 
 If you have a detailed implementation in mind and wish to contribute that implementation yourself, and the change that
-you are planning would require a 'Design Review' tag because it intoroduces or changes some APIs, or it is large and
+you are planning would require a 'Design Review' tag because it introduces or changes some APIs, or it is large and
 imposes lasting consequences on the codebase, please open a Proposal instead.
 
 ### Motivation
