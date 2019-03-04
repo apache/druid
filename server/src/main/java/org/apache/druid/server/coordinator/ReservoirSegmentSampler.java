@@ -86,9 +86,12 @@ final class ReservoirSegmentSampler
     for (ServerHolder serverHolder : serverHolders) {
       ImmutableDruidServer server = serverHolder.getServer();
       long numSegments = server.getSegments().size();
-      long randomIndex = ThreadLocalRandom.current().nextLong(total + numSegments);
+      long endIndex = total + numSegments;
+      // Handle edge case where first server contains no segments so that nextLong() doesn't fail
+      long randomIndex = ThreadLocalRandom.current().nextLong((endIndex == 0) ? 1 : endIndex);
 
-      if (randomIndex >= total && randomIndex < total + numSegments) {
+      // Select if random index falls within bounds of the segments contained in this server
+      if (randomIndex >= total && randomIndex < endIndex) {
         sampledServer = serverHolder;
       }
       total += numSegments;
