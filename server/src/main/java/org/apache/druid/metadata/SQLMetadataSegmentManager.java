@@ -437,6 +437,12 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
+  public Iterable<DataSegment> iterateAllSegments()
+  {
+    return () -> dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()).iterator();
+  }
+
+  @Override
   public Collection<String> getAllDataSourceNames()
   {
     return connector.getDBI().withHandle(

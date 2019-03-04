@@ -148,7 +148,7 @@ public class DruidCoordinatorBalancerProfiler
                                 .withLoadManagementPeons(
                                     peonMap
                                 )
-                                .withAvailableSegments(segments)
+                                .withAvailableSegmentsInTest(segments)
                                 .withDynamicConfigs(
                                     CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
@@ -246,7 +246,7 @@ public class DruidCoordinatorBalancerProfiler
                                         toPeon
                                     )
                                 )
-                                .withAvailableSegments(segments)
+                                .withAvailableSegmentsInTest(segments)
                                 .withDynamicConfigs(
                                     CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE

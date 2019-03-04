@@ -19,18 +19,18 @@
 
 package org.apache.druid.server.coordinator.helper;
 
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.Set;
+import java.util.TreeSet;
 
 public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
 {
   private final DruidCoordinator coordinator;
 
-  private static final Logger log = new Logger(DruidCoordinatorSegmentInfoLoader.class);
+  private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorSegmentInfoLoader.class);
 
   public DruidCoordinatorSegmentInfoLoader(DruidCoordinator coordinator)
   {
@@ -42,8 +42,17 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
   {
     log.info("Starting coordination. Getting available segments.");
 
-    // Display info about all available segments
-    final Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
+    final TreeSet<DataSegment> availableSegments = DruidCoordinatorRuntimeParams.createAvailableSegmentsSet();
+    for (DataSegment segment : coordinator.iterateAvailableDataSegments()) {
+      if (segment.getSize() < 0) {
+        log.makeAlert("No size on a segment")
+           .addData("segment", segment)
+           .emit();
+      }
+      availableSegments.add(segment);
+    }
+
+    // Log info about all available segments
     if (log.isDebugEnabled()) {
       log.debug("Available DataSegments");
       for (DataSegment dataSegment : availableSegments) {
@@ -54,7 +63,7 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
     log.info("Found [%,d] available segments.", availableSegments.size());
 
     return params.buildFromExisting()
-                 .withAvailableSegments(availableSegments)
+                 .setAvailableSegments(availableSegments)
                  .build();
   }
 }

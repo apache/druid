@@ -286,7 +286,7 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(
+                                     .withAvailableSegmentsInTest(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),
@@ -337,7 +337,7 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(secondCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(secondCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(
+                                     .withAvailableSegmentsInTest(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1)
@@ -366,7 +366,7 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(
+                                     .withAvailableSegmentsInTest(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),
@@ -404,7 +404,7 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(
+                                     .withAvailableSegmentsInTest(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),

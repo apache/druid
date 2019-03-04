@@ -70,7 +70,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -567,7 +567,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         ImmutableList.of(dataSource.toImmutableDruidDataSource())
     ).atLeastOnce();
     EasyMock.replay(databaseSegmentManager);
-    Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
+    TreeSet<DataSegment> availableSegments = DruidCoordinatorRuntimeParams.createAvailableSegmentsSet();
+    coordinator.iterateAvailableDataSegments().forEach(availableSegments::add);
     DataSegment[] expected = new DataSegment[]{
         getSegment("test", Intervals.of("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
         getSegment("test", Intervals.of("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),

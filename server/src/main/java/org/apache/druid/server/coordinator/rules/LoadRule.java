@@ -74,10 +74,7 @@ public abstract class LoadRule implements Rule
       currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getId()));
 
       final CoordinatorStats stats = new CoordinatorStats();
-
-      if (params.getAvailableSegments().contains(segment)) {
-        assign(params, segment, stats);
-      }
+      assign(params, segment, stats);
 
       drop(params, segment, stats);
 

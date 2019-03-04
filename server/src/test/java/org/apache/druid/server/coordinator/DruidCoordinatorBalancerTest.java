@@ -535,7 +535,7 @@ public class DruidCoordinatorBalancerTest
                 .boxed()
                 .collect(Collectors.toMap(i -> String.valueOf(i + 1), peons::get))
         )
-        .withAvailableSegments(segments)
+        .withAvailableSegmentsInTest(segments)
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                 MAX_SEGMENTS_TO_MOVE

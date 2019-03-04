@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -58,6 +59,8 @@ public interface MetadataSegmentManager
   ImmutableDruidDataSource getDataSource(String dataSourceName);
 
   Collection<ImmutableDruidDataSource> getDataSources();
+
+  Iterable<DataSegment> iterateAllSegments();
 
   Collection<String> getAllDataSourceNames();
 

@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -28,24 +29,28 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeSet;
 
 /**
  */
 public class DruidCoordinatorRuntimeParams
 {
+  public static TreeSet<DataSegment> createAvailableSegmentsSet()
+  {
+    return new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
+  }
+
   private final long startTime;
   private final DruidCluster druidCluster;
   private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
   private final Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
-  private final Set<DataSegment> availableSegments;
+  private final @Nullable TreeSet<DataSegment> availableSegments;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
   private final ReplicationThrottler replicationManager;
   private final ServiceEmitter emitter;
@@ -61,7 +66,7 @@ public class DruidCoordinatorRuntimeParams
       MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
       Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
-      Set<DataSegment> availableSegments,
+      @Nullable TreeSet<DataSegment> availableSegments,
       Map<String, LoadQueuePeon> loadManagementPeons,
       ReplicationThrottler replicationManager,
       ServiceEmitter emitter,
@@ -113,8 +118,9 @@ public class DruidCoordinatorRuntimeParams
     return dataSources;
   }
 
-  public Set<DataSegment> getAvailableSegments()
+  public TreeSet<DataSegment> getAvailableSegments()
   {
+    Preconditions.checkState(availableSegments != null, "availableSegments must be set");
     return availableSegments;
   }
 
@@ -196,7 +202,7 @@ public class DruidCoordinatorRuntimeParams
         databaseRuleManager,
         segmentReplicantLookup,
         dataSources,
-        new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR),
+        null, // availableSegments
         loadManagementPeons,
         replicationManager,
         emitter,
@@ -215,7 +221,7 @@ public class DruidCoordinatorRuntimeParams
     private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
     private Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources;
-    private final Set<DataSegment> availableSegments;
+    private @Nullable TreeSet<DataSegment> availableSegments;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
     private ReplicationThrottler replicationManager;
     private ServiceEmitter emitter;
@@ -232,7 +238,7 @@ public class DruidCoordinatorRuntimeParams
       this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
       this.dataSources = new HashMap<>();
-      this.availableSegments = new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR);
+      this.availableSegments = null;
       this.loadManagementPeons = new HashMap<>();
       this.replicationManager = null;
       this.emitter = null;
@@ -248,7 +254,7 @@ public class DruidCoordinatorRuntimeParams
         MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
         Map<String, VersionedIntervalTimeline<String, DataSegment>> dataSources,
-        Set<DataSegment> availableSegments,
+        @Nullable TreeSet<DataSegment> availableSegments,
         Map<String, LoadQueuePeon> loadManagementPeons,
         ReplicationThrottler replicationManager,
         ServiceEmitter emitter,
@@ -346,22 +352,35 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
+    /** This method must be used in test code only. */
     @VisibleForTesting
-    public Builder withAvailableSegments(DataSegment... availableSegments)
+    public Builder withAvailableSegmentsInTest(DataSegment... availableSegments)
     {
-      this.availableSegments.addAll(Arrays.asList(availableSegments));
-      return this;
+      return withAvailableSegmentsInTest(Arrays.asList(availableSegments));
     }
 
-    public Builder withAvailableSegments(Collection<DataSegment> availableSegments)
+    /** This method must be used in test code only. */
+    @VisibleForTesting
+    public Builder withAvailableSegmentsInTest(Collection<DataSegment> availableSegments)
     {
-      this.availableSegments.addAll(Collections.unmodifiableCollection(availableSegments));
+      TreeSet<DataSegment> availableSegmentSet = createAvailableSegmentsSet();
+      availableSegmentSet.addAll(availableSegments);
+      return setAvailableSegments(availableSegmentSet);
+    }
+
+    public Builder setAvailableSegments(TreeSet<DataSegment> availableSegments)
+    {
+      //noinspection ObjectEquality
+      if (availableSegments.comparator() != DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST) {
+        throw new IllegalArgumentException("Expected DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST");
+      }
+      this.availableSegments = availableSegments;
       return this;
     }
 
     public Builder withLoadManagementPeons(Map<String, LoadQueuePeon> loadManagementPeonsCollection)
     {
-      loadManagementPeons.putAll(Collections.unmodifiableMap(loadManagementPeonsCollection));
+      loadManagementPeons.putAll(loadManagementPeonsCollection);
       return this;
     }
 
