@@ -190,7 +190,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentWriteOutMediumFactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
-|maxNumSubTasks|Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to `maxNumSubTasks` regardless of the available task slots. If this value is set to too large, too many worker tasks can be created which might block other ingestion.|2|no|
+|maxNumSubTasks|Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to `maxNumSubTasks` regardless of the available task slots. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|2|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |taskStatusCheckPeriodMs|Polling period in milleseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
@@ -433,8 +433,10 @@ stream ingestion from being blocked by batch ingestion. Suppose you have
 the max number of tasks for batch ingestion to `b`. Then, (sum of `maxNumSubTasks`
 of all Parallel Index Tasks + `t` (for supervisor tasks)) must be smaller than `b`.
 
-If you have tasks of a higher priority than others, you may set their
-`maxNumSubTasks` to a higher value than other tasks of a lower priority.
+If you have some tasks of a higher priority than others, you may set their
+`maxNumSubTasks` to a higher value than lower priority tasks.
+This may help the higher priority tasks to finish earlier than lower priority tasks
+by assigning more task slots to them.
 
 Local Index Task
 ----------------
