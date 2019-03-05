@@ -258,9 +258,15 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     try {
       if (baseFirehoseFactory.isSplittable()) {
         return runParallel(toolbox);
+      } else if (ingestionSchema.getTuningConfig().getMaxNumSubTasks() == 1) {
+        log.warn(
+            "maxNumSubTasks is 1. Running sequentially. "
+            + "Please set maxNumSubTasks to something higher than 1 if you want to run in parallel ingestion mode."
+        );
+        return runSequential(toolbox);
       } else {
         log.warn(
-            "firehoseFactory[%s] is not splittable. Running sequentially",
+            "firehoseFactory[%s] is not splittable. Running sequentially.",
             baseFirehoseFactory.getClass().getSimpleName()
         );
         return runSequential(toolbox);

@@ -34,7 +34,7 @@ import java.util.Objects;
 @JsonTypeName("index_parallel")
 public class ParallelIndexTuningConfig extends IndexTuningConfig
 {
-  private static final int DEFAULT_MAX_NUM_BATCH_TASKS = 2;
+  private static final int DEFAULT_MAX_NUM_BATCH_TASKS = 1;
   private static final int DEFAULT_MAX_RETRY = 3;
   private static final long DEFAULT_TASK_STATUS_CHECK_PERIOD_MS = 1000;
 
