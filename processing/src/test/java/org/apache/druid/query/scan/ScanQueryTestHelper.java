@@ -24,14 +24,17 @@ import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class ScanQueryTestHelper
 {
-  public static ScanResultValue generateScanResultValue(long timestamp, ScanQuery.ResultFormat resultFormat, int batchSize)
+  public static ScanResultValue generateScanResultValue(
+      long timestamp,
+      ScanQuery.ResultFormat resultFormat,
+      int batchSize
+  )
   {
     String segmentId = "some_segment_id";
     List<String> columns = new ArrayList<>(Arrays.asList(ColumnHolder.TIME_COLUMN_NAME, "name", "count"));
