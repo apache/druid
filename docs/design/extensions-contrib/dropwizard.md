@@ -1,6 +1,26 @@
 ---
 layout: doc_page
+title: "Dropwizard metrics emitter"
 ---
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 # Dropwizard Emitter
 
@@ -8,11 +28,10 @@ To use this extension, make sure to [include](../../operations/including-extensi
 
 ## Introduction
 
-The intent of this extension is to integrate [Dropwizard](http://metrics.dropwizard.io/3.1.0/getting-started/#) metrics library with druid so that dropwizard users can easily absorb druid into their monitoring ecosystem.
-It accumulates druid metrics in a dropwizard histogram and emits them to various sinks via dropwizard supported reporters.
-A histogram measures the statistical distribution of values in a stream of data. In addition to minimum, maximum, mean, etc., it also measures median, 75th, 90th, 95th, 98th, 99th, and 99.9th percentiles.
-Currently dropwizard metrics can be emitted to these sinks:
-Console,HTTP,JMX,Graphite,CSV,Slf4jLogger,Ganglia and various other community supported [sinks](http://metrics.dropwizard.io/3.1.0/manual/third-party/).
+This extension integrates [Dropwizard](http://metrics.dropwizard.io/3.1.0/getting-started/#) metrics library with druid so that dropwizard users can easily absorb druid into their monitoring ecosystem.
+It accumulates druid metrics as dropwizard metrics, and emits them to various sinks via dropwizard supported reporters.
+Currently supported dropwizard metrics types counter, gauge, meter, timer and histogram. 
+These metrics can be emitted using either Console or JMX reporter. 
 
 ## Configuration
 
@@ -20,78 +39,45 @@ All the configuration parameters for Dropwizard emitter are under `druid.emitter
 
 |property|description|required?|default|
 |--------|-----------|---------|-------|
-|`druid.emitter.dropwizard.metric`|The metric manager to be used.Currently supported metric manager is histogram|no|histogram|
-|`druid.emitter.dropwizard.reporter`|The dropwizard reporter to be used.|yes|none|
-|`druid.emitter.dropwizard.eventConverter`| Filter and converter of druid events to dropwizard event(please see next section). |yes|none|
+|`druid.emitter.dropwizard.reporters`|List of dropwizard reporters to be used.|yes|none|
+|`druid.emitter.dropwizard.prefix`|Optional prefix to be used for metrics name|no|none|
+|`druid.emitter.dropwizard.includeHost`|Flag to include the hostname as part of the metric name.|no|yes|
+|`druid.emitter.dropwizard.includeDimensionNames`|Flag to include the dimension names as part of the metric name.|no|yes|
+|`druid.emitter.dropwizard.dimensionMapPath`|Path to JSON file defining the StatsD type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
 |`druid.emitter.dropwizard.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
 
 
-### Druid to Dropwizard Event Converter
- 
-Dropwizard Event Converter defines a mapping between druid metrics name plus dimensions to a Dropwizard metric name.
-Dropwizard metric name is organized using the following schema:
-`<namespacePrefix>.[<druid service name>].[<druid hostname>].<druid metrics dimensions>.<druid metrics name>`
-Properly naming the metrics is critical to avoid conflicts, confusing data and potentially wrong interpretation later on.
+### Druid to Dropwizard Event Conversion
 
-Example `druid.historical.abc_com:8080.MyDataSourceName.GroupBy.query/time`:
+Each metric emitted using Dropwizard must specify a type, one of `[timer, counter, guage, meter, histogram, ]`. Dropwizard Emitter expects this mapping to
+be provided as a JSON file.  Additionally, this mapping specifies which dimensions should be included for each metric.
+If the user does not specify their own JSON file, a default mapping is used.
+All metrics are expected to be mapped. Metrics which are not mapped will log an error.
 
- * `druid` -> namespace prefix 
- * `historical` -> service name 
- * `abc.com:8080` -> druid hostname
- * `MyDataSourceName` -> dimension value 
- * `GroupBy` -> dimension value
- * `query/time` -> metric name
+Dropwizard metric path is organized using the following schema:
 
-We have two different implementation of event converter:
+`<druid metric name> : { "dimensions" : <dimension list>, "type" : <Dropwizard metric type>, "timeUnit" : <For timers, timeunit in which metric is emitted>}`
 
-#### Send-All converter
+e.g.
 
-The first implementation called `all`, will send all the druid service metrics events. 
-The metric name will be in the form `<namespacePrefix>.[<druid service name>].[<druid hostname>].<dimensions values ordered by dimension's name>.<metric>`
-User has control of `<namespacePrefix>.[<druid service name>].[<druid hostname>].`
+`"query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer", "timeUnit": "MILLISECONDS"}`
+`"segment/scan/pending" : { "dimensions" : [], "type" : "gauge"}`
 
-You can omit the hostname by setting `ignoreHostname=true`
-`druid.SERVICE_NAME.dataSourceName.queryType.query.time`
 
-You can omit the service name by setting `ignoreServiceName=true`
-`druid.HOSTNAME.dataSourceName.queryType.query.time`
+For most use-cases, the default mapping is sufficient.
 
-```json
+### Supported Dropwizard reporters
 
-druid.emitter.dropwizard.eventConverter={"type":"all", "namespacePrefix": "druid.test", "ignoreHostname":true, "ignoreServiceName":true}
-
-```
-
-#### White-list based converter
-
-The second implementation called `whiteList`, will send only the white listed metrics and dimensions.
-Same as for the `all` converter user has control of `<namespacePrefix>.[<druid service name>].[<druid hostname>].`
-White-list based converter comes with the following  default white list map located under resources in `./src/main/resources/defaultWhiteListMap.json`
-
-Although user can override the default white list map by supplying a property called `mapPath`.
-This property is a String containing  the path for the file containing **white list map Json object**.
-For example the following converter will read the map from the file `/pathPrefix/fileName.json`.  
-
-```json
-
-druid.emitter.dropwizard.eventConverter={"type":"whiteList", "namespacePrefix": "druid.test", "ignoreHostname":true, "ignoreServiceName":true, "mapPath":"/pathPrefix/fileName.json"}
-
-```
-
-**Druid emits a huge number of metrics we highly recommend to use the `whiteList` converter**
-
-### Metric Manager
-
-Metric manager defines the dropwizard accumulator that would be used to accumulate druid metric events.
-For eg : Gauge,Counter,Histogram,Meter etc.
-
-### Dropwizard reporter
-
+#### JMX Reporter
+Used to report druid metrics via JMX.
 ```json
 
 druid.emitter.dropwizard.reporter={"type":"jmx"}
 
 ```
+
+#### Console Reporter
+Used to print Druid Metrics to console logs.
 
 ```json
 

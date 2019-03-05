@@ -158,6 +158,8 @@
         <module>extensions-contrib/influx-extensions</module>
         <module>extensions-contrib/azure-extensions</module>
         <module>extensions-contrib/cassandra-storage</module>
+        <module>extensions-contrib/druid-rocketmq</module>
+        <module>extensions-contrib/dropwizard-emitter</module>
         <module>extensions-contrib/cloudfiles-extensions</module>
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/distinctcount</module>

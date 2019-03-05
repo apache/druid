@@ -18,39 +18,39 @@
  ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.druid</groupId>
+    <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.10.0-SNAPSHOT</version>
+    <version>0.15.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
 
-  <groupId>io.druid.extensions.contrib</groupId>
+  <groupId>org.apache.druid.extensions.contrib</groupId>
   <artifactId>dropwizard-emitter</artifactId>
   <name>dropwizard-emitter</name>
   <description>Druid emitter extension to convert druid metric to Dropwizard metrics</description>
 
   <dependencies>
     <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>druid-common</artifactId>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-core</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>druid-api</artifactId>
+      <groupId>org.apache.druid</groupId>
+      <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.metamx</groupId>
-      <artifactId>emitter</artifactId>
-      <scope>provided</scope>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+      <version>3.1.0</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
@@ -69,23 +69,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.druid</groupId>
-      <artifactId>druid-server</artifactId>
-      <version>${project.parent.version}</version>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.druid</groupId>
+      <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
-      <dependency>
-          <groupId>io.dropwizard.metrics</groupId>
-          <artifactId>metrics-core</artifactId>
-          <version>3.1.0</version>
-      </dependency>
   </dependencies>
 </project>
