@@ -64,6 +64,16 @@
             </configuration>
           </execution>
           <execution>
+            <id>license-check</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>run check-licenses</arguments>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
+          <execution>
             <id>test-console</id>
             <goals>
               <goal>npm</goal>
@@ -71,6 +81,17 @@
             <phase>test</phase>
             <configuration>
               <arguments>test</arguments>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
+
+          <execution>
+            <id>generate-licenses-file</id>
+            <goals>
+              <goal>npm</goal>
+            </goals>
+            <configuration>
+              <arguments>run generate-licenses-file</arguments>
               <workingDirectory>${project.build.directory}</workingDirectory>
             </configuration>
           </execution>
