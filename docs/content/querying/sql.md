@@ -147,6 +147,14 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`x * y`|Multiplication.|
 |`x / y`|Division.|
 |`MOD(x, y)`|Modulo (remainder of x divided by y).|
+|`SIN(expr)`|Trigonometric sine of an angle expr.|
+|`COS(expr)`|Trigonometric cosine of an angle expr.|
+|`TAN(expr)`|Trigonometric tangent of an angle expr.|
+|`COT(expr)`|Trigonometric cotangent of an angle expr.|
+|`ASIN(expr)`|Arc sine of expr.|
+|`ACOS(expr)`|Arc cosine of expr.|
+|`ATAN(expr)`|Arc tangent of expr.|
+|`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
 
 ### String functions
 
