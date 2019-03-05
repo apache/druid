@@ -191,8 +191,9 @@ When using this firehose, events can be sent by submitting a POST request to the
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "receiver"|yes|
-|serviceName|name used to announce the event receiver service endpoint|yes|
-|bufferSize| size of buffer used by firehose to store events|no default(100000)|
+|serviceName|Name used to announce the event receiver service endpoint|yes|
+|maxIdleTime|A firehose is automatically shut down after not receiving any events for this period of time, in milliseconds. If not specified, a firehose is never shut down due to being idle. Zero and negative values have the same effect.|no|
+|bufferSize|Size of buffer used by firehose to store events|no, default is 100000|
 
 Shut down time for EventReceiverFirehose can be specified by submitting a POST request to
 

@@ -7622,4 +7622,51 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testTrigonometricFunction() throws Exception
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS,
+        "SELECT exp(count(*)) + 10, sin(pi / 6), cos(pi / 6), tan(pi / 6), cot(pi / 6)," +
+            "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1) " +
+            "FROM druid.foo WHERE  dim2 = 0",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
+                               .dataSource(CalciteTests.DATASOURCE1)
+                               .intervals(querySegmentSpec(Filtration.eternity()))
+                               .filters(selector("dim2", "0", null))
+                               .granularity(Granularities.ALL)
+                               .aggregators(aggregators(
+                                   new CountAggregatorFactory("a0")
+                               ))
+                               .postAggregators(
+                                   expresionPostAgg("p0", "(exp(\"a0\") + 10)"),
+                                   expresionPostAgg("p1", "sin((pi() / 6))"),
+                                   expresionPostAgg("p2", "cos((pi() / 6))"),
+                                   expresionPostAgg("p3", "tan((pi() / 6))"),
+                                   expresionPostAgg("p4", "cot((pi() / 6))"),
+                                   expresionPostAgg("p5", "asin((exp(\"a0\") / 2))"),
+                                   expresionPostAgg("p6", "acos((exp(\"a0\") / 2))"),
+                                   expresionPostAgg("p7", "atan((exp(\"a0\") / 2))"),
+                                   expresionPostAgg("p8", "atan2(exp(\"a0\"),1)")
+                               )
+                               .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
+                               .build()),
+        ImmutableList.of(
+            new Object[]{
+                11.0,
+                Math.sin(Math.PI / 6),
+                Math.cos(Math.PI / 6),
+                Math.tan(Math.PI / 6),
+                Math.cos(Math.PI / 6) / Math.sin(Math.PI / 6),
+                Math.asin(0.5),
+                Math.acos(0.5),
+                Math.atan(0.5),
+                Math.atan2(1, 1)
+            }
+        )
+    );
+  }
 }
