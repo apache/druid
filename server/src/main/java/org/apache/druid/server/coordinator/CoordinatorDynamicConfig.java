@@ -244,16 +244,19 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * Decommissioning velocity indicates what proportion of balancer 'move' operations out of
-   * {@link CoordinatorDynamicConfig#getMaxSegmentsToMove()} total will be spent towards 'decommissioning' servers
-   * by moving their segments to active servers, instead of normal 'balancing' segments between servers.
-   * Coordinator takes ceil(maxSegmentsToMove * (velocity / 10)) from decommissioning servers during balancing phase:
-   * 0 - no segments from decommissioning servers will be processed during balancing
-   * 5 - 50% segments from decommissioning servers
-   * 10 - 100% segments from decommissioning servers
-   * By leveraging the velocity an operator can prevent general nodes from overload or decrease 'decommissioning' time
-   * instead. Decommissioning can become stalled if there are no available active servers to place the segments.
+   * Decommissioning velocity determines the maximum number of segments that may be moved away from 'decommissioning'
+   * servers non-decommissioning (that is, active) servers during one Coordinator's run, relative to the total maximum
+   * segment movements allowed during one Coordinator's run (which, in turn, is determined by the
+   * {@link CoordinatorDynamicConfig#getMaxSegmentsToMove()}).
+   * Specifically, the maximum is ceil(maxSegmentsToMove * (velocity / 10)).
    *
+   * For example,
+   *    if decommissioningVelocity is 0 no segments will be moved away from 'decommissioning' servers.
+   *    If decommissioningVelocity is 5 no more than ceil(maxSegmentsToMove * 0.5) segments may be moved away from 'decommissioning' servers.
+   *
+   * By leveraging the velocity an operator can prevent active servers from overload by prioritizing balancing,
+   * or decrease decommissioning time instead. Decommissioning can become stalled if there are no available active
+   * servers to place the segments. The value should be between 0 and 10.
    * @return number in range [0, 10]
    */
   @JsonProperty
