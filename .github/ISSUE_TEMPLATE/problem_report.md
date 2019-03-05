@@ -10,13 +10,13 @@ Please provide a detailed title (e.g. "Broker crashes when using TopN query with
 
 ### Affected Version
 
-The Druid version where the bug was encountered.
+The Druid version where the problem was encountered.
 
 ### Description
 
-Please include as much detailed information about the bug as possible.
+Please include as much detailed information about the problem as possible.
 - Cluster size
 - Configurations in use
-- Steps to reproduce the bug
+- Steps to reproduce the problem
 - The error message or stack traces encountered. Providing more context, such as nearby log messages or even entire logs, can be helpful.
 - Any debugging that you have already done
