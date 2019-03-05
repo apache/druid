@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -131,6 +132,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
 
     this.chatHandlerTimeout = DEFAULT_CHAT_HANDLER_TIMEOUT;
     this.chatHandlerNumRetries = DEFAULT_CHAT_HANDLER_NUM_RETRIES;
+
+    Preconditions.checkArgument(this.maxNumSubTasks > 0, "maxNumSubTasks must be positive");
   }
 
   @JsonProperty

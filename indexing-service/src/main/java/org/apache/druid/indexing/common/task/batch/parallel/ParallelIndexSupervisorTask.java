@@ -256,26 +256,37 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     chatHandlerProvider.register(getId(), this, false);
 
     try {
-      if (baseFirehoseFactory.isSplittable()) {
-        if (ingestionSchema.getTuningConfig().getMaxNumSubTasks() == 1) {
+      if (isParallelMode()) {
+        return runParallel(toolbox);
+      } else {
+        if (!baseFirehoseFactory.isSplittable()) {
+          log.warn(
+              "firehoseFactory[%s] is not splittable. Running sequentially.",
+              baseFirehoseFactory.getClass().getSimpleName()
+          );
+        } else if (ingestionSchema.getTuningConfig().getMaxNumSubTasks() == 1) {
           log.warn(
               "maxNumSubTasks is 1. Running sequentially. "
               + "Please set maxNumSubTasks to something higher than 1 if you want to run in parallel ingestion mode."
           );
-          return runSequential(toolbox);
         } else {
-          return runParallel(toolbox);
+          throw new ISE("Unknown reason for sequentail mode. Failing this task.");
         }
-      } else {
-        log.warn(
-            "firehoseFactory[%s] is not splittable. Running sequentially.",
-            baseFirehoseFactory.getClass().getSimpleName()
-        );
+
         return runSequential(toolbox);
       }
     }
     finally {
       chatHandlerProvider.unregister(getId());
+    }
+  }
+
+  private boolean isParallelMode()
+  {
+    if (baseFirehoseFactory.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumSubTasks() > 1) {
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -487,11 +498,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   public Response getMode(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    if (runner == null) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
-    } else {
-      return Response.ok(baseFirehoseFactory.isSplittable() ? "parallel" : "sequential").build();
-    }
+    return Response.ok(isParallelMode() ? "parallel" : "sequential").build();
   }
 
   @GET
