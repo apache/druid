@@ -113,7 +113,7 @@
         </dependency>
         <dependency>
             <groupId>org.checkerframework</groupId>
-            <artifactId>checker</artifactId>
+            <artifactId>checker-qual</artifactId>
             <version>${checkerframework.version}</version>
         </dependency>
         <dependency>
