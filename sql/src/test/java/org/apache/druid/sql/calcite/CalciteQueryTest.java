@@ -7642,15 +7642,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    new CountAggregatorFactory("a0")
                                ))
                                .postAggregators(
-                                   expresionPostAgg("p0", "(exp(\"a0\") + 10)"),
-                                   expresionPostAgg("p1", "sin((pi() / 6))"),
-                                   expresionPostAgg("p2", "cos((pi() / 6))"),
-                                   expresionPostAgg("p3", "tan((pi() / 6))"),
-                                   expresionPostAgg("p4", "cot((pi() / 6))"),
-                                   expresionPostAgg("p5", "asin((exp(\"a0\") / 2))"),
-                                   expresionPostAgg("p6", "acos((exp(\"a0\") / 2))"),
-                                   expresionPostAgg("p7", "atan((exp(\"a0\") / 2))"),
-                                   expresionPostAgg("p8", "atan2(exp(\"a0\"),1)")
+                                   expressionPostAgg("p0", "(exp(\"a0\") + 10)"),
+                                   expressionPostAgg("p1", "sin((pi() / 6))"),
+                                   expressionPostAgg("p2", "cos((pi() / 6))"),
+                                   expressionPostAgg("p3", "tan((pi() / 6))"),
+                                   expressionPostAgg("p4", "cot((pi() / 6))"),
+                                   expressionPostAgg("p5", "asin((exp(\"a0\") / 2))"),
+                                   expressionPostAgg("p6", "acos((exp(\"a0\") / 2))"),
+                                   expressionPostAgg("p7", "atan((exp(\"a0\") / 2))"),
+                                   expressionPostAgg("p8", "atan2(exp(\"a0\"),1)")
                                )
                                .context(QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS)
                                .build()),
