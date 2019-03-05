@@ -71,3 +71,4 @@ For instructions on building Druid from source, see [docs/content/development/bu
 ### Contributing
 
 Please follow the guidelines listed [here](http://druid.io/community/).
+
