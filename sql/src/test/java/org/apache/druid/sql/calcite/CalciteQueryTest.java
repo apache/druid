@@ -174,7 +174,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
 
     testQuery(
-        "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent' GROUP BY FLOor(__time TO DAY)",
+        "SELECT COUNT(*) FROM foo WHERE dim1 = 'nonexistent' GROUP BY FLOOR(__time TO DAY)",
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Filtration.eternity()))
@@ -406,7 +406,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  COUNT(JDBC_TYPE),\n"
         + "  SUM(JDBC_TYPE),\n"
         + "  AVG(JDBC_TYPE),\n"
-        + "  Min(JDBC_TYPE),\n"
+        + "  MIN(JDBC_TYPE),\n"
         + "  MAX(JDBC_TYPE)\n"
         + "FROM INFORMATION_SCHEMA.COLUMNS\n"
         + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'",
@@ -869,10 +869,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "FLOor(__time TO MONTH) AS __time,\n"
+        + "FLOOR(__time TO MONTH) AS __time,\n"
         + "COUNT(*)\n"
         + "FROM druid.foo\n"
-        + "GROUP BY FLOor(__time TO MONTH)",
+        + "GROUP BY FLOOR(__time TO MONTH)",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -1596,7 +1596,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "  CASE EXTRACt(DAY FROM __time)\n"
+        + "  CASE EXTRACT(DAY FROM __time)\n"
         + "    WHEN m1 THEN 'match-m1'\n"
         + "    WHEN cnt THEN 'match-cnt'\n"
         + "    WHEN 0 THEN 'zero'"
@@ -1604,7 +1604,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  COUNT(*)\n"
         + "FROM druid.foo\n"
         + "GROUP BY"
-        + "  CASE EXTRACt(DAY FROM __time)\n"
+        + "  CASE EXTRACT(DAY FROM __time)\n"
         + "    WHEN m1 THEN 'match-m1'\n"
         + "    WHEN cnt THEN 'match-cnt'\n"
         + "    WHEN 0 THEN 'zero'"
@@ -2327,7 +2327,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSimpleAggregations() throws Exception
   {
     testQuery(
-        "SELECT COUNT(*), COUNT(cnt), COUNT(dim1), AVG(cnt), SUM(cnt), SUM(cnt) + Min(cnt) + MAX(cnt), COUNT(dim2) FROM druid.foo",
+        "SELECT COUNT(*), COUNT(cnt), COUNT(dim1), AVG(cnt), SUM(cnt), SUM(cnt) + MIN(cnt) + MAX(cnt), COUNT(dim2) FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -2381,7 +2381,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // By default this query uses topN.
 
     testQuery(
-        "SELECT dim1, Min(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
+        "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
         ImmutableList.of(
             new TopNQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
@@ -2417,7 +2417,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         PLANNER_CONFIG_NO_TOPN,
-        "SELECT dim1, Min(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
+        "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
@@ -2461,7 +2461,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_NO_TOPN,
-        "SELECT dim1, Min(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
+        "SELECT dim1, MIN(m1) + MAX(m1) AS x FROM druid.foo GROUP BY dim1 ORDER BY x LIMIT 3",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
@@ -2509,15 +2509,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "SUM(case dim1 when 'abc' then cnt end), "
         + "SUM(case dim1 when 'abc' then null else cnt end), "
         + "SUM(case substring(dim1, 1, 1) when 'a' then cnt end), "
-        + "COUNT(dim2) FILTER(WHERE dim1 <> '1'), "
+        + "COUNT(dim2) filter(WHERE dim1 <> '1'), "
         + "COUNT(CASE WHEN dim1 <> '1' THEN 'dummy' END), "
         + "SUM(CASE WHEN dim1 <> '1' THEN 1 ELSE 0 END), "
-        + "SUM(cnt) FILTER(WHERE dim2 = 'a'), "
-        + "SUM(case when dim1 <> '1' then cnt end) FILTER(WHERE dim2 = 'a'), "
+        + "SUM(cnt) filter(WHERE dim2 = 'a'), "
+        + "SUM(case when dim1 <> '1' then cnt end) filter(WHERE dim2 = 'a'), "
         + "SUM(CASE WHEN dim1 <> '1' THEN cnt ELSE 0 END), "
         + "MAX(CASE WHEN dim1 <> '1' THEN cnt END), "
         + "COUNT(DISTINCT CASE WHEN dim1 <> '1' THEN m1 END), "
-        + "SUM(cnt) FILTER(WHERE dim2 = 'a' AND dim1 = 'b') "
+        + "SUM(cnt) filter(WHERE dim2 = 'a' AND dim1 = 'b') "
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -2636,8 +2636,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "COUNT(*) FILTER(WHERE dim1 NOT IN ('1')),\n"
-        + "COUNT(dim2) FILTER(WHERE dim1 NOT IN ('1'))\n"
+        + "COUNT(*) filter(WHERE dim1 NOT IN ('1')),\n"
+        + "COUNT(dim2) filter(WHERE dim1 NOT IN ('1'))\n"
         + "FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -2715,11 +2715,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "  FLOor(m1 / 2) * 2,\n"
+        + "  FLOOR(m1 / 2) * 2,\n"
         + "  COUNT(*)\n"
         + "FROM druid.foo\n"
-        + "WHERE FLOor(m1 / 2) * 2 > -1\n"
-        + "GROUP BY FLOor(m1 / 2) * 2\n"
+        + "WHERE FLOOR(m1 / 2) * 2 > -1\n"
+        + "GROUP BY FLOOR(m1 / 2) * 2\n"
         + "ORDER BY 1 DESC",
         ImmutableList.of(
             GroupByQuery.builder()
@@ -2809,11 +2809,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "  FLOor(CAST(dim1 AS FLOAT) / 2) * 2,\n"
+        + "  FLOOR(CAST(dim1 AS FLOAT) / 2) * 2,\n"
         + "  COUNT(*)\n"
         + "FROM druid.foo\n"
-        + "WHERE FLOor(CAST(dim1 AS FLOAT) / 2) * 2 > -1\n"
-        + "GROUP BY FLOor(CAST(dim1 AS FLOAT) / 2) * 2\n"
+        + "WHERE FLOOR(CAST(dim1 AS FLOAT) / 2) * 2 > -1\n"
+        + "GROUP BY FLOOR(CAST(dim1 AS FLOAT) / 2) * 2\n"
         + "ORDER BY 1 DESC",
         ImmutableList.of(
             GroupByQuery.builder()
@@ -3398,8 +3398,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE "
-        + "cnt >= EXTRACt(EPOCH FROM TIMESTAMP '1970-01-01 00:00:00') * 1000 "
-        + "AND cnt < EXTRACt(EPOCH FROM TIMESTAMP '1970-01-02 00:00:00') * 1000",
+        + "cnt >= EXTRACT(EPOCH FROM TIMESTAMP '1970-01-01 00:00:00') * 1000 "
+        + "AND cnt < EXTRACT(EPOCH FROM TIMESTAMP '1970-01-02 00:00:00') * 1000",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3431,8 +3431,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE "
-        + "cnt >= EXTRACt(EPOCH FROM DATE '1970-01-01') * 1000 "
-        + "AND cnt < EXTRACt(EPOCH FROM DATE '1970-01-02') * 1000",
+        + "cnt >= EXTRACT(EPOCH FROM DATE '1970-01-01') * 1000 "
+        + "AND cnt < EXTRACT(EPOCH FROM DATE '1970-01-02') * 1000",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -3551,7 +3551,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "  FLOor(MILLIS_TO_TIMESTAMP(cnt) TO YEAR),\n"
+        + "  FLOOR(MILLIS_TO_TIMESTAMP(cnt) TO YEAR),\n"
         + "  COUNT(*)\n"
         + "FROM\n"
         + "  druid.foo\n"
@@ -3559,7 +3559,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "  MILLIS_TO_TIMESTAMP(cnt) >= TIMESTAMP '1970-01-01 00:00:00'\n"
         + "  AND MILLIS_TO_TIMESTAMP(cnt) < TIMESTAMP '1970-01-02 00:00:00'\n"
         + "GROUP BY\n"
-        + "  FLOor(MILLIS_TO_TIMESTAMP(cnt) TO YEAR)",
+        + "  FLOOR(MILLIS_TO_TIMESTAMP(cnt) TO YEAR)",
         ImmutableList.of(
             new GroupByQuery.Builder()
                 .setDataSource(CalciteTests.DATASOURCE1)
@@ -3924,7 +3924,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     testQuery(
         PLANNER_CONFIG_NO_HLL,
-        "SELECT APPROX_COUNT_DISTINCt(dim2) FROM druid.foo",
+        "SELECT APPROX_COUNT_DISTINCT(dim2) FROM druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -4011,10 +4011,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
-        + "  APPROX_COUNT_DISTINCt(dim2),\n" // uppercase
+        + "  APPROX_COUNT_DISTINCT(dim2),\n" // uppercase
         + "  approx_count_distinct(dim2) FILTER(WHERE dim2 <> ''),\n" // lowercase; also, filtered
-        + "  APPROX_COUNT_DISTINCt(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn
-        + "  APPROX_COUNT_DISTINCt(SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression
+        + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1)),\n" // on extractionFn
+        + "  APPROX_COUNT_DISTINCT(SUBSTRING(dim2, 1, 1) || 'x'),\n" // on expression
         + "  approx_count_distinct(unique_dim1)\n" // on native hyperUnique column
         + "FROM druid.foo",
         ImmutableList.of(
@@ -4087,7 +4087,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "    FLOor(__time to hour) AS __time,\n"
+        + "    FLOOR(__time to hour) AS __time,\n"
         + "    dim1,\n"
         + "    COUNT(m2)\n"
         + "FROM (\n"
@@ -4100,7 +4100,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "        AND m1 = '5.0'\n"
         + "    GROUP BY m2, dim1\n"
         + ")\n"
-        + "GROUP BY FLOor(__time to hour), dim1",
+        + "GROUP BY FLOOR(__time to hour), dim1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -4275,8 +4275,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT * FROM ("
-        + "  SELECT max(cnt), min(cnt), avg(cnt), TIME_EXTRACt(max(t), 'EPOCH') last_time, count(1) num_days FROM (\n"
-        + "      SELECT TIME_FLOor(__time, 'P1D') AS t, count(1) cnt\n"
+        + "  SELECT max(cnt), min(cnt), avg(cnt), TIME_EXTRACT(max(t), 'EPOCH') last_time, count(1) num_days FROM (\n"
+        + "      SELECT TIME_FLOOR(__time, 'P1D') AS t, count(1) cnt\n"
         + "      FROM \"foo\"\n"
         + "      GROUP BY 1\n"
         + "  )"
@@ -4339,7 +4339,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT\n"
         + "  AVG(u)\n"
-        + "FROM (SELECT FLOor(__time TO DAY), APPROX_COUNT_DISTINCt(cnt) AS u FROM druid.foo GROUP BY 1)",
+        + "FROM (SELECT FLOOR(__time TO DAY), APPROX_COUNT_DISTINCT(cnt) AS u FROM druid.foo GROUP BY 1)",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(
@@ -5072,12 +5072,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSillyQuarters() throws Exception
   {
-    // Like FLOor(__time TO QUARTER) but silly.
+    // Like FLOOR(__time TO QUARTER) but silly.
 
     testQuery(
-        "SELECT CAST((EXTRACt(MONTH FROM __time) - 1 ) / 3 + 1 AS INTEGER) AS quarter, COUNT(*)\n"
+        "SELECT CAST((EXTRACT(MONTH FROM __time) - 1 ) / 3 + 1 AS INTEGER) AS quarter, COUNT(*)\n"
         + "FROM foo\n"
-        + "GROUP BY CAST((EXTRACt(MONTH FROM __time) - 1 ) / 3 + 1 AS INTEGER)",
+        + "GROUP BY CAST((EXTRACT(MONTH FROM __time) - 1 ) / 3 + 1 AS INTEGER)",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5105,10 +5105,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     String nullValue = NullHandling.replaceWithDefault() ? "" : null;
     testQuery(
         "SELECT DISTINCT\n"
-        + "  REGEXP_EXTRACt(dim1, '^.'),\n"
-        + "  REGEXP_EXTRACt(dim1, '^(.)', 1)\n"
+        + "  REGEXP_EXTRACT(dim1, '^.'),\n"
+        + "  REGEXP_EXTRACT(dim1, '^(.)', 1)\n"
         + "FROM foo\n"
-        + "WHERE REGEXP_EXTRACt(dim1, '^(.)', 1) <> 'x'",
+        + "WHERE REGEXP_EXTRACT(dim1, '^(.)', 1) <> 'x'",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5251,8 +5251,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE\n"
-        + "FLOor(__time TO MONTH) = TIMESTAMP '2000-01-01 00:00:00'\n"
-        + "OR FLOor(__time TO MONTH) = TIMESTAMP '2000-02-01 00:00:00'",
+        + "FLOOR(__time TO MONTH) = TIMESTAMP '2000-01-01 00:00:00'\n"
+        + "OR FLOOR(__time TO MONTH) = TIMESTAMP '2000-02-01 00:00:00'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5382,7 +5382,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE\n"
-        + "FLOor(__time TO MONTH) <> TIMESTAMP '2001-01-01 00:00:00'",
+        + "FLOOR(__time TO MONTH) <> TIMESTAMP '2001-01-01 00:00:00'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5407,7 +5407,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE\n"
-        + "FLOor(__time TO MONTH) < TIMESTAMP '2000-02-01 00:00:00'",
+        + "FLOOR(__time TO MONTH) < TIMESTAMP '2000-02-01 00:00:00'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5429,7 +5429,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
         + "WHERE\n"
-        + "FLOor(__time TO MONTH) < TIMESTAMP '2000-02-01 00:00:01'",
+        + "FLOOR(__time TO MONTH) < TIMESTAMP '2000-02-01 00:00:01'",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5450,8 +5450,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
-        + "WHERE EXTRACt(YEAR FROM __time) = 2000\n"
-        + "AND EXTRACt(MONTH FROM __time) = 1",
+        + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
+        + "AND EXTRACT(MONTH FROM __time) = 1",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5482,8 +5482,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT COUNT(*) FROM druid.foo\n"
-        + "WHERE EXTRACt(YEAR FROM __time) = 2000\n"
-        + "AND EXTRACt(DAY FROM __time) IN (2, 3, 5)",
+        + "WHERE EXTRACT(YEAR FROM __time) = 2000\n"
+        + "AND EXTRACT(DAY FROM __time) IN (2, 3, 5)",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
@@ -5893,7 +5893,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT FLOor(__time TO MONTH) AS gran,\n"
+        + "  SELECT FLOOR(__time TO MONTH) AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -5924,7 +5924,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_LOS_ANGELES,
         QUERY_CONTEXT_DEFAULT,
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT FLOor(__time TO MONTH) AS gran,\n"
+        + "  SELECT FLOOR(__time TO MONTH) AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -5953,7 +5953,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT TIME_FLOor(__time, 'P1M') AS gran,\n"
+        + "  SELECT TIME_FLOOR(__time, 'P1M') AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -5979,7 +5979,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT TIME_FLOor(TIME_SHIFt(__time, 'P1D', -1), 'P1M') AS gran,\n"
+        + "  SELECT TIME_FLOOR(TIME_SHIFt(__time, 'P1D', -1), 'P1M') AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -6027,7 +6027,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT TIME_FLOor(TIMESTAMPADD(DAY, -1, __time), 'P1M') AS gran,\n"
+        + "  SELECT TIME_FLOOR(TIMESTAMPADD(DAY, -1, __time), 'P1M') AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -6075,7 +6075,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT TIME_FLOor(__time, 'P1M', TIMESTAMP '1970-01-01 01:02:03') AS gran,\n"
+        + "  SELECT TIME_FLOOR(__time, 'P1M', TIMESTAMP '1970-01-01 01:02:03') AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -6109,7 +6109,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT TIME_FLOor(__time, 'P1M', CAST(NULL AS TIMESTAMP), 'America/Los_Angeles') AS gran,\n"
+        + "  SELECT TIME_FLOOR(__time, 'P1M', CAST(NULL AS TIMESTAMP), 'America/Los_Angeles') AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -6139,7 +6139,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
         "SELECT SUM(cnt), gran FROM (\n"
-        + "  SELECT TIME_FLOor(__time, 'P1M') AS gran,\n"
+        + "  SELECT TIME_FLOOR(__time, 'P1M') AS gran,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY gran\n"
@@ -6251,7 +6251,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT SUM(cnt), dt FROM (\n"
-        + "  SELECT CAST(FLOor(__time TO QUARTER) AS DATE) AS dt,\n"
+        + "  SELECT CAST(FLOOR(__time TO QUARTER) AS DATE) AS dt,\n"
         + "  cnt FROM druid.foo\n"
         + ") AS x\n"
         + "GROUP BY dt\n"
@@ -6304,10 +6304,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "  EXTRACt(YEAR FROM __time) AS \"year\",\n"
+        + "  EXTRACT(YEAR FROM __time) AS \"year\",\n"
         + "  SUM(cnt)\n"
         + "FROM druid.foo\n"
-        + "GROUP BY EXTRACt(YEAR FROM __time)\n"
+        + "GROUP BY EXTRACT(YEAR FROM __time)\n"
         + "ORDER BY 1",
         ImmutableList.of(
             GroupByQuery.builder()
@@ -6396,9 +6396,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "EXTRACt(YEAR FROM FLOor(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
+        + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
         + "FROM druid.foo\n"
-        + "GROUP BY EXTRACt(YEAR FROM FLOor(__time TO YEAR))",
+        + "GROUP BY EXTRACT(YEAR FROM FLOOR(__time TO YEAR))",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -6430,9 +6430,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_LOS_ANGELES,
         "SELECT\n"
-        + "EXTRACt(YEAR FROM FLOor(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
+        + "EXTRACT(YEAR FROM FLOOR(__time TO YEAR)) AS \"year\", SUM(cnt)\n"
         + "FROM druid.foo\n"
-        + "GROUP BY EXTRACt(YEAR FROM FLOor(__time TO YEAR))",
+        + "GROUP BY EXTRACT(YEAR FROM FLOOR(__time TO YEAR))",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             GroupByQuery.builder()
@@ -6549,7 +6549,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT dim2, gran, SUM(cnt)\n"
-        + "FROM (SELECT FLOor(__time TO MONTH) AS gran, dim2, cnt FROM druid.foo) AS x\n"
+        + "FROM (SELECT FLOOR(__time TO MONTH) AS gran, dim2, cnt FROM druid.foo) AS x\n"
         + "GROUP BY dim2, gran\n"
         + "ORDER BY dim2, gran",
         ImmutableList.of(
@@ -6813,7 +6813,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSemiJoinWithOuterTimeExtractScan() throws Exception
   {
     testQuery(
-        "SELECT dim1, EXTRACt(MONTH FROM __time) FROM druid.foo\n"
+        "SELECT dim1, EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
         + "   SELECT dim2\n"
         + "   FROM druid.foo\n"
@@ -6854,14 +6854,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy() throws Exception
   {
     testQuery(
-        "SELECT COUNT(DISTINCT dim1), EXTRACt(MONTH FROM __time) FROM druid.foo\n"
+        "SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
         + "   SELECT dim2\n"
         + "   FROM druid.foo\n"
         + "   WHERE dim1 = 'def'\n"
         + " ) AND dim1 <> ''"
-        + "GROUP BY EXTRACt(MONTH FROM __time)\n"
-        + "ORDER BY EXTRACt(MONTH FROM __time)",
+        + "GROUP BY EXTRACT(MONTH FROM __time)\n"
+        + "ORDER BY EXTRACT(MONTH FROM __time)",
         ImmutableList.of(
             GroupByQuery
                 .builder()
@@ -7192,15 +7192,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT "
-        + "  FLOor(__time TO YEAR), "
+        + "  FLOOR(__time TO YEAR), "
         + "  SUM(m1), "
         + "  SUM(m1) + SUM(m2) "
         + "FROM "
         + "  druid.foo "
         + "WHERE "
         + "  dim2 = 'a' "
-        + "GROUP BY FLOor(__time TO YEAR) "
-        + "ORDER BY FLOor(__time TO YEAR) desc",
+        + "GROUP BY FLOOR(__time TO YEAR) "
+        + "ORDER BY FLOOR(__time TO YEAR) desc",
         Collections.singletonList(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
