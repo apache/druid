@@ -133,7 +133,9 @@ public class SegmentManager
 
   public boolean isSegmentCached(final DataSegment segment)
   {
-    return segmentLoader.isSegmentLoaded(segment);
+    synchronized (segmentLoader) {
+      return segmentLoader.isSegmentLoaded(segment);
+    }
   }
 
   @Nullable
@@ -171,7 +173,7 @@ public class SegmentManager
           );
 
           if ((entry != null) && (entry.getChunk(segment.getShardSpec().getPartitionNum()) != null)) {
-            log.warn("Told to load a adapter for a segment[%s] that already exists", segment.getId());
+            log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
             resultSupplier.set(false);
           } else {
             loadedIntervals.add(
@@ -192,12 +194,14 @@ public class SegmentManager
   private Segment getAdapter(final DataSegment segment) throws SegmentLoadingException
   {
     final Segment adapter;
-    try {
-      adapter = segmentLoader.getSegment(segment);
-    }
-    catch (SegmentLoadingException e) {
-      segmentLoader.cleanup(segment);
-      throw e;
+    synchronized (segmentLoader) {
+      try {
+        adapter = segmentLoader.getSegment(segment);
+      }
+      catch (SegmentLoadingException e) {
+        segmentLoader.cleanup(segment);
+        throw e;
+      }
     }
 
     if (adapter == null) {
@@ -223,6 +227,8 @@ public class SegmentManager
             final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
                 segment.getInterval(),
                 segment.getVersion(),
+                // remove() internally searches for a partitionChunk to remove which is *equal* to the given
+                // partitionChunk. Note that partitionChunk.equals() checks only the partitionNum, but not the object.
                 segment.getShardSpec().createChunk(null)
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
@@ -234,7 +240,7 @@ public class SegmentManager
               oldQueryable.close();
             } else {
               log.info(
-                  "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
+                  "Told to delete a queryable on dataSource[%s] for interval[%s] and version[%s] that I don't have.",
                   dataSourceName,
                   segment.getInterval(),
                   segment.getVersion()
@@ -247,6 +253,8 @@ public class SegmentManager
         }
     );
 
-    segmentLoader.cleanup(segment);
+    synchronized (segmentLoader) {
+      segmentLoader.cleanup(segment);
+    }
   }
 }
