@@ -75,11 +75,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
           return RESULT_FORMAT_LIST;
       }
     }
-
-    public byte[] getCacheKey()
-    {
-      return new byte[]{(byte) this.ordinal()};
-    }
   }
 
   public enum TimeOrder
@@ -99,11 +94,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     public static TimeOrder fromString(String name)
     {
       return valueOf(StringUtils.toUpperCase(name));
-    }
-
-    public byte[] getCacheKey()
-    {
-      return new byte[]{(byte) this.ordinal()};
     }
   }
 

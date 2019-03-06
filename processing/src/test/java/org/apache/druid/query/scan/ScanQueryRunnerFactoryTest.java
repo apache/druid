@@ -101,7 +101,7 @@ public class ScanQueryRunnerFactoryTest
     List<ScanResultValue> srvs = new ArrayList<>(numElements);
     List<Long> expectedEventTimestamps = new ArrayList<>();
     for (int i = 0; i < numElements; i++) {
-      long timestamp = (long) (ThreadLocalRandom.current().nextLong());
+      long timestamp = (ThreadLocalRandom.current().nextLong());
       expectedEventTimestamps.add(timestamp);
       srvs.add(ScanQueryTestHelper.generateScanResultValue(timestamp, resultFormat, 1));
     }
@@ -136,7 +136,7 @@ public class ScanQueryRunnerFactoryTest
     // check total # of rows <= limit
     Assert.assertTrue(output.size() <= query.getLimit());
 
-    // check ordering and values are correct
+    // check ordering is correct
     for (int i = 1; i < output.size(); i++) {
       if (query.getTimeOrder().equals(ScanQuery.TimeOrder.DESCENDING)) {
         Assert.assertTrue(output.get(i).getFirstEventTimestamp(resultFormat) <
@@ -145,6 +145,11 @@ public class ScanQueryRunnerFactoryTest
         Assert.assertTrue(output.get(i).getFirstEventTimestamp(resultFormat) >
                           output.get(i - 1).getFirstEventTimestamp(resultFormat));
       }
+    }
+
+    // check the values are correct
+    for(int i = 0; i < query.getLimit() && i < output.size(); i++) {
+      Assert.assertEquals((long) expectedEventTimestamps.get(i), output.get(i).getFirstEventTimestamp(resultFormat));
     }
   }
 }
