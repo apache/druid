@@ -133,9 +133,7 @@ public class SegmentManager
 
   public boolean isSegmentCached(final DataSegment segment)
   {
-    synchronized (segmentLoader) {
-      return segmentLoader.isSegmentLoaded(segment);
-    }
+    return segmentLoader.isSegmentLoaded(segment);
   }
 
   @Nullable
@@ -151,13 +149,9 @@ public class SegmentManager
    * @param segment segment to load
    *
    * @return true if the segment was newly loaded, false if it was already loaded
-   *
-   * @throws SegmentLoadingException if the segment cannot be loaded
    */
-  public boolean loadSegment(final DataSegment segment) throws SegmentLoadingException
+  public boolean loadSegment(final DataSegment segment)
   {
-    final Segment adapter = getAdapter(segment);
-
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
     // compute() is used to ensure that the operation for a data source is executed atomically
@@ -176,6 +170,13 @@ public class SegmentManager
             log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
             resultSupplier.set(false);
           } else {
+            final Segment adapter;
+            try {
+              adapter = getAdapter(segment);
+            }
+            catch (SegmentLoadingException e) {
+              throw new RuntimeException(e);
+            }
             loadedIntervals.add(
                 segment.getInterval(),
                 segment.getVersion(),
@@ -191,17 +192,22 @@ public class SegmentManager
     return resultSupplier.get();
   }
 
+  /**
+   * Loads a {@link Segment} corresponding to the given {@link DataSegment}. This may incur downloading the segment
+   * from deep storage.
+   *
+   * This method is NOT thread-safe, so must be called where it's thread-safe like inside of a lock or
+   * {@link ConcurrentHashMap#compute}.
+   */
   private Segment getAdapter(final DataSegment segment) throws SegmentLoadingException
   {
     final Segment adapter;
-    synchronized (segmentLoader) {
-      try {
-        adapter = segmentLoader.getSegment(segment);
-      }
-      catch (SegmentLoadingException e) {
-        segmentLoader.cleanup(segment);
-        throw e;
-      }
+    try {
+      adapter = segmentLoader.getSegment(segment);
+    }
+    catch (SegmentLoadingException e) {
+      segmentLoader.cleanup(segment);
+      throw e;
     }
 
     if (adapter == null) {
@@ -238,6 +244,7 @@ public class SegmentManager
 
               log.info("Attempting to close segment %s", segment.getId());
               oldQueryable.close();
+              segmentLoader.cleanup(segment);
             } else {
               log.info(
                   "Told to delete a queryable on dataSource[%s] for interval[%s] and version[%s] that I don't have.",
@@ -252,9 +259,5 @@ public class SegmentManager
           return dataSourceState == null || dataSourceState.isEmpty() ? null : dataSourceState;
         }
     );
-
-    synchronized (segmentLoader) {
-      segmentLoader.cleanup(segment);
-    }
   }
 }

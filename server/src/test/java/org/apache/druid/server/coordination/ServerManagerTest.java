@@ -64,7 +64,6 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.loading.SegmentLoader;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -469,24 +468,19 @@ public class ServerManagerTest
 
   public void loadQueryable(String dataSource, String version, Interval interval)
   {
-    try {
-      segmentManager.loadSegment(
-          new DataSegment(
-              dataSource,
-              interval,
-              version,
-              ImmutableMap.of("version", version, "interval", interval),
-              Arrays.asList("dim1", "dim2", "dim3"),
-              Arrays.asList("metric1", "metric2"),
-              NoneShardSpec.instance(),
-              IndexIO.CURRENT_VERSION_ID,
-              123L
-          )
-      );
-    }
-    catch (SegmentLoadingException e) {
-      throw new RuntimeException(e);
-    }
+    segmentManager.loadSegment(
+        new DataSegment(
+            dataSource,
+            interval,
+            version,
+            ImmutableMap.of("version", version, "interval", interval),
+            Arrays.asList("dim1", "dim2", "dim3"),
+            Arrays.asList("metric1", "metric2"),
+            NoneShardSpec.instance(),
+            IndexIO.CURRENT_VERSION_ID,
+            123L
+        )
+    );
   }
 
   public void dropQueryable(String dataSource, String version, Interval interval)

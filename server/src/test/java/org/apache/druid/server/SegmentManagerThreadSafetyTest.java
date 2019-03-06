@@ -40,7 +40,6 @@ import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -150,12 +149,7 @@ public class SegmentManagerThreadSafetyTest
         .range(0, 16)
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
-            try {
-              segmentManager.loadSegment(segment);
-            }
-            catch (SegmentLoadingException e) {
-              throw new RuntimeException(e);
-            }
+            segmentManager.loadSegment(segment);
           }
         }))
         .collect(Collectors.toList());
@@ -182,7 +176,6 @@ public class SegmentManagerThreadSafetyTest
     final String storageDir = DataSegmentPusher.getDefaultStorageDir(tmpSegment, false);
     final File segmentDir = new File(segmentDeepStorageDir, storageDir);
     FileUtils.forceMkdir(segmentDir);
-//    FileUtils.touch(new File(segmentDir, "version.bin"));
 
     final File factoryJson = new File(segmentDir, "factory.json");
     objectMapper.writeValue(factoryJson, new TestSegmentizerFactory());
