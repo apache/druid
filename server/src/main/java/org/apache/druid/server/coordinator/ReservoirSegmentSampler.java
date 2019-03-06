@@ -19,11 +19,9 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.math.IntMath;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
 
-import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.List;
 import java.util.Spliterator;
@@ -42,7 +40,7 @@ final class ReservoirSegmentSampler
       return null;
     }
 
-    DataSegment proposalSegment = null;
+    DataSegment proposalSegment;
     Collection<DataSegment> segments = fromServerHolder.getServer().getSegments();
 
     if (segments.size() == 1) {
@@ -53,23 +51,19 @@ final class ReservoirSegmentSampler
         return null;
       }
 
-      for (int i = 0; i < IntMath.log2(segments.size(), RoundingMode.UP); i++) {
-        if (chosenSpliterator.estimateSize() < SPLITERATOR_SIZE_THRESHOLD) {
-          List<DataSegment> finalList = StreamSupport
-              .stream(chosenSpliterator, false)
-              .collect(Collectors.toList());
-
-          proposalSegment = getRandomElementFromList(finalList);
-          break;
-        }
-
+      int randomBits = ThreadLocalRandom.current().nextInt();
+      while (chosenSpliterator.estimateSize() >= SPLITERATOR_SIZE_THRESHOLD) {
         Spliterator<DataSegment> newSpliterator = chosenSpliterator.trySplit();
-
         // Choose between itself or the new spliterator with equal probability
-        if (ThreadLocalRandom.current().nextBoolean()) {
+        boolean chooseNewSpliterator = ((randomBits >>= 1) & 1) == 0;
+        if (chooseNewSpliterator) {
           chosenSpliterator = newSpliterator;
         }
       }
+      List<DataSegment> finalList = StreamSupport
+          .stream(chosenSpliterator, false)
+          .collect(Collectors.toList());
+      proposalSegment = getRandomElementFromList(finalList);
     }
     return new BalancerSegmentHolder(fromServerHolder.getServer(), proposalSegment);
   }
@@ -78,6 +72,8 @@ final class ReservoirSegmentSampler
   {
     if (serverHolders.isEmpty()) {
       return null;
+    } else if (serverHolders.size() == 1) {
+      return serverHolders.get(0);
     }
 
     ServerHolder sampledServer = null;
@@ -88,7 +84,8 @@ final class ReservoirSegmentSampler
       long numSegments = server.getSegments().size();
       long endIndex = total + numSegments;
       // Handle edge case where first server contains no segments so that nextLong() doesn't fail
-      long randomIndex = ThreadLocalRandom.current().nextLong((endIndex == 0) ? 1 : endIndex);
+      long upperBound = (endIndex == 0) ? 1 : endIndex;
+      long randomIndex = ThreadLocalRandom.current().nextLong(upperBound);
 
       // Select if random index falls within bounds of the segments contained in this server
       if (randomIndex >= total && randomIndex < endIndex) {
