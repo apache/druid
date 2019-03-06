@@ -37,7 +37,6 @@ import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.NoopDataSegmentMover;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -94,7 +93,7 @@ public class SingleTaskBackgroundRunnerTest
         null,
         null,
         null,
-        new SegmentLoaderFactory(EasyMock.createMock(SegmentLoaderLocalCacheManager.class)),
+        new SegmentLoaderFactory(null, utils.getTestObjectMapper()),
         utils.getTestObjectMapper(),
         utils.getTestIndexIO(),
         null,
@@ -195,7 +194,7 @@ public class SingleTaskBackgroundRunnerTest
     }
 
     @Override
-    public void stopGracefully()
+    public void stopGracefully(TaskConfig taskConfig)
     {
       gracefullyStopped.set();
     }

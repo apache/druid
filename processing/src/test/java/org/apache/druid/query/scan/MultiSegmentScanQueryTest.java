@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -42,7 +43,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
@@ -124,20 +125,14 @@ public class MultiSegmentScanQueryTest
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
   }
 
-  private static String makeIdentifier(IncrementalIndex index, String version)
+  private static SegmentId makeIdentifier(IncrementalIndex index, String version)
   {
     return makeIdentifier(index.getInterval(), version);
   }
 
-  private static String makeIdentifier(Interval interval, String version)
+  private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return DataSegment.makeDataSegmentIdentifier(
-        QueryRunnerTestHelper.dataSource,
-        interval.getStart(),
-        interval.getEnd(),
-        version,
-        NoneShardSpec.instance()
-    );
+    return SegmentId.of(QueryRunnerTestHelper.dataSource, interval, version, NoneShardSpec.instance());
   }
 
   private static IncrementalIndex newIndex(String minTimeStamp)
@@ -183,11 +178,11 @@ public class MultiSegmentScanQueryTest
     this.batchSize = batchSize;
   }
 
-  private ScanQuery.ScanQueryBuilder newBuilder()
+  private Druids.ScanQueryBuilder newBuilder()
   {
-    return ScanQuery.newScanQueryBuilder()
+    return Druids.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .intervals(SelectQueryRunnerTest.I_0112_0114)
+                    .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
                     .batchSize(batchSize)
                     .columns(Collections.emptyList())
                     .legacy(false)

@@ -71,6 +71,10 @@ public interface Sequence<T>
     return new MappedSequence<>(this, mapper);
   }
 
+  /**
+   * Several benchmarks rely on this method to eagerly accumulate Sequences to ArrayLists.  e.g.
+   * GroupByBenchmark.
+   */
   default List<T> toList()
   {
     return accumulate(new ArrayList<>(), Accumulators.list());
@@ -81,9 +85,7 @@ public interface Sequence<T>
     return new LimitedSequence<>(this, limit);
   }
 
-  default <R> Sequence<R> flatMap(
-      Function<? super T, ? extends Sequence<? extends R>> mapper
-  )
+  default <R> Sequence<R> flatMap(Function<? super T, ? extends Sequence<? extends R>> mapper)
   {
     return new ConcatSequence<>(this.map(mapper));
   }

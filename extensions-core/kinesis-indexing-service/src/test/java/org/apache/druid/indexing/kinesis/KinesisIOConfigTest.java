@@ -89,7 +89,6 @@ public class KinesisIOConfigTest
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
     Assert.assertFalse(config.isDeaggregate());
-    Assert.assertTrue(config.isSkipOffsetGaps());
   }
 
   @Test
@@ -146,7 +145,6 @@ public class KinesisIOConfigTest
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
     Assert.assertEquals("awsexternalid", config.getAwsExternalId());
     Assert.assertTrue(config.isDeaggregate());
-    Assert.assertTrue(config.isSkipOffsetGaps());
   }
 
   @Test

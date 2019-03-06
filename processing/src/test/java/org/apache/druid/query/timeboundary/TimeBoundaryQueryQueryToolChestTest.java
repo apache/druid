@@ -74,12 +74,23 @@ public class TimeBoundaryQueryQueryToolChestTest
 
   private static LogicalSegment createLogicalSegment(final Interval interval)
   {
+    return createLogicalSegment(interval, interval);
+  }
+
+  private static LogicalSegment createLogicalSegment(final Interval interval, final Interval trueInterval)
+  {
     return new LogicalSegment()
     {
       @Override
       public Interval getInterval()
       {
         return interval;
+      }
+
+      @Override
+      public Interval getTrueInterval()
+      {
+        return trueInterval;
       }
     };
   }
@@ -117,6 +128,35 @@ public class TimeBoundaryQueryQueryToolChestTest
   }
 
   @Test
+  public void testFilterOverlapingSegments()
+  {
+    final List<LogicalSegment> actual = new TimeBoundaryQueryQueryToolChest().filterSegments(
+        TIME_BOUNDARY_QUERY,
+        Arrays.asList(
+            createLogicalSegment(Intervals.of("2015/2016-08-01")),
+            createLogicalSegment(Intervals.of("2016-08-01/2017")),
+            createLogicalSegment(Intervals.of("2017/2017-08-01"), Intervals.of("2017/2018")),
+            createLogicalSegment(Intervals.of("2017-08-01/2017-08-02")),
+            createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018"))
+        )
+    );
+
+    final List<LogicalSegment> expected = Arrays.asList(
+        createLogicalSegment(Intervals.of("2015/2016-08-01")),
+        createLogicalSegment(Intervals.of("2017/2017-08-01"), Intervals.of("2017/2018")),
+        createLogicalSegment(Intervals.of("2017-08-01/2017-08-02")),
+        createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018"))
+    );
+
+    Assert.assertEquals(expected.size(), actual.size());
+
+    for (int i = 0; i < actual.size(); i++) {
+      Assert.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
+      Assert.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
+    }
+  }
+
+  @Test
   public void testMaxTimeFilterSegments()
   {
     List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
@@ -142,6 +182,62 @@ public class TimeBoundaryQueryQueryToolChestTest
 
     for (int i = 0; i < segments.size(); i++) {
       Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
+    }
+  }
+
+  @Test
+  public void testMaxTimeFilterOverlapingSegments()
+  {
+    final List<LogicalSegment> actual = new TimeBoundaryQueryQueryToolChest().filterSegments(
+        MAXTIME_BOUNDARY_QUERY,
+        Arrays.asList(
+            createLogicalSegment(Intervals.of("2015/2016-08-01")),
+            createLogicalSegment(Intervals.of("2016-08-01/2017")),
+            createLogicalSegment(Intervals.of("2017/2017-08-01"), Intervals.of("2017/2018")),
+            createLogicalSegment(Intervals.of("2017-08-01/2017-08-02")),
+            createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018"))
+        )
+    );
+
+    final List<LogicalSegment> expected = Arrays.asList(
+        createLogicalSegment(Intervals.of("2017/2017-08-01"), Intervals.of("2017/2018")),
+        createLogicalSegment(Intervals.of("2017-08-01/2017-08-02")),
+        createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018"))
+    );
+
+    Assert.assertEquals(expected.size(), actual.size());
+
+    for (int i = 0; i < actual.size(); i++) {
+      Assert.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
+      Assert.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
+    }
+  }
+
+  @Test
+  public void testMinTimeFilterOverlapingSegments()
+  {
+    final List<LogicalSegment> actual = new TimeBoundaryQueryQueryToolChest().filterSegments(
+        MINTIME_BOUNDARY_QUERY,
+        Arrays.asList(
+            createLogicalSegment(Intervals.of("2017/2017-08-01"), Intervals.of("2017/2018")),
+            createLogicalSegment(Intervals.of("2017-08-01/2017-08-02")),
+            createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018")),
+            createLogicalSegment(Intervals.of("2018/2018-08-01")),
+            createLogicalSegment(Intervals.of("2018-08-01/2019"))
+        )
+    );
+
+    final List<LogicalSegment> expected = Arrays.asList(
+        createLogicalSegment(Intervals.of("2017/2017-08-01"), Intervals.of("2017/2018")),
+        createLogicalSegment(Intervals.of("2017-08-01/2017-08-02")),
+        createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018"))
+    );
+
+    Assert.assertEquals(expected.size(), actual.size());
+
+    for (int i = 0; i < actual.size(); i++) {
+      Assert.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
+      Assert.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
     }
   }
 
@@ -192,6 +288,7 @@ public class TimeBoundaryQueryQueryToolChestTest
 
     Assert.assertEquals(7, segments.size());
   }
+
   @Test
   public void testCacheStrategy() throws Exception
   {

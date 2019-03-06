@@ -34,6 +34,7 @@ import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -55,7 +56,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   }
 
   private static final String marketDimension = "market";
-  private static final String segmentId = "testSegment";
+  private static final SegmentId segmentId = SegmentId.dummy("testSegment");
 
   private static final HashMap<String, Object> context = new HashMap<String, Object>();
 
@@ -65,7 +66,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
       .dimension(marketDimension)
       .metric(QueryRunnerTestHelper.indexMetric)
       .threshold(4)
-      .intervals(QueryRunnerTestHelper.fullOnInterval)
+      .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
       .aggregators(
           Lists.newArrayList(
               Iterables.concat(
@@ -98,7 +99,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
               }
             }
         ),
-        new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     testCaseMap.put(
@@ -113,7 +114,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         TestCases.mMappedTestIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, TestIndex.getMMappedTestIndex()),
+            new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), segmentId),
             null
         )
     );
@@ -121,7 +122,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         TestCases.mergedRealtimeIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, TestIndex.mergedRealtimeIndex()),
+            new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), segmentId),
             null
         )
     );

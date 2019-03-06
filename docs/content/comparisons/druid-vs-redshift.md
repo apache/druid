@@ -42,7 +42,7 @@ Druid’s write semantics are not as fluid and does not support full joins (we s
 
 ### Data distribution model
 
-Druid’s data distribution is segment-based and leverages a highly available "deep" storage such as S3 or HDFS. Scaling up (or down) does not require massive copy actions or downtime; in fact, losing any number of historical nodes does not result in data loss because new historical nodes can always be brought up by reading data from "deep" storage.
+Druid’s data distribution is segment-based and leverages a highly available "deep" storage such as S3 or HDFS. Scaling up (or down) does not require massive copy actions or downtime; in fact, losing any number of Historical processes does not result in data loss because new Historical processes can always be brought up by reading data from "deep" storage.
 
 To contrast, ParAccel’s data distribution model is hash-based. Expanding the cluster requires re-hashing the data across the nodes, making it difficult to perform without taking downtime. Amazon’s Redshift works around this issue with a multi-step process:
 
@@ -52,7 +52,7 @@ To contrast, ParAccel’s data distribution model is hash-based. Expanding the c
 
 ### Replication strategy
 
-Druid employs segment-level data distribution meaning that more nodes can be added and rebalanced without having to perform a staged swap. The replication strategy also makes all replicas available for querying. Replication is done automatically and without any impact to performance.
+Druid employs segment-level data distribution meaning that more processes can be added and rebalanced without having to perform a staged swap. The replication strategy also makes all replicas available for querying. Replication is done automatically and without any impact to performance.
 
 ParAccel’s hash-based distribution generally means that replication is conducted via hot spares. This puts a numerical limit on the number of nodes you can lose without losing data, and this replication strategy often does not allow the hot spare to help share query load.
 

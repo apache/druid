@@ -27,11 +27,13 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.ClientInfoResourceTestClient;
 import org.apache.druid.testing.utils.RetryUtil;
+import org.apache.druid.testing.utils.SqlTestQueryHelper;
 import org.junit.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
 
 public class AbstractITBatchIndexTest extends AbstractIndexerTest
 {
@@ -39,6 +41,8 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
 
   @Inject
   IntegrationTestingConfig config;
+  @Inject
+  protected SqlTestQueryHelper sqlQueryHelper;
 
   @Inject
   ClientInfoResourceTestClient clientInfoResourceTestClient;
@@ -46,7 +50,8 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
   void doIndexTestTest(
       String dataSource,
       String indexTaskFilePath,
-      String queryFilePath
+      String queryFilePath,
+      boolean waitForNewVersion
   ) throws IOException
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
@@ -56,7 +61,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullDatasourceName
     );
 
-    submitTaskAndWait(taskSpec, fullDatasourceName);
+    submitTaskAndWait(taskSpec, fullDatasourceName, waitForNewVersion);
     try {
 
       String queryResponseTemplate;
@@ -104,7 +109,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
         fullReindexDatasourceName
     );
 
-    submitTaskAndWait(taskSpec, fullReindexDatasourceName);
+    submitTaskAndWait(taskSpec, fullReindexDatasourceName, false);
     try {
       String queryResponseTemplate;
       try {
@@ -118,7 +123,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       queryResponseTemplate = StringUtils.replace(
           queryResponseTemplate,
           "%%DATASOURCE%%",
-          fullBaseDatasourceName
+          fullReindexDatasourceName
       );
 
       queryHelper.testQueriesFromString(queryResponseTemplate, 2);
@@ -135,11 +140,40 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     }
   }
 
-  private void submitTaskAndWait(String taskSpec, String dataSourceName)
+  void doIndexTestSqlTest(
+      String dataSource,
+      String indexTaskFilePath,
+      String queryFilePath
+  )
   {
+    submitTaskAndWait(indexTaskFilePath, dataSource, false);
+    try {
+      sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
+    }
+    catch (Exception e) {
+      LOG.error(e, "Error while testing");
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void submitTaskAndWait(String taskSpec, String dataSourceName, boolean waitForNewVersion)
+  {
+    final Set<String> oldVersions = waitForNewVersion ? coordinator.getSegmentVersions(dataSourceName) : null;
+
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
     indexer.waitUntilTaskCompletes(taskID);
+
+    // ITParallelIndexTest does a second round of ingestion to replace segements in an existing
+    // data source. For that second round we need to make sure the coordinator actually learned
+    // about the new segments befor waiting for it to report that all segments are loaded; otherwise
+    // this method could return too early because the coordinator is merely reporting that all the
+    // original segments have loaded.
+    if (waitForNewVersion) {
+      RetryUtil.retryUntilTrue(
+          () -> !oldVersions.containsAll(coordinator.getSegmentVersions(dataSourceName)), "See a new version"
+      );
+    }
 
     RetryUtil.retryUntilTrue(
         () -> coordinator.areSegmentsLoaded(dataSourceName), "Segment Load"

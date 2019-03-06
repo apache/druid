@@ -25,12 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -55,7 +54,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -80,12 +78,11 @@ import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -408,7 +405,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
     try {
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
-        chatHandlerProvider.get().register(getId(), this, false);
+
+        if (chatHandlerProvider.get().get(getId()).isPresent()) {
+          // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
+          // sequential mode. See ParallelIndexSupervisorTask.runSequential().
+          // Note that all HTTP endpoints are not available in this case. This works only for
+          // ParallelIndexSupervisorTask because it doesn't support APIs for live ingestion reports.
+          log.warn("Chat handler is already registered. Skipping chat handler registration.");
+        } else {
+          chatHandlerProvider.get().register(getId(), this, false);
+        }
       } else {
         log.warn("No chat handler detected");
       }
@@ -419,8 +425,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
                                                          .isPresent();
 
       final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-
-      setFirehoseFactoryToolbox(firehoseFactory, toolbox);
 
       final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
       // Firehose temporary directory is automatically removed when this IndexTask completes.
@@ -486,25 +490,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     finally {
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
-      }
-    }
-  }
-
-  // pass toolbox to any IngestSegmentFirehoseFactory
-  private void setFirehoseFactoryToolbox(FirehoseFactory firehoseFactory, TaskToolbox toolbox)
-  {
-    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
-      return;
-    }
-
-    if (firehoseFactory instanceof CombiningFirehoseFactory) {
-      for (FirehoseFactory delegateFactory : ((CombiningFirehoseFactory) firehoseFactory).getDelegateFactoryList()) {
-        if (delegateFactory instanceof IngestSegmentFirehoseFactory) {
-          ((IngestSegmentFirehoseFactory) delegateFactory).setTaskToolbox(toolbox);
-        } else if (delegateFactory instanceof CombiningFirehoseFactory) {
-          setFirehoseFactoryToolbox(delegateFactory, toolbox);
-        }
       }
     }
   }
@@ -910,7 +895,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
     final SegmentAllocator segmentAllocator;
     if (isGuaranteedRollup) {
       // Overwrite mode, guaranteed rollup: segments are all known in advance and there is one per sequenceName.
-      final Map<String, SegmentIdentifier> lookup = new HashMap<>();
+      final Map<String, SegmentIdWithShardSpec> lookup = new HashMap<>();
 
       for (Map.Entry<Interval, List<ShardSpec>> entry : shardSpecs.getMap().entrySet()) {
         for (ShardSpec shardSpec : entry.getValue()) {
@@ -928,7 +913,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           final String version = findVersion(versions, entry.getKey());
           lookup.put(
               Appenderators.getSequenceName(entry.getKey(), version, shardSpec),
-              new SegmentIdentifier(getDataSource(), entry.getKey(), version, shardSpecForPublishing)
+              new SegmentIdWithShardSpec(getDataSource(), entry.getKey(), version, shardSpecForPublishing)
           );
         }
       }
@@ -966,7 +951,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         }
 
         final int partitionNum = counters.computeIfAbsent(interval, x -> new AtomicInteger()).getAndIncrement();
-        return new SegmentIdentifier(
+        return new SegmentIdWithShardSpec(
             getDataSource(),
             interval,
             findVersion(versions, interval),
@@ -1077,14 +1062,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
             buildSegmentsMeters.getUnparseable(),
             buildSegmentsMeters.getThrownAway()
         );
-        log.info(
-            "Published segments[%s]", Joiner.on(", ").join(
-                Iterables.transform(
-                    published.getSegments(),
-                    DataSegment::getIdentifier
-                )
-            )
-        );
+        log.info("Published segments: %s", Lists.transform(published.getSegments(), DataSegment::getId));
 
         toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
         return TaskStatus.success(getId());

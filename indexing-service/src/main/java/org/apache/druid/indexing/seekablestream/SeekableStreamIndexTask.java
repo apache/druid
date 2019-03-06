@@ -19,8 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -34,6 +32,7 @@ import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -57,17 +56,15 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CircularBuffer;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
 
 
-public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> extends AbstractTask
-    implements ChatHandler
+public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType extends Comparable>
+    extends AbstractTask implements ChatHandler
 {
   public static final long LOCK_ACQUIRE_TIMEOUT_SECONDS = 15;
-  private static final Random RANDOM = ThreadLocalRandom.current();
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamIndexTask.class);
 
   private final SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner;
@@ -81,18 +78,17 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   protected final RowIngestionMetersFactory rowIngestionMetersFactory;
   protected final CircularBuffer<Throwable> savedParseExceptions;
 
-  @JsonCreator
   public SeekableStreamIndexTask(
-      @JsonProperty("id") String id,
-      @JsonProperty("resource") TaskResource taskResource,
-      @JsonProperty("dataSchema") DataSchema dataSchema,
-      @JsonProperty("tuningConfig") SeekableStreamIndexTaskTuningConfig tuningConfig,
-      @JsonProperty("ioConfig") SeekableStreamIndexTaskIOConfig ioConfig,
-      @JsonProperty("context") Map<String, Object> context,
-      @JacksonInject ChatHandlerProvider chatHandlerProvider,
-      @JacksonInject AuthorizerMapper authorizerMapper,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
-      String groupId
+      final String id,
+      @Nullable final TaskResource taskResource,
+      final DataSchema dataSchema,
+      final SeekableStreamIndexTaskTuningConfig tuningConfig,
+      final SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceOffsetType> ioConfig,
+      @Nullable final Map<String, Object> context,
+      @Nullable final ChatHandlerProvider chatHandlerProvider,
+      final AuthorizerMapper authorizerMapper,
+      final RowIngestionMetersFactory rowIngestionMetersFactory,
+      @Nullable final String groupId
   )
   {
     super(
@@ -117,7 +113,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     this.rowIngestionMetersFactory = rowIngestionMetersFactory;
     this.runner = createTaskRunner();
   }
-
 
   private static String makeTaskId(String dataSource, String type)
   {
@@ -179,9 +174,11 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
   @Override
-  public void stopGracefully()
+  public void stopGracefully(TaskConfig taskConfig)
   {
-    runner.stopGracefully();
+    if (taskConfig.isRestoreTasksOnRestart()) {
+      runner.stopGracefully();
+    }
   }
 
   @Override

@@ -39,6 +39,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.LogicalSegment;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -292,7 +293,20 @@ public class SegmentMetadataQueryQueryToolChestTest
                 "2000-01-09/P1D"
             )
             .stream()
-            .map(interval -> (LogicalSegment) () -> Intervals.of(interval))
+            .map(interval -> new LogicalSegment()
+            {
+              @Override
+              public Interval getInterval()
+              {
+                return Intervals.of(interval);
+              }
+
+              @Override
+              public Interval getTrueInterval()
+              {
+                return Intervals.of(interval);
+              }
+            })
             .collect(Collectors.toList())
     );
 

@@ -56,10 +56,12 @@ public class GoogleDataSegmentKiller implements DataSegmentKiller
 
     try {
       deleteIfPresent(bucket, indexPath);
+      // descriptor.json is a file to store segment metadata in deep storage. This file is deprecated and not stored
+      // anymore, but we still delete them if exists.
       deleteIfPresent(bucket, descriptorPath);
     }
     catch (IOException e) {
-      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getIdentifier(), e.getMessage());
+      throw new SegmentLoadingException(e, "Couldn't kill segment[%s]: [%s]", segment.getId(), e.getMessage());
     }
   }
 

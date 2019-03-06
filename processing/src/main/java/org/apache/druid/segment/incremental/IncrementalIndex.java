@@ -97,8 +97,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
-/**
- */
 public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex implements Iterable<Row>, Closeable
 {
   private volatile DateTime maxIngestedEventTime;
@@ -194,7 +192,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
             @Override
             public Object getObject()
             {
-              return extractor.extractValue(in.get(), column);
+              return extractor.extractValue(in.get(), column, agg);
             }
 
             @Override
@@ -250,7 +248,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
-   *
+   * <p>
    * Set concurrentEventAdd to true to indicate that adding of input row should be thread-safe (for example, groupBy
    * where the multiple threads can add concurrently to the IncrementalIndex).
    *
@@ -482,12 +480,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
 
   // Note: This method needs to be thread safe.
   protected abstract AddToFactsResult addToFacts(
-      AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
       InputRow row,
-      AtomicInteger numEntries,
-      AtomicLong sizeInBytes,
       IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -608,12 +601,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
   {
     IncrementalIndexRowResult incrementalIndexRowResult = toIncrementalIndexRow(row);
     final AddToFactsResult addToFactsResult = addToFacts(
-        metrics,
-        deserializeComplexMetrics,
-        reportParseExceptions,
         row,
-        numEntries,
-        bytesInMemory,
         incrementalIndexRowResult.getIncrementalIndexRow(),
         in,
         rowSupplier,
@@ -625,7 +613,11 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
         incrementalIndexRowResult.getParseExceptionMessages(),
         addToFactsResult.getParseExceptionMessages()
     );
-    return new IncrementalIndexAddResult(addToFactsResult.getRowCount(), addToFactsResult.getBytesInMemory(), parseException);
+    return new IncrementalIndexAddResult(
+        addToFactsResult.getRowCount(),
+        addToFactsResult.getBytesInMemory(),
+        parseException
+    );
   }
 
   @VisibleForTesting
@@ -785,9 +777,29 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     return numEntries.get();
   }
 
-  public long getBytesInMemory()
+  boolean getDeserializeComplexMetrics()
   {
-    return bytesInMemory.get();
+    return deserializeComplexMetrics;
+  }
+
+  boolean getReportParseExceptions()
+  {
+    return reportParseExceptions;
+  }
+
+  AtomicInteger getNumEntries()
+  {
+    return numEntries;
+  }
+
+  AggregatorFactory[] getMetrics()
+  {
+    return metrics;
+  }
+
+  public AtomicLong getBytesInMemory()
+  {
+    return bytesInMemory;
   }
 
   private long getMinTimeMillis()
@@ -908,7 +920,10 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
    * https://github.com/apache/incubator-druid/issues/2011
    */
-  public void loadDimensionIterable(Iterable<String> oldDimensionOrder, Map<String, ColumnCapabilitiesImpl> oldColumnCapabilities)
+  public void loadDimensionIterable(
+      Iterable<String> oldDimensionOrder,
+      Map<String, ColumnCapabilitiesImpl> oldColumnCapabilities
+  )
   {
     synchronized (dimensionDescs) {
       if (!dimensionDescs.isEmpty()) {
@@ -1289,7 +1304,9 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     public Iterator<IncrementalIndexRow> iterator(boolean descending)
     {
       if (descending && sortFacts) {
-        return ((ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow>) facts).descendingMap().keySet().iterator();
+        return ((ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow>) facts).descendingMap()
+                                                                                         .keySet()
+                                                                                         .iterator();
       }
       return keySet().iterator();
     }
@@ -1304,7 +1321,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
       IncrementalIndexRow end = new IncrementalIndexRow(timeEnd, new Object[]{}, dimensionDescsList);
       ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow> subMap =
           ((ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow>) facts).subMap(start, end);
-      final Map<IncrementalIndexRow, IncrementalIndexRow> rangeMap = descending ? subMap.descendingMap() : subMap;
+      ConcurrentMap<IncrementalIndexRow, IncrementalIndexRow> rangeMap = descending ? subMap.descendingMap() : subMap;
       return rangeMap.keySet();
     }
 
@@ -1387,7 +1404,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       if (descending && sortFacts) {
         return timeOrderedConcat(((ConcurrentNavigableMap<Long, Deque<IncrementalIndexRow>>) facts)
-                .descendingMap().values(), true).iterator();
+                                     .descendingMap().values(), true).iterator();
       }
       return timeOrderedConcat(facts.values(), false).iterator();
     }
@@ -1397,7 +1414,7 @@ public abstract class IncrementalIndex<AggregatorType> extends AbstractIndex imp
     {
       ConcurrentNavigableMap<Long, Deque<IncrementalIndexRow>> subMap =
           ((ConcurrentNavigableMap<Long, Deque<IncrementalIndexRow>>) facts).subMap(timeStart, timeEnd);
-      final Map<Long, Deque<IncrementalIndexRow>> rangeMap = descending ? subMap.descendingMap() : subMap;
+      final ConcurrentMap<Long, Deque<IncrementalIndexRow>> rangeMap = descending ? subMap.descendingMap() : subMap;
       return timeOrderedConcat(rangeMap.values(), descending);
     }
 

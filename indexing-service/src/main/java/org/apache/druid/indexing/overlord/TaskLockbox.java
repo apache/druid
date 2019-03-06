@@ -619,11 +619,7 @@ public class TaskLockbox
    * @param intervals intervals
    * @param action    action to be performed inside of the critical section
    */
-  public <T> T doInCriticalSection(
-      Task task,
-      List<Interval> intervals,
-      CriticalAction<T> action
-  ) throws Exception
+  public <T> T doInCriticalSection(Task task, List<Interval> intervals, CriticalAction<T> action) throws Exception
   {
     giant.lock();
 
@@ -1077,16 +1073,13 @@ public class TaskLockbox
         return true;
       }
 
-      if (!getClass().equals(o.getClass())) {
+      if (o == null || !getClass().equals(o.getClass())) {
         return false;
       }
 
-      final TaskLockPosse that = (TaskLockPosse) o;
-      if (!taskLock.equals(that.taskLock)) {
-        return false;
-      }
-
-      return taskIds.equals(that.taskIds);
+      TaskLockPosse that = (TaskLockPosse) o;
+      return java.util.Objects.equals(taskLock, that.taskLock) &&
+              java.util.Objects.equals(taskIds, that.taskIds);
     }
 
     @Override

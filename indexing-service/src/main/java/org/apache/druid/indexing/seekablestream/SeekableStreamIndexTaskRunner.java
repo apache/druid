@@ -27,12 +27,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -111,6 +111,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -129,7 +130,7 @@ import java.util.stream.Collectors;
  * @param <PartitionIdType>    Partition Number Type
  * @param <SequenceOffsetType> Sequence Number Type
  */
-public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> implements ChatHandler
+public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType extends Comparable> implements ChatHandler
 {
   public enum Status
   {
@@ -145,8 +146,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
 
   private final Map<PartitionIdType, SequenceOffsetType> endOffsets;
-  private final Map<PartitionIdType, SequenceOffsetType> currOffsets = new ConcurrentHashMap<>();
-  private final Map<PartitionIdType, SequenceOffsetType> lastPersistedOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<PartitionIdType, SequenceOffsetType> currOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<PartitionIdType, SequenceOffsetType> lastPersistedOffsets = new ConcurrentHashMap<>();
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
@@ -473,7 +474,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           }
 
           // if stop is requested or task's end sequence is set by call to setEndOffsets method with finish set to true
-          if (stopRequested.get() || sequences.get(sequences.size() - 1).isCheckpointed()) {
+          if (stopRequested.get() || sequences.size() == 0 || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
           }
 
@@ -503,10 +504,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           SequenceMetadata sequenceToCheckpoint = null;
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record : records) {
 
+
             // for Kafka, the end offsets are exclusive, so skip it
             if (isEndSequenceOffsetsExclusive() &&
                 createSequenceNumber(record.getSequenceNumber()).compareTo(
-                    createSequenceNumber(endOffsets.get(record.getPartitionId()))) == 0) {
+                    createSequenceNumber(endOffsets.get(record.getPartitionId()))) >= 0) {
               continue;
             }
 
@@ -528,17 +530,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               currOffsets.put(record.getPartitionId(), record.getSequenceNumber());
             } else if (createSequenceNumber(record.getSequenceNumber()).compareTo(
                 createSequenceNumber(endOffsets.get(record.getPartitionId()))) <= 0) {
-
-
-              if (!record.getSequenceNumber().equals(currOffsets.get(record.getPartitionId()))
-                  && !ioConfig.isSkipOffsetGaps()) {
-                throw new ISE(
-                    "WTF?! Got sequence[%s] after sequence[%s] in partition[%s].",
-                    record.getSequenceNumber(),
-                    currOffsets.get(record.getPartitionId()),
-                    record.getPartitionId()
-                );
-              }
 
               try {
                 final List<byte[]> valueBytess = record.getData();
@@ -744,10 +735,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
       for (SegmentsAndMetadata handedOff : handedOffList) {
         log.info(
-            "Handoff completed for segments[%s] with metadata[%s].",
-            Joiner.on(", ").join(
-                handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList())
-            ),
+            "Handoff completed for segments %s with metadata[%s].",
+            Lists.transform(handedOff.getSegments(), DataSegment::getId),
             Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
         );
       }
@@ -893,11 +882,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           public void onSuccess(SegmentsAndMetadata publishedSegmentsAndMetadata)
           {
             log.info(
-                "Published segments[%s] with metadata[%s].",
-                publishedSegmentsAndMetadata.getSegments()
-                                            .stream()
-                                            .map(DataSegment::getIdentifier)
-                                            .collect(Collectors.toList()),
+                "Published segments %s with metadata[%s].",
+                Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::getId),
                 Preconditions.checkNotNull(publishedSegmentsAndMetadata.getCommitMetadata(), "commitMetadata")
             );
 
@@ -922,11 +908,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                   {
                     if (handoffSegmentsAndMetadata == null) {
                       log.warn(
-                          "Failed to handoff segments[%s]",
-                          publishedSegmentsAndMetadata.getSegments()
-                                                      .stream()
-                                                      .map(DataSegment::getIdentifier)
-                                                      .collect(Collectors.toList())
+                          "Failed to handoff segments %s",
+                          Lists.transform(publishedSegmentsAndMetadata.getSegments(), DataSegment::getId)
                       );
                     }
                     handoffFuture.set(handoffSegmentsAndMetadata);
@@ -1410,6 +1393,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             exclusivePartitions) && !finish) ||
             (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end sequences already set for sequences [%s]", sequenceNumbers);
+          resume();
           return Response.ok(sequenceNumbers).build();
         } else if (latestSequence.isCheckpointed()) {
           return Response.status(Response.Status.BAD_REQUEST)
@@ -1903,7 +1887,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   )
   {
     if (intialSequenceSnapshot.containsKey(record.getPartitionId())) {
-      if (!intialSequenceSnapshot.get(record.getPartitionId()).equals(record.getSequenceNumber())) {
+      if (record.getSequenceNumber().compareTo(intialSequenceSnapshot.get(record.getPartitionId())) < 0) {
         throw new ISE(
             "Starting sequenceNumber [%s] does not match expected [%s] for partition [%s]",
             record.getSequenceNumber(),

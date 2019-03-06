@@ -71,7 +71,7 @@ You can use this in concert with single-dimension partitioning to repartition yo
 
 ## Customizing data distribution
 
-Druid additionally supports multitenancy by providing configurable means of distributing data. Druid's historical nodes 
+Druid additionally supports multitenancy by providing configurable means of distributing data. Druid's Historical processes 
 can be configured into [tiers](../operations/rule-configuration.html), and [rules](../operations/rule-configuration.html) 
 can be set that determines which segments go into which tiers. One use case of this is that recent data tends to be accessed 
 more frequently than older data. Tiering enables more recent segments to be hosted on more powerful hardware for better performance. 
@@ -80,8 +80,8 @@ stored on this tier.
 
 ## Supporting high query concurrency
 
-Druid's fundamental unit of computation is a [segment](../design/segments.html). Nodes scan segments in parallel and a
-given node can scan `druid.processing.numThreads` concurrently. To
+Druid's fundamental unit of computation is a [segment](../design/segments.html). Processes scan segments in parallel and a
+given process can scan `druid.processing.numThreads` concurrently. To
 process more data in parallel and increase performance, more cores can be added to a cluster. Druid segments
 should be sized such that any computation over any given segment should complete in at most 500ms.
 
@@ -94,6 +94,6 @@ that resources are constantly being yielded, and segments pertaining to differen
 Druid queries can optionally set a `priority` flag in the [query context](../querying/query-context.html). Queries known to be
 slow (download or reporting style queries) can be de-prioritized and more interactive queries can have higher priority. 
 
-Broker nodes can also be dedicated to a given tier. For example, one set of broker nodes can be dedicated to fast interactive queries, 
-and a second set of broker nodes can be dedicated to slower reporting queries. Druid also provides a [router](../development/router.html) 
-node that can route queries to different brokers based on various query parameters (datasource, interval, etc.).  
+Broker processes can also be dedicated to a given tier. For example, one set of Broker processes can be dedicated to fast interactive queries, 
+and a second set of Broker processes can be dedicated to slower reporting queries. Druid also provides a [Router](../development/router.html) 
+process that can route queries to different Brokers based on various query parameters (datasource, interval, etc.).  

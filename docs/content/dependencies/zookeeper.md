@@ -29,8 +29,8 @@ Druid uses [ZooKeeper](http://zookeeper.apache.org/) (ZK) for management of curr
 1.  [Coordinator](../design/coordinator.html) leader election
 2.  Segment "publishing" protocol from [Historical](../design/historical.html) and [Realtime](../design/realtime.html)
 3.  Segment load/drop protocol between [Coordinator](../design/coordinator.html) and [Historical](../design/historical.html)
-4.  [Overlord](../design/indexing-service.html) leader election
-5.  [Indexing Service](../design/indexing-service.html) task management
+4.  [Overlord](../design/overlord.html) leader election
+5.  [Overlord](../design/overlord.html) and [MiddleManager](../design/middlemanager.html) task management
 
 ### Coordinator Leader Election
 
@@ -44,7 +44,7 @@ ${druid.zk.paths.coordinatorPath}/_COORDINATOR
 
 The `announcementsPath` and `servedSegmentsPath` are used for this.
 
-All [Historical](../design/historical.html) and [Realtime](../design/realtime.html) nodes publish themselves on the `announcementsPath`, specifically, they will create an ephemeral znode at
+All [Historical](../design/historical.html) and [Realtime](../design/realtime.html) processes publish themselves on the `announcementsPath`, specifically, they will create an ephemeral znode at
 
 ```
 ${druid.zk.paths.announcementsPath}/${druid.host}
@@ -62,16 +62,16 @@ And as they load up segments, they will attach ephemeral znodes that look like
 ${druid.zk.paths.servedSegmentsPath}/${druid.host}/_segment_identifier_
 ```
 
-Nodes like the [Coordinator](../design/coordinator.html) and [Broker](../design/broker.html) can then watch these paths to see which nodes are currently serving which segments.
+Processes like the [Coordinator](../design/coordinator.html) and [Broker](../design/broker.html) can then watch these paths to see which processes are currently serving which segments.
 
 ### Segment load/drop protocol between Coordinator and Historical
 
 The `loadQueuePath` is used for this.
 
-When the [Coordinator](../design/coordinator.html) decides that a [Historical](../design/historical.html) node should load or drop a segment, it writes an ephemeral znode to
+When the [Coordinator](../design/coordinator.html) decides that a [Historical](../design/historical.html) process should load or drop a segment, it writes an ephemeral znode to
 
 ```
-${druid.zk.paths.loadQueuePath}/_host_of_historical_node/_segment_identifier
+${druid.zk.paths.loadQueuePath}/_host_of_historical_process/_segment_identifier
 ```
 
-This node will contain a payload that indicates to the historical node what it should do with the given segment. When the historical node is done with the work, it will delete the znode in order to signify to the Coordinator that it is complete.
+This znode will contain a payload that indicates to the Historical process what it should do with the given segment. When the Historical process is done with the work, it will delete the znode in order to signify to the Coordinator that it is complete.

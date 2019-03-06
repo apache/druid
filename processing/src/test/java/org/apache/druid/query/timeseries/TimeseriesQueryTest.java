@@ -56,7 +56,7 @@ public class TimeseriesQueryTest
     Query query = Druids.newTimeseriesQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.dayGran)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(QueryRunnerTestHelper.rowsCount, QueryRunnerTestHelper.indexDoubleSum)
         .postAggregators(QueryRunnerTestHelper.addRowsIndexConstant)
         .descending(descending)

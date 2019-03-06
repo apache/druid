@@ -239,7 +239,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   {
     expectedException.expect(ExecutionException.class);
     expectedException.expectCause(CoreMatchers.instanceOf(ISE.class));
-    expectedException.expectMessage("Failed to publish segments.");
+    expectedException.expectMessage("Failed to publish segments because of [test].");
 
     testFailDuringPublishInternal(false);
   }
@@ -327,7 +327,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
   private static class NoopUsedSegmentChecker implements UsedSegmentChecker
   {
     @Override
-    public Set<DataSegment> findUsedSegments(Set<SegmentIdentifier> identifiers)
+    public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers)
     {
       return ImmutableSet.of();
     }
@@ -355,7 +355,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
   private static class FailableAppenderator implements Appenderator
   {
-    private final Map<SegmentIdentifier, List<InputRow>> rows = new HashMap<>();
+    private final Map<SegmentIdWithShardSpec, List<InputRow>> rows = new HashMap<>();
 
     private boolean dropEnabled = true;
     private boolean persistEnabled = true;
@@ -404,7 +404,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
     @Override
     public AppenderatorAddResult add(
-        SegmentIdentifier identifier,
+        SegmentIdWithShardSpec identifier,
         InputRow row,
         Supplier<Committer> committerSupplier,
         boolean allowIncrementalPersists
@@ -416,13 +416,13 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
 
     @Override
-    public List<SegmentIdentifier> getSegments()
+    public List<SegmentIdWithShardSpec> getSegments()
     {
       return ImmutableList.copyOf(rows.keySet());
     }
 
     @Override
-    public int getRowCount(SegmentIdentifier identifier)
+    public int getRowCount(SegmentIdWithShardSpec identifier)
     {
       final List<InputRow> rows = this.rows.get(identifier);
       if (rows != null) {
@@ -445,7 +445,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
 
     @Override
-    public ListenableFuture<?> drop(SegmentIdentifier identifier)
+    public ListenableFuture<?> drop(SegmentIdWithShardSpec identifier)
     {
       if (dropEnabled) {
         rows.remove(identifier);
@@ -468,7 +468,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
 
     @Override
     public ListenableFuture<SegmentsAndMetadata> push(
-        Collection<SegmentIdentifier> identifiers,
+        Collection<SegmentIdWithShardSpec> identifiers,
         Committer committer,
         boolean useUniquePath
     )

@@ -120,7 +120,7 @@ public class IndexGeneratorJob implements Jobby
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
         final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
         publishedSegmentsBuilder.add(segment);
-        log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
+        log.info("Adding segment %s to the list of published segments", segment.getId());
       }
     }
     catch (FileNotFoundException e) {
@@ -207,6 +207,11 @@ public class IndexGeneratorJob implements Jobby
 
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
+
+      // Store the jobId in the file
+      if (job.getJobID() != null) {
+        JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), job.getJobID().toString());
+      }
 
       boolean success = job.waitForCompletion(true);
 
@@ -819,13 +824,6 @@ public class IndexGeneratorJob implements Jobby
                 outputFS,
                 segmentTemplate,
                 JobHelper.INDEX_ZIP,
-                config.DATA_SEGMENT_PUSHER
-            ),
-            JobHelper.makeFileNamePath(
-                new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
-                outputFS,
-                segmentTemplate,
-                JobHelper.DESCRIPTOR_JSON,
                 config.DATA_SEGMENT_PUSHER
             ),
             JobHelper.makeTmpPath(

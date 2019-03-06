@@ -51,7 +51,6 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
    * org.apache.druid.segment.ObjectColumnSelector#getObject()} must not be modified, and must not become a subject for
    * modification during subsequent {@link #fold} calls.
    */
-  @SuppressWarnings("unused") // Going to be used when https://github.com/apache/incubator-druid/projects/2 is complete
   void reset(ColumnValueSelector selector);
 
   /**
@@ -80,6 +79,8 @@ public interface AggregateCombiner<T> extends ColumnValueSelector<T>
   @Override
   default void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    // Usually AggregateCombiner has nothing to inspect
+    // Usually AggregateCombiners have nothing to inspect, because their getLong/getDouble/getFloat (the methods
+    // annotated @CalledFromHotLoop in AggregateCombiner) is a plain getter of a field, so there is no source for
+    // branching and otherwise non-monomorphic runtime profile.
   }
 }

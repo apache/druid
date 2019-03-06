@@ -209,11 +209,13 @@ handle all formatting decisions on their own, without using the ParseSpec.
 | column | String | The column of the timestamp. | yes |
 | format | String | iso, posix, millis, micro, nano, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto' |
 
+<a name="dimensions" />
+
 ### DimensionsSpec
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| dimensions | JSON array | A list of [dimension schema](#dimension-schema) objects or dimension names. Providing a name is equivalent to providing a String-typed dimension schema with the given name. If this is an empty array, Druid will treat all columns that are not timestamp or metric columns as String-typed dimension columns. | yes |
+| dimensions | JSON array | A list of [dimension schema](#dimension-schema) objects or dimension names. Providing a name is equivalent to providing a String-typed dimension schema with the given name. If this is an empty array, Druid will treat all non-timestamp, non-metric columns that do not appear in "dimensionExclusions" as String-typed dimension columns. | yes |
 | dimensionExclusions | JSON String array | The names of dimensions to exclude from ingestion. | no (default == [] |
 | spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geo.html) | no (default == [] |
 
@@ -284,7 +286,7 @@ This spec is used to generated segments with uniform intervals.
 | segmentGranularity | string | The granularity to create time chunks at. Multiple segments can be created per time chunk. For example, with 'DAY' `segmentGranularity`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. See [Granularity](../querying/granularities.html) for supported granularities.| no (default == 'DAY') |
 | queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. A granularity of 'NONE' means millisecond granularity. See [Granularity](../querying/granularities.html) for supported granularities.| no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
-| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | no. If specified, batch ingestion tasks may skip determining partitions phase which results in faster ingestion. |
+| intervals | JSON string array | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | no. If specified, Hadoop and native non-parallel batch ingestion tasks may skip determining partitions phase which results in faster ingestion; native parallel ingestion tasks can request all their locks up-front instead of one by one. Batch ingestion will thrown away any data not in the specified intervals. |
 
 ### Arbitrary Granularity Spec
 
@@ -294,7 +296,7 @@ This spec is used to generate segments with arbitrary intervals (it tries to cre
 |-------|------|-------------|----------|
 | queryGranularity | string | The minimum granularity to be able to query results at and the granularity of the data inside the segment. E.g. a value of "minute" will mean that data is aggregated at minutely granularity. That is, if there are collisions in the tuple (minute(timestamp), dimensions), then it will aggregate values together using the aggregators instead of storing individual rows. A granularity of 'NONE' means millisecond granularity. See [Granularity](../querying/granularities.html) for supported granularities.| no (default == 'NONE') |
 | rollup | boolean | rollup or not | no (default == true) |
-| intervals | string | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | no. If specified, batch ingestion tasks may skip determining partitions phase which results in faster ingestion. |
+| intervals | JSON string array | A list of intervals for the raw data being ingested. Ignored for real-time ingestion. | no. If specified, Hadoop and native non-parallel batch ingestion tasks may skip determining partitions phase which results in faster ingestion; native parallel ingestion tasks can request all their locks up-front instead of one by one. Batch ingestion will thrown away any data not in the specified intervals. |
 
 # Transform Spec
 

@@ -226,23 +226,23 @@ public class DruidCoordinatorSegmentCompactorTest
         expectedVersionSupplier
     );
 
-    // compact for 2017-01-07T12:00:00.000Z/2017-01-08T12:00:00.000Z
-    expectedRemainingSegments -= 40;
+    // compact for 2017-01-08T00:00:00.000Z/2017-01-08T12:00:00.000Z
+    expectedRemainingSegments -= 20;
     assertCompactSegments(
         compactor,
         keepSegmentGranularity,
-        Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT12:00:00", 4, 8),
+        Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT12:00:00", 8, 8),
         expectedRemainingSegments,
         expectedCompactTaskCount,
         expectedVersionSupplier
     );
 
-    for (int endDay = 4; endDay > 1; endDay -= 1) {
+    for (int endDay = 5; endDay > 1; endDay -= 1) {
       expectedRemainingSegments -= 40;
       assertCompactSegments(
           compactor,
           keepSegmentGranularity,
-          Intervals.of("2017-01-%02dT12:00:00/2017-01-%02dT12:00:00", endDay - 1, endDay),
+          Intervals.of("2017-01-%02dT00:00:00/2017-01-%02dT00:00:00", endDay - 1, endDay),
           expectedRemainingSegments,
           expectedCompactTaskCount,
           expectedVersionSupplier
@@ -362,7 +362,7 @@ public class DruidCoordinatorSegmentCompactorTest
 
       // One of dataSource is compacted
       if (expectedRemainingSegments > 0) {
-        // If expectedRemainingSegments is positive, we check how many dataSources have the segments waiting
+        // If expectedRemainingSegments is positive, we check how many dataSources have the segments waiting for
         // compaction.
         long numDataSourceOfExpectedRemainingSegments = stats
             .getDataSources(DruidCoordinatorSegmentCompactor.SEGMENT_SIZE_WAIT_COMPACT)

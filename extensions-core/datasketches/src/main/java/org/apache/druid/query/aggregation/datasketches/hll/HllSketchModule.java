@@ -22,10 +22,13 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.yahoo.sketches.hll.HllSketch;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSqlAggregator;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.Collections;
 import java.util.List;
@@ -48,15 +51,8 @@ public class HllSketchModule implements DruidModule
   @Override
   public void configure(final Binder binder)
   {
-    if (ComplexMetrics.getSerdeForType(TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
-    }
-    if (ComplexMetrics.getSerdeForType(BUILD_TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
-    }
-    if (ComplexMetrics.getSerdeForType(MERGE_TYPE_NAME) == null) {
-      ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
-    }
+    registerSerde();
+    SqlBindings.addAggregator(binder, HllSketchSqlAggregator.class);
   }
 
   @Override
@@ -74,4 +70,17 @@ public class HllSketchModule implements DruidModule
     );
   }
 
+  @VisibleForTesting
+  public static void registerSerde()
+  {
+    if (ComplexMetrics.getSerdeForType(TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(TYPE_NAME, new HllSketchMergeComplexMetricSerde());
+    }
+    if (ComplexMetrics.getSerdeForType(BUILD_TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(BUILD_TYPE_NAME, new HllSketchBuildComplexMetricSerde());
+    }
+    if (ComplexMetrics.getSerdeForType(MERGE_TYPE_NAME) == null) {
+      ComplexMetrics.registerSerde(MERGE_TYPE_NAME, new HllSketchMergeComplexMetricSerde());
+    }
+  }
 }

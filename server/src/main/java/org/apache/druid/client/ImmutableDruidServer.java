@@ -25,29 +25,36 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
-import java.util.Map;
+import java.util.AbstractCollection;
+import java.util.Collection;
+import java.util.Iterator;
 
 /**
+ * This class should not be subclassed, it isn't declared final only to make it possible to mock the class with EasyMock
+ * in tests.
+ *
+ * @see DruidServer - a mutable counterpart of this class
  */
 public class ImmutableDruidServer
 {
   private final DruidServerMetadata metadata;
   private final long currSize;
   private final ImmutableMap<String, ImmutableDruidDataSource> dataSources;
-  private final ImmutableMap<String, DataSegment> segments;
+  private final int totalSegments;
 
   public ImmutableDruidServer(
       DruidServerMetadata metadata,
       long currSize,
       ImmutableMap<String, ImmutableDruidDataSource> dataSources,
-      ImmutableMap<String, DataSegment> segments
+      int totalSegments
   )
   {
     this.metadata = Preconditions.checkNotNull(metadata);
     this.currSize = currSize;
-    this.segments = segments;
     this.dataSources = dataSources;
+    this.totalSegments = totalSegments;
   }
 
   public String getName()
@@ -100,9 +107,13 @@ public class ImmutableDruidServer
     return metadata.getPriority();
   }
 
-  public DataSegment getSegment(String segmentName)
+  public DataSegment getSegment(SegmentId segmentId)
   {
-    return segments.get(segmentName);
+    ImmutableDruidDataSource dataSource = dataSources.get(segmentId.getDataSource());
+    if (dataSource == null) {
+      return null;
+    }
+    return dataSource.getSegment(segmentId);
   }
 
   public Iterable<ImmutableDruidDataSource> getDataSources()
@@ -115,9 +126,22 @@ public class ImmutableDruidServer
     return dataSources.get(name);
   }
 
-  public Map<String, DataSegment> getSegments()
+  public Collection<DataSegment> getSegments()
   {
-    return segments;
+    return new AbstractCollection<DataSegment>()
+    {
+      @Override
+      public Iterator<DataSegment> iterator()
+      {
+        return dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()).iterator();
+      }
+
+      @Override
+      public int size()
+      {
+        return totalSegments;
+      }
+    };
   }
 
   public String getURL()

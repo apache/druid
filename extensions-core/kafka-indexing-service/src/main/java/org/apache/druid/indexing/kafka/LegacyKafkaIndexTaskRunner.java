@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -64,7 +65,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -103,6 +104,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -111,7 +113,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.stream.Collectors;
 
 /**
  * Kafka index task runner which doesn't support incremental segment publishing. We keep this to support rolling update.
@@ -123,8 +124,8 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   private static final EmittingLogger log = new EmittingLogger(LegacyKafkaIndexTaskRunner.class);
   private static final String METADATA_NEXT_PARTITIONS = "nextPartitions";
 
-  private final Map<Integer, Long> endOffsets = new ConcurrentHashMap<>();
-  private final Map<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Integer, Long> endOffsets = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Integer, Long> nextOffsets = new ConcurrentHashMap<>();
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
@@ -412,23 +413,6 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
             }
 
             if (record.offset() < endOffsets.get(record.partition())) {
-              if (record.offset() != nextOffsets.get(record.partition())) {
-                if (ioConfig.isSkipOffsetGaps()) {
-                  log.warn(
-                      "Skipped to offset[%,d] after offset[%,d] in partition[%d].",
-                      record.offset(),
-                      nextOffsets.get(record.partition()),
-                      record.partition()
-                  );
-                } else {
-                  throw new ISE(
-                      "WTF?! Got offset[%,d] after offset[%,d] in partition[%d].",
-                      record.offset(),
-                      nextOffsets.get(record.partition()),
-                      record.partition()
-                  );
-                }
-              }
 
               try {
                 final byte[] valueBytes = record.value();
@@ -436,7 +420,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
                                             ? Utils.nullableListOf((InputRow) null)
                                             : parser.parseBatch(ByteBuffer.wrap(valueBytes));
                 boolean isPersistRequired = false;
-                final Map<String, Set<SegmentIdentifier>> segmentsToMoveOut = new HashMap<>();
+                final Map<String, Set<SegmentIdWithShardSpec>> segmentsToMoveOut = new HashMap<>();
 
                 for (InputRow row : rows) {
                   if (row != null && task.withinMinMaxRecordTime(row)) {
@@ -477,10 +461,9 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
                 if (isPersistRequired) {
                   driver.persist(committerSupplier.get());
                 }
-                segmentsToMoveOut.forEach((String sequence, Set<SegmentIdentifier> segments) -> driver.moveSegmentOut(
-                    sequence,
-                    new ArrayList<SegmentIdentifier>(segments)
-                ));
+                segmentsToMoveOut.forEach((String sequence, Set<SegmentIdWithShardSpec> segments) -> {
+                  driver.moveSegmentOut(sequence, new ArrayList<>(segments));
+                });
               }
               catch (ParseException e) {
                 handleParseException(e, record);
@@ -489,7 +472,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
               nextOffsets.put(record.partition(), record.offset() + 1);
             }
 
-            if (nextOffsets.get(record.partition()).equals(endOffsets.get(record.partition()))
+            if (nextOffsets.get(record.partition()) >= (endOffsets.get(record.partition()))
                 && assignment.remove(record.partition())) {
               log.info("Finished reading topic[%s], partition[%,d].", record.topic(), record.partition());
               KafkaIndexTask.assignPartitions(consumer, topic, assignment);
@@ -558,14 +541,10 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
           sequenceNames.values()
       ).get();
 
-      final List<String> publishedSegments = published.getSegments()
-                                                      .stream()
-                                                      .map(DataSegment::getIdentifier)
-                                                      .collect(Collectors.toList());
-
+      List<?> publishedSegmentIds = Lists.transform(published.getSegments(), DataSegment::getId);
       log.info(
-          "Published segments[%s] with metadata[%s].",
-          publishedSegments,
+          "Published segments %s with metadata[%s].",
+          publishedSegmentIds,
           Preconditions.checkNotNull(published.getCommitMetadata(), "commitMetadata")
       );
 
@@ -585,11 +564,11 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       }
 
       if (handedOff == null) {
-        log.warn("Failed to handoff segments[%s]", publishedSegments);
+        log.warn("Failed to handoff segments %s", publishedSegmentIds);
       } else {
         log.info(
-            "Handoff completed for segments[%s] with metadata[%s]",
-            handedOff.getSegments().stream().map(DataSegment::getIdentifier).collect(Collectors.toList()),
+            "Handoff completed for segments %s with metadata[%s]",
+            Lists.transform(handedOff.getSegments(), DataSegment::getId),
             Preconditions.checkNotNull(handedOff.getCommitMetadata(), "commitMetadata")
         );
       }

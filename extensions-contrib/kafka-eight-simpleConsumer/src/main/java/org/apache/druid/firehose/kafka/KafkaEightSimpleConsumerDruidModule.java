@@ -28,6 +28,7 @@ import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
 
+@Deprecated
 public class KafkaEightSimpleConsumerDruidModule implements DruidModule
 {
   @Override

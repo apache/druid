@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.primitives.Longs;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
@@ -33,14 +32,18 @@ public class ServerHolder implements Comparable<ServerHolder>
   private static final Logger log = new Logger(ServerHolder.class);
   private final ImmutableDruidServer server;
   private final LoadQueuePeon peon;
+  private final boolean inMaintenance;
 
-  public ServerHolder(
-      ImmutableDruidServer server,
-      LoadQueuePeon peon
-  )
+  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon)
+  {
+    this(server, peon, false);
+  }
+
+  public ServerHolder(ImmutableDruidServer server, LoadQueuePeon peon, boolean inMaintenance)
   {
     this.server = server;
     this.peon = peon;
+    this.inMaintenance = inMaintenance;
   }
 
   public ImmutableDruidServer getServer()
@@ -78,6 +81,17 @@ public class ServerHolder implements Comparable<ServerHolder>
     return (100.0 * getSizeUsed()) / getMaxSize();
   }
 
+  /**
+   * Historical nodes can be placed in maintenance mode, which instructs Coordinator to move segments from them
+   * according to a specified priority. The mechanism allows to drain segments from nodes which are planned for
+   * replacement.
+   * @return true if the node is in maitenance mode
+   */
+  public boolean isInMaintenance()
+  {
+    return inMaintenance;
+  }
+
   public long getAvailableSize()
   {
     long maxSize = getMaxSize();
@@ -99,7 +113,7 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public boolean isServingSegment(DataSegment segment)
   {
-    return (server.getSegment(segment.getIdentifier()) != null);
+    return server.getSegment(segment.getId()) != null;
   }
 
   public boolean isLoadingSegment(DataSegment segment)
@@ -115,7 +129,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   @Override
   public int compareTo(ServerHolder serverHolder)
   {
-    int result = Longs.compare(getAvailableSize(), serverHolder.getAvailableSize());
+    int result = Long.compare(getAvailableSize(), serverHolder.getAvailableSize());
     if (result != 0) {
       return result;
     }

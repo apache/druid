@@ -71,6 +71,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -295,7 +296,7 @@ public class TimeseriesBenchmark
 
     factory = new TimeseriesQueryRunnerFactory(
         new TimeseriesQueryQueryToolChest(
-            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
         ),
         new TimeseriesQueryEngine(),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
@@ -336,14 +337,12 @@ public class TimeseriesBenchmark
   {
     QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "incIndex",
-        new IncrementalIndexSegment(incIndexes.get(0), "incIndex")
+        SegmentId.dummy("incIndex"),
+        new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, query);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -353,14 +352,12 @@ public class TimeseriesBenchmark
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "qIndex",
-        new QueryableIndexSegment("qIndex", qIndexes.get(0))
+        SegmentId.dummy("qIndex"),
+        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, query);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -370,17 +367,15 @@ public class TimeseriesBenchmark
   {
     final QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "qIndex",
-        new QueryableIndexSegment("qIndex", qIndexes.get(0))
+        SegmentId.dummy("qIndex"),
+        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     DimFilter filter = new SelectorDimFilter("dimSequential", "399", null);
     Query filteredQuery = query.withDimFilter(filter);
 
     List<Result<TimeseriesResultValue>> results = TimeseriesBenchmark.runQuery(factory, runner, filteredQuery);
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -391,11 +386,11 @@ public class TimeseriesBenchmark
     List<QueryRunner<Result<TimeseriesResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
       QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          segmentId,
+          new QueryableIndexSegment(qIndexes.get(i), segmentId)
       );
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -413,8 +408,6 @@ public class TimeseriesBenchmark
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
 
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 }

@@ -101,7 +101,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -121,7 +120,6 @@ public class OverlordResource
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
-
 
   @Inject
   public OverlordResource(
@@ -503,100 +501,6 @@ public class OverlordResource
     return getTasks("waiting", null, null, null, null, req);
   }
 
-  private static class AnyTask extends TaskRunnerWorkItem
-  {
-    private final String taskType;
-    private final String dataSource;
-    private final TaskState taskState;
-    private final RunnerTaskState runnerTaskState;
-    private final DateTime createdTime;
-    private final DateTime queueInsertionTime;
-    private final TaskLocation taskLocation;
-
-    AnyTask(
-        String taskId,
-        String taskType,
-        ListenableFuture<TaskStatus> result,
-        String dataSource,
-        TaskState state,
-        RunnerTaskState runnerState,
-        DateTime createdTime,
-        DateTime queueInsertionTime,
-        TaskLocation taskLocation
-    )
-    {
-      super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
-      this.taskType = taskType;
-      this.dataSource = dataSource;
-      this.taskState = state;
-      this.runnerTaskState = runnerState;
-      this.createdTime = createdTime;
-      this.queueInsertionTime = queueInsertionTime;
-      this.taskLocation = taskLocation;
-    }
-
-    @Override
-    public TaskLocation getLocation()
-    {
-      return taskLocation;
-    }
-
-    @Override
-    public String getTaskType()
-    {
-      return taskType;
-    }
-
-    @Override
-    public String getDataSource()
-    {
-      return dataSource;
-    }
-
-    public TaskState getTaskState()
-    {
-      return taskState;
-    }
-
-    public RunnerTaskState getRunnerTaskState()
-    {
-      return runnerTaskState;
-    }
-
-    @Override
-    public DateTime getCreatedTime()
-    {
-      return createdTime;
-    }
-
-    @Override
-    public DateTime getQueueInsertionTime()
-    {
-      return queueInsertionTime;
-    }
-
-    public AnyTask withTaskState(
-        TaskState newTaskState,
-        RunnerTaskState runnerState,
-        DateTime createdTime,
-        DateTime queueInsertionTime,
-        TaskLocation taskLocation
-    )
-    {
-      return new AnyTask(
-          getTaskId(),
-          getTaskType(),
-          getResult(),
-          getDataSource(),
-          newTaskState,
-          runnerState,
-          createdTime,
-          queueInsertionTime,
-          taskLocation
-      );
-    }
-  }
-
   @GET
   @Path("/pendingTasks")
   @Produces(MediaType.APPLICATION_JSON)
@@ -760,120 +664,6 @@ public class OverlordResource
     return Response.ok(authorizedList).build();
   }
 
-  private static BiFunction<TaskInfo<Task, TaskStatus>, RunnerTaskState, TaskStatusPlus> newTaskInfo2TaskStatusPlusFn()
-  {
-    return (taskInfo, runnerTaskState) -> new TaskStatusPlus(
-        taskInfo.getId(),
-        taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
-        taskInfo.getCreatedTime(),
-        // Would be nice to include the real queue insertion time, but the
-        // TaskStorage API doesn't yet allow it.
-        DateTimes.EPOCH,
-        taskInfo.getStatus().getStatusCode(),
-        runnerTaskState,
-        taskInfo.getStatus().getDuration(),
-        TaskLocation.unknown(),
-        taskInfo.getDataSource(),
-        taskInfo.getStatus().getErrorMsg()
-    );
-  }
-
-  private List<AnyTask> filterActiveTasks(
-      RunnerTaskState state,
-      List<AnyTask> allTasks
-  )
-  {
-    //divide active tasks into 3 lists : running, pending, waiting
-    Optional<TaskRunner> taskRunnerOpt = taskMaster.getTaskRunner();
-    if (!taskRunnerOpt.isPresent()) {
-      throw new WebApplicationException(
-          Response.serverError().entity("No task runner found").build()
-      );
-    }
-    TaskRunner runner = taskRunnerOpt.get();
-    // the order of tasks below is waiting, pending, running to prevent
-    // skipping a task, it's the order in which tasks will change state
-    // if they do while this is code is executing, so a task might be
-    // counted twice but never skipped
-    if (RunnerTaskState.WAITING.equals(state)) {
-      Collection<? extends TaskRunnerWorkItem> runnersKnownTasks = runner.getKnownTasks();
-      Set<String> runnerKnownTaskIds = runnersKnownTasks
-          .stream()
-          .map(TaskRunnerWorkItem::getTaskId)
-          .collect(Collectors.toSet());
-      final List<AnyTask> waitingTasks = new ArrayList<>();
-      for (TaskRunnerWorkItem task : allTasks) {
-        if (!runnerKnownTaskIds.contains(task.getTaskId())) {
-          waitingTasks.add(((AnyTask) task).withTaskState(
-              TaskState.RUNNING,
-              RunnerTaskState.WAITING,
-              task.getCreatedTime(),
-              task.getQueueInsertionTime(),
-              task.getLocation()
-          ));
-        }
-      }
-      return waitingTasks;
-    }
-
-    if (RunnerTaskState.PENDING.equals(state)) {
-      Collection<? extends TaskRunnerWorkItem> knownPendingTasks = runner.getPendingTasks();
-      Set<String> pendingTaskIds = knownPendingTasks
-          .stream()
-          .map(TaskRunnerWorkItem::getTaskId)
-          .collect(Collectors.toSet());
-      Map<String, TaskRunnerWorkItem> workItemIdMap = knownPendingTasks
-          .stream()
-          .collect(Collectors.toMap(
-              TaskRunnerWorkItem::getTaskId,
-              java.util.function.Function.identity(),
-              (previousWorkItem, newWorkItem) -> newWorkItem
-          ));
-      final List<AnyTask> pendingTasks = new ArrayList<>();
-      for (TaskRunnerWorkItem task : allTasks) {
-        if (pendingTaskIds.contains(task.getTaskId())) {
-          pendingTasks.add(((AnyTask) task).withTaskState(
-              TaskState.RUNNING,
-              RunnerTaskState.PENDING,
-              workItemIdMap.get(task.getTaskId()).getCreatedTime(),
-              workItemIdMap.get(task.getTaskId()).getQueueInsertionTime(),
-              workItemIdMap.get(task.getTaskId()).getLocation()
-          ));
-        }
-      }
-      return pendingTasks;
-    }
-
-    if (RunnerTaskState.RUNNING.equals(state)) {
-      Collection<? extends TaskRunnerWorkItem> knownRunningTasks = runner.getRunningTasks();
-      Set<String> runningTaskIds = knownRunningTasks
-          .stream()
-          .map(TaskRunnerWorkItem::getTaskId)
-          .collect(Collectors.toSet());
-      Map<String, TaskRunnerWorkItem> workItemIdMap = knownRunningTasks
-          .stream()
-          .collect(Collectors.toMap(
-              TaskRunnerWorkItem::getTaskId,
-              java.util.function.Function.identity(),
-              (previousWorkItem, newWorkItem) -> newWorkItem
-          ));
-      final List<AnyTask> runningTasks = new ArrayList<>();
-      for (TaskRunnerWorkItem task : allTasks) {
-        if (runningTaskIds.contains(task.getTaskId())) {
-          runningTasks.add(((AnyTask) task).withTaskState(
-              TaskState.RUNNING,
-              RunnerTaskState.RUNNING,
-              workItemIdMap.get(task.getTaskId()).getCreatedTime(),
-              workItemIdMap.get(task.getTaskId()).getQueueInsertionTime(),
-              workItemIdMap.get(task.getTaskId()).getLocation()
-          ));
-        }
-      }
-      return runningTasks;
-    }
-    return allTasks;
-  }
-
   @DELETE
   @Path("/pendingSegments/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
@@ -1016,6 +806,102 @@ public class OverlordResource
     }
   }
 
+  private List<AnyTask> filterActiveTasks(
+      RunnerTaskState state,
+      List<AnyTask> allTasks
+  )
+  {
+    //divide active tasks into 3 lists : running, pending, waiting
+    Optional<TaskRunner> taskRunnerOpt = taskMaster.getTaskRunner();
+    if (!taskRunnerOpt.isPresent()) {
+      throw new WebApplicationException(
+          Response.serverError().entity("No task runner found").build()
+      );
+    }
+    TaskRunner runner = taskRunnerOpt.get();
+    // the order of tasks below is waiting, pending, running to prevent
+    // skipping a task, it's the order in which tasks will change state
+    // if they do while this is code is executing, so a task might be
+    // counted twice but never skipped
+    if (RunnerTaskState.WAITING.equals(state)) {
+      Collection<? extends TaskRunnerWorkItem> runnersKnownTasks = runner.getKnownTasks();
+      Set<String> runnerKnownTaskIds = runnersKnownTasks
+          .stream()
+          .map(TaskRunnerWorkItem::getTaskId)
+          .collect(Collectors.toSet());
+      final List<AnyTask> waitingTasks = new ArrayList<>();
+      for (TaskRunnerWorkItem task : allTasks) {
+        if (!runnerKnownTaskIds.contains(task.getTaskId())) {
+          waitingTasks.add(((AnyTask) task).withTaskState(
+              TaskState.RUNNING,
+              RunnerTaskState.WAITING,
+              task.getCreatedTime(),
+              task.getQueueInsertionTime(),
+              task.getLocation()
+          ));
+        }
+      }
+      return waitingTasks;
+    }
+
+    if (RunnerTaskState.PENDING.equals(state)) {
+      Collection<? extends TaskRunnerWorkItem> knownPendingTasks = runner.getPendingTasks();
+      Set<String> pendingTaskIds = knownPendingTasks
+          .stream()
+          .map(TaskRunnerWorkItem::getTaskId)
+          .collect(Collectors.toSet());
+      Map<String, TaskRunnerWorkItem> workItemIdMap = knownPendingTasks
+          .stream()
+          .collect(Collectors.toMap(
+              TaskRunnerWorkItem::getTaskId,
+              java.util.function.Function.identity(),
+              (previousWorkItem, newWorkItem) -> newWorkItem
+          ));
+      final List<AnyTask> pendingTasks = new ArrayList<>();
+      for (TaskRunnerWorkItem task : allTasks) {
+        if (pendingTaskIds.contains(task.getTaskId())) {
+          pendingTasks.add(((AnyTask) task).withTaskState(
+              TaskState.RUNNING,
+              RunnerTaskState.PENDING,
+              workItemIdMap.get(task.getTaskId()).getCreatedTime(),
+              workItemIdMap.get(task.getTaskId()).getQueueInsertionTime(),
+              workItemIdMap.get(task.getTaskId()).getLocation()
+          ));
+        }
+      }
+      return pendingTasks;
+    }
+
+    if (RunnerTaskState.RUNNING.equals(state)) {
+      Collection<? extends TaskRunnerWorkItem> knownRunningTasks = runner.getRunningTasks();
+      Set<String> runningTaskIds = knownRunningTasks
+          .stream()
+          .map(TaskRunnerWorkItem::getTaskId)
+          .collect(Collectors.toSet());
+      Map<String, TaskRunnerWorkItem> workItemIdMap = knownRunningTasks
+          .stream()
+          .collect(Collectors.toMap(
+              TaskRunnerWorkItem::getTaskId,
+              java.util.function.Function.identity(),
+              (previousWorkItem, newWorkItem) -> newWorkItem
+          ));
+      final List<AnyTask> runningTasks = new ArrayList<>();
+      for (TaskRunnerWorkItem task : allTasks) {
+        if (runningTaskIds.contains(task.getTaskId())) {
+          runningTasks.add(((AnyTask) task).withTaskState(
+              TaskState.RUNNING,
+              RunnerTaskState.RUNNING,
+              workItemIdMap.get(task.getTaskId()).getCreatedTime(),
+              workItemIdMap.get(task.getTaskId()).getQueueInsertionTime(),
+              workItemIdMap.get(task.getTaskId()).getLocation()
+          ));
+        }
+      }
+      return runningTasks;
+    }
+    return allTasks;
+  }
+
   private List<TaskStatusPlus> securedTaskStatusPlus(
       List<TaskStatusPlus> collectionToFilter,
       @Nullable String dataSource,
@@ -1056,5 +942,99 @@ public class OverlordResource
             authorizerMapper
         )
     );
+  }
+
+  private static class AnyTask extends TaskRunnerWorkItem
+  {
+    private final String taskType;
+    private final String dataSource;
+    private final TaskState taskState;
+    private final RunnerTaskState runnerTaskState;
+    private final DateTime createdTime;
+    private final DateTime queueInsertionTime;
+    private final TaskLocation taskLocation;
+
+    AnyTask(
+        String taskId,
+        String taskType,
+        ListenableFuture<TaskStatus> result,
+        String dataSource,
+        TaskState state,
+        RunnerTaskState runnerState,
+        DateTime createdTime,
+        DateTime queueInsertionTime,
+        TaskLocation taskLocation
+    )
+    {
+      super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
+      this.taskType = taskType;
+      this.dataSource = dataSource;
+      this.taskState = state;
+      this.runnerTaskState = runnerState;
+      this.createdTime = createdTime;
+      this.queueInsertionTime = queueInsertionTime;
+      this.taskLocation = taskLocation;
+    }
+
+    @Override
+    public TaskLocation getLocation()
+    {
+      return taskLocation;
+    }
+
+    @Override
+    public String getTaskType()
+    {
+      return taskType;
+    }
+
+    @Override
+    public String getDataSource()
+    {
+      return dataSource;
+    }
+
+    public TaskState getTaskState()
+    {
+      return taskState;
+    }
+
+    public RunnerTaskState getRunnerTaskState()
+    {
+      return runnerTaskState;
+    }
+
+    @Override
+    public DateTime getCreatedTime()
+    {
+      return createdTime;
+    }
+
+    @Override
+    public DateTime getQueueInsertionTime()
+    {
+      return queueInsertionTime;
+    }
+
+    public AnyTask withTaskState(
+        TaskState newTaskState,
+        RunnerTaskState runnerState,
+        DateTime createdTime,
+        DateTime queueInsertionTime,
+        TaskLocation taskLocation
+    )
+    {
+      return new AnyTask(
+          getTaskId(),
+          getTaskType(),
+          getResult(),
+          getDataSource(),
+          newTaskState,
+          runnerState,
+          createdTime,
+          queueInsertionTime,
+          taskLocation
+      );
+    }
   }
 }

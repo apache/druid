@@ -87,7 +87,7 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -185,8 +185,7 @@ public class IndexTaskTest
           {
             return deepStorageDir;
           }
-        },
-        jsonMapper
+        }
     )
     {
       @Override
@@ -1574,17 +1573,14 @@ public class IndexTaskTest
         }
 
         if (taskAction instanceof SegmentTransactionalInsertAction) {
-          return (RetType) new SegmentPublishResult(
-              ((SegmentTransactionalInsertAction) taskAction).getSegments(),
-              true
-          );
+          return (RetType) SegmentPublishResult.ok(((SegmentTransactionalInsertAction) taskAction).getSegments());
         }
 
         if (taskAction instanceof SegmentAllocateAction) {
           SegmentAllocateAction action = (SegmentAllocateAction) taskAction;
           Interval interval = action.getPreferredSegmentGranularity().bucket(action.getTimestamp());
           ShardSpec shardSpec = new NumberedShardSpec(segmentAllocatePartitionCounter++, 0);
-          return (RetType) new SegmentIdentifier(action.getDataSource(), interval, "latestVersion", shardSpec);
+          return (RetType) new SegmentIdWithShardSpec(action.getDataSource(), interval, "latestVersion", shardSpec);
         }
 
         return null;

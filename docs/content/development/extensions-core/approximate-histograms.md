@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Approximate Histogram aggregator"
+title: "Approximate Histogram aggregators"
 ---
 
 <!--
@@ -22,9 +22,17 @@ title: "Approximate Histogram aggregator"
   ~ under the License.
   -->
 
-# Approximate Histogram aggregator
+# Approximate Histogram aggregators
 
 Make sure to [include](../../operations/including-extensions.html) `druid-histogram` as an extension.
+
+The `druid-histogram` extension provides an approximate histogram aggregator and a fixed buckets histogram aggregator.
+
+## Approximate Histogram aggregator (Deprecated)
+
+<div class="note caution">
+The Approximate Histogram aggregator is deprecated. Please use <a href="../extensions-core/datasketches-quantiles.html">DataSketches Quantiles</a> instead which provides a superior distribution-independent algorithm with formal error guarantees.
+</div>
 
 This aggregator is based on
 [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf)
@@ -92,17 +100,148 @@ query.
 |`numBuckets`             |Number of output buckets for the resulting histogram. Bucket intervals are dynamic, based on the range of the underlying data. Use a post-aggregator to have finer control over the bucketing scheme|7|
 |`lowerLimit`/`upperLimit`|Restrict the approximation to the given range. The values outside this range will be aggregated into two centroids. Counts of values outside this range are still maintained. |-INF/+INF|
 
+## Fixed Buckets Histogram
 
-### Approximate Histogram post-aggregators
+The fixed buckets histogram aggregator builds a histogram on a numeric column, with evenly-sized buckets across a specified value range. Values outside of the range are handled based on a user-specified outlier handling mode.
+
+This histogram supports the min/max/quantiles post-aggregators but does not support the bucketing post-aggregators.
+
+### When to use
+
+The accuracy/usefulness of the fixed buckets histogram is extremely data-dependent; it is provided to support special use cases where the user has a great deal of prior information about the data being aggregated and knows that a fixed buckets implementation is suitable. 
+
+For general histogram and quantile use cases, the [DataSketches Quantiles Sketch](../extensions-core/datasketches-quantiles.html) extension is recommended.
+
+### Properties
+
+
+|Property                 |Description                   |Default                           |
+|-------------------------|------------------------------|----------------------------------|
+|`type`|Type of the aggregator. Must `fixedBucketsHistogram`.|No default, must be specified|
+|`name`|Column name for the aggregator.|No default, must be specified|
+|`fieldName`|Column name of the input to the aggregator.|No default, must be specified|
+|`lowerLimit`|Lower limit of the histogram. |No default, must be specified|
+|`upperLimit`|Upper limit of the histogram. |No default, must be specified|
+|`numBuckets`|Number of buckets for the histogram. The range [lowerLimit, upperLimit] will be divided into `numBuckets` intervals of equal size.|10|
+|`outlierHandlingMode`|Specifies how values outside of [lowerLimit, upperLimit] will be handled. Supported modes are "ignore", "overflow", and "clip". See [outlier handling modes](#outlier-handling-modes) for more details.|No default, must be specified|
+
+An example aggregator spec is shown below:
+
+```json
+{
+  "type" : "fixedBucketsHistogram",
+  "name" : <output_name>,
+  "fieldName" : <metric_name>,
+  "numBuckets" : <integer>,
+  "lowerLimit" : <double>,
+  "upperLimit" : <double>,
+  "outlierHandlingMode": <mode>
+}
+```
+
+### Outlier handling modes
+
+The outlier handling mode specifies what should be done with values outside of the histogram's range. There are three supported modes:
+
+- `ignore`: Throw away outlier values.
+- `overflow`: A count of outlier values will be tracked by the histogram, available in the `lowerOutlierCount` and `upperOutlierCount` fields.
+- `clip`: Outlier values will be clipped to the `lowerLimit` or the `upperLimit` and included in the histogram.
+
+If you don't care about outliers, `ignore` is the cheapest option performance-wise. There is currently no difference in storage size among the modes.
+
+### Output fields
+
+The histogram aggregator's output object has the following fields:
+
+- `lowerLimit`: Lower limit of the histogram
+- `upperLimit`: Upper limit of the histogram
+- `numBuckets`: Number of histogram buckets
+- `outlierHandlingMode`: Outlier handling mode
+- `count`: Total number of values contained in the histgram, excluding outliers
+- `lowerOutlierCount`: Count of outlier values below `lowerLimit`. Only used if the outlier mode is `overflow`.
+- `upperOutlierCount`: Count of outlier values above `upperLimit`. Only used if the outlier mode is `overflow`.
+- `missingValueCount`: Count of null values seen by the histogram.
+- `max`: Max value seen by the histogram. This does not include outlier values.
+- `min`: Min value seen by the histogram. This does not include outlier values.
+- `histogram`: An array of longs with size `numBuckets`, containing the bucket counts
+
+### Ingesting existing histograms 
+
+It is also possible to ingest existing fixed buckets histograms. The input must be a Base64 string encoding a byte array that contains a serialized histogram object. Both "full" and "sparse" formats can be used. Please see [Serialization formats](#serialization-formats) below for details.
+
+### Serialization formats
+
+#### Full serialization format
+
+This format includes the full histogram bucket count array in the serialization format.
+
+```
+byte: serialization version, must be 0x01
+byte: encoding mode, 0x01 for full
+double: lowerLimit
+double: upperLimit
+int: numBuckets
+byte: outlier handling mode (0x00 for `ignore`, 0x01 for `overflow`, and 0x02 for `clip`)
+long: count, total number of values contained in the histogram, excluding outliers
+long: lowerOutlierCount
+long: upperOutlierCount
+long: missingValueCount
+double: max
+double: min
+array of longs: bucket counts for the histogram
+```
+
+#### Sparse serialization format
+
+This format represents the histogram bucket counts as (bucketNum, count) pairs. This serialization format is used when less than half of the histogram's buckets have values.
+
+```
+byte: serialization version, must be 0x01
+byte: encoding mode, 0x02 for sparse
+double: lowerLimit
+double: upperLimit
+int: numBuckets
+byte: outlier handling mode (0x00 for `ignore`, 0x01 for `overflow`, and 0x02 for `clip`)
+long: count, total number of values contained in the histogram, excluding outliers
+long: lowerOutlierCount
+long: upperOutlierCount
+long: missingValueCount
+double: max
+double: min
+int: number of following (bucketNum, count) pairs
+sequence of (int, long) pairs:
+  int: bucket number
+  count: bucket count
+```
+
+### Combining histograms with different bucketing schemes
+
+It is possible to combine two histograms with different bucketing schemes (lowerLimit, upperLimit, numBuckets) together. 
+
+The bucketing scheme of the "left hand" histogram will be preserved (i.e., when running a query, the bucketing schemes specified in the query's histogram aggregators will be preserved). 
+
+When merging, we assume that values are evenly distributed within the buckets of the "right hand" histogram.
+
+When the right-hand histogram contains outliers (when using `overflow` mode), we assume that all of the outliers counted in the right-hand histogram will be outliers in the left-hand histogram as well.
+
+For performance and accuracy reasons, we recommend avoiding aggregation of histograms with different bucketing schemes if possible.
+
+### Null handling
+
+If `druid.generic.useDefaultValueForNull` is false, null values will be tracked in the `missingValueCount` field of the histogram.
+
+If `druid.generic.useDefaultValueForNull` is true, null values will be added to the histogram as the default 0.0 value.
+
+## Histogram post-aggregators
 
 Post-aggregators are used to transform opaque approximate histogram sketches
 into bucketed histogram representations, as well as to compute various
 distribution metrics such as quantiles, min, and max.
 
-#### Equal buckets post-aggregator
+### Equal buckets post-aggregator
 
 Computes a visual representation of the approximate histogram with a given number of equal-sized bins.
-Bucket intervals are based on the range of the underlying data.
+Bucket intervals are based on the range of the underlying data. This aggregator is not supported for the fixed buckets histogram.
 
 ```json
 {
@@ -113,13 +252,15 @@ Bucket intervals are based on the range of the underlying data.
 }
 ```
 
-#### Buckets post-aggregator
+### Buckets post-aggregator
 
 Computes a visual representation given an initial breakpoint, offset, and a bucket size.
 
 Bucket size determines the width of the binning interval.
 
 Offset determines the value on which those interval bins align.
+
+This aggregator is not supported for the fixed buckets histogram.
 
 ```json
 {
@@ -131,26 +272,28 @@ Offset determines the value on which those interval bins align.
 }
 ```
 
-#### Custom buckets post-aggregator
+### Custom buckets post-aggregator
 
 Computes a visual representation of the approximate histogram with bins laid out according to the given breaks.
+
+This aggregator is not supported for the fixed buckets histogram.
 
 ```json
 { "type" : "customBuckets", "name" : <output_name>, "fieldName" : <aggregator_name>,
   "breaks" : [ <value>, <value>, ... ] }
 ```
 
-#### min post-aggregator
+### min post-aggregator
 
-Returns the minimum value of the underlying approximate histogram aggregator
+Returns the minimum value of the underlying approximate or fixed buckets histogram aggregator
 
 ```json
 { "type" : "min", "name" : <output_name>, "fieldName" : <aggregator_name> }
 ```
 
-#### max post-aggregator
+### max post-aggregator
 
-Returns the maximum value of the underlying approximate histogram aggregator
+Returns the maximum value of the underlying approximate or fixed buckets histogram aggregator
 
 ```json
 { "type" : "max", "name" : <output_name>, "fieldName" : <aggregator_name> }
@@ -158,7 +301,7 @@ Returns the maximum value of the underlying approximate histogram aggregator
 
 #### quantile post-aggregator
 
-Computes a single quantile based on the underlying approximate histogram aggregator
+Computes a single quantile based on the underlying approximate or fixed buckets histogram aggregator
 
 ```json
 { "type" : "quantile", "name" : <output_name>, "fieldName" : <aggregator_name>,
@@ -167,7 +310,7 @@ Computes a single quantile based on the underlying approximate histogram aggrega
 
 #### quantiles post-aggregator
 
-Computes an array of quantiles based on the underlying approximate histogram aggregator
+Computes an array of quantiles based on the underlying approximate or fixed buckets histogram aggregator
 
 ```json
 { "type" : "quantiles", "name" : <output_name>, "fieldName" : <aggregator_name>,

@@ -82,7 +82,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
           public WindowedStorageAdapter apply(WindowedDataSegment segment)
           {
             try {
-              logger.info("Getting storage path for segment [%s]", segment.getSegment().getIdentifier());
+              logger.info("Getting storage path for segment [%s]", segment.getSegment().getId());
               Path path = new Path(JobHelper.getURIFromSegment(segment.getSegment()));
 
               logger.info("Fetch segment files from [%s]", path);
