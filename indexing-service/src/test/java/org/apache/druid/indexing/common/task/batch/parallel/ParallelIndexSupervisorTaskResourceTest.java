@@ -500,7 +500,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
     {
       setRunner(
           new TestRunner(
@@ -509,10 +509,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
               indexingServiceClient
           )
       );
-      return TaskStatus.fromCode(
-          getId(),
-          getRunner().run()
-      );
+      return getRunner();
     }
   }
 
