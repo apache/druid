@@ -48,7 +48,7 @@ public class GcpModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-
+    // Nothing to proactively bind
   }
 
 
