@@ -243,12 +243,13 @@ public class DruidCoordinator
     return loadManagementPeons;
   }
 
-  public Map<String, ? extends Object2LongMap<String>> getReplicationStatus()
+  /** @return tier -> { dataSource -> underReplicationCount } map */
+  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTier()
   {
-    final Map<String, Object2LongOpenHashMap<String>> retVal = new HashMap<>();
+    final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
 
     if (segmentReplicantLookup == null) {
-      return retVal;
+      return underReplicationCountsPerDataSourcePerTier;
     }
 
     final DateTime now = DateTimes.nowUtc();
@@ -265,15 +266,16 @@ public class DruidCoordinator
             .getTieredReplicants()
             .forEach((final String tier, final Integer ruleReplicants) -> {
               int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
-              retVal
-                  .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
+              Object2LongMap<String> underReplicationPerDataSource = underReplicationCountsPerDataSourcePerTier
+                  .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>());
+              ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
                   .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
             });
         break; // only the first matching rule applies
       }
     }
 
-    return retVal;
+    return underReplicationCountsPerDataSourcePerTier;
   }
 
   public Object2LongMap<String> getSegmentAvailability()
