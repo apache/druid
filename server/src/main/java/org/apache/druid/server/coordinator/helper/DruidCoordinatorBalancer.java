@@ -96,7 +96,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     if (params.getAvailableSegments().size() == 0) {
       log.warn("Metadata segments are not available. Cannot balance.");
-      // skip emit 0,0 stats
+      // suppress emit zero stats
       return;
     }
     currentlyMovingSegments.computeIfAbsent(tier, t -> new ConcurrentHashMap<>());
@@ -108,6 +108,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
           tier,
           currentlyMovingSegments.get(tier).size()
       );
+      // suppress emit zero stats
       return;
     }
 
@@ -127,6 +128,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     if ((decommissioningServers.isEmpty() && activeServers.size() <= 1) || activeServers.isEmpty()) {
       log.warn("[%s]: insufficient active servers. Cannot balance.", tier);
+      // suppress emit zero stats
       return;
     }
 
@@ -137,6 +139,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     if (numSegments == 0) {
       log.info("No segments found. Cannot balance.");
+      // suppress emit zero stats
       return;
     }
 
