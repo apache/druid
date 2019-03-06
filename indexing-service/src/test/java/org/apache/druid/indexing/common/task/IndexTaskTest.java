@@ -185,8 +185,7 @@ public class IndexTaskTest
           {
             return deepStorageDir;
           }
-        },
-        jsonMapper
+        }
     )
     {
       @Override
@@ -1574,10 +1573,7 @@ public class IndexTaskTest
         }
 
         if (taskAction instanceof SegmentTransactionalInsertAction) {
-          return (RetType) new SegmentPublishResult(
-              ((SegmentTransactionalInsertAction) taskAction).getSegments(),
-              true
-          );
+          return (RetType) SegmentPublishResult.ok(((SegmentTransactionalInsertAction) taskAction).getSegments());
         }
 
         if (taskAction instanceof SegmentAllocateAction) {

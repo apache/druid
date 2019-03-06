@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -101,6 +102,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
 
   public static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
+  public static final PlannerConfig PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE = new PlannerConfig()
+  {
+    @Override
+    public boolean shouldSerializeComplexValues()
+    {
+      return false;
+    }
+  };
   public static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION = new PlannerConfig()
   {
     @Override
@@ -234,70 +243,70 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   // Generate timestamps for expected results
-  public static long T(final String timeString)
+  public static long t(final String timeString)
   {
     return Calcites.jodaToCalciteTimestamp(DateTimes.of(timeString), DateTimeZone.UTC);
   }
 
   // Generate timestamps for expected results
-  public static long T(final String timeString, final String timeZoneString)
+  public static long t(final String timeString, final String timeZoneString)
   {
     final DateTimeZone timeZone = DateTimes.inferTzFromString(timeZoneString);
     return Calcites.jodaToCalciteTimestamp(new DateTime(timeString, timeZone), timeZone);
   }
 
   // Generate day numbers for expected results
-  public static int D(final String dayString)
+  public static int d(final String dayString)
   {
-    return (int) (Intervals.utc(T("1970"), T(dayString)).toDurationMillis() / (86400L * 1000L));
+    return (int) (Intervals.utc(t("1970"), t(dayString)).toDurationMillis() / (86400L * 1000L));
   }
 
-  public static QuerySegmentSpec QSS(final Interval... intervals)
+  public static QuerySegmentSpec querySegmentSpec(final Interval... intervals)
   {
     return new MultipleIntervalSegmentSpec(Arrays.asList(intervals));
   }
 
-  public static AndDimFilter AND(DimFilter... filters)
+  public static AndDimFilter and(DimFilter... filters)
   {
     return new AndDimFilter(Arrays.asList(filters));
   }
 
-  public static OrDimFilter OR(DimFilter... filters)
+  public static OrDimFilter or(DimFilter... filters)
   {
     return new OrDimFilter(Arrays.asList(filters));
   }
 
-  public static NotDimFilter NOT(DimFilter filter)
+  public static NotDimFilter not(DimFilter filter)
   {
     return new NotDimFilter(filter);
   }
 
-  public static InDimFilter IN(String dimension, List<String> values, ExtractionFn extractionFn)
+  public static InDimFilter in(String dimension, List<String> values, ExtractionFn extractionFn)
   {
     return new InDimFilter(dimension, values, extractionFn);
   }
 
-  public static SelectorDimFilter SELECTOR(final String fieldName, final String value, final ExtractionFn extractionFn)
+  public static SelectorDimFilter selector(final String fieldName, final String value, final ExtractionFn extractionFn)
   {
     return new SelectorDimFilter(fieldName, value, extractionFn);
   }
 
-  public static ExpressionDimFilter EXPRESSION_FILTER(final String expression)
+  public static ExpressionDimFilter expressionFilter(final String expression)
   {
     return new ExpressionDimFilter(expression, CalciteTests.createExprMacroTable());
   }
 
-  public static DimFilter NUMERIC_SELECTOR(
+  public static DimFilter numeric_Selector(
       final String fieldName,
       final String value,
       final ExtractionFn extractionFn
   )
   {
     // We use Bound filters for numeric equality to achieve "10.0" = "10"
-    return BOUND(fieldName, value, value, false, false, extractionFn, StringComparators.NUMERIC);
+    return bound(fieldName, value, value, false, false, extractionFn, StringComparators.NUMERIC);
   }
 
-  public static BoundDimFilter BOUND(
+  public static BoundDimFilter bound(
       final String fieldName,
       final String lower,
       final String upper,
@@ -310,7 +319,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new BoundDimFilter(fieldName, lower, upper, lowerStrict, upperStrict, null, extractionFn, comparator);
   }
 
-  public static BoundDimFilter TIME_BOUND(final Object intervalObj)
+  public static BoundDimFilter timeBound(final Object intervalObj)
   {
     final Interval interval = new Interval(intervalObj, ISOChronology.getInstanceUTC());
     return new BoundDimFilter(
@@ -320,32 +329,32 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         false,
         true,
         null,
-        null,
+        null, 
         StringComparators.NUMERIC
     );
   }
 
-  public static CascadeExtractionFn CASCADE(final ExtractionFn... fns)
+  public static CascadeExtractionFn cascade(final ExtractionFn... fns)
   {
     return new CascadeExtractionFn(fns);
   }
 
-  public static List<DimensionSpec> DIMS(final DimensionSpec... dimensionSpecs)
+  public static List<DimensionSpec> dimensionSpec(final DimensionSpec... dimensionSpecs)
   {
     return Arrays.asList(dimensionSpecs);
   }
 
-  public static List<AggregatorFactory> AGGS(final AggregatorFactory... aggregators)
+  public static List<AggregatorFactory> aggregators(final AggregatorFactory... aggregators)
   {
     return Arrays.asList(aggregators);
   }
 
-  public static DimFilterHavingSpec HAVING(final DimFilter filter)
+  public static DimFilterHavingSpec having(final DimFilter filter)
   {
     return new DimFilterHavingSpec(filter, true);
   }
 
-  public static ExpressionVirtualColumn EXPRESSION_VIRTUAL_COLUMN(
+  public static ExpressionVirtualColumn expression_Virtual_Column(
       final String name,
       final String expression,
       final ValueType outputType
@@ -354,14 +363,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
-  public static ExpressionPostAggregator EXPRESSION_POST_AGG(final String name, final String expression)
+  public static ExpressionPostAggregator expresionPostAgg(final String name, final String expression)
   {
     return new ExpressionPostAggregator(name, expression, null, CalciteTests.createExprMacroTable());
   }
 
-  public static ScanQuery.ScanQueryBuilder newScanQueryBuilder()
+  public static Druids.ScanQueryBuilder newScanQueryBuilder()
   {
-    return new ScanQuery.ScanQueryBuilder().resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
                                            .legacy(false);
   }
 
@@ -539,7 +548,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     final InProcessViewManager viewManager = new InProcessViewManager(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig, viewManager);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
 
 
     final PlannerFactory plannerFactory = new PlannerFactory(

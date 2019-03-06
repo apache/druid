@@ -114,12 +114,12 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(
                       new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -146,7 +146,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns()
                   .filters(
@@ -155,7 +155,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                           createExprMacroTable()
                       )
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -178,7 +178,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .virtualColumns()
                   .filters(
@@ -187,7 +187,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                           createExprMacroTable()
                       )
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -214,7 +214,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(
                       new OrDimFilter(
@@ -222,7 +222,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                           new BloomDimFilter("dim2", BloomKFilterHolder.fromBloomKFilter(filter2), null)
                       )
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),

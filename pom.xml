@@ -30,7 +30,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-incubating-SNAPSHOT</version>
+    <version>0.15.0-incubating-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -127,6 +127,7 @@
         <!-- Core cloud functionality -->
         <module>cloud/aws-common</module>
         <module>cloud/gcp-common</module>
+        <module>web-console</module>
         <!-- Core extensions -->
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -172,6 +173,7 @@
         <module>extensions-contrib/opentsdb-emitter</module>
         <module>extensions-contrib/materialized-view-maintenance</module>
         <module>extensions-contrib/materialized-view-selection</module>
+        <module>extensions-contrib/momentsketch</module>
         <!-- distribution packaging -->
         <module>distribution</module>
     </modules>
@@ -699,7 +701,7 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.6.4</version>
+                <version>1.7.25</version>
             </dependency>
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
@@ -1344,6 +1346,15 @@
                         <target>${maven.compiler.target}</target>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>com.github.eirslett</groupId>
+                    <artifactId>frontend-maven-plugin</artifactId>
+                    <version>1.6</version>
+                    <configuration>
+                        <nodeVersion>v10.13.0</nodeVersion>
+                        <npmVersion>6.4.1</npmVersion>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -1528,6 +1539,7 @@
                                 <exclude>quickstart/tutorial/conf/**</exclude>
                                 <exclude>docker/*.conf</exclude>
                                 <exclude>target/**</exclude>
+                                <exclude>licenses/**</exclude>
                                 <exclude>**/test/resources/**</exclude>
                                 <exclude>**/derby.log</exclude>
                                 <exclude>**/jvm.config</exclude>
@@ -1536,6 +1548,12 @@
                                 <exclude>**/*.json</exclude>
                                 <exclude>**/*.parq</exclude>
                                 <exclude>**/*.parquet</exclude>
+                                <exclude>LICENSE</exclude>
+                                <exclude>LICENSE.BINARY</exclude>
+                                <exclude>NOTICE</exclude>
+                                <exclude>NOTICE.BINARY</exclude>
+                                <exclude>LABELS.md</exclude>
+                                <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

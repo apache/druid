@@ -60,20 +60,20 @@ Please note that above flags are general guidelines only. Be cautious and feel f
 
 Additionally, for large jvm heaps, here are a few Garbage Collection efficiency guidelines that have been known to help in some cases.
 - Mount /tmp on tmpfs ( See http://www.evanjones.ca/jvm-mmap-pause.html )
-- On Disk-IO intensive nodes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
+- On Disk-IO intensive processes (e.g. Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
 - Disable Transparent Huge Pages ( See https://blogs.oracle.com/linux/performance-issues-with-transparent-huge-pages-thp )
 - Try disabling biased locking by using `-XX:-UseBiasedLocking` jvm flag. ( See https://dzone.com/articles/logging-stop-world-pauses-jvm )
 
 # Use UTC Timezone
 
-We recommend using UTC timezone for all your events and across on your nodes, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones. To query in a non-UTC timezone see [query granularities](../querying/granularities.html#period-granularities)
+We recommend using UTC timezone for all your events and across your hosts, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones. To query in a non-UTC timezone see [query granularities](../querying/granularities.html#period-granularities)
 
 # SSDs
 
-SSDs are highly recommended for historical and real-time nodes if you are not running a cluster that is entirely in memory. SSDs can greatly mitigate the time required to page data in and out of memory.
+SSDs are highly recommended for Historical and real-time processes if you are not running a cluster that is entirely in memory. SSDs can greatly mitigate the time required to page data in and out of memory.
 
 # JBOD vs RAID
-Historical nodes store large number of segments on Disk and support specifying multiple paths for storing those. Typically, hosts have multiple disks configured with RAID which makes them look like a single disk to OS. RAID might have overheads specially if its not hardware controller based but software based. So, Historicals might get improved disk throughput with JBOD.
+Historical processes store large number of segments on Disk and support specifying multiple paths for storing those. Typically, hosts have multiple disks configured with RAID which makes them look like a single disk to OS. RAID might have overheads specially if its not hardware controller based but software based. So, Historicals might get improved disk throughput with JBOD.
 
 # Use Timeseries and TopN Queries Instead of GroupBy Where Possible
 

@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -43,21 +42,17 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
-  private final boolean skipOffsetGaps;
   private final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
 
-  @JsonCreator
   public SeekableStreamIndexTaskIOConfig(
-      @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
-      @JsonProperty("baseSequenceName") String baseSequenceName,
-      @JsonProperty("startPartitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> startPartitions,
-      @JsonProperty("endPartitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> endPartitions,
-      @JsonProperty("useTransaction") Boolean useTransaction,
-      @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
-      @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
-      @JsonProperty("skipOffsetGaps") Boolean skipOffsetGaps,
-      @JsonProperty("exclusiveStartSequenceNumberPartitions")
-          Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
+      final @Nullable Integer taskGroupId, // can be null for backward compabitility
+      final String baseSequenceName,
+      final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> startPartitions,
+      final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> endPartitions,
+      final Boolean useTransaction,
+      final DateTime minimumMessageTime,
+      final DateTime maximumMessageTime,
+      final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
   )
   {
     this.taskGroupId = taskGroupId;
@@ -67,7 +62,6 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
-    this.skipOffsetGaps = skipOffsetGaps != null ? skipOffsetGaps : DEFAULT_SKIP_OFFSET_GAPS;
     this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions == null
                                                   ? Collections.emptySet()
                                                   : exclusiveStartSequenceNumberPartitions;
@@ -137,9 +131,4 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     return minimumMessageTime;
   }
 
-  @JsonProperty
-  public boolean isSkipOffsetGaps()
-  {
-    return skipOffsetGaps;
-  }
 }

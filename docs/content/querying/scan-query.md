@@ -178,7 +178,7 @@ The format of the result when resultFormat equals to `compactedList`:
 The biggest difference between select query and scan query is that, scan query doesn't retain all rows in memory before rows can be returned to client.  
 It will cause memory pressure if too many rows required by select query.  
 Scan query doesn't have this issue.  
-Scan query can return all rows without issuing another pagination query, which is extremely useful when query against historical or realtime node directly.
+Scan query can return all rows without issuing another pagination query, which is extremely useful when query against Historical or realtime process directly.
 
 ## Legacy mode
 
@@ -191,6 +191,6 @@ you may have that is named "timestamp".
 - Timestamps are returned as ISO8601 time strings rather than integers (milliseconds since 1970-01-01 00:00:00 UTC).
 
 Legacy mode can be triggered either by passing `"legacy" : true` in your query JSON, or by setting
-`druid.query.scan.legacy = true` on your Druid nodes. If you were previously using the scan-query contrib extension,
+`druid.query.scan.legacy = true` on your Druid processes. If you were previously using the scan-query contrib extension,
 the best way to migrate is to activate legacy mode during a rolling upgrade, then switch it off after the upgrade
 is complete.

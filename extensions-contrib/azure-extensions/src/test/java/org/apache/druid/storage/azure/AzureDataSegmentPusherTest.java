@@ -95,7 +95,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
 
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
 
     // Create a mock segment on disk
     File tmp = tempFolder.newFile("version.bin");
@@ -130,32 +130,25 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void getAzurePathsTest()
   {
 
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
     final String storageDir = pusher.getStorageDir(dataSegment, false);
-    Map<String, String> paths = pusher.getAzurePaths(dataSegment, false);
+    final String azurePath = pusher.getAzurePath(dataSegment, false);
 
     assertEquals(
         StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME),
-        paths.get("index")
-    );
-    assertEquals(
-        StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.DESCRIPTOR_FILE_NAME),
-        paths.get("descriptor")
+        azurePath
     );
   }
 
   @Test
   public void uploadDataSegmentTest() throws StorageException, IOException, URISyntaxException
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
     final int binaryVersion = 9;
     final File compressedSegmentData = new File("index.zip");
-    final File descriptorFile = new File("descriptor.json");
-    final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment, false);
+    final String azurePath = pusher.getAzurePath(dataSegment, false);
 
-    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"));
-    expectLastCall();
-    azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"));
+    azureStorage.uploadBlob(compressedSegmentData, containerName, azurePath);
     expectLastCall();
 
     replayAll();
@@ -165,15 +158,14 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         binaryVersion,
         0, // empty file
         compressedSegmentData,
-        descriptorFile,
-        azurePaths
+        azurePath
     );
 
     assertEquals(compressedSegmentData.length(), pushedDataSegment.getSize());
     assertEquals(binaryVersion, (int) pushedDataSegment.getBinaryVersion());
     Map<String, Object> loadSpec = pushedDataSegment.getLoadSpec();
     assertEquals(AzureStorageDruidModule.SCHEME, MapUtils.getString(loadSpec, "type"));
-    assertEquals(azurePaths.get("index"), MapUtils.getString(loadSpec, "blobPath"));
+    assertEquals(azurePath, MapUtils.getString(loadSpec, "blobPath"));
 
     verifyAll();
   }
@@ -181,7 +173,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void getPathForHadoopTest()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
     String hadoopPath = pusher.getPathForHadoop();
     Assert.assertEquals("wasbs://container@account.blob.core.windows.net/", hadoopPath);
   }
@@ -189,7 +181,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void storageDirContainsNoColonsTest()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig);
     DataSegment withColons = dataSegment.withVersion("2018-01-05T14:54:09.295Z");
     String segmentPath = pusher.getStorageDir(withColons, false);
     Assert.assertFalse("Path should not contain any columns", segmentPath.contains(":"));

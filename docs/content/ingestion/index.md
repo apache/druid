@@ -162,13 +162,13 @@ to load that segment and instructs that Historical to do so.
 ## Ingestion methods
 
 In most ingestion methods, this work is done by Druid
-MiddleManager nodes. One exception is Hadoop-based ingestion, where this work is instead done using a Hadoop MapReduce
-job on YARN (although MiddleManager nodes are still involved in starting and monitoring the Hadoop jobs).
+MiddleManager processes. One exception is Hadoop-based ingestion, where this work is instead done using a Hadoop MapReduce
+job on YARN (although MiddleManager processes are still involved in starting and monitoring the Hadoop jobs).
 
-Once segments have been generated and stored in [deep storage](../dependencies/deep-storage.html), they will be loaded by Druid Historical nodes. Some Druid
-ingestion methods additionally support _real-time queries_, meaning you can query in-flight data on MiddleManager nodes
+Once segments have been generated and stored in [deep storage](../dependencies/deep-storage.html), they will be loaded by Druid Historical processes. Some Druid
+ingestion methods additionally support _real-time queries_, meaning you can query in-flight data on MiddleManager processes
 before it is finished being converted and written to deep storage. In general, a small amount of data will be in-flight
-on MiddleManager nodes relative to the larger amount of historical data being served from Historical nodes.
+on MiddleManager processes relative to the larger amount of historical data being served from Historical processes.
 
 See the [Design](../design/index.html) page for more details on how Druid stores and manages your data.
 
@@ -178,7 +178,7 @@ the best one for your situation.
 |Method|How it works|Can append and overwrite?|Can handle late data?|Exactly-once ingestion?|Real-time queries?|
 |------|------------|-------------------------|---------------------|-----------------------|------------------|
 |[Native batch](native_tasks.html)|Druid loads data directly from S3, HTTP, NFS, or other networked storage.|Append or overwrite|Yes|Yes|No|
-|[Hadoop](hadoop.html)|Druid launches Hadoop Map/Reduce jobs to load data files.|Append or overwrite|Yes|Yes|No|
+|[Hadoop](hadoop.html)|Druid launches Hadoop Map/Reduce jobs to load data files.|Overwrite|Yes|Yes|No|
 |[Kafka indexing service](../development/extensions-core/kafka-ingestion.html)|Druid reads directly from Kafka.|Append only|Yes|Yes|Yes|
 |[Tranquility](stream-push.html)|You use Tranquility, a client side library, to push individual records into Druid.|Append only|No - late data is dropped|No - may drop or duplicate data|Yes|
 
@@ -191,7 +191,7 @@ a _time chunk_, and each time chunk contains one or more [segments](../design/se
 particular time chunk may be partitioned further using options that vary based on the ingestion method you have chosen.
 
  * With [Hadoop](hadoop.html) you can do hash- or range-based partitioning on one or more columns.
- * With [Native batch](native_tasks.html) you can partition on a hash of all dimension columns. This is useful when
+ * With [Native batch](native_tasks.html) you can partition on a hash of dimension columns. This is useful when
  rollup is enabled, since it maximizes your space savings.
  * With [Kafka indexing](../development/extensions-core/kafka-ingestion.html), partitioning is based on Kafka
  partitions, and is not configurable through Druid. You can configure it on the Kafka side by using the partitioning
@@ -291,9 +291,9 @@ For compaction documentation, please see [tasks](../ingestion/tasks.html).
 
 Druid supports retention rules, which are used to define intervals of time where data should be preserved, and intervals where data should be discarded.
 
-Druid also supports separating historical nodes into tiers, and the retention rules can be configured to assign data for specific intervals to specific tiers.
+Druid also supports separating Historical processes into tiers, and the retention rules can be configured to assign data for specific intervals to specific tiers.
 
-These features are useful for performance/cost management; a common use case is separating historical nodes into a "hot" tier and a "cold" tier.
+These features are useful for performance/cost management; a common use case is separating Historical processes into a "hot" tier and a "cold" tier.
 
 For more information, please see [Load rules](../operations/rule-configuration.html).
 

@@ -24,7 +24,7 @@ title: "Tasks Overview"
 
 # Tasks Overview
 
-Tasks are run on middle managers and always operate on a single data source.
+Tasks are run on MiddleManagers and always operate on a single data source.
 
 Tasks are submitted using POST requests to the Overlord. Please see [Overlord Task API](../operations/api-reference.html#overlord-tasks) for API details.
 
@@ -40,6 +40,10 @@ See [batch ingestion](../ingestion/hadoop.html).
 
 Druid provides a native index task which doesn't need any dependencies on other systems.
 See [native index tasks](./native_tasks.html) for more details.
+
+<div class="note info">
+Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.
+</div>
 
 ### Kafka Indexing Tasks
 

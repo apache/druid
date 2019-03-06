@@ -167,9 +167,9 @@ public class DefaultOfflineAppenderatorFactoryTest
           new LinearShardSpec(0)
       );
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(identifier, AppenderatorTest.IR("2000", "bar", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(identifier, AppenderatorTest.ir("2000", "bar", 1), Suppliers.ofInstance(Committers.nil()));
       Assert.assertEquals(1, ((AppenderatorImpl) appenderator).getRowsInMemory());
-      appenderator.add(identifier, AppenderatorTest.IR("2000", "baz", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(identifier, AppenderatorTest.ir("2000", "baz", 1), Suppliers.ofInstance(Committers.nil()));
       Assert.assertEquals(2, ((AppenderatorImpl) appenderator).getRowsInMemory());
       appenderator.close();
       Assert.assertEquals(0, ((AppenderatorImpl) appenderator).getRowsInMemory());

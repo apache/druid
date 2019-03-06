@@ -80,7 +80,7 @@ druid.auth.authenticator.anonymous.authorizerName=myBasicAuthorizer
 ```
 
 ## Escalator
-The `druid.escalator.type` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a broker node communicates with historical nodes for query processing).
+The `druid.escalator.type` property determines what authentication scheme should be used for internal Druid cluster communications (such as when a Broker process communicates with Historical processes for query processing).
 
 The Escalator chosen for this property must use an authentication scheme that is supported by an Authenticator in `druid.auth.authenticationChain`. Authenticator extension implementors must also provide a corresponding Escalator implementation if they intend to use a particular authentication scheme for internal Druid communications.
 
@@ -123,7 +123,7 @@ An Authenticator implementation should provide some means through configuration 
 
 ## Internal System User
 
-Internal requests between Druid nodes (non-user initiated communications) need to have authentication credentials attached. 
+Internal requests between Druid processes (non-user initiated communications) need to have authentication credentials attached. 
 
 These requests should be run as an "internal system user", an identity that represents the Druid cluster itself, with full access permissions.
 

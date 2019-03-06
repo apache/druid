@@ -24,7 +24,7 @@ title: "Materialized View"
 
 # Materialized View
 
-To use this feature, make sure to only load materialized-view-selection on broker and load materialized-view-maintenance on overlord. In addtion, this feature currently requires a hadoop cluster.
+To use this feature, make sure to only load `materialized-view-selection` on Broker and load `materialized-view-maintenance` on Overlord. In addtion, this feature currently requires a Hadoop cluster.
 
 This feature enables Druid to greatly improve the query performance, especially when the query dataSource has a very large number of dimensions but the query only required several dimensions. This feature includes two parts. One is `materialized-view-maintenance`, and the other is `materialized-view-selection`.
 
@@ -76,7 +76,7 @@ A sample derivativeDataSource supervisor spec is shown below:
 |tuningConfig	|TuningConfig must be HadoopTuningConfig. See [Hadoop tuning config](../../ingestion/hadoop.html#tuningconfig).|yes|
 |dataSource	|The name of this derived dataSource. 	|no(default=baseDataSource-hashCode of supervisor)|
 |hadoopDependencyCoordinates	|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by druid.extensions.hadoopDependenciesDir	|no|
-|classpathPrefix	|Classpath that will be pre-appended for the peon process.	|no|
+|classpathPrefix	|Classpath that will be pre-appended for the Peon process.	|no|
 |context	|See below.	|no|
 
 **Context**
@@ -131,4 +131,4 @@ There are 2 parts in a view query:
 |queryType	|The query type. This should always be view	|yes|
 |query	|The real query of this `view` query. The real query must be [groupBy](../../querying/groupbyquery.html), [topN](../../querying/topnquery.html), or [timeseries](../../querying/timeseriesquery.html) type.|yes|
 
-**Note that Materialized View is currently designated as experimental. Please make sure the time of all nodes are the same and increase monotonically. Otherwise, some unexpected errors may happen on query results.**
+**Note that Materialized View is currently designated as experimental. Please make sure the time of all processes are the same and increase monotonically. Otherwise, some unexpected errors may happen on query results.**

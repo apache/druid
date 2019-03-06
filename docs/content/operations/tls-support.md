@@ -32,7 +32,7 @@ title: "TLS Support"
 |`druid.enableTlsPort`|Enable/Disable HTTPS connector.|`false`|
 
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
-and `druid.tlsPort` properties on each node. Please see `Configuration` section of individual nodes to check the valid and default values for these ports.
+and `druid.tlsPort` properties on each process. Please see `Configuration` section of individual processes to check the valid and default values for these ports.
 
 # Jetty Server TLS Configuration
 
@@ -75,7 +75,7 @@ The following table contains non-mandatory advanced configuration options, use c
 
 # Druid's internal communication over TLS
 
-Whenever possible Druid nodes will use HTTPS to talk to each other. To enable this communication Druid's HttpClient needs to
+Whenever possible Druid processes will use HTTPS to talk to each other. To enable this communication Druid's HttpClient needs to
 be configured with a proper [SSLContext](http://docs.oracle.com/javase/8/docs/api/javax/net/ssl/SSLContext.html) that is able
 to validate the Server Certificates, otherwise communication will fail.
 
@@ -87,7 +87,7 @@ If this extension does not satisfy the requirements then please follow the exten
 to create your own extension.
 
 # Upgrading Clients that interact with Overlord or Coordinator
-When Druid Coordinator/Overlord have both HTTP and HTTPS enabled and Client sends request to non-leader node, then Client is always redirected to the HTTPS endpoint on leader node.
+When Druid Coordinator/Overlord have both HTTP and HTTPS enabled and Client sends request to non-leader process, then Client is always redirected to the HTTPS endpoint on leader process.
 So, Clients should be first upgraded to be able to handle redirect to HTTPS. Then Druid Overlord/Coordinator should be upgraded and configured to run both HTTP and HTTPS ports. Then Client configuration should be changed to refer to Druid Coordinator/Overlord via the HTTPS endpoint and then HTTP port on Druid Coordinator/Overlord should be disabled.
 
 # Custom TLS certificate checks

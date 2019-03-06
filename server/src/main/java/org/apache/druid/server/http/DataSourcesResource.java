@@ -363,17 +363,17 @@ public class DataSourcesResource
 
       return Response.ok(retVal).build();
     } else {
-      final Map<Interval, Map<SimpleProperties, Object>> retVal = new TreeMap<>(comparator);
+      final Map<Interval, Map<SimpleProperties, Object>> statsPerInterval = new TreeMap<>(comparator);
       for (DataSegment dataSegment : dataSource.getSegments()) {
         if (intervalFilter.test(dataSegment.getInterval())) {
           Map<SimpleProperties, Object> properties =
-              retVal.computeIfAbsent(dataSegment.getInterval(), i -> new EnumMap<>(SimpleProperties.class));
+              statsPerInterval.computeIfAbsent(dataSegment.getInterval(), i -> new EnumMap<>(SimpleProperties.class));
           properties.merge(SimpleProperties.size, dataSegment.getSize(), (a, b) -> (Long) a + (Long) b);
           properties.merge(SimpleProperties.count, 1, (a, b) -> (Integer) a + (Integer) b);
         }
       }
 
-      return Response.ok(retVal).build();
+      return Response.ok(statsPerInterval).build();
     }
   }
 

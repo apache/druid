@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.SegmentId;
 
@@ -28,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * The ReplicationThrottler is used to throttle the number of replicants that are created.
@@ -123,7 +123,7 @@ public class ReplicationThrottler
 
     public void removeSegment(String tier, SegmentId segmentId)
     {
-      Map<SegmentId, String> segments = currentlyProcessingSegments.get(tier);
+      ConcurrentMap<SegmentId, String> segments = currentlyProcessingSegments.get(tier);
       if (segments != null) {
         segments.remove(segmentId);
       }
@@ -131,7 +131,7 @@ public class ReplicationThrottler
 
     public int getNumProcessing(String tier)
     {
-      Map<SegmentId, String> segments = currentlyProcessingSegments.get(tier);
+      ConcurrentMap<SegmentId, String> segments = currentlyProcessingSegments.get(tier);
       return (segments == null) ? 0 : segments.size();
     }
 
@@ -161,10 +161,10 @@ public class ReplicationThrottler
 
     public List<String> getCurrentlyProcessingSegmentsAndHosts(String tier)
     {
-      Map<SegmentId, String> segments = currentlyProcessingSegments.get(tier);
-      List<String> retVal = new ArrayList<>();
-      segments.forEach((segmentId, serverId) -> retVal.add(StringUtils.format("%s ON %s", segmentId, serverId)));
-      return retVal;
+      ConcurrentMap<SegmentId, String> segments = currentlyProcessingSegments.get(tier);
+      List<String> segmentsAndHosts = new ArrayList<>();
+      segments.forEach((segmentId, serverId) -> segmentsAndHosts.add(segmentId + " ON " + serverId));
+      return segmentsAndHosts;
     }
   }
 }

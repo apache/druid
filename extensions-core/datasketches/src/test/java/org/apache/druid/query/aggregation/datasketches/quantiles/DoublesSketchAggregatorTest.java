@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.quantiles;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -55,8 +54,8 @@ public class DoublesSketchAggregatorTest
 
   public DoublesSketchAggregatorTest(final GroupByQueryConfig config)
   {
-    DruidModule module = new DoublesSketchModule();
-    module.configure(null);
+    DoublesSketchModule.registerSerde();
+    DoublesSketchModule module = new DoublesSketchModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
     timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
@@ -343,7 +342,7 @@ public class DoublesSketchAggregatorTest
   }
 
   @Test
-  public void QueryingDataWithFieldNameValueAsFloatInsteadOfSketch() throws Exception
+  public void queryingDataWithFieldNameValueAsFloatInsteadOfSketch() throws Exception
   {
     Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
@@ -419,7 +418,7 @@ public class DoublesSketchAggregatorTest
   }
 
   @Test
-  public void TimeSeriesQueryInputAsFloat() throws Exception
+  public void timeSeriesQueryInputAsFloat() throws Exception
   {
     Sequence<Row> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
