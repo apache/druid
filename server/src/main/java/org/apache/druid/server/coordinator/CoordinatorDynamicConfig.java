@@ -57,7 +57,7 @@ public class CoordinatorDynamicConfig
   private final boolean killAllDataSources;
   private final Set<String> killableDataSources;
   private final Set<String> decommissioningNodes;
-  private final int decommissioningVelocity;
+  private final int decommissioningMaxSegmentsToMovePercent;
 
   // The pending segments of the dataSources in this list are not killed.
   private final Set<String> protectedPendingSegmentDatasources;
@@ -89,7 +89,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killPendingSegmentsSkipList") Object protectedPendingSegmentDatasources,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,
-      @JsonProperty("decommissioningVelocity") int decommissioningVelocity
+      @JsonProperty("decommissioningMaxSegmentsToMovePercent") int decommissioningMaxSegmentsToMovePercent
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -106,10 +106,10 @@ public class CoordinatorDynamicConfig
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
     this.decommissioningNodes = parseJsonStringOrArray(decommissioningNodes);
     Preconditions.checkArgument(
-        decommissioningVelocity >= 0 && decommissioningVelocity <= 10,
-        "decommissioningVelocity should be in range [0, 10]"
+        decommissioningMaxSegmentsToMovePercent >= 0 && decommissioningMaxSegmentsToMovePercent <= 10,
+        "decommissioningMaxSegmentsToMovePercent should be in range [0, 10]"
     );
-    this.decommissioningVelocity = decommissioningVelocity;
+    this.decommissioningMaxSegmentsToMovePercent = decommissioningMaxSegmentsToMovePercent;
 
     if (this.killAllDataSources && !this.killableDataSources.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -231,9 +231,9 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * List of historical nodes to 'decommission'. Coordinator doesn't assign new segments on those nodes and moves
-   * segments away from the 'decommissioning' servers at the maximum rate specified by
-   * {@link CoordinatorDynamicConfig#getDecommissioningVelocity}.
+   * List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decomissioning' servers,
+   * and segments will be moved away from them to be placed on 'active' servers at the maximum rate specified by
+   * {@link CoordinatorDynamicConfig#getDecommissioningMaxSegmentsToMovePercent}.
    *
    * @return list of host:port entries
    */
@@ -244,26 +244,22 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * Decommissioning velocity determines the maximum number of segments that may be moved away from 'decommissioning'
-   * servers to non-decommissioning (that is, active) servers during one Coordinator's run. This value is relative to
-   * the total maximum segment movements allowed during one run which is determined by
-   * `{@link CoordinatorDynamicConfig#getMaxSegmentsToMove()}.
+   * The maximum number of segments that may be moved away from 'decommissioning' servers to non-decommissioning
+   * (that is, active) servers during one Coordinator's run. This value is relative to the total maximum segment
+   * movements allowed during one run which is determined by `{@link CoordinatorDynamicConfig#getMaxSegmentsToMove()}.
    *
-   * Specifically, the maximum is `ceil(maxSegmentsToMove * (velocity / 10))`. For example, if `decommissioningVelocity`
-   * is 5, no more than `ceil(maxSegmentsToMove * 0.5)` segments may be moved away from 'decommissioning' servers.
+   * If `decommissioningMaxSegmentsToMovePercent` is 0, segments will neither be moved from _or to_ 'decommissioning'
+   * servers, effectively putting them in a sort of 'maintenance' mode that will not participate in balancing or
+   * assignment by load rules. Decommissioning can also become stalled if there are no available active servers to place
+   * the segments. By leveraging decommissioning percent, an operator can prevent active servers from overload by
+   * prioritizing balancing, or decrease decommissioning time instead. The value should be between 0 and 100.
    *
-   * If `decommissioningVelocity` is 0, segments will neither be moved from _or to_ 'decommissioning' servers,
-   * effectively putting them in a sort of 'maintenance' mode that will not participate in balancing or assignment by
-   * load rules. Decommissioning can also become stalled if there are no available active servers to place the segments.
-   * By leveraging the velocity an operator can prevent active servers from overload by prioritizing balancing, or
-   * decrease decommissioning time instead. The value should be between 0 and 10.
-   *
-   * @return number in range [0, 10]
+   * @return number in range [0, 100]
    */
   @JsonProperty
-  public int getDecommissioningVelocity()
+  public int getDecommissioningMaxSegmentsToMovePercent()
   {
-    return decommissioningVelocity;
+    return decommissioningMaxSegmentsToMovePercent;
   }
 
   @Override
@@ -283,7 +279,7 @@ public class CoordinatorDynamicConfig
            ", protectedPendingSegmentDatasources=" + protectedPendingSegmentDatasources +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            ", decommissioningNodes=" + decommissioningNodes +
-           ", decommissioningVelocity=" + decommissioningVelocity +
+           ", decommissioningMaxSegmentsToMovePercent=" + decommissioningMaxSegmentsToMovePercent +
            '}';
   }
 
@@ -338,7 +334,7 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(decommissioningNodes, that.decommissioningNodes)) {
       return false;
     }
-    return decommissioningVelocity == that.decommissioningVelocity;
+    return decommissioningMaxSegmentsToMovePercent == that.decommissioningMaxSegmentsToMovePercent;
   }
 
   @Override
@@ -358,7 +354,7 @@ public class CoordinatorDynamicConfig
         killableDataSources,
         protectedPendingSegmentDatasources,
         decommissioningNodes,
-        decommissioningVelocity
+        decommissioningMaxSegmentsToMovePercent
     );
   }
 
@@ -379,7 +375,7 @@ public class CoordinatorDynamicConfig
     private static final boolean DEFAULT_EMIT_BALANCING_STATS = false;
     private static final boolean DEFAULT_KILL_ALL_DATA_SOURCES = false;
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
-    private static final int DEFAULT_DECOMMISSIONING_VELOCITY = 7;
+    private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
 
     private Long millisToWaitBeforeDeleting;
     private Long mergeBytesLimit;
@@ -394,7 +390,7 @@ public class CoordinatorDynamicConfig
     private Object killPendingSegmentsSkipList;
     private Integer maxSegmentsInNodeLoadingQueue;
     private Object decommissioningNodes;
-    private Integer decommissioningVelocity;
+    private Integer decommissioningMaxSegmentsToMovePercent;
 
     public Builder()
     {
@@ -415,7 +411,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object killPendingSegmentsSkipList,
         @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
-        @JsonProperty("decommissioningVelocity") @Nullable Integer decommissioningVelocity
+        @JsonProperty("decommissioningMaxSegmentsToMovePercent") @Nullable Integer decommissioningMaxSegmentsToMovePercent
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -431,7 +427,7 @@ public class CoordinatorDynamicConfig
       this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
       this.decommissioningNodes = decommissioningNodes;
-      this.decommissioningVelocity = decommissioningVelocity;
+      this.decommissioningMaxSegmentsToMovePercent = decommissioningMaxSegmentsToMovePercent;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -506,9 +502,9 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withDecommissioningVelocity(Integer velocity)
+    public Builder withDecommissioningMaxSegmentsToMovePercent(Integer percent)
     {
-      this.decommissioningVelocity = velocity;
+      this.decommissioningMaxSegmentsToMovePercent = percent;
       return this;
     }
 
@@ -530,9 +526,9 @@ public class CoordinatorDynamicConfig
           ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
           : maxSegmentsInNodeLoadingQueue,
           decommissioningNodes,
-          decommissioningVelocity == null
-          ? DEFAULT_DECOMMISSIONING_VELOCITY
-          : decommissioningVelocity
+          decommissioningMaxSegmentsToMovePercent == null
+          ? DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT
+          : decommissioningMaxSegmentsToMovePercent
       );
     }
 
@@ -556,9 +552,9 @@ public class CoordinatorDynamicConfig
           ? defaults.getMaxSegmentsInNodeLoadingQueue()
           : maxSegmentsInNodeLoadingQueue,
           decommissioningNodes == null ? defaults.getDecommissioningNodes() : decommissioningNodes,
-          decommissioningVelocity == null
-          ? defaults.getDecommissioningVelocity()
-          : decommissioningVelocity
+          decommissioningMaxSegmentsToMovePercent == null
+          ? defaults.getDecommissioningMaxSegmentsToMovePercent()
+          : decommissioningMaxSegmentsToMovePercent
       );
     }
   }

@@ -51,7 +51,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
                      + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
-                     + "  \"decommissioningVelocity\": 9\n"
+                     + "  \"decommissioningMaxSegmentsToMovePercent\": 9\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -70,7 +70,7 @@ public class CoordinatorDynamicConfigTest
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 9);
 
-    actual = CoordinatorDynamicConfig.builder().withDecommissioningVelocity(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningMaxSegmentsToMovePercent(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
@@ -106,7 +106,7 @@ public class CoordinatorDynamicConfigTest
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 0);
 
-    actual = CoordinatorDynamicConfig.builder().withDecommissioningVelocity(5).build(actual);
+    actual = CoordinatorDynamicConfig.builder().withDecommissioningMaxSegmentsToMovePercent(5).build(actual);
     assertConfig(actual, 1, 1, 1, 1, 1, 1, 2, true, whitelist, false, 1, ImmutableSet.of("host1"), 5);
   }
 
@@ -258,7 +258,7 @@ public class CoordinatorDynamicConfigTest
       boolean expectedKillAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> decommissioning,
-      int decommissioningVelocity
+      int decommissioningMaxSegmentsToMovePercent
   )
   {
     Assert.assertEquals(expectedMillisToWaitBeforeDeleting, config.getMillisToWaitBeforeDeleting());
@@ -273,6 +273,6 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
     Assert.assertEquals(decommissioning, config.getDecommissioningNodes());
-    Assert.assertEquals(decommissioningVelocity, config.getDecommissioningVelocity());
+    Assert.assertEquals(decommissioningMaxSegmentsToMovePercent, config.getDecommissioningMaxSegmentsToMovePercent());
   }
 }
