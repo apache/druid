@@ -97,10 +97,10 @@ public class HyperLogLogCollectorTest
   /**
    * This is a very long running test, disabled by default.
    * It is meant to catch issues when combining a large numer of HLL objects.
-   * <p>
+   *
    * It compares adding all the values to one HLL vs.
    * splitting up values into HLLs of 100 values each, and folding those HLLs into a single main HLL.
-   * <p>
+   * 
    * When reaching very large cardinalities (>> 50,000,000), offsets are mismatched between the main HLL and the ones
    * with 100 values, requiring  a floating max as described in
    * http://druid.io/blog/2014/02/18/hyperloglog-optimizations-for-real-world-systems.html
@@ -768,7 +768,7 @@ public class HyperLogLogCollectorTest
     Assert.assertEquals(folded.getStorageBuffer().remaining(), denseCollector.getNumBytesForDenseStorage());
   }
 
-  // Example of a terrible sampling filter
+  // Example of a terrible sampling filter. Don't use this method
   @Test
   public void testCanFillUpOnMod()
   {
@@ -797,7 +797,6 @@ public class HyperLogLogCollectorTest
     } while (hyperLogLogCollector.getNumNonZeroRegisters() > 0 && ++loops < loopLimit);
     Assert.assertNotEquals(loopLimit, loops);
     Assert.assertEquals(hyperLogLogCollector.getNumHeaderBytes(), hyperLogLogCollector.toByteBuffer().remaining());
-    log.info("Filled up registers after %s random numbers", loops);
   }
 
   @Test
