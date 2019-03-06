@@ -33,6 +33,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.ListIterator;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
@@ -340,22 +341,6 @@ public class SegmentsCostCache
 
         SegmentAndSum segmentAndSum = new SegmentAndSum(dataSegment, leftValue, rightValue);
 
-        // left/right value should be added to left/right sums for elements greater/lower than current segment
-        segments.tailSet(segmentAndSum).forEach(v -> v.leftSum += leftValue);
-        segments.headSet(segmentAndSum).forEach(v -> v.rightSum += rightValue);
-
-        // leftSum_i = leftValue_i + \sum leftValue_j = leftValue_i + leftSum_{i-1} , j < i
-        SegmentAndSum lower = segments.lower(segmentAndSum);
-        if (lower != null) {
-          segmentAndSum.leftSum = leftValue + lower.leftSum;
-        }
-
-        // rightSum_i = rightValue_i + \sum rightValue_j = rightValue_i + rightSum_{i+1} , j > i
-        SegmentAndSum higher = segments.higher(segmentAndSum);
-        if (higher != null) {
-          segmentAndSum.rightSum = rightValue + higher.rightSum;
-        }
-
         if (!segments.add(segmentAndSum)) {
           throw new ISE("expect new segment");
         }
@@ -366,18 +351,7 @@ public class SegmentsCostCache
       {
         SegmentAndSum segmentAndSum = new SegmentAndSum(dataSegment, 0.0, 0.0);
 
-        if (!segments.remove(segmentAndSum)) {
-          return this;
-        }
-
-        double t0 = convertStart(dataSegment, interval);
-        double t1 = convertEnd(dataSegment, interval);
-
-        double leftValue = FastMath.exp(t0) - FastMath.exp(t1);
-        double rightValue = FastMath.exp(-t1) - FastMath.exp(-t0);
-
-        segments.tailSet(segmentAndSum).forEach(v -> v.leftSum -= leftValue);
-        segments.headSet(segmentAndSum).forEach(v -> v.rightSum -= rightValue);
+        segments.remove(segmentAndSum);
         return this;
       }
 
@@ -389,14 +363,26 @@ public class SegmentsCostCache
       public Bucket build()
       {
         ArrayList<DataSegment> segmentsList = new ArrayList<>(segments.size());
-        double[] leftSum = new double[segments.size()];
-        double[] rightSum = new double[segments.size()];
-        int i = 0;
         for (SegmentAndSum segmentAndSum : segments) {
           segmentsList.add(segmentAndSum.dataSegment);
-          leftSum[i] = segmentAndSum.leftSum;
-          rightSum[i] = segmentAndSum.rightSum;
-          ++i;
+        }
+        double[] leftSum = new double[segments.size()];
+        double[] rightSum = new double[segments.size()];
+        double totalLeftSum = 0;
+        double totalRightSum = 0;
+        int i = 0;
+        Iterator<SegmentAndSum> iter = segments.iterator();
+        while (iter.hasNext()) {
+          totalLeftSum += iter.next().leftSum;
+          leftSum[i] = totalLeftSum;
+          i++;
+        }
+        i = segments.size() - 1;
+        iter = segments.descendingIterator();
+        while (iter.hasNext()) {
+          totalRightSum += iter.next().rightSum;
+          rightSum[i] = totalRightSum;
+          i--;
         }
         long bucketEndMillis = segmentsList
             .stream()
