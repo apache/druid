@@ -632,7 +632,7 @@ public class DruidCoordinatorBalancerTest
 
     mockCoordinator(coordinator);
 
-    // either decommissioning servers list or general ones (ie servers list is [2] or [1, 3])
+    // either decommissioning servers list or acitve ones (ie servers list is [2] or [1, 3])
     BalancerStrategy strategy = EasyMock.createMock(BalancerStrategy.class);
     EasyMock.expect(strategy.pickSegmentToMove(ImmutableList.of(new ServerHolder(druidServer2, peon2, true))))
             .andReturn(new BalancerSegmentHolder(druidServer2, segment2));

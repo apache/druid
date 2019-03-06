@@ -96,6 +96,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     if (params.getAvailableSegments().size() == 0) {
       log.warn("Metadata segments are not available. Cannot balance.");
+      // skip emit 0,0 stats
       return;
     }
     currentlyMovingSegments.computeIfAbsent(tier, t -> new ConcurrentHashMap<>());

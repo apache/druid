@@ -245,18 +245,19 @@ public class CoordinatorDynamicConfig
 
   /**
    * Decommissioning velocity determines the maximum number of segments that may be moved away from 'decommissioning'
-   * servers non-decommissioning (that is, active) servers during one Coordinator's run, relative to the total maximum
-   * segment movements allowed during one Coordinator's run (which, in turn, is determined by the
-   * {@link CoordinatorDynamicConfig#getMaxSegmentsToMove()}).
-   * Specifically, the maximum is ceil(maxSegmentsToMove * (velocity / 10)).
+   * servers to non-decommissioning (that is, active) servers during one Coordinator's run. This value is relative to
+   * the total maximum segment movements allowed during one run which is determined by
+   * `{@link CoordinatorDynamicConfig#getMaxSegmentsToMove()}.
    *
-   * For example,
-   *    if decommissioningVelocity is 0 no segments will be moved away from 'decommissioning' servers.
-   *    If decommissioningVelocity is 5 no more than ceil(maxSegmentsToMove * 0.5) segments may be moved away from 'decommissioning' servers.
+   * Specifically, the maximum is `ceil(maxSegmentsToMove * (velocity / 10))`. For example, if `decommissioningVelocity`
+   * is 5, no more than `ceil(maxSegmentsToMove * 0.5)` segments may be moved away from 'decommissioning' servers.
    *
-   * By leveraging the velocity an operator can prevent active servers from overload by prioritizing balancing,
-   * or decrease decommissioning time instead. Decommissioning can become stalled if there are no available active
-   * servers to place the segments. The value should be between 0 and 10.
+   * If `decommissioningVelocity` is 0, segments will neither be moved from _or to_ 'decommissioning' servers,
+   * effectively putting them in a sort of 'maintenance' mode that will not participate in balancing or assignment by
+   * load rules. Decommissioning can also become stalled if there are no available active servers to place the segments.
+   * By leveraging the velocity an operator can prevent active servers from overload by prioritizing balancing, or
+   * decrease decommissioning time instead. The value should be between 0 and 10.
+   *
    * @return number in range [0, 10]
    */
   @JsonProperty

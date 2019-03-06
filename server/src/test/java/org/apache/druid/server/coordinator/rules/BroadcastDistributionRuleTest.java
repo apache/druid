@@ -58,7 +58,7 @@ public class BroadcastDistributionRuleTest
   private final List<DataSegment> largeSegments2 = new ArrayList<>();
   private DataSegment smallSegment;
   private DruidCluster secondCluster;
-  private ServerHolder generalServer;
+  private ServerHolder activeServer;
   private ServerHolder decommissioningServer1;
   private ServerHolder decommissioningServer2;
 
@@ -200,9 +200,9 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    generalServer = new ServerHolder(
+    activeServer = new ServerHolder(
         new DruidServer(
-            "general",
+            "active",
             "host1",
             null,
             100,
@@ -267,7 +267,7 @@ public class BroadcastDistributionRuleTest
         ImmutableMap.of(
             "tier1",
             Stream.of(
-                generalServer,
+                activeServer,
                 decommissioningServer1,
                 decommissioningServer2
             ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
@@ -348,7 +348,7 @@ public class BroadcastDistributionRuleTest
     assertEquals(1L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
     assertEquals(false, stats.hasPerTierStats());
 
-    assertEquals(1, generalServer.getPeon().getSegmentsToLoad().size());
+    assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
     assertEquals(1, decommissioningServer1.getPeon().getSegmentsToDrop().size());
     assertEquals(0, decommissioningServer2.getPeon().getSegmentsToLoad().size());
   }
