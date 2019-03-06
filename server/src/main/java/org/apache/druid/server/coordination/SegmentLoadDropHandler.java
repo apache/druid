@@ -253,11 +253,9 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
 
   /**
    * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
-   * throw a SegmentLoadingException.
+   * throw a SegmentLoadingException
    *
-   * @return true if the segment was newly loaded, false if it was already loaded.
-   *
-   * @throws SegmentLoadingException if it fails to load the given segment.
+   * @throws SegmentLoadingException if it fails to load the given segment
    */
   private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback) throws SegmentLoadingException
   {
