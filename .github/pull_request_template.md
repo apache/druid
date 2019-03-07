@@ -25,16 +25,16 @@ Some of the aspects mentioned above may be omitted for simple and small PRs.
 
 ### Design
 
-If the change involves any design decisions, including:
- - Choosing algorithm of doing something
- - Choosing the Druid behaviour (Should certain configuration values be accepted? What some Druid nodes should do in
-   some corner situations, e. g. insufficient resources?)
+Please describe any design decisions made, including:
+ - Choice of algorithms
+ - Behavioral aspects. What configuration values are acceptable? How are corner cases and error conditions handled, such
+   as when insufficient resources are available?
  - Class organization and design (how the logic is split between classes, inheritance, composition, design patterns)
  - Method organization and design (how the logic is split between methods, parameters and return types)
  - Naming (class, method, API, configuration, HTTP endpoint, names of emitted metrics)
 
-Describe alternative designs (mention alternative names) and compare them with the designs that you've implemented (the
-names you've chosen).
+In addition, describe _at least one_ alternative design (or mention alternative name) for every design (or naming)
+decision point and compare the alternatives with the designs that you've implemented (or the names you've chosen).
 
 If you already did this in the associated issue (e. g. a "Proposal" issue), leave the following sentence:
 
