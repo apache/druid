@@ -43,8 +43,11 @@ public class ImmutableRoaringBitmapObjectStrategy implements ObjectStrategy<Immu
   @Override
   public ImmutableRoaringBitmap fromByteBuffer(ByteBuffer buffer, int numBytes)
   {
-    buffer.limit(buffer.position() + numBytes);
-    return new ImmutableRoaringBitmap(buffer);
+    if (numBytes > 0) {
+      buffer.limit(buffer.position() + numBytes);
+      return new ImmutableRoaringBitmap(buffer);
+    }
+    return new MutableRoaringBitmap();
   }
 
   @Override
@@ -70,6 +73,6 @@ public class ImmutableRoaringBitmapObjectStrategy implements ObjectStrategy<Immu
   @Override
   public int compare(ImmutableRoaringBitmap o1, ImmutableRoaringBitmap o2)
   {
-    return Integer.compare(o1.getCardinality(), o2.getCardinality());
+    return UniqueAggregatorFactory.COMPARATOR.compare(o1, o2);
   }
 }

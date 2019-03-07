@@ -62,7 +62,7 @@ public class RoaringBitmapComplexMetricSerde extends ComplexMetricSerde
       {
         final Object rawValue = inputRow.getRaw(metricName);
         if (rawValue == null) {
-          return null;
+          return new MutableRoaringBitmap();
         } else if (rawValue instanceof ImmutableRoaringBitmap) {
           return (ImmutableRoaringBitmap) rawValue;
         } else {
