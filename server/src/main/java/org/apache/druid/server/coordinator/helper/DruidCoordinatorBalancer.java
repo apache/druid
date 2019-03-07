@@ -190,8 +190,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       // "theoretical" point of view (Coordinator closes such discrepancies eventually via
       // DruidCoordinatorCleanupUnneeded). Therefore the picked segmentToMoveHolder's segment may not need to be
       // balanced.
-      boolean needToBalacePickedSegment = params.getAvailableSegments().contains(segmentToMoveHolder.getSegment());
-      if (needToBalacePickedSegment) {
+      boolean needToBalancePickedSegment = params.getAvailableSegments().contains(segmentToMoveHolder.getSegment());
+      if (needToBalancePickedSegment) {
         final DataSegment segmentToMove = segmentToMoveHolder.getSegment();
         final ImmutableDruidServer fromServer = segmentToMoveHolder.getFromServer();
         // we want to leave the server the segment is currently on in the list...

@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -28,9 +29,9 @@ import java.util.TreeSet;
 
 public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
 {
-  private final DruidCoordinator coordinator;
-
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorSegmentInfoLoader.class);
+
+  private final DruidCoordinator coordinator;
 
   public DruidCoordinatorSegmentInfoLoader(DruidCoordinator coordinator)
   {
@@ -42,15 +43,24 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
   {
     log.info("Starting coordination. Getting available segments.");
 
-    final TreeSet<DataSegment> availableSegments = DruidCoordinatorRuntimeParams.createAvailableSegmentsSet();
-    for (DataSegment segment : coordinator.iterateAvailableDataSegments()) {
-      if (segment.getSize() < 0) {
-        log.makeAlert("No size on a segment")
-           .addData("segment", segment)
-           .emit();
-      }
-      availableSegments.add(segment);
-    }
+    // The following transform() call doesn't actually transform the iterable. It only checks the sizes of the segments
+    // and emits alerts if segments with negative sizes are encountered. In other words, semantically it's similar to
+    // Stream.peek(). It works as long as DruidCoordinatorRuntimeParams.createAvailableSegmentsSet() (which is called
+    // below) guarantees to go over the passed iterable exactly once.
+    //noinspection StaticPseudoFunctionalStyleMethod: https://youtrack.jetbrains.com/issue/IDEA-153047
+    Iterable<DataSegment> availableSegmentsWithSizeChecking = Iterables.transform(
+        coordinator.iterateAvailableDataSegments(),
+        segment -> {
+          if (segment.getSize() < 0) {
+            log.makeAlert("No size on a segment")
+               .addData("segment", segment)
+               .emit();
+          }
+          return segment;
+        }
+    );
+    final TreeSet<DataSegment> availableSegments =
+        DruidCoordinatorRuntimeParams.createAvailableSegmentsSet(availableSegmentsWithSizeChecking);
 
     // Log info about all available segments
     if (log.isDebugEnabled()) {

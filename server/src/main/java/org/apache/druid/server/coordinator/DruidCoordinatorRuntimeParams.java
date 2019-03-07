@@ -40,9 +40,16 @@ import java.util.TreeSet;
  */
 public class DruidCoordinatorRuntimeParams
 {
-  public static TreeSet<DataSegment> createAvailableSegmentsSet()
+  /**
+   * Creates a TreeSet sorted in {@link DruidCoordinator#SEGMENT_COMPARATOR_RECENT_FIRST} order and populates it with
+   * the segments from the given iterable. The given iterable is iterated exactly once. No special action is taken if
+   * duplicate segments are encountered in the iterable.
+   */
+  public static TreeSet<DataSegment> createAvailableSegmentsSet(Iterable<DataSegment> availableSegments)
   {
-    return new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
+    TreeSet<DataSegment> segmentsSet = new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
+    availableSegments.forEach(segmentsSet::add);
+    return segmentsSet;
   }
 
   private final long startTime;
@@ -363,11 +370,13 @@ public class DruidCoordinatorRuntimeParams
     @VisibleForTesting
     public Builder withAvailableSegmentsInTest(Collection<DataSegment> availableSegments)
     {
-      TreeSet<DataSegment> availableSegmentSet = createAvailableSegmentsSet();
-      availableSegmentSet.addAll(availableSegments);
-      return setAvailableSegments(availableSegmentSet);
+      return setAvailableSegments(createAvailableSegmentsSet(availableSegments));
     }
 
+    /**
+     * Note: unlike {@link #withAvailableSegmentsInTest(Collection)}, this method doesn't make a defensive copy of the
+     * provided set. The set passed into this method must not be modified afterwards.
+     */
     public Builder setAvailableSegments(TreeSet<DataSegment> availableSegments)
     {
       //noinspection ObjectEquality
