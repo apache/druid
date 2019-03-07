@@ -57,7 +57,7 @@ public class CoordinatorDynamicConfig
   private final boolean killAllDataSources;
   private final Set<String> killableDataSources;
   private final Set<String> decommissioningNodes;
-  private final int decommissioningMaxSegmentsToMovePercent;
+  private final int decommissioningMaxPercentOfMaxSegmentsToMove;
 
   // The pending segments of the dataSources in this list are not killed.
   private final Set<String> protectedPendingSegmentDatasources;
@@ -89,7 +89,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("killPendingSegmentsSkipList") Object protectedPendingSegmentDatasources,
       @JsonProperty("maxSegmentsInNodeLoadingQueue") int maxSegmentsInNodeLoadingQueue,
       @JsonProperty("decommissioningNodes") Object decommissioningNodes,
-      @JsonProperty("decommissioningMaxSegmentsToMovePercent") int decommissioningMaxSegmentsToMovePercent
+      @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove
   )
   {
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -106,10 +106,10 @@ public class CoordinatorDynamicConfig
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
     this.decommissioningNodes = parseJsonStringOrArray(decommissioningNodes);
     Preconditions.checkArgument(
-        decommissioningMaxSegmentsToMovePercent >= 0 && decommissioningMaxSegmentsToMovePercent <= 100,
-        "decommissioningMaxSegmentsToMovePercent should be in range [0, 100]"
+        decommissioningMaxPercentOfMaxSegmentsToMove >= 0 && decommissioningMaxPercentOfMaxSegmentsToMove <= 100,
+        "decommissioningMaxPercentOfMaxSegmentsToMove should be in range [0, 100]"
     );
-    this.decommissioningMaxSegmentsToMovePercent = decommissioningMaxSegmentsToMovePercent;
+    this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
 
     if (this.killAllDataSources && !this.killableDataSources.isEmpty()) {
       throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
@@ -233,7 +233,7 @@ public class CoordinatorDynamicConfig
   /**
    * List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decomissioning' servers,
    * and segments will be moved away from them to be placed on 'active' servers at the maximum rate specified by
-   * {@link CoordinatorDynamicConfig#getDecommissioningMaxSegmentsToMovePercent}.
+   * {@link CoordinatorDynamicConfig#getDecommissioningMaxPercentOfMaxSegmentsToMove}.
    *
    * @return list of host:port entries
    */
@@ -248,7 +248,7 @@ public class CoordinatorDynamicConfig
    * (that is, active) servers during one Coordinator's run. This value is relative to the total maximum segment
    * movements allowed during one run which is determined by `{@link CoordinatorDynamicConfig#getMaxSegmentsToMove()}.
    *
-   * If `decommissioningMaxSegmentsToMovePercent` is 0, segments will neither be moved from _or to_ 'decommissioning'
+   * If `decommissioningMaxPercentOfMaxSegmentsToMove` is 0, segments will neither be moved from _or to_ 'decommissioning'
    * servers, effectively putting them in a sort of 'maintenance' mode that will not participate in balancing or
    * assignment by load rules. Decommissioning can also become stalled if there are no available active servers to place
    * the segments. By leveraging decommissioning percent, an operator can prevent active servers from overload by
@@ -257,9 +257,9 @@ public class CoordinatorDynamicConfig
    * @return number in range [0, 100]
    */
   @JsonProperty
-  public int getDecommissioningMaxSegmentsToMovePercent()
+  public int getDecommissioningMaxPercentOfMaxSegmentsToMove()
   {
-    return decommissioningMaxSegmentsToMovePercent;
+    return decommissioningMaxPercentOfMaxSegmentsToMove;
   }
 
   @Override
@@ -279,7 +279,7 @@ public class CoordinatorDynamicConfig
            ", protectedPendingSegmentDatasources=" + protectedPendingSegmentDatasources +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            ", decommissioningNodes=" + decommissioningNodes +
-           ", decommissioningMaxSegmentsToMovePercent=" + decommissioningMaxSegmentsToMovePercent +
+           ", decommissioningMaxPercentOfMaxSegmentsToMove=" + decommissioningMaxPercentOfMaxSegmentsToMove +
            '}';
   }
 
@@ -334,7 +334,7 @@ public class CoordinatorDynamicConfig
     if (!Objects.equals(decommissioningNodes, that.decommissioningNodes)) {
       return false;
     }
-    return decommissioningMaxSegmentsToMovePercent == that.decommissioningMaxSegmentsToMovePercent;
+    return decommissioningMaxPercentOfMaxSegmentsToMove == that.decommissioningMaxPercentOfMaxSegmentsToMove;
   }
 
   @Override
@@ -354,7 +354,7 @@ public class CoordinatorDynamicConfig
         killableDataSources,
         protectedPendingSegmentDatasources,
         decommissioningNodes,
-        decommissioningMaxSegmentsToMovePercent
+        decommissioningMaxPercentOfMaxSegmentsToMove
     );
   }
 
@@ -390,7 +390,7 @@ public class CoordinatorDynamicConfig
     private Object killPendingSegmentsSkipList;
     private Integer maxSegmentsInNodeLoadingQueue;
     private Object decommissioningNodes;
-    private Integer decommissioningMaxSegmentsToMovePercent;
+    private Integer decommissioningMaxPercentOfMaxSegmentsToMove;
 
     public Builder()
     {
@@ -411,7 +411,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("killPendingSegmentsSkipList") @Nullable Object killPendingSegmentsSkipList,
         @JsonProperty("maxSegmentsInNodeLoadingQueue") @Nullable Integer maxSegmentsInNodeLoadingQueue,
         @JsonProperty("decommissioningNodes") @Nullable Object decommissioningNodes,
-        @JsonProperty("decommissioningMaxSegmentsToMovePercent") @Nullable Integer decommissioningMaxSegmentsToMovePercent
+        @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -427,7 +427,7 @@ public class CoordinatorDynamicConfig
       this.killPendingSegmentsSkipList = killPendingSegmentsSkipList;
       this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
       this.decommissioningNodes = decommissioningNodes;
-      this.decommissioningMaxSegmentsToMovePercent = decommissioningMaxSegmentsToMovePercent;
+      this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -502,9 +502,9 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withDecommissioningMaxSegmentsToMovePercent(Integer percent)
+    public Builder withDecommissioningMaxPercentOfMaxSegmentsToMove(Integer percent)
     {
-      this.decommissioningMaxSegmentsToMovePercent = percent;
+      this.decommissioningMaxPercentOfMaxSegmentsToMove = percent;
       return this;
     }
 
@@ -526,9 +526,9 @@ public class CoordinatorDynamicConfig
           ? DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE
           : maxSegmentsInNodeLoadingQueue,
           decommissioningNodes,
-          decommissioningMaxSegmentsToMovePercent == null
+          decommissioningMaxPercentOfMaxSegmentsToMove == null
           ? DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT
-          : decommissioningMaxSegmentsToMovePercent
+          : decommissioningMaxPercentOfMaxSegmentsToMove
       );
     }
 
@@ -552,9 +552,9 @@ public class CoordinatorDynamicConfig
           ? defaults.getMaxSegmentsInNodeLoadingQueue()
           : maxSegmentsInNodeLoadingQueue,
           decommissioningNodes == null ? defaults.getDecommissioningNodes() : decommissioningNodes,
-          decommissioningMaxSegmentsToMovePercent == null
-          ? defaults.getDecommissioningMaxSegmentsToMovePercent()
-          : decommissioningMaxSegmentsToMovePercent
+          decommissioningMaxPercentOfMaxSegmentsToMove == null
+          ? defaults.getDecommissioningMaxPercentOfMaxSegmentsToMove()
+          : decommissioningMaxPercentOfMaxSegmentsToMove
       );
     }
   }

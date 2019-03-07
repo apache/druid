@@ -208,7 +208,7 @@ public class DruidCoordinatorBalancerTest
    * 2 (of 2) segments should be moved from Server 2 and 1 (of 2) from Server 1.
    */
   @Test
-  public void testMoveDecommissioningMaxSegmentsToMovePercent()
+  public void testMoveDecommissioningMaxPercentOfMaxSegmentsToMove()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, Arrays.asList(segment1, segment2));
     mockDruidServer(druidServer2, "2", "normal", 30L, 100L, Arrays.asList(segment3, segment4));
@@ -239,7 +239,7 @@ public class DruidCoordinatorBalancerTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(3)
-                                    .withDecommissioningMaxSegmentsToMovePercent(6)
+                                    .withDecommissioningMaxPercentOfMaxSegmentsToMove(6)
                                     .build() // ceil(3 * 0.6) = 2 segments from decommissioning servers
         )
         .withBalancerStrategy(strategy)
@@ -251,18 +251,18 @@ public class DruidCoordinatorBalancerTest
   }
 
   @Test
-  public void testZeroDecommissioningMaxSegmentsToMovePercent()
+  public void testZeroDecommissioningMaxPercentOfMaxSegmentsToMove()
   {
-    DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxSegmentsToMovePercent(0);
+    DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(0);
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
     Assert.assertThat(peon3.getSegmentsToLoad(), is(equalTo(ImmutableSet.of(segment1))));
   }
 
   @Test
-  public void testMaxDecommissioningMaxSegmentsToMovePercent()
+  public void testMaxDecommissioningMaxPercentOfMaxSegmentsToMove()
   {
-    DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxSegmentsToMovePercent(10);
+    DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(10);
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
     Assert.assertThat(peon3.getSegmentsToLoad(), is(equalTo(ImmutableSet.of(segment2))));
@@ -272,7 +272,7 @@ public class DruidCoordinatorBalancerTest
    * Should balance segments as usual (ignoring percent) with empty decommissioningList.
    */
   @Test
-  public void testMoveDecommissioningMaxSegmentsToMovePercentWithNoDecommissioning()
+  public void testMoveDecommissioningMaxPercentOfMaxSegmentsToMoveWithNoDecommissioning()
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, Arrays.asList(segment1, segment2));
     mockDruidServer(druidServer2, "2", "normal", 0L, 100L, Arrays.asList(segment3, segment4));
@@ -300,7 +300,7 @@ public class DruidCoordinatorBalancerTest
         ImmutableList.of(false, false, false)
     )
         .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(3).withDecommissioningMaxSegmentsToMovePercent(9).build()
+            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(3).withDecommissioningMaxPercentOfMaxSegmentsToMove(9).build()
         )
         .withBalancerStrategy(strategy)
         .build();
@@ -622,7 +622,7 @@ public class DruidCoordinatorBalancerTest
     }
   }
 
-  private DruidCoordinatorRuntimeParams setupParamsForDecommissioningMaxSegmentsToMovePercent(int percent)
+  private DruidCoordinatorRuntimeParams setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(int percent)
   {
     mockDruidServer(druidServer1, "1", "normal", 30L, 100L, Arrays.asList(segment1, segment3));
     mockDruidServer(druidServer2, "2", "normal", 30L, 100L, Arrays.asList(segment2, segment3));
@@ -651,7 +651,7 @@ public class DruidCoordinatorBalancerTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(1)
-                                    .withDecommissioningMaxSegmentsToMovePercent(percent)
+                                    .withDecommissioningMaxPercentOfMaxSegmentsToMove(percent)
                                     .build()
         )
         .withBalancerStrategy(strategy)

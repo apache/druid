@@ -84,7 +84,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   /**
    * Historical nodes can be 'decommissioned', which instructs Coordinator to move segments from them according to
    * the percent of move operations diverted from normal balancer moves for this purpose by
-   * {@link CoordinatorDynamicConfig#getDecommissioningMaxSegmentsToMovePercent()}. The mechanism allows draining
+   * {@link CoordinatorDynamicConfig#getDecommissioningMaxPercentOfMaxSegmentsToMove()}. The mechanism allows draining
    * segments from nodes which are planned for replacement.
    * @return true if the node is decommissioning
    */

@@ -113,7 +113,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     }
 
     /*
-      Take as many segments from decommissioning servers as decommissioningMaxSegmentsToMovePercent allows and find
+      Take as many segments from decommissioning servers as decommissioningMaxPercentOfMaxSegmentsToMove allows and find
       the best location for them on active servers. After that, balance segments within active servers pool.
      */
     Map<Boolean, List<ServerHolder>> partitions =
@@ -144,10 +144,10 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     }
 
     final int maxSegmentsToMove = Math.min(params.getCoordinatorDynamicConfig().getMaxSegmentsToMove(), numSegments);
-    int decommissioningMaxSegmentsToMovePercent =
-        params.getCoordinatorDynamicConfig().getDecommissioningMaxSegmentsToMovePercent();
+    int decommissioningMaxPercentOfMaxSegmentsToMove =
+        params.getCoordinatorDynamicConfig().getDecommissioningMaxPercentOfMaxSegmentsToMove();
     int maxSegmentsToMoveFromDecommissioningNodes =
-        (int) Math.ceil(maxSegmentsToMove * (decommissioningMaxSegmentsToMovePercent / 100.0));
+        (int) Math.ceil(maxSegmentsToMove * (decommissioningMaxPercentOfMaxSegmentsToMove / 100.0));
     log.info(
         "Processing %d segments for moving from decommissioning servers",
         maxSegmentsToMoveFromDecommissioningNodes
