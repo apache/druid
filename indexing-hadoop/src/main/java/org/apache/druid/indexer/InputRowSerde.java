@@ -212,6 +212,7 @@ public class InputRowSerde
     }
 
     @Override
+    @Nullable
     public Long deserialize(ByteArrayDataInput in)
     {
       return isNullByteSet(in) ? null : in.readLong();
@@ -246,6 +247,7 @@ public class InputRowSerde
     }
 
     @Override
+    @Nullable
     public Float deserialize(ByteArrayDataInput in)
     {
       return isNullByteSet(in) ? null : in.readFloat();
@@ -280,6 +282,7 @@ public class InputRowSerde
     }
 
     @Override
+    @Nullable
     public Double deserialize(ByteArrayDataInput in)
     {
       return isNullByteSet(in) ? null : in.readDouble();
