@@ -21,11 +21,11 @@
   },
   {
     "query": {
-      "query": "SELECT status FROM sys.tasks"
+      "query": "SELECT count(*) AS num_tasks FROM sys.tasks WHERE datasource LIKE 'wikipedia_index_test%' AND status='SUCCESS'"
     },
     "expectedResults": [
       {
-        "status": "SUCCESS"
+        "num_tasks": 1
       }
     ]
   }
