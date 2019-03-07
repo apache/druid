@@ -403,7 +403,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
     try {
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
-        chatHandlerProvider.get().register(getId(), this, false);
+
+        if (chatHandlerProvider.get().get(getId()).isPresent()) {
+          // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
+          // sequential mode. See ParallelIndexSupervisorTask.runSequential().
+          // Note that all HTTP endpoints are not available in this case. This works only for
+          // ParallelIndexSupervisorTask because it doesn't support APIs for live ingestion reports.
+          log.warn("Chat handler is already registered. Skipping chat handler registration.");
+        } else {
+          chatHandlerProvider.get().register(getId(), this, false);
+        }
       } else {
         log.warn("No chat handler detected");
       }
