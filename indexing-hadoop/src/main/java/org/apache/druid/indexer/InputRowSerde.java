@@ -77,7 +77,6 @@ public class InputRowSerde
     // Write the null byte only if the default numeric value is still null.
     if (ret == null) {
       out.writeByte(NullHandling.IS_NULL_BYTE);
-
       return;
     }
 
