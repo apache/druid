@@ -5,6 +5,10 @@
     },
     "expectedResults": [
       {
+        "datasource":"wikipedia_index_test Россия 한국 中国!?",
+        "EXPR$1":4
+      },
+      {
         "datasource": "wikipedia_editstream",
         "EXPR$1": 1
       },

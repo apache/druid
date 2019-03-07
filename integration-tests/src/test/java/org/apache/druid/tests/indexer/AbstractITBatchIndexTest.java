@@ -144,9 +144,16 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
       String dataSource,
       String indexTaskFilePath,
       String queryFilePath
-  )
+  ) throws IOException
   {
-    submitTaskAndWait(indexTaskFilePath, dataSource, false);
+    final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
+    final String taskSpec = StringUtils.replace(
+        getTaskAsString(indexTaskFilePath),
+        "%%DATASOURCE%%",
+        fullDatasourceName
+    );
+
+    submitTaskAndWait(taskSpec, fullDatasourceName, false);
     try {
       sqlQueryHelper.testQueriesFromFile(queryFilePath, 2);
     }
