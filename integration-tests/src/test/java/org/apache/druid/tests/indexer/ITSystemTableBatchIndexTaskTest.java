@@ -41,7 +41,6 @@ public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
     LOG.info("Starting batch index sys table queries");
     try (
         final Closeable indexCloseable = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
-        //final Closeable indexCloseable = unloader(INDEX_DATASOURCE)
     ) {
       doIndexTestSqlTest(
           INDEX_DATASOURCE,
