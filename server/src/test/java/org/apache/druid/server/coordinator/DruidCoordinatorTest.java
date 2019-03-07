@@ -320,7 +320,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(metadataRuleManager);
 
     // Setup MetadataSegmentManager
-    DruidDataSource[] dataSources = { new DruidDataSource(dataSource, Collections.emptyMap()) };
+    DruidDataSource[] dataSources = {
+        new DruidDataSource(dataSource, Collections.emptyMap())
+    };
     final DataSegment dataSegment = new DataSegment(
         dataSource,
         Intervals.of("2010-01-01/P1D"),
