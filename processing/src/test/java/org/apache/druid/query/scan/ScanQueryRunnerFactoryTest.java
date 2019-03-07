@@ -148,7 +148,7 @@ public class ScanQueryRunnerFactoryTest
     }
 
     // check the values are correct
-    for(int i = 0; i < query.getLimit() && i < output.size(); i++) {
+    for (int i = 0; i < query.getLimit() && i < output.size(); i++) {
       Assert.assertEquals((long) expectedEventTimestamps.get(i), output.get(i).getFirstEventTimestamp(resultFormat));
     }
   }
