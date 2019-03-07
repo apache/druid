@@ -203,7 +203,7 @@ public class DruidCoordinatorBalancerTest
    * Server 1 has 2 segments.
    * Server 2 (decommissioning) has 2 segments.
    * Server 3 is empty.
-   * Decommissioning percent is 70.
+   * Decommissioning percent is 60.
    * Max segments to move is 3.
    * 2 (of 2) segments should be moved from Server 2 and 1 (of 2) from Server 1.
    */
@@ -239,7 +239,7 @@ public class DruidCoordinatorBalancerTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
                                     .withMaxSegmentsToMove(3)
-                                    .withDecommissioningMaxPercentOfMaxSegmentsToMove(6)
+                                    .withDecommissioningMaxPercentOfMaxSegmentsToMove(60)
                                     .build() // ceil(3 * 0.6) = 2 segments from decommissioning servers
         )
         .withBalancerStrategy(strategy)
