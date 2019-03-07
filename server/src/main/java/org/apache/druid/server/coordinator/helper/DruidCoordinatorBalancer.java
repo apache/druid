@@ -186,7 +186,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       }
       // DruidCoordinatorRuntimeParams.getAvailableSegments originate from MetadataSegmentManager, i. e. that's a
       // "desired" or "theoretical" set of segments. segmentToMoveHolder.getSegment originates from ServerInventoryView,
-      // i. e. that may be any segment that happens to be loaded of some server, even if it "shouldn't" from the
+      // i. e. that may be any segment that happens to be loaded on some server, even if it "shouldn't" from the
       // "theoretical" point of view (Coordinator closes such discrepancies eventually via
       // DruidCoordinatorCleanupUnneeded). Therefore the picked segmentToMoveHolder's segment may not need to be
       // balanced.
