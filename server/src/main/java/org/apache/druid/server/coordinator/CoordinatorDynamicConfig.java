@@ -106,8 +106,8 @@ public class CoordinatorDynamicConfig
     this.maxSegmentsInNodeLoadingQueue = maxSegmentsInNodeLoadingQueue;
     this.decommissioningNodes = parseJsonStringOrArray(decommissioningNodes);
     Preconditions.checkArgument(
-        decommissioningMaxSegmentsToMovePercent >= 0 && decommissioningMaxSegmentsToMovePercent <= 10,
-        "decommissioningMaxSegmentsToMovePercent should be in range [0, 10]"
+        decommissioningMaxSegmentsToMovePercent >= 0 && decommissioningMaxSegmentsToMovePercent <= 100,
+        "decommissioningMaxSegmentsToMovePercent should be in range [0, 100]"
     );
     this.decommissioningMaxSegmentsToMovePercent = decommissioningMaxSegmentsToMovePercent;
 
