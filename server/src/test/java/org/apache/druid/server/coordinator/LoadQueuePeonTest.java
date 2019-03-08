@@ -178,24 +178,13 @@ public class LoadQueuePeonTest extends CuratorTestBase
       @Override
       public void addSegment(DataSegment segment, DataSegmentChangeCallback callback)
       {
-        try {
-          loadRequestSignals.get(segment.getId()).countDown();
-        }
-        catch (Exception e) {
-          e.printStackTrace();
-        }
+        loadRequestSignals.get(segment.getId()).countDown();
       }
 
       @Override
       public void removeSegment(DataSegment segment, DataSegmentChangeCallback callback)
       {
-        try {
-          CountDownLatch latch = dropRequestSignals.get(segment.getId());
-          latch.countDown();
-        }
-        catch (Exception e) {
-          e.printStackTrace();
-        }
+        dropRequestSignals.get(segment.getId()).countDown();
       }
     };
 
@@ -206,12 +195,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
                 event.getData().getData(),
                 DataSegmentChangeRequest.class
             );
-            try {
-              request.go(handler, null);
-            }
-            catch (Exception e) {
-              e.printStackTrace();
-            }
+            request.go(handler, null);
           }
         }
     );
