@@ -156,7 +156,7 @@
   {"source": "Tutorial-The-Druid-Cluster.html", "target": "tutorials/index.html"},
   {"source": "configuration/hadoop.html", "target": "ingestion/hadoop.html"},
   {"source": "configuration/production-cluster.html", "target": "tutorials/cluster.html"},
-  {"source": "configuration/zookeeper.html", "target": "dependencies/cluster.html"},
+  {"source": "configuration/zookeeper.html", "target": "dependencies/zookeeper.html"},
   {"source": "querying/optimizations.html", "target": "dependencies/cluster.html"},
   {"source": "development/community-extensions/azure.html", "target": "../extensions-contrib/azure.html"},
   {"source": "development/community-extensions/cassandra.html", "target": "../extensions-contrib/cassandra.html"},
