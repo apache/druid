@@ -191,7 +191,7 @@ public class KinesisIndexTaskTuningConfigTest
   }
 
   @Test
-  public void testSerdeWithModifiedTuningConfigRemovedField() throws IOException, IOException
+  public void testSerdeWithModifiedTuningConfigRemovedField() throws IOException
   {
     KinesisIndexTaskTuningConfig base = new KinesisIndexTaskTuningConfig(
         1,

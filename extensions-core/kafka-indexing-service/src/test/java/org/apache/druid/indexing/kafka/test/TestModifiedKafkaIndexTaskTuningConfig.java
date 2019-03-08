@@ -78,30 +78,6 @@ public class TestModifiedKafkaIndexTaskTuningConfig extends KafkaIndexTaskTuning
     this.extra = extra;
   }
 
-  public TestModifiedKafkaIndexTaskTuningConfig(KafkaIndexTaskTuningConfig base, String extra)
-  {
-    super(
-        base.getMaxRowsInMemory(),
-        base.getMaxBytesInMemory(),
-        base.getMaxRowsPerSegment(),
-        base.getMaxTotalRows(),
-        base.getIntermediatePersistPeriod(),
-        base.getBasePersistDirectory(),
-        base.getMaxPendingPersists(),
-        base.getIndexSpec(),
-        base.getBuildV9Directly(),
-        base.isReportParseExceptions(),
-        base.getHandoffConditionTimeout(),
-        base.isResetOffsetAutomatically(),
-        base.getSegmentWriteOutMediumFactory(),
-        base.getIntermediateHandoffPeriod(),
-        base.isLogParseExceptions(),
-        base.getMaxParseExceptions(),
-        base.getMaxSavedParseExceptions()
-    );
-    this.extra = extra;
-  }
-
   @JsonProperty("extra")
   public String getExtra()
   {

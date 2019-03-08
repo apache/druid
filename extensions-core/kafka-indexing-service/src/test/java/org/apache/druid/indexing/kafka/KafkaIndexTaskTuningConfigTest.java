@@ -241,7 +241,6 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
   }
 
-
   private static KafkaIndexTaskTuningConfig copy(KafkaIndexTaskTuningConfig config)
   {
     return new KafkaIndexTaskTuningConfig(

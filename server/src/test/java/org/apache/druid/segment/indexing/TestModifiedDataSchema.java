@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -46,22 +45,6 @@ public class TestModifiedDataSchema extends DataSchema
   )
   {
     super(dataSource, parser, aggregators, granularitySpec, transformSpec, jsonMapper);
-    this.extra = extra;
-  }
-
-  public TestModifiedDataSchema(
-      DataSchema base,
-      String extra
-  )
-  {
-    super(
-        base.getDataSource(),
-        base.getParserMap(),
-        base.getAggregators(),
-        base.getGranularitySpec(),
-        base.getTransformSpec(),
-        new DefaultObjectMapper()
-    );
     this.extra = extra;
   }
 
