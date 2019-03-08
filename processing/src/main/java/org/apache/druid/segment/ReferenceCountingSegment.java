@@ -45,8 +45,10 @@ public class ReferenceCountingSegment extends AbstractSegment
     @Override
     protected boolean onAdvance(int phase, int registeredParties)
     {
-      Preconditions.checkState(registeredParties == 0);
       // Ensure that onAdvance() doesn't throw exception, otherwise termination won't happen
+      if (registeredParties != 0) {
+        log.error("registeredParties[%s] is not 0", registeredParties);
+      }
       try {
         baseSegment.close();
       }

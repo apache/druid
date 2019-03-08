@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.FileUtils.FileCopyResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
@@ -37,11 +38,12 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -79,7 +81,7 @@ public class SegmentManagerThreadSafetyTest
   private IndexIO indexIO;
   private File segmentCacheDir;
   private File segmentDeepStorageDir;
-  private SegmentLoader segmentLoader;
+  private SegmentLoaderLocalCacheManager segmentLoader;
   private SegmentManager segmentManager;
   private ExecutorService exec;
 
@@ -111,6 +113,7 @@ public class SegmentManagerThreadSafetyTest
     );
     segmentManager = new SegmentManager(segmentLoader);
     exec = Execs.multiThreaded(NUM_THREAD, "SegmentManagerThreadSafetyTest-%d");
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
 
   @After
@@ -133,6 +136,7 @@ public class SegmentManagerThreadSafetyTest
     }
     Assert.assertEquals(1, segmentPuller.numFileLoaded.size());
     Assert.assertEquals(1, segmentPuller.numFileLoaded.values().iterator().next().intValue());
+    Assert.assertEquals(0, segmentLoader.getSegmentLocks().size());
   }
 
   @Test(timeout = 5000L)
@@ -149,7 +153,12 @@ public class SegmentManagerThreadSafetyTest
         .range(0, 16)
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
-            segmentManager.loadSegment(segment);
+            try {
+              segmentManager.loadSegment(segment);
+            }
+            catch (SegmentLoadingException e) {
+              throw new RuntimeException(e);
+            }
           }
         }))
         .collect(Collectors.toList());
@@ -158,6 +167,7 @@ public class SegmentManagerThreadSafetyTest
     }
     Assert.assertEquals(11, segmentPuller.numFileLoaded.size());
     Assert.assertEquals(1, segmentPuller.numFileLoaded.values().iterator().next().intValue());
+    Assert.assertEquals(0, segmentLoader.getSegmentLocks().size());
   }
 
   private DataSegment createSegment(String interval) throws IOException
