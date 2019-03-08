@@ -52,7 +52,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
   private final List<StorageLocation> locations;
 
-  // This createOrGetLock is used when creating or removing a directory
+  // This directoryWriteRemoveLock is used when creating or removing a directory
   private final Object directoryWriteRemoveLock = new Object();
 
   /**
