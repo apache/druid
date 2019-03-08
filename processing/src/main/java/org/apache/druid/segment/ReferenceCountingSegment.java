@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
