@@ -31,7 +31,7 @@ subject to change.
 
 Druid SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
 parser and planner based on [Apache Calcite](https://calcite.apache.org/). Druid SQL translates SQL into native Druid
-queries on the query Broker (the first node you query), which are then passed down to data nodes as native Druid
+queries on the query Broker (the first process you query), which are then passed down to data processes as native Druid
 queries. Other than the (slight) overhead of translating SQL on the Broker, there isn't an additional performance
 penalty versus native queries.
 
@@ -91,7 +91,7 @@ ordinal position (like `ORDER BY 2` to order by the second selected column). For
 can only order by the `__time` column. For aggregation queries, ORDER BY can order by any column.
 
 The LIMIT clause can be used to limit the number of rows returned. It can be used with any query type. It is pushed down
-to data nodes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
+to data processes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
 versions of Druid will support pushing down limits using the native GroupBy query type as well. If you notice that
 adding a limit doesn't change performance very much, then it's likely that Druid didn't push down the limit for your
 query.
@@ -147,6 +147,14 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`x * y`|Multiplication.|
 |`x / y`|Division.|
 |`MOD(x, y)`|Modulo (remainder of x divided by y).|
+|`SIN(expr)`|Trigonometric sine of an angle expr.|
+|`COS(expr)`|Trigonometric cosine of an angle expr.|
+|`TAN(expr)`|Trigonometric tangent of an angle expr.|
+|`COT(expr)`|Trigonometric cotangent of an angle expr.|
+|`ASIN(expr)`|Arc sine of expr.|
+|`ACOS(expr)`|Arc cosine of expr.|
+|`ATAN(expr)`|Arc tangent of expr.|
+|`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
 
 ### String functions
 
@@ -327,7 +335,7 @@ computed in memory. See the TopN documentation for more details.
 - [GroupBy](groupbyquery.html) is used for all other aggregations, including any nested aggregation queries. Druid's
 GroupBy is a traditional aggregation engine: it delivers exact results and rankings and supports a wide variety of
 features. GroupBy aggregates in memory if it can, but it may spill to disk if it doesn't have enough memory to complete
-your query. Results are streamed back from data nodes through the Broker if you ORDER BY the same expressions in your
+your query. Results are streamed back from data processes through the Broker if you ORDER BY the same expressions in your
 GROUP BY clause, or if you don't have an ORDER BY at all. If your query has an ORDER BY referencing expressions that
 don't appear in the GROUP BY clause (like aggregation functions) then the Broker will materialize a list of results in
 memory, up to a max of your LIMIT, if any. See the GroupBy documentation for details about tuning performance and memory
@@ -345,7 +353,7 @@ of plan.
 
 For all native query types, filters on the `__time` column will be translated into top-level query "intervals" whenever
 possible, which allows Druid to use its global time index to quickly prune the set of data that must be scanned. In
-addition, Druid will use indexes local to each data node to further speed up WHERE evaluation. This can typically be
+addition, Druid will use indexes local to each data process to further speed up WHERE evaluation. This can typically be
 done for filters that involve boolean combinations of references to and functions of single columns, like
 `WHERE col1 = 'a' AND col2 = 'b'`, but not `WHERE col1 = col2`.
 
@@ -476,7 +484,7 @@ so avoid those.
 
 Druid's JDBC server does not share connection state between Brokers. This means that if you're using JDBC and have
 multiple Druid Brokers, you should either connect to a specific Broker, or use a load balancer with sticky sessions
-enabled. The Druid Router node provides connection stickiness when balancing JDBC requests, and can be used to achieve
+enabled. The Druid Router process provides connection stickiness when balancing JDBC requests, and can be used to achieve
 the necessary stickiness even with a normal non-sticky load balancer. Please see the
 [Router](../development/router.html) documentation for more details.
 

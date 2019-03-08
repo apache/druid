@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.seekablestream;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.IAE;
@@ -33,9 +32,8 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
 {
   private final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> seekableStreamPartitions;
 
-  @JsonCreator
   public SeekableStreamDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> seekableStreamPartitions
+      SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> seekableStreamPartitions
   )
   {
     this.seekableStreamPartitions = seekableStreamPartitions;
@@ -62,7 +60,6 @@ public abstract class SeekableStreamDataSourceMetadata<PartitionIdType, Sequence
 
     return plus(other).equals(other.plus(this));
   }
-
 
   @Override
   public DataSourceMetadata plus(DataSourceMetadata other)

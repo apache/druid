@@ -41,49 +41,54 @@ The ingestion spec can be found at `quickstart/tutorial/retention-index.json`. L
 bin/post-index-task --file quickstart/tutorial/retention-index.json 
 ```
 
-After the ingestion completes, go to http://localhost:8081 in a browser to access the Coordinator console.
+After the ingestion completes, go to [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources) in a browser to access the Druid Console's datasource view.
  
-In the Coordinator console, go to the `datasources` tab at the top of the page.
+This view shows the available datasources and a summary of the retention rules for each datasource:
 
-This tab shows the available datasources and a summary of the retention rules for each datasource:
+![Summary](../tutorials/img/tutorial-retention-01.png "Summary")
 
-![Summary](../tutorials/img/tutorial-retention-00.png "Summary")
+Currently there are no rules set for the `retention-tutorial` datasource. Note that there are default rules for the cluster: load forever with 2 replicants in `_default_tier`. 
 
-Currently there are no rules set for the `retention-tutorial` datasource. Note that there are default rules, currently set to `load Forever 2 in _default_tier`. 
-
-This means that all data will be loaded regardless of timestamp, and each segment will be replicated to two nodes in the default tier. 
+This means that all data will be loaded regardless of timestamp, and each segment will be replicated to two Historical processes in the default tier. 
 
 In this tutorial, we will ignore the tiering and redundancy concepts for now.
 
-Let's click the `retention-tutorial` datasource on the left. 
+Let's view the segments for the `retention-tutorial` datasource by clicking the "24 Segments" link next to "Fully Available".
 
-The next page (http://localhost:8081/#/datasources/retention-tutorial) provides information about what segments a datasource contains. On the left, the page shows that there are 24 segments, each one containing data for a specific hour of 2015-09-12:
+The segments view ([http://localhost:8888/unified-console.html#segments](http://localhost:8888/unified-console.html#segments)) provides information about what segments a datasource contains. The page shows that there are 24 segments, each one containing data for a specific hour of 2015-09-12:
 
-![Original segments](../tutorials/img/tutorial-retention-01.png "Original segments")
+![Original segments](../tutorials/img/tutorial-retention-02.png "Original segments")
 
 ## Set retention rules
 
 Suppose we want to drop data for the first 12 hours of 2015-09-12 and keep data for the later 12 hours of 2015-09-12.
 
-Click the `edit rules` button with a pencil icon at the upper left corner of the page.
+Go to the [datasources view](http://localhost:8888/unified-console.html#datasources) and click the blue pencil icon next to `Cluster default: loadForever` for the `retention-tutorial` datasource.
 
-A rule configuration window will appear. Enter `tutorial` for both the user and changelog comment field.
+A rule configuration window will appear:
 
-Now click the `+ Add a rule` button twice. 
+![Rule configuration](../tutorials/img/tutorial-retention-03.png "Rule configuration")
 
-In the `rule #1` box at the top, click `Load`, `Interval`, enter `2015-09-12T12:00:00.000Z/2015-09-13T00:00:00.000Z` in the interval box, and click `+ _default_tier replicant`.
+Now click the `+ New rule` button twice. 
 
-In the `rule #2` box at the bottom, click `Drop` and `Forever`.
+In the upper rule box, select `Load` and `by interval`, and then enter `2015-09-12T12:00:00.000Z/2015-09-13T00:00:00.000Z` in field next to `by interval`. Replicants can remain at 2 in the `_default_tier`.
+
+In the lower rule box, select `Drop` and `forever`.
 
 The rules should look like this:
 
-![Set rules](../tutorials/img/tutorial-retention-02.png "Set rules")
+![Set rules](../tutorials/img/tutorial-retention-04.png "Set rules")
 
-Now click `Save all rules`, wait for a few seconds, and refresh the page. 
+Now click `Next`. The rule configuration process will ask for a user name and comment, for change logging purposes. You can enter `tutorial` for both.
 
+Now click `Save`. You can see the new rules in the datasources view:
+
+![New rules](../tutorials/img/tutorial-retention-05.png "New rules")
+
+Give the cluster a few minutes to apply the rule change, and go to the [segments view](http://localhost:8888/unified-console.html#segments) in the Druid Console.
 The segments for the first 12 hours of 2015-09-12 are now gone:
 
-![New segments](../tutorials/img/tutorial-retention-03.png "New segments")
+![New segments](../tutorials/img/tutorial-retention-06.png "New segments")
 
 The resulting retention rule chain is the following:
 
@@ -92,7 +97,6 @@ The resulting retention rule chain is the following:
 2. dropForever
 
 3. loadForever (default rule)
-
 
 The rule chain is evaluated from top to bottom, with the default rule chain always added at the bottom.
 

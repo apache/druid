@@ -80,6 +80,10 @@
           <groupId>org.apache.thrift</groupId>
           <artifactId>libthrift</artifactId>
         </exclusion>
+        <exclusion>
+          <artifactId>hadoop-lzo</artifactId>
+          <groupId>com.hadoop.gplcompression</groupId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
