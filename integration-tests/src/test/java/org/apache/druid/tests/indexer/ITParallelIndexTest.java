@@ -63,7 +63,7 @@ public class ITParallelIndexTest extends AbstractITBatchIndexTest
           INDEX_DATASOURCE,
           INDEX_INGEST_SEGMENT_DATASOURCE,
           INDEX_INGEST_SEGMENT_TASK,
-          INDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE
       );
     }
   }

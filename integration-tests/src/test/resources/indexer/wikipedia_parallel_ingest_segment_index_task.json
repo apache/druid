@@ -28,7 +28,7 @@
         "segmentGranularity": "DAY",
         "queryGranularity": "second",
         "intervals": [
-          "2013-08-31/2013-09-01"
+          "2013-08-31/2013-09-02"
         ]
       },
       "parser": {
@@ -38,23 +38,9 @@
             "column": "timestamp"
           },
           "dimensionsSpec": {
-            "dimensions": [
-              "page",
-              {
-                "type": "string",
-                "name": "language",
-                "createBitmapIndex": false
-              },
-              "user",
-              "unpatrolled",
-              "newPage",
+            "dimensionExclusions": [
               "robot",
-              "anonymous",
-              "namespace",
-              "continent",
-              "country",
-              "region",
-              "city"
+              "continent"
             ]
           }
         }
@@ -65,9 +51,13 @@
       "firehose": {
         "type": "ingestSegment",
         "dataSource": "%%DATASOURCE%%",
-        "interval": "2013-08-31/2013-09-01",
+        "interval": "2013-08-31/2013-09-02",
         "maxInputSegmentBytesPerTask": 1
       }
+    },
+    "tuningConfig": {
+      "type": "index_parallel",
+      "maxNumSubTasks": 10
     }
   }
 }
