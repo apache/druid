@@ -123,9 +123,7 @@ public class ScanQueryEngine
     if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) == null) {
       responseContext.put(ScanQueryRunnerFactory.CTX_COUNT, 0L);
     }
-    final long limit = query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE) ?
-                       query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) :
-                       Long.MAX_VALUE;
+    final long limit = calculateLimit(query, responseContext);
     return Sequences.concat(
             adapter
                 .makeCursors(
@@ -258,5 +256,16 @@ public class ScanQueryEngine
                     }
             ))
     );
+  }
+
+  /**
+   * If we're performing time-ordering, we want to scan through every row in the segment (hence the maximum limit)
+   */
+  private long calculateLimit(ScanQuery query,  Map<String, Object> responseContext)
+  {
+    if (query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
+      return query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
+    }
+    return Long.MAX_VALUE;
   }
 }

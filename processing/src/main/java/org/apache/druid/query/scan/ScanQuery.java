@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
@@ -72,7 +73,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
         case "list":
           return RESULT_FORMAT_LIST;
         default:
-          return RESULT_FORMAT_LIST;
+          throw new UOE("Scan query result format [%s] is not supported.", name);
       }
     }
   }

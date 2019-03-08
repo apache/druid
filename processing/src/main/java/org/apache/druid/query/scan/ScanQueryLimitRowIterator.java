@@ -52,7 +52,6 @@ import java.util.Map;
  */
 public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultValue>
 {
-  private static final String TIME_ORDERING_SEGMENT_ID = "No segment ID available when using time ordering";
   private Yielder<ScanResultValue> yielder;
   private ScanQuery.ResultFormat resultFormat;
   private long limit;
@@ -98,7 +97,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
       throw new UOE(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
     }
 
-    // We don't want to perform batching at the historical-level if we're time ordering
+    // We want to perform batching if we are not time-ordering or are at the outer level if we are re time-ordering
     if (query.getTimeOrder() == ScanQuery.TimeOrder.NONE ||
         !query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
       ScanResultValue batch = yielder.get();
@@ -128,7 +127,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
         yielder = yielder.next(null);
         count++;
       }
-      return new ScanResultValue(TIME_ORDERING_SEGMENT_ID, columns, eventsToAdd);
+      return new ScanResultValue(null, columns, eventsToAdd);
     }
   }
 

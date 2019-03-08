@@ -130,19 +130,15 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             );
 
         return unbatched;
-      } else if (query.getLimit() > scanQueryConfig.getMaxRowsQueuedForTimeOrdering()) {
-        throw new UOE(
-            "Time ordering for query result set limit of %,d is not supported.  Try lowering the result "
-            + "set size to less than or equal to the configurable time ordering limit of %,d rows.",
-            query.getLimit(),
-            scanQueryConfig.getMaxRowsQueuedForTimeOrdering()
-        );
       }
       throw new UOE(
-          "Time ordering for queries of %,d segments per historical is not supported.  Try reducing the scope "
-          + "of the query to scan fewer segments than the configurable time ordering limit of %,d segments",
+          "Time ordering for queries of %,d segments per historical and a row limit of %,d is not supported."
+          + "  Try reducing the scope of the query to scan fewer segments than the configurable time ordering limit of"
+          + " %,d segments or lower the row limit below %,d.",
           numSegments,
-          scanQueryConfig.getMaxSegmentsTimeOrderedInMemory()
+          query.getLimit(),
+          scanQueryConfig.getMaxSegmentsTimeOrderedInMemory(),
+          scanQueryConfig.getMaxRowsQueuedForTimeOrdering()
       );
     };
   }

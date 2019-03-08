@@ -156,12 +156,12 @@ The format of the result when resultFormat equals `compactedList`:
 ## Time Ordering
 
 The Scan query currently supports ordering based on timestamp for non-legacy queries.  Note that using time ordering
-will yield results that do not indicate which segment rows are from.  Furthermore, time ordering is only supported
-where the result set limit is less than `druid.query.scan.maxRowsQueuedForTimeOrdering` rows and less than 
-`druid.query.scan.maxSegmentsTimeOrderedInMemory` segments are scanned per Historical.  The reasoning behind these
-limitations is that the implementation of time ordering uses two strategies that can consume too much heap memory
-if left unbounded.  These strategies (listed below) are chosen on a per-Historical basis depending on query 
-result set limit and the number of segments being scanned. 
+will yield results that do not indicate which segment rows are from (`segmentId` will show up as `null`).  Furthermore,
+time ordering is only supported where the result set limit is less than `druid.query.scan.maxRowsQueuedForTimeOrdering` 
+rows **or** fewer than `druid.query.scan.maxSegmentsTimeOrderedInMemory` segments are scanned per Historical.  The 
+reasoning behind these limitations is that the implementation of time ordering uses two strategies that can consume too 
+much heap memory if left unbounded.  These strategies (listed below) are chosen on a per-Historical basis depending on
+query result set limit and the number of segments being scanned.
 
 1. Priority Queue: Each segment on a Historical is opened sequentially.  Every row is added to a bounded priority
 queue which is ordered by timestamp.  For every row above the result set limit, the row with the earliest (if descending)
@@ -170,8 +170,8 @@ priority queue are streamed back to the Broker(s) in batches.  Attempting to loa
 risk of Historical nodes running out of memory.  The `druid.query.scan.maxRowsQueuedForTimeOrdering` property protects
 from this by limiting the number of rows in the query result set when time ordering is used.
 
-2. K-Way/N-Way Merge: Each segment on a Historical is opened in parallel.  Since each segment's rows are already
-time-ordered, a k-way merge can be performed on the results from each segment.  This approach doesn't persist the entire
+2. N-Way Merge: Each segment on a Historical is opened in parallel.  Since each segment's rows are already
+time-ordered, an n-way merge can be performed on the results from each segment.  This approach doesn't persist the entire
 result set in memory (like the Priority Queue) as it streams back batches as they are returned from the merge function.
 However, attempting to query too many segments could also result in high memory usage due to the need to open 
 decompression and decoding buffers for each.  The `druid.query.scan.maxSegmentsTimeOrderedInMemory` limit protects
