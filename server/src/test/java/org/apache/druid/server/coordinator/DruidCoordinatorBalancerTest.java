@@ -269,7 +269,7 @@ public class DruidCoordinatorBalancerTest
   }
 
   /**
-   * Should balance segments as usual (ignoring percent) with empty decommissioningList.
+   * Should balance segments as usual (ignoring percent) with empty decommissioningNodes.
    */
   @Test
   public void testMoveDecommissioningMaxPercentOfMaxSegmentsToMoveWithNoDecommissioning()

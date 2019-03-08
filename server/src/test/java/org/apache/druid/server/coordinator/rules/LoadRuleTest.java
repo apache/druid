@@ -741,7 +741,7 @@ public class LoadRuleTest
    * Should not load a segment to the server that is decommssioning.
    */
   @Test
-  public void testLoadReplicaDuringDecomissioning()
+  public void testLoadReplicaDuringDecommissioning()
   {
     EasyMock.expect(throttler.canCreateReplicant(EasyMock.anyString())).andReturn(true).anyTimes();
 

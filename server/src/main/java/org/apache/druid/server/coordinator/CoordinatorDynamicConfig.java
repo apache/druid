@@ -28,6 +28,8 @@ import org.apache.druid.java.util.common.IAE;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
@@ -231,8 +233,8 @@ public class CoordinatorDynamicConfig
   }
 
   /**
-   * List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decomissioning' servers,
-   * and segments will be moved away from them to be placed on 'active' servers at the maximum rate specified by
+   * List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decommissioning' servers,
+   * and segments will be moved away from them to be placed on non-decommissioning servers at the maximum rate specified by
    * {@link CoordinatorDynamicConfig#getDecommissioningMaxPercentOfMaxSegmentsToMove}.
    *
    * @return list of host:port entries
@@ -241,21 +243,23 @@ public class CoordinatorDynamicConfig
   public Set<String> getDecommissioningNodes()
   {
     return decommissioningNodes;
+
   }
 
   /**
-   * The maximum number of segments that may be moved away from 'decommissioning' servers to non-decommissioning
-   * (that is, active) servers during one Coordinator's run. This value is relative to the total maximum segment
-   * movements allowed during one run which is determined by `{@link CoordinatorDynamicConfig#getMaxSegmentsToMove()}.
-   *
-   * If `decommissioningMaxPercentOfMaxSegmentsToMove` is 0, segments will neither be moved from _or to_ 'decommissioning'
-   * servers, effectively putting them in a sort of 'maintenance' mode that will not participate in balancing or
-   * assignment by load rules. Decommissioning can also become stalled if there are no available active servers to place
-   * the segments. By leveraging decommissioning percent, an operator can prevent active servers from overload by
-   * prioritizing balancing, or decrease decommissioning time instead. The value should be between 0 and 100.
+   * The percent of {@link CoordinatorDynamicConfig#getMaxSegmentsToMove()} that determines the maximum number of
+   * segments that may be moved away from 'decommissioning' servers (specified by
+   * {@link CoordinatorDynamicConfig#getDecommissioningNodes()}) to non-decommissioning servers during one Coordinator
+   * balancer run. If this value is 0, segments will neither be moved from or to 'decommissioning' servers, effectively
+   * putting them in a sort of "maintenance" mode that will not participate in balancing or assignment by load rules.
+   * Decommissioning can also become stalled if there are no available active servers to place the segments. By
+   * adjusting this value, an operator can prevent active servers from overload by prioritizing balancing, or
+   * decrease decommissioning time instead.
    *
    * @return number in range [0, 100]
    */
+  @Min(0)
+  @Max(100)
   @JsonProperty
   public int getDecommissioningMaxPercentOfMaxSegmentsToMove()
   {
