@@ -261,7 +261,7 @@ public class ScanQueryEngine
   /**
    * If we're performing time-ordering, we want to scan through every row in the segment (hence the maximum limit)
    */
-  private long calculateLimit(ScanQuery query,  Map<String, Object> responseContext)
+  private long calculateLimit(ScanQuery query, Map<String, Object> responseContext)
   {
     if (query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
       return query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
