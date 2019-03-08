@@ -343,7 +343,9 @@ public class HadoopConverterJob
       }
     }
     catch (InterruptedException | ClassNotFoundException e) {
-      throw new RuntimeException(e);
+      RuntimeException r = new RuntimeException(e);
+      throwable = r;
+      throw r;
     }
     catch (Throwable t) {
       throwable = t;
