@@ -30,7 +30,7 @@ import java.io.Closeable;
 public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
 {
 
-  private static final Logger LOG = new Logger(ITCompactionTaskTest.class);
+  private static final Logger LOG = new Logger(ITSystemTableBatchIndexTaskTest.class);
   private static String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static String SYSTEM_QUERIES_RESOURCE = "/indexer/sys_segment_batch_index_queries.json";
   private static String INDEX_DATASOURCE = "wikipedia_index_test";
@@ -40,7 +40,7 @@ public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
   {
     LOG.info("Starting batch index sys table queries");
     try (
-        final Closeable indexCloseable = unloader(INDEX_DATASOURCE)
+        final Closeable indexCloseable = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix());
     ) {
       doIndexTestSqlTest(
           INDEX_DATASOURCE,
