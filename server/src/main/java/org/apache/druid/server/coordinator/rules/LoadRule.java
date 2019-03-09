@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.BalancerStrategy;
 import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.CoordinatorStats.Stat;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -45,8 +46,6 @@ import java.util.Objects;
 import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
 
 /**
  * LoadRules indicate the number of replicants a segment should have in a given tier.
@@ -123,7 +122,7 @@ public abstract class LoadRule implements Rule
           createLoadQueueSizeLimitingPredicate(params).and(holder -> !holder.equals(primaryHolderToLoad)),
           segment
       );
-      stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
+      stats.addToTieredStat(Stat.ASSIGNED_COUNT, tier, numAssigned);
 
       // do assign replicas for the other tiers.
       assignReplicas(params, segment, stats, tier /* to skip */);
@@ -248,7 +247,7 @@ public abstract class LoadRule implements Rule
           createLoadQueueSizeLimitingPredicate(params),
           segment
       );
-      stats.addToTieredStat(ASSIGNED_COUNT, tier, numAssigned);
+      stats.addToTieredStat(Stat.ASSIGNED_COUNT, tier, numAssigned);
     }
   }
 
@@ -355,7 +354,7 @@ public abstract class LoadRule implements Rule
         }
       }
 
-      stats.addToTieredStat(DROPPED_COUNT, tier, numDropped);
+      stats.addToTieredStat(Stat.DROPPED_COUNT, tier, numDropped);
     }
   }
 

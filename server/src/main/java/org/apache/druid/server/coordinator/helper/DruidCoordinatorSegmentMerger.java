@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.CoordinatorStats.Stat;
 import org.apache.druid.server.coordinator.DatasourceWhitelist;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
@@ -53,8 +54,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.MERGED_COUNT;
 
 /**
  */
@@ -116,7 +115,7 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
           i -= segmentsToMerge.backtrack(params.getCoordinatorDynamicConfig().getMergeBytesLimit());
 
           if (segmentsToMerge.getSegmentCount() > 1) {
-            stats.addToGlobalStat(MERGED_COUNT, mergeSegments(segmentsToMerge, entry.getKey()));
+            stats.addToGlobalStat(Stat.MERGED_COUNT, mergeSegments(segmentsToMerge, entry.getKey()));
           }
 
           if (segmentsToMerge.getSegmentCount() == 0) {
@@ -131,15 +130,15 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
       // Finish any timelineObjects to merge that may have not hit threshold
       segmentsToMerge.backtrack(params.getCoordinatorDynamicConfig().getMergeBytesLimit());
       if (segmentsToMerge.getSegmentCount() > 1) {
-        stats.addToGlobalStat(MERGED_COUNT, mergeSegments(segmentsToMerge, entry.getKey()));
+        stats.addToGlobalStat(Stat.MERGED_COUNT, mergeSegments(segmentsToMerge, entry.getKey()));
       }
     }
 
-    log.info("Issued merge requests for %s segments", stats.getGlobalStat(MERGED_COUNT));
+    log.info("Issued merge requests for %s segments", stats.getGlobalStat(Stat.MERGED_COUNT));
 
     params.getEmitter().emit(
         new ServiceMetricEvent.Builder().build(
-            "coordinator/merge/count", stats.getGlobalStat(MERGED_COUNT)
+            "coordinator/merge/count", stats.getGlobalStat(Stat.MERGED_COUNT)
         )
     );
 

@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.helper;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.CoordinatorStats.Stat;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -33,8 +34,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
-
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.OVER_SHADOWED_COUNT;
 
 public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelper
 {
@@ -77,7 +76,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
         VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
         if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
           coordinator.removeSegment(dataSegment);
-          stats.addToGlobalStat(OVER_SHADOWED_COUNT, 1);
+          stats.addToGlobalStat(Stat.OVER_SHADOWED_COUNT, 1);
         }
       }
     }

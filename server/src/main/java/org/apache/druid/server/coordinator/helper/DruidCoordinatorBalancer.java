@@ -27,6 +27,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.BalancerStrategy;
 import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.CoordinatorStats.Stat;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadPeonCallback;
@@ -43,8 +44,6 @@ import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
 
 /**
  */
@@ -168,8 +167,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       // Cluster should be alive and constantly adjusting
       log.info("No good moves found in tier [%s]", tier);
     }
-    stats.addToTieredStat(UNMOVED_COUNT, tier, unmoved);
-    stats.addToTieredStat(MOVED_COUNT, tier, moved);
+    stats.addToTieredStat(Stat.UNMOVED_COUNT, tier, unmoved);
+    stats.addToTieredStat(Stat.MOVED_COUNT, tier, moved);
 
     if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
       final BalancerStrategy strategy = params.getBalancerStrategy();

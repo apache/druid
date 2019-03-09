@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.coordinator.CoordinatorStats.Stat;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -37,10 +38,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.INITIAL_COST;
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.NORMALIZATION;
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.NORMALIZED_INITIAL_COST_TIMES_ONE_THOUSAND;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -301,9 +298,9 @@ public class CostBalancerStrategy implements BalancerStrategy
     final double normalization = calculateNormalization(serverHolderList);
     final double normalizedInitialCost = initialTotalCost / normalization;
 
-    stats.addToTieredStat(INITIAL_COST, tier, (long) initialTotalCost);
-    stats.addToTieredStat(NORMALIZATION, tier, (long) normalization);
-    stats.addToTieredStat(NORMALIZED_INITIAL_COST_TIMES_ONE_THOUSAND, tier, (long) (normalizedInitialCost * 1000));
+    stats.addToTieredStat(Stat.INITIAL_COST, tier, (long) initialTotalCost);
+    stats.addToTieredStat(Stat.NORMALIZATION, tier, (long) normalization);
+    stats.addToTieredStat(Stat.NORMALIZED_INITIAL_COST_TIMES_ONE_THOUSAND, tier, (long) (normalizedInitialCost * 1000));
 
     log.info(
         "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",

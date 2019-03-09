@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.rules;
 
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.CoordinatorStats.Stat;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -29,8 +30,6 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
 
 public abstract class BroadcastDistributionRule implements Rule
 {
@@ -73,7 +72,7 @@ public abstract class BroadcastDistributionRule implements Rule
   )
   {
     final CoordinatorStats stats = new CoordinatorStats();
-    stats.addToGlobalStat(ASSIGNED_COUNT, 0);
+    stats.addToGlobalStat(Stat.ASSIGNED_COUNT, 0);
 
     for (ServerHolder holder : serverHolders) {
       if (segment.getSize() > holder.getAvailableSize()) {
@@ -90,7 +89,7 @@ public abstract class BroadcastDistributionRule implements Rule
               null
           );
 
-          stats.addToGlobalStat(ASSIGNED_COUNT, 1);
+          stats.addToGlobalStat(Stat.ASSIGNED_COUNT, 1);
         }
       }
     }
@@ -107,7 +106,7 @@ public abstract class BroadcastDistributionRule implements Rule
 
     for (ServerHolder holder : serverHolders) {
       holder.getPeon().dropSegment(segment, null);
-      stats.addToGlobalStat(DROPPED_COUNT, 1);
+      stats.addToGlobalStat(Stat.DROPPED_COUNT, 1);
     }
 
     return stats;

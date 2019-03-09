@@ -33,10 +33,10 @@ import java.util.Map;
 public class CoordinatorStatsTest
 {
   private CoordinatorStats stats;
-  private final static Stat stat0 = Stat.ASSIGNED_COUNT;
-  private final static Stat stat1 = Stat.UNASSIGNED_COUNT;
-  private final static Stat stat2 = Stat.UNASSIGNED_SIZE;
-  private final static Stat stat3 = Stat.DROPPED_COUNT;
+  private Stat stat0 = Stat.ASSIGNED_COUNT;
+  private Stat stat1 = Stat.UNASSIGNED_COUNT;
+  private Stat stat2 = Stat.UNASSIGNED_SIZE;
+  private Stat stat3 = Stat.DROPPED_COUNT;
 
   @Before
   public void setUp()

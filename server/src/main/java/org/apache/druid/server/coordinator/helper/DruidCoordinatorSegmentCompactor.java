@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorStats;
+import org.apache.druid.server.coordinator.CoordinatorStats.Stat;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
@@ -47,8 +48,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
 
 public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 {
@@ -206,13 +205,13 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   private CoordinatorStats makeStats(int numCompactionTasks, CompactionSegmentIterator iterator)
   {
     final CoordinatorStats stats = new CoordinatorStats();
-    stats.addToGlobalStat(COMPACT_TASK_COUNT, numCompactionTasks);
+    stats.addToGlobalStat(Stat.COMPACT_TASK_COUNT, numCompactionTasks);
     remainingSegmentSizeBytes = iterator.remainingSegmentSizeBytes();
     iterator.remainingSegmentSizeBytes().object2LongEntrySet().fastForEach(
         entry -> {
           final String dataSource = entry.getKey();
           final long numSegmentsWaitCompact = entry.getLongValue();
-          stats.addToDataSourceStat(SEGMENT_SIZE_WAIT_COMPACT, dataSource, numSegmentsWaitCompact);
+          stats.addToDataSourceStat(Stat.SEGMENT_SIZE_WAIT_COMPACT, dataSource, numSegmentsWaitCompact);
         }
     );
     return stats;
