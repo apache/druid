@@ -309,7 +309,8 @@ public class SegmentManagerTest
   public void testLoadDuplicatedSegmentsInParallel()
       throws ExecutionException, InterruptedException, SegmentLoadingException
   {
-    final List<Future<Boolean>> futures = ImmutableList.of(segments.get(0), segments.get(0), segments.get(0)).stream()
+    final List<Future<Boolean>> futures = ImmutableList.of(segments.get(0), segments.get(0), segments.get(0))
+                                                       .stream()
                                                        .map(
                                                            segment -> executor.submit(
                                                                () -> segmentManager.loadSegment(segment)
@@ -347,16 +348,17 @@ public class SegmentManagerTest
       throws SegmentLoadingException, ExecutionException, InterruptedException
   {
     segmentManager.loadSegment(segments.get(0));
-    final List<Future<Void>> futures = ImmutableList.of(segments.get(1), segments.get(2)).stream()
-                                                       .map(
-                                                           segment -> executor.submit(
-                                                               () -> {
-                                                                 segmentManager.dropSegment(segment);
-                                                                 return (Void) null;
-                                                               }
-                                                           )
-                                                       )
-                                                       .collect(Collectors.toList());
+    final List<Future<Void>> futures = ImmutableList.of(segments.get(1), segments.get(2))
+                                                    .stream()
+                                                    .map(
+                                                        segment -> executor.submit(
+                                                            () -> {
+                                                              segmentManager.dropSegment(segment);
+                                                              return (Void) null;
+                                                            }
+                                                        )
+                                                    )
+                                                    .collect(Collectors.toList());
 
     for (Future<Void> future : futures) {
       future.get();
