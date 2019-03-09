@@ -211,7 +211,7 @@ public class DruidCoordinatorRuleRunnerTest
     CoordinatorStats stats = afterParams.getCoordinatorStats();
 
     Assert.assertEquals(6L, stats.getTieredStat(Stat.ASSIGNED_COUNT, "hot"));
-                                                Assert.assertEquals(6L, stats.getTieredStat(Stat.ASSIGNED_COUNT, "normal"));
+    Assert.assertEquals(6L, stats.getTieredStat(Stat.ASSIGNED_COUNT, "normal"));
     Assert.assertEquals(12L, stats.getTieredStat(Stat.ASSIGNED_COUNT, "cold"));
     Assert.assertTrue(stats.getTiers(Stat.UNASSIGNED_COUNT).isEmpty());
     Assert.assertTrue(stats.getTiers(Stat.UNASSIGNED_SIZE).isEmpty());
