@@ -46,14 +46,14 @@ import java.util.TreeSet;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
+
 /**
  * LoadRules indicate the number of replicants a segment should have in a given tier.
  */
 public abstract class LoadRule implements Rule
 {
   private static final EmittingLogger log = new EmittingLogger(LoadRule.class);
-  static final String ASSIGNED_COUNT = "assignedCount";
-  static final String DROPPED_COUNT = "droppedCount";
 
   private final Object2IntMap<String> targetReplicants = new Object2IntOpenHashMap<>();
   private final Object2IntMap<String> currentReplicants = new Object2IntOpenHashMap<>();

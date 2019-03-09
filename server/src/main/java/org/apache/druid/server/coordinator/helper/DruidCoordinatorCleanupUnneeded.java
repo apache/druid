@@ -33,6 +33,8 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.Set;
 import java.util.SortedSet;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.UNNEEDED_COUNT;
+
 /**
  */
 public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
@@ -73,7 +75,7 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
 
                 if (!queuePeon.getSegmentsToDrop().contains(segment)) {
                   queuePeon.dropSegment(segment, () -> {});
-                  stats.addToTieredStat("unneededCount", server.getTier(), 1);
+                  stats.addToTieredStat(UNNEEDED_COUNT, server.getTier(), 1);
                   log.info(
                       "Dropping uneeded segment [%s] from server [%s] in tier [%s]",
                       segment.getId(),

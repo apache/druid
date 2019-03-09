@@ -24,7 +24,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongMap.Entry;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.ObjLongConsumer;
@@ -33,14 +33,34 @@ import java.util.function.ObjLongConsumer;
  */
 public class CoordinatorStats
 {
-  private final Map<String, Object2LongOpenHashMap<String>> perTierStats;
-  private final Map<String, Object2LongOpenHashMap<String>> perDataSourceStats;
-  private final Object2LongOpenHashMap<String> globalStats;
+  private final Map<Stat, Object2LongOpenHashMap<String>> perTierStats;
+  private final Map<Stat, Object2LongOpenHashMap<String>> perDataSourceStats;
+  private final Object2LongOpenHashMap<Stat> globalStats;
+
+  public enum Stat
+  {
+    INITIAL_COST,
+    NORMALIZATION,
+    NORMALIZED_INITIAL_COST_TIMES_ONE_THOUSAND,
+    UNMOVED_COUNT,
+    DELETED_COUNT,
+    MOVED_COUNT,
+    UNNEEDED_COUNT,
+    ASSIGNED_COUNT,
+    UNASSIGNED_COUNT,
+    UNASSIGNED_SIZE,
+    DROPPED_COUNT,
+    SEGMENT_SIZE_WAIT_COMPACT,
+    SEGMENTS_WAIT_COMPACT,
+    COMPACT_TASK_COUNT,
+    OVER_SHADOWED_COUNT,
+    MERGED_COUNT
+  }
 
   public CoordinatorStats()
   {
-    perTierStats = new HashMap<>();
-    perDataSourceStats = new HashMap<>();
+    perTierStats = new EnumMap<>(Stat.class);
+    perDataSourceStats = new EnumMap<>(Stat.class);
     globalStats = new Object2LongOpenHashMap<>();
   }
 
@@ -54,39 +74,39 @@ public class CoordinatorStats
     return !perDataSourceStats.isEmpty();
   }
 
-  public Set<String> getTiers(final String statName)
+  public Set<String> getTiers(final Stat stat)
   {
-    final Object2LongOpenHashMap<String> theStat = perTierStats.get(statName);
+    final Object2LongOpenHashMap<String> theStat = perTierStats.get(stat);
     if (theStat == null) {
       return Collections.emptySet();
     }
     return Collections.unmodifiableSet(theStat.keySet());
   }
 
-  public Set<String> getDataSources(String statName)
+  public Set<String> getDataSources(Stat stat)
   {
-    final Object2LongOpenHashMap<String> stat = perDataSourceStats.get(statName);
-    if (stat == null) {
+    final Object2LongOpenHashMap<String> theStat = perDataSourceStats.get(stat);
+    if (theStat == null) {
       return Collections.emptySet();
     }
-    return Collections.unmodifiableSet(stat.keySet());
+    return Collections.unmodifiableSet(theStat.keySet());
   }
 
   /**
    *
-   * @param statName the name of the statistics
+   * @param stat the statistics
    * @param tier the tier
    * @return the value for the statistics {@code statName} under {@code tier} tier
    * @throws NullPointerException if {@code statName} is not found
    */
-  public long getTieredStat(final String statName, final String tier)
+  public long getTieredStat(final Stat stat, final String tier)
   {
-    return perTierStats.get(statName).getLong(tier);
+    return perTierStats.get(stat).getLong(tier);
   }
 
-  public void forEachTieredStat(final String statName, final ObjLongConsumer<String> consumer)
+  public void forEachTieredStat(final Stat stat, final ObjLongConsumer<String> consumer)
   {
-    final Object2LongOpenHashMap<String> theStat = perTierStats.get(statName);
+    final Object2LongOpenHashMap<String> theStat = perTierStats.get(stat);
     if (theStat != null) {
       for (final Object2LongMap.Entry<String> entry : theStat.object2LongEntrySet()) {
         consumer.accept(entry.getKey(), entry.getLongValue());
@@ -94,50 +114,49 @@ public class CoordinatorStats
     }
   }
 
-  public long getDataSourceStat(String statName, String dataSource)
+  public long getDataSourceStat(Stat stat, String dataSource)
   {
-    return perDataSourceStats.get(statName).getLong(dataSource);
+    return perDataSourceStats.get(stat).getLong(dataSource);
   }
 
-  public void forEachDataSourceStat(String statName, ObjLongConsumer<String> consumer)
+  public void forEachDataSourceStat(Stat stat, ObjLongConsumer<String> consumer)
   {
-    final Object2LongOpenHashMap<String> stat = perDataSourceStats.get(statName);
-    if (stat != null) {
-      for (Entry<String> entry : stat.object2LongEntrySet()) {
+    final Object2LongOpenHashMap<String> theStat = perDataSourceStats.get(stat);
+    if (theStat != null) {
+      for (Entry<String> entry : theStat.object2LongEntrySet()) {
         consumer.accept(entry.getKey(), entry.getLongValue());
       }
     }
   }
 
-  public long getGlobalStat(final String statName)
+  public long getGlobalStat(final Stat stat)
   {
-    return globalStats.getLong(statName);
+    return globalStats.getLong(stat);
   }
 
-  public void addToTieredStat(final String statName, final String tier, final long value)
+  public void addToTieredStat(final Stat stat, final String tier, final long value)
   {
-    perTierStats.computeIfAbsent(statName, ignored -> new Object2LongOpenHashMap<>())
+    perTierStats.computeIfAbsent(stat, ignored -> new Object2LongOpenHashMap<>())
                 .addTo(tier, value);
   }
 
-  public void addToDataSourceStat(String statName, String dataSource, long value)
+  public void addToDataSourceStat(Stat stat, String dataSource, long value)
   {
-    perDataSourceStats.computeIfAbsent(statName, k -> new Object2LongOpenHashMap<>())
+    perDataSourceStats.computeIfAbsent(stat, k -> new Object2LongOpenHashMap<>())
                       .addTo(dataSource, value);
   }
 
-  public void addToGlobalStat(final String statName, final long value)
+  public void addToGlobalStat(final Stat stat, final long value)
   {
-    globalStats.addTo(statName, value);
+    globalStats.addTo(stat, value);
   }
 
   public CoordinatorStats accumulate(final CoordinatorStats stats)
   {
     stats.perTierStats.forEach(
-        (final String statName, final Object2LongOpenHashMap<String> urStat) -> {
-
+        (stat, urStat) -> {
           final Object2LongOpenHashMap<String> myStat = perTierStats.computeIfAbsent(
-              statName,
+              stat,
               name -> new Object2LongOpenHashMap<>()
           );
 
@@ -148,9 +167,9 @@ public class CoordinatorStats
     );
 
     stats.perDataSourceStats.forEach(
-        (statName, urStat) -> {
+        (stat, urStat) -> {
           final Object2LongOpenHashMap<String> myStat = perDataSourceStats.computeIfAbsent(
-              statName,
+              stat,
               k -> new Object2LongOpenHashMap<>()
           );
 
@@ -160,7 +179,7 @@ public class CoordinatorStats
         }
     );
 
-    for (final Object2LongMap.Entry<String> entry : stats.globalStats.object2LongEntrySet()) {
+    for (final Object2LongMap.Entry<Stat> entry : stats.globalStats.object2LongEntrySet()) {
       globalStats.addTo(entry.getKey(), entry.getLongValue());
     }
 

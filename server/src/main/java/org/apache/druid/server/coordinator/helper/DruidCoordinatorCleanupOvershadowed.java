@@ -34,6 +34,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.OVER_SHADOWED_COUNT;
+
 public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelper
 {
   private final DruidCoordinator coordinator;
@@ -75,7 +77,7 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
         VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
         if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
           coordinator.removeSegment(dataSegment);
-          stats.addToGlobalStat("overShadowedCount", 1);
+          stats.addToGlobalStat(OVER_SHADOWED_COUNT, 1);
         }
       }
     }

@@ -24,6 +24,8 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.DELETED_COUNT;
+
 /**
  * DropRules indicate when segments should be completely removed from the cluster.
  */
@@ -34,7 +36,7 @@ public abstract class DropRule implements Rule
   {
     CoordinatorStats stats = new CoordinatorStats();
     coordinator.removeSegment(segment);
-    stats.addToGlobalStat("deletedCount", 1);
+    stats.addToGlobalStat(DELETED_COUNT, 1);
     return stats;
   }
 }

@@ -44,6 +44,7 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.ASSIGNED_COUNT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -297,7 +298,7 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(3L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(3L, stats.getGlobalStat(ASSIGNED_COUNT));
     assertEquals(false, stats.hasPerTierStats());
 
     assertTrue(
@@ -345,7 +346,7 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(1L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(1L, stats.getGlobalStat(ASSIGNED_COUNT));
     assertEquals(false, stats.hasPerTierStats());
 
     assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
@@ -377,7 +378,7 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(5L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(5L, stats.getGlobalStat(ASSIGNED_COUNT));
     assertEquals(false, stats.hasPerTierStats());
 
     assertTrue(
@@ -415,7 +416,7 @@ public class BroadcastDistributionRuleTest
         smallSegment
     );
 
-    assertEquals(6L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(6L, stats.getGlobalStat(ASSIGNED_COUNT));
     assertEquals(false, stats.hasPerTierStats());
 
     assertTrue(

@@ -39,6 +39,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
+
 /**
  */
 public class DruidCoordinatorLogger implements DruidCoordinatorHelper
@@ -69,11 +71,11 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
       final ServiceEmitter emitter,
       final String metricName,
       final CoordinatorStats stats,
-      final String statName
+      final CoordinatorStats.Stat stat
   )
   {
     stats.forEachTieredStat(
-        statName,
+        stat,
         (final String tier, final long count) -> {
           emitTieredStat(emitter, metricName, tier, count);
         }
@@ -88,7 +90,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     ServiceEmitter emitter = params.getEmitter();
 
     stats.forEachTieredStat(
-        "assignedCount",
+        ASSIGNED_COUNT,
         (final String tier, final long count) -> {
           log.info(
               "[%s] : Assigned %s segments among %,d servers",
@@ -100,7 +102,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     );
 
     stats.forEachTieredStat(
-        "droppedCount",
+        DROPPED_COUNT,
         (final String tier, final long count) -> {
           log.info(
               "[%s] : Dropped %s segments among %,d servers",
@@ -111,23 +113,23 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
         }
     );
 
-    emitTieredStats(emitter, "segment/cost/raw", stats, "initialCost");
+    emitTieredStats(emitter, "segment/cost/raw", stats, INITIAL_COST);
 
-    emitTieredStats(emitter, "segment/cost/normalization", stats, "normalization");
+    emitTieredStats(emitter, "segment/cost/normalization", stats, NORMALIZATION);
 
-    emitTieredStats(emitter, "segment/moved/count", stats, "movedCount");
+    emitTieredStats(emitter, "segment/moved/count", stats, MOVED_COUNT);
 
-    emitTieredStats(emitter, "segment/deleted/count", stats, "deletedCount");
+    emitTieredStats(emitter, "segment/deleted/count", stats, DELETED_COUNT);
 
     stats.forEachTieredStat(
-        "normalizedInitialCostTimesOneThousand",
+        NORMALIZED_INITIAL_COST_TIMES_ONE_THOUSAND,
         (final String tier, final long count) -> {
           emitTieredStat(emitter, "segment/cost/normalized", tier, count / 1000d);
         }
     );
 
     stats.forEachTieredStat(
-        "unneededCount",
+        UNNEEDED_COUNT,
         (final String tier, final long count) -> {
           log.info(
               "[%s] : Removed %s unneeded segments among %,d servers",
@@ -140,19 +142,19 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
             "segment/overShadowed/count",
-            stats.getGlobalStat("overShadowedCount")
+            stats.getGlobalStat(OVER_SHADOWED_COUNT)
         )
     );
 
     stats.forEachTieredStat(
-        "movedCount",
+        MOVED_COUNT,
         (final String tier, final long count) -> {
           log.info("[%s] : Moved %,d segment(s)", tier, count);
         }
     );
 
     stats.forEachTieredStat(
-        "unmovedCount",
+        UNMOVED_COUNT,
         (final String tier, final long count) -> {
           log.info("[%s] : Let alone %,d segment(s)", tier, count);
         }
@@ -247,12 +249,12 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
             "compact/task/count",
-            stats.getGlobalStat("compactTaskCount")
+            stats.getGlobalStat(COMPACT_TASK_COUNT)
         )
     );
 
     stats.forEachDataSourceStat(
-        "segmentsWaitCompact",
+        SEGMENTS_WAIT_COMPACT,
         (final String dataSource, final long count) -> {
           emitter.emit(
               new ServiceMetricEvent.Builder()

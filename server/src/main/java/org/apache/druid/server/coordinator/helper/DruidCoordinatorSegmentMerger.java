@@ -54,6 +54,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.MERGED_COUNT;
+
 /**
  */
 public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
@@ -114,7 +116,7 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
           i -= segmentsToMerge.backtrack(params.getCoordinatorDynamicConfig().getMergeBytesLimit());
 
           if (segmentsToMerge.getSegmentCount() > 1) {
-            stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
+            stats.addToGlobalStat(MERGED_COUNT, mergeSegments(segmentsToMerge, entry.getKey()));
           }
 
           if (segmentsToMerge.getSegmentCount() == 0) {
@@ -129,15 +131,15 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
       // Finish any timelineObjects to merge that may have not hit threshold
       segmentsToMerge.backtrack(params.getCoordinatorDynamicConfig().getMergeBytesLimit());
       if (segmentsToMerge.getSegmentCount() > 1) {
-        stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
+        stats.addToGlobalStat(MERGED_COUNT, mergeSegments(segmentsToMerge, entry.getKey()));
       }
     }
 
-    log.info("Issued merge requests for %s segments", stats.getGlobalStat("mergedCount"));
+    log.info("Issued merge requests for %s segments", stats.getGlobalStat(MERGED_COUNT));
 
     params.getEmitter().emit(
         new ServiceMetricEvent.Builder().build(
-            "coordinator/merge/count", stats.getGlobalStat("mergedCount")
+            "coordinator/merge/count", stats.getGlobalStat(MERGED_COUNT)
         )
     );
 

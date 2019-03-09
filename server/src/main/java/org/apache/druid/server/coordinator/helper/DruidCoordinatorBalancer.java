@@ -44,6 +44,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
+
 /**
  */
 public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
@@ -166,8 +168,8 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       // Cluster should be alive and constantly adjusting
       log.info("No good moves found in tier [%s]", tier);
     }
-    stats.addToTieredStat("unmovedCount", tier, unmoved);
-    stats.addToTieredStat("movedCount", tier, moved);
+    stats.addToTieredStat(UNMOVED_COUNT, tier, unmoved);
+    stats.addToTieredStat(MOVED_COUNT, tier, moved);
 
     if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
       final BalancerStrategy strategy = params.getBalancerStrategy();

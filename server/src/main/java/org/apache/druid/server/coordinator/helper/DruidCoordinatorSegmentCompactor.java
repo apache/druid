@@ -48,11 +48,10 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
+
 public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 {
-  static final String COMPACT_TASK_COUNT = "compactTaskCount";
-  static final String SEGMENT_SIZE_WAIT_COMPACT = "segmentSizeWaitCompact";
-
   // Should be synced with CompactionTask.TYPE
   private static final String COMPACT_TASK_TYPE = "compact";
   private static final Logger LOG = new Logger(DruidCoordinatorSegmentCompactor.class);

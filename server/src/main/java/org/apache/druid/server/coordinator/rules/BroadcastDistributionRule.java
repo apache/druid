@@ -30,6 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.*;
+
 public abstract class BroadcastDistributionRule implements Rule
 {
   private static final EmittingLogger log = new EmittingLogger(BroadcastDistributionRule.class);
@@ -71,7 +73,7 @@ public abstract class BroadcastDistributionRule implements Rule
   )
   {
     final CoordinatorStats stats = new CoordinatorStats();
-    stats.addToGlobalStat(LoadRule.ASSIGNED_COUNT, 0);
+    stats.addToGlobalStat(ASSIGNED_COUNT, 0);
 
     for (ServerHolder holder : serverHolders) {
       if (segment.getSize() > holder.getAvailableSize()) {
@@ -88,7 +90,7 @@ public abstract class BroadcastDistributionRule implements Rule
               null
           );
 
-          stats.addToGlobalStat(LoadRule.ASSIGNED_COUNT, 1);
+          stats.addToGlobalStat(ASSIGNED_COUNT, 1);
         }
       }
     }
@@ -105,7 +107,7 @@ public abstract class BroadcastDistributionRule implements Rule
 
     for (ServerHolder holder : serverHolders) {
       holder.getPeon().dropSegment(segment, null);
-      stats.addToGlobalStat(LoadRule.DROPPED_COUNT, 1);
+      stats.addToGlobalStat(DROPPED_COUNT, 1);
     }
 
     return stats;

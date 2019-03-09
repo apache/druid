@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import org.apache.druid.server.coordinator.CoordinatorStats.Stat;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,6 +33,10 @@ import java.util.Map;
 public class CoordinatorStatsTest
 {
   private CoordinatorStats stats;
+  private final static Stat stat0 = Stat.ASSIGNED_COUNT;
+  private final static Stat stat1 = Stat.UNASSIGNED_COUNT;
+  private final static Stat stat2 = Stat.UNASSIGNED_SIZE;
+  private final static Stat stat3 = Stat.DROPPED_COUNT;
 
   @Before
   public void setUp()
@@ -48,43 +53,43 @@ public class CoordinatorStatsTest
   @Test
   public void addToGlobalStat()
   {
-    Assert.assertEquals(0, stats.getGlobalStat("stats"));
-    stats.addToGlobalStat("stats", 1);
-    Assert.assertEquals(1, stats.getGlobalStat("stats"));
-    stats.addToGlobalStat("stats", -11);
-    Assert.assertEquals(-10, stats.getGlobalStat("stats"));
+    Assert.assertEquals(0, stats.getGlobalStat(stat0));
+    stats.addToGlobalStat(stat0, 1);
+    Assert.assertEquals(1, stats.getGlobalStat(stat0));
+    stats.addToGlobalStat(stat0, -11);
+    Assert.assertEquals(-10, stats.getGlobalStat(stat0));
   }
 
   @Test(expected = NullPointerException.class)
   public void testAddToTieredStatNonexistentStat()
   {
-    stats.getTieredStat("stat", "tier");
+    stats.getTieredStat(stat0, "tier");
   }
 
   @Test
   public void testAddToTieredStat()
   {
     Assert.assertFalse(stats.hasPerTierStats());
-    stats.addToTieredStat("stat1", "tier1", 1);
-    stats.addToTieredStat("stat1", "tier2", 1);
-    stats.addToTieredStat("stat1", "tier1", -5);
-    stats.addToTieredStat("stat2", "tier1", 1);
-    stats.addToTieredStat("stat1", "tier2", 1);
+    stats.addToTieredStat(stat1, "tier1", 1);
+    stats.addToTieredStat(stat1, "tier2", 1);
+    stats.addToTieredStat(stat1, "tier1", -5);
+    stats.addToTieredStat(stat2, "tier1", 1);
+    stats.addToTieredStat(stat1, "tier2", 1);
     Assert.assertTrue(stats.hasPerTierStats());
 
     Assert.assertEquals(
         Sets.newHashSet("tier1", "tier2"),
-        stats.getTiers("stat1")
+        stats.getTiers(stat1)
     );
     Assert.assertEquals(
         Sets.newHashSet("tier1"),
-        stats.getTiers("stat2")
+        stats.getTiers(stat2)
     );
-    Assert.assertTrue(stats.getTiers("stat3").isEmpty());
+    Assert.assertTrue(stats.getTiers(stat3).isEmpty());
 
-    Assert.assertEquals(-4, stats.getTieredStat("stat1", "tier1"));
-    Assert.assertEquals(2, stats.getTieredStat("stat1", "tier2"));
-    Assert.assertEquals(1, stats.getTieredStat("stat2", "tier1"));
+    Assert.assertEquals(-4, stats.getTieredStat(stat1, "tier1"));
+    Assert.assertEquals(2, stats.getTieredStat(stat1, "tier2"));
+    Assert.assertEquals(1, stats.getTieredStat(stat2, "tier1"));
   }
 
   @Test
@@ -98,11 +103,11 @@ public class CoordinatorStatsTest
     final Map<String, Long> actual = new HashMap<>();
 
     expected.forEach(
-        (tier, count) -> stats.addToTieredStat("stat", tier, count)
+        (tier, count) -> stats.addToTieredStat(stat1, tier, count)
     );
 
-    stats.forEachTieredStat("stat0", (tier, count) -> Assert.fail());
-    stats.forEachTieredStat("stat", actual::put);
+    stats.forEachTieredStat(stat0, (tier, count) -> Assert.fail());
+    stats.forEachTieredStat(stat1, actual::put);
 
     Assert.assertEquals(expected, actual);
   }
@@ -111,26 +116,26 @@ public class CoordinatorStatsTest
   @Test
   public void testAccumulate()
   {
-    stats.addToGlobalStat("stat1", 1);
-    stats.addToGlobalStat("stat2", 1);
-    stats.addToTieredStat("stat1", "tier1", 1);
-    stats.addToTieredStat("stat1", "tier2", 1);
-    stats.addToTieredStat("stat2", "tier1", 1);
+    stats.addToGlobalStat(stat1, 1);
+    stats.addToGlobalStat(stat2, 1);
+    stats.addToTieredStat(stat1, "tier1", 1);
+    stats.addToTieredStat(stat1, "tier2", 1);
+    stats.addToTieredStat(stat2, "tier1", 1);
 
     final CoordinatorStats stats2 = new CoordinatorStats();
-    stats2.addToGlobalStat("stat1", 1);
-    stats2.addToTieredStat("stat1", "tier2", 1);
-    stats2.addToTieredStat("stat2", "tier2", 1);
-    stats2.addToTieredStat("stat3", "tier1", 1);
+    stats2.addToGlobalStat(stat1, 1);
+    stats2.addToTieredStat(stat1, "tier2", 1);
+    stats2.addToTieredStat(stat2, "tier2", 1);
+    stats2.addToTieredStat(stat3, "tier1", 1);
 
     stats.accumulate(stats2);
 
-    Assert.assertEquals(2, stats.getGlobalStat("stat1"));
-    Assert.assertEquals(1, stats.getGlobalStat("stat2"));
-    Assert.assertEquals(1, stats.getTieredStat("stat1", "tier1"));
-    Assert.assertEquals(2, stats.getTieredStat("stat1", "tier2"));
-    Assert.assertEquals(1, stats.getTieredStat("stat2", "tier1"));
-    Assert.assertEquals(1, stats.getTieredStat("stat2", "tier2"));
-    Assert.assertEquals(1, stats.getTieredStat("stat3", "tier1"));
+    Assert.assertEquals(2, stats.getGlobalStat(stat1));
+    Assert.assertEquals(1, stats.getGlobalStat(stat2));
+    Assert.assertEquals(1, stats.getTieredStat(stat1, "tier1"));
+    Assert.assertEquals(2, stats.getTieredStat(stat1, "tier2"));
+    Assert.assertEquals(1, stats.getTieredStat(stat2, "tier1"));
+    Assert.assertEquals(1, stats.getTieredStat(stat2, "tier2"));
+    Assert.assertEquals(1, stats.getTieredStat(stat3, "tier1"));
   }
 }

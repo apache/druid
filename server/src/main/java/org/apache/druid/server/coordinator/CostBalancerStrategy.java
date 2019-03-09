@@ -38,6 +38,10 @@ import java.util.NavigableSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.INITIAL_COST;
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.NORMALIZATION;
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.NORMALIZED_INITIAL_COST_TIMES_ONE_THOUSAND;
+
 public class CostBalancerStrategy implements BalancerStrategy
 {
   private static final EmittingLogger log = new EmittingLogger(CostBalancerStrategy.class);
@@ -297,9 +301,9 @@ public class CostBalancerStrategy implements BalancerStrategy
     final double normalization = calculateNormalization(serverHolderList);
     final double normalizedInitialCost = initialTotalCost / normalization;
 
-    stats.addToTieredStat("initialCost", tier, (long) initialTotalCost);
-    stats.addToTieredStat("normalization", tier, (long) normalization);
-    stats.addToTieredStat("normalizedInitialCostTimesOneThousand", tier, (long) (normalizedInitialCost * 1000));
+    stats.addToTieredStat(INITIAL_COST, tier, (long) initialTotalCost);
+    stats.addToTieredStat(NORMALIZATION, tier, (long) normalization);
+    stats.addToTieredStat(NORMALIZED_INITIAL_COST_TIMES_ONE_THOUSAND, tier, (long) (normalizedInitialCost * 1000));
 
     log.info(
         "[%s]: Initial Total Cost: [%f], Normalization: [%f], Initial Normalized Cost: [%f]",

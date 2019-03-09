@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import static org.apache.druid.server.coordinator.CoordinatorStats.Stat.MOVED_COUNT;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.replay;
 import static org.hamcrest.Matchers.equalTo;
@@ -196,7 +197,7 @@ public class DruidCoordinatorBalancerTest
         .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertEquals(2, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(2, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
   }
 
   /**
@@ -246,7 +247,7 @@ public class DruidCoordinatorBalancerTest
         .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
     Assert.assertThat(peon3.getSegmentsToLoad(), is(equalTo(ImmutableSet.of(segment1, segment3, segment4))));
   }
 
@@ -255,7 +256,7 @@ public class DruidCoordinatorBalancerTest
   {
     DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(0);
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
     Assert.assertThat(peon3.getSegmentsToLoad(), is(equalTo(ImmutableSet.of(segment1))));
   }
 
@@ -264,7 +265,7 @@ public class DruidCoordinatorBalancerTest
   {
     DruidCoordinatorRuntimeParams params = setupParamsForDecommissioningMaxPercentOfMaxSegmentsToMove(10);
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1L, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
     Assert.assertThat(peon3.getSegmentsToLoad(), is(equalTo(ImmutableSet.of(segment2))));
   }
 
@@ -306,7 +307,7 @@ public class DruidCoordinatorBalancerTest
         .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(3L, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
     Assert.assertThat(peon3.getSegmentsToLoad(), is(equalTo(ImmutableSet.of(segment1, segment2, segment3))));
   }
 
@@ -343,7 +344,7 @@ public class DruidCoordinatorBalancerTest
         .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertEquals(0, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(0, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
   }
 
   @Test
@@ -375,7 +376,7 @@ public class DruidCoordinatorBalancerTest
         .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
     Assert.assertEquals(0, peon1.getNumberOfSegmentsInQueue());
     Assert.assertEquals(1, peon2.getNumberOfSegmentsInQueue());
   }
@@ -419,7 +420,7 @@ public class DruidCoordinatorBalancerTest
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
 
     // max to move is 5, all segments on server 1, but only expect to move 1 to server 2 since max node load queue is 1
-    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
   }
 
   @Test
@@ -454,7 +455,7 @@ public class DruidCoordinatorBalancerTest
         .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat("movedCount", "normal"));
+    Assert.assertEquals(1, params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal"));
   }
 
   @Test
@@ -476,7 +477,7 @@ public class DruidCoordinatorBalancerTest
     ).build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertTrue(params.getCoordinatorStats().getTieredStat("movedCount", "normal") > 0);
+    Assert.assertTrue(params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal") > 0);
   }
 
   @Test
@@ -494,7 +495,7 @@ public class DruidCoordinatorBalancerTest
     DruidCoordinatorRuntimeParams params = defaultRuntimeParamsBuilder(druidServers, peons).build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
-    Assert.assertTrue(params.getCoordinatorStats().getTieredStat("movedCount", "normal") > 0);
+    Assert.assertTrue(params.getCoordinatorStats().getTieredStat(MOVED_COUNT, "normal") > 0);
   }
 
   private DruidCoordinatorRuntimeParams.Builder defaultRuntimeParamsBuilder(
