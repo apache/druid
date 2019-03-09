@@ -694,7 +694,7 @@ public class DruidCoordinator
                 }
 
                 // Find all historical servers, group them by subType and sort by ascending usage
-                Set<String> nodesInMaintenance = params.getCoordinatorDynamicConfig().getHistoricalNodesInMaintenance();
+                Set<String> decommissioningServers = params.getCoordinatorDynamicConfig().getDecommissioningNodes();
                 final DruidCluster cluster = new DruidCluster();
                 for (ImmutableDruidServer server : servers) {
                   if (!loadManagementPeons.containsKey(server.getName())) {
@@ -709,7 +709,7 @@ public class DruidCoordinator
                       new ServerHolder(
                           server,
                           loadManagementPeons.get(server.getName()),
-                          nodesInMaintenance.contains(server.getHost())
+                          decommissioningServers.contains(server.getHost())
                       )
                   );
                 }
