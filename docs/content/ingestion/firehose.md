@@ -112,8 +112,8 @@ A sample ingest firehose spec is shown below -
 SqlFirehoseFactory can be used to ingest events residing in RDBMS. The database connection information is provided as part of the ingestion spec. For each query, the results are fetched locally and indexed. If there are multiple queries from which data needs to be indexed, queries are prefetched in the background upto `maxFetchCapacityBytes` bytes.
 
 Requires one of the following extensions:
- * [MySQL Metadata Store](../ingestion/mysql.html).
- * [PostgreSQL Metadata Store](../ingestion/postgresql.html).
+ * [MySQL Metadata Store](../development/extensions-core/mysql.html).
+ * [PostgreSQL Metadata Store](../development/extensions-core/postgresql.html).
 
 ```json
 {
