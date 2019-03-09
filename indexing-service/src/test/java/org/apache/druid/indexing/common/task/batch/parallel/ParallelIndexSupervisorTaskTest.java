@@ -309,6 +309,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
   )
   {
     // set up ingestion spec
+    //noinspection unchecked
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
             "dataSource",
