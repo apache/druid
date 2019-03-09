@@ -35,7 +35,7 @@ java.lang.Math#random() @ Use ThreadLocalRandom.current()
 java.util.regex.Pattern#matches(java.lang.String,java.lang.CharSequence) @ Use String.startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
 org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
 
-@defaultMessage Uses default locale
+@defaultMessage Use Locale.ENGLISH
 com.ibm.icu.text.DateFormatSymbols#<init>()
 com.ibm.icu.text.SimpleDateFormat#<init>()
 com.ibm.icu.text.SimpleDateFormat#<init>(java.lang.String)
