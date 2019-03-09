@@ -33,8 +33,6 @@ The Coordinator loads a set of rules from the metadata storage. Rules may be spe
 
 Note: It is recommended that the Coordinator console is used to configure rules. However, the Coordinator process does have HTTP endpoints to programmatically configure rules.
 
-When a rule is updated, the change may not be reflected until the next time the Coordinator runs. This will be fixed in the near future.
-
 Load Rules
 ----------
 
