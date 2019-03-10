@@ -473,7 +473,13 @@ interface Function
 
     protected ExprEval eval(ExprEval param, ExprEval scale)
     {
-      return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale.asInt(), RoundingMode.HALF_UP).doubleValue());
+      if (param.type() == ExprType.LONG) {
+        Long value = BigDecimal.valueOf(param.asLong()).setScale(scale.asInt(), RoundingMode.HALF_UP).longValue();
+        return ExprEval.of(value);
+      } else {
+        double value = BigDecimal.valueOf(param.asDouble()).setScale(scale.asInt(), RoundingMode.HALF_UP).doubleValue();
+        return ExprEval.of(value);
+      }
     }
   }
 

@@ -363,19 +363,19 @@ public class ExpressionsTest extends CalciteTestBase
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("a")),
         DruidExpression.fromExpression("round(\"a\")"),
-        10.0
+        10L
     );
 
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("b")),
         DruidExpression.fromExpression("round(\"b\")"),
-        25.0
+        25L
     );
 
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("b"), integerLiteral(-1)),
         DruidExpression.fromExpression("round(\"b\", -1)"),
-        30.0
+        30L
     );
 
     testExpression(
