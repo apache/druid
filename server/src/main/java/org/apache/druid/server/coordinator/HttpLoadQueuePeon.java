@@ -146,9 +146,9 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       return;
     }
 
-    int batchSize = config.getHttpLoadQueuePeonBatchSize();
+    final int batchSize = config.getHttpLoadQueuePeonBatchSize();
 
-    List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
+    final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
     synchronized (lock) {
       Iterator<Map.Entry<DataSegment, SegmentHolder>> iter = Iterators.concat(
@@ -156,8 +156,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
           segmentsToLoad.entrySet().iterator()
       );
 
-      while (batchSize > 0 && iter.hasNext()) {
-        batchSize--;
+      while (newRequests.size() < batchSize && iter.hasNext()) {
         Map.Entry<DataSegment, SegmentHolder> entry = iter.next();
         if (entry.getValue().hasTimedOut()) {
           entry.getValue().requestFailed("timed out");
@@ -303,8 +302,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
               return;
             }
 
-            if (status.getState()
-                == SegmentLoadDropHandler.Status.STATE.FAILED) {
+            if (status.getState() == SegmentLoadDropHandler.Status.STATE.FAILED) {
               holder.requestFailed(status.getFailureCause());
             } else {
               holder.requestSucceeded();

@@ -280,10 +280,10 @@ The [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.ht
 #### Cardinality/HyperUnique (Deprecated)
 
 <div class="note caution">
-The Cardinality and HyperUnique aggregators are deprecated. Please use <a href="../extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
+The Cardinality and HyperUnique aggregators are deprecated. Please use <a href="../development/extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
 </div>
 
-The [Cardinality and HyperUnique](../hll-old.html) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator has superior accuracy and performance and is recommended instead. 
+The [Cardinality and HyperUnique](../querying/hll-old.html) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator has superior accuracy and performance and is recommended instead. 
 
 The DataSketches team has published a [comparison study](https://datasketches.github.io/docs/HLL/HllSketchVsDruidHyperLogLogCollector.html) between Druid's original HLL algorithm and the DataSketches HLL algorithm. Based on the demonstrated advantages of the DataSketches implementation, we have deprecated Druid's original HLL aggregator.
 
@@ -315,7 +315,7 @@ We do not recommend the fixed buckets histogram for general use, as its usefulne
 
 #### Approximate Histogram (Deprecated)
 
-The [Approximate Histogram](../development/extensions-core/approxiate-histograms.html) extension-provided aggregator also provides quantile estimates and histogram approximations, based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf).
+The [Approximate Histogram](../development/extensions-core/approximate-histograms.html) extension-provided aggregator also provides quantile estimates and histogram approximations, based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf).
 
 The algorithm used by this deprecated aggregator is highly distribution-dependent and its output is subject to serious distortions when the input does not fit within the algorithm's limitations.
 

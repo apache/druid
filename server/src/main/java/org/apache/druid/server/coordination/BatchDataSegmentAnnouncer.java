@@ -118,9 +118,14 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       return;
     }
 
-    DataSegment toAnnounce = segmentTransformer.apply(segment);
-
     synchronized (lock) {
+      if (segmentLookup.containsKey(segment)) {
+        log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
+        return;
+      }
+
+      DataSegment toAnnounce = segmentTransformer.apply(segment);
+
       changes.addChangeRequest(new SegmentChangeRequestLoad(toAnnounce));
 
       if (config.isSkipSegmentAnnouncementOnZk()) {
