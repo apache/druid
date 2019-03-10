@@ -42,6 +42,7 @@ import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -351,6 +352,54 @@ public class ExpressionsTest extends CalciteTestBase
         rexBuilder.makeCall(truncateFunction, inputRef("z"), integerLiteral(-1)),
         DruidExpression.fromExpression("(cast(cast(\"z\" * 0.1,'long'),'double') / 0.1)"),
         0.0
+    );
+  }
+
+  @Test
+  public void testRound()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("a")),
+        DruidExpression.fromExpression("round(\"a\")"),
+        10.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("b")),
+        DruidExpression.fromExpression("round(\"b\")"),
+        25.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("b"), integerLiteral(-1)),
+        DruidExpression.fromExpression("round(\"b\", -1)"),
+        30.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x")),
+        DruidExpression.fromExpression("round(\"x\")"),
+        2.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x"), integerLiteral(1)),
+        DruidExpression.fromExpression("round(\"x\", 1)"),
+        2.3
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("y")),
+        DruidExpression.fromExpression("round(\"y\")"),
+        3.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("z")),
+        DruidExpression.fromExpression("round(\"z\")"),
+        -2.0
     );
   }
 

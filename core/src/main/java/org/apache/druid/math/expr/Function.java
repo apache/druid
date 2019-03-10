@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 /**
@@ -441,18 +443,37 @@ interface Function
     }
   }
 
-  class Round extends SingleParamMath
+  class Round implements Function
   {
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() == 1) {
+        Expr expr1 = args.get(0);
+        return eval(expr1.eval(bindings));
+      } else if (args.size() == 2) {
+        Expr expr1 = args.get(0);
+        Expr expr2 = args.get(1);
+        return eval(expr1.eval(bindings), expr2.eval(bindings));
+      } else {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+    }
+
     @Override
     public String name()
     {
       return "round";
     }
 
-    @Override
-    protected ExprEval eval(double param)
+    protected ExprEval eval(ExprEval param)
     {
-      return ExprEval.of(Math.round(param));
+      return eval(param, ExprEval.of(0));
+    }
+
+    protected ExprEval eval(ExprEval param, ExprEval scale)
+    {
+      return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale.asInt(), RoundingMode.HALF_UP).doubleValue());
     }
   }
 
