@@ -38,7 +38,7 @@ import org.apache.druid.guice.RouterProcessingModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.query.lookup.RouterLookupModule;
 import org.apache.druid.server.AsyncQueryForwardingServlet;
 import org.apache.druid.server.http.RouterResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -117,7 +117,7 @@ public class CliRouter extends ServerRunnable
             );
           }
         },
-        new LookupModule()
+        new RouterLookupModule()
     );
   }
 }

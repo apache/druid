@@ -39,7 +39,8 @@ import javax.ws.rs.ext.Provider;
 public class LookupIntrospectionResourceImplTest extends JerseyTest
 {
 
-  static LookupReferencesManager lookupReferencesManager = EasyMock.createMock(LookupReferencesManager.class);
+  static LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider =
+      EasyMock.createMock(LookupExtractorFactoryContainerProvider.class);
 
 
   @Override
@@ -47,29 +48,29 @@ public class LookupIntrospectionResourceImplTest extends JerseyTest
   public void setUp() throws Exception
   {
     super.setUp();
-    EasyMock.reset(lookupReferencesManager);
+    EasyMock.reset(lookupExtractorFactoryContainerProvider);
     LookupExtractorFactory lookupExtractorFactory1 = new MapLookupExtractorFactory(ImmutableMap.of(
         "key",
         "value",
         "key2",
         "value2"
     ), false);
-    EasyMock.expect(lookupReferencesManager.get("lookupId1")).andReturn(
+    EasyMock.expect(lookupExtractorFactoryContainerProvider.get("lookupId1")).andReturn(
         new LookupExtractorFactoryContainer(
             "v0",
             lookupExtractorFactory1
         )
     ).anyTimes();
-    EasyMock.replay(lookupReferencesManager);
+    EasyMock.replay(lookupExtractorFactoryContainerProvider);
   }
 
   @Provider
-  public static class MockTodoServiceProvider extends
-      SingletonTypeInjectableProvider<Context, LookupReferencesManager>
+  public static class MockLookupExtractorFactoryContainerProvider extends
+      SingletonTypeInjectableProvider<Context, LookupExtractorFactoryContainerProvider>
   {
-    public MockTodoServiceProvider()
+    public MockLookupExtractorFactoryContainerProvider()
     {
-      super(LookupReferencesManager.class, lookupReferencesManager);
+      super(LookupExtractorFactoryContainerProvider.class, lookupExtractorFactoryContainerProvider);
     }
   }
 
@@ -84,7 +85,7 @@ public class LookupIntrospectionResourceImplTest extends JerseyTest
                                             ClassNamesResourceConfig.PROPERTY_CLASSNAMES,
                                             LookupIntrospectionResource.class.getName()
                                             + ';'
-                                            + MockTodoServiceProvider.class.getName()
+                                            + MockLookupExtractorFactoryContainerProvider.class.getName()
                                             + ';'
                                             + LookupIntrospectHandler.class.getName()
                                         )

@@ -98,6 +98,7 @@ public class LookupModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupConfig.class);
+    binder.bind(LookupExtractorFactoryContainerProvider.class).to(LookupReferencesManager.class);
     LifecycleModule.register(binder, LookupReferencesManager.class);
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupListeningAnnouncerConfig.class);
     Jerseys.addResource(binder, LookupListeningResource.class);
