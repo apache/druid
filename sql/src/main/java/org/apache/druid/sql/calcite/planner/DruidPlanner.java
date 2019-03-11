@@ -104,9 +104,9 @@ public class DruidPlanner implements Closeable
     RelRoot root = planner.rel(validated);
     RelDataType rowType = root.validatedRowType;
 
-    // todo: this is sort of lame, planner won't cough up it's validator, it's private and has no accessors, so make
-    //  so make another one so we can get the parameter types...
-    //  but i suppose beats creating our own Prepare and Planner implementations
+    // this is sort of lame, planner won't cough up it's validator, it's private and has no accessors, so make
+    // so make another one so we can get the parameter types...
+    // but i suppose beats creating our own Prepare and Planner implementations
     SqlValidator validator = getValidator();
     RelDataType parameterTypes = validator.getParameterRowType(validator.validate(parsed));
 
