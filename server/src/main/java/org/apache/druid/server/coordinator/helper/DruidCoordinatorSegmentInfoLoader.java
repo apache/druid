@@ -47,6 +47,11 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
     // and emits alerts if segments with negative sizes are encountered. In other words, semantically it's similar to
     // Stream.peek(). It works as long as DruidCoordinatorRuntimeParams.createAvailableSegmentsSet() (which is called
     // below) guarantees to go over the passed iterable exactly once.
+    //
+    // An iterable returned from iterateAvailableDataSegments() is not simply iterated (with size checks) before passing
+    // into DruidCoordinatorRuntimeParams.createAvailableSegmentsSet() because iterateAvailableDataSegments()'s
+    // documentation says to strive to avoid iterating the result more than once.
+    //
     //noinspection StaticPseudoFunctionalStyleMethod: https://youtrack.jetbrains.com/issue/IDEA-153047
     Iterable<DataSegment> availableSegmentsWithSizeChecking = Iterables.transform(
         coordinator.iterateAvailableDataSegments(),

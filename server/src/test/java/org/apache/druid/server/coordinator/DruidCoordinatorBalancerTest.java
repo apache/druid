@@ -558,7 +558,7 @@ public class DruidCoordinatorBalancerTest
     EasyMock.expect(druidServer.getTier()).andReturn(tier).anyTimes();
     EasyMock.expect(druidServer.getCurrSize()).andReturn(currentSize).atLeastOnce();
     EasyMock.expect(druidServer.getMaxSize()).andReturn(maxSize).atLeastOnce();
-    EasyMock.expect(druidServer.getSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(druidServer.getLazyAllSegments()).andReturn(segments).anyTimes();
     EasyMock.expect(druidServer.getHost()).andReturn(name).anyTimes();
     EasyMock.expect(druidServer.getType()).andReturn(ServerType.HISTORICAL).anyTimes();
     if (!segments.isEmpty()) {

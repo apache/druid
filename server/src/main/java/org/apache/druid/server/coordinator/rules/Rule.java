@@ -59,6 +59,8 @@ public interface Rule
    * org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper}s and Rules need, respectively.
    * For example, {@link org.apache.druid.server.coordinator.ReplicationThrottler} needs to belong only to "RuleParams",
    * but not "DruidCoordinatorHelperParams". The opposite for "AvailableSegments".
+   *
+   * See https://github.com/apache/incubator-druid/issues/7228
    */
   CoordinatorStats run(DruidCoordinator coordinator, DruidCoordinatorRuntimeParams params, DataSegment segment);
 }

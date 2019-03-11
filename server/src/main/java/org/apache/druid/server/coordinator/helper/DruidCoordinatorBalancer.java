@@ -130,7 +130,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     int numSegments = 0;
     for (ServerHolder sourceHolder : servers) {
-      numSegments += sourceHolder.getServer().getSegments().size();
+      numSegments += sourceHolder.getServer().getLazyAllSegments().size();
     }
 
     if (numSegments == 0) {
