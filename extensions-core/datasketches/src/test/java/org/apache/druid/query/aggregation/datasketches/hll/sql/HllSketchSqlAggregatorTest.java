@@ -251,13 +251,13 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                      "a3:v",
+                      "v0",
                       "substring(\"dim2\", 0, 1)",
                       ValueType.STRING,
                       TestExprMacroTable.INSTANCE
                   ),
                   new ExpressionVirtualColumn(
-                      "a4:v",
+                      "v1",
                       "concat(substring(\"dim2\", 0, 1),'x')",
                       ValueType.STRING,
                       TestExprMacroTable.INSTANCE
@@ -283,13 +283,13 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                       ),
                       new HllSketchBuildAggregatorFactory(
                           "a3",
-                          "a3:v",
+                          "v0",
                           null,
                           null
                       ),
                       new HllSketchBuildAggregatorFactory(
                           "a4",
-                          "a4:v",
+                          "v1",
                           null,
                           null
                       ),
@@ -340,7 +340,7 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                      .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          new ExpressionVirtualColumn(
-                                                             "d0:v",
+                                                             "v0",
                                                              "timestamp_floor(\"__time\",'P1D',null,'UTC')",
                                                              ValueType.LONG,
                                                              TestExprMacroTable.INSTANCE
@@ -349,8 +349,8 @@ public class HllSketchSqlAggregatorTest extends CalciteTestBase
                                                      .setDimensions(
                                                          Collections.singletonList(
                                                              new DefaultDimensionSpec(
-                                                                 "d0:v",
-                                                                 "d0",
+                                                                 "v0",
+                                                                 "v0",
                                                                  ValueType.LONG
                                                              )
                                                          )

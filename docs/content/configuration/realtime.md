@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Realtime Node Configuration"
+title: "Realtime Process Configuration"
 ---
 
 <!--
@@ -22,20 +22,20 @@ title: "Realtime Node Configuration"
   ~ under the License.
   -->
 
-# Realtime Node Configuration
+# Realtime Process Configuration
 
-For general Realtime Node information, see [here](../design/realtime.html).
+For general Realtime Process information, see [here](../design/realtime.html).
 
 Runtime Configuration
 ---------------------
 
-The realtime node uses several of the global configs in [Configuration](../configuration/index.html) and has the following set of configurations as well:
+The realtime process uses several of the global configs in [Configuration](../configuration/index.html) and has the following set of configurations as well:
 
-### Node Config
+### Process Config
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.host`|The host for the current node. This is used to advertise the current processes location as reachable from another node and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
+|`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|InetAddress.getLocalHost().getCanonicalHostName()|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8084|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.html) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8284|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|druid/realtime|
@@ -60,8 +60,8 @@ The realtime node uses several of the global configs in [Configuration](../confi
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime nodes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|auto (max 1GB)|
-|`druid.processing.formatString`|Realtime and Historical nodes use this format string to name their processing threads.|processing-%s|
+|`druid.processing.buffer.sizeBytes`|This specifies a buffer size for the storage of intermediate results. The computation engine in both the Historical and Realtime processes will use a scratch buffer of this size to do all of their intermediate computations off-heap. Larger values allow for more aggregations in a single pass over the data while smaller values can require more passes depending on the query that is being executed.|auto (max 1GB)|
+|`druid.processing.formatString`|Realtime and Historical processes use this format string to name their processing threads.|processing-%s|
 |`druid.processing.numMergeBuffers`|The number of direct memory buffers available for merging query results. The buffers are sized by `druid.processing.buffer.sizeBytes`. This property is effectively a concurrency limit for queries that require merging buffers. If you are using any queries that require merge buffers (currently, just groupBy v2) then you should have at least two of these.|`max(2, druid.processing.numThreads / 4)`|
 |`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
 |`druid.processing.columnCache.sizeBytes`|Maximum size in bytes for the dimension value lookup cache. Any value greater than `0` enables the cache. It is currently disabled by default. Enabling the lookup cache can significantly improve the performance of aggregators operating on dimension values, such as the JavaScript aggregator, or cardinality aggregator, but can slow things down if the cache hit rate is low (i.e. dimensions with few repeating values). Enabling it may also require additional garbage collection tuning to avoid long GC pauses.|`0` (disabled)|
@@ -86,7 +86,7 @@ See [groupBy server configuration](../querying/groupbyquery.html#server-configur
 
 ### Caching
 
-You can optionally configure caching to be enabled on the realtime node by setting caching configs here.
+You can optionally configure caching to be enabled on the realtime process by setting caching configs here.
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|

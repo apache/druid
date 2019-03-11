@@ -182,7 +182,7 @@ druid.indexer.logs.directory=/druid/indexing-logs
 Also,
 
 - Place your Hadoop configuration XMLs (core-site.xml, hdfs-site.xml, yarn-site.xml,
-mapred-site.xml) on the classpath of your Druid nodes. You can do this by copying them into
+mapred-site.xml) on the classpath of your Druid processes. You can do this by copying them into
 `conf/druid/_common/`.
 
 ## Configure Tranquility Server (optional)
@@ -207,7 +207,7 @@ a path on HDFS that you'd like to use for temporary files required during the in
 `druid.indexer.task.hadoopWorkingPath=/tmp/druid-indexing` is a common choice.
 
 - Place your Hadoop configuration XMLs (core-site.xml, hdfs-site.xml, yarn-site.xml,
-mapred-site.xml) on the classpath of your Druid nodes. You can do this by copying them into
+mapred-site.xml) on the classpath of your Druid processes. You can do this by copying them into
 `conf/druid/_common/core-site.xml`, `conf/druid/_common/hdfs-site.xml`, and so on.
 
 Note that you don't need to use HDFS deep storage in order to load data from Hadoop. For example, if
@@ -263,7 +263,7 @@ hardware. The most commonly adjusted configurations are:
 - `druid.processing.numThreads`
 - `druid.query.groupBy.maxIntermediateRows`
 - `druid.query.groupBy.maxResults`
-- `druid.server.maxSize` and `druid.segmentCache.locations` on Historical Nodes
+- `druid.server.maxSize` and `druid.segmentCache.locations` on Historical processes
 - `druid.worker.capacity` on MiddleManagers
 
 <div class="note info">

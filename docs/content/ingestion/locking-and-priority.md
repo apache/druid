@@ -26,7 +26,7 @@ title: "Task Locking & Priority"
 
 ## Locking
 
-Once an Overlord node accepts a task, the task acquires locks for the data source and intervals specified in the task.
+Once an Overlord process accepts a task, the task acquires locks for the data source and intervals specified in the task.
 
 There are two lock types, i.e., _shared lock_ and _exclusive lock_.
 
