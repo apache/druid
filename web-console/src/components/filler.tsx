@@ -20,6 +20,8 @@ import { Button } from '@blueprintjs/core';
 import * as React from 'react';
 import classNames from 'classnames';
 import './filler.scss';
+import {parseJSONToString, parseStringToJSON, validJson} from "../utils";
+import AceEditor from "react-ace";
 
 
 export const IconNames = {
@@ -255,5 +257,65 @@ export class TagInput extends React.Component<TagInputProps, { stringValue: stri
       value={stringValue}
       onChange={this.handleChange}
     />;
+  }
+}
+
+interface JSONInputProps extends React.Props<any>{
+  onChange: (newValue: string) => void;
+  value: JSON;
+  updateErrors: ((newValue: string) => void)
+}
+
+interface JSONInputState{
+  stringValue: string;
+}
+
+export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
+  constructor(props: JSONInputProps) {
+    super(props);
+    this.state = {
+      stringValue: ""
+    }
+  }
+
+  componentDidMount(): void {
+    const { value } = this.props;
+    const stringValue = parseJSONToString(value);
+    this.setState({
+      stringValue: stringValue
+    })
+  }
+
+  render() {
+    const { onChange, updateErrors } = this.props;
+    const { stringValue } = this.state;
+    return <AceEditor
+      className={"bp3-fill"}
+      key={"hjson"}
+      mode={"hjson"}
+      theme="solarized_dark"
+      name="ace-editor"
+      onChange={(e: string) => {
+        this.setState({stringValue: e});
+        if(validJson(e) || e === "") onChange(e);
+        updateErrors(e);
+      }}
+      focus={true}
+      fontSize={12}
+      width={'100%'}
+      height={"8vh"}
+      showPrintMargin={false}
+      showGutter={false}
+      value={stringValue}
+      editorProps={{
+        $blockScrolling: Infinity
+      }}
+      setOptions={{
+        enableBasicAutocompletion: false,
+        enableLiveAutocompletion: false,
+        showLineNumbers: false,
+        tabSize: 2,
+      }}
+    />
   }
 }

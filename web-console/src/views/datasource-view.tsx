@@ -18,26 +18,27 @@
 
 import axios from 'axios';
 import * as React from 'react';
-import * as classNames from 'classnames';
-import ReactTable from "react-table";
-import { Filter } from "react-table";
-import { Button, Intent, Switch } from "@blueprintjs/core";
-import { IconNames } from "../components/filler";
-import { AppToaster } from '../singletons/toaster';
-import { RuleEditor } from '../components/rule-editor';
-import { AsyncActionDialog } from '../dialogs/async-action-dialog';
-import { RetentionDialog } from '../dialogs/retention-dialog';
+import ReactTable, {Filter} from "react-table";
+import {Button, Intent, Switch} from "@blueprintjs/core";
+import {IconNames} from "../components/filler";
+import {AppToaster} from '../singletons/toaster';
+import {RuleEditor} from '../components/rule-editor';
+import {AsyncActionDialog} from '../dialogs/async-action-dialog';
+import {RetentionDialog} from '../dialogs/retention-dialog';
 import {
   addFilter,
-  formatNumber,
-  formatBytes,
   countBy,
+  formatBytes,
+  formatNumber,
+  getDruidErrorMessage,
   lookupBy,
-  QueryManager,
-  pluralIfNeeded, queryDruidSql, getDruidErrorMessage
+  pluralIfNeeded,
+  queryDruidSql,
+  QueryManager
 } from "../utils";
 
 import "./datasource-view.scss";
+import {CompactionDialog} from "../dialogs/compaction-dialog";
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -60,6 +61,7 @@ export interface DatasourcesViewState {
 
   showDisabled: boolean;
   retentionDialogOpenOn: { datasource: string, rules: any[] } | null;
+  compactionDialogOpenOn: {datasource: string, configData: any} | null;
   dropDataDatasource: string | null;
   enableDatasource: string | null;
   killDatasource: string | null;
@@ -94,6 +96,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
 
       showDisabled: false,
       retentionDialogOpenOn: null,
+      compactionDialogOpenOn: null,
       dropDataDatasource: null,
       enableDatasource: null,
       killDatasource: null
@@ -271,6 +274,45 @@ GROUP BY 1`);
     }, 50);
   }
 
+
+  private saveCompaction = async (compactionConfig: any) => {
+    if (compactionConfig === null) return;
+    try {
+      await axios.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
+      this.setState({compactionDialogOpenOn: null});
+      this.datasourceQueryManager.rerunLastQuery();
+    } catch (e) {
+      AppToaster.show({
+        message: e,
+        intent: Intent.DANGER
+      })
+    }
+  }
+
+  private deleteCompaction = async () => {
+    const {compactionDialogOpenOn} = this.state;
+    if (compactionDialogOpenOn === null) return;
+    const datasource = compactionDialogOpenOn.datasource;
+    AppToaster.show({
+      message: `Are you sure you want to delete ${datasource}'s compaction?`,
+      intent: Intent.DANGER,
+      action: {
+        text: "Confirm",
+        onClick: async () => {
+          try {
+            await axios.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
+            this.setState({compactionDialogOpenOn: null}, ()=>this.datasourceQueryManager.rerunLastQuery());
+          } catch (e) {
+            AppToaster.show({
+              message: e,
+              intent: Intent.DANGER
+            })
+          }
+        }
+      }
+    });
+  }
+
   renderRetentionDialog() {
     const { retentionDialogOpenOn, tiers } = this.state;
     if (!retentionDialogOpenOn) return null;
@@ -283,6 +325,20 @@ GROUP BY 1`);
       onCancel={() => this.setState({ retentionDialogOpenOn: null })}
       onSave={this.saveRules}
     />;
+  }
+
+  renderCompactionDialog() {
+    const { datasources, compactionDialogOpenOn } = this.state;
+
+    if (!compactionDialogOpenOn || !datasources) return;
+
+    return <CompactionDialog
+      datasource={compactionDialogOpenOn.datasource}
+      configData={compactionDialogOpenOn.configData}
+      onClose={() => this.setState({compactionDialogOpenOn: null})}
+      onSave={this.saveCompaction}
+      onDelete={this.deleteCompaction}
+    />
   }
 
   renderDatasourceTable() {
@@ -376,14 +432,15 @@ GROUP BY 1`);
             Cell: row => {
               const { compaction } = row.original;
               let text: string;
+              let compactionOpenOn: {datasource: string, configData: any} | null =
+                {datasource:row.original.datasource, configData: compaction};
               if (compaction) {
                 text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
               } else {
                 text = 'None';
               }
-              return <span>{text} <a onClick={() => alert('ToDo')}>&#x270E;</a></span>;
-            },
-            show: false // This feature is not ready, it will be enabled later
+              return <span>{text} <a onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}>&#x270E;</a></span>;
+            }
           },
           {
             Header: 'Size',
@@ -428,6 +485,7 @@ GROUP BY 1`);
       {this.renderEnableAction()}
       {this.renderKillAction()}
       {this.renderRetentionDialog()}
+      {this.renderCompactionDialog()}
     </>;
   }
 

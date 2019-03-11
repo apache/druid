@@ -16,26 +16,29 @@
  * limitations under the License.
  */
 
-import { resolveSrv } from 'dns';
 import * as React from 'react';
-import axios from 'axios';
 import { InputGroup } from "@blueprintjs/core";
-import { HTMLSelect, FormGroup, NumericInput, TagInput } from "../components/filler";
+import { HTMLSelect, FormGroup, NumericInput, TagInput, JSONInput } from "../components/filler";
+import "./auto-form.scss";
+import {parseStringToJSON, validJson} from "../utils";
 
 interface Field {
   name: string;
   label?: string;
-  type: 'number' | 'size-bytes' | 'string' | 'boolean' | 'string-array';
+  type: 'number' | 'size-bytes' | 'string' | 'boolean' | 'string-array' | 'json';
   min?: number;
 }
 
 export interface AutoFormProps<T> extends React.Props<any> {
   fields: Field[];
   model: T | null,
-  onChange: (newValue: T) => void
+  onChange: (newValue: T) => void,
+  JSONErrors?: T | null,
+  updateJSONErrors?: (newValue: T) => void;
 }
 
 export interface AutoFormState<T> {
+
 }
 
 export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState<T>> {
@@ -100,6 +103,15 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
     </HTMLSelect>
   }
 
+  private renderJSONInput(field: Field): JSX.Element {
+    const { model, onChange, JSONErrors, updateJSONErrors } = this.props;
+    return <JSONInput
+      value={(model as any)[field.name]}
+      onChange={(e: any) => onChange(Object.assign({}, model, { [field.name]: parseStringToJSON(e)}))}
+      updateErrors={(e: any) => updateJSONErrors!(Object.assign({}, JSONErrors, { [field.name]: validJson(e) || e === ''}))}
+    />
+  }
+
   private renderStringArrayInput(field: Field): JSX.Element {
     const { model, onChange } = this.props;
     const label = field.label || AutoForm.makeLabelName(field.name);
@@ -119,6 +131,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
       case 'string': return this.renderStringInput(field);
       case 'boolean': return this.renderBooleanInput(field);
       case 'string-array': return this.renderStringArrayInput(field);
+      case 'json': return this.renderJSONInput(field);
       default: throw new Error(`unknown field type '${field.type}'`);
     }
   }
@@ -132,7 +145,6 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
 
   render() {
     const { fields, model } = this.props;
-
     return <div className="auto-form">
       {model && fields.map(field => this.renderField(field))}
     </div>

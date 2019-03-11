@@ -137,3 +137,32 @@ export function localStorageGet(key: string): string | null {
   if (typeof localStorage === 'undefined') return null;
   return localStorage.getItem(key);
 }
+
+// ----------------------------
+
+export function validJson(json: string): boolean {
+  try {
+    JSON.parse(json);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// parse JSON to string; if JSON is null, parse empty string ""
+export function parseJSONToString(item: JSON): string {
+  if (item != null) {
+    return JSON.stringify(item, null, 2);
+  } else {
+    return "";
+  }
+}
+
+// parse string to JSON object; if string is empty, return null
+export function parseStringToJSON(s: string): JSON | null {
+  if (s === "") {
+    return null;
+  } else {
+    return JSON.parse(s);
+  }
+}
