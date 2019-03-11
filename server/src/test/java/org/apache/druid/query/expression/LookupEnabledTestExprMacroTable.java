@@ -36,7 +36,7 @@ import java.util.Collections;
 
 /**
  * Separate from {@link TestExprMacroTable} since that one is in druid-processing, which doesn't have
- * {@link LookupReferencesManager}.
+ * {@link LookupExtractorFactoryContainerProvider}.
  */
 public class LookupEnabledTestExprMacroTable extends ExprMacroTable
 {
