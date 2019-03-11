@@ -3217,7 +3217,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
-  private class TestableKafkaSupervisorWithCustomIsTaskCurrent extends TestableKafkaSupervisor
+  private static class TestableKafkaSupervisorWithCustomIsTaskCurrent extends TestableKafkaSupervisor
   {
     private boolean isTaskCurrentReturn;
 
