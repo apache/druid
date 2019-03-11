@@ -46,7 +46,7 @@ almost certainly shouldn't omit this section.
 <hr>
 
 I've self-reviewed this PR (including using the [concurrency checklist](
-https://medium.com/@leventov/code-review-checklist-java-concurrency-49398c326154)).
+https://github.com/leventov/java-concurrency-checklist)).
 
 Leave the sentence above if you've self-reviewed your PR. Leave the part in parens if your PR has any relation to Java
 concurrency (any use of Threads, `synchronized`, `volatile`, `ConcurrentHashMap`, etc.) and you used the referenced

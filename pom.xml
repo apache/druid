@@ -1489,6 +1489,7 @@
                                 <exclude>NOTICE.BINARY</exclude>
                                 <exclude>LABELS.md</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
+                                <exclude>.github/pull_request_template.md</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
