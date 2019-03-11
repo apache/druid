@@ -97,6 +97,8 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       LOG.info("indexerSpec: [%s]\n", task);
       taskID = indexer.submitTask(task);
 
+      TimeUnit.SECONDS.sleep(5);
+
       // this posts 22 events, one every 4 seconds
       // each event contains the current time as its timestamp except
       //   the timestamp for the 14th event is early enough that the event should be ignored
