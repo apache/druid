@@ -92,7 +92,7 @@ public class DiscoveryModule implements Module
    * 
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class)) automatically.
-   * Announcement will happen in the LAST stage of the Lifecycle
+   * Announcement will happen in the ANNOUNCEMENTS stage of the Lifecycle
    *
    * @param binder the Binder to register with
    */
@@ -106,7 +106,7 @@ public class DiscoveryModule implements Module
    * 
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
-   * Announcement will happen in the LAST stage of the Lifecycle
+   * Announcement will happen in the ANNOUNCEMENTS stage of the Lifecycle
    *
    * @param annotation The annotation instance to use in finding the DruidNode instance, usually a Named annotation
    */
@@ -120,7 +120,7 @@ public class DiscoveryModule implements Module
    * 
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
-   * Announcement will happen in the LAST stage of the Lifecycle
+   * Announcement will happen in the ANNOUNCEMENTS stage of the Lifecycle
    *
    * @param binder the Binder to register with
    * @param annotation The annotation class to use in finding the DruidNode instance
@@ -135,7 +135,7 @@ public class DiscoveryModule implements Module
    * 
    * That is, this module will announce the DruidNode instance returned by
    * injector.getInstance(Key.get(DruidNode.class, annotation)) automatically.
-   * Announcement will happen in the LAST stage of the Lifecycle
+   * Announcement will happen in the ANNOUNCEMENTS stage of the Lifecycle
    *
    * @param binder the Binder to register with
    * @param key The key to use in finding the DruidNode instance
@@ -251,7 +251,7 @@ public class DiscoveryModule implements Module
             }
           }
         },
-        Lifecycle.Stage.LAST
+        Lifecycle.Stage.ANNOUNCEMENTS
     );
 
     return announcer;
