@@ -33,8 +33,8 @@ import java.util.List;
 
 /**
  * Variant of {@link LookupModule} that only supports serde of {@link org.apache.druid.query.Query} objects, to allow
- * the router to examine queries that might contain for example a {@link RegisteredLookupExtractionFn}, but without
- * requiring the router to load the actual lookups.
+ * a service to examine queries that might contain for example a {@link RegisteredLookupExtractionFn}, but without
+ * requiring the service to load the actual lookups.
  */
 public class LookupSerdeModule implements DruidModule
 {
