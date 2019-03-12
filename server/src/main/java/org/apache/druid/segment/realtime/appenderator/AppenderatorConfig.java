@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
@@ -34,6 +35,7 @@ public interface AppenderatorConfig
    * Maximum number of rows in memory before persisting to local storage
    */
   int getMaxRowsInMemory();
+
 
   /**
    * Maximum number of bytes (estimated) to store in memory before persisting to local storage
@@ -58,6 +60,15 @@ public interface AppenderatorConfig
   default Long getMaxTotalRows()
   {
     throw new UnsupportedOperationException("maxTotalRows is not implemented.");
+  }
+
+  /**
+   * Maximum number of mutable segments before pushing to deep storage
+   */
+  @Nullable
+  default Integer getMaxTotalSegments()
+  {
+    throw new UOE("maxTotalRows is not implemented");
   }
 
   /**

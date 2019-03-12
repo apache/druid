@@ -36,12 +36,15 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
+  private static final int DEFAULT_MAX_TOTAL_SEGMENTS = 1000;
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final int maxRowsPerSegment;
   @Nullable
   private final Long maxTotalRows;
+  @Nullable
+  private final Integer maxTotalSegments;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   @Deprecated
@@ -64,6 +67,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
       @Nullable Long maxBytesInMemory,
       @Nullable Integer maxRowsPerSegment,
       @Nullable Long maxTotalRows,
+      @Nullable Integer maxTotalSegments,
       @Nullable Period intermediatePersistPeriod,
       @Nullable File basePersistDirectory,
       @Nullable Integer maxPendingPersists,
@@ -87,6 +91,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : maxRowsPerSegment;
     this.maxTotalRows = maxTotalRows;
+    this.maxTotalSegments = maxTotalSegments;
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -156,6 +161,14 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   public Long getMaxTotalRows()
   {
     return maxTotalRows;
+  }
+
+  @JsonProperty
+  @Override
+  @Nullable
+  public Integer getMaxTotalSegments()
+  {
+    return maxTotalSegments;
   }
 
   @Override

@@ -34,6 +34,7 @@ public class AppenderatorDriverAddResult
   private final int numRowsInSegment;
   private final long totalNumRowsInAppenderator;
   private final boolean isPersistRequired;
+  private final int totalNumSegmentsInAppenderator;
 
   @Nullable
   private final ParseException parseException;
@@ -43,7 +44,8 @@ public class AppenderatorDriverAddResult
       int numRowsInSegment,
       long totalNumRowsInAppenderator,
       boolean isPersistRequired,
-      @Nullable ParseException parseException
+      @Nullable ParseException parseException,
+      int totalNumSegmentsInAppenderator
   )
   {
     return new AppenderatorDriverAddResult(
@@ -51,13 +53,21 @@ public class AppenderatorDriverAddResult
         numRowsInSegment,
         totalNumRowsInAppenderator,
         isPersistRequired,
-        parseException
+        parseException,
+        totalNumSegmentsInAppenderator
     );
   }
 
   public static AppenderatorDriverAddResult fail()
   {
-    return new AppenderatorDriverAddResult(null, 0, 0, false, null);
+    return new AppenderatorDriverAddResult(
+        null,
+        0,
+        0,
+        false,
+        null,
+        0
+    );
   }
 
   private AppenderatorDriverAddResult(
@@ -65,7 +75,8 @@ public class AppenderatorDriverAddResult
       int numRowsInSegment,
       long totalNumRowsInAppenderator,
       boolean isPersistRequired,
-      @Nullable ParseException parseException
+      @Nullable ParseException parseException,
+      int totalNumSegmentsInAppenderator
   )
   {
     this.segmentIdentifier = segmentIdentifier;
@@ -73,6 +84,7 @@ public class AppenderatorDriverAddResult
     this.totalNumRowsInAppenderator = totalNumRowsInAppenderator;
     this.isPersistRequired = isPersistRequired;
     this.parseException = parseException;
+    this.totalNumSegmentsInAppenderator = totalNumSegmentsInAppenderator;
   }
 
   public boolean isOk()
@@ -95,6 +107,11 @@ public class AppenderatorDriverAddResult
     return totalNumRowsInAppenderator;
   }
 
+  public int getTotalNumSegmentsInAppenderator()
+  {
+    return totalNumSegmentsInAppenderator;
+  }
+
   public boolean isPersistRequired()
   {
     return isPersistRequired;
@@ -102,10 +119,16 @@ public class AppenderatorDriverAddResult
 
   public boolean isPushRequired(AppenderatorConfig tuningConfig)
   {
-    return isPushRequired(tuningConfig.getMaxRowsPerSegment(), tuningConfig.getMaxTotalRows());
+    return isPushRequired(
+        tuningConfig.getMaxRowsPerSegment(),
+        tuningConfig.getMaxTotalRows(),
+        tuningConfig.getMaxTotalSegments());
   }
 
-  public boolean isPushRequired(@Nullable Integer maxRowsPerSegment, @Nullable Long maxTotalRows)
+  public boolean isPushRequired(
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable Long maxTotalRows,
+      @Nullable Integer maxTotalSegments)
   {
     boolean overThreshold = false;
     if (maxRowsPerSegment != null) {
@@ -113,6 +136,9 @@ public class AppenderatorDriverAddResult
     }
     if (maxTotalRows != null) {
       overThreshold |= getTotalNumRowsInAppenderator() >= maxTotalRows;
+    }
+    if (maxTotalSegments != null) {
+      overThreshold |= getTotalNumSegmentsInAppenderator() >= maxTotalSegments;
     }
     return overThreshold;
   }
