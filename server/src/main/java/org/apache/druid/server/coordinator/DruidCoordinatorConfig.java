@@ -75,20 +75,20 @@ public abstract class DruidCoordinatorConfig
     return "curator";
   }
 
-  @Config("druid.coordinator.loadqueuepeon.curator.numCreateThreads")
-  public int getCreateZkNodeNumThreads()
+  @Config("druid.coordinator.curator.loadqueuepeon.numCreateThreads")
+  public int getNumZookeeperNodeCreatingThreads()
   {
     return 10;
   }
 
-  @Config("druid.coordinator.loadqueuepeon.curator.numCallbackThreads")
-  public int getCuratorNumCallBackThreads()
+  @Config("druid.coordinator.curator.loadqueuepeon.numCallbackThreads")
+  public int getNumCuratorCallBackThreads()
   {
     return 2;
   }
 
-  @Config("druid.coordinator.loadqueuepeon.curator.numMonitorThreads")
-  public int getCuratorNumMonitorThreads()
+  @Config("druid.coordinator.curator.loadqueuepeon.numMonitorThreads")
+  public int getNumZookeeperMonitorThreads()
   {
     return 1;
   }

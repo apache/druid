@@ -251,12 +251,12 @@ public class CliCoordinator extends ServerRunnable
           )
           {
             boolean useHttpLoadQueuePeon = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
-            int poolSize = useHttpLoadQueuePeon ? 1 : config.getCreateZkNodeNumThreads();
+            int poolSize = useHttpLoadQueuePeon ? 1 : config.getNumZookeeperNodeCreatingThreads();
             ExecutorService callBackExec;
             if (useHttpLoadQueuePeon) {
               callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
             } else {
-              callBackExec = Execs.multiThreaded(config.getCuratorNumCallBackThreads(), "LoadQueuePeon"
+              callBackExec = Execs.multiThreaded(config.getNumCuratorCallBackThreads(), "LoadQueuePeon"
                                                                                         + "-callbackexec--%d");
             }
             return new LoadQueueTaskMaster(

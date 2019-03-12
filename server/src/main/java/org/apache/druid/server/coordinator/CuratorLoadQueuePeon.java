@@ -108,12 +108,12 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     this.config = config;
     this.monitorNodeRemovedExecutor =
         Executors.newScheduledThreadPool(
-            config.getCuratorNumMonitorThreads(),
+            config.getNumZookeeperMonitorThreads(),
             Execs.makeThreadFactory("LoadQueuePeon-NodeRemovedMonitor--%d")
         );
     // One processing queue per thread
-    Preconditions.checkArgument(config.getCreateZkNodeNumThreads() > 0);
-    this.numProcessingQueues = config.getCreateZkNodeNumThreads();
+    Preconditions.checkArgument(config.getNumZookeeperNodeCreatingThreads() > 0);
+    this.numProcessingQueues = config.getNumZookeeperNodeCreatingThreads();
 
     Preconditions.checkArgument(config.getCuratorCreateZkNodeBatchSize() > 0);
     this.batchSizePerTask = (config.getCuratorCreateZkNodeBatchSize() / numProcessingQueues);
