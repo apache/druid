@@ -48,6 +48,8 @@ update the entire Historical cluster.
 
 Overlord processes can be updated one at a time in a rolling fashion.
 
+Note that doing an upgrade of overlord (or combined overlord + coordinator node) can result in exisiting Kafka Indexing Tasks to terminate and restart. This could result in few minutes of query downtime till tasks are restarted and resume reading data. No data loss will occur though as the restarted tasks will resume reading from where the terminated ones left off.
+
 ## Middle Managers
 
 Middle Managers run both batch and real-time indexing tasks. Generally you want to update Middle
