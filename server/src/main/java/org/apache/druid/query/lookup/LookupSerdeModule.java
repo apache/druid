@@ -36,7 +36,7 @@ import java.util.List;
  * the router to examine queries that might contain for example a {@link RegisteredLookupExtractionFn}, but without
  * requiring the router to load the actual lookups.
  */
-public class RouterLookupModule implements DruidModule
+public class LookupSerdeModule implements DruidModule
 {
   @Override
   public List<? extends Module> getJacksonModules()
@@ -54,14 +54,14 @@ public class RouterLookupModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, LookupModule.PROPERTY_BASE, LookupConfig.class);
-    binder.bind(LookupExtractorFactoryContainerProvider.class).to(RouterLookupExtractorFactoryContainerProvider.class);
+    binder.bind(LookupExtractorFactoryContainerProvider.class).to(NoopLookupExtractorFactoryContainerProvider.class);
   }
 
   /**
-   * The router doesn't actually need lookups, but the objects that get materialized during deserialization expect
-   * a {@link LookupExtractorFactoryContainerProvider} to exist.
+   * Anything using this module doesn't actually need lookups, but the objects that get materialized during
+   * deserialization expect a {@link LookupExtractorFactoryContainerProvider} to exist, so this one returns nulls.
    */
-  private static class RouterLookupExtractorFactoryContainerProvider implements LookupExtractorFactoryContainerProvider
+  private static class NoopLookupExtractorFactoryContainerProvider implements LookupExtractorFactoryContainerProvider
   {
     @Nullable
     @Override
