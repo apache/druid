@@ -153,6 +153,11 @@ public class OverlordResourceTestClient
     return getTasks("pendingTasks");
   }
 
+  public List<TaskResponseObject> getCompleteTasksForDataSource(final String dataSource)
+  {
+    return getTasks(StringUtils.format("tasks?state=complete&datasource=%s", StringUtils.urlEncode(dataSource)));
+  }
+
   private List<TaskResponseObject> getTasks(String identifier)
   {
     try {
@@ -233,7 +238,14 @@ public class OverlordResourceTestClient
   {
     try {
       StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(StringUtils.format("%ssupervisor/%s/shutdown", getIndexerURL(), StringUtils.urlEncode(id)))),
+          new Request(
+              HttpMethod.POST,
+              new URL(StringUtils.format(
+                  "%ssupervisor/%s/shutdown",
+                  getIndexerURL(),
+                  StringUtils.urlEncode(id)
+              ))
+          ),
           responseHandler
       ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {

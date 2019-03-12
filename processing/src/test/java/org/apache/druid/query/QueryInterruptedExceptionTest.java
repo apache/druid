@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,6 +44,7 @@ public class QueryInterruptedExceptionTest
     Assert.assertEquals("Query cancelled", new QueryInterruptedException(new CancellationException()).getErrorCode());
     Assert.assertEquals("Query interrupted", new QueryInterruptedException(new InterruptedException()).getErrorCode());
     Assert.assertEquals("Query timeout", new QueryInterruptedException(new TimeoutException()).getErrorCode());
+    Assert.assertEquals("Unsupported operation", new QueryInterruptedException(new UOE("Unsupported")).getErrorCode());
     Assert.assertEquals("Unknown exception", new QueryInterruptedException(null).getErrorCode());
     Assert.assertEquals("Unknown exception", new QueryInterruptedException(new ISE("Something bad!")).getErrorCode());
     Assert.assertEquals(

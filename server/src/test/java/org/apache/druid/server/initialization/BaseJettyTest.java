@@ -24,7 +24,6 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.guice.http.LifecycleUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
@@ -119,7 +118,7 @@ public abstract class BaseJettyTest
       try {
         this.client = HttpClientInit.createClient(
             new HttpClientConfig(maxClientConnections, SSLContext.getDefault(), Duration.ZERO),
-            LifecycleUtils.asMmxLifecycle(druidLifecycle)
+            druidLifecycle
         );
       }
       catch (Exception e) {
