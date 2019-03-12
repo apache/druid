@@ -36,7 +36,7 @@ import java.util.Set;
  * @param <SequenceOffsetType> Sequence Number Type
  */
 @Beta
-public interface RecordSupplier<PartitionIdType, SequenceOffsetType extends Comparable> extends Closeable
+public interface RecordSupplier<PartitionIdType, SequenceOffsetType> extends Closeable
 {
   /**
    * assigns the given partitions to this RecordSupplier

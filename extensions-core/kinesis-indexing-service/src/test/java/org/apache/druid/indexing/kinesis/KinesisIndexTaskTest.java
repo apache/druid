@@ -176,6 +176,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -2277,7 +2278,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     verifyAll();
 
-    Map<String, String> currentOffsets = task.getRunner().getCurrentOffsets();
+    ConcurrentMap<String, String> currentOffsets = task.getRunner().getCurrentOffsets();
 
     try {
       future.get(10, TimeUnit.SECONDS);

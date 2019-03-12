@@ -959,7 +959,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   }
 
   @Override
-  public Map<Integer, Long> getCurrentOffsets()
+  public ConcurrentMap<Integer, Long> getCurrentOffsets()
   {
     return nextOffsets;
   }
