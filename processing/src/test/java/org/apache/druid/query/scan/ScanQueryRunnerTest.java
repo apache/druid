@@ -569,7 +569,7 @@ public class ScanQueryRunnerTest
           ascendingEvents,
           legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
-          seg1Results.length + seg2Results.length
+          limit
       );
       verify(ascendingExpectedResults, results);
     }
@@ -629,7 +629,7 @@ public class ScanQueryRunnerTest
           descendingEvents,
           legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
-          seg1Results.length + seg2Results.length
+          limit
       );
       verify(descendingExpectedResults, results);
     }
@@ -689,7 +689,7 @@ public class ScanQueryRunnerTest
           ascendingEvents,
           legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
-          seg1Results.length + seg2Results.length
+          limit
       );
       results = compactedListToRow(results);
       verify(ascendingExpectedResults, results);
@@ -753,7 +753,7 @@ public class ScanQueryRunnerTest
           descendingEvents,
           legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
           0,
-          expectedRet.length
+          limit
       );
       results = compactedListToRow(results);
       verify(descendingExpectedResults, results);
