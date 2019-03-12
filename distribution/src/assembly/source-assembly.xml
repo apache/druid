@@ -47,10 +47,7 @@
                 <exclude>.gitignore</exclude>
                 <exclude>.dockerignore</exclude>
                 <exclude>.travis.yml</exclude>
-                <exclude>LICENSE.BINARY</exclude>
-                <exclude>NOTICE.BINARY</exclude>
                 <exclude>README.BINARY</exclude>
-                <exclude>licenses/bin/**</exclude>
                 <exclude>publications/**</exclude>
                 <exclude>upload.sh</exclude>
                 <exclude>web-console/node_modules/**</exclude>
