@@ -40,9 +40,9 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   private final Configuration jsonPathConfiguration;
   private final OrcStructConverter converter;
 
-  OrcStructFlattenerMaker()
+  OrcStructFlattenerMaker(boolean binaryAsString)
   {
-    this.converter = new OrcStructConverter();
+    this.converter = new OrcStructConverter(binaryAsString);
     this.jsonPathConfiguration = Configuration.builder()
                                               .jsonProvider(new OrcStructJsonProvider(converter))
                                               .mappingProvider(new NotImplementedMappingProvider())

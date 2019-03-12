@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.parsers.ObjectFlattener;
 import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import org.apache.orc.mapred.OrcStruct;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 
@@ -38,20 +39,23 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   private final ParseSpec parseSpec;
   private final ObjectFlattener<OrcStruct> groupFlattener;
   private final MapInputRowParser parser;
+  private final boolean binaryAsString;
 
   @JsonCreator
   public OrcHadoopInputRowParser(
-      @JsonProperty("parseSpec") ParseSpec parseSpec
+      @JsonProperty("parseSpec") ParseSpec parseSpec,
+      @Nullable @JsonProperty("binaryAsString") Boolean binaryAsString
   )
   {
     this.parseSpec = parseSpec;
+    this.binaryAsString = binaryAsString == null ? false : binaryAsString;
     final JSONPathSpec flattenSpec;
     if ((parseSpec instanceof OrcParseSpec)) {
       flattenSpec = ((OrcParseSpec) parseSpec).getFlattenSpec();
     } else {
       flattenSpec = JSONPathSpec.DEFAULT;
     }
-    this.groupFlattener = ObjectFlatteners.create(flattenSpec, new OrcStructFlattenerMaker());
+    this.groupFlattener = ObjectFlatteners.create(flattenSpec, new OrcStructFlattenerMaker(false));
     this.parser = new MapInputRowParser(parseSpec);
   }
 
@@ -71,6 +75,6 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   @Override
   public InputRowParser withParseSpec(ParseSpec parseSpec)
   {
-    return new OrcHadoopInputRowParser(parseSpec);
+    return new OrcHadoopInputRowParser(parseSpec, binaryAsString);
   }
 }
