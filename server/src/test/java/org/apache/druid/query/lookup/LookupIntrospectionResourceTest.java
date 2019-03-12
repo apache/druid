@@ -86,8 +86,8 @@ public class LookupIntrospectionResourceTest
         baseUri,
         LookupIntrospectionResource.class.getName(),
         binder -> {
-          binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
-              mockLookupExtractorFactoryContainerProvider);
+          binder.bind(LookupExtractorFactoryContainerProvider.class)
+                .toInstance(mockLookupExtractorFactoryContainerProvider);
         }
     );
     server.start();
