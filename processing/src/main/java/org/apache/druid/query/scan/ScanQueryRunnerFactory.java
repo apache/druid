@@ -133,7 +133,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       }
       throw new UOE(
           "Time ordering for queries of %,d segments per historical and a row limit of %,d is not supported."
-          + "  Try reducing the scope of the query to scan fewer segments than the configurable time ordering limit of"
+          + "  Try reducing the scope of the query to scan fewer segments than the configurable segment limit of"
           + " %,d segments or lower the row limit below %,d.",
           numSegments,
           query.getLimit(),
