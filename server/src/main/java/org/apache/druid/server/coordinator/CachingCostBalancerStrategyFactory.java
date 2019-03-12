@@ -35,10 +35,10 @@ import org.apache.druid.timeline.DataSegment;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CachingCostBalancerStrategyFactory implements BalancerStrategyFactory
 {
@@ -47,19 +47,19 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
   /** Must be single-threaded, because {@link ClusterCostCache.Builder} and downstream builders are not thread-safe */
   private final ExecutorService executor = Execs.singleThreaded("CachingCostBalancerStrategy-executor");
   private final ClusterCostCache.Builder clusterCostCacheBuilder = ClusterCostCache.builder();
-  /**
-   * Atomic is needed to use compareAndSet(true, true) construction below, that is linearizable with the write made from
-   * callback, that ensures visibility of the write made from callback. Neither plain field nor volatile field read
-   * ensure such visibility
-   */
-  private final AtomicBoolean initialized = new AtomicBoolean(false);
+
+  private final CountDownLatch initialized = new CountDownLatch(1);
+  private final CachingCostBalancerStrategyConfig config;
 
   @JsonCreator
   public CachingCostBalancerStrategyFactory(
       @JacksonInject ServerInventoryView serverInventoryView,
-      @JacksonInject Lifecycle lifecycle
+      @JacksonInject Lifecycle lifecycle,
+      @JacksonInject CachingCostBalancerStrategyConfig config
   ) throws Exception
   {
+    this.config = config;
+
     // Adding to lifecycle dynamically because couldn't use @ManageLifecycle on the class,
     // see https://github.com/apache/incubator-druid/issues/4980
     lifecycle.addMaybeStartManagedInstance(this);
@@ -89,7 +89,7 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
           @Override
           public ServerView.CallbackAction segmentViewInitialized()
           {
-            initialized.set(true);
+            initialized.countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
         }
@@ -118,10 +118,28 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
     executor.shutdownNow();
   }
 
+  private boolean isInitialized()
+  {
+    return initialized.getCount() == 0;
+  }
+
   @Override
   public BalancerStrategy createBalancerStrategy(final ListeningExecutorService exec)
   {
-    if (initialized.compareAndSet(true, true)) {
+    if (!isInitialized() && config.isAwaitInitialization()) {
+      try {
+        final long startMillis = System.currentTimeMillis();
+        LOG.info("Waiting for segment view initialization before creating CachingCostBalancerStrategy.");
+        initialized.await();
+        LOG.info("Segment view initialized in [%,d] ms.", System.currentTimeMillis() - startMillis);
+      }
+      catch (InterruptedException e) {
+        LOG.error(e, "Segment view initialization has been interrupted.");
+        Thread.currentThread().interrupt();
+      }
+    }
+
+    if (isInitialized()) {
       try {
         // Calling clusterCostCacheBuilder.build() in the same thread (executor's sole thread) where
         // clusterCostCacheBuilder is updated, to avoid problems with concurrent updates

@@ -43,6 +43,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -106,7 +107,6 @@ public class S3StorageDruidModule implements DruidModule
            .to(S3DataSegmentArchiver.class)
            .in(LazySingleton.class);
     Binders.dataSegmentPusherBinder(binder).addBinding("s3").to(S3DataSegmentPusher.class).in(LazySingleton.class);
-    Binders.dataSegmentFinderBinder(binder).addBinding("s3").to(S3DataSegmentFinder.class).in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentPusherConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3DataSegmentArchiverConfig.class);
     JsonConfigProvider.bind(binder, "druid.storage", S3StorageConfig.class);
@@ -185,7 +185,8 @@ public class S3StorageDruidModule implements DruidModule
     final Protocol protocolFromClientConfig = parseProtocol(clientConfig.getProtocol());
     final String endpointUrl = endpointConfig.getUrl();
     if (StringUtils.isNotEmpty(endpointUrl)) {
-      final URI uri = URI.create(endpointUrl);
+      //noinspection ConstantConditions
+      final URI uri = URIs.parse(endpointUrl, protocolFromClientConfig.toString());
       final Protocol protocol = parseProtocol(uri.getScheme());
       if (protocol != null && (protocol != protocolFromClientConfig)) {
         log.warn("[%s] protocol will be used for endpoint [%s]", protocol, endpointUrl);

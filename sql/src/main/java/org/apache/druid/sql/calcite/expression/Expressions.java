@@ -50,6 +50,7 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.filtration.BoundRefKey;
@@ -57,6 +58,7 @@ import org.apache.druid.sql.calcite.filtration.Bounds;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.joda.time.Interval;
 
@@ -207,27 +209,35 @@ public class Expressions
    * Translates "condition" to a Druid filter, or returns null if we cannot translate the condition.
    *
    * @param plannerContext planner context
-   * @param rowSignature   row signature of the dataSource to be filtered
+   * @param querySignature   row signature of the dataSource to be filtered
    * @param expression     Calcite row expression
    */
   @Nullable
   public static DimFilter toFilter(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
+      final DruidQuerySignature querySignature,
       final RexNode expression
   )
   {
     final SqlKind kind = expression.getKind();
 
     if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
-      return toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()));
+      return toFilter(
+          plannerContext,
+          querySignature,
+          Iterables.getOnlyElement(((RexCall) expression).getOperands())
+      );
     } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
       return new NotDimFilter(
-          toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()))
+          toFilter(
+              plannerContext,
+              querySignature,
+              Iterables.getOnlyElement(((RexCall) expression).getOperands())
+          )
       );
     } else if (kind == SqlKind.CAST && expression.getType().getSqlTypeName() == SqlTypeName.BOOLEAN) {
       // Calcite sometimes leaves errant, useless cast-to-booleans inside filters. Strip them and continue.
-      return toFilter(plannerContext, rowSignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()));
+      return toFilter(plannerContext, querySignature, Iterables.getOnlyElement(((RexCall) expression).getOperands()));
     } else if (kind == SqlKind.AND
                || kind == SqlKind.OR
                || kind == SqlKind.NOT) {
@@ -235,7 +245,7 @@ public class Expressions
       for (final RexNode rexNode : ((RexCall) expression).getOperands()) {
         final DimFilter nextFilter = toFilter(
             plannerContext,
-            rowSignature,
+            querySignature,
             rexNode
         );
         if (nextFilter == null) {
@@ -254,7 +264,7 @@ public class Expressions
       }
     } else {
       // Handle filter conditions on everything else.
-      return toLeafFilter(plannerContext, rowSignature, expression);
+      return toLeafFilter(plannerContext, querySignature, expression);
     }
   }
 
@@ -263,13 +273,13 @@ public class Expressions
    * if we cannot translate the condition.
    *
    * @param plannerContext planner context
-   * @param rowSignature   row signature of the dataSource to be filtered
+   * @param querySignature   row signature of the dataSource to be filtered
    * @param rexNode        Calcite row expression
    */
   @Nullable
   private static DimFilter toLeafFilter(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
+      final DruidQuerySignature querySignature,
       final RexNode rexNode
   )
   {
@@ -279,17 +289,23 @@ public class Expressions
       return Filtration.matchNothing();
     }
 
-    final DimFilter simpleFilter = toSimpleLeafFilter(plannerContext, rowSignature, rexNode);
-    return simpleFilter != null ? simpleFilter : toExpressionLeafFilter(plannerContext, rowSignature, rexNode);
+    final DimFilter simpleFilter = toSimpleLeafFilter(
+        plannerContext,
+        querySignature,
+        rexNode
+    );
+    return simpleFilter != null
+           ? simpleFilter
+           : toExpressionLeafFilter(plannerContext, querySignature.getRowSignature(), rexNode);
   }
 
   /**
-   * Translates to a simple leaf filter, meaning one that hits just a single column and is not an expression filter.
+   * Translates to a simple leaf filter, i.e. is not an expression filter.
    */
   @Nullable
   private static DimFilter toSimpleLeafFilter(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
+      final DruidQuerySignature querySignature,
       final RexNode rexNode
   )
   {
@@ -298,14 +314,14 @@ public class Expressions
     if (kind == SqlKind.IS_TRUE || kind == SqlKind.IS_NOT_FALSE) {
       return toSimpleLeafFilter(
           plannerContext,
-          rowSignature,
+          querySignature,
           Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
       );
     } else if (kind == SqlKind.IS_FALSE || kind == SqlKind.IS_NOT_TRUE) {
       return new NotDimFilter(
           toSimpleLeafFilter(
               plannerContext,
-              rowSignature,
+              querySignature,
               Iterables.getOnlyElement(((RexCall) rexNode).getOperands())
           )
       );
@@ -313,16 +329,35 @@ public class Expressions
       final RexNode operand = Iterables.getOnlyElement(((RexCall) rexNode).getOperands());
 
       // operand must be translatable to a SimpleExtraction to be simple-filterable
-      final DruidExpression druidExpression = toDruidExpression(plannerContext, rowSignature, operand);
-      if (druidExpression == null || !druidExpression.isSimpleExtraction()) {
+      final DruidExpression druidExpression =
+          toDruidExpression(plannerContext, querySignature.getRowSignature(), operand);
+
+      if (druidExpression == null) {
         return null;
       }
 
-      final DimFilter equalFilter = new SelectorDimFilter(
-          druidExpression.getSimpleExtraction().getColumn(),
-          NullHandling.defaultStringValue(),
-          druidExpression.getSimpleExtraction().getExtractionFn()
-      );
+      final DimFilter equalFilter;
+      if (druidExpression.isSimpleExtraction()) {
+        equalFilter = new SelectorDimFilter(
+            druidExpression.getSimpleExtraction().getColumn(),
+            NullHandling.defaultStringValue(),
+            druidExpression.getSimpleExtraction().getExtractionFn()
+        );
+      } else {
+        final VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+            plannerContext,
+            druidExpression,
+            operand.getType().getSqlTypeName()
+        );
+        if (virtualColumn == null) {
+          return null;
+        }
+        equalFilter = new SelectorDimFilter(
+            virtualColumn.getOutputName(),
+            NullHandling.defaultStringValue(),
+            null
+        );
+      }
 
       return kind == SqlKind.IS_NOT_NULL ? new NotDimFilter(equalFilter) : equalFilter;
     } else if (kind == SqlKind.EQUALS
@@ -379,7 +414,7 @@ public class Expressions
       }
 
       // Translate lhs to a DruidExpression.
-      final DruidExpression lhsExpression = toDruidExpression(plannerContext, rowSignature, lhs);
+      final DruidExpression lhsExpression = toDruidExpression(plannerContext, querySignature.getRowSignature(), lhs);
       if (lhsExpression == null) {
         return null;
       }
@@ -392,13 +427,23 @@ public class Expressions
         return buildTimeFloorFilter(ColumnHolder.TIME_COLUMN_NAME, queryGranularity, flippedKind, rhsMillis);
       }
 
-      // In the general case, lhs must be translatable to a SimpleExtraction to be simple-filterable.
-      if (!lhsExpression.isSimpleExtraction()) {
-        return null;
+      final String column;
+      final ExtractionFn extractionFn;
+      if (lhsExpression.isSimpleExtraction()) {
+        column = lhsExpression.getSimpleExtraction().getColumn();
+        extractionFn = lhsExpression.getSimpleExtraction().getExtractionFn();
+      } else {
+        VirtualColumn virtualLhs = querySignature.getOrCreateVirtualColumnForExpression(
+            plannerContext,
+            lhsExpression,
+            lhs.getType().getSqlTypeName()
+        );
+        if (virtualLhs == null) {
+          return null;
+        }
+        column = virtualLhs.getOutputName();
+        extractionFn = null;
       }
-
-      final String column = lhsExpression.getSimpleExtraction().getColumn();
-      final ExtractionFn extractionFn = lhsExpression.getSimpleExtraction().getExtractionFn();
 
       if (column.equals(ColumnHolder.TIME_COLUMN_NAME) && extractionFn instanceof TimeFormatExtractionFn) {
         // Check if we can strip the extractionFn and convert the filter to a direct filter on __time.
@@ -477,19 +522,32 @@ public class Expressions
       if (conversion == null) {
         return null;
       } else {
-        DimFilter filter = conversion.toDruidFilter(plannerContext, rowSignature, rexNode);
+        DimFilter filter =
+            conversion.toDruidFilter(plannerContext, querySignature, rexNode);
         if (filter != null) {
           return filter;
         }
-        DruidExpression expression = conversion.toDruidExpression(plannerContext, rowSignature, rexNode);
-        if (expression != null) {
-          return new ExpressionDimFilter(expression.getExpression(), plannerContext.getExprMacroTable());
-        }
+        return null;
       }
     }
     return null;
   }
 
+  /**
+   * Translates to an "expression" type leaf filter. Used as a fallback if we can't use a simple leaf filter.
+   */
+  @Nullable
+  private static DimFilter toExpressionLeafFilter(
+      final PlannerContext plannerContext,
+      final RowSignature rowSignature,
+      final RexNode rexNode
+  )
+  {
+    final DruidExpression druidExpression = toDruidExpression(plannerContext, rowSignature, rexNode);
+    return druidExpression != null
+           ? new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable())
+           : null;
+  }
 
   public static ExprType exprTypeForValueType(final ValueType valueType)
   {
@@ -504,22 +562,6 @@ public class Expressions
       default:
         throw new ISE("No ExprType for valueType[%s]", valueType);
     }
-  }
-
-  /**
-   * Translates to an "expression" type leaf filter. Used as a fallback if we can't use a simple leaf filter.
-   */
-  @Nullable
-  private static DimFilter toExpressionLeafFilter(
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final RexNode rexNode
-  )
-  {
-    final DruidExpression druidExpression = toDruidExpression(plannerContext, rowSignature, rexNode);
-    return druidExpression == null
-           ? null
-           : new ExpressionDimFilter(druidExpression.getExpression(), plannerContext.getExprMacroTable());
   }
 
   /**
