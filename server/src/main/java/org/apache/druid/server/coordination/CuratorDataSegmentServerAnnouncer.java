@@ -89,7 +89,7 @@ public class CuratorDataSegmentServerAnnouncer implements DataSegmentServerAnnou
       }
 
       final String path = makeAnnouncementPath();
-      log.info("Unannouncing self[%s] at [%s]", server, path);
+      log.debug("Unannouncing self[%s] at [%s]", server, path);
       announcer.unannounce(path);
 
       announced = false;
