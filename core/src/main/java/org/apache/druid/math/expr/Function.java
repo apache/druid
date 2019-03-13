@@ -446,39 +446,48 @@ interface Function
   class Round implements Function
   {
     @Override
-    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
-    {
-      if (args.size() == 1) {
-        Expr expr1 = args.get(0);
-        return eval(expr1.eval(bindings));
-      } else if (args.size() == 2) {
-        Expr expr1 = args.get(0);
-        Expr expr2 = args.get(1);
-        return eval(expr1.eval(bindings), expr2.eval(bindings));
-      } else {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
-      }
-    }
-
-    @Override
     public String name()
     {
       return "round";
     }
 
-    protected ExprEval eval(ExprEval param)
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      return eval(param, ExprEval.of(0));
+      if (args.size() == 1) {
+        ExprEval value1 = args.get(0).eval(bindings);
+        if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
+          throw new IAE("first argument should be integer or double type but got %s type", value1.type());
+        }
+        return eval(value1);
+      } else if (args.size() == 2) {
+        ExprEval value1 = args.get(0).eval(bindings);
+        ExprEval value2 = args.get(1).eval(bindings);
+        if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
+          throw new IAE("first argument should be integer or double type but got %s type", value1.type());
+        }
+        if (value2.type() != ExprType.LONG) {
+          throw new IAE("second argument should be integer type but got %s type", value2.type());
+        }
+        return eval(value1, value2.asInt());
+      } else {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
     }
 
-    protected ExprEval eval(ExprEval param, ExprEval scale)
+    protected ExprEval eval(ExprEval param)
+    {
+      return eval(param, 0);
+    }
+
+    protected ExprEval eval(ExprEval param, int scale)
     {
       if (param.type() == ExprType.LONG) {
-        Long value = BigDecimal.valueOf(param.asLong()).setScale(scale.asInt(), RoundingMode.HALF_UP).longValue();
-        return ExprEval.of(value);
+        return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
+      } else if (param.type() == ExprType.DOUBLE) {
+        return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale, RoundingMode.HALF_UP).doubleValue());
       } else {
-        double value = BigDecimal.valueOf(param.asDouble()).setScale(scale.asInt(), RoundingMode.HALF_UP).doubleValue();
-        return ExprEval.of(value);
+        return ExprEval.of(null);
       }
     }
   }

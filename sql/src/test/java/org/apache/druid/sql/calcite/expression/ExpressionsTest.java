@@ -36,6 +36,7 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -60,8 +61,9 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
-
+import org.junit.rules.ExpectedException;
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -103,6 +105,9 @@ public class ExpressionsTest extends CalciteTestBase
   private final RelDataTypeFactory typeFactory = new JavaTypeFactoryImpl();
   private final RexBuilder rexBuilder = new RexBuilder(typeFactory);
   private final RelDataType relDataType = rowSignature.getRelDataType(typeFactory);
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testConcat()
@@ -400,6 +405,34 @@ public class ExpressionsTest extends CalciteTestBase
         rexBuilder.makeCall(roundFunction, inputRef("z")),
         DruidExpression.fromExpression("round(\"z\")"),
         -2.0
+    );
+  }
+
+  @Test
+  public void testRoundWithInvalidArgument()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("first argument should be long or double type but got STRING type");
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("s")),
+        DruidExpression.fromExpression("round(\"s\")"),
+        "IAE Exception"
+    );
+  }
+
+  @Test
+  public void testRoundWithInvalidSecondArgument()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    expectedException.expect(ClassCastException.class);
+    expectedException.expectMessage("java.lang.String cannot be cast to java.lang.Number");
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x"), rexBuilder.makeLiteral("foo")),
+        DruidExpression.fromExpression("round(\"x\", foo)"),
+        "ClassCast Exception"
     );
   }
 
