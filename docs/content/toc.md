@@ -136,6 +136,7 @@ layout: toc
   * [Recommendations](/docs/VERSION/operations/recommendations.html)
   * [TLS Support](/docs/VERSION/operations/tls-support.html)
   * [Password Provider](/docs/VERSION/operations/password-provider.html)
+  * [HTTP Compression](/docs/VERSION/operations/http-compression.html)
 
 ## Configuration
   * [Configuration Reference](/docs/VERSION/configuration/index.html)

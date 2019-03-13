@@ -64,6 +64,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.Deflater;
 
 public abstract class BaseJettyTest
 {
@@ -145,7 +146,13 @@ public abstract class BaseJettyTest
       root.addFilter(GuiceFilter.class, "/*", null);
 
       final HandlerList handlerList = new HandlerList();
-      handlerList.setHandlers(new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(root, 4096, -1)});
+      handlerList.setHandlers(
+          new Handler[]{JettyServerInitUtils.wrapWithDefaultGzipHandler(
+              root,
+              ServerConfig.DEFAULT_GZIP_INFLATE_BUFFER_SIZE,
+              Deflater.DEFAULT_COMPRESSION
+          )}
+      );
       server.setHandler(handlerList);
     }
 
