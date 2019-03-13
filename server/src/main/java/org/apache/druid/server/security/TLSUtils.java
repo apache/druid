@@ -177,7 +177,7 @@ public class TLSUtils
       TLSCertificateChecker tlsCertificateChecker
   )
   {
-    SSLContext sslContext = null;
+    SSLContext sslContext;
     try {
       sslContext = SSLContext.getInstance(protocol == null ? "TLSv1.2" : protocol);
       KeyStore trustStore = KeyStore.getInstance(trustStoreType == null

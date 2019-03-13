@@ -1139,7 +1139,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
 
-        boolean metadataUpdateSuccess = false;
+        boolean metadataUpdateSuccess;
         if (currentMetadata == null) {
           metadataUpdateSuccess = true;
         } else {
@@ -2545,7 +2545,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void updateLatestOffsetsFromStream() throws InterruptedException
   {
     synchronized (recordSupplierLock) {
-      Set<PartitionIdType> partitionIds = null;
+      Set<PartitionIdType> partitionIds;
       try {
         partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
       }
