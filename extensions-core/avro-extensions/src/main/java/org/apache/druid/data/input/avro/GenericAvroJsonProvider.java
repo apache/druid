@@ -23,6 +23,7 @@ import com.jayway.jsonpath.InvalidJsonException;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.util.Utf8;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -137,7 +138,15 @@ public class GenericAvroJsonProvider implements JsonProvider
       throw new UnsupportedOperationException();
     }
   }
-
+  
+  private Object transformAvroMapKey(String keyToTransform, Map avroMapObj) {
+    Object key = avroMapObj.keySet().iterator().next();
+    if (key instanceof Utf8) {
+      return new Utf8(keyToTransform);
+    }
+    return keyToTransform;
+  }
+  
   @Override
   public Object getMapValue(final Object o, final String s)
   {
@@ -146,7 +155,7 @@ public class GenericAvroJsonProvider implements JsonProvider
     } else if (o instanceof GenericRecord) {
       return ((GenericRecord) o).get(s);
     } else if (o instanceof Map) {
-      return ((Map) o).get(s);
+      return ((Map) o).get(transformAvroMapKey(s,(Map) o));
     } else {
       throw new UnsupportedOperationException(o.getClass().getName());
     }
