@@ -23,7 +23,6 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
-import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
