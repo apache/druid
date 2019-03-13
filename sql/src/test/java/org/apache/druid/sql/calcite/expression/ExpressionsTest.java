@@ -414,7 +414,7 @@ public class ExpressionsTest extends CalciteTestBase
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("first argument should be long or double type but got STRING type");
+    expectedException.expectMessage("first argument should be integer or double type but got STRING type");
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("s")),
         DruidExpression.fromExpression("round(\"s\")"),
