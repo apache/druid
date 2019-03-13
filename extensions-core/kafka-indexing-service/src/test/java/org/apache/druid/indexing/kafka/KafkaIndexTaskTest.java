@@ -1942,11 +1942,6 @@ public class KafkaIndexTaskTest
       kafkaProducer.commitTransaction();
     }
 
-//    while (task2.getRunner().getStatus() != Status.PUBLISHING) {
-//      Thread.sleep(10);
-//    }
-//    Thread.sleep(2500);
-
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 

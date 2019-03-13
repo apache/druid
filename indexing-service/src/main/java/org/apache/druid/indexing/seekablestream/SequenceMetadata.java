@@ -39,9 +39,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.METADATA_NEXT_PARTITIONS;
-import static org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.METADATA_PUBLISH_PARTITIONS;
-
 public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
 {
   private final int sequenceId;
@@ -275,8 +272,10 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
               // Publish metadata can be different from persist metadata as we are going to publish only
               // subset of segments
               return ImmutableMap.of(
-                  METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(stream, lastPersistedOffsets),
-                  METADATA_PUBLISH_PARTITIONS, new SeekableStreamPartitions<>(stream, endOffsets)
+                  SeekableStreamIndexTaskRunner.METADATA_NEXT_PARTITIONS,
+                  new SeekableStreamPartitions<>(stream, lastPersistedOffsets),
+                  SeekableStreamIndexTaskRunner.METADATA_PUBLISH_PARTITIONS,
+                  new SeekableStreamPartitions<>(stream, endOffsets)
               );
             }
             finally {
@@ -304,7 +303,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       final SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> finalPartitions =
           runner.deserializePartitionsFromMetadata(
               toolbox.getObjectMapper(),
-              commitMetaMap.get(METADATA_PUBLISH_PARTITIONS)
+              commitMetaMap.get(SeekableStreamIndexTaskRunner.METADATA_PUBLISH_PARTITIONS)
           );
 
       // Sanity check, we should only be publishing things that match our desired end state.
@@ -334,4 +333,3 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     };
   }
 }
-
