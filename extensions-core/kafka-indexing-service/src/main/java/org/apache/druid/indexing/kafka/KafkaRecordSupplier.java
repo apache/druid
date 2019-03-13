@@ -193,9 +193,8 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
   {
     final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
-    props.putAll(consumerConfigs);
-
     addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
+    props.putAll(consumerConfigs);
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {

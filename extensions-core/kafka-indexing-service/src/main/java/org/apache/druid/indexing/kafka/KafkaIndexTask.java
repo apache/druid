@@ -98,13 +98,12 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
 
       final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
       final Properties props = new Properties();
-      props.putAll(consumerConfigs);
-
       KafkaRecordSupplier.addConsumerPropertiesFromConfig(
           props,
           configMapper,
           ioConfig.getConsumerProperties()
       );
+      props.putAll(consumerConfigs);
 
       return new KafkaConsumer<>(props);
     }
