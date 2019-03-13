@@ -150,6 +150,8 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
       Properties consumerProperties = new Properties();
       consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
+      consumerProperties.put("auto.offset.reset", "none");
+      consumerProperties.put("enable.auto.commit", "false");
       addFilteredProperties(consumerProperties);
 
       spec = getTaskAsString(INDEXER_FILE);
