@@ -1909,7 +1909,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       final OrderedSequenceNumber<SequenceOffsetType> currentSequenceNumber = createSequenceNumber(
           currOffset
       );
-      if (recordSequenceNumber.compareTo(currentSequenceNumber) != 0) {
+      if (recordSequenceNumber.compareTo(currentSequenceNumber) < 0) {
         throw new ISE(
             "sequenceNumber of the start record[%s] is smaller than current sequenceNumber[%s] for partition[%s]",
             record.getSequenceNumber(),
