@@ -96,19 +96,15 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<Integer, Long>
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
+      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
       final Properties props = new Properties();
+      props.putAll(consumerConfigs);
 
       KafkaRecordSupplier.addConsumerPropertiesFromConfig(
           props,
           configMapper,
           ioConfig.getConsumerProperties()
       );
-
-      props.setProperty("enable.auto.commit", "false");
-      props.setProperty("auto.offset.reset", "none");
-      props.setProperty("key.deserializer", ByteArrayDeserializer.class.getName());
-      props.setProperty("value.deserializer", ByteArrayDeserializer.class.getName());
-      props.setProperty("isolation.level", "read_committed");
 
       return new KafkaConsumer<>(props);
     }
