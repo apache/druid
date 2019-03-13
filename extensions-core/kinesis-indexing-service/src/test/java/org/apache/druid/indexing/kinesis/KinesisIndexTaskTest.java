@@ -198,28 +198,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   private static String shardId1 = "1";
   private static String shardId0 = "0";
   private static KinesisRecordSupplier recordSupplier;
-  private static List<OrderedPartitionableRecord<String, String>> records = ImmutableList.of(
-      new OrderedPartitionableRecord<>(stream, "1", "0", jb("2008", "a", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "1", jb("2009", "b", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "2", jb("2010", "c", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "3", jb("2011", "d", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "4", jb("2011", "e", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(
-          stream,
-          "1",
-          "5",
-          jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
-      ),
-      new OrderedPartitionableRecord<>(stream, "1", "6", Collections.singletonList(StringUtils.toUtf8("unparseable"))),
-      new OrderedPartitionableRecord<>(stream, "1", "7", Collections.singletonList(StringUtils.toUtf8("unparseable2"))),
-      new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(StringUtils.toUtf8("{}"))),
-      new OrderedPartitionableRecord<>(stream, "1", "9", jb("2013", "f", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "10", jb("2049", "f", "y", "notanumber", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "11", jb("2049", "f", "y", "10", "notanumber", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "12", jb("2049", "f", "y", "10", "20.0", "notanumber")),
-      new OrderedPartitionableRecord<>(stream, "0", "0", jb("2012", "g", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "0", "1", jb("2011", "h", "y", "10", "20.0", "1.0"))
-  );
+  private static List<OrderedPartitionableRecord<String, String>> records;
 
   private static ServiceEmitter emitter;
   private static ListeningExecutorService taskExec;
@@ -315,6 +294,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     maxSavedParseExceptions = null;
     skipAvailabilityCheck = false;
     doHandoff = true;
+    records = generateRecords(stream);
     reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     maxRecordsPerPoll = 1;
 
@@ -347,6 +327,52 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     emitter.close();
   }
 
+  private static List<OrderedPartitionableRecord<String, String>> generateRecords(String stream)
+  {
+    return ImmutableList.of(
+        new OrderedPartitionableRecord<>(stream, "1", "0", jb("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "1", jb("2009", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "2", jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "3", jb("2011", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "4", jb("2011", "e", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(
+            stream,
+            "1",
+            "5",
+            jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
+        ),
+        new OrderedPartitionableRecord<>(stream, "1", "6", Collections.singletonList(StringUtils.toUtf8("unparseable"))),
+        new OrderedPartitionableRecord<>(stream, "1", "7", Collections.singletonList(StringUtils.toUtf8("unparseable2"))),
+        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(StringUtils.toUtf8("{}"))),
+        new OrderedPartitionableRecord<>(stream, "1", "9", jb("2013", "f", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "10", jb("2049", "f", "y", "notanumber", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "11", jb("2049", "f", "y", "10", "notanumber", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "12", jb("2049", "f", "y", "10", "20.0", "notanumber")),
+        new OrderedPartitionableRecord<>(stream, "0", "0", jb("2012", "g", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "0", "1", jb("2011", "h", "y", "10", "20.0", "1.0"))
+    );
+  }
+
+  private static List<OrderedPartitionableRecord<String, String>> generateSinglePartitionRecords(String stream)
+  {
+    return ImmutableList.of(
+        new OrderedPartitionableRecord<>(stream, "1", "0", jb("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "1", jb("2009", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "2", jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "3", jb("2011", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "4", jb("2011", "e", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "5", jb("2012", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "6", jb("2013", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "7", jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "8", jb("2011", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "9", jb("2011", "e", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "10", jb("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "11", jb("2009", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "12", jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "13", jb("2012", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "14", jb("2013", "e", "y", "10", "20.0", "1.0"))
+    );
+  }
   @Test(timeout = 120_000L)
   public void testRunAfterDataInserted() throws Exception
   {
@@ -2218,6 +2244,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   {
     maxRowsPerSegment = 2;
     maxRecordsPerPoll = 1;
+    records = generateSinglePartitionRecords(stream);
 
     recordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -2227,7 +2254,16 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     recordSupplier.seek(anyObject(), anyString());
     expectLastCall().anyTimes();
 
-    expect(recordSupplier.poll(anyLong())).andReturn(records.subList(0, 5))
+    // simulate 1 record at a time
+    expect(recordSupplier.poll(anyLong())).andReturn(Collections.singletonList(records.get(0)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(1)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(2)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(3)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(4)))
                                           .once()
                                           .andReturn(Collections.emptyList())
                                           .anyTimes();
@@ -2288,10 +2324,16 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     expect(recordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
 
+
     recordSupplier.seek(anyObject(), anyString());
     expectLastCall().anyTimes();
 
-    expect(recordSupplier.poll(anyLong())).andReturn(records.subList(3, 6)).once();
+    expect(recordSupplier.poll(anyLong())).andReturn(Collections.singletonList(records.get(5)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(6)))
+                                          .once()
+                                          .andReturn(Collections.emptyList())
+                                          .anyTimes();
 
     recordSupplier.close();
     expectLastCall();
@@ -2333,29 +2375,28 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     verifyAll();
 
     // Check metrics
-    Assert.assertEquals(2, task1.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(5, task1.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
     Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = sd(task1, "2010/P1D", 0);
-    SegmentDescriptor desc2 = sd(task1, "2011/P1D", 0);
-    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    SegmentDescriptor desc1 = sd(task1, "2008/P1D", 0);
+    SegmentDescriptor desc2 = sd(task1, "2009/P1D", 0);
+    SegmentDescriptor desc3 = sd(task1, "2010/P1D", 0);
+    SegmentDescriptor desc4 = sd(task1, "2011/P1D", 0);
+    SegmentDescriptor desc5 = sd(task1, "2013/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamPartitions<>(stream, ImmutableMap.of(
                 shardId1,
-                "5"
+                "6"
             ))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
   @Test(timeout = 120_000L)
@@ -2570,23 +2611,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   @Test(timeout = 5000L)
   public void testIncrementalHandOffReadsThroughEndOffsets() throws Exception
   {
-    final List<OrderedPartitionableRecord<String, String>> records = ImmutableList.of(
-        new OrderedPartitionableRecord<>(stream, "1", "0", jb("2008", "a", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "1", jb("2009", "b", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "2", jb("2010", "c", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "3", jb("2011", "d", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "4", jb("2011", "e", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "5", jb("2012", "a", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "6", jb("2013", "b", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "7", jb("2010", "c", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "8", jb("2011", "d", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "9", jb("2011", "e", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "10", jb("2008", "a", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "11", jb("2009", "b", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "12", jb("2010", "c", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "13", jb("2012", "d", "y", "10", "20.0", "1.0")),
-        new OrderedPartitionableRecord<>(stream, "1", "14", jb("2013", "e", "y", "10", "20.0", "1.0"))
-    );
+    records = generateSinglePartitionRecords(stream);
 
     final String baseSequenceName = "sequence0";
     // as soon as any segment has more than one record, incremental publishing should happen

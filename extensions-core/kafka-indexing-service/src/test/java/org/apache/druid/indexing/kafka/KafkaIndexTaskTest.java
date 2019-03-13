@@ -293,6 +293,26 @@ public class KafkaIndexTaskTest
     );
   }
 
+  private static List<ProducerRecord<byte[], byte[]>> generateSinglePartitionRecords(String topic)
+  {
+    return ImmutableList.of(
+        new ProducerRecord<>(topic, 0, null, jb("2008", "a", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2009", "b", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2011", "d", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2011", "D", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2012", "e", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2009", "B", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2008", "A", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2009", "B", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2010", "C", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2011", "D", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2011", "d", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2012", "E", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2009", "b", "x", "10", "20.0", "1.0"))
+    );
+  }
+
   private static String getTopicName()
   {
     return "topic" + topicPostfix++;
@@ -867,23 +887,7 @@ public class KafkaIndexTaskTest
     if (!isIncrementalHandoffSupported) {
       return;
     }
-
-    List<ProducerRecord<byte[], byte[]>> records = ImmutableList.of(
-        new ProducerRecord<>(topic, 0, null, jb("2008", "a", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2009", "b", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2010", "c", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2011", "d", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2011", "D", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2012", "e", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2009", "B", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2008", "A", "x", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2009", "B", "x", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2010", "C", "x", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2011", "D", "x", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2011", "d", "x", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2012", "E", "x", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2009", "b", "x", "10", "20.0", "1.0"))
-    );
+    records = generateSinglePartitionRecords(topic);
 
     final String baseSequenceName = "sequence0";
     // as soon as any segment has more than one record, incremental publishing should happen
@@ -901,22 +905,14 @@ public class KafkaIndexTaskTest
     Map<String, Object> consumerProps = kafkaServer.consumerProperties();
     consumerProps.put("max.poll.records", "1");
 
-    final SeekableStreamPartitions<Integer, Long> startPartitions = new SeekableStreamPartitions<>(
-        topic,
-        ImmutableMap.of(0, 0L)
-    );
-    final SeekableStreamPartitions<Integer, Long> checkpoint1 = new SeekableStreamPartitions<>(
-        topic,
-        ImmutableMap.of(0, 5L)
-    );
-    final SeekableStreamPartitions<Integer, Long> checkpoint2 = new SeekableStreamPartitions<>(
-        topic,
-        ImmutableMap.of(0, 12L)
-    );
-    final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
-        topic,
-        ImmutableMap.of(0, Long.MAX_VALUE)
-    );
+    final SeekableStreamPartitions<Integer, Long> startPartitions =
+        new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L));
+    final SeekableStreamPartitions<Integer, Long> checkpoint1 =
+        new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L));
+    final SeekableStreamPartitions<Integer, Long> checkpoint2 =
+        new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 12L));
+    final SeekableStreamPartitions<Integer, Long> endPartitions =
+        new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, Long.MAX_VALUE));
 
     final KafkaIndexTask task = createTask(
         null,
@@ -1866,16 +1862,19 @@ public class KafkaIndexTaskTest
       return;
     }
 
+    records = generateSinglePartitionRecords(topic);
     maxRowsPerSegment = 2;
+    Map<String, Object> consumerProps = kafkaServer.consumerProperties();
+    consumerProps.put("max.poll.records", "1");
 
     final KafkaIndexTask task1 = createTask(
         null,
         new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
-            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 6L)),
-            kafkaServer.consumerProperties(),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L)),
+            consumerProps,
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
@@ -1920,9 +1919,9 @@ public class KafkaIndexTaskTest
         new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
-            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 2L)),
-            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 6L)),
-            kafkaServer.consumerProperties(),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 0L)),
+            new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L)),
+            consumerProps,
             KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
             true,
             null,
@@ -1931,6 +1930,7 @@ public class KafkaIndexTaskTest
     );
 
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
+    // Wait for the task to start reading
 
     // Insert remaining data
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
@@ -1942,29 +1942,35 @@ public class KafkaIndexTaskTest
       kafkaProducer.commitTransaction();
     }
 
+//    while (task2.getRunner().getStatus() != Status.PUBLISHING) {
+//      Thread.sleep(10);
+//    }
+//    Thread.sleep(2500);
+
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(2, task1.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(5, task1.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
-    Assert.assertEquals(1, task2.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(4, task2.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = sd(task1, "2010/P1D", 0);
-    SegmentDescriptor desc2 = sd(task1, "2011/P1D", 0);
-    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    SegmentDescriptor desc1 = sd(task1, "2008/P1D", 0);
+    SegmentDescriptor desc2 = sd(task1, "2008/P1D", 1);
+    SegmentDescriptor desc3 = sd(task1, "2009/P1D", 0);
+    SegmentDescriptor desc4 = sd(task1, "2009/P1D", 1);
+    SegmentDescriptor desc5 = sd(task1, "2010/P1D", 0);
+    SegmentDescriptor desc6 = sd(task1, "2011/P1D", 0);
+    SegmentDescriptor desc7 = sd(task1, "2012/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 6L))),
+        new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 10L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
-
-    // Check segments in deep storage
-    Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
   @Test(timeout = 60_000L)

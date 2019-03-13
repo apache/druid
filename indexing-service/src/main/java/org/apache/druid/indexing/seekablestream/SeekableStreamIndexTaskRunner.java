@@ -504,6 +504,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             if (isEndSequenceOffsetsExclusive() &&
                 createSequenceNumber(record.getSequenceNumber()).compareTo(
                     createSequenceNumber(endOffsets.get(record.getPartitionId()))) >= 0) {
+              stillReading = false;
               continue;
             }
 
