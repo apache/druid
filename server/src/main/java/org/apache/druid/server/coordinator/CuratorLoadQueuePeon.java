@@ -42,7 +42,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
@@ -50,7 +49,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,8 +84,8 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
 
-  private final int numProcessingQueues;
-  private final LinkedBlockingQueue<SegmentHolder>[] segmentProcessingQueues;
+  private final int numTasks;
+  private final LinkedBlockingQueue<SegmentHolder> segmentProcessingQueue;
   // Max number of segments to process in every round
   private final int batchSizePerTask;
 
@@ -113,14 +111,11 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
         );
     // One processing queue per thread
     Preconditions.checkArgument(config.getNumZookeeperNodeCreatingThreads() > 0);
-    this.numProcessingQueues = config.getNumZookeeperNodeCreatingThreads();
+    this.numTasks = config.getNumZookeeperNodeCreatingThreads();
 
     Preconditions.checkArgument(config.getCuratorCreateZkNodeBatchSize() > 0);
-    this.batchSizePerTask = (config.getCuratorCreateZkNodeBatchSize() / numProcessingQueues);
-    this.segmentProcessingQueues = new LinkedBlockingQueue[numProcessingQueues];
-    for (int i = 0; i < numProcessingQueues; i++) {
-      segmentProcessingQueues[i] = new LinkedBlockingQueue<>();
-    }
+    this.batchSizePerTask = (config.getCuratorCreateZkNodeBatchSize() / numTasks);
+    this.segmentProcessingQueue = new LinkedBlockingQueue();
   }
 
   @JsonProperty
@@ -177,7 +172,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     queuedSize.addAndGet(segment.getSize());
     SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
     segmentsToLoad.put(segment, segmentHolder);
-    segmentProcessingQueues[getSegmentQueueIndex()].offer(segmentHolder);
+    segmentProcessingQueue.offer(segmentHolder);
   }
 
   @Override
@@ -196,7 +191,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getId());
     SegmentHolder segmentHolder = new SegmentHolder(segment, DROP, Collections.singletonList(callback));
     segmentsToDrop.put(segment, segmentHolder);
-    segmentProcessingQueues[getSegmentQueueIndex()].offer(segmentHolder);
+    segmentProcessingQueue.offer(segmentHolder);
   }
 
   @Override
@@ -211,29 +206,17 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     segmentsMarkedToDrop.remove(dataSegment);
   }
 
-  private int getSegmentQueueIndex()
-  {
-    return ThreadLocalRandom.current().nextInt(0, numProcessingQueues);
-  }
-
   private class SegmentChangeProcessor implements Runnable
   {
-    private final BlockingQueue<SegmentHolder> segmentQueue;
-
-    private SegmentChangeProcessor(BlockingQueue<SegmentHolder> segmentQueue)
-    {
-      this.segmentQueue = segmentQueue;
-    }
-
     @Override
     public void run()
     {
       try {
         int numProcessed = 0;
-        while (numProcessed++ < batchSizePerTask && !segmentQueue.isEmpty()) {
+        while (numProcessed++ < batchSizePerTask && !segmentProcessingQueue.isEmpty()) {
           // Instead of calling poll for every element, drain the batch to a list.
           List<SegmentHolder> batch = new ArrayList<>(batchSizePerTask);
-          segmentQueue.drainTo(batch, batchSizePerTask);
+          segmentProcessingQueue.drainTo(batch, batchSizePerTask);
           for (SegmentHolder s : batch) {
             processSegmentChangeRequest(s);
           }
@@ -344,9 +327,9 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   @Override
   public void start()
   {
-    for (int i = 0; i < numProcessingQueues; i++) {
+    for (int i = 0; i < numTasks; i++) {
       processingExecutor.scheduleAtFixedRate(
-          new SegmentChangeProcessor(segmentProcessingQueues[i]),
+          new SegmentChangeProcessor(),
           0,
           config.getCuratorCreateZkNodesRepeatDelay().getMillis(),
           TimeUnit.MILLISECONDS
