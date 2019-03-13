@@ -130,7 +130,7 @@ The following example was retrieved from a Historical process configured to use 
 00Z_2015-04-14T02:41:09.484Z
 2015-04-14T02:42:33,463 INFO [ZkCoordinator-0] org.apache.druid.guice.JsonConfigurator - Loaded class[class org.apache.druid.storage.azure.AzureAccountConfig] from props[drui
 d.azure.] as [org.apache.druid.storage.azure.AzureAccountConfig@759c9ad9]
-2015-04-14T02:49:08,275 INFO [ZkCoordinator-0] org.apache.druid.java.util.common.CompressionUtils - Unzipping file[/opt/druid/tmp/compressionUtilZipCache1263964429587449785.z
+2015-04-14T02:49:08,275 INFO [ZkCoordinator-0] org.apache.druid.utils.CompressionUtils - Unzipping file[/opt/druid/tmp/compressionUtilZipCache1263964429587449785.z
 ip] to [/opt/druid/zk_druid/dde/2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z/2015-04-14T02:41:09.484Z/0]
 2015-04-14T02:49:08,276 INFO [ZkCoordinator-0] org.apache.druid.storage.azure.AzureDataSegmentPuller - Loaded 1196 bytes from [dde/2015-01-02T00:00:00.000Z_2015-01-03
 T00:00:00.000Z/2015-04-14T02:41:09.484Z/0/index.zip] to [/opt/druid/zk_druid/dde/2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z/2015-04-14T02:41:09.484Z/0]

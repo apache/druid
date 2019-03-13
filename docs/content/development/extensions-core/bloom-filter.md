@@ -76,7 +76,7 @@ This string can then be used in the native or sql Druid query.
 |`type`                   |Filter Type. Should always be `bloom`|yes|
 |`dimension`              |The dimension to filter over. | yes |
 |`bloomKFilter`           |Base64 encoded Binary representation of `org.apache.hive.common.util.BloomKFilter`| yes |
-|`extractionFn`|[Extraction function](./../dimensionspecs.html#extraction-functions) to apply to the dimension values |no|
+|`extractionFn`|[Extraction function](../../querying/dimensionspecs.html#extraction-functions) to apply to the dimension values |no|
 
 
 ### Serialized Format for BloomKFilter
@@ -129,7 +129,7 @@ for the query.
 |-------------------------|------------------------------|----------------------------------|
 |`type`                   |Aggregator Type. Should always be `bloom`|yes|
 |`name`                   |Output field name |yes|
-|`field`                  |[DimensionSpec](./../dimensionspecs.html) to add to `org.apache.hive.common.util.BloomKFilter` | yes |
+|`field`                  |[DimensionSpec](../../querying/dimensionspecs.html) to add to `org.apache.hive.common.util.BloomKFilter` | yes |
 |`maxNumEntries`          |Maximum number of distinct values supported by `org.apache.hive.common.util.BloomKFilter`, default `1500`| no |
 
 ### Example

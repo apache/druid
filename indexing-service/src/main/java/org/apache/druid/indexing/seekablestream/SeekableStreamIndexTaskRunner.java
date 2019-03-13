@@ -130,7 +130,7 @@ import java.util.stream.Collectors;
  * @param <PartitionIdType>    Partition Number Type
  * @param <SequenceOffsetType> Sequence Number Type
  */
-public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType extends Comparable> implements ChatHandler
+public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> implements ChatHandler
 {
   public enum Status
   {
@@ -196,7 +196,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
-  private final Map<PartitionIdType, SequenceOffsetType> initialOffsetsSnapshot = new HashMap<>();
+  private final Set<PartitionIdType> initialOffsetsSnapshot = new HashSet<>();
   private final Set<PartitionIdType> exclusiveStartingPartitions = new HashSet<>();
 
   private volatile DateTime startTime;
@@ -454,7 +454,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       status = Status.READING;
       Throwable caughtExceptionInner = null;
 
-      initialOffsetsSnapshot.putAll(currOffsets);
+      initialOffsetsSnapshot.addAll(currOffsets.keySet());
       exclusiveStartingPartitions.addAll(ioConfig.getExclusiveStartSequenceNumberPartitions());
 
       try {
@@ -490,7 +490,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           maybePersistAndPublishSequences(committerSupplier);
 
-
           // calling getRecord() ensures that exceptions specific to kafka/kinesis like OffsetOutOfRangeException
           // are handled in the subclasses.
           List<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType>> records = getRecords(
@@ -512,9 +511,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               continue;
             }
 
-            // for the first message we receive, check that we were given a message with a sequenceNumber that matches our
-            // expected starting sequenceNumber
-            if (!verifyInitialRecordAndSkipExclusivePartition(record, initialOffsetsSnapshot)) {
+            // for the first message we receive, check that we were given a message with a sequenceNumber that matches
+            // our expected starting sequenceNumber
+            if (!verifyInitialRecordAndSkipExclusivePartition(record)) {
               continue;
             }
 
@@ -1281,7 +1280,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return getCurrentOffsets();
   }
 
-  public Map<PartitionIdType, SequenceOffsetType> getCurrentOffsets()
+  public ConcurrentMap<PartitionIdType, SequenceOffsetType> getCurrentOffsets()
   {
     return currOffsets;
   }
@@ -1384,14 +1383,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         // do not mark the starting sequence number as exclusive
         Set<PartitionIdType> exclusivePartitions = sequenceNumbers.keySet()
                                                                   .stream()
-                                                                  .filter(x -> !initialOffsetsSnapshot.containsKey(x)
+                                                                  .filter(x -> !initialOffsetsSnapshot.contains(x)
                                                                                || ioConfig.getExclusiveStartSequenceNumberPartitions()
                                                                                           .contains(x))
                                                                   .collect(Collectors.toSet());
 
-        if ((latestSequence.getStartOffsets().equals(sequenceNumbers) && latestSequence.exclusiveStartPartitions.equals(
-            exclusivePartitions) && !finish) ||
-            (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
+        if ((latestSequence.getStartOffsets().equals(sequenceNumbers)
+             && latestSequence.exclusiveStartPartitions.equals(exclusivePartitions)
+             && !finish)
+            || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end sequences already set for sequences [%s]", sequenceNumbers);
           resume();
           return Response.ok(sequenceNumbers).build();
@@ -1442,7 +1442,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               exclusivePartitions
           );
           sequences.add(newSequence);
-          initialOffsetsSnapshot.putAll(sequenceNumbers);
+          initialOffsetsSnapshot.addAll(sequenceNumbers.keySet());
         }
         persistSequences();
       }
@@ -1882,33 +1882,38 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   }
 
   private boolean verifyInitialRecordAndSkipExclusivePartition(
-      final OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record,
-      final Map<PartitionIdType, SequenceOffsetType> intialSequenceSnapshot
+      final OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record
   )
   {
-    if (intialSequenceSnapshot.containsKey(record.getPartitionId())) {
-      if (record.getSequenceNumber().compareTo(intialSequenceSnapshot.get(record.getPartitionId())) < 0) {
+    // Check only for the first record among the record batch.
+    if (initialOffsetsSnapshot.contains(record.getPartitionId())) {
+      final SequenceOffsetType currOffset = Preconditions.checkNotNull(
+          currOffsets.get(record.getPartitionId()),
+          "Current offset is null for sequenceNumber[%s] and partitionId[%s]",
+          record.getSequenceNumber(),
+          record.getPartitionId()
+      );
+      final OrderedSequenceNumber<SequenceOffsetType> recordSequenceNumber = createSequenceNumber(
+          record.getSequenceNumber()
+      );
+      final OrderedSequenceNumber<SequenceOffsetType> currentSequenceNumber = createSequenceNumber(
+          currOffset
+      );
+      if (recordSequenceNumber.compareTo(currentSequenceNumber) < 0) {
         throw new ISE(
-            "Starting sequenceNumber [%s] does not match expected [%s] for partition [%s]",
+            "sequenceNumber of the start record[%s] is smaller than current sequenceNumber[%s] for partition[%s]",
             record.getSequenceNumber(),
-            intialSequenceSnapshot.get(record.getPartitionId()),
+            currOffset,
             record.getPartitionId()
         );
       }
 
-      log.info(
-          "Verified starting sequenceNumber [%s] for partition [%s]",
-          record.getSequenceNumber(), record.getPartitionId()
-      );
-
-      intialSequenceSnapshot.remove(record.getPartitionId());
-      if (intialSequenceSnapshot.isEmpty()) {
-        log.info("Verified starting sequences for all partitions");
-      }
+      // Remove the mark to notify that this partition has been read.
+      initialOffsetsSnapshot.remove(record.getPartitionId());
 
       // check exclusive starting sequence
       if (isStartingSequenceOffsetsExclusive() && exclusiveStartingPartitions.contains(record.getPartitionId())) {
-        log.info("Skipping starting sequenceNumber for partition [%s] marked exclusive", record.getPartitionId());
+        log.info("Skipping starting sequenceNumber for partition[%s] marked exclusive", record.getPartitionId());
 
         return false;
       }
