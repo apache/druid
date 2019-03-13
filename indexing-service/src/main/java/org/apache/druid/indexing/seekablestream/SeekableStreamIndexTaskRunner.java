@@ -944,9 +944,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     log.info("Persisting Sequences Metadata [%s]", sequences);
     toolbox.getObjectMapper().writerWithType(
-        new TypeReference<List<SequenceMetadata<PartitionIdType, SequenceOffsetType>>>()
-        {
-        }
+        getSequenceMetadataTypeReference()
     ).writeValue(getSequencesPersistFile(toolbox), sequences);
   }
 
