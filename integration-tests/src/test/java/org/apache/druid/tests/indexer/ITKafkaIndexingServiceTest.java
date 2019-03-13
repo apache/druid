@@ -28,6 +28,7 @@ import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -148,10 +149,10 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
     String spec;
     try {
       LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
-      Properties consumerProperties = new Properties();
+      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
+      final Properties consumerProperties = new Properties();
+      consumerProperties.putAll(consumerConfigs);
       consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
-      consumerProperties.put("auto.offset.reset", "none");
-      consumerProperties.put("enable.auto.commit", "false");
       addFilteredProperties(consumerProperties);
 
       spec = getTaskAsString(INDEXER_FILE);
