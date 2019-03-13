@@ -1887,22 +1887,25 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     // Check only for the first record among the record batch.
     if (initialOffsetsSnapshot.contains(record.getPartitionId())) {
-      final SequenceOffsetType currOffset = currOffsets.get(record.getPartitionId());
-      if (currOffset != null) {
-        final OrderedSequenceNumber<SequenceOffsetType> recordSequenceNumber = createSequenceNumber(
-            record.getSequenceNumber()
+      final SequenceOffsetType currOffset = Preconditions.checkNotNull(
+          currOffsets.get(record.getPartitionId()),
+          "Current offset is null for sequenceNumber[%s] and partitionId[%s]",
+          record.getSequenceNumber(),
+          record.getPartitionId()
+      );
+      final OrderedSequenceNumber<SequenceOffsetType> recordSequenceNumber = createSequenceNumber(
+          record.getSequenceNumber()
+      );
+      final OrderedSequenceNumber<SequenceOffsetType> currentSequenceNumber = createSequenceNumber(
+          currOffset
+      );
+      if (recordSequenceNumber.compareTo(currentSequenceNumber) < 0) {
+        throw new ISE(
+            "sequenceNumber of the start record[%s] is smaller than current sequenceNumber[%s] for partition[%s]",
+            record.getSequenceNumber(),
+            currOffset,
+            record.getPartitionId()
         );
-        final OrderedSequenceNumber<SequenceOffsetType> currentSequenceNumber = createSequenceNumber(
-            currOffset
-        );
-        if (recordSequenceNumber.compareTo(currentSequenceNumber) < 0) {
-          throw new ISE(
-              "sequenceNumber of the start record[%s] is smaller than current sequenceNumber[%s] for partition [%s]",
-              record.getSequenceNumber(),
-              currOffset,
-              record.getPartitionId()
-          );
-        }
       }
 
       // Remove the mark to notify that this partition has been read.
@@ -1910,7 +1913,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
       // check exclusive starting sequence
       if (isStartingSequenceOffsetsExclusive() && exclusiveStartingPartitions.contains(record.getPartitionId())) {
-        log.warn("Skipping starting sequenceNumber for partition [%s] marked exclusive", record.getPartitionId());
+        log.info("Skipping starting sequenceNumber for partition[%s] marked exclusive", record.getPartitionId());
 
         return false;
       }
