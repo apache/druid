@@ -81,7 +81,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -149,6 +148,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.easymock.EasyMock;
@@ -225,8 +225,6 @@ public class KafkaIndexTaskTest
   private final Set<Integer> checkpointRequestsHash = new HashSet<>();
   private File reportsFile;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
-
-  private int handoffCount = 0;
 
   // This should be removed in versions greater that 0.12.x
   // isIncrementalHandoffSupported should always be set to true in those later versions
@@ -877,7 +875,14 @@ public class KafkaIndexTaskTest
         new ProducerRecord<>(topic, 0, null, jb("2011", "d", "y", "10", "20.0", "1.0")),
         new ProducerRecord<>(topic, 0, null, jb("2011", "D", "y", "10", "20.0", "1.0")),
         new ProducerRecord<>(topic, 0, null, jb("2012", "e", "y", "10", "20.0", "1.0")),
-        new ProducerRecord<>(topic, 0, null, jb("2009", "B", "y", "10", "20.0", "1.0"))
+        new ProducerRecord<>(topic, 0, null, jb("2009", "B", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2008", "A", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2009", "B", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2010", "C", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2011", "D", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2011", "d", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2012", "E", "x", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 0, null, jb("2009", "b", "x", "10", "20.0", "1.0"))
     );
 
     final String baseSequenceName = "sequence0";
@@ -904,9 +909,13 @@ public class KafkaIndexTaskTest
         topic,
         ImmutableMap.of(0, 5L)
     );
+    final SeekableStreamPartitions<Integer, Long> checkpoint2 = new SeekableStreamPartitions<>(
+        topic,
+        ImmutableMap.of(0, 12L)
+    );
     final SeekableStreamPartitions<Integer, Long> endPartitions = new SeekableStreamPartitions<>(
         topic,
-        ImmutableMap.of(0, 7L)
+        ImmutableMap.of(0, Long.MAX_VALUE)
     );
 
     final KafkaIndexTask task = createTask(
@@ -927,17 +936,28 @@ public class KafkaIndexTaskTest
     while (task.getRunner().getStatus() != Status.PAUSED) {
       Thread.sleep(10);
     }
-    final Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertTrue(checkpoint1.getPartitionSequenceNumberMap().equals(currentOffsets));
+    Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
 
-    // actual checkpoint offset is 5, but simulating behavior of publishing set end offset call, to ensure this task
-    // will continue reading through the end offset of the checkpointed sequence
-    task.getRunner().setEndOffsets(ImmutableMap.of(0, 6L), true);
+    // Simulating the case when another replica has consumed up to the offset of 8
+    task.getRunner().setEndOffsets(ImmutableMap.of(0, 8L), false);
+
+    // The task is supposed to consume remaining rows up to the offset of 13
+    while (task.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), currentOffsets);
+
+    task.getRunner().setEndOffsets(
+        ImmutableMap.of(0, task.getRunner().getCurrentOffsets().get(0) + 1L),
+        true
+    );
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
-    // processed count would be 5 if it stopped at it's current offsets
-    Assert.assertEquals(6, task.getRunner().getRowIngestionMeters().getProcessed());
+    // processed count would be 8 if it stopped at it's current offsets
+    Assert.assertEquals(13, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
   }
