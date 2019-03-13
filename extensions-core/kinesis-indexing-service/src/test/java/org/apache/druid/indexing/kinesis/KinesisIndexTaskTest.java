@@ -86,7 +86,6 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -147,6 +146,7 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
