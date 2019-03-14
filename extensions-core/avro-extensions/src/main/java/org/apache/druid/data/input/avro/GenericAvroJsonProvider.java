@@ -138,15 +138,7 @@ public class GenericAvroJsonProvider implements JsonProvider
       throw new UnsupportedOperationException();
     }
   }
-  
-  private Object transformAvroMapKey(String keyToTransform, Map avroMapObj) {
-    Object key = avroMapObj.keySet().iterator().next();
-    if (key instanceof Utf8) {
-      return new Utf8(keyToTransform);
-    }
-    return keyToTransform;
-  }
-  
+
   @Override
   public Object getMapValue(final Object o, final String s)
   {
@@ -155,7 +147,13 @@ public class GenericAvroJsonProvider implements JsonProvider
     } else if (o instanceof GenericRecord) {
       return ((GenericRecord) o).get(s);
     } else if (o instanceof Map) {
-      return ((Map) o).get(transformAvroMapKey(s,(Map) o));
+      final Map theMap = (Map) o;
+      if (theMap.containsKey(s)) {
+        return theMap.get(s);
+      } else {
+        final Utf8 utf8Key = new Utf8(s);
+        return theMap.get(utf8Key);
+      }
     } else {
       throw new UnsupportedOperationException(o.getClass().getName());
     }
