@@ -124,11 +124,12 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                               return null;
                             }
                             catch (QueryInterruptedException e) {
-                              throw Throwables.propagate(e);
+                              throw new RuntimeException(e);
                             }
                             catch (Exception e) {
                               log.error(e, "Exception with one of the sequences!");
-                              throw Throwables.propagate(e);
+                              Throwables.propagateIfPossible(e);
+                              throw new RuntimeException(e);
                             }
                           }
                         }
@@ -202,7 +203,8 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
     }
     catch (ExecutionException e) {
       closeOnFailure.close();
-      throw Throwables.propagate(e.getCause());
+      Throwables.propagateIfPossible(e.getCause());
+      throw new RuntimeException(e.getCause());
     }
   }
 }

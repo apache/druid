@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.indexer;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -83,7 +82,7 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     try {
       reader = new BufferedReader(isr);
@@ -131,7 +130,7 @@ public class ITRealtimeIndexTaskTest extends AbstractITRealtimeIndexTaskTest
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       reader.close();

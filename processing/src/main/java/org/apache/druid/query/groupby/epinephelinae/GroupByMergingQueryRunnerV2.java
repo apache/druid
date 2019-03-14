@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -254,7 +253,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
                                       }
                                       catch (Exception e) {
                                         log.error(e, "Exception with one of the sequences!");
-                                        throw Throwables.propagate(e);
+                                        throw new RuntimeException(e);
                                       }
                                     }
                                   }
@@ -386,7 +385,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner<Row>
       throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
-      throw Throwables.propagate(e.getCause());
+      throw new RuntimeException(e);
     }
   }
 

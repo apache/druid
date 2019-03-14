@@ -22,7 +22,6 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.updater.HadoopDruidConverterConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -174,7 +173,7 @@ public class JobHelper
           );
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     }
@@ -344,7 +343,7 @@ public class JobHelper
       config.addInputPaths(job);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -673,7 +672,7 @@ public class JobHelper
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -858,7 +857,7 @@ public class JobHelper
     }
     catch (Exception e) {
       log.error(e, "Failed to cleanup path[%s]", path);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
