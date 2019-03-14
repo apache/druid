@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiFunction;
 
 public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
 {
@@ -148,17 +149,16 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   }
 
   void updateAssignments(
-      SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType> runner,
-      Map<PartitionIdType, SequenceOffsetType> nextPartitionOffset
+      Map<PartitionIdType, SequenceOffsetType> currOffsets,
+      BiFunction<SequenceOffsetType, SequenceOffsetType, Boolean> moreToReadFn
   )
   {
     lock.lock();
     try {
       assignments.clear();
-      nextPartitionOffset.forEach((key, value) -> {
+      currOffsets.forEach((key, value) -> {
         SequenceOffsetType endOffset = endOffsets.get(key);
-        if (SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset)
-            || runner.createSequenceNumber(endOffset).compareTo(runner.createSequenceNumber(nextPartitionOffset.get(key))) > 0) {
+        if (moreToReadFn.apply(value, endOffset)) {
           assignments.add(key);
         }
       });
@@ -188,14 +188,15 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         return false;
       }
       boolean ret;
-      if (runner.isStartingSequenceOffsetsExclusive()) {
+      if (!runner.isEndOffsetExclusive()) {
+        // Inclusive endOffsets mean that we must skip the first record of any partition that has been read before.
         ret = recordOffset.compareTo(partitionStartOffset)
               >= (getExclusiveStartPartitions().contains(record.getPartitionId()) ? 1 : 0);
       } else {
         ret = recordOffset.compareTo(partitionStartOffset) >= 0;
       }
 
-      if (runner.isEndSequenceOffsetsExclusive()) {
+      if (runner.isEndOffsetExclusive()) {
         ret &= recordOffset.compareTo(partitionEndOffset) < 0;
       } else {
         ret &= recordOffset.compareTo(partitionEndOffset) <= 0;

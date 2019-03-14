@@ -706,17 +706,10 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   }
 
   @Override
-  protected boolean isEndSequenceOffsetsExclusive()
+  protected boolean isEndOffsetExclusive()
   {
-    return false;
+    return true;
   }
-
-  @Override
-  protected boolean isStartingSequenceOffsetsExclusive()
-  {
-    return false;
-  }
-
 
   @Override
   protected SeekableStreamPartitions<Integer, Long> deserializePartitionsFromMetadata(
@@ -805,7 +798,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   }
 
   @Override
-  protected Long getSequenceNumberToStoreAfterRead(Long sequenceNumber)
+  protected Long getNextStartOffset(Long sequenceNumber)
   {
     throw new UnsupportedOperationException();
   }
