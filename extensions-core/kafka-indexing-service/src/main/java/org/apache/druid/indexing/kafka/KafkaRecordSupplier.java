@@ -67,7 +67,6 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
                         .stream()
                         .map(x -> new TopicPartition(x.getStream(), x.getPartitionId()))
                         .collect(Collectors.toSet()));
-    seekToEarliest(streamPartitions);
   }
 
   @Override
