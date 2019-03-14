@@ -2237,8 +2237,8 @@ public class KafkaIndexTaskTest
     try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
       kafkaProducer.initTransactions();
       kafkaProducer.beginTransaction();
-      for (int i = 0; i < numToAdd; i++) {
-        kafkaProducer.send(records.get(i)).get();
+      for (ProducerRecord<byte[], byte[]> record : records) {
+        kafkaProducer.send(record).get();
       }
       kafkaProducer.commitTransaction();
     }
