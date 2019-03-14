@@ -454,24 +454,23 @@ interface Function
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+
+      ExprEval value1 = args.get(0).eval(bindings);
+      if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
+        throw new IAE("The first argument to the function[%s] should be integer or double type but get the %s type", name(), value1.type());
+      }
+
       if (args.size() == 1) {
-        ExprEval value1 = args.get(0).eval(bindings);
-        if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
-          throw new IAE("first argument should be integer or double type but got %s type", value1.type());
-        }
         return eval(value1);
-      } else if (args.size() == 2) {
-        ExprEval value1 = args.get(0).eval(bindings);
+      } else {
         ExprEval value2 = args.get(1).eval(bindings);
-        if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
-          throw new IAE("first argument should be integer or double type but got %s type", value1.type());
-        }
         if (value2.type() != ExprType.LONG) {
-          throw new IAE("second argument should be integer type but got %s type", value2.type());
+          throw new IAE("The second argument to the function[%s] should be integer type but get the %s type", name(), value2.type());
         }
         return eval(value1, value2.asInt());
-      } else {
-        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
       }
     }
 
