@@ -911,7 +911,7 @@ public class KafkaIndexTaskTest
     final SeekableStreamPartitions<Integer, Long> checkpoint1 =
         new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 5L));
     final SeekableStreamPartitions<Integer, Long> checkpoint2 =
-        new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 12L));
+        new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, 9L));
     final SeekableStreamPartitions<Integer, Long> endPartitions =
         new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, Long.MAX_VALUE));
 
