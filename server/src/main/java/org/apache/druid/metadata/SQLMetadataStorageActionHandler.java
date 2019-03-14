@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import org.apache.druid.indexer.TaskInfo;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -81,7 +82,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   )
   {
     this.connector = connector;
-    this.jsonMapper = jsonMapper;
+    this.jsonMapper = new DefaultObjectMapper((DefaultObjectMapper) jsonMapper).addMixIn(org.apache.druid.metadata.PasswordProvider.class, org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
     this.logType = types.getLogType();
