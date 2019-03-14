@@ -203,7 +203,7 @@ public class BasicHTTPAuthenticator implements Authenticator
   {
     Map<String, BasicAuthenticatorUser> userMap = cacheManager.get().getUserMap(name);
     if (userMap == null) {
-      throw new IAE("No authenticator found with prefix: [%s]", name);
+      throw new IAE("No userMap is available for authenticator: [%s]", name);
     }
 
     BasicAuthenticatorUser user = userMap.get(username);
