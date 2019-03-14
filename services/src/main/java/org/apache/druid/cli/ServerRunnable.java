@@ -92,7 +92,7 @@ public abstract class ServerRunnable extends GuiceRunnable
 
   /**
    * This is a helper class used by CliXXX classes to announce {@link DiscoveryDruidNode}
-   * as part of {@link Lifecycle.Stage#LAST}.
+   * as part of {@link Lifecycle.Stage#ANNOUNCEMENTS}.
    */
   protected static class DiscoverySideEffectsProvider implements Provider<DiscoverySideEffectsProvider.Child>
   {
@@ -199,7 +199,7 @@ public abstract class ServerRunnable extends GuiceRunnable
               announcer.unannounce(discoveryDruidNode);
             }
           },
-          Lifecycle.Stage.LAST
+          Lifecycle.Stage.ANNOUNCEMENTS
       );
 
       return new Child();

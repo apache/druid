@@ -28,7 +28,6 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -39,6 +38,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.URIDataPuller;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.tools.FileObject;
 import java.io.File;

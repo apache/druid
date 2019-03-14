@@ -322,14 +322,16 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     );
   }
 
+  @SuppressWarnings("ObjectEquality")
   private void unlock(DataSegment dataSegment, ReferenceCountingLock lock)
   {
     segmentLocks.compute(
         dataSegment,
         (segment, existingLock) -> {
-          //noinspection ObjectEquality
-          if (existingLock == null || existingLock != lock) {
-            throw new ISE("WTH? Different createOrGetLock instance");
+          if (existingLock == null) {
+            throw new ISE("WTH? the given lock has already been removed");
+          } else if (existingLock != lock) {
+            throw new ISE("WTH? Different lock instance");
           } else {
             if (existingLock.numReferences == 1) {
               return null;

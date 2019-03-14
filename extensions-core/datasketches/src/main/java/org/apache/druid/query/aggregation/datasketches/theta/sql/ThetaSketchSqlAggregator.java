@@ -41,13 +41,13 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -70,7 +70,7 @@ public class ThetaSketchSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
+      DruidQuerySignature querySignature,
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
@@ -79,6 +79,7 @@ public class ThetaSketchSqlAggregator implements SqlAggregator
       boolean finalizeAggregations
   )
   {
+    final RowSignature rowSignature = querySignature.getRowSignature();
     // Don't use Aggregations.getArgumentsForSimpleAggregator, since it won't let us use direct column access
     // for string columns.
     final RexNode columnRexNode = Expressions.fromFieldAccess(
@@ -135,10 +136,10 @@ public class ThetaSketchSqlAggregator implements SqlAggregator
       if (columnArg.isDirectColumnAccess()) {
         dimensionSpec = columnArg.getSimpleExtraction().toDimensionSpec(null, inputType);
       } else {
-        final ExpressionVirtualColumn virtualColumn = columnArg.toVirtualColumn(
-            Calcites.makePrefixedName(name, "v"),
-            inputType,
-            plannerContext.getExprMacroTable()
+        VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+            plannerContext,
+            columnArg,
+            sqlTypeName
         );
         dimensionSpec = new DefaultDimensionSpec(virtualColumn.getOutputName(), null, inputType);
         virtualColumns.add(virtualColumn);

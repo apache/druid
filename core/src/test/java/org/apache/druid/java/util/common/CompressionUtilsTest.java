@@ -28,6 +28,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream;
+import org.apache.druid.utils.CompressionUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -352,7 +353,7 @@ public class CompressionUtilsTest
 
     File evilZip = new File(tmpDir, "evil.zip");
     java.nio.file.Files.deleteIfExists(evilZip.toPath());
-    CompressionUtils.makeEvilZip(evilZip);
+    CompressionUtilsTest.makeEvilZip(evilZip);
 
     try {
       CompressionUtils.unzip(evilZip, tmpDir);
@@ -375,7 +376,7 @@ public class CompressionUtilsTest
 
     File evilZip = new File(tmpDir, "evil.zip");
     java.nio.file.Files.deleteIfExists(evilZip.toPath());
-    CompressionUtils.makeEvilZip(evilZip);
+    CompressionUtilsTest.makeEvilZip(evilZip);
 
     try {
       CompressionUtils.unzip(new FileInputStream(evilZip), tmpDir);
@@ -728,5 +729,17 @@ public class CompressionUtilsTest
     {
       return 0;
     }
+  }
+
+  // Helper method for unit tests (for checking that we fixed https://snyk.io/research/zip-slip-vulnerability)
+  public static void makeEvilZip(File outputFile) throws IOException
+  {
+    ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(outputFile));
+    ZipEntry zipEntry = new ZipEntry("../../../../../../../../../../../../../../../tmp/evil.txt");
+    zipOutputStream.putNextEntry(zipEntry);
+    byte[] output = StringUtils.toUtf8("evil text");
+    zipOutputStream.write(output);
+    zipOutputStream.closeEntry();
+    zipOutputStream.close();
   }
 }

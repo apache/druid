@@ -493,7 +493,7 @@ public class BloomFilterSqlAggregatorTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "a0:agg:v",
+                    "v0",
                     "(\"l1\" * 2)",
                     ValueType.LONG,
                     TestExprMacroTable.INSTANCE
@@ -503,7 +503,7 @@ public class BloomFilterSqlAggregatorTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("a0:agg:v", "a0:agg:v"),
+                        new DefaultDimensionSpec("v0", "v0"),
                         TEST_NUM_ENTRIES
                     )
                 )
@@ -556,7 +556,7 @@ public class BloomFilterSqlAggregatorTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "a0:agg:v",
+                    "v0",
                     "(\"f1\" * 2)",
                     ValueType.FLOAT,
                     TestExprMacroTable.INSTANCE
@@ -566,7 +566,7 @@ public class BloomFilterSqlAggregatorTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("a0:agg:v", "a0:agg:v"),
+                        new DefaultDimensionSpec("v0", "v0"),
                         TEST_NUM_ENTRIES
                     )
                 )
@@ -619,7 +619,7 @@ public class BloomFilterSqlAggregatorTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "a0:agg:v",
+                    "v0",
                     "(\"d1\" * 2)",
                     ValueType.DOUBLE,
                     TestExprMacroTable.INSTANCE
@@ -629,7 +629,7 @@ public class BloomFilterSqlAggregatorTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("a0:agg:v", "a0:agg:v"),
+                        new DefaultDimensionSpec("v0", "v0"),
                         TEST_NUM_ENTRIES
                     )
                 )

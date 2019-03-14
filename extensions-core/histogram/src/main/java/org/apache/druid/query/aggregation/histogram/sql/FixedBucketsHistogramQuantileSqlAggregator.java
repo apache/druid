@@ -38,13 +38,13 @@ import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogram;
 import org.apache.druid.query.aggregation.histogram.FixedBucketsHistogramAggregatorFactory;
 import org.apache.druid.query.aggregation.histogram.QuantilePostAggregator;
 import org.apache.druid.segment.VirtualColumn;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 import org.apache.druid.sql.calcite.table.RowSignature;
 
 import javax.annotation.Nullable;
@@ -66,7 +66,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
+      DruidQuerySignature querySignature,
       RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
@@ -75,6 +75,7 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
       boolean finalizeAggregations
   )
   {
+    final RowSignature rowSignature = querySignature.getRowSignature();
     final DruidExpression input = Expressions.toDruidExpression(
         plannerContext,
         rowSignature,
@@ -233,10 +234,10 @@ public class FixedBucketsHistogramQuantileSqlAggregator implements SqlAggregator
           outlierHandlingMode
       );
     } else {
-      final ExpressionVirtualColumn virtualColumn = input.toVirtualColumn(
-          StringUtils.format("%s:v", name),
-          ValueType.FLOAT,
-          plannerContext.getExprMacroTable()
+      VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+          plannerContext,
+          input,
+          SqlTypeName.FLOAT
       );
       virtualColumns.add(virtualColumn);
       aggregatorFactory = new FixedBucketsHistogramAggregatorFactory(
