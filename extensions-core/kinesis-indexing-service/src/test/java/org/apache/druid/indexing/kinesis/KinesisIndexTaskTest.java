@@ -177,6 +177,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -639,7 +640,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", desc6));
     Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc7));
   }
-
 
   @Test(timeout = 120_000L)
   public void testIncrementalHandOffMaxTotalRows() throws Exception
@@ -2278,7 +2278,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     verifyAll();
 
-    Map<String, String> currentOffsets = task.getRunner().getCurrentOffsets();
+    ConcurrentMap<String, String> currentOffsets = task.getRunner().getCurrentOffsets();
 
     try {
       future.get(10, TimeUnit.SECONDS);
@@ -2422,6 +2422,154 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     // Check segments in deep storage
     Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
+  }
+
+  @Test(timeout = 5000L)
+  public void testIncrementalHandOffReadsThroughEndOffsets() throws Exception
+  {
+    final List<OrderedPartitionableRecord<String, String>> records = ImmutableList.of(
+        new OrderedPartitionableRecord<>(stream, "1", "0", JB("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "1", JB("2009", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "2", JB("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "3", JB("2011", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "4", JB("2011", "e", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "5", JB("2012", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "6", JB("2013", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "7", JB("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "8", JB("2011", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "9", JB("2011", "e", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "10", JB("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "11", JB("2009", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "12", JB("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "13", JB("2012", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "14", JB("2013", "e", "y", "10", "20.0", "1.0"))
+    );
+
+    final String baseSequenceName = "sequence0";
+    // as soon as any segment has more than one record, incremental publishing should happen
+    maxRowsPerSegment = 2;
+    maxRecordsPerPoll = 1;
+
+    recordSupplier.assign(anyObject());
+    expectLastCall().anyTimes();
+
+    expect(recordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
+
+    recordSupplier.seek(anyObject(), anyString());
+    expectLastCall().anyTimes();
+
+    expect(recordSupplier.poll(anyLong())).andReturn(records.subList(0, 5))
+                                          .once()
+                                          .andReturn(records.subList(4, 10))
+                                          .once()
+                                          .andReturn(records.subList(9, 15))
+                                          .once();
+
+    recordSupplier.close();
+    expectLastCall().once();
+
+    replayAll();
+
+    final SeekableStreamPartitions<String, String> startPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            "0"
+        )
+    );
+
+    final SeekableStreamPartitions<String, String> checkpoint1 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            "4"
+        )
+    );
+
+    final SeekableStreamPartitions<String, String> checkpoint2 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            "9"
+        )
+    );
+
+    final SeekableStreamPartitions<String, String> endPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(
+            shardId1,
+            "14"
+        )
+    );
+    final KinesisIndexTask task = createTask(
+        null,
+        new KinesisIndexTaskIOConfig(
+            null,
+            baseSequenceName,
+            startPartitions,
+            endPartitions,
+            true,
+            null,
+            null,
+            "awsEndpoint",
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+    final ListenableFuture<TaskStatus> future = runTask(task);
+    while (task.getRunner().getStatus() != SeekableStreamIndexTaskRunner.Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
+    task.getRunner().setEndOffsets(currentOffsets, false);
+
+    // The task is supposed to consume remaining rows up to the offset of 13
+    while (task.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), currentOffsets);
+
+    task.getRunner().setEndOffsets(
+        ImmutableMap.of(shardId1, String.valueOf(Long.valueOf(task.getRunner().getCurrentOffsets().get(shardId1)) + 1)),
+        true
+    );
+
+    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+
+    verifyAll();
+
+    Assert.assertEquals(2, checkpointRequestsHash.size());
+
+    // Check metrics
+    Assert.assertEquals(12, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    final Set<SegmentDescriptor> descriptors = new HashSet<>();
+    descriptors.add(SD(task, "2008/P1D", 0));
+    descriptors.add(SD(task, "2008/P1D", 1));
+    descriptors.add(SD(task, "2009/P1D", 0));
+    descriptors.add(SD(task, "2010/P1D", 0));
+    descriptors.add(SD(task, "2010/P1D", 1));
+    descriptors.add(SD(task, "2011/P1D", 0));
+    descriptors.add(SD(task, "2011/P1D", 1));
+    descriptors.add(SD(task, "2012/P1D", 0));
+    descriptors.add(SD(task, "2013/P1D", 0));
+    Assert.assertEquals(descriptors, publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+            shardId1,
+            "10"
+        ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
   }
 
   private ListenableFuture<TaskStatus> runTask(final Task task)
