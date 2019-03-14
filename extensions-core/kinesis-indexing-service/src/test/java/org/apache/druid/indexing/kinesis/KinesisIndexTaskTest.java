@@ -3237,15 +3237,15 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     {
       super(
           id,
-          null,
+          taskResource,
           dataSchema,
           tuningConfig,
           ioConfig,
           context,
-          null,
-          null,
+          chatHandlerProvider,
+          authorizerMapper,
           rowIngestionMetersFactory,
-          null
+          awsCredentialsConfig
       );
     }
 
