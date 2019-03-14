@@ -86,6 +86,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -914,7 +915,7 @@ public class KafkaIndexTaskTest
     final SeekableStreamPartitions<Integer, Long> endPartitions =
         new SeekableStreamPartitions<>(topic, ImmutableMap.of(0, Long.MAX_VALUE));
 
-    final KafkaIndexTask task = createTask(
+    final KafkaIndexTask normalReplica = createTask(
         null,
         new KafkaIndexTaskIOConfig(
             0,
@@ -928,34 +929,68 @@ public class KafkaIndexTaskTest
             null
         )
     );
-    final ListenableFuture<TaskStatus> future = runTask(task);
-    while (task.getRunner().getStatus() != Status.PAUSED) {
-      Thread.sleep(10);
-    }
-    Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
-
-    // Simulating the case when another replica has consumed up to the offset of 8
-    task.getRunner().setEndOffsets(ImmutableMap.of(0, 8L), false);
-
-    // The task is supposed to consume remaining rows up to the offset of 13
-    while (task.getRunner().getStatus() != Status.PAUSED) {
-      Thread.sleep(10);
-    }
-    currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), currentOffsets);
-
-    task.getRunner().setEndOffsets(
-        ImmutableMap.of(0, task.getRunner().getCurrentOffsets().get(0) + 1L),
-        true
+    final KafkaIndexTask staleReplica = createTask(
+        null,
+        new KafkaIndexTaskIOConfig(
+            0,
+            baseSequenceName,
+            startPartitions,
+            endPartitions,
+            consumerProps,
+            KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS,
+            true,
+            null,
+            null
+        )
     );
 
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    final ListenableFuture<TaskStatus> normalReplicaFuture = runTask(normalReplica);
+    // Simulating one replica is slower than the other
+    final ListenableFuture<TaskStatus> staleReplicaFuture = ListenableFutures.transformAsync(
+        taskExec.submit(() -> {
+          Thread.sleep(1000);
+          return staleReplica;
+        }),
+        this::runTask
+    );
 
-    // processed count would be 8 if it stopped at it's current offsets
-    Assert.assertEquals(13, task.getRunner().getRowIngestionMeters().getProcessed());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
+    while (normalReplica.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    staleReplica.getRunner().pause();
+    while (staleReplica.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    Map<Integer, Long> currentOffsets = ImmutableMap.copyOf(normalReplica.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
+
+    normalReplica.getRunner().setEndOffsets(currentOffsets, false);
+    staleReplica.getRunner().setEndOffsets(currentOffsets, false);
+
+    while (normalReplica.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    while (staleReplica.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    currentOffsets = ImmutableMap.copyOf(normalReplica.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), currentOffsets);
+    currentOffsets = ImmutableMap.copyOf(staleReplica.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), currentOffsets);
+
+    normalReplica.getRunner().setEndOffsets(currentOffsets, true);
+    staleReplica.getRunner().setEndOffsets(currentOffsets, true);
+
+    Assert.assertEquals(TaskState.SUCCESS, normalReplicaFuture.get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, staleReplicaFuture.get().getStatusCode());
+
+    Assert.assertEquals(9, normalReplica.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, normalReplica.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, normalReplica.getRunner().getRowIngestionMeters().getThrownAway());
+
+    Assert.assertEquals(9, staleReplica.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, staleReplica.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, staleReplica.getRunner().getRowIngestionMeters().getThrownAway());
   }
 
   @Test(timeout = 60_000L)

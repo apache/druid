@@ -534,6 +534,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 } else {
                   rows = new ArrayList<>();
                   for (byte[] valueBytes : valueBytess) {
+                    log.info("valueBytes len: " + valueBytes.length);
                     rows.addAll(parser.parseBatch(ByteBuffer.wrap(valueBytes)));
                   }
                 }
