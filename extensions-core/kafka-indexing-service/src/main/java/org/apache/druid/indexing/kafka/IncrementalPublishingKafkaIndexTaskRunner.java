@@ -84,7 +84,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected Long getSequenceNumberToStoreAfterRead(@NotNull Long sequenceNumber)
+  protected Long getNextStartOffset(@NotNull Long sequenceNumber)
   {
     return sequenceNumber + 1;
   }
@@ -209,15 +209,9 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected boolean isEndSequenceOffsetsExclusive()
+  protected boolean isEndOffsetExclusive()
   {
     return true;
-  }
-
-  @Override
-  protected boolean isStartingSequenceOffsetsExclusive()
-  {
-    return false;
   }
 
   @Override

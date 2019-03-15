@@ -142,6 +142,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   static final String METADATA_PUBLISH_PARTITIONS = "publishPartitions";
 
   private final Map<PartitionIdType, SequenceOffsetType> endOffsets;
+
+  // lastReadOffsets are the last offsets that were read and processed.
+  private final Map<PartitionIdType, SequenceOffsetType> lastReadOffsets = new HashMap<>();
+
+  // currOffsets are what should become the start offsets of the next reader, if we stopped reading now. They are
+  // initialized to the start offsets when the task begins.
   private final ConcurrentMap<PartitionIdType, SequenceOffsetType> currOffsets = new ConcurrentHashMap<>();
   private final ConcurrentMap<PartitionIdType, SequenceOffsetType> lastPersistedOffsets = new ConcurrentHashMap<>();
 
@@ -192,8 +198,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private final Set<String> publishingSequences = Sets.newConcurrentHashSet();
   private final List<ListenableFuture<SegmentsAndMetadata>> publishWaitList = new ArrayList<>();
   private final List<ListenableFuture<SegmentsAndMetadata>> handOffWaitList = new ArrayList<>();
-  private final Set<PartitionIdType> initialOffsetsSnapshot = new HashSet<>();
-  private final Set<PartitionIdType> exclusiveStartingPartitions = new HashSet<>();
 
   private volatile DateTime startTime;
   private volatile Status status = Status.NOT_STARTED; // this is only ever set by the task runner thread (runThread)
@@ -272,7 +276,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         Map.Entry<Integer, Map<PartitionIdType, SequenceOffsetType>> previous = sequenceOffsets.next();
         while (sequenceOffsets.hasNext()) {
           Map.Entry<Integer, Map<PartitionIdType, SequenceOffsetType>> current = sequenceOffsets.next();
-          sequences.add(new SequenceMetadata<>(
+          addSequence(new SequenceMetadata<>(
               previous.getKey(),
               StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
               previous.getValue(),
@@ -283,7 +287,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           previous = current;
           exclusive = true;
         }
-        sequences.add(new SequenceMetadata<>(
+        addSequence(new SequenceMetadata<>(
             previous.getKey(),
             StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), previous.getKey()),
             previous.getValue(),
@@ -292,7 +296,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             exclusive ? previous.getValue().keySet() : null
         ));
       } else {
-        sequences.add(new SequenceMetadata<>(
+        addSequence(new SequenceMetadata<>(
             0,
             StringUtils.format("%s_%s", ioConfig.getBaseSequenceName(), 0),
             ioConfig.getStartPartitions().getPartitionSequenceNumberMap(),
@@ -408,6 +412,21 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         );
       }
 
+      // Initialize lastReadOffsets immediately after restoring currOffsets. This is only done when end offsets are
+      // inclusive, because the point of initializing lastReadOffsets here is so we know when to skip the start record.
+      // When end offsets are exclusive, we never skip the start record.
+      if (!isEndOffsetExclusive()) {
+        for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : currOffsets.entrySet()) {
+          final boolean isAtStart = entry.getValue().equals(
+              ioConfig.getStartPartitions().getPartitionSequenceNumberMap().get(entry.getKey())
+          );
+
+          if (!isAtStart || ioConfig.getExclusiveStartSequenceNumberPartitions().contains(entry.getKey())) {
+            lastReadOffsets.put(entry.getKey(), entry.getValue());
+          }
+        }
+      }
+
       // Set up committer.
       final Supplier<Committer> committerSupplier = () -> {
         final Map<PartitionIdType, SequenceOffsetType> snapshot = ImmutableMap.copyOf(currOffsets);
@@ -450,17 +469,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       status = Status.READING;
       Throwable caughtExceptionInner = null;
 
-      initialOffsetsSnapshot.addAll(currOffsets.keySet());
-      exclusiveStartingPartitions.addAll(ioConfig.getExclusiveStartSequenceNumberPartitions());
-
       try {
         while (stillReading) {
           if (possiblyPause()) {
             // The partition assignments may have changed while paused by a call to setEndOffsets() so reassign
-            // partitions upon resuming. This is safe even if the end sequences have not been modified.
+            // partitions upon resuming. Don't call "seekToStartingSequence" after "assignPartitions", because there's
+            // no need to re-seek here. All we're going to be doing is dropping partitions.
             assignment = assignPartitions(recordSupplier);
             possiblyResetDataSourceMetadata(toolbox, recordSupplier, assignment, currOffsets);
-            seekToStartingSequence(recordSupplier, assignment);
 
             if (assignment.isEmpty()) {
               log.info("All partitions have been fully read");
@@ -470,7 +486,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           }
 
           // if stop is requested or task's end sequence is set by call to setEndOffsets method with finish set to true
-          if (stopRequested.get() || sequences.get(sequences.size() - 1).isCheckpointed()) {
+          if (stopRequested.get() || sequences.size() == 0 || sequences.get(sequences.size() - 1).isCheckpointed()) {
             status = Status.PUBLISHING;
           }
 
@@ -498,44 +514,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           SequenceMetadata sequenceToCheckpoint = null;
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record : records) {
-
-            // for Kafka, the end offsets are exclusive, so skip it
-            if (isEndSequenceOffsetsExclusive() &&
-                createSequenceNumber(record.getSequenceNumber()).compareTo(
-                    createSequenceNumber(endOffsets.get(record.getPartitionId()))) == 0) {
-              continue;
-            }
-
-            // for the first message we receive, check that we were given a message with a sequenceNumber that matches
-            // our expected starting sequenceNumber
-            if (!verifyInitialRecordAndSkipExclusivePartition(record)) {
-              continue;
-            }
+            final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
             log.trace(
-                "Got stream[%s] partition[%s] sequence[%s].",
+                "Got stream[%s] partition[%s] sequenceNumber[%s], shouldProcess[%s].",
                 record.getStream(),
                 record.getPartitionId(),
-                record.getSequenceNumber()
+                record.getSequenceNumber(),
+                shouldProcess
             );
 
-            if (isEndOfShard(record.getSequenceNumber())) {
-              // shard is closed, applies to Kinesis only
-              currOffsets.put(record.getPartitionId(), record.getSequenceNumber());
-            } else if (createSequenceNumber(record.getSequenceNumber()).compareTo(
-                createSequenceNumber(endOffsets.get(record.getPartitionId()))) <= 0) {
-
-
-              if (!record.getSequenceNumber().equals(currOffsets.get(record.getPartitionId()))
-                  && !ioConfig.isSkipOffsetGaps()) {
-                throw new ISE(
-                    "WTF?! Got sequence[%s] after sequence[%s] in partition[%s].",
-                    record.getSequenceNumber(),
-                    currOffsets.get(record.getPartitionId()),
-                    record.getPartitionId()
-                );
-              }
-
+            if (shouldProcess) {
               try {
                 final List<byte[]> valueBytess = record.getData();
                 final List<InputRow> rows;
@@ -557,7 +546,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
                 if (sequenceToUse == null) {
                   throw new ISE(
-                      "WTH?! cannot find any valid sequence for record with partition [%d] and sequence [%d]. Current sequences: %s",
+                      "WTH?! cannot find any valid sequence for record with partition [%s] and sequenceNumber [%s]. Current sequences: %s",
                       record.getPartitionId(),
                       record.getSequenceNumber(),
                       sequences
@@ -627,12 +616,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               // in kafka, we can easily get the next offset by adding 1, but for kinesis, there's no way
               // to get the next sequence number without having to make an expensive api call. So the behavior
               // here for kafka is to +1 while for kinesis we simply save the current sequence number
-              currOffsets.put(record.getPartitionId(), getSequenceNumberToStoreAfterRead(record.getSequenceNumber()));
+              lastReadOffsets.put(record.getPartitionId(), record.getSequenceNumber());
+              currOffsets.put(record.getPartitionId(), getNextStartOffset(record.getSequenceNumber()));
             }
 
-            if ((currOffsets.get(record.getPartitionId()).equals(endOffsets.get(record.getPartitionId()))
-                 || isEndOfShard(currOffsets.get(record.getPartitionId())))
-                && assignment.remove(record.getStreamPartition())) {
+            // Use record.getSequenceNumber() in the moreToRead check, since currOffsets might not have been
+            // updated if we were skipping records for being beyond the end.
+            final boolean moreToReadAfterThisRecord = isMoreToReadAfterReadingRecord(
+                record.getSequenceNumber(),
+                endOffsets.get(record.getPartitionId())
+            );
+
+            if (!moreToReadAfterThisRecord && assignment.remove(record.getStreamPartition())) {
               log.info("Finished reading stream[%s], partition[%s].", record.getStream(), record.getPartitionId());
               recordSupplier.assign(assignment);
               stillReading = !assignment.isEmpty();
@@ -698,11 +693,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         status = Status.PUBLISHING;
       }
 
-      for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
+      for (int i = 0; i < sequences.size(); i++) {
+        final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata = sequences.get(i);
         if (!publishingSequences.contains(sequenceMetadata.getSequenceName())) {
-          // this is done to prevent checks in sequence specific commit supplier from failing
-          sequenceMetadata.setEndOffsets(currOffsets);
-          sequenceMetadata.updateAssignments(this, currOffsets);
+          final boolean isLast = i == (sequences.size() - 1);
+          if (isLast) {
+            // Shorten endOffsets of the last sequence to match currOffsets.
+            sequenceMetadata.setEndOffsets(currOffsets);
+          }
+
+          // Update assignments of the sequence, which should clear them. (This will be checked later, when the
+          // Committer is built.)
+          sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadAfterReadingRecord);
           publishingSequences.add(sequenceMetadata.getSequenceName());
           // persist already done in finally, so directly add to publishQueue
           publishAndRegisterHandoff(sequenceMetadata);
@@ -805,7 +807,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
         toolbox.getDataSegmentServerAnnouncer().unannounce();
       }
-      catch (Exception e) {
+      catch (Throwable e) {
         if (caughtExceptionOuter != null) {
           caughtExceptionOuter.addSuppressed(e);
         } else {
@@ -922,7 +924,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           @Override
           public void onFailure(Throwable t)
           {
-            log.error(t, "Error while publishing segments for sequence[%s]", sequenceMetadata);
+            log.error(t, "Error while publishing segments for sequenceNumber[%s]", sequenceMetadata);
             handoffFuture.setException(t);
           }
         }
@@ -1000,7 +1002,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       throws InterruptedException
   {
     for (SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata : sequences) {
-      sequenceMetadata.updateAssignments(this, currOffsets);
+      sequenceMetadata.updateAssignments(currOffsets, this::isMoreToReadBeforeReadingRecord);
       if (!sequenceMetadata.isOpen() && !publishingSequences.contains(sequenceMetadata.getSequenceName())) {
         publishingSequences.add(sequenceMetadata.getSequenceName());
         try {
@@ -1026,19 +1028,21 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     final Set<StreamPartition<PartitionIdType>> assignment = new HashSet<>();
     for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : currOffsets.entrySet()) {
-      final SequenceOffsetType endOffset = endOffsets.get(entry.getKey());
-      if (isEndOfShard(endOffset)
-          || SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(endOffset)
-          || createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(endOffset)) < 0) {
-        assignment.add(StreamPartition.of(stream, entry.getKey()));
-      } else if (entry.getValue().equals(endOffset)) {
-        log.info("Finished reading partition[%s].", entry.getKey());
-      } else {
-        throw new ISE(
-            "WTF?! Cannot start from sequence[%,d] > endOffset[%,d]",
-            entry.getValue(),
+      final PartitionIdType partition = entry.getKey();
+      final SequenceOffsetType currOffset = entry.getValue();
+      final SequenceOffsetType endOffset = endOffsets.get(partition);
+
+      if (!isRecordAlreadyRead(partition, endOffset) && isMoreToReadBeforeReadingRecord(currOffset, endOffset)) {
+        log.info(
+            "Adding partition[%s], start[%s] -> end[%s] to assignment.",
+            partition,
+            currOffset,
             endOffset
         );
+
+        assignment.add(StreamPartition.of(stream, partition));
+      } else {
+        log.info("Finished reading partition[%s].", partition);
       }
     }
 
@@ -1047,6 +1051,77 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return assignment;
   }
 
+  private void addSequence(final SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata)
+  {
+    // Sanity check that the start of the new sequence matches up with the end of the prior sequence.
+    for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : sequenceMetadata.getStartOffsets().entrySet()) {
+      final PartitionIdType partition = entry.getKey();
+      final SequenceOffsetType startOffset = entry.getValue();
+
+      if (!sequences.isEmpty()) {
+        final SequenceOffsetType priorOffset = sequences.get(sequences.size() - 1).endOffsets.get(partition);
+
+        if (!startOffset.equals(priorOffset)) {
+          throw new ISE(
+              "New sequence startOffset[%s] does not equal expected prior offset[%s]",
+              startOffset,
+              priorOffset
+          );
+        }
+      }
+    }
+
+    // Actually do the add.
+    sequences.add(sequenceMetadata);
+  }
+
+  /**
+   * Returns true if the given record has already been read, based on lastReadOffsets.
+   */
+  private boolean isRecordAlreadyRead(
+      final PartitionIdType recordPartition,
+      final SequenceOffsetType recordSequenceNumber
+  )
+  {
+    final SequenceOffsetType lastReadOffset = lastReadOffsets.get(recordPartition);
+
+    if (lastReadOffset == null) {
+      return false;
+    } else {
+      return createSequenceNumber(recordSequenceNumber).compareTo(createSequenceNumber(lastReadOffset)) <= 0;
+    }
+  }
+
+  /**
+   * Returns true if, given that we want to start reading from recordSequenceNumber and end at endSequenceNumber, there
+   * is more left to read. Used in pre-read checks to determine if there is anything left to read.
+   */
+  private boolean isMoreToReadBeforeReadingRecord(
+      final SequenceOffsetType recordSequenceNumber,
+      final SequenceOffsetType endSequenceNumber
+  )
+  {
+    final int compareToEnd = createSequenceNumber(recordSequenceNumber)
+        .compareTo(createSequenceNumber(endSequenceNumber));
+
+    return isEndOffsetExclusive() ? compareToEnd < 0 : compareToEnd <= 0;
+  }
+
+  /**
+   * Returns true if, given that recordSequenceNumber has already been read and we want to end at endSequenceNumber,
+   * there is more left to read. Used in post-read checks to determine if there is anything left to read.
+   */
+  private boolean isMoreToReadAfterReadingRecord(
+      final SequenceOffsetType recordSequenceNumber,
+      final SequenceOffsetType endSequenceNumber
+  )
+  {
+    final int compareNextToEnd = createSequenceNumber(getNextStartOffset(recordSequenceNumber))
+        .compareTo(createSequenceNumber(endSequenceNumber));
+
+    // Unlike isMoreToReadBeforeReadingRecord, we don't care if the end is exclusive or not. If we read it, we're done.
+    return compareNextToEnd < 0;
+  }
 
   private void seekToStartingSequence(
       RecordSupplier<PartitionIdType, SequenceOffsetType> recordSupplier,
@@ -1055,7 +1130,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   {
     for (final StreamPartition<PartitionIdType> partition : partitions) {
       final SequenceOffsetType sequence = currOffsets.get(partition.getPartitionId());
-      log.info("Seeking partition[%s] to sequence[%s].", partition.getPartitionId(), sequence);
+      log.info("Seeking partition[%s] to sequenceNumber[%s].", partition.getPartitionId(), sequence);
       recordSupplier.seek(partition, sequence);
     }
   }
@@ -1114,7 +1189,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     if (tuningConfig.isLogParseExceptions()) {
       log.error(
           pe,
-          "Encountered parse exception on row from partition[%s] sequence[%s]",
+          "Encountered parse exception on row from partition[%s] sequenceNumber[%s]",
           record.getPartitionId(),
           record.getSequenceNumber()
       );
@@ -1240,7 +1315,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -1376,17 +1451,20 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         Preconditions.checkState(sequenceNumbers.size() > 0, "WTH?! No Sequences found to set end sequences");
 
         final SequenceMetadata<PartitionIdType, SequenceOffsetType> latestSequence = sequences.get(sequences.size() - 1);
-        // if a partition has not been read yet (contained in initialOffsetsSnapshot), then
-        // do not mark the starting sequence number as exclusive
-        Set<PartitionIdType> exclusivePartitions = sequenceNumbers.keySet()
-                                                                  .stream()
-                                                                  .filter(x -> !initialOffsetsSnapshot.contains(x)
-                                                                               || ioConfig.getExclusiveStartSequenceNumberPartitions()
-                                                                                          .contains(x))
-                                                                  .collect(Collectors.toSet());
+        final Set<PartitionIdType> exclusiveStartPartitions;
+
+        if (isEndOffsetExclusive()) {
+          // When end offsets are exclusive, there's no need for marking the next sequence as having any
+          // exclusive-start partitions. It should always start from the end offsets of the prior sequence.
+          exclusiveStartPartitions = Collections.emptySet();
+        } else {
+          // When end offsets are inclusive, we must mark all partitions as exclusive-start, to avoid reading
+          // their final messages (which have already been read).
+          exclusiveStartPartitions = sequenceNumbers.keySet();
+        }
 
         if ((latestSequence.getStartOffsets().equals(sequenceNumbers)
-             && latestSequence.getExclusiveStartPartitions().equals(exclusivePartitions)
+             && latestSequence.getExclusiveStartPartitions().equals(exclusiveStartPartitions)
              && !finish)
             || (latestSequence.getEndOffsets().equals(sequenceNumbers) && finish)) {
           log.warn("Ignoring duplicate request, end sequences already set for sequences [%s]", sequenceNumbers);
@@ -1426,19 +1504,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           log.info("Updating endOffsets from [%s] to [%s]", endOffsets, sequenceNumbers);
           endOffsets.putAll(sequenceNumbers);
         } else {
-          exclusiveStartingPartitions.addAll(exclusivePartitions);
-
           // create new sequence
+          log.info("Creating new sequence with startOffsets [%s] and endOffsets [%s]", sequenceNumbers, endOffsets);
           final SequenceMetadata<PartitionIdType, SequenceOffsetType> newSequence = new SequenceMetadata<>(
               latestSequence.getSequenceId() + 1,
               StringUtils.format("%s_%d", ioConfig.getBaseSequenceName(), latestSequence.getSequenceId() + 1),
               sequenceNumbers,
               endOffsets,
               false,
-              exclusivePartitions
+              exclusiveStartPartitions
           );
-          sequences.add(newSequence);
-          initialOffsetsSnapshot.addAll(sequenceNumbers.keySet());
+          addSequence(newSequence);
         }
         persistSequences();
       }
@@ -1547,7 +1623,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       return Response.ok().entity(toolbox.getObjectMapper().writeValueAsString(getCurrentOffsets())).build();
     }
     catch (JsonProcessingException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -1592,45 +1668,47 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     return startTime;
   }
 
-  private boolean verifyInitialRecordAndSkipExclusivePartition(
-      final OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType> record
+  /**
+   * This method does two things:
+   *
+   * 1) Verifies that the sequence numbers we read are at least as high as those read previously, and throws an
+   * exception if not.
+   * 2) Returns false if we should skip this record because it's either (a) the first record in a partition that we are
+   * needing to be exclusive on; (b) too late to read, past the endOffsets.
+   */
+  private boolean verifyRecordInRange(
+      final PartitionIdType partition,
+      final SequenceOffsetType recordOffset
   )
   {
-    // Check only for the first record among the record batch.
-    if (initialOffsetsSnapshot.contains(record.getPartitionId())) {
-      final SequenceOffsetType currOffset = Preconditions.checkNotNull(
-          currOffsets.get(record.getPartitionId()),
-          "Current offset is null for sequenceNumber[%s] and partitionId[%s]",
-          record.getSequenceNumber(),
-          record.getPartitionId()
-      );
-      final OrderedSequenceNumber<SequenceOffsetType> recordSequenceNumber = createSequenceNumber(
-          record.getSequenceNumber()
-      );
-      final OrderedSequenceNumber<SequenceOffsetType> currentSequenceNumber = createSequenceNumber(
-          currOffset
-      );
-      if (recordSequenceNumber.compareTo(currentSequenceNumber) < 0) {
-        throw new ISE(
-            "sequenceNumber of the start record[%s] is smaller than current sequenceNumber[%s] for partition[%s]",
-            record.getSequenceNumber(),
-            currOffset,
-            record.getPartitionId()
-        );
-      }
+    // Verify that the record is at least as high as its currOffset.
+    final SequenceOffsetType currOffset = Preconditions.checkNotNull(
+        currOffsets.get(partition),
+        "Current offset is null for sequenceNumber[%s] and partition[%s]",
+        recordOffset,
+        partition
+    );
 
-      // Remove the mark to notify that this partition has been read.
-      initialOffsetsSnapshot.remove(record.getPartitionId());
+    final OrderedSequenceNumber<SequenceOffsetType> recordSequenceNumber = createSequenceNumber(recordOffset);
+    final OrderedSequenceNumber<SequenceOffsetType> currentSequenceNumber = createSequenceNumber(currOffset);
 
-      // check exclusive starting sequence
-      if (isStartingSequenceOffsetsExclusive() && exclusiveStartingPartitions.contains(record.getPartitionId())) {
-        log.info("Skipping starting sequenceNumber for partition[%s] marked exclusive", record.getPartitionId());
-
-        return false;
-      }
+    final int comparisonToCurrent = recordSequenceNumber.compareTo(currentSequenceNumber);
+    if (comparisonToCurrent < 0) {
+      throw new ISE(
+          "Record sequenceNumber[%s] is smaller than current sequenceNumber[%s] for partition[%s]",
+          recordOffset,
+          currOffset,
+          partition
+      );
     }
 
-    return true;
+    // Check if the record has already been read.
+    if (isRecordAlreadyRead(partition, recordOffset)) {
+      return false;
+    }
+
+    // Finally, check if this record comes before the endOffsets for this partition.
+    return isMoreToReadBeforeReadingRecord(recordSequenceNumber.get(), endOffsets.get(partition));
   }
 
   /**
@@ -1655,16 +1733,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   ) throws IOException;
 
   /**
-   * Calculates the sequence number used to update `currentOffsets` after finished reading a record.
-   * In Kafka this returns sequenceNumeber + 1 since that's the next expected offset
-   * In Kinesis this simply returns sequenceNumber, since the sequence numbers in Kinesis are not
-   * contiguous and finding the next sequence number requires an expensive API call
+   * Calculates the sequence number used to update currOffsets after finished reading a record.
+   * This is what would become the start offsets of the next reader, if we stopped reading now.
    *
    * @param sequenceNumber the sequence number that has already been processed
    *
    * @return next sequence number to be stored
    */
-  protected abstract SequenceOffsetType getSequenceNumberToStoreAfterRead(SequenceOffsetType sequenceNumber);
+  protected abstract SequenceOffsetType getNextStartOffset(SequenceOffsetType sequenceNumber);
 
   /**
    * deserializes stored metadata into SeekableStreamPartitions
@@ -1736,14 +1812,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * In Kafka, the endOffsets are exclusive, so skip it.
    * In Kinesis the endOffsets are inclusive
    */
-  protected abstract boolean isEndSequenceOffsetsExclusive();
-
-  /**
-   * In Kafka, the startingOffsets are inclusive.
-   * In Kinesis, the startingOffsets are exclusive, except for the first
-   * partition we read from stream
-   */
-  protected abstract boolean isStartingSequenceOffsetsExclusive();
+  protected abstract boolean isEndOffsetExclusive();
 
   protected abstract TypeReference<List<SequenceMetadata<PartitionIdType, SequenceOffsetType>>> getSequenceMetadataTypeReference();
 }
