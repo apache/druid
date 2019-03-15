@@ -78,7 +78,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
 
   @Override
-  protected String getSequenceNumberToStoreAfterRead(String sequenceNumber)
+  protected String getNextStartOffset(String sequenceNumber)
   {
     return sequenceNumber;
   }
@@ -160,15 +160,9 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected boolean isEndSequenceOffsetsExclusive()
+  protected boolean isEndOffsetExclusive()
   {
     return false;
-  }
-
-  @Override
-  protected boolean isStartingSequenceOffsetsExclusive()
-  {
-    return true;
   }
 
   @Override
