@@ -20,9 +20,8 @@ import { Button } from '@blueprintjs/core';
 import * as React from 'react';
 import classNames from 'classnames';
 import './filler.scss';
-import {parseJSONToString, parseStringToJSON, validJson} from "../utils";
+import {stringifyJSON, parseStringToJSON, validJson} from "../utils";
 import AceEditor from "react-ace";
-
 
 export const IconNames = {
   ERROR: "error" as "error",
@@ -261,9 +260,9 @@ export class TagInput extends React.Component<TagInputProps, { stringValue: stri
 }
 
 interface JSONInputProps extends React.Props<any>{
-  onChange: (newValue: string) => void;
-  value: JSON;
-  updateErrors: ((newValue: string) => void)
+  onChange: (newJSONValue: any) => void,
+  value: any,
+  updateInputValidity: (valueValid: boolean) => void
 }
 
 interface JSONInputState{
@@ -280,14 +279,22 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
 
   componentDidMount(): void {
     const { value } = this.props;
-    const stringValue = parseJSONToString(value);
+    const stringValue = stringifyJSON(value);
     this.setState({
       stringValue: stringValue
     })
   }
 
+  componentWillReceiveProps(nextProps: JSONInputProps): void {
+    if (JSON.stringify(nextProps.value) !== JSON.stringify(this.props.value)) {
+      this.setState({
+        stringValue: stringifyJSON(nextProps.value)
+      });
+    }
+  }
+
   render() {
-    const { onChange, updateErrors } = this.props;
+    const { onChange, updateInputValidity } = this.props;
     const { stringValue } = this.state;
     return <AceEditor
       className={"bp3-fill"}
@@ -297,8 +304,8 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
       name="ace-editor"
       onChange={(e: string) => {
         this.setState({stringValue: e});
-        if(validJson(e) || e === "") onChange(e);
-        updateErrors(e);
+        if(validJson(e) || e === "") onChange(parseStringToJSON(e));
+        updateInputValidity(validJson(e) || e === '');
       }}
       focus={true}
       fontSize={12}

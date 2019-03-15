@@ -31,7 +31,7 @@ export interface CompactionDialogProps extends React.Props<any> {
 
 export interface CompactionDialogState {
   currentConfig: Record<string, any> | null;
-  JSONErrors: Record<string, boolean> | null;
+  allJSONValid: boolean
 }
 
 export class CompactionDialog extends React.Component<CompactionDialogProps, CompactionDialogState> {
@@ -39,7 +39,7 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
     super(props);
     this.state = {
       currentConfig: null,
-      JSONErrors: null
+      allJSONValid: true
     };
   }
 
@@ -66,7 +66,7 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
 
   render() {
     const { onClose, onSave, onDelete, datasource, configData } = this.props;
-    const { currentConfig, JSONErrors } = this.state;
+    const { currentConfig, allJSONValid } = this.state;
     return <Dialog
       className="compaction-dialog"
       isOpen
@@ -111,8 +111,7 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
         ]}
         model={currentConfig}
         onChange={m => this.setState({currentConfig: m})}
-        updateJSONErrors={e => this.setState({JSONErrors: e})}
-        JSONErrors={JSONErrors}
+        updateJSONValidity={e => this.setState({allJSONValid: e})}
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -130,7 +129,7 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
             text="Submit"
             intent={Intent.PRIMARY}
             onClick={() => onSave(currentConfig)}
-            disabled={ currentConfig === null || (JSONErrors != null && !Object.keys(JSONErrors).every(e => JSONErrors[e] === true))}
+            disabled={ currentConfig === null || !allJSONValid }
           />
         </div>
       </div>

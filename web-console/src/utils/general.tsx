@@ -149,8 +149,8 @@ export function validJson(json: string): boolean {
   }
 }
 
-// parse JSON to string; if JSON is null, parse empty string ""
-export function parseJSONToString(item: JSON): string {
+// stringify JSON to string; if JSON is null, parse empty string ""
+export function stringifyJSON(item: any): string {
   if (item != null) {
     return JSON.stringify(item, null, 2);
   } else {

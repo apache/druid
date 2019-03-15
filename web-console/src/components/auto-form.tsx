@@ -20,7 +20,6 @@ import * as React from 'react';
 import { InputGroup } from "@blueprintjs/core";
 import { HTMLSelect, FormGroup, NumericInput, TagInput, JSONInput } from "../components/filler";
 import "./auto-form.scss";
-import {parseStringToJSON, validJson} from "../utils";
 
 interface Field {
   name: string;
@@ -33,12 +32,11 @@ export interface AutoFormProps<T> extends React.Props<any> {
   fields: Field[];
   model: T | null,
   onChange: (newValue: T) => void,
-  JSONErrors?: T | null,
-  updateJSONErrors?: (newValue: T) => void;
+  updateJSONValidity?: (jsonValidity: boolean) => void;
 }
 
 export interface AutoFormState<T> {
-
+  jsonInputsValidity: any
 }
 
 export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState<T>> {
@@ -51,6 +49,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
   constructor(props: AutoFormProps<T>) {
     super(props);
     this.state = {
+      jsonInputsValidity: {}
     }
   }
 
@@ -104,11 +103,24 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
   }
 
   private renderJSONInput(field: Field): JSX.Element {
-    const { model, onChange, JSONErrors, updateJSONErrors } = this.props;
+    const { model, onChange,  updateJSONValidity } = this.props;
+    const { jsonInputsValidity } = this.state;
+
+    const updateInputValidity = (e: any) => {
+      if (updateJSONValidity) {
+        const newJSONInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e});
+        this.setState({
+          jsonInputsValidity: newJSONInputValidity
+        })
+        const allJSONValid: boolean = Object.keys(newJSONInputValidity).every(property => newJSONInputValidity[property] === true);
+        updateJSONValidity(allJSONValid);
+      }
+    }
+
     return <JSONInput
       value={(model as any)[field.name]}
-      onChange={(e: any) => onChange(Object.assign({}, model, { [field.name]: parseStringToJSON(e)}))}
-      updateErrors={(e: any) => updateJSONErrors!(Object.assign({}, JSONErrors, { [field.name]: validJson(e) || e === ''}))}
+      onChange={(e: any) => onChange(Object.assign({}, model, { [field.name]: e}))}
+      updateInputValidity={updateInputValidity}
     />
   }
 

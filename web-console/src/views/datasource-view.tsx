@@ -439,7 +439,7 @@ GROUP BY 1`);
               } else {
                 text = 'None';
               }
-              return <span>{text} <a onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}>&#x270E;</a></span>;
+              return <span className={"clickable-cell"} onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}>{text} <a>&#x270E;</a></span>;
             }
           },
           {
