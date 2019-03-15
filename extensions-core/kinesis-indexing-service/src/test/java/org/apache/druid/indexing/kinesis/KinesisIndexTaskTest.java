@@ -2399,7 +2399,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     final StreamPartition<String> streamPartition = StreamPartition.of(stream, shardId1);
     recordSupplier.assign(ImmutableSet.of(streamPartition));
     expectLastCall();
-    expect(recordSupplier.getEarliestSequenceNumber(streamPartition)).andReturn("0");
     recordSupplier.seek(streamPartition, "2");
     expectLastCall();
     expect(recordSupplier.poll(anyLong())).andReturn(records.subList(2, 5))
