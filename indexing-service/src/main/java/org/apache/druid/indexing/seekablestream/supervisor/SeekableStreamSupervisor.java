@@ -169,6 +169,31 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
     )
     {
+      this(
+          groupId,
+          startingSequences,
+          minimumMessageTime,
+          maximumMessageTime,
+          exclusiveStartSequenceNumberPartitions,
+          generateSequenceName(
+              startingSequences,
+              minimumMessageTime,
+              maximumMessageTime,
+              spec.getDataSchema(),
+              taskTuningConfig
+          )
+      );
+    }
+
+    TaskGroup(
+        int groupId,
+        ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences,
+        Optional<DateTime> minimumMessageTime,
+        Optional<DateTime> maximumMessageTime,
+        Set<PartitionIdType> exclusiveStartSequenceNumberPartitions,
+        String baseSequenceName
+    )
+    {
       this.groupId = groupId;
       this.startingSequences = startingSequences;
       this.minimumMessageTime = minimumMessageTime;
@@ -177,13 +202,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions != null
                                                     ? exclusiveStartSequenceNumberPartitions
                                                     : new HashSet<>();
-      this.baseSequenceName = generateSequenceName(
-          startingSequences,
-          minimumMessageTime,
-          maximumMessageTime,
-          spec.getDataSchema(),
-          taskTuningConfig
-      );
+      this.baseSequenceName = baseSequenceName;
     }
 
     int addNewCheckpoint(Map<PartitionIdType, SequenceOffsetType> checkpoint)
@@ -1661,6 +1680,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
     if (activelyReadingTaskGroups.get(taskGroupId) != null) {
       TaskGroup taskGroup = activelyReadingTaskGroups.get(taskGroupId);
+      activelyReadingTaskGroups.put(taskGroupId, new TaskGroup(
+          taskGroup.groupId,
+          taskGroup.startingSequences,
+          taskGroup.minimumMessageTime,
+          taskGroup.maximumMessageTime,
+          taskGroup.exclusiveStartSequenceNumberPartitions,
+          task.getIOConfig().getBaseSequenceName()
+      ));
       return generateSequenceName(
           taskGroup.startingSequences,
           taskGroup.minimumMessageTime,
