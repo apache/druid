@@ -364,7 +364,7 @@ GROUP BY 1`);
 
               return <span
                 onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}
-                style={{cursor: "pointer"}}
+                className={"clickable-cell"}
               >
                 {text}&nbsp;
                 <a>&#x270E;</a>
