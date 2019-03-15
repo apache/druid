@@ -115,7 +115,7 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
       <FormGroup className={"lookup-label"} label={"Spec:"}/>
 
       <AceEditor
-        className={"bp3-fill lookup-edit-dialog-textarea"}
+        className={"lookup-edit-dialog-textarea"}
         mode="sql"
         theme="solarized_dark"
         onChange={
