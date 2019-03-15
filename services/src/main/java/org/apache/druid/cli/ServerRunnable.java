@@ -19,7 +19,6 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
@@ -61,7 +60,7 @@ public abstract class ServerRunnable extends GuiceRunnable
       lifecycle.join();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

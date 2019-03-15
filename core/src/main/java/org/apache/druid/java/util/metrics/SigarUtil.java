@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.StreamUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.hyperic.jni.ArchLoaderException;
@@ -57,7 +56,7 @@ public class SigarUtil
       }
     }
     catch (ArchNotSupportedException | ArchLoaderException | IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

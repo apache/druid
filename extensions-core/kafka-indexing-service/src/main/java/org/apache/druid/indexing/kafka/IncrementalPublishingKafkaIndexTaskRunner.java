@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SequenceMetadata;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -83,7 +84,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected Long getSequenceNumberToStoreAfterRead(@NotNull Long sequenceNumber)
+  protected Long getNextStartOffset(@NotNull Long sequenceNumber)
   {
     return sequenceNumber + 1;
   }
@@ -111,7 +112,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected SeekableStreamPartitions<Integer, Long> deserializeSeekableStreamPartitionsFromMetadata(
+  protected SeekableStreamPartitions<Integer, Long> deserializePartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
@@ -208,21 +209,23 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   }
 
   @Override
-  protected boolean isEndSequenceOffsetsExclusive()
+  protected boolean isEndOffsetExclusive()
   {
     return true;
-  }
-
-  @Override
-  protected boolean isStartingSequenceOffsetsExclusive()
-  {
-    return false;
   }
 
   @Override
   protected boolean isEndOfShard(Long seqNum)
   {
     return false;
+  }
+
+  @Override
+  public TypeReference<List<SequenceMetadata<Integer, Long>>> getSequenceMetadataTypeReference()
+  {
+    return new TypeReference<List<SequenceMetadata<Integer, Long>>>()
+    {
+    };
   }
 
   @Nullable

@@ -503,7 +503,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 <a href={`/druid/indexer/v1/task/${id}/reports`} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/log`} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/log?offset=-8192`} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
-                { (status === 'RUNNING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a> }
+                { (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a> }
               </div>
             },
             Aggregated: row => ''
