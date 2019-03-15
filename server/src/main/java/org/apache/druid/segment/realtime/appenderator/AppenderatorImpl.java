@@ -26,7 +26,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -763,7 +762,7 @@ public class AppenderatorImpl implements Appenderator
     catch (Exception e) {
       metrics.incrementFailedHandoffs();
       log.warn(e, "Failed to push merged index for segment[%s].", identifier);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -883,7 +882,7 @@ public class AppenderatorImpl implements Appenderator
         }
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }
@@ -898,7 +897,7 @@ public class AppenderatorImpl implements Appenderator
       }
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -1139,7 +1138,7 @@ public class AppenderatorImpl implements Appenderator
                 log.makeAlert(e, "Failed to update committed segments[%s]", schema.getDataSource())
                    .addData("identifier", identifier.toString())
                    .emit();
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
               finally {
                 commitLock.unlock();
@@ -1281,7 +1280,7 @@ public class AppenderatorImpl implements Appenderator
            .addData("count", indexToPersist.getCount())
            .emit();
 
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

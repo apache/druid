@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
@@ -487,7 +486,7 @@ public class BatchServerInventoryViewTest
                     testSegments.addAll(segments);
                   }
                   catch (Exception e) {
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   return segmentAnnouncer;
                 }

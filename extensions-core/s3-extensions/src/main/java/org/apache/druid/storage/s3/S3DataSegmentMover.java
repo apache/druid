@@ -142,7 +142,7 @@ public class S3DataSegmentMover implements DataSegmentMover
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, AmazonServiceException.class);
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
