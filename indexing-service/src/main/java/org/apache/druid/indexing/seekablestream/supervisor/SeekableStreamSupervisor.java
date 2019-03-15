@@ -1648,6 +1648,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>) taskOptional
         .get();
 
+    // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
+    // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
+    // data schema. Recomputing both ensures that forwards-compatible tasks won't be killed (which would occur
+    // if the hash generated using the old class definitions was used).
     String taskSequenceName = generateSequenceName(
         task.getIOConfig().getStartPartitions().getPartitionSequenceNumberMap(),
         task.getIOConfig().getMinimumMessageTime(),
