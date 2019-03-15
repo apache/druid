@@ -52,5 +52,5 @@
 2. Consider adding `Bug` and `Security` PRs to the next Druid milestone. Don't add PRs that are neither `Bug` nor
 `Security`-related to milestones.
 
-3. If the PR has obvious problems, such as an empty description or it fails CI, ask the PR author to fix these problems
-even if you are don't plan to review the PR.
+3. If the PR has obvious problems, such as an empty description or the PR fails the CI, ask the PR author to fix these
+problems even if you don't plan to review the PR.
