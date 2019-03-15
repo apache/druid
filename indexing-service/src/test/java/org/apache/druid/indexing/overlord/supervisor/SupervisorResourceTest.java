@@ -741,7 +741,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecGetHistoryWithAuthFailure() throws Exception
+  public void testSpecGetHistoryWithAuthFailure()
   {
     List<VersionedSupervisorSpec> versions1 = ImmutableList.of(
         new VersionedSupervisorSpec(
