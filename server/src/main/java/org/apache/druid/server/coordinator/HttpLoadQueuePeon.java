@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -136,7 +135,7 @@ public class HttpLoadQueuePeon extends LoadQueuePeon
       );
     }
     catch (MalformedURLException ex) {
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
   }
 

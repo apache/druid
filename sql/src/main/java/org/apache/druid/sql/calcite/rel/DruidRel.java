@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import com.google.common.base.Throwables;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.interpreter.Node;
@@ -140,7 +139,7 @@ public abstract class DruidRel<T extends DruidRel> extends AbstractRelNode imple
             theSink.send(Row.of(in));
           }
           catch (InterruptedException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
           return theSink;
         }
