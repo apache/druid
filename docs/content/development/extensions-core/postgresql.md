@@ -83,3 +83,5 @@ In most cases, the configuration options map directly to the [postgres jdbc conn
 | `druid.metadata.postgres.ssl.sslRootCert` | The full path to the root certificate. | none | no |
 | `druid.metadata.postgres.ssl.sslHostNameVerifier` | The classname of the hostname verifier. | none | no |
 | `druid.metadata.postgres.ssl.sslPasswordCallback` | The classname of the SSL password provider. | none | no |
+| `druid.metadata.postgres.dbTableSchema` | druid meta table schema | `public` | no |
+
