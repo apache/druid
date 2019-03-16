@@ -49,6 +49,8 @@ export const IconNames = {
   CARET_DOWN: "caret-down" as "caret-down",
   ARROW_UP: "arrow-up" as "arrow-up",
   ARROW_DOWN: "arrow-down" as "arrow-down",
+  PROPERTIES: "properties" as "properties",
+  BUILD: "build" as "build"
 };
 export type IconNames = typeof IconNames[keyof typeof IconNames];
 

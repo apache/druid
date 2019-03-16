@@ -31,6 +31,7 @@ import { SegmentsView } from './views/segments-view';
 import { ServersView } from './views/servers-view';
 import { TasksView } from './views/tasks-view';
 import { SqlView } from './views/sql-view';
+import { LookupsView } from "./views/lookups-view";
 import "./console-application.scss";
 
 export interface ConsoleApplicationProps extends React.Props<any> {
@@ -155,6 +156,9 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
           }} />
           <Route path="/sql" component={() => {
             return wrapInViewContainer('sql', <SqlView initSql={this.initSql}/>);
+          }} />
+          <Route path="/lookups" component={() => {
+            return wrapInViewContainer('lookups', <LookupsView />);
           }} />
           <Route component={() => {
             return wrapInViewContainer(null, <HomeView/>)
