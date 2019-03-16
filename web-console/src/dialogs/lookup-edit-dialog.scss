@@ -17,7 +17,9 @@
  */
 
 .lookup-edit-dialog {
-  top: 10%;
+  top: 10vh;
+
+  width: 600px;
 
   .ace_editor{
     margin: 0px 20px 10px;
