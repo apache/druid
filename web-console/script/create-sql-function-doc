@@ -22,6 +22,7 @@ writefile='lib/sql-function-doc.ts'
 > "$writefile"
 
 echo -e "// This file is auto generated and should not be modified\n" > "$writefile"
+echo -e "/* tslint:disable */\n" >> "$writefile"
 echo -e 'export const SQLFunctionDoc: any[] = [' >> "$writefile"
 
 isFunction=false
@@ -47,4 +48,4 @@ while read -r line; do
     fi
 done < "$readfile"
 
-echo -e ']' >> "$writefile"
+echo -e '];' >> "$writefile"

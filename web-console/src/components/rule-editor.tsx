@@ -107,7 +107,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     super(props);
     this.state = {
       isOpen: true
-    }
+    };
   }
 
   private removeTier = (key: string) => {
@@ -126,9 +126,9 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     let newTierName = tiers[0];
 
     if (rule.tieredReplicants) {
-      for (let i = 0; i < tiers.length; i++) {
-        if (rule.tieredReplicants[tiers[i]] === undefined) {
-          newTierName = tiers[i];
+      for (const tier of tiers) {
+        if (rule.tieredReplicants[tier] === undefined) {
+          newTierName = tier;
           break;
         }
       }

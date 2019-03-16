@@ -28,7 +28,7 @@ import { addFilter, formatBytes, formatBytesCompact, QueryManager, queryDruidSql
 import "./servers-view.scss";
 
 function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmentsToDrop: number, segmentsToDropSize: number): string {
-  let queueParts: string[] = [];
+  const queueParts: string[] = [];
   if (segmentsToLoad) {
     queueParts.push(`${segmentsToLoad} segments to load (${formatBytesCompact(segmentsToLoadSize)})`);
   }
@@ -73,7 +73,7 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       middleManagersLoading: true,
       middleManagers: null,
       middleManagersError: null,
-      middleManagerFilter: props.middleManager ? [{ id: 'host', value: props.middleManager }] : [],
+      middleManagerFilter: props.middleManager ? [{ id: 'host', value: props.middleManager }] : []
     };
   }
 
@@ -82,7 +82,7 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       processQuery: async (query: string) => {
         const servers = await queryDruidSql({ query });
 
-        let loadQueueResponse = await axios.get("/druid/coordinator/v1/loadqueue?simple");
+        const loadQueueResponse = await axios.get("/druid/coordinator/v1/loadqueue?simple");
         const loadQueues = loadQueueResponse.data;
 
         return servers.map((s: any) => {
@@ -161,7 +161,7 @@ WHERE "server_type" = 'historical'`);
           accessor: "tier",
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) }) }}>{value}</a>
+            return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) }); }}>{value}</a>;
           }
         },
         {
@@ -234,7 +234,7 @@ WHERE "server_type" = 'historical'`);
             const segmentsToDrop = sum(originals, s => s.segmentsToDrop);
             const segmentsToDropSize = sum(originals, s => s.segmentsToDropSize);
             return formatQueues(segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize);
-          },
+          }
         },
         {
           Header: "Host",
@@ -245,7 +245,7 @@ WHERE "server_type" = 'historical'`);
           Header: "Port",
           id: 'port',
           accessor: (row) => {
-            let ports: string[] = [];
+            const ports: string[] = [];
             if (row.plaintext_port !== -1) {
               ports.push(`${row.plaintext_port} (plain)`);
             }
@@ -255,7 +255,7 @@ WHERE "server_type" = 'historical'`);
             return ports.join(', ') || 'No port';
           },
           Aggregated: () => ''
-        },
+        }
       ]}
       defaultPageSize={10}
       className="-striped -highlight"
@@ -282,7 +282,7 @@ WHERE "server_type" = 'historical'`);
           accessor: (row) => row.worker.host,
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ middleManagerFilter: addFilter(middleManagerFilter, 'host', value) }) }}>{value}</a>
+            return <a onClick={() => { this.setState({ middleManagerFilter: addFilter(middleManagerFilter, 'host', value) }); }}>{value}</a>;
           }
         },
         {
@@ -297,7 +297,7 @@ WHERE "server_type" = 'historical'`);
           id: "availabilityGroups",
           width: 60,
           accessor: (row) => row.availabilityGroups.length,
-          filterable: false,
+          filterable: false
         },
         {
           Header: "Last completed task time",
@@ -362,7 +362,6 @@ WHERE "server_type" = 'historical'`);
         />
       </div>
       {this.renderMiddleManagerTable()}
-    </div>
+    </div>;
   }
 }
-

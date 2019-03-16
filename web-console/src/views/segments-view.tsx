@@ -88,7 +88,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           segmentsError: error
         });
       }
-    })
+    });
   }
 
   componentWillUnmount(): void {
@@ -99,7 +99,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     const { page, pageSize, filtered, sorted } = state;
     const totalQuerySize = (page + 1) * pageSize;
 
-    let queryParts = [
+    const queryParts = [
       `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "payload"`,
       `FROM sys.segments`
     ];
@@ -114,7 +114,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     }).filter(Boolean);
 
     if (whereParts.length) {
-      queryParts.push('WHERE ' + whereParts.join(' AND '))
+      queryParts.push('WHERE ' + whereParts.join(' AND '));
     }
 
     if (sorted.length) {
@@ -160,7 +160,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           accessor: "datasource",
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) }) }}>{value}</a>
+            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) }); }}>{value}</a>;
           }
         },
         {
@@ -170,7 +170,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           defaultSortDesc: true,
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) }) }}>{value}</a>
+            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) }); }}>{value}</a>;
           }
         },
         {
@@ -180,14 +180,14 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           width: 120,
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) }) }}>{value}</a>
+            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) }); }}>{value}</a>;
           }
         },
         {
           Header: "Version",
           accessor: "version",
           defaultSortDesc: true,
-          width: 120,
+          width: 120
         },
         {
           Header: "Partition",
@@ -272,6 +272,6 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         />
       </div>
       {this.renderSegmentsTable()}
-    </div>
+    </div>;
   }
 }

@@ -31,8 +31,8 @@ interface Field {
 
 export interface AutoFormProps<T> extends React.Props<any> {
   fields: Field[];
-  model: T | null,
-  onChange: (newValue: T) => void
+  model: T | null;
+  onChange: (newValue: T) => void;
 }
 
 export interface AutoFormState<T> {
@@ -48,7 +48,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
   constructor(props: AutoFormProps<T>) {
     super(props);
     this.state = {
-    }
+    };
   }
 
   private renderNumberInput(field: Field): JSX.Element {
@@ -97,7 +97,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
     >
       <option value="True">True</option>
       <option value="False">False</option>
-    </HTMLSelect>
+    </HTMLSelect>;
   }
 
   private renderStringArrayInput(field: Field): JSX.Element {
@@ -127,7 +127,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
     const label = field.label || AutoForm.makeLabelName(field.name);
     return <FormGroup label={label} key={field.name}>
       {this.renderFieldInput(field)}
-    </FormGroup>
+    </FormGroup>;
   }
 
   render() {
@@ -135,6 +135,6 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
 
     return <div className="auto-form">
       {model && fields.map(field => this.renderField(field))}
-    </div>
+    </div>;
   }
 }

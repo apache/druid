@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 import * as React from 'react';
 import { Filter, ReactTableDefaults } from "react-table";
 import { Button } from "@blueprintjs/core";

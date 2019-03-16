@@ -48,6 +48,6 @@ export class Loader extends React.Component<LoaderProps, LoaderState> {
         </svg>
         {loadingText ? <div className="label">{loadingText}</div> : null}
       </div>
-    </div>
+    </div>;
   }
 }

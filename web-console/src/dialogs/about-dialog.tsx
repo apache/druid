@@ -22,7 +22,7 @@ import { IconNames } from "../components/filler";
 import { DRUID_COMMUNITY, DRUID_DEVELOPER_GROUP, DRUID_USER_GROUP, DRUID_WEBSITE } from '../variables';
 
 export interface AboutDialogProps extends React.Props<any> {
-  onClose: () => void
+  onClose: () => void;
 }
 
 export interface AboutDialogState {

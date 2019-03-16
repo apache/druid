@@ -84,7 +84,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           error
         });
       }
-    })
+    });
   }
 
   componentWillUnmount(): void {
@@ -117,7 +117,6 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
         }}
       />
       {this.renderResultTable()}
-    </div>
+    </div>;
   }
 }
-

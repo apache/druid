@@ -70,7 +70,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
           href={LEGACY_OVERLORD_CONSOLE}>overlord</a> consoles that do not rely on the SQL endpoint.
         </>
       });
-      return false
+      return false;
     }
     return true;
   }
@@ -161,11 +161,10 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
             return wrapInViewContainer('lookups', <LookupsView />);
           }} />
           <Route component={() => {
-            return wrapInViewContainer(null, <HomeView/>)
+            return wrapInViewContainer(null, <HomeView/>);
           }} />
         </Switch>
       </div>
     </HashRouter>;
   }
 }
-

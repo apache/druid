@@ -54,7 +54,7 @@ export interface DatasourcesViewState {
   datasourcesLoading: boolean;
   datasources: Datasource[] | null;
   tiers: string[];
-  defaultRules: any[]
+  defaultRules: any[];
   datasourcesError: string | null;
   datasourcesFilter: Filter[];
 
@@ -73,7 +73,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   static formatRules(rules: any[]): string {
     if (rules.length === 0) {
       return 'No rules';
-    } if (rules.length <= 2) {
+    } else if (rules.length <= 2) {
       return rules.map(RuleEditor.ruleToString).join(', ');
     } else {
       return `${RuleEditor.ruleToString(rules[0])} +${rules.length - 1} more rules`;
@@ -161,7 +161,7 @@ GROUP BY 1`);
     return <AsyncActionDialog
       action={
         dropDataDatasource ? async () => {
-          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dropDataDatasource}`, {})
+          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dropDataDatasource}`, {});
           return resp.data;
         } : null
       }
@@ -186,7 +186,7 @@ GROUP BY 1`);
     return <AsyncActionDialog
       action={
         enableDatasource ? async () => {
-          const resp = await axios.post(`/druid/coordinator/v1/datasources/${enableDatasource}`, {})
+          const resp = await axios.post(`/druid/coordinator/v1/datasources/${enableDatasource}`, {});
           return resp.data;
         } : null
       }
@@ -291,7 +291,7 @@ GROUP BY 1`);
 
     let data = datasources || [];
     if (!showDisabled) {
-      data = data.filter(d => !d.disabled)
+      data = data.filter(d => !d.disabled);
     }
 
     return <>
@@ -311,7 +311,7 @@ GROUP BY 1`);
             width: 150,
             Cell: row => {
               const value = row.value;
-              return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }) }}>{value}</a>
+              return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
             }
           },
           {
@@ -415,11 +415,11 @@ GROUP BY 1`);
                 return <div>
                   <a onClick={() => this.setState({ enableDatasource: datasource })}>Enable</a>&nbsp;&nbsp;&nbsp;
                   <a onClick={() => this.setState({ killDatasource: datasource })}>Permanently delete</a>
-                </div>
+                </div>;
               } else {
                 return <div>
                   <a onClick={() => this.setState({ dropDataDatasource: datasource })}>Drop data</a>
-                </div>
+                </div>;
               }
             }
           }
@@ -458,7 +458,6 @@ GROUP BY 1`);
         />
       </div>
       {this.renderDatasourceTable()}
-    </div>
+    </div>;
   }
 }
-

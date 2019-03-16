@@ -27,7 +27,7 @@ import { SnitchDialog } from './snitch-dialog';
 import './coordinator-dynamic-config.scss';
 
 export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
-  onClose: () => void
+  onClose: () => void;
 }
 
 export interface CoordinatorDynamicConfigDialogState {
@@ -39,7 +39,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     super(props);
     this.state = {
       dynamicConfig: null
-    }
+    };
   }
 
   componentDidMount(): void {
@@ -50,7 +50,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     let config: Record<string, any> | null = null;
     try {
       const configResp = await axios.get("/druid/coordinator/v1/config");
-      config = configResp.data
+      config = configResp.data;
     } catch (e) {
       AppToaster.show({
         iconName: IconNames.ERROR,
@@ -66,7 +66,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
 
   private saveClusterConfig = async (author: string, comment: string) => {
     const { onClose } = this.props;
-    let newState: any = this.state.dynamicConfig;
+    const newState: any = this.state.dynamicConfig;
     try {
       await axios.post("/druid/coordinator/v1/config", newState, {
         headers: {
@@ -158,6 +158,6 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
         model={dynamicConfig}
         onChange={m => this.setState({ dynamicConfig: m })}
       />
-    </SnitchDialog>
+    </SnitchDialog>;
   }
 }

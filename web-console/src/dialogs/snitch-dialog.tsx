@@ -23,10 +23,9 @@ import {
   Dialog,
   IDialogProps,
   Classes,
-  Intent,
+  Intent
 } from "@blueprintjs/core";
 import { IconNames, FormGroup } from '../components/filler';
-
 
 export interface SnitchDialogProps extends IDialogProps {
   onSave: (author: string, comment: string) => void;
@@ -50,7 +49,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
       comment: "",
       author: "",
       saveDisabled: true
-    }
+    };
   }
 
   save = () => {
@@ -136,7 +135,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
         ? <Button disabled={saveDisabled} text="Save" onClick={this.save} intent={Intent.PRIMARY as any} rightIconName={IconNames.TICK}/>
         : <Button disabled={saveDisabled} text="Next" onClick={this.goToFinalStep} intent={Intent.PRIMARY as any} rightIconName={IconNames.ARROW_RIGHT}/>
       }
-    </div>
+    </div>;
   }
 
   render() {

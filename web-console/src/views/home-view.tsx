@@ -164,14 +164,14 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
     this.taskQueryManager = new QueryManager({
       processQuery: async (query) => {
         const taskCountsFromSql = await queryDruidSql({ query });
-        let taskCounts = {
+        const taskCounts = {
           successTaskCount: 0,
           failedTaskCount: 0,
           runningTaskCount: 0,
           waitingTaskCount: 0,
           pendingTaskCount: 0
         };
-        for (let dataStatus of taskCountsFromSql) {
+        for (const dataStatus of taskCountsFromSql) {
           if (dataStatus.status === "SUCCESS") {
             taskCounts.successTaskCount = dataStatus.count;
           } else if (dataStatus.status === "FAILED") {
@@ -321,7 +321,6 @@ GROUP BY 1`);
         </>,
         error: state.dataServerCountError
       })}
-    </div>
+    </div>;
   }
 }
-

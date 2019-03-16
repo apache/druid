@@ -22,9 +22,8 @@ import * as numeral from "numeral";
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
-
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  let currentFilter = filters.find(f => f.id === id);
+  const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {
     filters = filters.filter(f => f.id !== id);
     if (currentFilter.value !== value) {
@@ -36,7 +35,7 @@ export function addFilter(filters: Filter[], id: string, value: string): Filter[
   return filters;
 }
 
-export function makeTextFilter(placeholder: string = ''): FilterRender {
+export function makeTextFilter(placeholder = ''): FilterRender {
   return ({ filter, onChange, key }) => {
     const filterValue = filter ? filter.value : '';
     return <InputGroup
@@ -45,8 +44,8 @@ export function makeTextFilter(placeholder: string = ''): FilterRender {
       value={filterValue}
       rightElement={filterValue ? <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} /> : undefined}
       placeholder={placeholder}
-    />
-  }
+    />;
+  };
 }
 
 export function makeBooleanFilter(): FilterRender {
@@ -63,7 +62,7 @@ export function makeBooleanFilter(): FilterRender {
       <option value="true">true</option>
       <option value="false">false</option>
     </HTMLSelect>;
-  }
+  };
 }
 
 // ----------------------------

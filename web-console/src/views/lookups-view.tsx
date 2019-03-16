@@ -32,16 +32,16 @@ export interface LookupsViewProps extends React.Props<any> {
 }
 
 export interface LookupsViewState {
-  lookups: {}[],
-  loadingLookups: boolean,
-  lookupsError: string | null,
-  lookupEditDialogOpen: boolean,
-  lookupEditName: string,
-  lookupEditTier: string,
-  lookupEditVersion: string,
-  lookupEditSpec: string,
-  isEdit: boolean,
-  allLookupTiers: string[]
+  lookups: {}[];
+  loadingLookups: boolean;
+  lookupsError: string | null;
+  lookupEditDialogOpen: boolean;
+  lookupEditName: string;
+  lookupEditTier: string;
+  lookupEditVersion: string;
+  lookupEditSpec: string;
+  isEdit: boolean;
+  allLookupTiers: string[];
 }
 
 export class LookupsView extends React.Component<LookupsViewProps, LookupsViewState> {
@@ -70,15 +70,15 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
         const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
         const tiers = tiersResp.data;
 
-        let lookupEntries: {}[] = [];
+        const lookupEntries: {}[] = [];
         const lookupResp = await axios.get("/druid/coordinator/v1/lookups/config/all");
         const lookupData = lookupResp.data;
         Object.keys(lookupData).map((tier: string) => {
           const lookupIds = lookupData[tier];
           Object.keys(lookupIds).map((id: string) => {
-            lookupEntries.push({tier: tier, id: id, version:lookupData[tier][id].version, spec: lookupData[tier][id].lookupExtractorFactory},);
-          })
-        })
+            lookupEntries.push({tier, id, version: lookupData[tier][id].version, spec: lookupData[tier][id].lookupExtractorFactory});
+          });
+        });
         return {
           lookupEntries,
           tiers
@@ -123,11 +123,11 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
           intent: Intent.DANGER,
           message: getDruidErrorMessage(e)
         }
-      )
+      );
     }
   }
 
-  private async openLookupEditDialog(tier:string, id: string) {
+  private async openLookupEditDialog(tier: string, id: string) {
     const { lookups, allLookupTiers } = this.state;
     const target: any = lookups.find((lookupEntry: any) => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
@@ -156,7 +156,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   private changeLookup(field: string, value: string) {
     this.setState({
       [field]: value
-    } as any)
+    } as any);
   }
 
   private async submitLookupEdit() {
@@ -184,20 +184,20 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       await axios.post(endpoint, dataJSON);
       this.setState({
         lookupEditDialogOpen: false
-      })
+      });
       this.lookupsGetQueryManager.rerunLastQuery();
-    } catch(e) {
+    } catch (e) {
       AppToaster.show(
         {
           iconName: 'error',
           intent: Intent.DANGER,
           message: getDruidErrorMessage(e)
         }
-      )
+      );
     }
   }
 
-  private deleteLookup(tier:string, name: string): void {
+  private deleteLookup(tier: string, name: string): void {
     const url = `/druid/coordinator/v1/lookups/config/${tier}/${name}`;
     this.lookupDeleteQueryManager.runQuery(url);
   }
@@ -211,7 +211,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
           text="Initialize Lookup"
           onClick={() => this.initializeLookup()}
         />
-      </div>
+      </div>;
     }
     return <>
       <ReactTable
@@ -224,39 +224,39 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
             Header: "Lookup Name",
             id: "lookup_name",
             accessor: (row: any) => row.id,
-            filterable: true,
+            filterable: true
           },
           {
             Header: "Tier",
             id: "tier",
             accessor: (row: any) => row.tier,
-            filterable: true,
+            filterable: true
           },
           {
             Header: "Type",
             id: "type",
             accessor: (row: any) => row.spec.type,
-            filterable: true,
+            filterable: true
           },
           {
             Header: "Version",
             id: "version",
             accessor: (row: any) => row.version,
-            filterable: true,
+            filterable: true
           },
           {
             Header: "Config",
             id: "config",
-            accessor: row => {return {id: row.id, tier: row.tier};},
+            accessor: row => ({id: row.id, tier: row.tier}),
             filterable: false,
             Cell: (row: any) => {
               const lookupId = row.value.id;
               const lookupTier = row.value.tier;
               return <div>
-                <a onClick={() => this.openLookupEditDialog(lookupTier,lookupId)}>Edit</a>
+                <a onClick={() => this.openLookupEditDialog(lookupTier, lookupId)}>Edit</a>
                 &nbsp;&nbsp;&nbsp;
-                <a onClick={() => this.deleteLookup(lookupTier,lookupId)}>Delete</a>
-              </div>
+                <a onClick={() => this.deleteLookup(lookupTier, lookupId)}>Delete</a>
+              </div>;
             }
           }
         ]}
@@ -266,8 +266,8 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     </>;
   }
 
-  renderLookupEditDialog () {
-    const { lookupEditDialogOpen, allLookupTiers, lookupEditSpec, lookupEditTier, lookupEditName, lookupEditVersion, isEdit } = this.state
+  renderLookupEditDialog() {
+    const { lookupEditDialogOpen, allLookupTiers, lookupEditSpec, lookupEditTier, lookupEditName, lookupEditVersion, isEdit } = this.state;
 
     return <LookupEditDialog
       isOpen={lookupEditDialogOpen}
@@ -280,7 +280,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       lookupVersion = {lookupEditVersion}
       isEdit={isEdit}
       allLookupTiers={allLookupTiers}
-    />
+    />;
   }
 
   render() {
@@ -301,6 +301,6 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       </div>
       {this.renderLookupsTable()}
       {this.renderLookupEditDialog()}
-    </div>
+    </div>;
   }
 }
