@@ -362,9 +362,12 @@ GROUP BY 1`);
                 text = DatasourcesView.formatRules(rules);
               }
 
-              return <span>
+              return <span
+                onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}
+                className={"clickable-cell"}
+              >
                 {text}&nbsp;
-                <a onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}>&#x270E;</a>
+                <a>&#x270E;</a>
               </span>;
             }
           },
