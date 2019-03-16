@@ -66,7 +66,8 @@ public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModu
   {
     super.configure(binder);
 
-    JsonConfigProvider.bind(binder, "druid.metadata.postgres", PostgreSQLConnectorConfig.class);
+    JsonConfigProvider.bind(binder, "druid.metadata.postgres.ssl", PostgreSQLConnectorConfig.class);
+    JsonConfigProvider.bind(binder, "druid.metadata.postgres", PostgreSQLTablesConfig.class);
 
     PolyBind
         .optionBinder(binder, Key.get(MetadataStorageProvider.class))
