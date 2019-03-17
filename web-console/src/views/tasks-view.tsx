@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 
+import { Alert, Button, Intent } from "@blueprintjs/core";
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
+import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
-import { Button, Intent, Alert } from "@blueprintjs/core";
-import { ButtonGroup, Label, IconNames } from "../components/filler";
-import { addFilter, QueryManager, getDruidErrorMessage, countBy, formatDuration, queryDruidSql } from "../utils";
+
+import { ButtonGroup, IconNames, Label } from "../components/filler";
 import { AsyncActionDialog } from "../dialogs/async-action-dialog";
 import { SpecDialog } from "../dialogs/spec-dialog";
 import { AppToaster } from '../singletons/toaster';
+import { addFilter, countBy, formatDuration, getDruidErrorMessage, queryDruidSql, QueryManager } from "../utils";
+
 import "./tasks-view.scss";
 
 export interface TasksViewProps extends React.Props<any> {
@@ -102,7 +104,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   componentDidMount(): void {
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        const resp = await axios.get("/druid/indexer/v1/supervisor?full")
+        const resp = await axios.get("/druid/indexer/v1/supervisor?full");
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -299,7 +301,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         data={supervisors || []}
         loading={supervisorsLoading}
         noDataText={!supervisorsLoading && supervisors && !supervisors.length ? 'No supervisors' : (supervisorsError || '')}
-        filterable={true}
+        filterable
         columns={[
           {
             Header: "Datasource",
@@ -338,7 +340,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <span>
                 <span
                   style={{ color: value === 'Suspended' ? '#d58512' : '#2167d5' }}
-                >&#x25cf;&nbsp;</span>
+                >
+                  &#x25cf;&nbsp;
+                </span>
                 {value}
               </span>;
             }
@@ -363,7 +367,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 {suspendResume}&nbsp;&nbsp;&nbsp;
                 <a onClick={() => this.setState({ resetSupervisorId: id })}>Reset</a>&nbsp;&nbsp;&nbsp;
                 <a onClick={() => this.setState({ terminateSupervisorId: id })}>Terminate</a>
-              </div>
+              </div>;
             }
           }
         ]}
@@ -413,7 +417,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         data={tasks || []}
         loading={tasksLoading}
         noDataText={!tasksLoading && tasks && !tasks.length ? 'No tasks' : (tasksError || '')}
-        filterable={true}
+        filterable
         filtered={taskFilter}
         onFilteredChange={(filtered, column) => {
           this.setState({ taskFilter: filtered });
@@ -432,7 +436,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             accessor: "type",
             Cell: row => {
               const value = row.value;
-              return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'type', value) }) }}>{value}</a>
+              return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'type', value) }); }}>{value}</a>;
             }
           },
           {
@@ -440,7 +444,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             accessor: "datasource",
             Cell: row => {
               const value = row.value;
-              return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'datasource', value) }) }}>{value}</a>
+              return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'datasource', value) }); }}>{value}</a>;
             }
           },
           {
@@ -462,10 +466,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <span>
                 <span
                   style={{ color: statusToColor(status) }}
-                >&#x25cf;&nbsp;</span>
-                { status }
-                { location && <a onClick={() => goToMiddleManager(locationHostname)} title={`Go to: ${locationHostname}`}>&nbsp;&#x279A;</a> }
-                { errorMsg && <a onClick={() => this.setState({ alertErrorMsg: errorMsg })} title={errorMsg}>&nbsp;?</a> }
+                >
+                  &#x25cf;&nbsp;
+                </span>
+                {status}
+                {location && <a onClick={() => goToMiddleManager(locationHostname)} title={`Go to: ${locationHostname}`}>&nbsp;&#x279A;</a>}
+                {errorMsg && <a onClick={() => this.setState({ alertErrorMsg: errorMsg })} title={errorMsg}>&nbsp;?</a>}
               </span>;
             },
             PivotValue: (opt) => {
@@ -503,8 +509,8 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 <a href={`/druid/indexer/v1/task/${id}/reports`} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/log`} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/log?offset=-8192`} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
-                { (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a> }
-              </div>
+                {(status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a>}
+              </div>;
             },
             Aggregated: row => ''
           }
@@ -583,7 +589,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
       >
         <p>{alertErrorMsg}</p>
       </Alert>
-    </div>
+    </div>;
   }
 }
-

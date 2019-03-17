@@ -16,21 +16,24 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import * as ReactDOMServer from 'react-dom/server';
+import { Button, Checkbox, Classes, Intent, Popover, Position } from "@blueprintjs/core";
 import axios from "axios";
-import * as classNames from 'classnames';
-import * as ace from 'brace'
-import AceEditor from "react-ace";
-import 'brace/mode/sql';
-import 'brace/mode/hjson';
-import 'brace/theme/solarized_dark';
+import * as ace from 'brace';
 import 'brace/ext/language_tools';
-import {Intent, Button, Popover, Checkbox, Classes, Position} from "@blueprintjs/core";
+import 'brace/mode/hjson';
+import 'brace/mode/sql';
+import 'brace/theme/solarized_dark';
+import * as classNames from 'classnames';
+import * as React from 'react';
+import AceEditor from "react-ace";
+import * as ReactDOMServer from 'react-dom/server';
+
 import { SQLFunctionDoc } from "../../lib/sql-function-doc";
+import { AppToaster } from "../singletons/toaster";
+
 import { IconNames } from './filler';
-import './sql-control.scss'
-import {AppToaster} from "../singletons/toaster";
+
+import './sql-control.scss';
 
 const langTools = ace.acequire('ace/ext/language_tools');
 
@@ -55,9 +58,8 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     };
   }
 
-
-  private addDatasourceAutoCompleter = async (): Promise<any> =>{
-    const datasourceResp = await axios.post("/druid/v2/sql", { query: `SELECT datasource FROM sys.segments GROUP BY 1`})
+  private addDatasourceAutoCompleter = async (): Promise<any> => {
+    const datasourceResp = await axios.post("/druid/v2/sql", { query: `SELECT datasource FROM sys.segments GROUP BY 1`});
     const datasourceList: any[] = datasourceResp.data.map((d: any) => {
       const datasourceName: string = d.datasource;
       return {
@@ -68,7 +70,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     });
 
     const completer = {
-      getCompletions: (editor:any , session: any, pos: any, prefix: any, callback: any) => {
+      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
         callback(null, datasourceList);
       }
     };
@@ -77,7 +79,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
   }
 
   private addColumnNameAutoCompleter = async (): Promise<any> => {
-    const columnNameResp = await axios.post("/druid/v2/sql", {query: `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid'`})
+    const columnNameResp = await axios.post("/druid/v2/sql", {query: `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid'`});
     const columnNameList: any[] = columnNameResp.data.map((d: any) => {
       const columnName: string = d.COLUMN_NAME;
       return {
@@ -88,7 +90,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     });
 
     const completer = {
-      getCompletions: (editor:any , session: any, pos: any, prefix: any, callback: any) => {
+      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
         callback(null, columnNameList);
       }
     };
@@ -97,9 +99,9 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
   }
 
   private addFunctionAutoCompleter = (): void => {
-    const functionList: any[]= SQLFunctionDoc.map((entry: any) => {
-      let funcName: string = entry.syntax.replace(/\(.*\)/,"()");
-      if (!funcName.includes("(")) funcName = funcName.substr(0,10);
+    const functionList: any[] = SQLFunctionDoc.map((entry: any) => {
+      let funcName: string = entry.syntax.replace(/\(.*\)/, "()");
+      if (!funcName.includes("(")) funcName = funcName.substr(0, 10);
       return {
         value: funcName,
         score: 80,
@@ -107,22 +109,22 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         syntax: entry.syntax,
         description: entry.description,
         completer: {
-          insertMatch: (editor:any, data:any) => {
+          insertMatch: (editor: any, data: any) => {
             editor.completer.insertMatch({value: data.caption});
             const pos = editor.getCursorPosition();
-            editor.gotoLine(pos.row+1, pos.column-1);
+            editor.gotoLine(pos.row + 1, pos.column - 1);
           }
         }
       };
     });
 
     const completer = {
-      getCompletions: (editor:any , session: any, pos: any, prefix: any, callback: any) => {
+      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
         callback(null, functionList);
       },
       getDocTooltip: (item: any) => {
         if (item.meta === "function") {
-          const functionName = item.caption.slice(0,-2);
+          const functionName = item.caption.slice(0, -2);
           item.docHTML = ReactDOMServer.renderToStaticMarkup((
             <div className={"function-doc"}>
               <div className={"function-doc-name"}><b>{functionName}</b></div>
@@ -133,7 +135,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
               <div><b>Description:</b></div>
               <div>{item.description}</div>
             </div>
-          ))
+          ));
         }
       }
     };
@@ -160,7 +162,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
   private handleChange = (newValue: string): void => {
     this.setState({
       query: newValue
-    })
+    });
   }
 
   render() {
@@ -186,7 +188,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         theme="solarized_dark"
         name="ace-editor"
         onChange={this.handleChange}
-        focus={true}
+        focus
         fontSize={14}
         width={'100%'}
         height={"30vh"}
@@ -199,7 +201,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
           enableBasicAutocompletion: isRune ? false : autoCompleteOn,
           enableLiveAutocompletion: isRune ? false : autoCompleteOn,
           showLineNumbers: true,
-          tabSize: 2,
+          tabSize: 2
         }}
       />
       <div className="buttons">
@@ -213,4 +215,3 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     </div>;
   }
 }
-

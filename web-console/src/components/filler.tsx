@@ -17,10 +17,10 @@
  */
 
 import { Button } from '@blueprintjs/core';
-import * as React from 'react';
 import classNames from 'classnames';
-import './filler.scss';
+import * as React from 'react';
 
+import './filler.scss';
 
 export const IconNames = {
   ERROR: "error" as "error",
@@ -103,16 +103,15 @@ export class FormGroup extends React.Component<{ className?: string, label?: str
   render() {
     const { className, label, children } = this.props;
     return <div className={classNames("form-group", className)}>
-      { label ? <Label>{label}</Label> : null }
+      {label ? <Label>{label}</Label> : null}
       {children}
     </div>;
   }
 }
 
-
 export const Alignment = {
   LEFT: "left" as "left",
-  RIGHT: "right" as "right",
+  RIGHT: "right" as "right"
 };
 export type Alignment = typeof Alignment[keyof typeof Alignment];
 
@@ -166,7 +165,7 @@ export interface NumericInputProps {
   min?: number;
   max?: number;
   stepSize?: number;
-  majorStepSize?: number
+  majorStepSize?: number;
 }
 
 export class NumericInput extends React.Component<NumericInputProps, { stringValue: string }> {
@@ -174,20 +173,20 @@ export class NumericInput extends React.Component<NumericInputProps, { stringVal
   static defaultProps = {
     stepSize: 1,
     majorStepSize: 10
-  }
+  };
 
   constructor(props: NumericInputProps) {
     super(props);
     this.state = {
       stringValue: typeof props.value === 'number' ? String(props.value) : ''
-    }
+    };
   }
 
   private constrain(n: number): number {
     const { min, max } = this.props;
     if (typeof min === 'number') n = Math.max(n, min);
     if (typeof max === 'number') n = Math.min(n, max);
-    return n
+    return n;
   }
 
   private handleChange = (e: any) => {
@@ -236,13 +235,13 @@ export class TagInput extends React.Component<TagInputProps, { stringValue: stri
     super(props);
     this.state = {
       stringValue: Array.isArray(props.values) ? props.values.join(', ') : ''
-    }
+    };
   }
 
   handleChange = (e: any) => {
-    let stringValue = e.target.value;
-    let newValues = stringValue.split(',').map((v: string) => v.trim());
-    let newValuesFiltered = newValues.filter(Boolean);
+    const stringValue = e.target.value;
+    const newValues = stringValue.split(',').map((v: string) => v.trim());
+    const newValuesFiltered = newValues.filter(Boolean);
     this.setState({
       stringValue: newValues.length === newValuesFiltered.length ? newValues.join(', ') : stringValue
     });
