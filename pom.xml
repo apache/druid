@@ -1220,7 +1220,7 @@
                         <!-- set default options -->
                         <argLine>
                             -Xmx1500m
-                            -XX:MaxDirectMemorySize=32g
+                            -XX:MaxDirectMemorySize=512m
                             -Duser.language=en
                             -Duser.GroupByQueryRunnerTest.javacountry=US
                             -Dfile.encoding=UTF-8
