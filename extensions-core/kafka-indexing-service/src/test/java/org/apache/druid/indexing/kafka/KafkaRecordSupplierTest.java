@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 
 public class KafkaRecordSupplierTest
 {
-  private static final Logger log = new Logger(KafkaRecordSupplierTest.class);
+
   private static String topic = "topic";
   private static long poll_timeout_millis = 1000;
   private static int pollRetry = 5;
@@ -313,6 +313,7 @@ public class KafkaRecordSupplierTest
         kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
 
     Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition0));
     Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition1));
@@ -355,6 +356,7 @@ public class KafkaRecordSupplierTest
         kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
 
     Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition0));
     Assert.assertEquals(0L, (long) recordSupplier.getEarliestSequenceNumber(partition1));
@@ -413,6 +415,7 @@ public class KafkaRecordSupplierTest
         kafkaServer.consumerProperties(), objectMapper);
 
     recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
 
     Assert.assertEquals(0L, (long) recordSupplier.getPosition(partition0));
     Assert.assertEquals(0L, (long) recordSupplier.getPosition(partition1));
