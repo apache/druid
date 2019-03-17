@@ -75,8 +75,8 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
         onChange={(e) => { this.setState({ spec: e }); }}
         fontSize={12}
         showPrintMargin={false}
-        showGutter={true}
-        highlightActiveLine={true}
+        showGutter
+        highlightActiveLine
         value={spec}
         width={"100%"}
         setOptions={{

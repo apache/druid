@@ -63,12 +63,14 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
         iconName: 'error',
         intent: Intent.DANGER,
         timeout: 120000,
+        /* tslint:disable:jsx-alignment */
         message: <>
           It appears that the SQL endpoint is disabled. Either <a
           href={DRUID_DOCS_SQL}>enable the SQL endpoint</a> or use the old <a
           href={LEGACY_COORDINATOR_CONSOLE}>coordinator</a> and <a
           href={LEGACY_OVERLORD_CONSOLE}>overlord</a> consoles that do not rely on the SQL endpoint.
         </>
+        /* tslint:enable:jsx-alignment */
       });
       return false;
     }
@@ -142,27 +144,47 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     return <HashRouter hashType="noslash">
       <div className="console-application">
         <Switch>
-          <Route path="/datasources" component={() => {
-            return wrapInViewContainer('datasources', <DatasourcesView goToSql={this.goToSql} goToSegments={this.goToSegments}/>);
-          }} />
-          <Route path="/segments" component={() => {
-            return wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql}/>);
-          }} />
-          <Route path="/tasks" component={() => {
-            return wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager}/>, true);
-          }} />
-          <Route path="/servers" component={() => {
-            return wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask}/>, true);
-          }} />
-          <Route path="/sql" component={() => {
-            return wrapInViewContainer('sql', <SqlView initSql={this.initSql}/>);
-          }} />
-          <Route path="/lookups" component={() => {
-            return wrapInViewContainer('lookups', <LookupsView />);
-          }} />
-          <Route component={() => {
-            return wrapInViewContainer(null, <HomeView/>);
-          }} />
+          <Route
+            path="/datasources"
+            component={() => {
+              return wrapInViewContainer('datasources', <DatasourcesView goToSql={this.goToSql} goToSegments={this.goToSegments}/>);
+            }}
+          />
+          <Route
+            path="/segments"
+            component={() => {
+              return wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql}/>);
+            }}
+          />
+          <Route
+            path="/tasks"
+            component={() => {
+              return wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager}/>, true);
+            }}
+          />
+          <Route
+            path="/servers"
+            component={() => {
+              return wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask}/>, true);
+            }}
+          />
+          <Route
+            path="/sql"
+            component={() => {
+              return wrapInViewContainer('sql', <SqlView initSql={this.initSql}/>);
+            }}
+          />
+          <Route
+            path="/lookups"
+            component={() => {
+              return wrapInViewContainer('lookups', <LookupsView />);
+            }}
+          />
+          <Route
+            component={() => {
+              return wrapInViewContainer(null, <HomeView/>);
+            }}
+          />
         </Switch>
       </div>
     </HashRouter>;

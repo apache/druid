@@ -22,8 +22,8 @@ import * as classNames from 'classnames';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 import { Button, Intent } from "@blueprintjs/core";
-import {getDruidErrorMessage, QueryManager} from "../utils";
-import {LookupEditDialog} from "../dialogs/lookup-edit-dialog";
+import { getDruidErrorMessage, QueryManager } from "../utils";
+import { LookupEditDialog } from "../dialogs/lookup-edit-dialog";
 import { AppToaster } from "../singletons/toaster";
 import "./lookups-view.scss";
 
@@ -218,7 +218,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
         data={lookups}
         loading={loadingLookups}
         noDataText={!loadingLookups && lookups && !lookups.length ? 'No lookups' : (lookupsError || '')}
-        filterable={true}
+        filterable
         columns={[
           {
             Header: "Lookup Name",
@@ -274,10 +274,10 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       onClose={() => this.setState({ lookupEditDialogOpen: false })}
       onSubmit={() => this.submitLookupEdit()}
       onChange={(field: string, value: string) => this.changeLookup(field, value)}
-      lookupSpec= {lookupEditSpec}
+      lookupSpec={lookupEditSpec}
       lookupName={lookupEditName}
       lookupTier={lookupEditTier}
-      lookupVersion = {lookupEditVersion}
+      lookupVersion={lookupEditVersion}
       isEdit={isEdit}
       allLookupTiers={allLookupTiers}
     />;

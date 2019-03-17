@@ -26,11 +26,11 @@ import 'brace/mode/sql';
 import 'brace/mode/hjson';
 import 'brace/theme/solarized_dark';
 import 'brace/ext/language_tools';
-import {Intent, Button, Popover, Checkbox, Classes, Position} from "@blueprintjs/core";
+import { Intent, Button, Popover, Checkbox, Classes, Position } from "@blueprintjs/core";
 import { SQLFunctionDoc } from "../../lib/sql-function-doc";
 import { IconNames } from './filler';
 import './sql-control.scss';
-import {AppToaster} from "../singletons/toaster";
+import { AppToaster } from "../singletons/toaster";
 
 const langTools = ace.acequire('ace/ext/language_tools');
 
@@ -185,7 +185,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         theme="solarized_dark"
         name="ace-editor"
         onChange={this.handleChange}
-        focus={true}
+        focus
         fontSize={14}
         width={'100%'}
         height={"30vh"}

@@ -56,7 +56,7 @@ export function makeBooleanFilter(): FilterRender {
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
       value={filterValue || "all"}
-      fill={true}
+      fill
     >
       <option value="all">Show all</option>
       <option value="true">true</option>

@@ -143,7 +143,7 @@ WHERE "server_type" = 'historical'`);
       data={servers || []}
       loading={serversLoading}
       noDataText={!serversLoading && servers && !servers.length ? 'No historicals' : (serversError || '')}
-      filterable={true}
+      filterable
       filtered={serverFilter}
       onFilteredChange={(filtered, column) => {
         this.setState({ serverFilter: filtered });
@@ -270,7 +270,7 @@ WHERE "server_type" = 'historical'`);
       data={middleManagers || []}
       loading={middleManagersLoading}
       noDataText={!middleManagersLoading && middleManagers && !middleManagers.length ? 'No MiddleManagers' : (middleManagersError || '')}
-      filterable={true}
+      filterable
       filtered={middleManagerFilter}
       onFilteredChange={(filtered, column) => {
         this.setState({ middleManagerFilter: filtered });
@@ -317,7 +317,7 @@ WHERE "server_type" = 'historical'`);
             runningTasks.length ?
               <>
                 <span>Running tasks:</span>
-                <ul>{ runningTasks.map((t: string) => <li key={t}>{t}&nbsp;<a onClick={() => goToTask(t)}>&#x279A;</a></li>) }</ul>
+                <ul>{runningTasks.map((t: string) => <li key={t}>{t}&nbsp;<a onClick={() => goToTask(t)}>&#x279A;</a></li>)}</ul>
               </> :
               <span>No running tasks</span>
           }

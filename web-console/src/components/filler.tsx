@@ -102,7 +102,7 @@ export class FormGroup extends React.Component<{ className?: string, label?: str
   render() {
     const { className, label, children } = this.props;
     return <div className={classNames("form-group", className)}>
-      { label ? <Label>{label}</Label> : null }
+      {label ? <Label>{label}</Label> : null}
       {children}
     </div>;
   }

@@ -299,7 +299,7 @@ GROUP BY 1`);
         data={data}
         loading={datasourcesLoading}
         noDataText={!datasourcesLoading && datasources && !datasources.length ? 'No datasources' : (datasourcesError || '')}
-        filterable={true}
+        filterable
         filtered={datasourcesFilter}
         onFilteredChange={(filtered, column) => {
           this.setState({ datasourcesFilter: filtered });

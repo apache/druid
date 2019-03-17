@@ -92,8 +92,8 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
       onClose={handleClose}
     >
       <div className={Classes.ALERT_BODY}>
-        { icon && <Icon icon={icon} /> }
-        { !working && <div className={Classes.ALERT_CONTENTS}>{children}</div> }
+        {icon && <Icon icon={icon} />}
+        {!working && <div className={Classes.ALERT_CONTENTS}>{children}</div>}
       </div>
       {
         working ?

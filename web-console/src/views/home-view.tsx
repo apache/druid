@@ -254,7 +254,7 @@ GROUP BY 1`);
 
   renderCard(cardOptions: CardOptions): JSX.Element {
     return <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
-      <Card interactive={true}>
+      <Card interactive>
         <H5><Icon color="#bfccd5" icon={cardOptions.icon}/>&nbsp;{cardOptions.title}</H5>
         {cardOptions.loading ? <p>Loading...</p> : (cardOptions.error ? `Error: ${cardOptions.error}` : cardOptions.content)}
       </Card>
@@ -298,11 +298,11 @@ GROUP BY 1`);
         title: "Tasks",
         loading: state.taskCountLoading,
         content: <>
-          { Boolean(state.runningTaskCount) && <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p> }
-          { Boolean(state.pendingTaskCount) && <p>{pluralIfNeeded(state.pendingTaskCount, 'pending task')}</p> }
-          { Boolean(state.successTaskCount) && <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p> }
-          { Boolean(state.waitingTaskCount) && <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p> }
-          { Boolean(state.failedTaskCount) && <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p> }
+          {Boolean(state.runningTaskCount) && <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p>}
+          {Boolean(state.pendingTaskCount) && <p>{pluralIfNeeded(state.pendingTaskCount, 'pending task')}</p>}
+          {Boolean(state.successTaskCount) && <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p>}
+          {Boolean(state.waitingTaskCount) && <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p>}
+          {Boolean(state.failedTaskCount) && <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p>}
           { !(state.runningTaskCount + state.pendingTaskCount + state.successTaskCount + state.waitingTaskCount + state.failedTaskCount) &&
             <p>There are no tasks</p>
           }

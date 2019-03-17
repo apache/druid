@@ -1,5 +1,8 @@
 {
-  "extends": "tslint:recommended",
+  "extends": [
+    "tslint:recommended",
+    "tslint-react"
+  ],
   "rules": {
     "align": true,
     "array-type": [true, "array"],
@@ -13,8 +16,9 @@
       "check-space"
     ],
     "curly": [true, "ignore-same-line"],
+    "file-header": [true, "Licensed to the Apache Software Foundation \\(ASF\\).+"],
     "forin": false,
-    "indent": [true, 2],
+    "indent": [true, "spaces", 2],
     "interface-name": [true, "never-prefix"],
     "jsdoc-format": true,
     "label-position": true,
@@ -22,7 +26,15 @@
     "max-classes-per-file": false,
     "member-access": false,
     "member-ordering": [true,
-      "static-before-instance"
+      {
+        "order": [
+          "static-field",
+          "static-method",
+          "instance-field",
+          "constructor",
+          "instance-method"
+        ]
+      }
     ],
     "no-any": false,
     "no-arg": true,
@@ -83,8 +95,19 @@
       "check-branch",
       "check-decl",
       "check-operator",
+      "check-module",
       "check-separator",
-      "check-type"
-    ]
+      "check-type",
+      "check-type-operator"
+    ],
+    "jsx-alignment": true,
+    "jsx-boolean-value": [true, "never"],
+    "jsx-curly-spacing": [true, "never"],
+    "jsx-no-lambda": false,
+    "jsx-no-multiline-js": false,
+    "jsx-no-string-ref": true,
+    "jsx-self-close": true,
+    "jsx-space-before-trailing-slash": false,
+    "jsx-wrap-multiline": false
   }
 }

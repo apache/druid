@@ -37,6 +37,7 @@ export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogSt
   render() {
     const { onClose } = this.props;
 
+    /* tslint:disable:jsx-alignment */
     return <Dialog
       iconName={IconNames.GRAPH}
       onClose={onClose}
@@ -75,5 +76,6 @@ export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogSt
         </div>
       </div>
     </Dialog>;
+    /* tslint:enable:jsx-alignment */
   }
 }

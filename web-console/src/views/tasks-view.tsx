@@ -299,7 +299,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         data={supervisors || []}
         loading={supervisorsLoading}
         noDataText={!supervisorsLoading && supervisors && !supervisors.length ? 'No supervisors' : (supervisorsError || '')}
-        filterable={true}
+        filterable
         columns={[
           {
             Header: "Datasource",
@@ -338,7 +338,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <span>
                 <span
                   style={{ color: value === 'Suspended' ? '#d58512' : '#2167d5' }}
-                >&#x25cf;&nbsp;</span>
+                >
+                  &#x25cf;&nbsp;
+                </span>
                 {value}
               </span>;
             }
@@ -413,7 +415,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         data={tasks || []}
         loading={tasksLoading}
         noDataText={!tasksLoading && tasks && !tasks.length ? 'No tasks' : (tasksError || '')}
-        filterable={true}
+        filterable
         filtered={taskFilter}
         onFilteredChange={(filtered, column) => {
           this.setState({ taskFilter: filtered });
@@ -462,10 +464,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <span>
                 <span
                   style={{ color: statusToColor(status) }}
-                >&#x25cf;&nbsp;</span>
-                { status }
-                { location && <a onClick={() => goToMiddleManager(locationHostname)} title={`Go to: ${locationHostname}`}>&nbsp;&#x279A;</a> }
-                { errorMsg && <a onClick={() => this.setState({ alertErrorMsg: errorMsg })} title={errorMsg}>&nbsp;?</a> }
+                >
+                  &#x25cf;&nbsp;
+                </span>
+                {status}
+                {location && <a onClick={() => goToMiddleManager(locationHostname)} title={`Go to: ${locationHostname}`}>&nbsp;&#x279A;</a>}
+                {errorMsg && <a onClick={() => this.setState({ alertErrorMsg: errorMsg })} title={errorMsg}>&nbsp;?</a>}
               </span>;
             },
             PivotValue: (opt) => {
@@ -503,7 +507,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 <a href={`/druid/indexer/v1/task/${id}/reports`} target="_blank">Reports</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/log`} target="_blank">Log (all)</a>&nbsp;&nbsp;&nbsp;
                 <a href={`/druid/indexer/v1/task/${id}/log?offset=-8192`} target="_blank">Log (last 8kb)</a>&nbsp;&nbsp;&nbsp;
-                { (status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a> }
+                {(status === 'RUNNING' || status === 'WAITING' || status === 'PENDING') && <a onClick={() => this.setState({ killTaskId: id })}>Kill</a>}
               </div>;
             },
             Aggregated: row => ''

@@ -17,11 +17,11 @@
  */
 
 import * as React from "react";
-import {Button, Classes, Dialog, Intent, InputGroup } from "@blueprintjs/core";
+import { Button, Classes, Dialog, Intent, InputGroup } from "@blueprintjs/core";
 import "./lookup-edit-dialog.scss";
-import {validJson} from "../utils";
+import { validJson } from "../utils";
 import AceEditor from "react-ace";
-import {FormGroup} from "../components/filler";
+import { FormGroup } from "../components/filler";
 
 export interface LookupEditDialogProps extends React.Props<any> {
   isOpen: boolean;
@@ -62,7 +62,7 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
         <InputGroup
           value={lookupTier}
           onChange={(e: any) => onChange("lookupEditTier", e.target.value)}
-          disabled={true}
+          disabled
         />
       </FormGroup>;
     } else {
@@ -101,7 +101,7 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
         />
       </FormGroup>
 
-      { this.renderTierInput() }
+      {this.renderTierInput()}
 
       <FormGroup className={"lookup-label"} label={"Version:"}>
         <InputGroup
