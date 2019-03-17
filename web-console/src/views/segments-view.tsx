@@ -16,22 +16,24 @@
  * limitations under the License.
  */
 
+import { Button } from "@blueprintjs/core";
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
+import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
-import { Button } from "@blueprintjs/core";
+
 import { H5, IconNames } from "../components/filler";
 import {
   addFilter,
-  makeBooleanFilter,
-  QueryManager,
   formatBytes,
   formatNumber,
+  makeBooleanFilter,
   parseList,
-  queryDruidSql
+  queryDruidSql,
+  QueryManager
 } from "../utils";
+
 import "./segments-view.scss";
 
 export interface SegmentsViewProps extends React.Props<any> {

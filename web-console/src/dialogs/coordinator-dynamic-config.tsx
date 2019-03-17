@@ -17,13 +17,16 @@
  */
 
 import { Intent } from '@blueprintjs/core';
-import * as React from 'react';
 import axios from 'axios';
-import { AppToaster } from '../singletons/toaster';
-import { IconNames } from '../components/filler';
+import * as React from 'react';
+
 import { AutoForm } from '../components/auto-form';
+import { IconNames } from '../components/filler';
+import { AppToaster } from '../singletons/toaster';
 import { getDruidErrorMessage } from '../utils';
+
 import { SnitchDialog } from './snitch-dialog';
+
 import './coordinator-dynamic-config.scss';
 
 export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {

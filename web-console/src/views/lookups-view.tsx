@@ -16,15 +16,17 @@
  * limitations under the License.
  */
 
+import { Button, Intent } from "@blueprintjs/core";
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
+import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
-import { Button, Intent } from "@blueprintjs/core";
-import { getDruidErrorMessage, QueryManager } from "../utils";
+
 import { LookupEditDialog } from "../dialogs/lookup-edit-dialog";
 import { AppToaster } from "../singletons/toaster";
+import { getDruidErrorMessage, QueryManager } from "../utils";
+
 import "./lookups-view.scss";
 
 export interface LookupsViewProps extends React.Props<any> {

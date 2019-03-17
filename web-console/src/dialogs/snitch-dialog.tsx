@@ -16,16 +16,17 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
 import {
   Button,
-  InputGroup,
+  Classes,
   Dialog,
   IDialogProps,
-  Classes,
+  InputGroup,
   Intent
 } from "@blueprintjs/core";
-import { IconNames, FormGroup } from '../components/filler';
+import * as React from 'react';
+
+import { FormGroup, IconNames } from '../components/filler';
 
 export interface SnitchDialogProps extends IDialogProps {
   onSave: (author: string, comment: string) => void;

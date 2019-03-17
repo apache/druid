@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import { Button, Collapse, InputGroup } from "@blueprintjs/core";
 import axios from 'axios';
-import { Button, InputGroup, Collapse } from "@blueprintjs/core";
-import { IconNames, FormGroup, HTMLSelect, Card, ControlGroup, NumericInput, TagInput } from "../components/filler";
+import * as React from 'react';
+
+import { Card, ControlGroup, FormGroup, HTMLSelect, IconNames, NumericInput, TagInput } from "../components/filler";
+
 import './rule-editor.scss';
 
 export interface Rule {

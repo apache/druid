@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import axios from 'axios';
 import { Button } from "@blueprintjs/core";
+import axios from 'axios';
+import * as React from 'react';
+
 import { FormGroup, IconNames } from '../components/filler';
-import { RuleEditor, Rule } from '../components/rule-editor';
+import { Rule, RuleEditor } from '../components/rule-editor';
+
 import { SnitchDialog } from './snitch-dialog';
 
 import './retention-dialog.scss';

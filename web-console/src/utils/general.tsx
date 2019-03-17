@@ -17,10 +17,11 @@
  */
 
 import { Button, InputGroup, Intent } from '@blueprintjs/core';
-import { IconNames, HTMLSelect } from "../components/filler";
 import * as numeral from "numeral";
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
+
+import { HTMLSelect, IconNames } from "../components/filler";
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
   const currentFilter = filters.find(f => f.id === id);

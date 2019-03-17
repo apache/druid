@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
+import { Button, Classes, Dialog, InputGroup, Intent } from "@blueprintjs/core";
 import * as React from "react";
-import { Button, Classes, Dialog, Intent, InputGroup } from "@blueprintjs/core";
-import "./lookup-edit-dialog.scss";
-import { validJson } from "../utils";
 import AceEditor from "react-ace";
+
 import { FormGroup } from "../components/filler";
+import { validJson } from "../utils";
+
+import "./lookup-edit-dialog.scss";
 
 export interface LookupEditDialogProps extends React.Props<any> {
   isOpen: boolean;

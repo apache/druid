@@ -16,22 +16,23 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
-import * as React from 'react';
-import * as classNames from 'classnames';
-import { HashRouter, Route, Switch } from "react-router-dom";
 import { Intent } from "@blueprintjs/core";
+import axios from 'axios';
+import * as classNames from 'classnames';
+import * as React from 'react';
+import { HashRouter, Route, Switch } from "react-router-dom";
+
+import { HeaderActiveTab, HeaderBar } from './components/header-bar';
 import { AppToaster } from './singletons/toaster';
-import { HeaderBar, HeaderActiveTab } from './components/header-bar';
-import { localStorageGet, localStorageSet } from './utils';
 import { DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE } from './variables';
-import { HomeView } from './views/home-view';
 import { DatasourcesView } from './views/datasource-view';
+import { HomeView } from './views/home-view';
+import { LookupsView } from "./views/lookups-view";
 import { SegmentsView } from './views/segments-view';
 import { ServersView } from './views/servers-view';
-import { TasksView } from './views/tasks-view';
 import { SqlView } from './views/sql-view';
-import { LookupsView } from "./views/lookups-view";
+import { TasksView } from './views/tasks-view';
+
 import "./console-application.scss";
 
 export interface ConsoleApplicationProps extends React.Props<any> {

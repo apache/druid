@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-import classNames from 'classnames';
-import * as React from 'react';
 import {
   Button,
-  InputGroup,
-  Dialog,
   Classes,
+  Dialog,
   Intent,
   ProgressBar
 } from "@blueprintjs/core";
-import { Icon, FormGroup, ButtonGroup, NumericInput, TagInput } from '../components/filler';
+import classNames from 'classnames';
+import * as React from 'react';
+
+import { ButtonGroup, FormGroup, Icon, NumericInput, TagInput } from '../components/filler';
 import { AppToaster } from '../singletons/toaster';
 
 export interface AsyncAlertDialogProps extends React.Props<any> {

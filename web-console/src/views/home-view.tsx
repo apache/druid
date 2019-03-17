@@ -17,10 +17,12 @@
  */
 
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
-import { H5, Card, Icon, IconNames } from "../components/filler";
-import { QueryManager, pluralIfNeeded, queryDruidSql, getHeadProp } from '../utils';
+import * as React from 'react';
+
+import { Card, H5, Icon, IconNames } from "../components/filler";
+import { getHeadProp, pluralIfNeeded, queryDruidSql, QueryManager } from '../utils';
+
 import './home-view.scss';
 
 export interface CardOptions {

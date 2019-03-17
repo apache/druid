@@ -16,15 +16,17 @@
  * limitations under the License.
  */
 
+import { Button, Switch } from "@blueprintjs/core";
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
+import { sum } from "d3-array";
+import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
-import { sum } from "d3-array";
-import { Button, Switch } from "@blueprintjs/core";
+
 import { IconNames } from '../components/filler';
-import { addFilter, formatBytes, formatBytesCompact, QueryManager, queryDruidSql } from "../utils";
+import { addFilter, formatBytes, formatBytesCompact, queryDruidSql, QueryManager } from "../utils";
+
 import "./servers-view.scss";
 
 function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmentsToDrop: number, segmentsToDropSize: number): string {

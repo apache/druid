@@ -17,8 +17,9 @@
  */
 
 import { Button } from '@blueprintjs/core';
-import * as React from 'react';
 import classNames from 'classnames';
+import * as React from 'react';
+
 import './filler.scss';
 
 export const IconNames = {

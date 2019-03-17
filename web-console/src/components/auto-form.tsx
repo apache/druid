@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { resolveSrv } from 'dns';
-import * as React from 'react';
-import axios from 'axios';
 import { InputGroup } from "@blueprintjs/core";
-import { HTMLSelect, FormGroup, NumericInput, TagInput } from "../components/filler";
+import * as React from 'react';
+
+import { FormGroup, HTMLSelect, NumericInput, TagInput } from "../components/filler";
 
 interface Field {
   name: string;

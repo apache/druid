@@ -16,25 +16,26 @@
  * limitations under the License.
  */
 
+import { Button, Intent, Switch } from "@blueprintjs/core";
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
+import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
-import { Button, Intent, Switch } from "@blueprintjs/core";
+
 import { IconNames } from "../components/filler";
-import { AppToaster } from '../singletons/toaster';
 import { RuleEditor } from '../components/rule-editor';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { RetentionDialog } from '../dialogs/retention-dialog';
+import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
-  formatNumber,
-  formatBytes,
   countBy,
+  formatBytes,
+  formatNumber,
+  getDruidErrorMessage,
   lookupBy,
-  QueryManager,
-  pluralIfNeeded, queryDruidSql, getDruidErrorMessage
+  pluralIfNeeded, queryDruidSql, QueryManager
 } from "../utils";
 
 import "./datasource-view.scss";

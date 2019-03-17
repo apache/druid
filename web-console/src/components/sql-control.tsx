@@ -16,21 +16,24 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import * as ReactDOMServer from 'react-dom/server';
+import { Button, Checkbox, Classes, Intent, Popover, Position } from "@blueprintjs/core";
 import axios from "axios";
-import * as classNames from 'classnames';
 import * as ace from 'brace';
-import AceEditor from "react-ace";
-import 'brace/mode/sql';
-import 'brace/mode/hjson';
-import 'brace/theme/solarized_dark';
 import 'brace/ext/language_tools';
-import { Intent, Button, Popover, Checkbox, Classes, Position } from "@blueprintjs/core";
+import 'brace/mode/hjson';
+import 'brace/mode/sql';
+import 'brace/theme/solarized_dark';
+import * as classNames from 'classnames';
+import * as React from 'react';
+import AceEditor from "react-ace";
+import * as ReactDOMServer from 'react-dom/server';
+
 import { SQLFunctionDoc } from "../../lib/sql-function-doc";
-import { IconNames } from './filler';
-import './sql-control.scss';
 import { AppToaster } from "../singletons/toaster";
+
+import { IconNames } from './filler';
+
+import './sql-control.scss';
 
 const langTools = ace.acequire('ace/ext/language_tools');
 

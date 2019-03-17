@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 
+import { Alert, Button, Intent } from "@blueprintjs/core";
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
+import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
-import { Button, Intent, Alert } from "@blueprintjs/core";
-import { ButtonGroup, Label, IconNames } from "../components/filler";
-import { addFilter, QueryManager, getDruidErrorMessage, countBy, formatDuration, queryDruidSql } from "../utils";
+
+import { ButtonGroup, IconNames, Label } from "../components/filler";
 import { AsyncActionDialog } from "../dialogs/async-action-dialog";
 import { SpecDialog } from "../dialogs/spec-dialog";
 import { AppToaster } from '../singletons/toaster';
+import { addFilter, countBy, formatDuration, getDruidErrorMessage, queryDruidSql, QueryManager } from "../utils";
+
 import "./tasks-view.scss";
 
 export interface TasksViewProps extends React.Props<any> {

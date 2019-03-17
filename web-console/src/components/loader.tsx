@@ -17,6 +17,7 @@
  */
 
 import * as React from 'react';
+
 import './loader.scss';
 
 export interface LoaderProps extends React.Props<any> {

@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-import * as React from "react";
 import { Button, Classes, Dialog, Intent } from "@blueprintjs/core";
-import "./spec-dialog.scss";
-import AceEditor from "react-ace";
-import "brace/theme/solarized_dark";
 import "brace/mode/json";
+import "brace/theme/solarized_dark";
+import * as React from "react";
+import AceEditor from "react-ace";
+
+import "./spec-dialog.scss";
 
 export interface SpecDialogProps extends React.Props<any> {
   onSubmit: (spec: JSON) => void;
