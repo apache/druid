@@ -27,6 +27,7 @@ import com.oath.oak.OakBufferView;
 import com.oath.oak.OakIterator;
 import com.oath.oak.OakMap;
 import com.oath.oak.OakMapBuilder;
+import com.oath.oak.OakRBuffer;
 import com.oath.oak.OakTransformView;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
@@ -234,6 +235,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   @Override
   public Iterable<Row> iterableWithPostAggregations(final List<PostAggregator> postAggs, final boolean descending)
   {
+    //TODO YONIGO - rewrite this function. maybe return an unserialized row?
     Function<Map.Entry<ByteBuffer, ByteBuffer>, Row> transformer = entry -> {
       ByteBuffer serializedKey = entry.getKey();
       ByteBuffer serializedValue = entry.getValue();
@@ -540,8 +542,9 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
         try (OakMap<IncrementalIndexRow, Row> subMap = oak.subMap(from, true, to, false, descending);
              OakBufferView<IncrementalIndexRow> bufferView = subMap.createBufferView()) {
 
-          OakIterator<ByteBuffer> keysIterator = bufferView.keysIterator();
-          return Iterators.transform(keysIterator, byteBuffer -> new OakIncrementalIndexRow(byteBuffer, dimensionDescsList));
+          OakIterator<Map.Entry<ByteBuffer, OakRBuffer>> iterator = bufferView.entriesIterator();
+          return Iterators.transform(iterator, entry ->
+                  new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue()));
         }
       };
     }
@@ -550,9 +553,12 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     public Iterable<IncrementalIndexRow> keySet()
     {
       return () -> {
-        //TODO YONIGO - why not return oakIncrementalIndex and not have this diserialization?
-        OakIterator<IncrementalIndexRow> keysIterator = oak.keysIterator();
-        return Iterators.transform(keysIterator, key -> key);
+        try (OakBufferView<IncrementalIndexRow> bufferView = oak.createBufferView()) {
+
+          OakIterator<Map.Entry<ByteBuffer, OakRBuffer>> iterator = bufferView.entriesIterator();
+          return Iterators.transform(iterator, entry ->
+                  new OakIncrementalIndexRow(entry.getKey(), dimensionDescsList, entry.getValue()));
+        }
       };
     }
 
@@ -622,72 +628,61 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     protected float getMetricFloatValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      //TODO YONIGO - all these get functions are bad!. we should somehow put the aggregator bytebuffer
-      // in the incrementalindexrow to avoid and additional search in oak.
-      Function<Map.Entry<ByteBuffer, ByteBuffer>, Float> transformer = entry -> {
-        ByteBuffer serializedValue = entry.getValue();
+      Function<ByteBuffer, Float> transformer = serializedValue -> {
         BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.getFloat(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       };
 
-      try (OakTransformView<IncrementalIndexRow, Float> transformView = oak.createTransformView(transformer)) {
-        return transformView.get(incrementalIndexRow);
-      }
+      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
+      return rBuffer.transform(transformer);
     }
 
 
     protected long getMetricLongValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<Map.Entry<ByteBuffer, ByteBuffer>, Long> transformer = entry -> {
-        ByteBuffer serializedValue = entry.getValue();
+      Function<ByteBuffer, Long> transformer = serializedValue -> {
         BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.getLong(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       };
 
-      try (OakTransformView<IncrementalIndexRow, Long> transformView = oak.createTransformView(transformer)) {
-        return transformView.get(incrementalIndexRow);
-      }
+      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
+      return rBuffer.transform(transformer);
     }
 
 
     protected Object getMetricObjectValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<Map.Entry<ByteBuffer, ByteBuffer>, Object> transformer = entry -> {
-        ByteBuffer serializedValue = entry.getValue();
+      Function<ByteBuffer, Object> transformer = serializedValue -> {
         BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.get(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       };
 
-      try (OakTransformView<IncrementalIndexRow, Object> transformView = oak.createTransformView(transformer)) {
-        return transformView.get(incrementalIndexRow);
-      }
+      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
+      return rBuffer.transform(transformer);
     }
 
 
     protected double getMetricDoubleValue(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<Map.Entry<ByteBuffer, ByteBuffer>, Double> transformer = entry -> {
-        ByteBuffer serializedValue = entry.getValue();
+      Function<ByteBuffer, Double> transformer = serializedValue -> {
         BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.getDouble(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       };
-      try (OakTransformView<IncrementalIndexRow, Double> transformView = oak.createTransformView(transformer)) {
-        return transformView.get(incrementalIndexRow);
-      }
+
+      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
+      return rBuffer.transform(transformer);
     }
 
 
     protected boolean isNull(IncrementalIndexRow incrementalIndexRow, int aggIndex)
     {
-      Function<Map.Entry<ByteBuffer, ByteBuffer>, Boolean> transformer = entry -> {
-        ByteBuffer serializedValue = entry.getValue();
+      Function<ByteBuffer, Boolean> transformer = serializedValue -> {
         BufferAggregator agg = aggsManager.getAggs()[aggIndex];
         return agg.isNull(serializedValue, serializedValue.position() + aggsManager.aggOffsetInBuffer[aggIndex]);
       };
 
-      try (OakTransformView<IncrementalIndexRow, Boolean> transformView = oak.createTransformView(transformer)) {
-        return transformView.get(incrementalIndexRow);
-      }
+      OakRBuffer rBuffer = ((OakIncrementalIndexRow) incrementalIndexRow).getAggregations();
+      return rBuffer.transform(transformer);
     }
   }
 }

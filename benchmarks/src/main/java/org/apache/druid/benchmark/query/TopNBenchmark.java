@@ -112,6 +112,9 @@ public class TopNBenchmark
   @Param({"10"})
   private int threshold;
 
+  @Param({"oak", "onheap"})
+  private String indexType;
+
   private static final Logger log = new Logger(TopNBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMergerV9 INDEX_MERGER_V9;
@@ -290,15 +293,22 @@ public class TopNBenchmark
   public void tearDown() throws IOException
   {
     FileUtils.deleteDirectory(tmpDir);
+    incIndexes.forEach(index->index.close());
   }
 
   private IncrementalIndex makeIncIndex()
   {
-    return new IncrementalIndex.Builder()
+    IncrementalIndex.Builder builder = new IncrementalIndex.Builder()
         .setSimpleTestingIndexSchema(schemaInfo.getAggsArray())
         .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment)
-        .buildOnheap();
+        .setMaxRowCount(rowsPerSegment);
+    switch (indexType) {
+      case "onheap":
+        return builder.buildOnheap();
+      case "oak":
+        return builder.buildOak();
+    }
+    return null;
   }
 
   private static <T> List<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)

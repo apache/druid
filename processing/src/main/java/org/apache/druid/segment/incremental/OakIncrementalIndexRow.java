@@ -20,6 +20,7 @@
 package org.apache.druid.segment.incremental;
 
 
+import com.oath.oak.OakRBuffer;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 
@@ -30,20 +31,29 @@ import java.util.List;
 //wrapper class for bytebuffers
 public class OakIncrementalIndexRow extends IncrementalIndexRow
 {
-  private final ByteBuffer byteBuffer;
+  private final ByteBuffer dimentions;
+  private final OakRBuffer aggregations;
   private Integer dimsLength;
 
-  public OakIncrementalIndexRow(ByteBuffer byteBuffer, List<DimensionDesc> dimensionDescsList)
+  public OakIncrementalIndexRow(ByteBuffer dimentions,
+                                List<DimensionDesc> dimensionDescsList,
+                                OakRBuffer aggregations)
   {
     super(0, dimensionDescsList);
-    this.byteBuffer = byteBuffer;
+    this.dimentions = dimentions;
     this.dimsLength = null; // lazy initialization
+    this.aggregations = aggregations;
+  }
+
+  public OakRBuffer getAggregations()
+  {
+    return aggregations;
   }
 
   @Override
   public long getTimestamp()
   {
-    return byteBuffer.getLong(byteBuffer.position() + OakIncrementalIndex.TIME_STAMP_INDEX);
+    return dimentions.getLong(dimentions.position() + OakIncrementalIndex.TIME_STAMP_INDEX);
   }
 
   @Override
@@ -51,7 +61,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   {
     // Read length only once
     if (dimsLength == null) {
-      dimsLength = byteBuffer.getInt(byteBuffer.position() + OakIncrementalIndex.DIMS_LENGTH_INDEX);
+      dimsLength = dimentions.getInt(dimentions.position() + OakIncrementalIndex.DIMS_LENGTH_INDEX);
     }
     return dimsLength;
   }
@@ -68,7 +78,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   @Override
   public int getRowIndex()
   {
-    return byteBuffer.getInt(byteBuffer.position() + OakIncrementalIndex.ROW_INDEX_INDEX);
+    return dimentions.getInt(dimentions.position() + OakIncrementalIndex.ROW_INDEX_INDEX);
   }
 
   @Override
@@ -98,7 +108,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
       int dimType = getDimType(dimIndex);
       if (dimType == ValueType.STRING.ordinal()) {
         int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
-        int arraySize = byteBuffer.getInt(dimIndexInBuffer + OakIncrementalIndex.ARRAY_LENGTH_OFFSET);
+        int arraySize = dimentions.getInt(dimIndexInBuffer + OakIncrementalIndex.ARRAY_LENGTH_OFFSET);
         sizeInBytes += (arraySize * Integer.BYTES);
       }
     }
@@ -115,7 +125,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     if (dimIndex >= getDimsLength()) {
       return OakIncrementalIndex.NO_DIM;
     }
-    return byteBuffer.position() + OakIncrementalIndex.DIMS_INDEX + dimIndex * OakIncrementalIndex.ALLOC_PER_DIM;
+    return dimentions.position() + OakIncrementalIndex.DIMS_INDEX + dimIndex * OakIncrementalIndex.ALLOC_PER_DIM;
   }
 
   private Object getDimValue(int dimIndex)
@@ -125,22 +135,22 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
       return null;
     }
     int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
-    int dimType = byteBuffer.getInt(dimIndexInBuffer);
+    int dimType = dimentions.getInt(dimIndexInBuffer);
     if (dimType == OakIncrementalIndex.NO_DIM) {
       return null;
     } else if (dimType == ValueType.DOUBLE.ordinal()) {
-      dimObject = byteBuffer.getDouble(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
+      dimObject = dimentions.getDouble(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
     } else if (dimType == ValueType.FLOAT.ordinal()) {
-      dimObject = byteBuffer.getFloat(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
+      dimObject = dimentions.getFloat(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
     } else if (dimType == ValueType.LONG.ordinal()) {
-      dimObject = byteBuffer.getLong(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
+      dimObject = dimentions.getLong(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
     } else if (dimType == ValueType.STRING.ordinal()) {
-      int arrayIndexOffset = byteBuffer.getInt(dimIndexInBuffer + OakIncrementalIndex.ARRAY_INDEX_OFFSET);
-      int arrayIndex = byteBuffer.position() + arrayIndexOffset;
-      int arraySize = byteBuffer.getInt(dimIndexInBuffer + OakIncrementalIndex.ARRAY_LENGTH_OFFSET);
+      int arrayIndexOffset = dimentions.getInt(dimIndexInBuffer + OakIncrementalIndex.ARRAY_INDEX_OFFSET);
+      int arrayIndex = dimentions.position() + arrayIndexOffset;
+      int arraySize = dimentions.getInt(dimIndexInBuffer + OakIncrementalIndex.ARRAY_LENGTH_OFFSET);
       int[] array = new int[arraySize];
       for (int i = 0; i < arraySize; i++) {
-        array[i] = byteBuffer.getInt(arrayIndex);
+        array[i] = dimentions.getInt(arrayIndex);
         arrayIndex += Integer.BYTES;
       }
       dimObject = array;
@@ -155,6 +165,6 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
       return OakIncrementalIndex.NO_DIM;
     }
     int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
-    return byteBuffer.getInt(dimIndexInBuffer);
+    return dimentions.getInt(dimIndexInBuffer);
   }
 }
