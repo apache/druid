@@ -18,12 +18,16 @@
 
 .retention-dialog {
   width: 750px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) !important;
 
   .dialog-body {
     overflow: scroll;
     max-height: 70vh;
 
-    .bp3-form-group {
+    .form-group {
       margin: 0 0 5px;
     }
 

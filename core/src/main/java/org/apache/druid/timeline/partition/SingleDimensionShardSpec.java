@@ -19,13 +19,16 @@
 
 package org.apache.druid.timeline.partition;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -36,24 +39,22 @@ import java.util.Map;
  */
 public class SingleDimensionShardSpec implements ShardSpec
 {
-  private String dimension;
-  private String start;
-  private String end;
-  private int partitionNum;
+  private final String dimension;
+  @Nullable
+  private final String start;
+  @Nullable
+  private final String end;
+  private final int partitionNum;
 
-  public SingleDimensionShardSpec()
-  {
-    this(null, null, null, -1);
-  }
-
+  @JsonCreator
   public SingleDimensionShardSpec(
-      String dimension,
-      String start,
-      String end,
-      int partitionNum
+      @JsonProperty("dimension") String dimension,
+      @JsonProperty("start") @Nullable String start,
+      @JsonProperty("end") @Nullable String end,
+      @JsonProperty("partitionNum") int partitionNum
   )
   {
-    this.dimension = dimension;
+    this.dimension = Preconditions.checkNotNull(dimension, "dimension");
     this.start = start;
     this.end = end;
     this.partitionNum = partitionNum;
@@ -65,31 +66,18 @@ public class SingleDimensionShardSpec implements ShardSpec
     return dimension;
   }
 
-  public void setDimension(String dimension)
-  {
-    this.dimension = dimension;
-  }
-
+  @Nullable
   @JsonProperty("start")
   public String getStart()
   {
     return start;
   }
 
-  public void setStart(String start)
-  {
-    this.start = start;
-  }
-
+  @Nullable
   @JsonProperty("end")
   public String getEnd()
   {
     return end;
-  }
-
-  public void setEnd(String end)
-  {
-    this.end = end;
   }
 
   @Override
@@ -141,11 +129,6 @@ public class SingleDimensionShardSpec implements ShardSpec
       return true;
     }
     return !rangeSet.subRangeSet(getRange()).isEmpty();
-  }
-
-  public void setPartitionNum(int partitionNum)
-  {
-    this.partitionNum = partitionNum;
   }
 
   @Override

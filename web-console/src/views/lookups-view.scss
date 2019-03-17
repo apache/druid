@@ -16,29 +16,19 @@
  * limitations under the License.
  */
 
-.coordinator-dynamic-config {
-  margin-top: 5vh;
+.lookups-view {
+  height: 100%;
+  width: 100%;
 
-  .pt-dialog-body {
-    max-height: 70vh;
+  .ReactTable {
+    position: absolute;
+    top: 60px;
+    bottom: 0;
+    width: 100%;
+  }
 
-    .auto-form {
-      max-height: 60vh;
-      overflow: auto;
-    }
-
-    .html-select {
-      width: 195px;
-    }
-
-    .config-comment {
-      margin-top: 10px;
-      padding: 0 15px;
-
-      textarea {
-        max-width: 200px;
-        padding: 0 15px;
-      }
-    }
+  .init-div {
+    text-align: center;
+    margin-top: 35vh;
   }
 }

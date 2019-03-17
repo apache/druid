@@ -16,29 +16,46 @@
  * limitations under the License.
  */
 
-.coordinator-dynamic-config {
-  margin-top: 5vh;
 
-  .pt-dialog-body {
-    max-height: 70vh;
+.sql-control {
 
-    .auto-form {
-      max-height: 60vh;
-      overflow: auto;
+  .ace_scroller {
+    background-color: #232C35;
+  }
+
+  .ace_gutter-layer {
+    background-color: #27313c;
+  }
+
+  .buttons {
+
+    button{
+      margin-right: 15px;
     }
 
-    .html-select {
-      width: 195px;
-    }
+  }
 
-    .config-comment {
-      margin-top: 10px;
-      padding: 0 15px;
+}
 
-      textarea {
-        max-width: 200px;
-        padding: 0 15px;
-      }
-    }
+.auto-complete-checkbox {
+  margin:10px;
+  min-width: 120px;
+}
+
+.ace_tooltip {
+  padding: 10px;
+  background-color: #333D47;
+  color: #C1CCD5;
+  width: 500px;
+  display: block;
+  height: auto;
+  white-space: initial;
+
+  hr {
+    margin: 10px 0;
+  }
+  
+  .function-doc-name {
+    font-size: 18px;
   }
 }

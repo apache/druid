@@ -137,3 +137,14 @@ export function localStorageGet(key: string): string | null {
   if (typeof localStorage === 'undefined') return null;
   return localStorage.getItem(key);
 }
+
+// ----------------------------
+
+export function validJson(json: string): boolean {
+  try {
+    JSON.parse(json);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}

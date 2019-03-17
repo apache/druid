@@ -16,29 +16,26 @@
  * limitations under the License.
  */
 
-.coordinator-dynamic-config {
-  margin-top: 5vh;
+.lookup-edit-dialog {
+  top: 10vh;
 
-  .pt-dialog-body {
-    max-height: 70vh;
+  width: 600px;
 
-    .auto-form {
-      max-height: 60vh;
-      overflow: auto;
-    }
+  .ace_editor{
+    margin: 0px 20px 10px;
+  }
 
-    .html-select {
-      width: 195px;
-    }
+  .lookup-label {
+    padding: 0 20px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+  }
 
-    .config-comment {
-      margin-top: 10px;
-      padding: 0 15px;
+  .ace_scroller {
+    background-color: #232C35;
+  }
 
-      textarea {
-        max-width: 200px;
-        padding: 0 15px;
-      }
-    }
+  .ace_gutter-layer {
+    background-color: #27313c;
   }
 }

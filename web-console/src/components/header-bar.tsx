@@ -31,7 +31,7 @@ import {
   LEGACY_OVERLORD_CONSOLE
 } from '../variables';
 
-export type HeaderActiveTab = null | 'datasources' | 'segments' | 'tasks' | 'servers' | 'sql';
+export type HeaderActiveTab = null | 'datasources' | 'segments' | 'tasks' | 'servers' | 'sql' | 'lookups';
 
 export interface HeaderBarProps extends React.Props<any> {
   active: HeaderActiveTab;
@@ -100,6 +100,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
 
     const configMenu = <Menu>
       <MenuItem iconName={IconNames.COG} text="Coordinator dynamic config" onClick={() => this.setState({ coordinatorDynamicConfigDialogOpen: true })}/>
+      <MenuItem iconName={IconNames.PROPERTIES} className={classNames(Classes.MINIMAL, { 'pt-active': active === 'lookups' })} text="Lookups" href="#lookups"/>
     </Menu>;
 
     return <Navbar className="header-bar">
