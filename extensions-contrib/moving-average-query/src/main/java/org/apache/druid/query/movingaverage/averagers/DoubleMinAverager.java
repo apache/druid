@@ -22,8 +22,6 @@ package org.apache.druid.query.movingaverage.averagers;
 public class DoubleMinAverager extends BaseAverager<Number, Double>
 {
 
-  private int startFrom = 0;
-
   public DoubleMinAverager(int numBuckets, String name, String fieldName, int cycleSize)
   {
     super(Number.class, numBuckets, name, fieldName, cycleSize);
@@ -33,13 +31,10 @@ public class DoubleMinAverager extends BaseAverager<Number, Double>
   protected Double computeResult()
   {
     double result = Double.POSITIVE_INFINITY;
-    int cycleSize = getCycleSize();
-    int numBuckets = getNumBuckets();
-    Number[] obj = getBuckets();
 
     for (int i = 0; i < numBuckets; i += cycleSize) {
-      if (obj[(i + startFrom) % numBuckets] != null) {
-        result = Double.min(result, (obj[(i + startFrom) % numBuckets]).doubleValue());
+      if (buckets[(i + startFrom) % numBuckets] != null) {
+        result = Double.min(result, (buckets[(i + startFrom) % numBuckets]).doubleValue());
       }
     }
 
