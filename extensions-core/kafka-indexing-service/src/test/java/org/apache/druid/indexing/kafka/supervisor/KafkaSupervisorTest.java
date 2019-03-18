@@ -2723,7 +2723,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(ImmutableMap.of("task2", ImmutableMap.of("prop2", "val2")), stats.get("1"));
   }
 
-
   private void addSomeEvents(int numEventsPerPartition) throws Exception
   {
     //create topic manually

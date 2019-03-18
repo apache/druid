@@ -356,6 +356,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
+  protected boolean useExclusiveStartSequenceNumberForStartSequence()
+  {
+    return false;
+  }
+
+  @Override
   protected void updateLatestSequenceFromStream(
       RecordSupplier<Integer, Long> recordSupplier,
       Set<StreamPartition<Integer>> partitions

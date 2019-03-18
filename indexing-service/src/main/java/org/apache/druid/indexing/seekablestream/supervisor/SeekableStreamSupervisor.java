@@ -2243,8 +2243,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         ) : Optional.absent());
 
 
-        Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets = generateStartingSequencesForPartitionGroup(
-            groupId);
+        final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets =
+            generateStartingSequencesForPartitionGroup(groupId);
 
         ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
             .entrySet()
@@ -2341,7 +2341,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (!getNotSetMarker().equals(sequence)) {
         // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
         if (!isEndOfShard(sequence)) {
-          builder.put(partition, makeSequenceNumber(sequence, true));
+          builder.put(partition, makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForStartSequence()));
         }
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
@@ -2387,7 +2387,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
         }
       }
-      return makeSequenceNumber(sequence, true);
+      return makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForStartSequence());
     } else {
       boolean useEarliestSequenceNumber = ioConfig.isUseEarliestSequenceNumber();
       if (subsequentlyDiscoveredPartitions.contains(partition)) {
@@ -2807,4 +2807,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * checks if seqNum marks the end of a Kinesis shard. Used by Kinesis only.
    */
   protected abstract boolean isEndOfShard(SequenceOffsetType seqNum);
+
+  /**
+   * Returns true if the start sequence number should be exclusive for the non-first sequences for the whole partition.
+   * For example, in Kinesis, the start offsets are inclusive for the first sequence, but exclusive for following
+   * sequences. In Kafka, start offsets are always inclusive.
+   */
+  protected abstract boolean useExclusiveStartSequenceNumberForStartSequence();
 }

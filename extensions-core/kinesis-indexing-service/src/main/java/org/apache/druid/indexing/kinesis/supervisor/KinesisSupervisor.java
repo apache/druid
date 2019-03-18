@@ -308,4 +308,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   {
     return KinesisSequenceNumber.END_OF_SHARD_MARKER.equals(seqNum);
   }
+
+  @Override
+  protected boolean useExclusiveStartSequenceNumberForStartSequence()
+  {
+    return true;
+  }
 }
