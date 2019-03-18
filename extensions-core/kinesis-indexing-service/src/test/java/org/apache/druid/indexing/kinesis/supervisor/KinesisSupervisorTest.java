@@ -1278,7 +1278,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisorRecordSupplier.seek(anyObject(), anyString());
     expectLastCall().anyTimes();
 
-    Capture<Task> captured = Capture.newInstance(CaptureType.ALL);
+    final Capture<Task> firstTasks = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
@@ -1288,7 +1288,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null
         )
     ).anyTimes();
-    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(4);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(firstTasks))).andReturn(true).times(4);
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
@@ -1296,14 +1296,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    List<Task> tasks = captured.getValues();
+    final List<Task> tasks = firstTasks.getValues();
     Collection workItems = new ArrayList<>();
     for (Task task : tasks) {
       workItems.add(new TestTaskRunnerWorkItem(task, null, location));
     }
 
     EasyMock.reset(taskStorage, taskRunner, taskClient, taskQueue);
-    captured = Capture.newInstance(CaptureType.ALL);
+    final Capture<Task> secondTasks = Capture.newInstance(CaptureType.ALL);
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(tasks).anyTimes();
     for (Task task : tasks) {
       EasyMock.expect(taskStorage.getStatus(task.getId()))
@@ -1346,7 +1346,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             EasyMock.eq(true)
         )
     ).andReturn(Futures.immediateFuture(true)).times(2);
-    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(secondTasks))).andReturn(true).times(2);
 
     TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
     checkpoints1.put(0, ImmutableMap.of(
@@ -1370,7 +1370,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    for (Task task : captured.getValues()) {
+    for (Task task : secondTasks.getValues()) {
       KinesisIndexTask KinesisIndexTask = (KinesisIndexTask) task;
       Assert.assertEquals(dataSchema, KinesisIndexTask.getDataSchema());
       Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), KinesisIndexTask.getTuningConfig());
@@ -1387,6 +1387,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
       Assert.assertEquals(
           "1",
           taskConfig.getStartPartitions().getPartitionSequenceNumberMap().get(shardId0)
+      );
+      // start sequenceNumbers should be exclusive for the second batch of tasks
+      Assert.assertEquals(
+          ImmutableSet.of("0", "1"),
+          ((KinesisIndexTask) task).getIOConfig().getExclusiveStartSequenceNumberPartitions()
       );
     }
   }

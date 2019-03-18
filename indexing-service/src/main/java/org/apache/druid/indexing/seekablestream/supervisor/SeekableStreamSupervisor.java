@@ -311,19 +311,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @Deprecated
     private final String baseSequenceName;
     private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint;
-    private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentCheckpoint;
 
     public CheckpointNotice(
         @Nullable Integer nullableTaskGroupId,
         @Deprecated String baseSequenceName,
-        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint,
-        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentCheckpoint
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint
     )
     {
       this.baseSequenceName = baseSequenceName;
       this.nullableTaskGroupId = nullableTaskGroupId;
       this.previousCheckpoint = previousCheckpoint;
-      this.currentCheckpoint = currentCheckpoint;
     }
 
     @Override
@@ -2344,7 +2341,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (!getNotSetMarker().equals(sequence)) {
         // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
         if (!isEndOfShard(sequence)) {
-          builder.put(partition, makeSequenceNumber(sequence, false));
+          builder.put(partition, makeSequenceNumber(sequence, true));
         }
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
@@ -2644,8 +2641,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         new CheckpointNotice(
             taskGroupId,
             baseSequenceName,
-            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) previousCheckPoint,
-            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) currentCheckPoint
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) previousCheckPoint
         )
     );
   }
