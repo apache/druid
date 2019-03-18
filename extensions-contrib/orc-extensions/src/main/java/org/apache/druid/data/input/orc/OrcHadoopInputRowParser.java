@@ -121,7 +121,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
           break;
         case MAP:
           MapObjectInspector mapObjectInspector = (MapObjectInspector) objectInspector;
-          getMapObject(field.getFieldName(), mapObjectInspector, oip.getStructFieldData(input, field), map);
+          addMapValues(map, field.getFieldName(), mapObjectInspector, oip.getStructFieldData(input, field));
           break;
         default:
           break;
@@ -164,11 +164,20 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     return list;
   }
 
-  private void getMapObject(String parentName, MapObjectInspector mapObjectInspector, Object mapObject, Map<String, Object> parsedMap)
+  private void addMapValues(Map<String, Object> parsedMap, String parentName, MapObjectInspector mapObjectInspector, Object mapObject)
   {
     if (mapObjectInspector.getMapSize(mapObject) < 0) {
       return;
     }
+    ObjectInspector keyoip = mapObjectInspector.getMapKeyObjectInspector();
+    ObjectInspector valueoip = mapObjectInspector.getMapValueObjectInspector();
+    if (keyoip.getCategory() != ObjectInspector.Category.PRIMITIVE || valueoip.getCategory() != ObjectInspector.Category.PRIMITIVE) {
+      return;
+    }
+
+    PrimitiveObjectInspector keyInspector = (PrimitiveObjectInspector) keyoip;
+    PrimitiveObjectInspector valueInspector = (PrimitiveObjectInspector) valueoip;
+
     String mapChildFieldNameFormat = StringUtils.replace(
         StringUtils.format(mapParentFieldNameFormat, parentName),
         MAP_CHILD_TAG,
@@ -176,12 +185,10 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     );
 
     Map objectMap = mapObjectInspector.getMap(mapObject);
-    PrimitiveObjectInspector key = (PrimitiveObjectInspector) mapObjectInspector.getMapKeyObjectInspector();
-    PrimitiveObjectInspector value = (PrimitiveObjectInspector) mapObjectInspector.getMapValueObjectInspector();
 
     objectMap.forEach((k, v) -> {
-      String resolvedFieldName = StringUtils.format(mapChildFieldNameFormat, key.getPrimitiveJavaObject(k).toString());
-      parsedMap.put(resolvedFieldName, value.getPrimitiveJavaObject(v));
+      String resolvedFieldName = StringUtils.format(mapChildFieldNameFormat, keyInspector.getPrimitiveJavaObject(k).toString());
+      parsedMap.put(resolvedFieldName, valueInspector.getPrimitiveJavaObject(v));
     });
   }
 

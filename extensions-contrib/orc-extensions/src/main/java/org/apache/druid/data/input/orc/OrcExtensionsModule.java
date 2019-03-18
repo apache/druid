@@ -36,7 +36,8 @@ public class OrcExtensionsModule implements DruidModule
     return Collections.singletonList(
         new SimpleModule("OrcInputRowParserModule")
             .registerSubtypes(
-                new NamedType(OrcHadoopInputRowParser.class, "orc")
+                new NamedType(OrcHadoopInputRowParser.class, "orc"),
+                new NamedType(DruidOrcHadoopInputRowParser.class, "druid_orc")
             )
     );
   }
