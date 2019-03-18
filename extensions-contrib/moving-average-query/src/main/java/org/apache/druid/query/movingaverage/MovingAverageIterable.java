@@ -34,6 +34,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -75,8 +76,28 @@ public class MovingAverageIterable implements Iterable<Row>
 
     postAggMap = postAggList.stream().collect(Collectors.toMap(postAgg -> postAgg.getName(), postAgg -> postAgg));
     aggMap = aggList.stream().collect(Collectors.toMap(agg -> agg.getName(), agg -> agg));
+    fakeEvents = generateFakeEventsFromAggregators(aggMap, postAggMap);
+  }
 
-    ColumnSelectorFactory colFact = new ColumnSelectorFactory()
+  // Build a list of dummy events from Aggregators/PostAggregators to be used by Iterator to build fake rows.
+  // These fake rows will be used by computeMovingAverage() in skip=true mode.
+  // See fakeEventsCopy in internalNext() and computeMovingAverage() documentation.
+  private Map<String, Object> generateFakeEventsFromAggregators(Map<String, AggregatorFactory> aggMap,
+                                                                Map<String, PostAggregator> postAggMap)
+  {
+    Map<String, Object> fakeEvents = new LinkedHashMap<>();
+    aggMap.values().forEach(agg -> {
+      Aggregator aggFactorized = agg.factorize(getEmptyColumnSelectorFactory());
+      fakeEvents.put(agg.getName(), aggFactorized.get());
+    });
+    postAggMap.values().forEach(postAgg -> fakeEvents.put(postAgg.getName(), postAgg.compute(fakeEvents)));
+    return fakeEvents;
+  }
+
+  @Nonnull
+  private ColumnSelectorFactory getEmptyColumnSelectorFactory()
+  {
+    return new ColumnSelectorFactory()
     {
       @Override
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
@@ -98,13 +119,6 @@ public class MovingAverageIterable implements Iterable<Row>
         return null;
       }
     };
-    // Fill in all the fake events
-    fakeEvents = new LinkedHashMap<>();
-    aggMap.values().forEach(agg -> {
-      Aggregator aggFactorized = agg.factorize(colFact);
-      fakeEvents.put(agg.getName(), aggFactorized.get());
-    });
-    postAggMap.values().forEach(postAgg -> fakeEvents.put(postAgg.getName(), postAgg.compute(fakeEvents)));
   }
 
   /* (non-Javadoc)
