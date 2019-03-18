@@ -1664,8 +1664,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     @SuppressWarnings("unchecked")
-    SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task = (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>) taskOptional
-        .get();
+    SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType> task =
+        (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType>) taskOptional.get();
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
@@ -1678,8 +1678,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         task.getDataSchema(),
         task.getTuningConfig()
     );
+
     if (activelyReadingTaskGroups.get(taskGroupId) != null) {
       TaskGroup taskGroup = activelyReadingTaskGroups.get(taskGroupId);
+      // We reassign the task's original base sequence name (from the existing task) to the task group so that the
+      // replica segment allocations are the same.
       activelyReadingTaskGroups.put(taskGroupId, new TaskGroup(
           taskGroup.groupId,
           taskGroup.startingSequences,
