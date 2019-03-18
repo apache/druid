@@ -190,7 +190,7 @@ public class MovingAverageQueryRunner implements QueryRunner<Row>
       resultsSeq = Sequences.map(results, new TimeseriesResultToRow());
     }
 
-    // Process into day buckets
+    // Process into period buckets
     Sequence<RowBucket> bucketedMovingAvgResults =
         Sequences.simple(new RowBucketIterable(resultsSeq, intervals, period));
 

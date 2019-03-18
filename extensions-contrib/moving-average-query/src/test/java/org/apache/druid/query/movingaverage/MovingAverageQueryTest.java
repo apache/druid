@@ -108,6 +108,7 @@ public class MovingAverageQueryTest
   private final List<Result<TimeseriesResultValue>> timeseriesResults = new ArrayList<>();
 
   private final TestConfig config;
+  private final String yamlFile;
 
   @Parameters(name = "{0}")
   public static Iterable<String[]> data() throws IOException
@@ -125,6 +126,8 @@ public class MovingAverageQueryTest
 
   public MovingAverageQueryTest(String yamlFile) throws IOException
   {
+    this.yamlFile = yamlFile;
+
     List<Module> modules = getRequiredModules();
     modules.add(
         binder -> {

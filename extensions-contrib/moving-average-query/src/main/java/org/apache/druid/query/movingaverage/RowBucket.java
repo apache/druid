@@ -27,6 +27,7 @@ import java.util.List;
 
 /**
  * Represents a set of rows for a specific date
+ * Each RowBucket is an element in a list (holds a pointer to the next RowBucket)
  */
 public class RowBucket
 {
