@@ -57,7 +57,7 @@ public abstract class BaseAveragerFactory<R, F> implements AveragerFactory<R, F>
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null field name");
     Preconditions.checkArgument(this.cycleSize > 0, "Cycle size must be greater than zero");
     Preconditions.checkArgument(numBuckets > 0, "Bucket size must be greater than zero");
-    Preconditions.checkArgument(this.cycleSize < numBuckets, "Cycle size must be less than the bucket size");
+    Preconditions.checkArgument(!(this.cycleSize > numBuckets), "Cycle size must be less than the bucket size");
     Preconditions.checkArgument(numBuckets % this.cycleSize == 0, "cycleSize must devide numBuckets without a remainder");
   }
 
