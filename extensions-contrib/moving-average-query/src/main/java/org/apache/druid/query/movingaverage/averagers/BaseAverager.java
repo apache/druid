@@ -52,10 +52,8 @@ public abstract class BaseAverager<I, R extends Object> implements Averager<R>
    * @param name           The name of the resulting metric
    * @param fieldName      The field to extra from incoming rows and stored in the window cache
    * @param cycleSize      Cycle group size. Used to calculate day-of-week option. Default=1 (single element in group).
-   * @param shouldFinalize Whether the intermediate values need to be finalized prior to averaging
    */
-  public BaseAverager(Class<I> storageType, int numBuckets, String name, String fieldName, int cycleSize,
-                      boolean shouldFinalize)
+  public BaseAverager(Class<I> storageType, int numBuckets, String name, String fieldName, int cycleSize)
   {
     this.numBuckets = numBuckets;
     this.name = name;
@@ -64,13 +62,7 @@ public abstract class BaseAverager<I, R extends Object> implements Averager<R>
     @SuppressWarnings("unchecked")
     final I[] array = (I[]) Array.newInstance(storageType, numBuckets);
     this.buckets = array;
-    this.shouldFinalize = shouldFinalize;
     this.cycleSize = cycleSize;
-  }
-
-  public BaseAverager(Class<I> storageType, int numBuckets, String name, String fieldName, int cycleSize)
-  {
-    this(storageType, numBuckets, name, fieldName, cycleSize, true);
   }
 
 
@@ -83,7 +75,7 @@ public abstract class BaseAverager<I, R extends Object> implements Averager<R>
   {
     Object metric = e.get(fieldName);
     I finalMetric;
-    if (a.containsKey(fieldName) && shouldFinalize) {
+    if (a.containsKey(fieldName)) {
       AggregatorFactory af = a.get(fieldName);
       finalMetric = metric != null ? (I) af.finalizeComputation(metric) : null;
     } else {
