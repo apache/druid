@@ -135,7 +135,7 @@ public class MovingAverageIterable implements Iterable<Row>
 
     private final List<DimensionSpec> dims;
     private final Map<Map<String, Object>, List<Averager<?>>> averagers = new HashMap<>();
-    private final List<AveragerFactory<?, ?>> factories;
+    private final List<AveragerFactory<?, ?>> averagerFactories;
 
     private Yielder<RowBucket> yielder;
     private RowBucket cache = null;
@@ -149,13 +149,13 @@ public class MovingAverageIterable implements Iterable<Row>
     public MovingAverageIterator(
         Sequence<RowBucket> rows,
         List<DimensionSpec> dims,
-        List<AveragerFactory<?, ?>> factories,
+        List<AveragerFactory<?, ?>> averagerFactories,
         Map<String, Object> fakeEvents,
         Map<String, AggregatorFactory> aggMap
     )
     {
       this.dims = dims;
-      this.factories = factories;
+      this.averagerFactories = averagerFactories;
       this.fakeEvents = fakeEvents;
       this.aggMap = aggMap;
 
@@ -290,7 +290,7 @@ public class MovingAverageIterable implements Iterable<Row>
       List<Averager<?>> avg = averagers.get(key);
 
       if (avg == null) {
-        avg = factories.stream().map(af -> af.createAverager()).collect(Collectors.toList());
+        avg = averagerFactories.stream().map(af -> af.createAverager()).collect(Collectors.toList());
         averagers.put(key, avg);
       }
 
