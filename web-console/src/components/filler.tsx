@@ -19,6 +19,9 @@
 import { Button } from '@blueprintjs/core';
 import classNames from 'classnames';
 import * as React from 'react';
+import AceEditor from "react-ace";
+
+import { parseStringToJSON, stringifyJSON, validJson } from "../utils";
 
 import './filler.scss';
 
@@ -255,6 +258,74 @@ export class TagInput extends React.Component<TagInputProps, { stringValue: stri
       className={classNames("pt-input", {'pt-fill': fill })}
       value={stringValue}
       onChange={this.handleChange}
+    />;
+  }
+}
+
+interface JSONInputProps extends React.Props<any> {
+  onChange: (newJSONValue: any) => void;
+  value: any;
+  updateInputValidity: (valueValid: boolean) => void;
+}
+
+interface JSONInputState {
+  stringValue: string;
+}
+
+export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
+  constructor(props: JSONInputProps) {
+    super(props);
+    this.state = {
+      stringValue: ""
+    };
+  }
+
+  componentDidMount(): void {
+    const { value } = this.props;
+    const stringValue = stringifyJSON(value);
+    this.setState({
+      stringValue
+    });
+  }
+
+  componentWillReceiveProps(nextProps: JSONInputProps): void {
+    if (JSON.stringify(nextProps.value) !== JSON.stringify(this.props.value)) {
+      this.setState({
+        stringValue: stringifyJSON(nextProps.value)
+      });
+    }
+  }
+
+  render() {
+    const { onChange, updateInputValidity } = this.props;
+    const { stringValue } = this.state;
+    return <AceEditor
+      className={"bp3-fill"}
+      key={"hjson"}
+      mode={"hjson"}
+      theme="solarized_dark"
+      name="ace-editor"
+      onChange={(e: string) => {
+        this.setState({stringValue: e});
+        if (validJson(e) || e === "") onChange(parseStringToJSON(e));
+        updateInputValidity(validJson(e) || e === '');
+      }}
+      focus
+      fontSize={12}
+      width={'100%'}
+      height={"8vh"}
+      showPrintMargin={false}
+      showGutter={false}
+      value={stringValue}
+      editorProps={{
+        $blockScrolling: Infinity
+      }}
+      setOptions={{
+        enableBasicAutocompletion: false,
+        enableLiveAutocompletion: false,
+        showLineNumbers: false,
+        tabSize: 2
+      }}
     />;
   }
 }

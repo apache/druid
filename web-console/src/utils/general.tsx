@@ -148,3 +148,21 @@ export function validJson(json: string): boolean {
     return false;
   }
 }
+
+// stringify JSON to string; if JSON is null, parse empty string ""
+export function stringifyJSON(item: any): string {
+  if (item != null) {
+    return JSON.stringify(item, null, 2);
+  } else {
+    return "";
+  }
+}
+
+// parse string to JSON object; if string is empty, return null
+export function parseStringToJSON(s: string): JSON | null {
+  if (s === "") {
+    return null;
+  } else {
+    return JSON.parse(s);
+  }
+}
