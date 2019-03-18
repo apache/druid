@@ -16,30 +16,15 @@
  * limitations under the License.
  */
 
-
-
-.lookup-edit-dialog {
-  &.pt-dialog{
-    top: 10vh;
-
-    width: 600px;
+.compaction-dialog {
+  &.pt-dialog {
+    top: 5%;
   }
 
-  .ace_editor{
-    margin: 0px 20px 10px;
-  }
-
-  .lookup-label {
-    padding: 0 20px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-  }
-
-  .ace_scroller {
-    background-color: #232C35;
-  }
-
-  .ace_gutter-layer {
-    background-color: #27313c;
+  .auto-form {
+    margin: 10px 15px;
+    padding: 0 5px 0 5px;
+    max-height: 70vh;
+    overflow: scroll;
   }
 }

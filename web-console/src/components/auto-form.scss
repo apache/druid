@@ -16,30 +16,8 @@
  * limitations under the License.
  */
 
-
-
-.lookup-edit-dialog {
-  &.pt-dialog{
-    top: 10vh;
-
-    width: 600px;
-  }
-
-  .ace_editor{
-    margin: 0px 20px 10px;
-  }
-
-  .lookup-label {
-    padding: 0 20px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-  }
-
+.auto-form {
   .ace_scroller {
-    background-color: #232C35;
-  }
-
-  .ace_gutter-layer {
-    background-color: #27313c;
+    background-color: #212c36;
   }
 }

@@ -17,11 +17,10 @@
  */
 
 .retention-dialog {
-  width: 750px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) !important;
+  &.pt-dialog {
+    top: 5%;
+    width: 750px;
+  }
 
   .dialog-body {
     overflow: scroll;

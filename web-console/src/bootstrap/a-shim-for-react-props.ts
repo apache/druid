@@ -16,30 +16,10 @@
  * limitations under the License.
  */
 
+// Trick blueprint 1.0.1 into accepting React 16 as React 15.
+// This is broken into its own file to make linting and import sorting easy
+// This file "a" to make sure it is imported before console-application in entry.ts
 
-
-.lookup-edit-dialog {
-  &.pt-dialog{
-    top: 10vh;
-
-    width: 600px;
-  }
-
-  .ace_editor{
-    margin: 0px 20px 10px;
-  }
-
-  .lookup-label {
-    padding: 0 20px;
-    margin-top: 5px;
-    margin-bottom: 5px;
-  }
-
-  .ace_scroller {
-    background-color: #232C35;
-  }
-
-  .ace_gutter-layer {
-    background-color: #27313c;
-  }
-}
+// tslint:disable
+import * as React from 'react';
+(React as any).PropTypes = require('prop-types');

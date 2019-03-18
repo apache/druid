@@ -17,10 +17,13 @@
  */
 
 import { Button } from '@blueprintjs/core';
-import * as React from 'react';
 import classNames from 'classnames';
-import './filler.scss';
+import * as React from 'react';
+import AceEditor from "react-ace";
 
+import { parseStringToJSON, stringifyJSON, validJson } from "../utils";
+
+import './filler.scss';
 
 export const IconNames = {
   ERROR: "error" as "error",
@@ -103,16 +106,15 @@ export class FormGroup extends React.Component<{ className?: string, label?: str
   render() {
     const { className, label, children } = this.props;
     return <div className={classNames("form-group", className)}>
-      { label ? <Label>{label}</Label> : null }
+      {label ? <Label>{label}</Label> : null}
       {children}
     </div>;
   }
 }
 
-
 export const Alignment = {
   LEFT: "left" as "left",
-  RIGHT: "right" as "right",
+  RIGHT: "right" as "right"
 };
 export type Alignment = typeof Alignment[keyof typeof Alignment];
 
@@ -166,7 +168,7 @@ export interface NumericInputProps {
   min?: number;
   max?: number;
   stepSize?: number;
-  majorStepSize?: number
+  majorStepSize?: number;
 }
 
 export class NumericInput extends React.Component<NumericInputProps, { stringValue: string }> {
@@ -174,20 +176,20 @@ export class NumericInput extends React.Component<NumericInputProps, { stringVal
   static defaultProps = {
     stepSize: 1,
     majorStepSize: 10
-  }
+  };
 
   constructor(props: NumericInputProps) {
     super(props);
     this.state = {
       stringValue: typeof props.value === 'number' ? String(props.value) : ''
-    }
+    };
   }
 
   private constrain(n: number): number {
     const { min, max } = this.props;
     if (typeof min === 'number') n = Math.max(n, min);
     if (typeof max === 'number') n = Math.min(n, max);
-    return n
+    return n;
   }
 
   private handleChange = (e: any) => {
@@ -236,13 +238,13 @@ export class TagInput extends React.Component<TagInputProps, { stringValue: stri
     super(props);
     this.state = {
       stringValue: Array.isArray(props.values) ? props.values.join(', ') : ''
-    }
+    };
   }
 
   handleChange = (e: any) => {
-    let stringValue = e.target.value;
-    let newValues = stringValue.split(',').map((v: string) => v.trim());
-    let newValuesFiltered = newValues.filter(Boolean);
+    const stringValue = e.target.value;
+    const newValues = stringValue.split(',').map((v: string) => v.trim());
+    const newValuesFiltered = newValues.filter(Boolean);
     this.setState({
       stringValue: newValues.length === newValuesFiltered.length ? newValues.join(', ') : stringValue
     });
@@ -256,6 +258,74 @@ export class TagInput extends React.Component<TagInputProps, { stringValue: stri
       className={classNames("pt-input", {'pt-fill': fill })}
       value={stringValue}
       onChange={this.handleChange}
+    />;
+  }
+}
+
+interface JSONInputProps extends React.Props<any> {
+  onChange: (newJSONValue: any) => void;
+  value: any;
+  updateInputValidity: (valueValid: boolean) => void;
+}
+
+interface JSONInputState {
+  stringValue: string;
+}
+
+export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
+  constructor(props: JSONInputProps) {
+    super(props);
+    this.state = {
+      stringValue: ""
+    };
+  }
+
+  componentDidMount(): void {
+    const { value } = this.props;
+    const stringValue = stringifyJSON(value);
+    this.setState({
+      stringValue
+    });
+  }
+
+  componentWillReceiveProps(nextProps: JSONInputProps): void {
+    if (JSON.stringify(nextProps.value) !== JSON.stringify(this.props.value)) {
+      this.setState({
+        stringValue: stringifyJSON(nextProps.value)
+      });
+    }
+  }
+
+  render() {
+    const { onChange, updateInputValidity } = this.props;
+    const { stringValue } = this.state;
+    return <AceEditor
+      className={"bp3-fill"}
+      key={"hjson"}
+      mode={"hjson"}
+      theme="solarized_dark"
+      name="ace-editor"
+      onChange={(e: string) => {
+        this.setState({stringValue: e});
+        if (validJson(e) || e === "") onChange(parseStringToJSON(e));
+        updateInputValidity(validJson(e) || e === '');
+      }}
+      focus
+      fontSize={12}
+      width={'100%'}
+      height={"8vh"}
+      showPrintMargin={false}
+      showGutter={false}
+      value={stringValue}
+      editorProps={{
+        $blockScrolling: Infinity
+      }}
+      setOptions={{
+        enableBasicAutocompletion: false,
+        enableLiveAutocompletion: false,
+        showLineNumbers: false,
+        tabSize: 2
+      }}
     />;
   }
 }

@@ -17,14 +17,14 @@
  */
 
 import { Button, InputGroup, Intent } from '@blueprintjs/core';
-import { IconNames, HTMLSelect } from "../components/filler";
 import * as numeral from "numeral";
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
+import { HTMLSelect, IconNames } from "../components/filler";
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  let currentFilter = filters.find(f => f.id === id);
+  const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {
     filters = filters.filter(f => f.id !== id);
     if (currentFilter.value !== value) {
@@ -36,7 +36,7 @@ export function addFilter(filters: Filter[], id: string, value: string): Filter[
   return filters;
 }
 
-export function makeTextFilter(placeholder: string = ''): FilterRender {
+export function makeTextFilter(placeholder = ''): FilterRender {
   return ({ filter, onChange, key }) => {
     const filterValue = filter ? filter.value : '';
     return <InputGroup
@@ -45,8 +45,8 @@ export function makeTextFilter(placeholder: string = ''): FilterRender {
       value={filterValue}
       rightElement={filterValue ? <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} /> : undefined}
       placeholder={placeholder}
-    />
-  }
+    />;
+  };
 }
 
 export function makeBooleanFilter(): FilterRender {
@@ -57,13 +57,13 @@ export function makeBooleanFilter(): FilterRender {
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
       value={filterValue || "all"}
-      fill={true}
+      fill
     >
       <option value="all">Show all</option>
       <option value="true">true</option>
       <option value="false">false</option>
     </HTMLSelect>;
-  }
+  };
 }
 
 // ----------------------------
@@ -146,5 +146,23 @@ export function validJson(json: string): boolean {
     return true;
   } catch (e) {
     return false;
+  }
+}
+
+// stringify JSON to string; if JSON is null, parse empty string ""
+export function stringifyJSON(item: any): string {
+  if (item != null) {
+    return JSON.stringify(item, null, 2);
+  } else {
+    return "";
+  }
+}
+
+// parse string to JSON object; if string is empty, return null
+export function parseStringToJSON(s: string): JSON | null {
+  if (s === "") {
+    return null;
+  } else {
+    return JSON.parse(s);
   }
 }

@@ -17,19 +17,21 @@
  */
 
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
-import ReactTable from "react-table";
 import * as Hjson from "hjson";
+import * as React from 'react';
+import ReactTable from "react-table";
+
 import { SqlControl } from '../components/sql-control';
 import {
-  QueryManager,
-  localStorageSet,
-  localStorageGet,
   decodeRune,
   HeaderRows,
-  queryDruidRune, queryDruidSql
+  localStorageGet,
+  localStorageSet,
+  queryDruidRune,
+  queryDruidSql, QueryManager
 } from '../utils';
+
 import "./sql-view.scss";
 
 export interface SqlViewProps extends React.Props<any> {
@@ -84,7 +86,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           error
         });
       }
-    })
+    });
   }
 
   componentWillUnmount(): void {
@@ -117,7 +119,6 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
         }}
       />
       {this.renderResultTable()}
-    </div>
+    </div>;
   }
 }
-

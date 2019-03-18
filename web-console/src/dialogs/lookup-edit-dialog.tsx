@@ -16,24 +16,26 @@
  * limitations under the License.
  */
 
+import { Button, Classes, Dialog, InputGroup, Intent } from "@blueprintjs/core";
 import * as React from "react";
-import {Button, Classes, Dialog, Intent, InputGroup } from "@blueprintjs/core";
-import "./lookup-edit-dialog.scss"
-import {validJson} from "../utils";
 import AceEditor from "react-ace";
-import {FormGroup} from "../components/filler";
+
+import { FormGroup } from "../components/filler";
+import { validJson } from "../utils";
+
+import "./lookup-edit-dialog.scss";
 
 export interface LookupEditDialogProps extends React.Props<any> {
-  isOpen: boolean,
-  onClose: () => void,
-  onSubmit: () => void,
-  onChange: (field: string, value: string) => void
-  lookupName: string,
-  lookupTier: string,
-  lookupVersion: string,
-  lookupSpec: string,
-  isEdit: boolean,
-  allLookupTiers: string[]
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+  onChange: (field: string, value: string) => void;
+  lookupName: string;
+  lookupTier: string;
+  lookupVersion: string;
+  lookupSpec: string;
+  isEdit: boolean;
+  allLookupTiers: string[];
 }
 
 export interface LookupEditDialogState {
@@ -45,7 +47,7 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
     super(props);
     this.state = {
 
-    }
+    };
   }
 
   private addISOVersion = () => {
@@ -62,21 +64,21 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
         <InputGroup
           value={lookupTier}
           onChange={(e: any) => onChange("lookupEditTier", e.target.value)}
-          disabled={true}
+          disabled
         />
-      </FormGroup>
+      </FormGroup>;
     } else {
       return <FormGroup className={"lookup-label"} label={"Tier:"}>
         <div className="pt-select">
-          <select disabled={isEdit} value={lookupTier} onChange={(e:any) => onChange("lookupEditTier", e.target.value)}>
+          <select disabled={isEdit} value={lookupTier} onChange={(e: any) => onChange("lookupEditTier", e.target.value)}>
             {
               allLookupTiers.map(tier => {
-                return <option key={tier} value={tier}>{tier}</option>
+                return <option key={tier} value={tier}>{tier}</option>;
               })
             }
           </select>
         </div>
-      </FormGroup>
+      </FormGroup>;
     }
   }
 
@@ -101,7 +103,7 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
         />
       </FormGroup>
 
-      { this.renderTierInput() }
+      {this.renderTierInput()}
 
       <FormGroup className={"lookup-label"} label={"Version:"}>
         <InputGroup
@@ -131,7 +133,7 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
         setOptions={{
           enableBasicAutocompletion: false,
           enableLiveAutocompletion: false,
-          tabSize: 2,
+          tabSize: 2
         }}
       />
 
