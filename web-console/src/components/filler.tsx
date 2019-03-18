@@ -53,7 +53,8 @@ export const IconNames = {
   ARROW_UP: "arrow-up" as "arrow-up",
   ARROW_DOWN: "arrow-down" as "arrow-down",
   PROPERTIES: "properties" as "properties",
-  BUILD: "build" as "build"
+  BUILD: "build" as "build",
+  REMOVE_COLUMN_LEFT: "remove-column-left" as "remove-column-left"
 };
 export type IconNames = typeof IconNames[keyof typeof IconNames];
 

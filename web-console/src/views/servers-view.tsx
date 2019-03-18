@@ -25,9 +25,13 @@ import ReactTable from "react-table";
 import { Filter } from "react-table";
 
 import { IconNames } from '../components/filler';
+import { TableColumnSelection } from "../components/table-column-selection";
 import { addFilter, formatBytes, formatBytesCompact, queryDruidSql, QueryManager } from "../utils";
 
 import "./servers-view.scss";
+
+const historicalTableColumnSelection = "historical-table-column-selection";
+const middlemanagerTableColumnSelection = "middlemanager-table-column-selection";
 
 function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmentsToDrop: number, segmentsToDropSize: number): string {
   const queueParts: string[] = [];
@@ -77,6 +81,7 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       middleManagersError: null,
       middleManagerFilter: props.middleManager ? [{ id: 'host', value: props.middleManager }] : []
     };
+    this.initTableColumnSelection();
   }
 
   componentDidMount(): void {
@@ -131,8 +136,38 @@ WHERE "server_type" = 'historical'`);
     this.middleManagerQueryManager.terminate();
   }
 
+  private initTableColumnSelection() {
+    if (localStorage.getItem(historicalTableColumnSelection) == null) {
+      const columns: string[] = ["Server", "Tier", "Curr size", "Max size", "Usage", "Load/drop queues", "Host", "Port"];
+      const defaultSetting: any = {};
+      columns.forEach(column => defaultSetting[column] = true);
+      localStorage.setItem(historicalTableColumnSelection, JSON.stringify(defaultSetting));
+    }
+    if (localStorage.getItem(middlemanagerTableColumnSelection) == null) {
+      const columns: string[] = ["Host", "Usage", "Availability groups", "Last completed task time", "Blacklisted until"];
+      const defaultSetting: any = {};
+      columns.forEach(column => defaultSetting[column] = true);
+      localStorage.setItem(middlemanagerTableColumnSelection, JSON.stringify(defaultSetting));
+    }
+  }
+
+  renderHistoricalTableColumnSelection() {
+    return <TableColumnSelection
+      onChange={() => this.setState(this.state)}
+      tableName={historicalTableColumnSelection}
+    />;
+  }
+
+  renderMiddlemanagerTableColumnSelection() {
+    return <TableColumnSelection
+      onChange={() => this.setState(this.state)}
+      tableName={middlemanagerTableColumnSelection}
+    />;
+  }
+
   renderServersTable() {
     const { servers, serversLoading, serversError, serverFilter, groupByTier } = this.state;
+    const tableColumnSelection = JSON.parse(localStorage[historicalTableColumnSelection]);
 
     const fillIndicator = (value: number) => {
       return <div className="fill-indicator">
@@ -156,7 +191,8 @@ WHERE "server_type" = 'historical'`);
           Header: "Server",
           accessor: "server",
           width: 300,
-          Aggregated: row => ''
+          Aggregated: row => '',
+          show: tableColumnSelection["Server"]
         },
         {
           Header: "Tier",
@@ -164,7 +200,8 @@ WHERE "server_type" = 'historical'`);
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) }); }}>{value}</a>;
-          }
+          },
+          show: tableColumnSelection["Tier"]
         },
         {
           Header: "Curr size",
@@ -181,7 +218,8 @@ WHERE "server_type" = 'historical'`);
             if (row.aggregated) return '';
             if (row.value === null) return '';
             return formatBytes(row.value);
-          }
+          },
+          show: tableColumnSelection["Curr size"]
         },
         {
           Header: "Max size",
@@ -198,7 +236,8 @@ WHERE "server_type" = 'historical'`);
             if (row.aggregated) return '';
             if (row.value === null) return '';
             return formatBytes(row.value);
-          }
+          },
+          show: tableColumnSelection["Max size"]
         },
         {
           Header: "Usage",
@@ -216,7 +255,8 @@ WHERE "server_type" = 'historical'`);
             if (row.aggregated) return '';
             if (row.value === null) return '';
             return fillIndicator(row.value);
-          }
+          },
+          show: tableColumnSelection["Usage"]
         },
         {
           Header: "Load/drop queues",
@@ -236,12 +276,14 @@ WHERE "server_type" = 'historical'`);
             const segmentsToDrop = sum(originals, s => s.segmentsToDrop);
             const segmentsToDropSize = sum(originals, s => s.segmentsToDropSize);
             return formatQueues(segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize);
-          }
+          },
+          show: tableColumnSelection["Load/drop queues"]
         },
         {
           Header: "Host",
           accessor: "host",
-          Aggregated: () => ''
+          Aggregated: () => '',
+          show: tableColumnSelection["Host"]
         },
         {
           Header: "Port",
@@ -256,7 +298,8 @@ WHERE "server_type" = 'historical'`);
             }
             return ports.join(', ') || 'No port';
           },
-          Aggregated: () => ''
+          Aggregated: () => '',
+          show: tableColumnSelection["Port"]
         }
       ]}
       defaultPageSize={10}
@@ -267,6 +310,7 @@ WHERE "server_type" = 'historical'`);
   renderMiddleManagerTable() {
     const { goToTask } = this.props;
     const { middleManagers, middleManagersLoading, middleManagersError, middleManagerFilter } = this.state;
+    const tableColumnSelection = JSON.parse(localStorage[middlemanagerTableColumnSelection]);
 
     return <ReactTable
       data={middleManagers || []}
@@ -285,29 +329,34 @@ WHERE "server_type" = 'historical'`);
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ middleManagerFilter: addFilter(middleManagerFilter, 'host', value) }); }}>{value}</a>;
-          }
+          },
+          show: tableColumnSelection["Host"]
         },
         {
           Header: "Usage",
           id: "usage",
           width: 60,
           accessor: (row) => `${row.currCapacityUsed} / ${row.worker.capacity}`,
-          filterable: false
+          filterable: false,
+          show: tableColumnSelection["Usage"]
         },
         {
           Header: "Availability groups",
           id: "availabilityGroups",
           width: 60,
           accessor: (row) => row.availabilityGroups.length,
-          filterable: false
+          filterable: false,
+          show: tableColumnSelection["Availability groups"]
         },
         {
           Header: "Last completed task time",
-          accessor: "lastCompletedTaskTime"
+          accessor: "lastCompletedTaskTime",
+          show: tableColumnSelection["Last completed task time"]
         },
         {
           Header: "Blacklisted until",
-          accessor: "blacklistedUntil"
+          accessor: "blacklistedUntil",
+          show: tableColumnSelection["Blacklisted until"]
         }
       ]}
       defaultPageSize={10}
@@ -350,6 +399,7 @@ WHERE "server_type" = 'historical'`);
           label="Group by tier"
           onChange={() => this.setState({ groupByTier: !groupByTier })}
         />
+        {this.renderHistoricalTableColumnSelection()}
       </div>
       {this.renderServersTable()}
 
@@ -362,6 +412,7 @@ WHERE "server_type" = 'historical'`);
           text="Refresh"
           onClick={() => this.middleManagerQueryManager.rerunLastQuery()}
         />
+        {this.renderMiddlemanagerTableColumnSelection()}
       </div>
       {this.renderMiddleManagerTable()}
     </div>;

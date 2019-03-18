@@ -23,11 +23,14 @@ import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 
+import { TableColumnSelection } from "../components/table-column-selection";
 import { LookupEditDialog } from "../dialogs/lookup-edit-dialog";
 import { AppToaster } from "../singletons/toaster";
 import { getDruidErrorMessage, QueryManager } from "../utils";
 
 import "./lookups-view.scss";
+
+const lookupTableColumnSelection = "lookup-table-column-selection";
 
 export interface LookupsViewProps extends React.Props<any> {
 
@@ -64,6 +67,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       isEdit: false,
       allLookupTiers: []
     };
+    this.initTableColumnSelection();
   }
 
   componentDidMount(): void {
@@ -112,6 +116,15 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   componentWillUnmount(): void {
     this.lookupsGetQueryManager.terminate();
     this.lookupDeleteQueryManager.terminate();
+  }
+
+  private initTableColumnSelection() {
+    if (localStorage.getItem(lookupTableColumnSelection) == null) {
+      const columns: string[] = ["Lookup Name", "Tier", "Type", "Version", "Config"];
+      const defaultSetting: any = {};
+      columns.forEach(column => defaultSetting[column] = true);
+      localStorage.setItem(lookupTableColumnSelection, JSON.stringify(defaultSetting));
+    }
   }
 
   private async initializeLookup() {
@@ -204,8 +217,16 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     this.lookupDeleteQueryManager.runQuery(url);
   }
 
+  renderTableColumnSelection() {
+    return <TableColumnSelection
+      onChange={() => this.setState(this.state)}
+      tableName={lookupTableColumnSelection}
+    />;
+  }
+
   renderLookupsTable() {
     const { lookups, loadingLookups, lookupsError} = this.state;
+    const tableColumnSelection = JSON.parse(localStorage[lookupTableColumnSelection]);
     if (lookupsError) {
       return <div className={"init-div"}>
         <Button
@@ -226,25 +247,29 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
             Header: "Lookup Name",
             id: "lookup_name",
             accessor: (row: any) => row.id,
-            filterable: true
+            filterable: true,
+            show: tableColumnSelection["Lookup Name"]
           },
           {
             Header: "Tier",
             id: "tier",
             accessor: (row: any) => row.tier,
-            filterable: true
+            filterable: true,
+            show: tableColumnSelection["Tier"]
           },
           {
             Header: "Type",
             id: "type",
             accessor: (row: any) => row.spec.type,
-            filterable: true
+            filterable: true,
+            show: tableColumnSelection["Type"]
           },
           {
             Header: "Version",
             id: "version",
             accessor: (row: any) => row.version,
-            filterable: true
+            filterable: true,
+            show: tableColumnSelection["Version"]
           },
           {
             Header: "Config",
@@ -259,7 +284,8 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
                 &nbsp;&nbsp;&nbsp;
                 <a onClick={() => this.deleteLookup(lookupTier, lookupId)}>Delete</a>
               </div>;
-            }
+            },
+            show: tableColumnSelection["Config"]
           }
         ]}
         defaultPageSize={50}
@@ -300,6 +326,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
           style={{display: this.state.lookupsError !== null ? 'none' : 'inline'}}
           onClick={() => this.openLookupEditDialog("", "")}
         />
+        {this.renderTableColumnSelection()}
       </div>
       {this.renderLookupsTable()}
       {this.renderLookupEditDialog()}

@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, Intent, Switch } from "@blueprintjs/core";
+import { Button, Classes, Intent, Popover, Position, Switch } from "@blueprintjs/core";
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from "react-table";
 
 import { IconNames } from "../components/filler";
 import { RuleEditor } from '../components/rule-editor';
+import { TableColumnSelection } from "../components/table-column-selection";
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { CompactionDialog } from "../dialogs/compaction-dialog";
 import { RetentionDialog } from '../dialogs/retention-dialog';
@@ -38,6 +39,8 @@ import {
 } from "../utils";
 
 import "./datasource-view.scss";
+
+const datasourceTableColumnSelection = "datasource-table-column-selection";
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -100,6 +103,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       enableDatasource: null,
       killDatasource: null
     };
+    this.initTableColumnSelection();
   }
 
   componentDidMount(): void {
@@ -339,10 +343,26 @@ GROUP BY 1`);
     />;
   }
 
+  private initTableColumnSelection() {
+    if (localStorage.getItem(datasourceTableColumnSelection) == null) {
+      const columns: string[] = ["Datasource", "Availability", "Retention", "Compaction", "Size", "Num rows", "Actions"];
+      const defaultSetting: any = {};
+      columns.forEach(column => defaultSetting[column] = true);
+      localStorage.setItem(datasourceTableColumnSelection, JSON.stringify(defaultSetting));
+    }
+  }
+
+  renderTableColumnSelection() {
+    return <TableColumnSelection
+      onChange={() => this.setState(this.state)}
+      tableName={datasourceTableColumnSelection}
+    />;
+  }
+
   renderDatasourceTable() {
     const { goToSegments } = this.props;
     const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
-
+    const tableColumnSelection = JSON.parse(localStorage[datasourceTableColumnSelection]);
     let data = datasources || [];
     if (!showDisabled) {
       data = data.filter(d => !d.disabled);
@@ -366,7 +386,8 @@ GROUP BY 1`);
             Cell: row => {
               const value = row.value;
               return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
-            }
+            },
+            show: tableColumnSelection["Datasource"]
           },
           {
             Header: "Availability",
@@ -400,7 +421,8 @@ GROUP BY 1`);
                 </span>;
 
               }
-            }
+            },
+            show: tableColumnSelection["Availability"]
           },
           {
             Header: 'Retention',
@@ -423,7 +445,8 @@ GROUP BY 1`);
                 {text}&nbsp;
                 <a>&#x270E;</a>
               </span>;
-            }
+            },
+            show: tableColumnSelection["Retention"]
           },
           {
             Header: 'Compaction',
@@ -449,21 +472,24 @@ GROUP BY 1`);
                 {text}&nbsp;
                 <a>&#x270E;</a>
               </span>;
-            }
+            },
+            show: tableColumnSelection["Compaction"]
           },
           {
             Header: 'Size',
             accessor: 'size',
             filterable: false,
             width: 100,
-            Cell: (row) => formatBytes(row.value)
+            Cell: (row) => formatBytes(row.value),
+            show: tableColumnSelection["Size"]
           },
           {
             Header: 'Num rows',
             accessor: 'num_rows',
             filterable: false,
             width: 100,
-            Cell: (row) => formatNumber(row.value)
+            Cell: (row) => formatNumber(row.value),
+            show: tableColumnSelection["Num rows"]
           },
           {
             Header: 'Actions',
@@ -484,7 +510,8 @@ GROUP BY 1`);
                   <a onClick={() => this.setState({ dropDataDatasource: datasource })}>Drop data</a>
                 </div>;
               }
-            }
+            },
+            show: tableColumnSelection["Actions"]
           }
         ]}
         defaultPageSize={50}
@@ -520,6 +547,7 @@ GROUP BY 1`);
           label="Show disabled"
           onChange={() => this.setState({ showDisabled: !showDisabled })}
         />
+        {this.renderTableColumnSelection()}
       </div>
       {this.renderDatasourceTable()}
     </div>;
