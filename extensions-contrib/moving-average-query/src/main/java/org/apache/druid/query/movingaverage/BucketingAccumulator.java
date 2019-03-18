@@ -27,7 +27,9 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Works together with {@link RowBucketIterable} to group all the rows for a specific day together.
+ * Groups all the rows for a specific period together.
+ * Rows of each period are placed in a single {@link RowBucket} (timed through the dateTime field).
+ * (Assumpltion: Input arrives sorted by timestamp).
  */
 public class BucketingAccumulator extends YieldingAccumulator<RowBucket, Row>
 {

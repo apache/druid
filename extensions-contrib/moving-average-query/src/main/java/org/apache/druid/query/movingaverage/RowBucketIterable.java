@@ -32,8 +32,15 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
- * It is the iterable used to bucket data into days,
- * doing appropriate lookahead to see if the next row is in the same day or a new day.
+ * An iterator which takes list of rows ({@link Sequence<Row>}) and generates a new list of {@link RowBucket}s from it.
+ *
+ * It calls {@link BucketingAccumulator} for naive backeting to buckets of periods,
+ * But does more suttle logic to cover edge cases, such as:
+ * - Handling periods with no rows.
+ * - Handling last record.
+ *
+ * Please notice this is being called by {@link MovingAverageIterable.MovingAverageIterator#internalNext()}
+ * and the logic for skipping records is comprised by the interaction between the two classes.
  */
 public class RowBucketIterable implements Iterable<RowBucket>
 {
@@ -95,13 +102,14 @@ public class RowBucketIterable implements Iterable<RowBucket>
     {
       RowBucket currentBucket = yielder.get();
 
+      // Iterate to next interval
       if (expectedBucket.compareTo(intervals.get(intervalIndex).getEnd()) >= 0) {
         intervalIndex++;
         if (intervalIndex < intervals.size()) {
           expectedBucket = intervals.get(intervalIndex).getStart();
         }
       }
-      // currentBucket > expectedBucket
+      // currentBucket > expectedBucket (No rows found for period). Iterate to next period.
       if (currentBucket != null && currentBucket.getDateTime().compareTo(expectedBucket) > 0) {
         currentBucket = new RowBucket(expectedBucket, Collections.emptyList());
         expectedBucket = expectedBucket.plus(period);
