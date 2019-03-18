@@ -68,7 +68,7 @@ public class ScanQuerySpecTest
         ScanQuery.ResultFormat.RESULT_FORMAT_LIST,
         0,
         3,
-        ScanQuery.TimeOrder.NONE,
+        ScanQuery.Order.NONE,
         null,
         Arrays.asList("market", "quality", "index"),
         null,

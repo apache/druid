@@ -98,7 +98,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
     }
 
     // We want to perform batching if we are not time-ordering or are at the outer level if we are re time-ordering
-    if (query.getTimeOrder() == ScanQuery.TimeOrder.NONE ||
+    if (query.getOrder() == ScanQuery.Order.NONE ||
         !query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
       ScanResultValue batch = yielder.get();
       List events = (List) batch.getEvents();

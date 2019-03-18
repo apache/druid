@@ -78,7 +78,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
-  public enum TimeOrder
+  public enum Order
   {
     ASCENDING,
     DESCENDING,
@@ -92,7 +92,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
 
     @JsonCreator
-    public static TimeOrder fromString(String name)
+    public static Order fromString(String name)
     {
       return valueOf(StringUtils.toUpperCase(name));
     }
@@ -111,7 +111,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final DimFilter dimFilter;
   private final List<String> columns;
   private final Boolean legacy;
-  private final TimeOrder timeOrder;
+  private final Order order;
 
   @JsonCreator
   public ScanQuery(
@@ -121,7 +121,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("resultFormat") ResultFormat resultFormat,
       @JsonProperty("batchSize") int batchSize,
       @JsonProperty("limit") long limit,
-      @JsonProperty("timeOrder") TimeOrder timeOrder,
+      @JsonProperty("order") Order order,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("legacy") Boolean legacy,
@@ -138,7 +138,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.dimFilter = dimFilter;
     this.columns = columns;
     this.legacy = legacy;
-    this.timeOrder = timeOrder == null ? TimeOrder.NONE : timeOrder;
+    this.order = order == null ? Order.NONE : order;
   }
 
   @JsonProperty
@@ -166,9 +166,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @JsonProperty
-  public TimeOrder getTimeOrder()
+  public Order getOrder()
   {
-    return timeOrder;
+    return order;
   }
 
   @Override

@@ -52,7 +52,7 @@ public class ScanResultValueTimestampComparatorTest
   public void comparisonDescendingListTest()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TimeOrder.DESCENDING)
+                            .timeOrder(ScanQuery.Order.DESCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -89,7 +89,7 @@ public class ScanResultValueTimestampComparatorTest
   public void comparisonAscendingListTest()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TimeOrder.ASCENDING)
+                            .timeOrder(ScanQuery.Order.ASCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -126,7 +126,7 @@ public class ScanResultValueTimestampComparatorTest
   public void comparisonDescendingCompactedListTest()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TimeOrder.DESCENDING)
+                            .timeOrder(ScanQuery.Order.DESCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)
@@ -161,7 +161,7 @@ public class ScanResultValueTimestampComparatorTest
   public void comparisonAscendingCompactedListTest()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
-                            .timeOrder(ScanQuery.TimeOrder.ASCENDING)
+                            .timeOrder(ScanQuery.Order.ASCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                             .dataSource("some src")
                             .intervals(intervalSpec)

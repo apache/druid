@@ -68,7 +68,7 @@ public class ScanQueryEngine
 
     if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) != null) {
       long count = (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
-      if (count >= query.getLimit() && query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
+      if (count >= query.getLimit() && query.getOrder().equals(ScanQuery.Order.NONE)) {
         return Sequences.empty();
       }
     }
@@ -131,8 +131,8 @@ public class ScanQueryEngine
                     intervals.get(0),
                     query.getVirtualColumns(),
                     Granularities.ALL,
-                    query.getTimeOrder().equals(ScanQuery.TimeOrder.DESCENDING) ||
-                    (query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE) && query.isDescending()),
+                    query.getOrder().equals(ScanQuery.Order.DESCENDING) ||
+                    (query.getOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
                     null
                 )
                 .map(cursor -> new BaseSequence<>(
@@ -264,7 +264,7 @@ public class ScanQueryEngine
    */
   private long calculateLimit(ScanQuery query, Map<String, Object> responseContext)
   {
-    if (query.getTimeOrder().equals(ScanQuery.TimeOrder.NONE)) {
+    if (query.getOrder().equals(ScanQuery.Order.NONE)) {
       return query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
     }
     return query.getLimit();

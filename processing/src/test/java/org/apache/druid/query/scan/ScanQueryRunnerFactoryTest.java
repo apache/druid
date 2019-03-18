@@ -56,14 +56,14 @@ public class ScanQueryRunnerFactoryTest
       final int batchSize,
       final long limit,
       final ScanQuery.ResultFormat resultFormat,
-      final ScanQuery.TimeOrder timeOrder
+      final ScanQuery.Order order
   )
   {
     this.numElements = numElements;
     this.query = Druids.newScanQueryBuilder()
                        .batchSize(batchSize)
                        .limit(limit)
-                       .timeOrder(timeOrder)
+                       .timeOrder(order)
                        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                        .dataSource("some datasource")
                        .resultFormat(resultFormat)
@@ -81,9 +81,9 @@ public class ScanQueryRunnerFactoryTest
         ScanQuery.ResultFormat.RESULT_FORMAT_LIST,
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST
     );
-    List<ScanQuery.TimeOrder> timeOrder = ImmutableList.of(
-        ScanQuery.TimeOrder.ASCENDING,
-        ScanQuery.TimeOrder.DESCENDING
+    List<ScanQuery.Order> order = ImmutableList.of(
+        ScanQuery.Order.ASCENDING,
+        ScanQuery.Order.DESCENDING
     );
 
     return QueryRunnerTestHelper.cartesian(
@@ -91,7 +91,7 @@ public class ScanQueryRunnerFactoryTest
         batchSizes,
         limits,
         resultFormats,
-        timeOrder
+        order
     );
   }
 
@@ -112,7 +112,7 @@ public class ScanQueryRunnerFactoryTest
       } else if (o1 < o2) {
         retVal = -1;
       }
-      if (query.getTimeOrder().equals(ScanQuery.TimeOrder.DESCENDING)) {
+      if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
         return retVal * -1;
       }
       return retVal;
@@ -138,7 +138,7 @@ public class ScanQueryRunnerFactoryTest
 
     // check ordering is correct
     for (int i = 1; i < output.size(); i++) {
-      if (query.getTimeOrder().equals(ScanQuery.TimeOrder.DESCENDING)) {
+      if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
         Assert.assertTrue(output.get(i).getFirstEventTimestamp(resultFormat) <
                           output.get(i - 1).getFirstEventTimestamp(resultFormat));
       } else {
