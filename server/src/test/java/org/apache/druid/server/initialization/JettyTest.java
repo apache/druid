@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.initialization;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Binder;
@@ -273,7 +272,7 @@ public class JettyTest extends BaseJettyTest
               // Expected.
             }
             catch (Throwable t) {
-              Throwables.propagate(t);
+              throw new RuntimeException(t);
             }
             latch.countDown();
           }

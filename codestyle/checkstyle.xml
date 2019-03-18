@@ -204,6 +204,12 @@
       <property name="message" value="Use org.apache.druid.server.http.HttpMediaType#TEXT_PLAIN_UTF8 instead"/>
     </module>
 
+    <module name="Regexp">
+      <property name="format" value='^Throwables.propagate\('/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Throwables.propagate() shouldn't be used in new code"/>
+    </module>
+
     <module name="PackageName">
       <property name="format" value="^org.apache.druid.*$"/>
     </module>
@@ -291,5 +297,10 @@ codestyle/checkstyle.xml.&#10;"/>
       <property name="illegalPattern" value="true"/>
       <property name="message" value="Duplicate line"/>
     </module>
+    
+     <!-- Added as per the issue #6936 - Prohibit method names starting with capital letters -->
+	 <module name="MethodName">
+	   <property name = "format" value = "^[a-z_]*[a-z0-9][a-zA-Z0-9_]*$"/>
+	 </module>
   </module>
 </module>

@@ -33,6 +33,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
   private static String INDEX_DATASOURCE = "wikipedia_index_test";
 
   private static String REINDEX_TASK = "/indexer/wikipedia_reindex_task.json";
+  private static String REINDEX_QUERIES_RESOURCE = "/indexer/wikipedia_reindex_queries.json";
   private static String REINDEX_DATASOURCE = "wikipedia_reindex_test";
 
   @Test
@@ -52,7 +53,7 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
           INDEX_DATASOURCE,
           REINDEX_DATASOURCE,
           REINDEX_TASK,
-          INDEX_QUERIES_RESOURCE
+          REINDEX_QUERIES_RESOURCE
       );
     }
   }

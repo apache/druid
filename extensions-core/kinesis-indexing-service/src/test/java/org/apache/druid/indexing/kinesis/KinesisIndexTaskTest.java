@@ -83,15 +83,16 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -134,9 +135,6 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorImpl;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifier;
@@ -148,6 +146,7 @@ import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
@@ -177,6 +176,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -198,28 +198,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   private static String shardId1 = "1";
   private static String shardId0 = "0";
   private static KinesisRecordSupplier recordSupplier;
-  private static List<OrderedPartitionableRecord<String, String>> records = ImmutableList.of(
-      new OrderedPartitionableRecord<>(stream, "1", "0", JB("2008", "a", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "1", JB("2009", "b", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "2", JB("2010", "c", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "3", JB("2011", "d", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "4", JB("2011", "e", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(
-          stream,
-          "1",
-          "5",
-          JB("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
-      ),
-      new OrderedPartitionableRecord<>(stream, "1", "6", Collections.singletonList(StringUtils.toUtf8("unparseable"))),
-      new OrderedPartitionableRecord<>(stream, "1", "7", Collections.singletonList(StringUtils.toUtf8("unparseable2"))),
-      new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(StringUtils.toUtf8("{}"))),
-      new OrderedPartitionableRecord<>(stream, "1", "9", JB("2013", "f", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "10", JB("2049", "f", "y", "notanumber", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "11", JB("2049", "f", "y", "10", "notanumber", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "1", "12", JB("2049", "f", "y", "10", "20.0", "notanumber")),
-      new OrderedPartitionableRecord<>(stream, "0", "0", JB("2012", "g", "y", "10", "20.0", "1.0")),
-      new OrderedPartitionableRecord<>(stream, "0", "1", JB("2011", "h", "y", "10", "20.0", "1.0"))
-  );
+  private static List<OrderedPartitionableRecord<String, String>> records;
 
   private static ServiceEmitter emitter;
   private static ListeningExecutorService taskExec;
@@ -315,6 +294,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     maxSavedParseExceptions = null;
     skipAvailabilityCheck = false;
     doHandoff = true;
+    records = generateRecords(stream);
     reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
     maxRecordsPerPoll = 1;
 
@@ -347,6 +327,52 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     emitter.close();
   }
 
+  private static List<OrderedPartitionableRecord<String, String>> generateRecords(String stream)
+  {
+    return ImmutableList.of(
+        new OrderedPartitionableRecord<>(stream, "1", "0", jb("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "1", jb("2009", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "2", jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "3", jb("2011", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "4", jb("2011", "e", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(
+            stream,
+            "1",
+            "5",
+            jb("246140482-04-24T15:36:27.903Z", "x", "z", "10", "20.0", "1.0")
+        ),
+        new OrderedPartitionableRecord<>(stream, "1", "6", Collections.singletonList(StringUtils.toUtf8("unparseable"))),
+        new OrderedPartitionableRecord<>(stream, "1", "7", Collections.singletonList(StringUtils.toUtf8("unparseable2"))),
+        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(StringUtils.toUtf8("{}"))),
+        new OrderedPartitionableRecord<>(stream, "1", "9", jb("2013", "f", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "10", jb("2049", "f", "y", "notanumber", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "11", jb("2049", "f", "y", "10", "notanumber", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "12", jb("2049", "f", "y", "10", "20.0", "notanumber")),
+        new OrderedPartitionableRecord<>(stream, "0", "0", jb("2012", "g", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "0", "1", jb("2011", "h", "y", "10", "20.0", "1.0"))
+    );
+  }
+
+  private static List<OrderedPartitionableRecord<String, String>> generateSinglePartitionRecords(String stream)
+  {
+    return ImmutableList.of(
+        new OrderedPartitionableRecord<>(stream, "1", "0", jb("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "1", jb("2009", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "2", jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "3", jb("2011", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "4", jb("2011", "e", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "5", jb("2012", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "6", jb("2013", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "7", jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "8", jb("2011", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "9", jb("2011", "e", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "10", jb("2008", "a", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "11", jb("2009", "b", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "12", jb("2010", "c", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "13", jb("2012", "d", "y", "10", "20.0", "1.0")),
+        new OrderedPartitionableRecord<>(stream, "1", "14", jb("2013", "e", "y", "10", "20.0", "1.0"))
+    );
+  }
   @Test(timeout = 120_000L)
   public void testRunAfterDataInserted() throws Exception
   {
@@ -405,8 +431,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(
@@ -485,8 +511,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2012/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2011/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2012/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
@@ -610,13 +636,13 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc4 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc5 = SD(task, "2011/P1D", 1);
-    SegmentDescriptor desc6 = SD(task, "2012/P1D", 0);
-    SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2009/P1D", 0);
+    SegmentDescriptor desc3 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc4 = sd(task, "2011/P1D", 0);
+    SegmentDescriptor desc5 = sd(task, "2011/P1D", 1);
+    SegmentDescriptor desc6 = sd(task, "2012/P1D", 0);
+    SegmentDescriptor desc7 = sd(task, "2013/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6, desc7), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
@@ -639,7 +665,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", desc6));
     Assert.assertEquals(ImmutableList.of("f"), readSegmentColumn("dim1", desc7));
   }
-
 
   @Test(timeout = 120_000L)
   public void testIncrementalHandOffMaxTotalRows() throws Exception
@@ -771,12 +796,12 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc4 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc5 = SD(task, "2049/P1D", 0);
-    SegmentDescriptor desc7 = SD(task, "2013/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2009/P1D", 0);
+    SegmentDescriptor desc3 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc4 = sd(task, "2011/P1D", 0);
+    SegmentDescriptor desc5 = sd(task, "2049/P1D", 0);
+    SegmentDescriptor desc7 = sd(task, "2013/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc7), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
@@ -858,8 +883,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
@@ -941,9 +966,9 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(2, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2008/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2009/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2008/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2009/P1D", 0);
+    SegmentDescriptor desc3 = sd(task, "2010/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
@@ -1034,7 +1059,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2009/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2009/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
@@ -1055,7 +1080,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
 
   @Test(timeout = 120_000L)
-  public void testRunOnNothing() throws Exception
+  public void testRunOnSingletonRange() throws Exception
   {
     recordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -1065,11 +1090,15 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     recordSupplier.seek(anyObject(), anyString());
     expectLastCall().anyTimes();
 
+    expect(recordSupplier.poll(anyLong())).andReturn(records.subList(2, 3)).once();
+
     recordSupplier.close();
     expectLastCall().once();
 
     replayAll();
 
+    // When start and end offsets are the same, it means we need to read one message (since in Kinesis, end offsets
+    // are inclusive).
     final KinesisIndexTask task = createTask(
         null,
         new KinesisIndexTaskIOConfig(
@@ -1104,12 +1133,12 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     verifyAll();
 
     // Check metrics
-    Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(1, task.getRunner().getRowIngestionMeters().getProcessed());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getUnparseable());
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
+    Assert.assertEquals(ImmutableSet.of(sd(task, "2010/P1D", 0)), publishedDescriptors());
   }
 
 
@@ -1172,8 +1201,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
@@ -1249,8 +1278,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
@@ -1396,10 +1425,10 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(4, task.getRunner().getRowIngestionMeters().getUnparseable());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2013/P1D", 0);
-    SegmentDescriptor desc4 = SD(task, "2049/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2011/P1D", 0);
+    SegmentDescriptor desc3 = sd(task, "2013/P1D", 0);
+    SegmentDescriptor desc4 = sd(task, "2049/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
@@ -1621,8 +1650,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task1, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task1, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
@@ -1732,8 +1761,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata, should all be from the first task
-    SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task1, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task1, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
@@ -1830,8 +1859,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task1, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task1, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
@@ -1850,8 +1879,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc3 = SD(task2, "2011/P1D", 1);
-    SegmentDescriptor desc4 = SD(task2, "2013/P1D", 0);
+    SegmentDescriptor desc3 = sd(task2, "2011/P1D", 1);
+    SegmentDescriptor desc4 = sd(task2, "2013/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertNull(metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource()));
 
@@ -1929,9 +1958,9 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc4 = SD(task, "2012/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2011/P1D", 0);
+    SegmentDescriptor desc4 = sd(task, "2012/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc4), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
@@ -2044,10 +2073,10 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
-    SegmentDescriptor desc3 = SD(task2, "2011/P1D", 1);
-    SegmentDescriptor desc4 = SD(task2, "2012/P1D", 0);
+    SegmentDescriptor desc1 = sd(task1, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task1, "2011/P1D", 0);
+    SegmentDescriptor desc3 = sd(task2, "2011/P1D", 1);
+    SegmentDescriptor desc4 = sd(task2, "2012/P1D", 0);
 
     Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
@@ -2075,14 +2104,11 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   @Test(timeout = 120_000L)
   public void testRestore() throws Exception
   {
-    recordSupplier.assign(anyObject());
-    expectLastCall().anyTimes();
-
-    expect(recordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
-
-    recordSupplier.seek(anyObject(), anyString());
-    expectLastCall().anyTimes();
-
+    final StreamPartition<String> streamPartition = StreamPartition.of(stream, shardId1);
+    recordSupplier.assign(ImmutableSet.of(streamPartition));
+    expectLastCall();
+    recordSupplier.seek(streamPartition, "2");
+    expectLastCall();
     expect(recordSupplier.poll(anyLong())).andReturn(records.subList(2, 4))
                                           .once()
                                           .andReturn(Collections.emptyList())
@@ -2133,16 +2159,13 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     verifyAll();
     reset(recordSupplier);
 
-    recordSupplier.assign(anyObject());
-    expectLastCall().anyTimes();
-
-    expect(recordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
-
-    recordSupplier.seek(anyObject(), anyString());
-    expectLastCall().anyTimes();
-
+    recordSupplier.assign(ImmutableSet.of(streamPartition));
+    expectLastCall();
+    recordSupplier.seek(streamPartition, "3");
+    expectLastCall();
     expect(recordSupplier.poll(anyLong())).andReturn(records.subList(3, 6)).once();
-
+    recordSupplier.assign(ImmutableSet.of());
+    expectLastCall();
     recordSupplier.close();
     expectLastCall();
 
@@ -2197,8 +2220,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published segments & metadata
-    SegmentDescriptor desc1 = SD(task1, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task1, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task1, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task1, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(
@@ -2214,18 +2237,170 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
   }
 
-
   @Test(timeout = 120_000L)
-  public void testRunWithPauseAndResume() throws Exception
+  public void testRestoreAfterPersistingSequences() throws Exception
   {
+    maxRowsPerSegment = 2;
+    maxRecordsPerPoll = 1;
+    records = generateSinglePartitionRecords(stream);
+
     recordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
-
-    expect(recordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
 
     recordSupplier.seek(anyObject(), anyString());
     expectLastCall().anyTimes();
 
+    // simulate 1 record at a time
+    expect(recordSupplier.poll(anyLong())).andReturn(Collections.singletonList(records.get(0)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(1)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(2)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(3)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(4)))
+                                          .once()
+                                          .andReturn(Collections.emptyList())
+                                          .anyTimes();
+
+    replayAll();
+
+    final KinesisIndexTask task1 = createTask(
+        "task1",
+        new KinesisIndexTaskIOConfig(
+            null,
+            "sequence0",
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                "0"
+            )),
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                "6"
+            )),
+            true,
+            null,
+            null,
+            "awsEndpoint",
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        )
+    );
+
+    final SeekableStreamPartitions<String, String> checkpoint1 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(shardId1, "4")
+    );
+
+    final ListenableFuture<TaskStatus> future1 = runTask(task1);
+
+    while (task1.getRunner().getStatus() != SeekableStreamIndexTaskRunner.Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    final Map<String, String> currentOffsets = ImmutableMap.copyOf(task1.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
+    task1.getRunner().setEndOffsets(currentOffsets, false);
+
+    // Stop without publishing segment
+    task1.stopGracefully(toolboxFactory.build(task1).getConfig());
+    unlockAppenderatorBasePersistDirForTask(task1);
+
+    Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
+
+    verifyAll();
+    reset(recordSupplier);
+
+    recordSupplier.assign(anyObject());
+    expectLastCall().anyTimes();
+
+    recordSupplier.seek(anyObject(), anyString());
+    expectLastCall().anyTimes();
+
+    expect(recordSupplier.poll(anyLong())).andReturn(Collections.singletonList(records.get(5)))
+                                          .once()
+                                          .andReturn(Collections.singletonList(records.get(6)))
+                                          .once()
+                                          .andReturn(Collections.emptyList())
+                                          .anyTimes();
+
+    recordSupplier.close();
+    expectLastCall();
+
+    replayAll();
+
+    // Start a new task
+    final KinesisIndexTask task2 = createTask(
+        task1.getId(),
+        new KinesisIndexTaskIOConfig(
+            null,
+            "sequence0",
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                "0"
+            )),
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                "6"
+            )),
+            true,
+            null,
+            null,
+            "awsEndpoint",
+            null,
+            null,
+            ImmutableSet.of(shardId1),
+            null,
+            null,
+            false
+        )
+    );
+
+    final ListenableFuture<TaskStatus> future2 = runTask(task2);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
+
+    verifyAll();
+
+    // Check metrics
+    Assert.assertEquals(5, task1.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task1.getRunner().getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(2, task2.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, task2.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published segments & metadata
+    SegmentDescriptor desc1 = sd(task1, "2008/P1D", 0);
+    SegmentDescriptor desc2 = sd(task1, "2009/P1D", 0);
+    SegmentDescriptor desc3 = sd(task1, "2010/P1D", 0);
+    SegmentDescriptor desc4 = sd(task1, "2011/P1D", 0);
+    SegmentDescriptor desc5 = sd(task1, "2012/P1D", 0);
+    SegmentDescriptor desc6 = sd(task1, "2013/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4, desc5, desc6), publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(
+            new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+                shardId1,
+                "6"
+            ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+  }
+
+  @Test(timeout = 120_000L)
+  public void testRunWithPauseAndResume() throws Exception
+  {
+    final StreamPartition<String> streamPartition = StreamPartition.of(stream, shardId1);
+    recordSupplier.assign(ImmutableSet.of(streamPartition));
+    expectLastCall();
+    recordSupplier.seek(streamPartition, "2");
+    expectLastCall();
     expect(recordSupplier.poll(anyLong())).andReturn(records.subList(2, 5))
                                           .once()
                                           .andReturn(Collections.emptyList())
@@ -2278,7 +2453,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     verifyAll();
 
-    Map<String, String> currentOffsets = task.getRunner().getCurrentOffsets();
+    ConcurrentMap<String, String> currentOffsets = task.getRunner().getCurrentOffsets();
 
     try {
       future.get(10, TimeUnit.SECONDS);
@@ -2292,14 +2467,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     reset(recordSupplier);
 
-    recordSupplier.assign(anyObject());
-    expectLastCall().anyTimes();
-
-    expect(recordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
-
-    recordSupplier.seek(anyObject(), anyString());
-    expectLastCall().anyTimes();
-
+    recordSupplier.assign(ImmutableSet.of());
+    expectLastCall();
     recordSupplier.close();
     expectLastCall().once();
 
@@ -2318,8 +2487,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(
@@ -2363,8 +2532,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     final TreeMap<Integer, Map<String, String>> sequences = new TreeMap<>();
     // Here the sequence number is 1 meaning that one incremental handoff was done by the failed task
-    // and this task should start reading from stream 2 for partition 0
-    sequences.put(1, ImmutableMap.of(shardId1, "2"));
+    // and this task should start reading from offset 2 for partition 0 (not offset 1, because end is inclusive)
+    sequences.put(1, ImmutableMap.of(shardId1, "1"));
     final Map<String, Object> context = new HashMap<>();
     context.put("checkpoints", objectMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<String, String>>>()
     {
@@ -2373,6 +2542,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
 
     final KinesisIndexTask task = createTask(
         "task1",
+        DATA_SCHEMA,
         new KinesisIndexTaskIOConfig(
             null,
             "sequence0",
@@ -2408,8 +2578,8 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(0, task.getRunner().getRowIngestionMeters().getThrownAway());
 
     // Check published metadata
-    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
-    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    SegmentDescriptor desc1 = sd(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = sd(task, "2011/P1D", 0);
     Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
     Assert.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
@@ -2422,6 +2592,160 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     // Check segments in deep storage
     Assert.assertEquals(ImmutableList.of("c"), readSegmentColumn("dim1", desc1));
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentColumn("dim1", desc2));
+  }
+
+  @Test(timeout = 5000L)
+  public void testIncrementalHandOffReadsThroughEndOffsets() throws Exception
+  {
+    records = generateSinglePartitionRecords(stream);
+
+    final String baseSequenceName = "sequence0";
+    // as soon as any segment has more than one record, incremental publishing should happen
+    maxRowsPerSegment = 2;
+
+    final KinesisRecordSupplier recordSupplier1 = mock(KinesisRecordSupplier.class);
+    recordSupplier1.assign(anyObject());
+    expectLastCall().anyTimes();
+    expect(recordSupplier1.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
+    recordSupplier1.seek(anyObject(), anyString());
+    expectLastCall().anyTimes();
+    expect(recordSupplier1.poll(anyLong())).andReturn(records.subList(0, 5))
+                                           .once()
+                                           .andReturn(records.subList(4, 10))
+                                           .once();
+    recordSupplier1.close();
+    expectLastCall().once();
+    final KinesisRecordSupplier recordSupplier2 = mock(KinesisRecordSupplier.class);
+    recordSupplier2.assign(anyObject());
+    expectLastCall().anyTimes();
+    expect(recordSupplier2.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
+    recordSupplier2.seek(anyObject(), anyString());
+    expectLastCall().anyTimes();
+    expect(recordSupplier2.poll(anyLong())).andReturn(records.subList(0, 5))
+                                           .once()
+                                           .andReturn(records.subList(4, 10))
+                                           .once();
+    recordSupplier2.close();
+    expectLastCall().once();
+
+    replayAll();
+
+    final SeekableStreamPartitions<String, String> startPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(shardId1, "0")
+    );
+
+    final SeekableStreamPartitions<String, String> checkpoint1 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(shardId1, "4")
+    );
+
+    final SeekableStreamPartitions<String, String> checkpoint2 = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(shardId1, "9")
+    );
+
+    final SeekableStreamPartitions<String, String> endPartitions = new SeekableStreamPartitions<>(
+        stream,
+        ImmutableMap.of(shardId1, "100") // simulating unlimited
+    );
+    final KinesisIndexTaskIOConfig ioConfig = new KinesisIndexTaskIOConfig(
+        null,
+        baseSequenceName,
+        startPartitions,
+        endPartitions,
+        true,
+        null,
+        null,
+        "awsEndpoint",
+        null,
+        null,
+        null,
+        null,
+        null,
+        false
+    );
+    final KinesisIndexTask normalReplica = createTask(
+        null,
+        DATA_SCHEMA,
+        ioConfig,
+        null
+    );
+    ((TestableKinesisIndexTask) normalReplica).setLocalSupplier(recordSupplier1);
+    final KinesisIndexTask staleReplica = createTask(
+        null,
+        DATA_SCHEMA,
+        ioConfig,
+        null
+    );
+    ((TestableKinesisIndexTask) staleReplica).setLocalSupplier(recordSupplier2);
+    final ListenableFuture<TaskStatus> normalReplicaFuture = runTask(normalReplica);
+    // Simulating one replica is slower than the other
+    final ListenableFuture<TaskStatus> staleReplicaFuture = ListenableFutures.transformAsync(
+        taskExec.submit(() -> {
+          Thread.sleep(1000);
+          return staleReplica;
+        }),
+        this::runTask
+    );
+
+    while (normalReplica.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    staleReplica.getRunner().pause();
+    while (staleReplica.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    Map<String, String> currentOffsets = ImmutableMap.copyOf(normalReplica.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
+
+    normalReplica.getRunner().setEndOffsets(currentOffsets, false);
+    staleReplica.getRunner().setEndOffsets(currentOffsets, false);
+
+    while (normalReplica.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    while (staleReplica.getRunner().getStatus() != Status.PAUSED) {
+      Thread.sleep(10);
+    }
+    currentOffsets = ImmutableMap.copyOf(normalReplica.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), currentOffsets);
+    currentOffsets = ImmutableMap.copyOf(staleReplica.getRunner().getCurrentOffsets());
+    Assert.assertEquals(checkpoint2.getPartitionSequenceNumberMap(), currentOffsets);
+
+    normalReplica.getRunner().setEndOffsets(currentOffsets, true);
+    staleReplica.getRunner().setEndOffsets(currentOffsets, true);
+
+    Assert.assertEquals(TaskState.SUCCESS, normalReplicaFuture.get().getStatusCode());
+    Assert.assertEquals(TaskState.SUCCESS, staleReplicaFuture.get().getStatusCode());
+
+    verifyAll();
+
+    Assert.assertEquals(2, checkpointRequestsHash.size());
+
+    // Check metrics
+    Assert.assertEquals(10, normalReplica.getRunner().getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, normalReplica.getRunner().getRowIngestionMeters().getUnparseable());
+    Assert.assertEquals(0, normalReplica.getRunner().getRowIngestionMeters().getThrownAway());
+
+    // Check published metadata
+    final Set<SegmentDescriptor> descriptors = new HashSet<>();
+    descriptors.add(sd(normalReplica, "2008/P1D", 0));
+    descriptors.add(sd(normalReplica, "2009/P1D", 0));
+    descriptors.add(sd(normalReplica, "2010/P1D", 0));
+    descriptors.add(sd(normalReplica, "2010/P1D", 1));
+    descriptors.add(sd(normalReplica, "2011/P1D", 0));
+    descriptors.add(sd(normalReplica, "2011/P1D", 1));
+    descriptors.add(sd(normalReplica, "2012/P1D", 0));
+    descriptors.add(sd(normalReplica, "2013/P1D", 0));
+    Assert.assertEquals(descriptors, publishedDescriptors());
+    Assert.assertEquals(
+        new KinesisDataSourceMetadata(new SeekableStreamPartitions<>(stream, ImmutableMap.of(
+            shardId1,
+            "9"
+        ))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
   }
 
   private ListenableFuture<TaskStatus> runTask(final Task task)
@@ -2446,7 +2770,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
               throw new ISE("Task is not ready");
             }
           }
-          catch (Exception e) {
+          catch (Throwable e) {
             log.warn(e, "Task failed");
             return TaskStatus.failure(task.getId(), Throwables.getStackTraceAsString(e));
           }
@@ -2475,16 +2799,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
       final KinesisIndexTaskIOConfig ioConfig
   )
   {
-    return createTask(taskId, DATA_SCHEMA, ioConfig);
-  }
-
-  private KinesisIndexTask createTask(
-      final String taskId,
-      final KinesisIndexTaskIOConfig ioConfig,
-      final Map<String, Object> context
-  )
-  {
-    return createTask(taskId, DATA_SCHEMA, ioConfig, context);
+    return createTask(taskId, DATA_SCHEMA, ioConfig, null);
   }
 
   private KinesisIndexTask createTask(
@@ -2493,55 +2808,14 @@ public class KinesisIndexTaskTest extends EasyMockSupport
       final KinesisIndexTaskIOConfig ioConfig
   )
   {
-    final KinesisIndexTaskTuningConfig tuningConfig = new KinesisIndexTaskTuningConfig(
-        1000,
-        null,
-        maxRowsPerSegment,
-        maxTotalRows,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        true,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        resetOffsetAutomatically,
-        skipAvailabilityCheck,
-        null,
-        null,
-        null,
-        5000,
-        null,
-        null,
-        logParseExceptions,
-        maxParseExceptions,
-        maxSavedParseExceptions,
-        maxRecordsPerPoll,
-        intermediateHandoffPeriod
-    );
-    final Map<String, Object> context = null;
-    final KinesisIndexTask task = new TestableKinesisIndexTask(
-        taskId,
-        null,
-        cloneDataSchema(dataSchema),
-        tuningConfig,
-        ioConfig,
-        context,
-        null,
-        null,
-        rowIngestionMetersFactory,
-        null
-    );
-
-    return task;
+    return createTask(taskId, dataSchema, ioConfig, null);
   }
-
 
   private KinesisIndexTask createTask(
       final String taskId,
       final DataSchema dataSchema,
       final KinesisIndexTaskIOConfig ioConfig,
-      final Map<String, Object> context
+      @Nullable final Map<String, Object> context
   )
   {
     final KinesisIndexTaskTuningConfig tuningConfig = new KinesisIndexTaskTuningConfig(
@@ -2570,7 +2844,20 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         maxRecordsPerPoll,
         intermediateHandoffPeriod
     );
-    context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
+    return createTask(taskId, dataSchema, ioConfig, tuningConfig, context);
+  }
+
+  private KinesisIndexTask createTask(
+      final String taskId,
+      final DataSchema dataSchema,
+      final KinesisIndexTaskIOConfig ioConfig,
+      final KinesisIndexTaskTuningConfig tuningConfig,
+      @Nullable final Map<String, Object> context
+  )
+  {
+    if (context != null) {
+      context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
+    }
 
     final KinesisIndexTask task = new TestableKinesisIndexTask(
         taskId,
@@ -2743,14 +3030,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
     final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
-    SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return new ArrayList<>();
-      }
-    };
     toolboxFactory = new TaskToolboxFactory(
         taskConfig,
         taskActionClientFactory,
@@ -2765,9 +3044,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         this::makeTimeseriesOnlyConglomerate,
         Execs.directExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),
-        new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, testUtils.getTestObjectMapper())
-        ),
+        new SegmentLoaderFactory(null, testUtils.getTestObjectMapper()),
         testUtils.getTestObjectMapper(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
@@ -2880,7 +3157,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     return results.isEmpty() ? 0L : DimensionHandlerUtils.nullToZero(results.get(0).getValue().getLongMetric("rows"));
   }
 
-  private static List<byte[]> JB(
+  private static List<byte[]> jb(
       String timestamp,
       String dim1,
       String dim2,
@@ -2902,11 +3179,11 @@ public class KinesisIndexTaskTest extends EasyMockSupport
       ));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
-  private SegmentDescriptor SD(final Task task, final String intervalString, final int partitionNum)
+  private SegmentDescriptor sd(final Task task, final String intervalString, final int partitionNum)
   {
     final Interval interval = Intervals.of(intervalString);
     return new SegmentDescriptor(interval, getLock(task, interval).getVersion(), partitionNum);
@@ -2928,8 +3205,10 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   @JsonTypeName("index_kinesis")
   private static class TestableKinesisIndexTask extends KinesisIndexTask
   {
+    private KinesisRecordSupplier localSupplier;
+
     @JsonCreator
-    public TestableKinesisIndexTask(
+    private TestableKinesisIndexTask(
         @JsonProperty("id") String id,
         @JsonProperty("resource") TaskResource taskResource,
         @JsonProperty("dataSchema") DataSchema dataSchema,
@@ -2956,10 +3235,15 @@ public class KinesisIndexTaskTest extends EasyMockSupport
       );
     }
 
+    private void setLocalSupplier(KinesisRecordSupplier recordSupplier)
+    {
+      this.localSupplier = recordSupplier;
+    }
+
     @Override
     protected KinesisRecordSupplier newTaskRecordSupplier()
     {
-      return recordSupplier;
+      return localSupplier == null ? recordSupplier : localSupplier;
     }
   }
 

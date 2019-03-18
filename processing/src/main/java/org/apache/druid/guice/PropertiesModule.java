@@ -19,7 +19,6 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -74,7 +73,7 @@ public class PropertiesModule implements Module
             fileProps.load(new InputStreamReader(stream, StandardCharsets.UTF_8));
           }
           catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
         }
       }

@@ -31,14 +31,13 @@ import java.util.Objects;
 /**
  * class that encapsulates a partitionIdToSequenceNumberMap of partitionId -> sequenceNumber.
  * To be backward compatible with both Kafka and Kinesis datasource metadata when
- * deserializing json. Redundant constructor fields stream, topic and
+ * serializing and deserializing json, redundant constructor fields stream, topic,
  * partitionSequenceNumberMap and partitionOffsetMap are created. Only one of topic, stream
  * should have a non-null value and only one of partitionOffsetMap and partitionSequenceNumberMap
  * should have a non-null value.
- * <p>
- * Redundant getters
- * are used for proper Jackson serialization/deserialization when processing terminologies
- * used by Kafka and kinesis (i.e. topic vs. stream)
+ *
+ * Redundant getters are used for proper Jackson serialization/deserialization when processing terminologies
+ * used by Kafka and Kinesis (i.e. topic vs. stream)
  *
  * @param <PartitionIdType>    partition id type
  * @param <SequenceOffsetType> sequence number type
@@ -81,7 +80,12 @@ public class SeekableStreamPartitions<PartitionIdType, SequenceOffsetType>
       final Map<PartitionIdType, SequenceOffsetType> partitionOffsetMap
   )
   {
-    this(stream, null, partitionOffsetMap, null);
+    this(
+        Preconditions.checkNotNull(stream, "stream"),
+        null,
+        Preconditions.checkNotNull(partitionOffsetMap, "partitionOffsetMap"),
+        null
+    );
   }
 
   @JsonProperty
@@ -90,8 +94,28 @@ public class SeekableStreamPartitions<PartitionIdType, SequenceOffsetType>
     return stream;
   }
 
+  /**
+   * Identical to {@link #getStream()}. Here for backwards compatibility, so a serialized SeekableStreamPartitions can
+   * be read by older Druid versions as a KafkaPartitions object.
+   */
+  @JsonProperty
+  public String getTopic()
+  {
+    return stream;
+  }
+
   @JsonProperty
   public Map<PartitionIdType, SequenceOffsetType> getPartitionSequenceNumberMap()
+  {
+    return partitionIdToSequenceNumberMap;
+  }
+
+  /**
+   * Identical to {@link #getPartitionSequenceNumberMap()} ()}. Here for backwards compatibility, so a serialized
+   * SeekableStreamPartitions can be read by older Druid versions as a KafkaPartitions object.
+   */
+  @JsonProperty
+  public Map<PartitionIdType, SequenceOffsetType> getPartitionOffsetMap()
   {
     return partitionIdToSequenceNumberMap;
   }
@@ -119,9 +143,9 @@ public class SeekableStreamPartitions<PartitionIdType, SequenceOffsetType>
   @Override
   public String toString()
   {
-    return "SeekableStreamPartitions{" +
-           "stream/topic='" + stream + '\'' +
-           ", partitionSequenceNumberMap/partitionOffsetMap=" + partitionIdToSequenceNumberMap +
+    return getClass().getSimpleName() + "{" +
+           "stream='" + stream + '\'' +
+           ", partitionSequenceNumberMap=" + partitionIdToSequenceNumberMap +
            '}';
   }
 }

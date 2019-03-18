@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
 import {
-  FormGroup,
   Button,
-  InputGroup,
+  Classes,
   Dialog,
   IDialogProps,
-  Classes,
-  Intent,
+  InputGroup,
+  Intent
 } from "@blueprintjs/core";
+import * as React from 'react';
 
-import { IconNames } from "@blueprintjs/icons";
+import { FormGroup, IconNames } from '../components/filler';
 
 export interface SnitchDialogProps extends IDialogProps {
   onSave: (author: string, comment: string) => void;
@@ -51,7 +50,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
       comment: "",
       author: "",
       saveDisabled: true
-    }
+    };
   }
 
   save = () => {
@@ -107,12 +106,12 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
         <FormGroup label={"Who is making this change?"}>
           <InputGroup value={author} onChange={(e: any) => this.changeAuthor(e.target.value)}/>
         </FormGroup>
-        <FormGroup className={"comment"}>
+        <FormGroup label={"Why are you making this change?"} className={"comment"}>
           <InputGroup
+            className="pt-large"
             value={comment}
-            placeholder={"Why are you making this change?"}
+            placeholder={"Enter description here"}
             onChange={(e: any) => this.changeComment(e.target.value)}
-            large={true}
           />
         </FormGroup>
       </div>
@@ -128,38 +127,25 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     const { showFinalStep } = this.state;
 
     return <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-      <FormGroup>
-        { showFinalStep
-          ? <Button onClick={this.back} icon={IconNames.ARROW_LEFT}>Back</Button>
-          : onReset ? <Button onClick={this.reset} intent={"none"}>Reset</Button> : null
-        }
+      { showFinalStep
+        ? <Button onClick={this.back} iconName={IconNames.ARROW_LEFT}>Back</Button>
+        : onReset ? <Button onClick={this.reset} intent={"none" as any}>Reset</Button> : null
+      }
 
-        { showFinalStep
-          ? <Button disabled={saveDisabled} text="Save" onClick={this.save} intent={Intent.PRIMARY} rightIcon={IconNames.TICK}/>
-          : <Button disabled={saveDisabled} text="Next" onClick={this.goToFinalStep} intent={Intent.PRIMARY} rightIcon={IconNames.ARROW_RIGHT}/>
-        }
-      </FormGroup>
-    </div>
-  }
-
-  onOpening = (node: HTMLElement) => {
-    const { onOpening } = this.props;
-
-    this.setState({
-      author: '',
-      comment: ''
-    });
-
-    onOpening && onOpening(node);
+      { showFinalStep
+        ? <Button disabled={saveDisabled} text="Save" onClick={this.save} intent={Intent.PRIMARY as any} rightIconName={IconNames.TICK}/>
+        : <Button disabled={saveDisabled} text="Next" onClick={this.goToFinalStep} intent={Intent.PRIMARY as any} rightIconName={IconNames.ARROW_RIGHT}/>
+      }
+    </div>;
   }
 
   render() {
-    const { isOpen, onClose, className, children, saveDisabled } = this.props;
+    const { onClose, className, children, saveDisabled } = this.props;
     const { showFinalStep } = this.state;
 
     if (showFinalStep) return this.renderFinalStep();
 
-    return <Dialog {...this.props} onOpening={this.onOpening}>
+    return <Dialog isOpen inline {...this.props}>
       <div className={Classes.DIALOG_BODY}>
         {children}
       </div>

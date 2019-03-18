@@ -99,8 +99,7 @@ which has been configured to read the `quickstart/tutorial/wikiticker-2015-09-12
     "tuningConfig" : {
       "type" : "index",
       "maxRowsPerSegment" : 5000000,
-      "maxRowsInMemory" : 25000,
-      "forceExtendableShardSpecs" : true
+      "maxRowsInMemory" : 25000
     }
   }
 }
@@ -163,16 +162,16 @@ Which will print the ID of the task if the submission was successful:
 {"task":"index_wikipedia_2018-06-09T21:30:32.802Z"}
 ```
 
-To view the status of the ingestion task, go to the Overlord console:
-[http://localhost:8090/console.html](http://localhost:8090/console.html). You can refresh the console periodically, and after
-the task is successful, you should see a "SUCCESS" status for the task.
+To view the status of the ingestion task, go to the Druid Console:
+[http://localhost:8888/](http://localhost:8888). You can refresh the console periodically, and after
+the task is successful, you should see a "SUCCESS" status for the task under the [Tasks view](http://localhost:8888/unified-console.html#tasks).
 
-After the ingestion task finishes, the data will be loaded by Historical nodes and available for
+After the ingestion task finishes, the data will be loaded by Historical processes and available for
 querying within a minute or two. You can monitor the progress of loading the data in the
-Coordinator console, by checking whether there is a datasource "wikipedia" with a blue circle
-indicating "fully available": [http://localhost:8081/#/](http://localhost:8081/#/).
+Datasources view, by checking whether there is a datasource "wikipedia" with a green circle
+indicating "fully available": [http://localhost:8888/unified-console.html#datasources](http://localhost:8888/unified-console.html#datasources).
 
-![Coordinator console](../tutorials/img/tutorial-batch-01.png "Wikipedia 100% loaded")
+![Druid Console](../tutorials/img/tutorial-batch-01.png "Wikipedia 100% loaded")
 
 ## Further reading
 

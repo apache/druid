@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
+import { Button, Classes, Dialog, Intent } from "@blueprintjs/core";
+import "brace/mode/json";
+import "brace/theme/solarized_dark";
 import * as React from "react";
-import axios from 'axios';
-import {Button, Classes, Dialog, Intent, EditableText} from "@blueprintjs/core";
-import "./spec-dialog.scss"
-import {QueryManager} from "../utils";
+import AceEditor from "react-ace";
+
+import "./spec-dialog.scss";
 
 export interface SpecDialogProps extends React.Props<any> {
-  isOpen: boolean;
   onSubmit: (spec: JSON) => void;
   onClose: () => void;
   title: string;
@@ -47,7 +48,7 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
     super(props);
     this.state = {
       spec: ""
-    }
+    };
   }
 
   private postSpec(): void {
@@ -59,22 +60,33 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
   }
 
   render() {
-    const { isOpen, onClose, title } = this.props;
+    const { onClose, title } = this.props;
     const { spec } = this.state;
 
     return <Dialog
       className={"post-spec-dialog"}
-      isOpen={isOpen}
+      isOpen
       onClose={onClose}
       title={title}
     >
-      <EditableText
+      <AceEditor
+        mode="json"
+        theme="solarized_dark"
         className={"post-spec-dialog-textarea"}
-        multiline={true}
-        minLines={30}
-        maxLines={30}
-        placeholder={"Enter the spec JSON to post"}
-        onChange={ (e) => {this.setState({ spec: e })}}
+        onChange={(e) => { this.setState({ spec: e }); }}
+        fontSize={12}
+        showPrintMargin={false}
+        showGutter
+        highlightActiveLine
+        value={spec}
+        width={"100%"}
+        setOptions={{
+          enableBasicAutocompletion: true,
+          enableLiveAutocompletion: true,
+          showLineNumbers: true,
+          enableSnippets: true,
+          tabSize: 2
+        }}
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

@@ -17,18 +17,20 @@
  */
 
 import { Intent } from '@blueprintjs/core';
-import * as React from 'react';
 import axios from 'axios';
-import { IconNames } from "@blueprintjs/icons";
-import { AppToaster } from '../singletons/toaster';
+import * as React from 'react';
+
 import { AutoForm } from '../components/auto-form';
+import { IconNames } from '../components/filler';
+import { AppToaster } from '../singletons/toaster';
 import { getDruidErrorMessage } from '../utils';
+
 import { SnitchDialog } from './snitch-dialog';
+
 import './coordinator-dynamic-config.scss';
 
 export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
-  isOpen: boolean,
-  onClose: () => void
+  onClose: () => void;
 }
 
 export interface CoordinatorDynamicConfigDialogState {
@@ -40,17 +42,21 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     super(props);
     this.state = {
       dynamicConfig: null
-    }
+    };
+  }
+
+  componentDidMount(): void {
+    this.getClusterConfig();
   }
 
   async getClusterConfig() {
     let config: Record<string, any> | null = null;
     try {
       const configResp = await axios.get("/druid/coordinator/v1/config");
-      config = configResp.data
+      config = configResp.data;
     } catch (e) {
       AppToaster.show({
-        icon: IconNames.ERROR,
+        iconName: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not load coordinator dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -63,7 +69,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
 
   private saveClusterConfig = async (author: string, comment: string) => {
     const { onClose } = this.props;
-    let newState: any = this.state.dynamicConfig;
+    const newState: any = this.state.dynamicConfig;
     try {
       await axios.post("/druid/coordinator/v1/config", newState, {
         headers: {
@@ -73,7 +79,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
       });
     } catch (e) {
       AppToaster.show({
-        icon: IconNames.ERROR,
+        iconName: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not save coordinator dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -87,15 +93,14 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
   }
 
   render() {
-    const { isOpen, onClose } = this.props;
+    const { onClose } = this.props;
     const { dynamicConfig } = this.state;
 
     return <SnitchDialog
       className="coordinator-dynamic-config"
-      isOpen={ isOpen }
+      isOpen
       onSave={this.saveClusterConfig}
-      onOpening={() => {this.getClusterConfig()}}
-      onClose={ onClose }
+      onClose={onClose}
       title="Coordinator dynamic config"
     >
       <p>
@@ -156,6 +161,6 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
         model={dynamicConfig}
         onChange={m => this.setState({ dynamicConfig: m })}
       />
-    </SnitchDialog>
+    </SnitchDialog>;
   }
 }

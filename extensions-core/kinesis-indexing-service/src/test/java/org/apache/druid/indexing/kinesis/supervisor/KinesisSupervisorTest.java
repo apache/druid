@@ -22,7 +22,6 @@ package org.apache.druid.indexing.kinesis.supervisor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -3560,7 +3559,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
-  private static List<byte[]> JB(
+  private static List<byte[]> jb(
       String timestamp,
       String dim1,
       String dim2,
@@ -3582,7 +3581,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
       ));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

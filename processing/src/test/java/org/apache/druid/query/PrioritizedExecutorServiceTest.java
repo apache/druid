@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -356,7 +355,7 @@ public class PrioritizedExecutorServiceTest
         }
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
         if (useFifo) {
           Assert.assertEquals(myOrder, hasRun.getAndIncrement());

@@ -77,6 +77,27 @@
                     <failIfNoFiles>false</failIfNoFiles>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <target>
+                                <concat destfile="${project.build.directory}/../../README.BINARY">
+                                    <fileset file="${project.build.directory}/../../README.md" />
+                                    <fileset file="${project.build.directory}/../../LABELS.md" />
+                                </concat>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

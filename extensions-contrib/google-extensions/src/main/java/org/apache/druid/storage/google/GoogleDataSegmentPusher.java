@@ -22,11 +22,9 @@ package org.apache.druid.storage.google;
 import com.google.api.client.http.FileContent;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,6 +32,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -127,7 +126,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
       return outSegment;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       if (indexFile != null) {

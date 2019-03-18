@@ -54,7 +54,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -84,13 +83,11 @@ import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CircularBuffer;
@@ -124,7 +121,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -407,7 +403,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
     try {
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
-        chatHandlerProvider.get().register(getId(), this, false);
+
+        if (chatHandlerProvider.get().get(getId()).isPresent()) {
+          // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
+          // sequential mode. See ParallelIndexSupervisorTask.runSequential().
+          // Note that all HTTP endpoints are not available in this case. This works only for
+          // ParallelIndexSupervisorTask because it doesn't support APIs for live ingestion reports.
+          log.warn("Chat handler is already registered. Skipping chat handler registration.");
+        } else {
+          chatHandlerProvider.get().register(getId(), this, false);
+        }
       } else {
         log.warn("No chat handler detected");
       }
@@ -418,8 +423,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
                                                          .isPresent();
 
       final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-
-      setFirehoseFactoryToolbox(firehoseFactory, toolbox);
 
       final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
       // Firehose temporary directory is automatically removed when this IndexTask completes.
@@ -489,25 +492,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
   }
 
-  // pass toolbox to any IngestSegmentFirehoseFactory
-  private void setFirehoseFactoryToolbox(FirehoseFactory firehoseFactory, TaskToolbox toolbox)
-  {
-    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
-      return;
-    }
-
-    if (firehoseFactory instanceof CombiningFirehoseFactory) {
-      for (FirehoseFactory delegateFactory : ((CombiningFirehoseFactory) firehoseFactory).getDelegateFactoryList()) {
-        if (delegateFactory instanceof IngestSegmentFirehoseFactory) {
-          ((IngestSegmentFirehoseFactory) delegateFactory).setTaskToolbox(toolbox);
-        } else if (delegateFactory instanceof CombiningFirehoseFactory) {
-          setFirehoseFactoryToolbox(delegateFactory, toolbox);
-        }
-      }
-    }
-  }
-
   private Map<String, TaskReport> getTaskCompletionReports()
   {
     return TaskReport.buildTaskReports(
@@ -571,11 +555,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
         "Perfect rollup cannot be guaranteed when appending to existing dataSources"
     );
     return tuningConfig.isForceGuaranteedRollup();
-  }
-
-  private static boolean isExtendableShardSpecs(IndexIOConfig ioConfig, IndexTuningConfig tuningConfig)
-  {
-    return tuningConfig.isForceExtendableShardSpecs() || ioConfig.isAppendToExisting();
   }
 
   /**
@@ -651,16 +630,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
     if (isGuaranteedRollup(ioConfig, tuningConfig)) {
       // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
       final int numShards = tuningConfig.getNumShards() == null ? 1 : tuningConfig.getNumShards();
-      final BiFunction<Integer, Integer, ShardSpec> shardSpecCreateFn = getShardSpecCreateFunction(
-          numShards,
-          tuningConfig.getPartitionDimensions(),
-          jsonMapper
-      );
 
       for (Interval interval : intervals) {
         final List<ShardSpec> intervalShardSpecs = IntStream.range(0, numShards)
                                                             .mapToObj(
-                                                                shardId -> shardSpecCreateFn.apply(shardId, numShards)
+                                                                shardId -> new HashBasedNumberedShardSpec(
+                                                                    shardId,
+                                                                    numShards,
+                                                                    tuningConfig.partitionDimensions,
+                                                                    jsonMapper
+                                                                )
                                                             )
                                                             .collect(Collectors.toList());
         shardSpecs.put(interval, intervalShardSpecs);
@@ -719,15 +698,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       if (isGuaranteedRollup(ingestionSchema.getIOConfig(), ingestionSchema.getTuningConfig())) {
         // Overwrite mode, guaranteed rollup: shardSpecs must be known in advance.
-        final BiFunction<Integer, Integer, ShardSpec> shardSpecCreateFn = getShardSpecCreateFunction(
-            numShards,
-            tuningConfig.getPartitionDimensions(),
-            jsonMapper
-        );
-
         final List<ShardSpec> intervalShardSpecs = IntStream.range(0, numShards)
                                                             .mapToObj(
-                                                                shardId -> shardSpecCreateFn.apply(shardId, numShards)
+                                                                shardId -> new HashBasedNumberedShardSpec(
+                                                                    shardId,
+                                                                    numShards,
+                                                                    tuningConfig.partitionDimensions,
+                                                                    jsonMapper
+                                                                )
                                                             ).collect(Collectors.toList());
 
         intervalToShardSpecs.put(interval, intervalShardSpecs);
@@ -838,26 +816,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     return hllCollectors;
   }
 
-  private static BiFunction<Integer, Integer, ShardSpec> getShardSpecCreateFunction(
-      Integer numShards,
-      List<String> partitionDimensions,
-      ObjectMapper jsonMapper
-  )
-  {
-    Preconditions.checkNotNull(numShards, "numShards");
-
-    if (numShards == 1) {
-      return (shardId, totalNumShards) -> NoneShardSpec.instance();
-    } else {
-      return (shardId, totalNumShards) -> new HashBasedNumberedShardSpec(
-          shardId,
-          totalNumShards,
-          partitionDimensions,
-          jsonMapper
-      );
-    }
-  }
-
   /**
    * This method reads input data row by row and adds the read row to a proper segment using {@link BaseAppenderatorDriver}.
    * If there is no segment for the row, a new one is created.  Segments can be published in the middle of reading inputs
@@ -913,21 +871,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       for (Map.Entry<Interval, List<ShardSpec>> entry : shardSpecs.getMap().entrySet()) {
         for (ShardSpec shardSpec : entry.getValue()) {
-          final ShardSpec shardSpecForPublishing;
-
-          if (isExtendableShardSpecs(ioConfig, tuningConfig)) {
-            shardSpecForPublishing = new NumberedShardSpec(
-                shardSpec.getPartitionNum(),
-                entry.getValue().size()
-            );
-          } else {
-            shardSpecForPublishing = shardSpec;
-          }
-
           final String version = findVersion(versions, entry.getKey());
           lookup.put(
               Appenderators.getSequenceName(entry.getKey(), version, shardSpec),
-              new SegmentIdWithShardSpec(getDataSource(), entry.getKey(), version, shardSpecForPublishing)
+              new SegmentIdWithShardSpec(getDataSource(), entry.getKey(), version, shardSpec)
           );
         }
       }
@@ -1083,7 +1030,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       }
     }
     catch (TimeoutException | ExecutionException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -1314,7 +1261,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
-    private static final boolean DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS = false;
     private static final boolean DEFAULT_GUARANTEE_ROLLUP = false;
     private static final boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = false;
     private static final long DEFAULT_PUSH_TIMEOUT = 0;
@@ -1333,16 +1279,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
     private final int maxPendingPersists;
 
     /**
-     * This flag is to force to always use an extendableShardSpec (like {@link NumberedShardSpec} even if
-     * {@link #forceGuaranteedRollup} is set.
-     */
-    private final boolean forceExtendableShardSpecs;
-
-    /**
      * This flag is to force _perfect rollup mode_. {@link IndexTask} will scan the whole input data twice to 1) figure
      * out proper shard specs for each segment and 2) generate segments. Note that perfect rollup mode basically assumes
-     * that no more data will be appended in the future. As a result, in perfect rollup mode, {@link NoneShardSpec} and
-     * {@link HashBasedNumberedShardSpec} are used for a single shard and two or shards, respectively.
+     * that no more data will be appended in the future. As a result, in perfect rollup mode,
+     * {@link HashBasedNumberedShardSpec} is used for shards.
      */
     private final boolean forceGuaranteedRollup;
     private final boolean reportParseExceptions;
@@ -1366,17 +1306,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
-        @JsonProperty("rowFlushBoundary") @Nullable Integer rowFlushBoundary_forBackCompatibility, // DEPRECATED
+        @JsonProperty("rowFlushBoundary") @Deprecated @Nullable Integer rowFlushBoundary_forBackCompatibility,
         @JsonProperty("numShards") @Nullable Integer numShards,
         @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
         // This parameter is left for compatibility when reading existing JSONs, to be removed in Druid 0.12.
         @JsonProperty("buildV9Directly") @Nullable Boolean buildV9Directly,
-        @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
         @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
-        @Deprecated @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
-        @JsonProperty("publishTimeout") @Nullable Long publishTimeout, // deprecated
+        @JsonProperty("reportParseExceptions") @Deprecated @Nullable Boolean reportParseExceptions,
+        @JsonProperty("publishTimeout") @Deprecated @Nullable Long publishTimeout,
         @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
         @JsonProperty("segmentWriteOutMediumFactory") @Nullable
             SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
@@ -1394,7 +1333,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
           partitionDimensions,
           indexSpec,
           maxPendingPersists,
-          forceExtendableShardSpecs,
           forceGuaranteedRollup,
           reportParseExceptions,
           pushTimeout != null ? pushTimeout : publishTimeout,
@@ -1413,7 +1351,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1425,7 +1363,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @Nullable List<String> partitionDimensions,
         @Nullable IndexSpec indexSpec,
         @Nullable Integer maxPendingPersists,
-        @Nullable Boolean forceExtendableShardSpecs,
         @Nullable Boolean forceGuaranteedRollup,
         @Nullable Boolean reportParseExceptions,
         @Nullable Long pushTimeout,
@@ -1453,9 +1390,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
       this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
       this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-      this.forceExtendableShardSpecs = forceExtendableShardSpecs == null
-                                       ? DEFAULT_FORCE_EXTENDABLE_SHARD_SPECS
-                                       : forceExtendableShardSpecs;
       this.forceGuaranteedRollup = forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup;
       this.reportParseExceptions = reportParseExceptions == null
                                    ? DEFAULT_REPORT_PARSE_EXCEPTIONS
@@ -1492,7 +1426,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
           partitionDimensions,
           indexSpec,
           maxPendingPersists,
-          forceExtendableShardSpecs,
           forceGuaranteedRollup,
           reportParseExceptions,
           pushTimeout,
@@ -1515,7 +1448,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
           partitionDimensions,
           indexSpec,
           maxPendingPersists,
-          forceExtendableShardSpecs,
           forceGuaranteedRollup,
           reportParseExceptions,
           pushTimeout,
@@ -1608,12 +1540,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
 
     @JsonProperty
-    public boolean isForceExtendableShardSpecs()
-    {
-      return forceExtendableShardSpecs;
-    }
-
-    @JsonProperty
     public boolean isForceGuaranteedRollup()
     {
       return forceGuaranteedRollup;
@@ -1677,7 +1603,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
       return maxRowsInMemory == that.maxRowsInMemory &&
              Objects.equals(maxTotalRows, that.maxTotalRows) &&
              maxPendingPersists == that.maxPendingPersists &&
-             forceExtendableShardSpecs == that.forceExtendableShardSpecs &&
              forceGuaranteedRollup == that.forceGuaranteedRollup &&
              reportParseExceptions == that.reportParseExceptions &&
              pushTimeout == that.pushTimeout &&
@@ -1702,7 +1627,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
           indexSpec,
           basePersistDirectory,
           maxPendingPersists,
-          forceExtendableShardSpecs,
           forceGuaranteedRollup,
           reportParseExceptions,
           pushTimeout,
@@ -1725,7 +1649,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
              ", indexSpec=" + indexSpec +
              ", basePersistDirectory=" + basePersistDirectory +
              ", maxPendingPersists=" + maxPendingPersists +
-             ", forceExtendableShardSpecs=" + forceExtendableShardSpecs +
              ", forceGuaranteedRollup=" + forceGuaranteedRollup +
              ", reportParseExceptions=" + reportParseExceptions +
              ", pushTimeout=" + pushTimeout +

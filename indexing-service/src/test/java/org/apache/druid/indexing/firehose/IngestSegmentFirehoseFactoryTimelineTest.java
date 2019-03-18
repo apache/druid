@@ -20,12 +20,12 @@
 package org.apache.druid.indexing.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -34,20 +34,10 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexing.common.RetryPolicyConfig;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentLoaderFactory;
-import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.actions.LockAcquireAction;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
-import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
-import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.NoopTestTaskFileWriter;
-import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -59,12 +49,8 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -165,7 +151,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     FileUtils.deleteDirectory(tmpDir);
   }
 
-  private static TestCase TC(
+  private static TestCase tc(
       String intervalString,
       int expectedCount,
       long expectedSum,
@@ -187,7 +173,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     );
   }
 
-  private static DataSegmentMaker DS(
+  private static DataSegmentMaker ds(
       String intervalString,
       String version,
       int partitionNum,
@@ -197,7 +183,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     return new DataSegmentMaker(Intervals.of(intervalString), version, partitionNum, Arrays.asList(rows));
   }
 
-  private static InputRow IR(String timeString, long metricValue)
+  private static InputRow ir(String timeString, long metricValue)
   {
     return new MapBasedInputRow(
         DateTimes.of(timeString).getMillis(),
@@ -228,7 +214,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         index.add(row);
       }
       catch (IndexSizeExceededException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -236,7 +222,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       INDEX_MERGER_V9.persist(index, persistDir, new IndexSpec(), null);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     return ImmutableMap.of(
@@ -249,115 +235,68 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<TestCase> testCases = ImmutableList.of(
-        TC(
+        tc(
             "2000/2000T02", 3, 7,
-            DS("2000/2000T01", "v1", 0, IR("2000", 1), IR("2000T00:01", 2)),
-            DS("2000T01/2000T02", "v1", 0, IR("2000T01", 4))
+            ds("2000/2000T01", "v1", 0, ir("2000", 1), ir("2000T00:01", 2)),
+            ds("2000T01/2000T02", "v1", 0, ir("2000T01", 4))
         ) /* Adjacent segments */,
-        TC(
+        tc(
             "2000/2000T02", 3, 7,
-            DS("2000/2000T02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8)),
-            DS("2000T01/2000T02", "v2", 0, IR("2000T01:01", 4))
+            ds("2000/2000T02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8)),
+            ds("2000T01/2000T02", "v2", 0, ir("2000T01:01", 4))
         ) /* 1H segment overlaid on top of 2H segment */,
-        TC(
+        tc(
             "2000/2000-01-02", 4, 23,
-            DS("2000/2000-01-02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8), IR("2000T02", 16)),
-            DS("2000T01/2000T02", "v2", 0, IR("2000T01:01", 4))
+            ds("2000/2000-01-02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8), ir("2000T02", 16)),
+            ds("2000T01/2000T02", "v2", 0, ir("2000T01:01", 4))
         ) /* 1H segment overlaid on top of 1D segment */,
-        TC(
+        tc(
             "2000/2000T02", 4, 15,
-            DS("2000/2000T02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8)),
-            DS("2000/2000T02", "v1", 1, IR("2000T01:01", 4))
+            ds("2000/2000T02", "v1", 0, ir("2000", 1), ir("2000T00:01", 2), ir("2000T01", 8)),
+            ds("2000/2000T02", "v1", 1, ir("2000T01:01", 4))
         ) /* Segment set with two segments for the same interval */,
-        TC(
+        tc(
             "2000T01/2000T02", 1, 2,
-            DS("2000/2000T03", "v1", 0, IR("2000", 1), IR("2000T01", 2), IR("2000T02", 4))
+            ds("2000/2000T03", "v1", 0, ir("2000", 1), ir("2000T01", 2), ir("2000T02", 4))
         ) /* Segment wider than desired interval */,
-        TC(
+        tc(
             "2000T02/2000T04", 2, 12,
-            DS("2000/2000T03", "v1", 0, IR("2000", 1), IR("2000T01", 2), IR("2000T02", 4)),
-            DS("2000T03/2000T04", "v1", 0, IR("2000T03", 8))
+            ds("2000/2000T03", "v1", 0, ir("2000", 1), ir("2000T01", 2), ir("2000T02", 4)),
+            ds("2000T03/2000T04", "v1", 0, ir("2000T03", 8))
         ) /* Segment intersecting desired interval */
     );
 
     final List<Object[]> constructors = new ArrayList<>();
 
     for (final TestCase testCase : testCases) {
-      final TaskActionClient taskActionClient = new TaskActionClient()
+      SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
+      EasyMock.replay(notifierFactory);
+      final SegmentLoaderFactory slf = new SegmentLoaderFactory(null, MAPPER);
+      final RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(new RetryPolicyConfig());
+      final CoordinatorClient cc = new CoordinatorClient(null, null)
       {
         @Override
-        public <RetType> RetType submit(TaskAction<RetType> taskAction)
+        public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
         {
-          if (taskAction instanceof SegmentListUsedAction) {
-            // Expect the interval we asked for
-            final SegmentListUsedAction action = (SegmentListUsedAction) taskAction;
-            if (action.getIntervals().equals(ImmutableList.of(testCase.interval))) {
-              return (RetType) ImmutableList.copyOf(testCase.segments);
-            } else {
-              throw new IllegalArgumentException("WTF");
-            }
-          } else if (taskAction instanceof LockAcquireAction) {
-            return (RetType) new TaskLock(TaskLockType.EXCLUSIVE, null, DATA_SOURCE, Intervals.of("2000/2001"), "v1", 0);
+          // Expect the interval we asked for
+          if (intervals.equals(ImmutableList.of(testCase.interval))) {
+            return ImmutableList.copyOf(testCase.segments);
           } else {
-            throw new UnsupportedOperationException();
+            throw new IllegalArgumentException("WTF");
           }
         }
       };
-      SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
-      EasyMock.replay(notifierFactory);
-      SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
-      {
-        @Override
-        public List<StorageLocationConfig> getLocations()
-        {
-          return new ArrayList<>();
-        }
-      };
-      final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-          new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null, false, null, null),
-          new TaskActionClientFactory()
-          {
-            @Override
-            public TaskActionClient create(Task task)
-            {
-              return taskActionClient;
-            }
-          },
-          new NoopServiceEmitter(),
-          null, // segment pusher
-          null, // segment killer
-          null, // segment mover
-          null, // segment archiver
-          null, // segment announcer,
-          null,
-          notifierFactory,
-          null, // query runner factory conglomerate corporation unionized collective
-          null, // query executor service
-          null, // monitor scheduler
-          new SegmentLoaderFactory(
-              new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, MAPPER)
-          ),
-          MAPPER,
-          INDEX_IO,
-          null,
-          null,
-          null,
-          INDEX_MERGER_V9,
-          null,
-          null,
-          null,
-          null,
-          new NoopTestTaskFileWriter()
-      );
       final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
           DATA_SOURCE,
           testCase.interval,
           new TrueDimFilter(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
-          INDEX_IO
+          INDEX_IO,
+          cc,
+          slf,
+          retryPolicyFactory
       );
-      factory.setTaskToolbox(taskToolboxFactory.build(NoopTask.create(DATA_SOURCE)));
 
       constructors.add(
           new Object[]{

@@ -46,6 +46,7 @@ import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -114,12 +115,12 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(
                       new BloomDimFilter("dim1", BloomKFilterHolder.fromBloomKFilter(filter), null)
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -130,7 +131,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBloomFilterVirtualColumn() throws Exception
+  public void testBloomFilterExprFilter() throws Exception
   {
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
@@ -141,21 +142,21 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     String base64 = StringUtils.encodeBase64String(bytes);
 
+    // fool the planner to make an expression virtual column to test bloom filter Druid expression
     testQuery(
-        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s')", base64),
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim2, '-foo'), '%s') = TRUE", base64),
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns()
                   .filters(
                       new ExpressionDimFilter(
-                          StringUtils.format("bloom_filter_test(concat(\"dim2\",'-foo'),'%s')", base64),
+                          StringUtils.format("(bloom_filter_test(concat(\"dim2\",'-foo'),'%s') == 1)", base64),
                           createExprMacroTable()
                       )
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -166,10 +167,40 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testBloomFilterVirtualColumn() throws Exception
+  {
+    BloomKFilter filter = new BloomKFilter(1500);
+    filter.addString("def-foo");
+    byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
+    String base64 = StringUtils.encodeBase64String(bytes);
+
+    testQuery(
+        StringUtils.format("SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(concat(dim1, '-foo'), '%s')", base64),
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .virtualColumns(expressionVirtualColumn("v0", "concat(\"dim1\",'-foo')", ValueType.STRING))
+                  .filters(
+                      new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
+                  )
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+
+  @Test
   public void testBloomFilterVirtualColumnNumber() throws Exception
   {
     BloomKFilter filter = new BloomKFilter(1500);
-    filter.addDouble(20.2);
+    filter.addFloat(20.2f);
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     String base64 = StringUtils.encodeBase64String(bytes);
 
@@ -178,16 +209,15 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
-                  .virtualColumns()
-                  .filters(
-                      new ExpressionDimFilter(
-                          StringUtils.format("bloom_filter_test((2 * CAST(\"dim1\", 'DOUBLE')),'%s')", base64),
-                          createExprMacroTable()
-                      )
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "(2 * CAST(\"dim1\", 'DOUBLE'))", ValueType.FLOAT)
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .filters(
+                      new BloomDimFilter("v0", BloomKFilterHolder.fromBloomKFilter(filter), null)
+                  )
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -214,7 +244,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
-                  .intervals(QSS(Filtration.eternity()))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(
                       new OrDimFilter(
@@ -222,7 +252,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
                           new BloomDimFilter("dim2", BloomKFilterHolder.fromBloomKFilter(filter2), null)
                       )
                   )
-                  .aggregators(AGGS(new CountAggregatorFactory("a0")))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(TIMESERIES_CONTEXT_DEFAULT)
                   .build()
         ),

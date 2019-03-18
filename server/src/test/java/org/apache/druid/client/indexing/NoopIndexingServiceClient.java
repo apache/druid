@@ -43,12 +43,6 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public void mergeSegments(List<DataSegment> segments)
-  {
-    
-  }
-
-  @Override
   public String compactSegments(
       List<DataSegment> segments,
       boolean keepSegmentGranularity,

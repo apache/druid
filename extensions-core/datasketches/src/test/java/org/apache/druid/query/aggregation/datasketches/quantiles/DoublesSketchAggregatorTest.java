@@ -342,7 +342,7 @@ public class DoublesSketchAggregatorTest
   }
 
   @Test
-  public void QueryingDataWithFieldNameValueAsFloatInsteadOfSketch() throws Exception
+  public void queryingDataWithFieldNameValueAsFloatInsteadOfSketch() throws Exception
   {
     Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),
@@ -418,7 +418,7 @@ public class DoublesSketchAggregatorTest
   }
 
   @Test
-  public void TimeSeriesQueryInputAsFloat() throws Exception
+  public void timeSeriesQueryInputAsFloat() throws Exception
   {
     Sequence<Row> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("quantiles/doubles_build_data.tsv").getFile()),

@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -106,7 +105,6 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentTest;
@@ -195,16 +193,16 @@ public class TaskLifecycleTest
   private static DateTime now = DateTimes.nowUtc();
 
   private static final Iterable<InputRow> realtimeIdxTaskInputRows = ImmutableList.of(
-      IR(now.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
-      IR(now.plus(new Period(Hours.ONE)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 2.0f),
-      IR(now.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
+      ir(now.toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 1.0f),
+      ir(now.plus(new Period(Hours.ONE)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 2.0f),
+      ir(now.plus(new Period(Hours.TWO)).toString("YYYY-MM-dd'T'HH:mm:ss"), "test_dim1", "test_dim2", 3.0f)
   );
 
   private static final Iterable<InputRow> IdxTaskInputRows = ImmutableList.of(
-      IR("2010-01-01T01", "x", "y", 1),
-      IR("2010-01-01T01", "x", "z", 1),
-      IR("2010-01-02T01", "a", "b", 2),
-      IR("2010-01-02T01", "a", "c", 1)
+      ir("2010-01-01T01", "x", "y", 1),
+      ir("2010-01-01T01", "x", "z", 1),
+      ir("2010-01-02T01", "a", "b", 2),
+      ir("2010-01-02T01", "a", "c", 1)
   );
 
   @Rule
@@ -241,7 +239,7 @@ public class TaskLifecycleTest
     return new NoopServiceEmitter();
   }
 
-  private static InputRow IR(String dt, String dim1, String dim2, float met)
+  private static InputRow ir(String dt, String dim1, String dim2, float met)
   {
     return new MapBasedInputRow(
         DateTimes.of(dt).getMillis(),
@@ -611,9 +609,7 @@ public class TaskLifecycleTest
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         Execs.directExecutor(), // query executor service
         monitorScheduler, // monitor scheduler
-        new SegmentLoaderFactory(
-            new SegmentLoaderLocalCacheManager(null, segmentLoaderConfig, new DefaultObjectMapper())
-        ),
+        new SegmentLoaderFactory(null, new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,
         MapCache.create(0),
@@ -696,7 +692,6 @@ public class TaskLifecycleTest
                 indexSpec,
                 3,
                 true,
-                true,
                 false,
                 null,
                 null,
@@ -777,7 +772,6 @@ public class TaskLifecycleTest
                 null,
                 indexSpec,
                 3,
-                true,
                 true,
                 false,
                 null,
@@ -1174,7 +1168,6 @@ public class TaskLifecycleTest
                 null,
                 null,
                 null,
-                null,
                 null
             )
         ),
@@ -1262,7 +1255,7 @@ public class TaskLifecycleTest
         }
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 

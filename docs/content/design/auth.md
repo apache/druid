@@ -123,7 +123,7 @@ An Authenticator implementation should provide some means through configuration 
 
 ## Internal System User
 
-Internal requests between Druid nodes (non-user initiated communications) need to have authentication credentials attached. 
+Internal requests between Druid processes (non-user initiated communications) need to have authentication credentials attached. 
 
 These requests should be run as an "internal system user", an identity that represents the Druid cluster itself, with full access permissions.
 

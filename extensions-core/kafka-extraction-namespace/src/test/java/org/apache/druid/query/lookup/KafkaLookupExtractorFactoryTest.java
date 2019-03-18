@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Bytes;
@@ -360,7 +359,7 @@ public class KafkaLookupExtractorFactoryTest
           Thread.currentThread().join();
         }
         catch (InterruptedException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
         throw new RuntimeException("shouldn't make it here");
       }

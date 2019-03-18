@@ -75,7 +75,7 @@ public class GoogleDataSegmentPusherTest extends EasyMockSupport
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         size
     );

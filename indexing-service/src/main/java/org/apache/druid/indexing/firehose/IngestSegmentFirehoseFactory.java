@@ -25,21 +25,24 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
+import org.apache.druid.indexing.common.RetryPolicy;
+import org.apache.druid.indexing.common.RetryPolicyFactory;
+import org.apache.druid.indexing.common.SegmentLoaderFactory;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.realtime.firehose.IngestSegmentFirehose;
 import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
@@ -48,14 +51,17 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -68,7 +74,9 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   private final List<String> dimensions;
   private final List<String> metrics;
   private final IndexIO indexIO;
-  private TaskToolbox taskToolbox;
+  private final CoordinatorClient coordinatorClient;
+  private final SegmentLoaderFactory segmentLoaderFactory;
+  private final RetryPolicyFactory retryPolicyFactory;
 
   @JsonCreator
   public IngestSegmentFirehoseFactory(
@@ -77,7 +85,10 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
-      @JacksonInject IndexIO indexIO
+      @JacksonInject IndexIO indexIO,
+      @JacksonInject CoordinatorClient coordinatorClient,
+      @JacksonInject SegmentLoaderFactory segmentLoaderFactory,
+      @JacksonInject RetryPolicyFactory retryPolicyFactory
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -88,6 +99,9 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     this.dimensions = dimensions;
     this.metrics = metrics;
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
+    this.coordinatorClient = Preconditions.checkNotNull(coordinatorClient, "null CoordinatorClient");
+    this.segmentLoaderFactory = Preconditions.checkNotNull(segmentLoaderFactory, "null SegmentLoaderFactory");
+    this.retryPolicyFactory = Preconditions.checkNotNull(retryPolicyFactory, "null RetryPolicyFactory");
   }
 
   @JsonProperty
@@ -120,23 +134,46 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     return metrics;
   }
 
-  public void setTaskToolbox(TaskToolbox taskToolbox)
-  {
-    this.taskToolbox = taskToolbox;
-  }
-
   @Override
   public Firehose connect(InputRowParser inputRowParser, File temporaryDirectory) throws ParseException
   {
     log.info("Connecting firehose: dataSource[%s], interval[%s]", dataSource, interval);
 
-    Preconditions.checkNotNull(taskToolbox, "taskToolbox is not set");
-
     try {
-      final List<DataSegment> usedSegments = taskToolbox
-          .getTaskActionClient()
-          .submit(new SegmentListUsedAction(dataSource, interval, null));
-      final Map<DataSegment, File> segmentFileMap = taskToolbox.fetchSegments(usedSegments);
+      // This call used to use the TaskActionClient, so for compatibility we use the same retry configuration
+      // as TaskActionClient.
+      final RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
+      List<DataSegment> usedSegments;
+      while (true) {
+        try {
+          usedSegments =
+              coordinatorClient.getDatabaseSegmentDataSourceSegments(dataSource, Collections.singletonList(interval));
+          break;
+        }
+        catch (Throwable e) {
+          log.warn(e, "Exception getting database segments");
+          final Duration delay = retryPolicy.getAndIncrementRetryDelay();
+          if (delay == null) {
+            throw e;
+          } else {
+            final long sleepTime = jitter(delay.getMillis());
+            log.info("Will try again in [%s].", new Duration(sleepTime).toString());
+            try {
+              Thread.sleep(sleepTime);
+            }
+            catch (InterruptedException e2) {
+              throw new RuntimeException(e2);
+            }
+          }
+        }
+      }
+
+      final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
+      Map<DataSegment, File> segmentFileMap = Maps.newLinkedHashMap();
+      for (DataSegment segment : usedSegments) {
+        segmentFileMap.put(segment, segmentLoader.getSegmentFiles(segment));
+      }
+
       final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = VersionedIntervalTimeline
           .forSegments(usedSegments)
           .lookup(interval);
@@ -187,7 +224,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                                     );
                                   }
                                   catch (IOException e) {
-                                    throw Throwables.propagate(e);
+                                    throw new RuntimeException(e);
                                   }
                                 }
                               }
@@ -201,9 +238,16 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       final TransformSpec transformSpec = TransformSpec.fromInputRowParser(inputRowParser);
       return new IngestSegmentFirehose(adapters, transformSpec, dims, metricsList, dimFilter);
     }
-    catch (IOException | SegmentLoadingException e) {
-      throw Throwables.propagate(e);
+    catch (SegmentLoadingException e) {
+      throw new RuntimeException(e);
     }
+  }
+
+  private long jitter(long input)
+  {
+    final double jitter = ThreadLocalRandom.current().nextGaussian() * input / 4.0;
+    long retval = input + (long) jitter;
+    return retval < 0 ? 0 : retval;
   }
 
   @VisibleForTesting
@@ -260,7 +304,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
 
     final BiMap<Integer, String> orderedMetrics = uniqueMetrics.inverse();
     return IntStream.range(0, orderedMetrics.size())
-        .mapToObj(orderedMetrics::get)
-        .collect(Collectors.toList());
+                    .mapToObj(orderedMetrics::get)
+                    .collect(Collectors.toList());
   }
 }
