@@ -68,6 +68,7 @@
             <directory>${project.build.directory}</directory>
             <includes>
                 <include>git.version</include>
+                <include>README.md</include>
             </includes>
             <outputDirectory/>
         </fileSet>
