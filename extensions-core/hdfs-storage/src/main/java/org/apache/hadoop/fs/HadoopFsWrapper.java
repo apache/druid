@@ -19,7 +19,6 @@
 
 package /*CHECKSTYLE.OFF: PackageName*/org.apache.hadoop.fs/*CHECKSTYLE.ON: PackageName*/;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
@@ -64,7 +63,7 @@ public class HadoopFsWrapper
         log.info(ex, "Destination exists while renaming [%s] to [%s]", from, to);
         return false;
       } else {
-        throw Throwables.propagate(ex);
+        throw new RuntimeException(ex);
       }
     }
     catch (NoSuchMethodException | IllegalAccessException ex) {
@@ -72,7 +71,7 @@ public class HadoopFsWrapper
       for (Method method : fs.getClass().getDeclaredMethods()) {
         log.error(method.toGenericString());
       }
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
   }
 

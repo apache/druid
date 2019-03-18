@@ -19,7 +19,6 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -69,7 +68,7 @@ public abstract class GuiceRunnable implements Runnable
       return Initialization.makeInjectorWithModules(baseInjector, getModules());
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -114,7 +113,7 @@ public abstract class GuiceRunnable implements Runnable
       return lifecycle;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

@@ -29,7 +29,7 @@ public interface ProgressIndicator
 
   void stop();
 
-  void startSection(String section);
+  void startSection(@SuppressWarnings("unused") String section);
 
-  void stopSection(String section);
+  void stopSection(@SuppressWarnings("unused") String section);
 }

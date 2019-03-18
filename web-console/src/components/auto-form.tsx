@@ -16,26 +16,29 @@
  * limitations under the License.
  */
 
-import { resolveSrv } from 'dns';
-import * as React from 'react';
-import axios from 'axios';
 import { InputGroup } from "@blueprintjs/core";
-import { HTMLSelect, FormGroup, NumericInput, TagInput } from "../components/filler";
+import * as React from 'react';
+
+import { FormGroup, HTMLSelect, JSONInput, NumericInput, TagInput } from "../components/filler";
+
+import "./auto-form.scss";
 
 interface Field {
   name: string;
   label?: string;
-  type: 'number' | 'size-bytes' | 'string' | 'boolean' | 'string-array';
+  type: 'number' | 'size-bytes' | 'string' | 'boolean' | 'string-array' | 'json';
   min?: number;
 }
 
 export interface AutoFormProps<T> extends React.Props<any> {
   fields: Field[];
-  model: T | null,
-  onChange: (newValue: T) => void
+  model: T | null;
+  onChange: (newValue: T) => void;
+  updateJSONValidity?: (jsonValidity: boolean) => void;
 }
 
 export interface AutoFormState<T> {
+  jsonInputsValidity: any;
 }
 
 export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState<T>> {
@@ -48,7 +51,8 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
   constructor(props: AutoFormProps<T>) {
     super(props);
     this.state = {
-    }
+      jsonInputsValidity: {}
+    };
   }
 
   private renderNumberInput(field: Field): JSX.Element {
@@ -97,12 +101,33 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
     >
       <option value="True">True</option>
       <option value="False">False</option>
-    </HTMLSelect>
+    </HTMLSelect>;
+  }
+
+  private renderJSONInput(field: Field): JSX.Element {
+    const { model, onChange,  updateJSONValidity } = this.props;
+    const { jsonInputsValidity } = this.state;
+
+    const updateInputValidity = (e: any) => {
+      if (updateJSONValidity) {
+        const newJSONInputValidity = Object.assign({}, jsonInputsValidity, { [field.name]: e});
+        this.setState({
+          jsonInputsValidity: newJSONInputValidity
+        });
+        const allJSONValid: boolean = Object.keys(newJSONInputValidity).every(property => newJSONInputValidity[property] === true);
+        updateJSONValidity(allJSONValid);
+      }
+    };
+
+    return <JSONInput
+      value={(model as any)[field.name]}
+      onChange={(e: any) => onChange(Object.assign({}, model, { [field.name]: e}))}
+      updateInputValidity={updateInputValidity}
+    />;
   }
 
   private renderStringArrayInput(field: Field): JSX.Element {
     const { model, onChange } = this.props;
-    const label = field.label || AutoForm.makeLabelName(field.name);
     return <TagInput
       values={(model as any)[field.name] || []}
       onChange={(v: any) => {
@@ -119,6 +144,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
       case 'string': return this.renderStringInput(field);
       case 'boolean': return this.renderBooleanInput(field);
       case 'string-array': return this.renderStringArrayInput(field);
+      case 'json': return this.renderJSONInput(field);
       default: throw new Error(`unknown field type '${field.type}'`);
     }
   }
@@ -127,14 +153,13 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
     const label = field.label || AutoForm.makeLabelName(field.name);
     return <FormGroup label={label} key={field.name}>
       {this.renderFieldInput(field)}
-    </FormGroup>
+    </FormGroup>;
   }
 
   render() {
     const { fields, model } = this.props;
-
     return <div className="auto-form">
       {model && fields.map(field => this.renderField(field))}
-    </div>
+    </div>;
   }
 }

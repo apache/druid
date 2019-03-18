@@ -36,4 +36,4 @@ To enable experimental features, include their artifacts in the configuration ru
 druid.extensions.loadList=["druid-histogram"]
 ```
 
-The configuration files for all the indexer and query nodes need to be updated with this.
+The configuration files for all the Druid processes need to be updated with this.

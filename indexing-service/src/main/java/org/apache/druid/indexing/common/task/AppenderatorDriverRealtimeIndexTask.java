@@ -425,7 +425,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         }
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

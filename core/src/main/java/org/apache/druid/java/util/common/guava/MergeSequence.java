@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common.guava;
 
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.io.Closer;
 
@@ -110,7 +109,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
           yielder.close();
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       } else {
         pQueue.add(yielder);
