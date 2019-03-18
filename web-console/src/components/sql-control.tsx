@@ -16,16 +16,26 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import * as classNames from 'classnames';
-import * as ace from 'brace'
-import AceEditor from "react-ace";
-import 'brace/mode/sql';
-import 'brace/mode/hjson';
-import 'brace/theme/solarized_dark';
+import { Button, Checkbox, Classes, Intent, Popover, Position } from "@blueprintjs/core";
+import axios from "axios";
+import * as ace from 'brace';
 import 'brace/ext/language_tools';
-import { Intent, Button } from "@blueprintjs/core";
+import 'brace/mode/hjson';
+import 'brace/mode/sql';
+import 'brace/theme/solarized_dark';
+import * as classNames from 'classnames';
+import * as React from 'react';
+import AceEditor from "react-ace";
+import * as ReactDOMServer from 'react-dom/server';
+
+import { SQLFunctionDoc } from "../../lib/sql-function-doc";
+import { AppToaster } from "../singletons/toaster";
+
 import { IconNames } from './filler';
+
+import './sql-control.scss';
+
+const langTools = ace.acequire('ace/ext/language_tools');
 
 export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
@@ -35,6 +45,7 @@ export interface SqlControlProps extends React.Props<any> {
 export interface SqlControlState {
   query: string;
   autoCompleteOn: boolean;
+  autoCompleteLoading: boolean;
 }
 
 export class SqlControl extends React.Component<SqlControlProps, SqlControlState> {
@@ -42,14 +53,116 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     super(props, context);
     this.state = {
       query: props.initSql || '',
-      autoCompleteOn: true
+      autoCompleteOn: true,
+      autoCompleteLoading: false
     };
+  }
+
+  private addDatasourceAutoCompleter = async (): Promise<any> => {
+    const datasourceResp = await axios.post("/druid/v2/sql", { query: `SELECT datasource FROM sys.segments GROUP BY 1`});
+    const datasourceList: any[] = datasourceResp.data.map((d: any) => {
+      const datasourceName: string = d.datasource;
+      return {
+        value: datasourceName,
+        score: 50,
+        meta: "datasource"
+      };
+    });
+
+    const completer = {
+      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+        callback(null, datasourceList);
+      }
+    };
+
+    langTools.addCompleter(completer);
+  }
+
+  private addColumnNameAutoCompleter = async (): Promise<any> => {
+    const columnNameResp = await axios.post("/druid/v2/sql", {query: `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid'`});
+    const columnNameList: any[] = columnNameResp.data.map((d: any) => {
+      const columnName: string = d.COLUMN_NAME;
+      return {
+        value: columnName,
+        score: 50,
+        meta: "column"
+      };
+    });
+
+    const completer = {
+      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+        callback(null, columnNameList);
+      }
+    };
+
+    langTools.addCompleter(completer);
+  }
+
+  private addFunctionAutoCompleter = (): void => {
+    const functionList: any[] = SQLFunctionDoc.map((entry: any) => {
+      let funcName: string = entry.syntax.replace(/\(.*\)/, "()");
+      if (!funcName.includes("(")) funcName = funcName.substr(0, 10);
+      return {
+        value: funcName,
+        score: 80,
+        meta: "function",
+        syntax: entry.syntax,
+        description: entry.description,
+        completer: {
+          insertMatch: (editor: any, data: any) => {
+            editor.completer.insertMatch({value: data.caption});
+            const pos = editor.getCursorPosition();
+            editor.gotoLine(pos.row + 1, pos.column - 1);
+          }
+        }
+      };
+    });
+
+    const completer = {
+      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+        callback(null, functionList);
+      },
+      getDocTooltip: (item: any) => {
+        if (item.meta === "function") {
+          const functionName = item.caption.slice(0, -2);
+          item.docHTML = ReactDOMServer.renderToStaticMarkup((
+            <div className={"function-doc"}>
+              <div className={"function-doc-name"}><b>{functionName}</b></div>
+              <hr/>
+              <div><b>Syntax:</b></div>
+              <div>{item.syntax}</div>
+              <br/>
+              <div><b>Description:</b></div>
+              <div>{item.description}</div>
+            </div>
+          ));
+        }
+      }
+    };
+    langTools.addCompleter(completer);
+  }
+
+  private addCompleters = async () => {
+    try {
+      this.addFunctionAutoCompleter();
+      await this.addDatasourceAutoCompleter();
+      await this.addColumnNameAutoCompleter();
+    } catch (e) {
+      AppToaster.show({
+        message: "Failed to load SQL auto completer",
+        intent: Intent.DANGER
+      });
+    }
+  }
+
+  componentDidMount(): void {
+    this.addCompleters();
   }
 
   private handleChange = (newValue: string): void => {
     this.setState({
       query: newValue
-    })
+    });
   }
 
   render() {
@@ -57,6 +170,15 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     const { query, autoCompleteOn } = this.state;
 
     const isRune = query.trim().startsWith('{');
+
+    const autoCompletePopover = <div className={"auto-complete-checkbox"}>
+      <Checkbox
+        checked={isRune ? false : autoCompleteOn}
+        disabled={isRune}
+        label={"Auto complete"}
+        onChange={() => this.setState({autoCompleteOn: !autoCompleteOn})}
+      />
+    </div>;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return <div className="sql-control">
@@ -66,7 +188,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         theme="solarized_dark"
         name="ace-editor"
         onChange={this.handleChange}
-        focus={true}
+        focus
         fontSize={14}
         width={'100%'}
         height={"30vh"}
@@ -79,13 +201,17 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
           enableBasicAutocompletion: isRune ? false : autoCompleteOn,
           enableLiveAutocompletion: isRune ? false : autoCompleteOn,
           showLineNumbers: true,
-          tabSize: 2,
+          tabSize: 2
         }}
       />
       <div className="buttons">
-        <Button rightIconName={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>{isRune ? 'Rune' : 'Run'}</Button>
+        <Button rightIconName={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
+          {isRune ? 'Rune' : 'Run'}
+        </Button>
+        <Popover position={Position.BOTTOM_LEFT} content={autoCompletePopover} inline>
+          <Button className={`${Classes.MINIMAL} pt-icon-more`}/>
+        </Popover>
       </div>
-    </div>
+    </div>;
   }
 }
-

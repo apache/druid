@@ -2365,6 +2365,53 @@ public class TopNQueryRunnerTest
   }
 
   @Test
+  public void testTopNDimExtractionTimeToOneLong()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                ColumnHolder.TIME_COLUMN_NAME,
+                "t",
+                ValueType.LONG,
+                new JavaScriptExtractionFn(
+                    "function(f) { return \"42\"; }",
+                    false,
+                    JavaScriptConfig.getEnabledInstance()
+                )
+            )
+        )
+        .metric("rows")
+        .threshold(10)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+        .aggregators(commonAggregators)
+        .postAggregators(Collections.singletonList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+        new Result<>(
+            DateTimes.of("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Collections.<Map<String, Object>>singletonList(
+                    ImmutableMap.of(
+                        "addRowsIndexConstant", 504542.5071372986D,
+                        "index", 503332.5071372986D,
+                        "t", 42L,
+                        "uniques", QueryRunnerTestHelper.UNIQUES_9,
+                        "rows", 1209L
+                    )
+                )
+            )
+        )
+    );
+    List<Result<TopNResultValue>> list = runWithMerge(query).toList();
+    Assert.assertEquals(list.size(), 1);
+    Assert.assertEquals("Didn't merge results", list.get(0).getValue().getValue().size(), 1);
+    TestHelper.assertExpectedResults(expectedResults, list, "Failed to match");
+  }
+
+  @Test
   public void testTopNCollapsingDimExtraction()
   {
     TopNQuery query = new TopNQueryBuilder()

@@ -20,7 +20,6 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
@@ -201,7 +200,7 @@ public class QueryInterruptedExceptionTest
       return MAPPER.readValue(MAPPER.writeValueAsBytes(e), QueryInterruptedException.class);
     }
     catch (Exception e2) {
-      throw Throwables.propagate(e2);
+      throw new RuntimeException(e2);
     }
   }
 }

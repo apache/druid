@@ -109,6 +109,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |copysign|copysign(x) would return the first floating-point argument with the sign of the second floating-point argument|
 |cos|cos(x) would return the trigonometric cosine of x|
 |cosh|cosh(x) would return the hyperbolic cosine of x|
+|cot|cot(x) would return the trigonometric cotangent of an angle x|
 |div|div(x,y) is integer division of x by y|
 |exp|exp(x) would return Euler's number raised to the power of x|
 |expm1|expm1(x) would return e^x-1|
@@ -122,6 +123,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |min|min(x, y) would return the smaller of two values|
 |nextafter|nextafter(x, y) would return the floating-point number adjacent to the x in the direction of the y|
 |nextUp|nextUp(x) would return the floating-point value adjacent to x in the direction of positive infinity|
+|pi|pi would return the constant value of the π |
 |pow|pow(x, y) would return the value of the x raised to the power of y|
 |remainder|remainder(x, y) would return the remainder operation on two arguments as prescribed by the IEEE 754 standard|
 |rint|rint(x) would return value that is closest in value to x and is equal to a mathematical integer|

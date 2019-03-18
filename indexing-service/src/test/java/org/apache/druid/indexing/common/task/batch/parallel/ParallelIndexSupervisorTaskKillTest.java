@@ -188,7 +188,6 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
             null,
             null,
             null,
-            null,
             numTotalSubTasks,
             null,
             null,
@@ -281,9 +280,8 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
     {
-      setToolbox(toolbox);
       setRunner(
           new TestRunner(
               toolbox,
@@ -291,10 +289,7 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
               indexingServiceClient
           )
       );
-      return TaskStatus.fromCode(
-          getId(),
-          getRunner().run()
-      );
+      return getRunner();
     }
   }
 

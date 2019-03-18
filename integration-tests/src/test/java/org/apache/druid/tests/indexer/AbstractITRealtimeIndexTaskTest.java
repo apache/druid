@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.indexer;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
@@ -97,6 +96,10 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       LOG.info("indexerSpec: [%s]\n", task);
       taskID = indexer.submitTask(task);
 
+
+      // sleep for a while to let peons finish starting up
+      TimeUnit.SECONDS.sleep(5);
+
       // this posts 22 events, one every 4 seconds
       // each event contains the current time as its timestamp except
       //   the timestamp for the 14th event is early enough that the event should be ignored
@@ -134,7 +137,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
         this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       // wait for the task to complete
@@ -160,7 +163,7 @@ public abstract class AbstractITRealtimeIndexTaskTest extends AbstractIndexerTes
       this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

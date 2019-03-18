@@ -30,7 +30,6 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.indexer.Bucket;
@@ -422,7 +421,7 @@ public class HdfsDataSegmentPusherTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     //DataSchema dataSchema = new DataSchema("dataSource", null, null, Gra)
@@ -511,7 +510,7 @@ public class HdfsDataSegmentPusherTest
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(

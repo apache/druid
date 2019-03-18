@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -259,7 +258,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           catch (InterruptedException e) {
             log.error(e, "Queue appending interrupted");
             Thread.currentThread().interrupt();
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
           totalByteCount.addAndGet(response.getContent().readableBytes());
           return ClientResponse.finished(
@@ -293,7 +292,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       }
                       catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        throw Throwables.propagate(e);
+                        throw new RuntimeException(e);
                       }
                     }
                   }
@@ -324,7 +323,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             catch (InterruptedException e) {
               log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
               Thread.currentThread().interrupt();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
             totalByteCount.addAndGet(bytes);
           }
@@ -365,7 +364,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             catch (InterruptedException e) {
               log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
               Thread.currentThread().interrupt();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
             finally {
               done.set(true);
@@ -500,7 +499,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   }
                 }
                 catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
-                  Throwables.propagate(e);
+                  throw new RuntimeException(e);
                 }
               }
             }
@@ -508,7 +507,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       );
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     Sequence<T> retVal = new BaseSequence<>(

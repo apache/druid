@@ -58,9 +58,9 @@ public class BroadcastDistributionRuleTest
   private final List<DataSegment> largeSegments2 = new ArrayList<>();
   private DataSegment smallSegment;
   private DruidCluster secondCluster;
-  private ServerHolder generalServer;
-  private ServerHolder maintenanceServer2;
-  private ServerHolder maintenanceServer1;
+  private ServerHolder activeServer;
+  private ServerHolder decommissioningServer1;
+  private ServerHolder decommissioningServer2;
 
   @Before
   public void setUp()
@@ -200,9 +200,9 @@ public class BroadcastDistributionRuleTest
         )
     );
 
-    generalServer = new ServerHolder(
+    activeServer = new ServerHolder(
         new DruidServer(
-            "general",
+            "active",
             "host1",
             null,
             100,
@@ -214,9 +214,9 @@ public class BroadcastDistributionRuleTest
         new LoadQueuePeonTester()
     );
 
-    maintenanceServer1 = new ServerHolder(
+    decommissioningServer1 = new ServerHolder(
         new DruidServer(
-            "maintenance1",
+            "decommissioning1",
             "host2",
             null,
             100,
@@ -229,9 +229,9 @@ public class BroadcastDistributionRuleTest
         true
     );
 
-    maintenanceServer2 = new ServerHolder(
+    decommissioningServer2 = new ServerHolder(
         new DruidServer(
-            "maintenance2",
+            "decommissioning2",
             "host3",
             null,
             100,
@@ -267,9 +267,9 @@ public class BroadcastDistributionRuleTest
         ImmutableMap.of(
             "tier1",
             Stream.of(
-                generalServer,
-                maintenanceServer1,
-                maintenanceServer2
+                activeServer,
+                decommissioningServer1,
+                decommissioningServer2
             ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
@@ -315,19 +315,19 @@ public class BroadcastDistributionRuleTest
 
   /**
    * Servers:
-   * name         | segments
-   * -------------+--------------
-   * general      | large segment
-   * maintenance1 | small segment
-   * maintenance2 | large segment
+   * name             | segments
+   * -----------------+--------------
+   * active           | large segment
+   * decommissioning1 | small segment
+   * decommissioning2 | large segment
    *
    * After running the rule for the small segment:
-   * general      | large & small segments
-   * maintenance1 |
-   * maintenance2 | large segment
+   * active           | large & small segments
+   * decommissioning1 |
+   * decommissionint2 | large segment
    */
   @Test
-  public void testBroadcastWithMaintenance()
+  public void testBroadcastDecommissioning()
   {
     final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
 
@@ -348,9 +348,9 @@ public class BroadcastDistributionRuleTest
     assertEquals(1L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
     assertEquals(false, stats.hasPerTierStats());
 
-    assertEquals(1, generalServer.getPeon().getSegmentsToLoad().size());
-    assertEquals(1, maintenanceServer1.getPeon().getSegmentsToDrop().size());
-    assertEquals(0, maintenanceServer2.getPeon().getSegmentsToLoad().size());
+    assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
+    assertEquals(1, decommissioningServer1.getPeon().getSegmentsToDrop().size());
+    assertEquals(0, decommissioningServer2.getPeon().getSegmentsToLoad().size());
   }
 
   @Test

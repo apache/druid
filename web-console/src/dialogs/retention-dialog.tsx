@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
-import axios from 'axios';
 import { Button } from "@blueprintjs/core";
+import axios from 'axios';
+import * as React from 'react';
+
 import { FormGroup, IconNames } from '../components/filler';
-import { RuleEditor, Rule } from '../components/rule-editor';
+import { Rule, RuleEditor } from '../components/rule-editor';
+
 import { SnitchDialog } from './snitch-dialog';
 
 import './retention-dialog.scss';
 
 export function reorderArray<T>(items: T[], oldIndex: number, newIndex: number): T[] {
-  let newItems = items.concat();
+  const newItems = items.concat();
 
   if (newIndex > oldIndex) newIndex--;
 
@@ -111,7 +113,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
       onDelete={() => this.onDeleteRule(index)}
       moveUp={index > 0 ? () => this.moveRule(index, -1) : null}
       moveDown={index < (currentRules || []).length - 1 ? () => this.moveRule(index, 2) : null}
-    />
+    />;
   }
 
   reset = () => {
