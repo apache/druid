@@ -44,9 +44,9 @@ A project administrator could restart a build by pressing the "Run" button on th
 
 ### Contacting TeamCity support regarding problems with builds
 
-Regarding any build problems, feel free to contact TeamCity support by writing a e-mail at
+Regarding any build problems, feel free to contact TeamCity support by writing an e-mail at
 teamcity-support@jetbrains.com. There is an automatic system behind this e-mail address that creates a ticket and sends
-you a e-mail with a link to the ticket. Note that:
+you an e-mail with a link to the ticket. Note that:
 
  - Contacting TeamCity support regarding problems with open-source Druid project builds is *free*. Don't hestitate doing
  that if you don't see how to resolve some problem with a build.
