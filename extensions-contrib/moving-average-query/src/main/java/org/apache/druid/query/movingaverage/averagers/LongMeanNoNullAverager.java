@@ -22,8 +22,6 @@ package org.apache.druid.query.movingaverage.averagers;
 public class LongMeanNoNullAverager extends BaseAverager<Number, Double>
 {
 
-  private int startFrom = 0;
-
   public LongMeanNoNullAverager(int numBuckets, String name, String fieldName, int cycleSize)
   {
     super(Number.class, numBuckets, name, fieldName, cycleSize);
@@ -34,13 +32,10 @@ public class LongMeanNoNullAverager extends BaseAverager<Number, Double>
   {
     long result = 0;
     int validBuckets = 0;
-    int cycleSize = getCycleSize();
-    int numBuckets = getNumBuckets();
-    Number[] obj = getBuckets();
 
     for (int i = 0; i < numBuckets; i += cycleSize) {
-      if (obj[(i + startFrom) % numBuckets] != null) {
-        result += (obj[(i + startFrom) % numBuckets]).longValue();
+      if (buckets[(i + startFrom) % numBuckets] != null) {
+        result += (buckets[(i + startFrom) % numBuckets]).longValue();
         validBuckets++;
       }
     }

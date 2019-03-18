@@ -35,16 +35,16 @@ import java.util.Map;
 public abstract class BaseAverager<I, R extends Object> implements Averager<R>
 {
 
-  private final int numBuckets;
-  private final int cycleSize;
+  final int numBuckets;
+  final int cycleSize;
   private final String name;
   private final String fieldName;
-  private final I[] buckets;
+  final I[] buckets;
   private int index;
 
-  /* This flag checks if the intermediate sketches have to be finalized or not
-   for further computation involving sketches */
-  private boolean shouldFinalize;
+  /* startFrom is needed because `buckets` field is a fixed array, not a list.
+  It makes computeResults() start from the correct bucket in the array. */
+  int startFrom = 0;
 
   /**
    * @param storageType    The class to use for storing intermediate values

@@ -22,8 +22,6 @@ package org.apache.druid.query.movingaverage.averagers;
 public class LongMaxAverager extends BaseAverager<Number, Long>
 {
 
-  private int startFrom = 0;
-
   public LongMaxAverager(int numBuckets, String name, String fieldName, int cycleSize)
   {
     super(Number.class, numBuckets, name, fieldName, cycleSize);
@@ -33,13 +31,10 @@ public class LongMaxAverager extends BaseAverager<Number, Long>
   protected Long computeResult()
   {
     long result = Long.MIN_VALUE;
-    int cycleSize = getCycleSize();
-    int numBuckets = getNumBuckets();
-    Number[] obj = getBuckets();
 
     for (int i = 0; i < numBuckets; i += cycleSize) {
-      if (obj[(i + startFrom) % numBuckets] != null) {
-        result = Long.max(result, (obj[(i + startFrom) % numBuckets]).longValue());
+      if (buckets[(i + startFrom) % numBuckets] != null) {
+        result = Long.max(result, (buckets[(i + startFrom) % numBuckets]).longValue());
       }
     }
 
