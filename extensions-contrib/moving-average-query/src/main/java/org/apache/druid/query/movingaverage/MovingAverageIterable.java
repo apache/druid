@@ -134,6 +134,7 @@ public class MovingAverageIterable implements Iterable<Row>
   {
 
     private final List<DimensionSpec> dims;
+    // Key: Row's dimension set. Value: Averager. See MovingAverageIterator#computeMovingAverage for more details.
     private final Map<Map<String, Object>, List<Averager<?>>> averagers = new HashMap<>();
     private final List<AveragerFactory<?, ?>> averagerFactories;
 
