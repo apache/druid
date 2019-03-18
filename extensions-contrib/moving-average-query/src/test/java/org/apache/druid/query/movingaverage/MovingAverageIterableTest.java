@@ -200,7 +200,7 @@ public class MovingAverageIterableTest
 
     event4.put("gender", "f");
     event4.put("pageViews", 40L);
-    Row row4 = new MapBasedRow(JAN_2, event4);
+    Row row4 = new MapBasedRow(JAN_3, event4);
 
     float retval = 14.5f;
 
