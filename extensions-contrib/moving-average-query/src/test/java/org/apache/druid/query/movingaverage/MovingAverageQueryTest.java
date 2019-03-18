@@ -25,9 +25,9 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.google.common.collect.Maps;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.Provider;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
 import mockit.Mock;
@@ -260,15 +260,6 @@ public class MovingAverageQueryTest
       groupByResults.addAll(jsonMapper.readValue(getGroupByResultJson(), new TypeReference<List<Row>>()
       {
       }));
-      for (Row r : groupByResults) {
-        Map<String, Object> map = ((MapBasedRow) r).getEvent();
-        for (AggregatorFactory agg : aggs) {
-          Object serializedVal = map.get(agg.getName());
-          if (serializedVal != null) {
-            map.put(agg.getName(), agg.deserialize(serializedVal));
-          }
-        }
-      }
     }
 
     if (getTimeseriesResultJson() != null) {
@@ -278,15 +269,6 @@ public class MovingAverageQueryTest
           {
           }
       ));
-      for (Result<TimeseriesResultValue> r : timeseriesResults) {
-        Map<String, Object> map = r.getValue().getBaseObject();
-        for (AggregatorFactory agg : aggs) {
-          Object serializedVal = map.get(agg.getName());
-          if (serializedVal != null) {
-            map.put(agg.getName(), agg.deserialize(serializedVal));
-          }
-        }
-      }
     }
   }
 
@@ -295,10 +277,11 @@ public class MovingAverageQueryTest
    *
    * @param result
    */
-  protected void consistentTypeCasting(List<MapBasedRow> result)
+  protected List<MapBasedRow> consistentTypeCasting(List<MapBasedRow> result)
   {
+    List<MapBasedRow> newResult = new ArrayList<>();
     for (MapBasedRow row : result) {
-      Map<String, Object> event = row.getEvent();
+      final Map<String, Object> event = Maps.newLinkedHashMap((row).getEvent());
       event.forEach((key, value) -> {
         if (Integer.class.isInstance(value)) {
           event.put(key, ((Integer) value).longValue());
@@ -307,8 +290,10 @@ public class MovingAverageQueryTest
           event.put(key, ((Float) value).doubleValue());
         }
       });
-
+      newResult.add(new MapBasedRow(row.getTimestamp(), event));
     }
+    
+    return newResult;
   }
 
   /**
@@ -441,8 +426,8 @@ public class MovingAverageQueryTest
     List actualResults = new ArrayList();
     actualResults = (List<MapBasedRow>) res.accumulate(actualResults, Accumulators.list());
 
-    consistentTypeCasting(expectedResults);
-    consistentTypeCasting(actualResults);
+    expectedResults = consistentTypeCasting(expectedResults);
+    actualResults = consistentTypeCasting(actualResults);
 
     assertEquals(expectedResults, actualResults);
   }

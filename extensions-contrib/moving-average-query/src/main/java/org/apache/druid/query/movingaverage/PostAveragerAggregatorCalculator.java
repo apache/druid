@@ -20,9 +20,11 @@
 package org.apache.druid.query.movingaverage;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -43,21 +45,23 @@ public class PostAveragerAggregatorCalculator implements Function<Row, Row>
     this.postAveragers = maq.getPostAveragerSpecs();
   }
 
-  /* (non-Javadoc)
-   * @see com.google.common.base.Function#apply(java.lang.Object)
-   */
   @Override
-  public Row apply(Row input)
+  public Row apply(final Row row)
   {
-    MapBasedRow row = (MapBasedRow) input;
-    Map<String, Object> event = new HashMap<>(row.getEvent());
-
-    for (PostAggregator postAverager : postAveragers) {
-      boolean allColsPresent = postAverager.getDependentFields().stream().allMatch(c -> event.get(c) != null);
-      event.put(postAverager.getName(), allColsPresent ? postAverager.compute(event) : null);
+    if (postAveragers.isEmpty()) {
+      return row;
     }
 
-    return input;
+    final Map<String, Object> newMap;
+
+    newMap = Maps.newLinkedHashMap(((MapBasedRow) row).getEvent());
+
+    for (PostAggregator postAverager : postAveragers) {
+      boolean allColsPresent = postAverager.getDependentFields().stream().allMatch(c -> newMap.get(c) != null);
+      newMap.put(postAverager.getName(), allColsPresent ? postAverager.compute(newMap) : null);
+    }
+
+    return new MapBasedRow(row.getTimestamp(), newMap);
   }
 
 }
