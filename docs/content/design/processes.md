@@ -126,6 +126,6 @@ Please see [Coordinator Configuration: Operation](../configuration/index.html#co
 
 ### Historicals and MiddleManagers
 
-With higher levels of ingestion or query load, it can make sense to deploy the Historical and MiddleManager processes on separate nodes to to avoid CPU and memory contention. 
+With higher levels of ingestion or query load, it can make sense to deploy the Historical and MiddleManager processes on separate hosts to to avoid CPU and memory contention. 
 
 The Historical also benefits from having free memory for memory mapped segments, which can be another reason to deploy the Historical and MiddleManager processes separately.

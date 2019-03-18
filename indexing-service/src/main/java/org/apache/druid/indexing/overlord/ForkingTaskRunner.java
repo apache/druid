@@ -27,7 +27,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -474,7 +473,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         }
                         catch (Throwable t) {
                           log.info(t, "Exception caught during execution");
-                          throw Throwables.propagate(t);
+                          throw new RuntimeException(t);
                         }
                         finally {
                           try {

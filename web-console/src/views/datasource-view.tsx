@@ -16,15 +16,17 @@
  * limitations under the License.
  */
 
+import { Button, Intent, Switch } from "@blueprintjs/core";
 import axios from 'axios';
 import * as React from 'react';
-import ReactTable, {Filter} from "react-table";
-import {Button, Intent, Switch} from "@blueprintjs/core";
-import {IconNames} from "../components/filler";
-import {AppToaster} from '../singletons/toaster';
-import {RuleEditor} from '../components/rule-editor';
-import {AsyncActionDialog} from '../dialogs/async-action-dialog';
-import {RetentionDialog} from '../dialogs/retention-dialog';
+import ReactTable, { Filter } from "react-table";
+
+import { IconNames } from "../components/filler";
+import { RuleEditor } from '../components/rule-editor';
+import { AsyncActionDialog } from '../dialogs/async-action-dialog';
+import { CompactionDialog } from "../dialogs/compaction-dialog";
+import { RetentionDialog } from '../dialogs/retention-dialog';
+import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
   countBy,
@@ -32,13 +34,10 @@ import {
   formatNumber,
   getDruidErrorMessage,
   lookupBy,
-  pluralIfNeeded,
-  queryDruidSql,
-  QueryManager
+  pluralIfNeeded, queryDruidSql, QueryManager
 } from "../utils";
 
 import "./datasource-view.scss";
-import {CompactionDialog} from "../dialogs/compaction-dialog";
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -55,7 +54,7 @@ export interface DatasourcesViewState {
   datasourcesLoading: boolean;
   datasources: Datasource[] | null;
   tiers: string[];
-  defaultRules: any[]
+  defaultRules: any[];
   datasourcesError: string | null;
   datasourcesFilter: Filter[];
 
@@ -75,7 +74,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   static formatRules(rules: any[]): string {
     if (rules.length === 0) {
       return 'No rules';
-    } if (rules.length <= 2) {
+    } else if (rules.length <= 2) {
       return rules.map(RuleEditor.ruleToString).join(', ');
     } else {
       return `${RuleEditor.ruleToString(rules[0])} +${rules.length - 1} more rules`;
@@ -164,7 +163,7 @@ GROUP BY 1`);
     return <AsyncActionDialog
       action={
         dropDataDatasource ? async () => {
-          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dropDataDatasource}`, {})
+          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dropDataDatasource}`, {});
           return resp.data;
         } : null
       }
@@ -189,7 +188,7 @@ GROUP BY 1`);
     return <AsyncActionDialog
       action={
         enableDatasource ? async () => {
-          const resp = await axios.post(`/druid/coordinator/v1/datasources/${enableDatasource}`, {})
+          const resp = await axios.post(`/druid/coordinator/v1/datasources/${enableDatasource}`, {});
           return resp.data;
         } : null
       }
@@ -274,7 +273,6 @@ GROUP BY 1`);
     }, 50);
   }
 
-
   private saveCompaction = async (compactionConfig: any) => {
     if (compactionConfig === null) return;
     try {
@@ -285,7 +283,7 @@ GROUP BY 1`);
       AppToaster.show({
         message: e,
         intent: Intent.DANGER
-      })
+      });
     }
   }
 
@@ -301,12 +299,12 @@ GROUP BY 1`);
         onClick: async () => {
           try {
             await axios.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
-            this.setState({compactionDialogOpenOn: null}, ()=>this.datasourceQueryManager.rerunLastQuery());
+            this.setState({compactionDialogOpenOn: null}, () => this.datasourceQueryManager.rerunLastQuery());
           } catch (e) {
             AppToaster.show({
               message: e,
               intent: Intent.DANGER
-            })
+            });
           }
         }
       }
@@ -338,7 +336,7 @@ GROUP BY 1`);
       onClose={() => this.setState({compactionDialogOpenOn: null})}
       onSave={this.saveCompaction}
       onDelete={this.deleteCompaction}
-    />
+    />;
   }
 
   renderDatasourceTable() {
@@ -347,7 +345,7 @@ GROUP BY 1`);
 
     let data = datasources || [];
     if (!showDisabled) {
-      data = data.filter(d => !d.disabled)
+      data = data.filter(d => !d.disabled);
     }
 
     return <>
@@ -355,7 +353,7 @@ GROUP BY 1`);
         data={data}
         loading={datasourcesLoading}
         noDataText={!datasourcesLoading && datasources && !datasources.length ? 'No datasources' : (datasourcesError || '')}
-        filterable={true}
+        filterable
         filtered={datasourcesFilter}
         onFilteredChange={(filtered, column) => {
           this.setState({ datasourcesFilter: filtered });
@@ -367,7 +365,7 @@ GROUP BY 1`);
             width: 150,
             Cell: row => {
               const value = row.value;
-              return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }) }}>{value}</a>
+              return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
             }
           },
           {
@@ -418,9 +416,12 @@ GROUP BY 1`);
                 text = DatasourcesView.formatRules(rules);
               }
 
-              return <span>
+              return <span
+                onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}
+                className={"clickable-cell"}
+              >
                 {text}&nbsp;
-                <a onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}>&#x270E;</a>
+                <a>&#x270E;</a>
               </span>;
             }
           },
@@ -431,15 +432,23 @@ GROUP BY 1`);
             filterable: false,
             Cell: row => {
               const { compaction } = row.original;
+              const compactionOpenOn: {datasource: string, configData: any} | null = {
+                datasource: row.original.datasource,
+                configData: compaction
+              };
               let text: string;
-              let compactionOpenOn: {datasource: string, configData: any} | null =
-                {datasource:row.original.datasource, configData: compaction};
               if (compaction) {
                 text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
               } else {
                 text = 'None';
               }
-              return <span className={"clickable-cell"} onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}>{text} <a>&#x270E;</a></span>;
+              return <span
+                className={"clickable-cell"}
+                onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}
+              >
+                {text}&nbsp;
+                <a>&#x270E;</a>
+              </span>;
             }
           },
           {
@@ -469,11 +478,11 @@ GROUP BY 1`);
                 return <div>
                   <a onClick={() => this.setState({ enableDatasource: datasource })}>Enable</a>&nbsp;&nbsp;&nbsp;
                   <a onClick={() => this.setState({ killDatasource: datasource })}>Permanently delete</a>
-                </div>
+                </div>;
               } else {
                 return <div>
                   <a onClick={() => this.setState({ dropDataDatasource: datasource })}>Drop data</a>
-                </div>
+                </div>;
               }
             }
           }
@@ -513,7 +522,6 @@ GROUP BY 1`);
         />
       </div>
       {this.renderDatasourceTable()}
-    </div>
+    </div>;
   }
 }
-

@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import { Button, Collapse, InputGroup } from "@blueprintjs/core";
 import axios from 'axios';
-import { Button, InputGroup, Collapse } from "@blueprintjs/core";
-import { IconNames, FormGroup, HTMLSelect, Card, ControlGroup, NumericInput, TagInput } from "../components/filler";
+import * as React from 'react';
+
+import { Card, ControlGroup, FormGroup, HTMLSelect, IconNames, NumericInput, TagInput } from "../components/filler";
+
 import './rule-editor.scss';
 
 export interface Rule {
@@ -107,7 +109,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     super(props);
     this.state = {
       isOpen: true
-    }
+    };
   }
 
   private removeTier = (key: string) => {
@@ -126,9 +128,9 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     let newTierName = tiers[0];
 
     if (rule.tieredReplicants) {
-      for (let i = 0; i < tiers.length; i++) {
-        if (rule.tieredReplicants[tiers[i]] === undefined) {
-          newTierName = tiers[i];
+      for (const tier of tiers) {
+        if (rule.tieredReplicants[tier] === undefined) {
+          newTierName = tier;
           break;
         }
       }
@@ -160,7 +162,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
         />
         <Button className="pt-minimal" style={{pointerEvents: 'none'}}>Tier:</Button>
         <HTMLSelect
-          fill={true}
+          fill
           value={tier}
           onChange={(e: any) => onChange(RuleEditor.changeTier(rule, tier, e.target.value))}
         >
@@ -194,7 +196,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     return <FormGroup label="Colocated datasources:">
       <TagInput
         values={rule.colocatedDataSources || []}
-        onChange={(v: any) => onChange(RuleEditor.changeColocatedDataSources(rule, v)) }
+        onChange={(v: any) => onChange(RuleEditor.changeColocatedDataSources(rule, v))}
         fill
       />
     </FormGroup>;
@@ -240,21 +242,21 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
                 <option value="ByPeriod">by period</option>
                 <option value="ByInterval">by interval</option>
               </HTMLSelect>
-              { ruleTimeType === 'ByPeriod' && <InputGroup value={rule.period || ''} onChange={(e: any) => onChange(RuleEditor.changePeriod(rule, e.target.value as any))}/>}
-              { ruleTimeType === 'ByInterval' && <InputGroup value={rule.interval || ''} onChange={(e: any) => onChange(RuleEditor.changeInterval(rule, e.target.value as any))}/>}
+              {ruleTimeType === 'ByPeriod' && <InputGroup value={rule.period || ''} onChange={(e: any) => onChange(RuleEditor.changePeriod(rule, e.target.value as any))}/>}
+              {ruleTimeType === 'ByInterval' && <InputGroup value={rule.interval || ''} onChange={(e: any) => onChange(RuleEditor.changeInterval(rule, e.target.value as any))}/>}
             </ControlGroup>
           </FormGroup>
           {
             ruleLoadType === 'load' &&
             <FormGroup>
-              { this.renderTiers() }
-              { this.renderTierAdder() }
+              {this.renderTiers()}
+              {this.renderTierAdder()}
             </FormGroup>
           }
           {
             ruleLoadType === 'broadcast' &&
             <FormGroup>
-              { this.renderColocatedDataSources() }
+              {this.renderColocatedDataSources()}
             </FormGroup>
           }
         </Card>

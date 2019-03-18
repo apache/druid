@@ -17,22 +17,14 @@
  */
 
 .compaction-dialog {
-  top: 8%;
+  &.pt-dialog {
+    top: 5%;
+  }
 
   .auto-form {
     margin: 10px 15px;
     padding: 0 5px 0 5px;
     max-height: 70vh;
     overflow: scroll;
-
-    .bp3-form-group {
-      padding: 0 15px;
-      margin: 0 0 5px;
-    }
-  ;
-
-    .bp3-html-select {
-      width: 195px;
-    }
   }
 }

@@ -31,7 +31,7 @@ import org.apache.druid.segment.realtime.plumber.RejectionPolicyFactory;
 import org.apache.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
 import org.apache.druid.segment.realtime.plumber.VersioningPolicy;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Period;
 
@@ -48,7 +48,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
   private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
   private static final int defaultMaxPendingPersists = 0;
-  private static final ShardSpec defaultShardSpec = NoneShardSpec.instance();
+  private static final ShardSpec defaultShardSpec = new NumberedShardSpec(0, 1);
   private static final IndexSpec defaultIndexSpec = new IndexSpec();
   private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
   private static final long defaultHandoffConditionTimeout = 0;

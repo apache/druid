@@ -16,22 +16,24 @@
  * limitations under the License.
  */
 
+import { Button, Classes, Dialog, Intent } from "@blueprintjs/core";
 import * as React from 'react';
+
 import { AutoForm } from '../components/auto-form';
+
 import './compaction-dialog.scss';
-import {Button, Classes, Dialog, Intent} from "@blueprintjs/core";
 
 export interface CompactionDialogProps extends React.Props<any> {
-  onClose: () => void,
-  onSave: (config: any) => void,
-  onDelete: () => void,
-  datasource: string,
-  configData: any,
+  onClose: () => void;
+  onSave: (config: any) => void;
+  onDelete: () => void;
+  datasource: string;
+  configData: any;
 }
 
 export interface CompactionDialogState {
   currentConfig: Record<string, any> | null;
-  allJSONValid: boolean
+  allJSONValid: boolean;
 }
 
 export class CompactionDialog extends React.Component<CompactionDialogProps, CompactionDialogState> {
@@ -70,7 +72,7 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
     return <Dialog
       className="compaction-dialog"
       isOpen
-      onClose={ onClose }
+      onClose={onClose}
       canOutsideClickClose={false}
       title={`Compaction config: ${datasource}`}
     >
@@ -129,10 +131,10 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
             text="Submit"
             intent={Intent.PRIMARY}
             onClick={() => onSave(currentConfig)}
-            disabled={ currentConfig === null || !allJSONValid }
+            disabled={currentConfig === null || !allJSONValid}
           />
         </div>
       </div>
-    </Dialog>
+    </Dialog>;
   }
 }

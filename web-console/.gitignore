@@ -9,6 +9,9 @@ coordinator-console/
 pages/
 index.html
 
+lib/sql-function-doc.ts
+
 .tscache
 tscommand-*.tmp.txt
 
+licenses.json

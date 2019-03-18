@@ -17,7 +17,9 @@
  */
 
 .coordinator-dynamic-config {
-  .bp3-dialog-body {
+  margin-top: 5vh;
+
+  .pt-dialog-body {
     max-height: 70vh;
 
     .auto-form {
@@ -25,7 +27,7 @@
       overflow: auto;
     }
 
-    .bp3-html-select {
+    .html-select {
       width: 195px;
     }
 

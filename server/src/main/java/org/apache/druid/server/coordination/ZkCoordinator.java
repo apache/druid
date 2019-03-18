@@ -139,7 +139,7 @@ public class ZkCoordinator
                                   log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
                                 }
                                 log.error(e, "Exception while removing zNode[%s]", path);
-                                throw Throwables.propagate(e);
+                                throw new RuntimeException(e);
                               }
                             }
                           }
@@ -173,7 +173,7 @@ public class ZkCoordinator
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       started = true;
@@ -193,7 +193,7 @@ public class ZkCoordinator
         loadQueueCache.close();
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         loadQueueCache = null;
