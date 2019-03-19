@@ -40,7 +40,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SQLMetadataSegmentManager;
+import org.apache.druid.metadata.SqlMetadataSegments;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -82,7 +82,7 @@ public class MaterializedViewSupervisorTest
   private TaskMaster taskMaster;
   private IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private MetadataSupervisorManager metadataSupervisorManager;
-  private SQLMetadataSegmentManager sqlMetadataSegmentManager;
+  private SqlMetadataSegments sqlMetadataSegments;
   private TaskQueue taskQueue;
   private MaterializedViewSupervisor supervisor;
   private MaterializedViewSupervisorSpec spec;
@@ -102,7 +102,7 @@ public class MaterializedViewSupervisorTest
         derbyConnector
     );
     metadataSupervisorManager = createMock(MetadataSupervisorManager.class);
-    sqlMetadataSegmentManager = createMock(SQLMetadataSegmentManager.class);
+    sqlMetadataSegments = createMock(SqlMetadataSegments.class);
     taskQueue = createMock(TaskQueue.class);
     taskQueue.start();
     objectMapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
@@ -121,7 +121,7 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlMetadataSegmentManager,
+        sqlMetadataSegments,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         createMock(AuthorizerMapper.class),
@@ -278,7 +278,7 @@ public class MaterializedViewSupervisorTest
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        sqlMetadataSegmentManager,
+        sqlMetadataSegments,
         indexerMetadataStorageCoordinator,
         new MaterializedViewTaskConfig(),
         createMock(AuthorizerMapper.class),

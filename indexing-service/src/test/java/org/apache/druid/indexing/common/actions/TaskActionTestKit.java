@@ -29,11 +29,11 @@ import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
-import org.apache.druid.metadata.MetadataSegmentManager;
-import org.apache.druid.metadata.MetadataSegmentManagerConfig;
+import org.apache.druid.metadata.MetadataSegments;
+import org.apache.druid.metadata.MetadataSegmentsConfig;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.metadata.SQLMetadataSegmentManager;
+import org.apache.druid.metadata.SqlMetadataSegments;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
@@ -48,7 +48,7 @@ public class TaskActionTestKit extends ExternalResource
   private TaskLockbox taskLockbox;
   private TestDerbyConnector testDerbyConnector;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private MetadataSegmentManager metadataSegmentManager;
+  private MetadataSegments metadataSegments;
   private TaskActionToolbox taskActionToolbox;
 
   public TaskLockbox getTaskLockbox()
@@ -61,9 +61,9 @@ public class TaskActionTestKit extends ExternalResource
     return metadataStorageCoordinator;
   }
 
-  public MetadataSegmentManager getMetadataSegmentManager()
+  public MetadataSegments getMetadataSegments()
   {
-    return metadataSegmentManager;
+    return metadataSegments;
   }
 
   public TaskActionToolbox getTaskActionToolbox()
@@ -86,9 +86,9 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageTablesConfig,
         testDerbyConnector
     );
-    metadataSegmentManager = new SQLMetadataSegmentManager(
+    metadataSegments = new SqlMetadataSegments(
         objectMapper,
-        Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
+        Suppliers.ofInstance(new MetadataSegmentsConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector
     );
@@ -116,7 +116,7 @@ public class TaskActionTestKit extends ExternalResource
     taskLockbox = null;
     testDerbyConnector = null;
     metadataStorageCoordinator = null;
-    metadataSegmentManager = null;
+    metadataSegments = null;
     taskActionToolbox = null;
   }
 }

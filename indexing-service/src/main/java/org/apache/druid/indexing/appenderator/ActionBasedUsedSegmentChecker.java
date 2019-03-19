@@ -45,35 +45,34 @@ public class ActionBasedUsedSegmentChecker implements UsedSegmentChecker
   }
 
   @Override
-  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> identifiers) throws IOException
+  public Set<DataSegment> findUsedSegments(Set<SegmentIdWithShardSpec> segmentIds) throws IOException
   {
     // Group by dataSource
-    final Map<String, Set<SegmentIdWithShardSpec>> identifiersByDataSource = new TreeMap<>();
-    for (SegmentIdWithShardSpec identifier : identifiers) {
-      if (!identifiersByDataSource.containsKey(identifier.getDataSource())) {
-        identifiersByDataSource.put(identifier.getDataSource(), new HashSet<>());
-      }
-      identifiersByDataSource.get(identifier.getDataSource()).add(identifier);
+    final Map<String, Set<SegmentIdWithShardSpec>> idsByDataSource = new TreeMap<>();
+    for (SegmentIdWithShardSpec segmentId : segmentIds) {
+      idsByDataSource.computeIfAbsent(segmentId.getDataSource(), i -> new HashSet<>()).add(segmentId);
     }
 
-    final Set<DataSegment> retVal = new HashSet<>();
+    final Set<DataSegment> usedSegments = new HashSet<>();
 
-    for (Map.Entry<String, Set<SegmentIdWithShardSpec>> entry : identifiersByDataSource.entrySet()) {
+    for (Map.Entry<String, Set<SegmentIdWithShardSpec>> entry : idsByDataSource.entrySet()) {
+      String dataSource = entry.getKey();
+      Set<SegmentIdWithShardSpec> segmentIdsInDataSource = entry.getValue();
       final List<Interval> intervals = JodaUtils.condenseIntervals(
-          Iterables.transform(entry.getValue(), input -> input.getInterval())
+          Iterables.transform(segmentIdsInDataSource, SegmentIdWithShardSpec::getInterval)
       );
 
       final List<DataSegment> usedSegmentsForIntervals = taskActionClient.submit(
-          new SegmentListUsedAction(entry.getKey(), null, intervals)
+          new SegmentListUsedAction(dataSource, null, intervals)
       );
 
       for (DataSegment segment : usedSegmentsForIntervals) {
-        if (identifiers.contains(SegmentIdWithShardSpec.fromDataSegment(segment))) {
-          retVal.add(segment);
+        if (segmentIds.contains(SegmentIdWithShardSpec.fromDataSegment(segment))) {
+          usedSegments.add(segment);
         }
       }
     }
 
-    return retVal;
+    return usedSegments;
   }
 }

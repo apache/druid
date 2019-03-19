@@ -30,9 +30,12 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.timeline.partition.ImmutablePartitionHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.PartitionHolder;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,47 +47,31 @@ import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.StreamSupport;
 
 /**
  * VersionedIntervalTimeline is a data structure that manages objects on a specific timeline.
  *
- * It associates a jodatime Interval and a generically-typed version with the object that is being stored.
+ * It associates an {@link Interval} and a generically-typed version with the object that is being stored.
  *
  * In the event of overlapping timeline entries, timeline intervals may be chunked. The underlying data associated
  * with a timeline entry remains unchanged when chunking occurs.
  *
- * After loading objects via the add() method, the lookup(Interval) method can be used to get the list of the most
- * recent objects (according to the version) that match the given interval.  The intent is that objects represent
- * a certain time period and when you do a lookup(), you are asking for all of the objects that you need to look
- * at in order to get a correct answer about that time period.
+ * After loading objects via the {@link #add} method, the {@link #lookup(Interval)} method can be used to get the list
+ * of the most recent objects (according to the version) that match the given interval. The intent is that objects
+ * represent a certain time period and when you do a {@link #lookup(Interval)}, you are asking for all of the objects
+ * that you need to look at in order to get a correct answer about that time period.
  *
- * The findOvershadowed() method returns a list of objects that will never be returned by a call to lookup() because
- * they are overshadowed by some other object.  This can be used in conjunction with the add() and remove() methods
- * to achieve "atomic" updates.  First add new items, then check if those items caused anything to be overshadowed, if
- * so, remove the overshadowed elements and you have effectively updated your data set without any user impact.
+ * The {@link #findOvershadowed} method returns a list of objects that will never be returned by a call to {@link
+ * #lookup} because they are overshadowed by some other object. This can be used in conjunction with the {@link #add}
+ * and {@link #remove} methods to achieve "atomic" updates.  First add new items, then check if those items caused
+ * anything to be overshadowed, if so, remove the overshadowed elements and you have effectively updated your data set
+ * without any user impact.
  */
 public class VersionedIntervalTimeline<VersionType, ObjectType> implements TimelineLookup<VersionType, ObjectType>
 {
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
-
-  final NavigableMap<Interval, TimelineEntry> completePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
-      Comparators.intervalsByStartThenEnd()
-  );
-  final NavigableMap<Interval, TimelineEntry> incompletePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
-      Comparators.intervalsByStartThenEnd()
-  );
-  private final Map<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = new HashMap<>();
-
-  private final Comparator<? super VersionType> versionComparator;
-
-  public VersionedIntervalTimeline(
-      Comparator<? super VersionType> versionComparator
-  )
-  {
-    this.versionComparator = versionComparator;
-  }
-
   public static VersionedIntervalTimeline<String, DataSegment> forSegments(Iterable<DataSegment> segments)
   {
     return forSegments(segments.iterator());
@@ -95,6 +82,26 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
     addSegments(timeline, segments);
     return timeline;
+  }
+
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
+
+  final NavigableMap<Interval, TimelineEntry> completePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
+      Comparators.intervalsByStartThenEnd()
+  );
+  final NavigableMap<Interval, TimelineEntry> incompletePartitionsTimeline = new TreeMap<Interval, TimelineEntry>(
+      Comparators.intervalsByStartThenEnd()
+  );
+  private final Map<Interval, TreeMap<VersionType, TimelineEntry>> allTimelineEntries = new HashMap<>();
+  private final AtomicInteger numObjects = new AtomicInteger();
+
+  private final Comparator<? super VersionType> versionComparator;
+
+  public VersionedIntervalTimeline(
+      Comparator<? super VersionType> versionComparator
+  )
+  {
+    this.versionComparator = versionComparator;
   }
 
   public static void addSegments(
@@ -113,6 +120,31 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
   {
     return allTimelineEntries;
+  }
+
+  /**
+   * Returns a lazy collection with all objects in this VersionedIntervalTimeline to be used for iteration or {@link
+   * Collection#stream()} transformation. The order of objects in this collection is unspecified.
+   *
+   * Note: iteration over the returned collection may not be as trivially cheap as, for example, iteration over an
+   * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned collection only
+   * once rather than several times.
+   */
+  public Collection<ObjectType> iterateAllObjects()
+  {
+    return CollectionUtils.createLazyCollectionFromStream(
+        () -> allTimelineEntries
+            .values()
+            .stream()
+            .flatMap((TreeMap<VersionType, TimelineEntry> entryMap) -> entryMap.values().stream())
+            .flatMap((TimelineEntry entry) -> StreamSupport.stream(entry.getPartitionHolder().spliterator(), false))
+            .map(PartitionChunk::getObject),
+        numObjects.get()
+    );
+  }
+
+  public int getNumObjects() {
+    return numObjects.get();
   }
 
   public void add(final Interval interval, VersionType version, PartitionChunk<ObjectType> object)
@@ -143,15 +175,19 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
           TreeMap<VersionType, TimelineEntry> versionEntry = new TreeMap<>(versionComparator);
           versionEntry.put(version, entry);
           allTimelineEntries.put(interval, versionEntry);
+          numObjects.incrementAndGet();
         } else {
           entry = exists.get(version);
 
           if (entry == null) {
             entry = new TimelineEntry(interval, version, new PartitionHolder<>(object));
             exists.put(version, entry);
+            numObjects.incrementAndGet();
           } else {
             PartitionHolder<ObjectType> partitionHolder = entry.getPartitionHolder();
-            partitionHolder.add(object);
+            if (partitionHolder.add(object)) {
+              numObjects.incrementAndGet();
+            }
           }
         }
 
@@ -174,6 +210,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     }
   }
 
+  @Nullable
   public PartitionChunk<ObjectType> remove(Interval interval, VersionType version, PartitionChunk<ObjectType> chunk)
   {
     try {
@@ -189,7 +226,11 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
         return null;
       }
 
-      PartitionChunk<ObjectType> retVal = entry.getPartitionHolder().remove(chunk);
+      PartitionChunk<ObjectType> removedChunk = entry.getPartitionHolder().remove(chunk);
+      if (removedChunk == null) {
+        return null;
+      }
+      numObjects.decrementAndGet();
       if (entry.getPartitionHolder().isEmpty()) {
         versionEntries.remove(version);
         if (versionEntries.isEmpty()) {
@@ -201,7 +242,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
       remove(completePartitionsTimeline, interval, entry, false);
 
-      return retVal;
+      return removedChunk;
     }
     finally {
       lock.writeLock().unlock();
@@ -217,9 +258,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
         if (entry.getKey().equals(interval) || entry.getKey().contains(interval)) {
           TimelineEntry foundEntry = entry.getValue().get(version);
           if (foundEntry != null) {
-            return new ImmutablePartitionHolder<ObjectType>(
-                foundEntry.getPartitionHolder()
-            );
+            return new ImmutablePartitionHolder<>(foundEntry.getPartitionHolder());
           }
         }
       }

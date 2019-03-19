@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.helper;
 
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -32,12 +33,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.LoadQueuePeon;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.PartitionChunk;
-
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 /**
  */
@@ -214,14 +210,14 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
           );
         });
 
-    coordinator.getSegmentAvailability().object2LongEntrySet().forEach(
-        (final Object2LongMap.Entry<String> entry) -> {
+    coordinator.computeNumsUnavailableUsedSegmentsPerDataSource().object2IntEntrySet().forEach(
+        (final Object2IntMap.Entry<String> entry) -> {
           final String dataSource = entry.getKey();
-          final long count = entry.getLongValue();
+          final int numUnavailableUsedSegmentsInDataSource = entry.getIntValue();
           emitter.emit(
               new ServiceMetricEvent.Builder()
                   .setDimension(DruidMetrics.DATASOURCE, dataSource).build(
-                  "segment/unavailable/count", count
+                  "segment/unavailable/count", numUnavailableUsedSegmentsInDataSource
               )
           );
         }
@@ -263,28 +259,25 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     );
 
     // Emit segment metrics
-    final Stream<DataSegment> allSegments = params
-        .getDataSources()
-        .values()
-        .stream()
-        .flatMap(timeline -> timeline.getAllTimelineEntries().values().stream())
-        .flatMap(entryMap -> entryMap.values().stream())
-        .flatMap(entry -> StreamSupport.stream(entry.getPartitionHolder().spliterator(), false))
-        .map(PartitionChunk::getObject);
-
-    allSegments
-        .collect(Collectors.groupingBy(DataSegment::getDataSource))
-        .forEach((final String name, final List<DataSegment> segments) -> {
-          final long size = segments.stream().mapToLong(DataSegment::getSize).sum();
+    params.getDataSourcesWithUsedSegments().forEach(
+        (String dataSource, VersionedIntervalTimeline<String, DataSegment> dataSourceWithUsedSegments) -> {
+          long totalSizeOfUsedSegments = dataSourceWithUsedSegments
+              .iterateAllObjects()
+              .stream()
+              .mapToLong(DataSegment::getSize)
+              .sum();
           emitter.emit(
-              new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, name).build("segment/size", size)
+              new ServiceMetricEvent.Builder()
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/size", totalSizeOfUsedSegments)
           );
           emitter.emit(
               new ServiceMetricEvent.Builder()
-                  .setDimension(DruidMetrics.DATASOURCE, name)
-                  .build("segment/count", segments.size())
+                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                  .build("segment/count", dataSourceWithUsedSegments.getNumObjects())
           );
-        });
+        }
+    );
 
     return params;
   }

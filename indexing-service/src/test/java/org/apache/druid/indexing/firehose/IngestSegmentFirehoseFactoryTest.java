@@ -160,7 +160,7 @@ public class IngestSegmentFirehoseFactoryTest
     final CoordinatorClient cc = new CoordinatorClient(null, null)
     {
       @Override
-      public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+      public List<DataSegment> getUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
       {
         return ImmutableList.copyOf(segmentSet);
       }

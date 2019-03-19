@@ -126,7 +126,7 @@ public class CoordinatorClient
     }
   }
 
-  public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+  public List<DataSegment> getUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
   {
     try {
       FullResponseHolder response = druidLeaderClient.go(
@@ -141,7 +141,7 @@ public class CoordinatorClient
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
-            "Error while fetching database segment data source segments status[%s] content[%s]",
+            "Error while fetching used segments in a data source for intervals: status[%s] content[%s]",
             response.getStatus(),
             response.getContent()
         );

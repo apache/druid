@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -75,9 +76,9 @@ import java.util.stream.Collectors;
 /**
  */
 @ManageLifecycle
-public class SQLMetadataSegmentManager implements MetadataSegmentManager
+public class SqlMetadataSegments implements MetadataSegments
 {
-  private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
+  private static final EmittingLogger log = new EmittingLogger(SqlMetadataSegments.class);
 
   /**
    * Use to synchronize {@link #start()}, {@link #stop()}, {@link #poll()}, and {@link #isStarted()}. These methods
@@ -98,16 +99,16 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final Object pollLock = new Object();
 
   private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataSegmentManagerConfig> config;
+  private final Supplier<MetadataSegmentsConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
 
   private ConcurrentHashMap<String, DruidDataSource> dataSources = new ConcurrentHashMap<>();
 
-  /** The number of times this SQLMetadataSegmentManager was started. */
+  /** The number of times this SqlMetadataSegments was started. */
   private long startCount = 0;
   /**
-   * Equal to the current {@link #startCount} value, if the SQLMetadataSegmentManager is currently started; -1 if
+   * Equal to the current {@link #startCount} value, if the SqlMetadataSegments is currently started; -1 if
    * currently stopped.
    *
    * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
@@ -121,9 +122,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private ScheduledExecutorService exec = null;
 
   @Inject
-  public SQLMetadataSegmentManager(
+  public SqlMetadataSegments(
       ObjectMapper jsonMapper,
-      Supplier<MetadataSegmentManagerConfig> config,
+      Supplier<MetadataSegmentsConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       SQLMetadataConnector connector
   )
@@ -149,7 +150,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       currentStartOrder = startCount;
       final long localStartOrder = currentStartOrder;
 
-      exec = Execs.scheduledSingleThreaded("DatabaseSegmentManager-Exec--%d");
+      exec = Execs.scheduledSingleThreaded(getClass().getName() + "-Exec--%d");
 
       final Duration delay = config.get().getPollDuration().toStandardDuration();
       exec.scheduleWithFixedDelay(
@@ -170,7 +171,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       // poll() is synchronized together with start(), stop() and isStarted() to ensure that when stop() exits, poll()
       // won't actually run anymore after that (it could only enter the syncrhonized section and exit immediately
       // because the localStartedOrder doesn't match the new currentStartOrder). It's needed to avoid flakiness in
-      // SQLMetadataSegmentManagerTest. See https://github.com/apache/incubator-druid/issues/6028
+      // SqlMetadataSegmentsTest. See https://github.com/apache/incubator-druid/issues/6028
       ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
       lock.lock();
       try {
@@ -181,7 +182,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         }
       }
       catch (Exception e) {
-        log.makeAlert(e, "uncaught exception in segment manager polling thread").emit();
+        log.makeAlert(e, "uncaught exception in " + getClass().getName() + "'s polling thread").emit();
       }
       finally {
         lock.unlock();
@@ -211,7 +212,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean enableDataSource(final String dataSource)
+  public boolean tryMarkAsUsedAllSegmentsInDataSource(final String dataSource)
   {
     try {
       final IDBI dbi = connector.getDBI();
@@ -244,7 +245,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
       final List<DataSegment> segments = new ArrayList<>();
       List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
-          Intervals.of("0000-01-01/3000-01-01")
+          Intervals.ETERNITY
       );
       for (TimelineObjectHolder<String, DataSegment> objectHolder : timelineObjectHolders) {
         for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
@@ -254,7 +255,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
       if (segments.isEmpty()) {
         log.warn("No segments found in the database!");
-        return false;
+        return true;
       }
 
       dbi.withHandle(
@@ -282,7 +283,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       );
     }
     catch (Exception e) {
-      log.error(e, "Exception enabling datasource %s", dataSource);
+      log.error(e, "Exception marking all segments as used in the data source %s", dataSource);
       return false;
     }
 
@@ -290,7 +291,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean enableSegment(final String segmentId)
+  public boolean tryMarkSegmentAsUsed(final String segmentId)
   {
     try {
       connector.getDBI().withHandle(
@@ -308,7 +309,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       );
     }
     catch (Exception e) {
-      log.error(e, "Exception enabling segment %s", segmentId);
+      log.error(e, "Exception marking segment %s as used", segmentId);
       return false;
     }
 
@@ -316,7 +317,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean removeDataSource(final String dataSource)
+  public boolean tryMarkAsUnusedAllSegmentsInDataSource(final String dataSource)
   {
     try {
       final int removed = connector.getDBI().withHandle(
@@ -340,7 +341,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean removeSegment(String dataSourceName, final String segmentId)
+  public boolean tryMarkSegmentAsUnused(String dataSourceName, final String segmentId)
   {
     try {
       final boolean removed = removeSegmentFromTable(segmentId);
@@ -371,7 +372,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean removeSegment(SegmentId segmentId)
+  public boolean tryMarkSegmentAsUnused(SegmentId segmentId)
   {
     try {
       final boolean removed = removeSegmentFromTable(segmentId.toString());
@@ -420,14 +421,20 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
   @Override
   @Nullable
-  public ImmutableDruidDataSource getDataSource(String dataSourceName)
+  public ImmutableDruidDataSource prepareImmutableDataSourceWithUsedSegments(String dataSourceName)
   {
     final DruidDataSource dataSource = dataSources.get(dataSourceName);
     return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
   }
 
   @Override
-  public Collection<ImmutableDruidDataSource> getDataSources()
+  public @Nullable DruidDataSource getDataSourceWithUsedSegments(String dataSource)
+  {
+    return dataSources.get(dataSource);
+  }
+
+  @Override
+  public Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments()
   {
     return dataSources.values()
                       .stream()
@@ -436,13 +443,13 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public Iterable<DataSegment> iterateAllSegments()
+  public Iterable<DataSegment> iterateAllUsedSegments()
   {
     return () -> dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()).iterator();
   }
 
   @Override
-  public Collection<String> getAllDataSourceNames()
+  public Collection<String> retrieveAllDataSourceNames()
   {
     return connector.getDBI().withHandle(
         handle -> handle.createQuery(
@@ -484,6 +491,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  /** This method is extracted from {@link #poll()} solely to reduce code nesting. */
+  @GuardedBy("pollLock")
   private void doPoll()
   {
     log.debug("Starting polling of segment table");

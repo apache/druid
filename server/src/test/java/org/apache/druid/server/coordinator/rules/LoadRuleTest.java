@@ -182,7 +182,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -253,7 +253,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -303,7 +303,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -393,7 +393,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -482,7 +482,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -541,7 +541,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -614,7 +614,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -671,7 +671,7 @@ public class LoadRuleTest
             .withReplicationManager(throttler)
             .withBalancerStrategy(mockBalancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withAvailableSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
+            .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
             .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
             .build();
 
@@ -728,7 +728,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -785,7 +785,7 @@ public class LoadRuleTest
                                      .withReplicationManager(throttler)
                                      .withBalancerStrategy(mockBalancerStrategy)
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegmentsInTest(segment).build(),
+                                     .withUsedSegmentsInTest(segment).build(),
         segment
     );
 
@@ -838,7 +838,7 @@ public class LoadRuleTest
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-        .withAvailableSegmentsInTest(segment1, segment2)
+        .withUsedSegmentsInTest(segment1, segment2)
         .build();
     CoordinatorStats stats = rule.run(
         null,
@@ -904,7 +904,7 @@ public class LoadRuleTest
         .withReplicationManager(throttler)
         .withBalancerStrategy(mockBalancerStrategy)
         .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-        .withAvailableSegmentsInTest(segment1)
+        .withUsedSegmentsInTest(segment1)
         .build();
     CoordinatorStats stats = rule.run(
         null,

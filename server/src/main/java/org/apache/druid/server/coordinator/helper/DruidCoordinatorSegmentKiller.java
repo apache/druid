@@ -26,7 +26,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.metadata.MetadataSegments;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.joda.time.Interval;
@@ -46,12 +46,12 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   private long lastKillTime = 0;
 
 
-  private final MetadataSegmentManager segmentManager;
+  private final MetadataSegments metadataSegments;
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
   public DruidCoordinatorSegmentKiller(
-      MetadataSegmentManager segmentManager,
+      MetadataSegments metadataSegments,
       IndexingServiceClient indexingServiceClient,
       DruidCoordinatorConfig config
   )
@@ -75,7 +75,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
         this.maxSegmentsToKill
     );
 
-    this.segmentManager = segmentManager;
+    this.metadataSegments = metadataSegments;
     this.indexingServiceClient = indexingServiceClient;
   }
 
@@ -83,21 +83,26 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillAllDataSources();
-    Collection<String> whitelist = params.getCoordinatorDynamicConfig().getKillableDataSources();
+    Collection<String> specificDataSourcesToKill = params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKill();
 
-    if (killAllDataSources && whitelist != null && !whitelist.isEmpty()) {
-      log.error("killAllDataSources can't be true when killDataSourceWhitelist is non-empty, No kill tasks are scheduled.");
+    if (killAllDataSources && specificDataSourcesToKill != null && !specificDataSourcesToKill.isEmpty()) {
+      log.error(
+          "killAllDataSources can't be true when specificDataSourcesToKill is non-empty. No kill tasks are scheduled."
+      );
       return params;
     }
 
+    Collection<String> dataSourcesToKill = specificDataSourcesToKill;
     if (killAllDataSources) {
-      whitelist = segmentManager.getAllDataSourceNames();
+      dataSourcesToKill = metadataSegments.retrieveAllDataSourceNames();
     }
 
-    if (whitelist != null && whitelist.size() > 0 && (lastKillTime + period) < System.currentTimeMillis()) {
+    if (dataSourcesToKill != null &&
+        dataSourcesToKill.size() > 0 &&
+        (lastKillTime + period) < System.currentTimeMillis()) {
       lastKillTime = System.currentTimeMillis();
 
-      for (String dataSource : whitelist) {
+      for (String dataSource : dataSourcesToKill) {
         final Interval intervalToKill = findIntervalForKillTask(dataSource, maxSegmentsToKill);
         if (intervalToKill != null) {
           try {
@@ -119,7 +124,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   @VisibleForTesting
   Interval findIntervalForKillTask(String dataSource, int limit)
   {
-    List<Interval> unusedSegmentIntervals = segmentManager.getUnusedSegmentIntervals(
+    List<Interval> unusedSegmentIntervals = metadataSegments.getUnusedSegmentIntervals(
         dataSource,
         new Interval(DateTimes.EPOCH, DateTimes.nowUtc().minus(retainDuration)),
         limit

@@ -63,7 +63,7 @@ public class DruidCoordinatorRuleRunnerTest
 {
   private DruidCoordinator coordinator;
   private LoadQueuePeon mockPeon;
-  private List<DataSegment> availableSegments;
+  private List<DataSegment> usedSegments;
   private DruidCoordinatorRuleRunner ruleRunner;
   private ServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
@@ -78,9 +78,9 @@ public class DruidCoordinatorRuleRunnerTest
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
 
     DateTime start = DateTimes.of("2012-01-01");
-    availableSegments = new ArrayList<>();
+    usedSegments = new ArrayList<>();
     for (int i = 0; i < 24; i++) {
-      availableSegments.add(
+      usedSegments.add(
           new DataSegment(
               "test",
               new Interval(start, start.plusHours(1)),
@@ -198,7 +198,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
+            .withUsedSegmentsInTest(usedSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .withBalancerStrategy(balancerStrategy)
@@ -304,7 +304,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
+            .withUsedSegmentsInTest(usedSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .withBalancerStrategy(balancerStrategy)
@@ -361,8 +361,8 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    for (DataSegment availableSegment : availableSegments) {
-      normServer.addDataSegment(availableSegment);
+    for (DataSegment segment : usedSegments) {
+      normServer.addDataSegment(segment);
     }
 
     DruidCluster druidCluster = new DruidCluster(
@@ -403,7 +403,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
+            .withUsedSegmentsInTest(usedSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(segmentReplicantLookup)
             .withBalancerStrategy(balancerStrategy)
@@ -478,7 +478,7 @@ public class DruidCoordinatorRuleRunnerTest
         new DruidCoordinatorRuntimeParams.Builder()
             .withEmitter(emitter)
             .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
+            .withUsedSegmentsInTest(usedSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .withBalancerStrategy(balancerStrategy)
@@ -540,7 +540,7 @@ public class DruidCoordinatorRuleRunnerTest
         new DruidCoordinatorRuntimeParams.Builder()
             .withEmitter(emitter)
             .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
+            .withUsedSegmentsInTest(usedSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
@@ -558,7 +558,7 @@ public class DruidCoordinatorRuleRunnerTest
     mockEmptyPeon();
 
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    coordinator.removeSegment(EasyMock.anyObject());
+    coordinator.tryMarkSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(coordinator);
 
@@ -582,7 +582,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    for (DataSegment segment : availableSegments) {
+    for (DataSegment segment : usedSegments) {
       server.addDataSegment(segment);
     }
 
@@ -609,7 +609,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
+        .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
@@ -653,7 +653,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    server1.addDataSegment(availableSegments.get(0));
+    server1.addDataSegment(usedSegments.get(0));
 
     DruidServer server2 = new DruidServer(
         "serverNorm2",
@@ -664,7 +664,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    for (DataSegment segment : availableSegments) {
+    for (DataSegment segment : usedSegments) {
       server2.addDataSegment(segment);
     }
 
@@ -695,7 +695,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
+        .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
@@ -742,7 +742,7 @@ public class DruidCoordinatorRuleRunnerTest
         "hot",
         0
     );
-    server1.addDataSegment(availableSegments.get(0));
+    server1.addDataSegment(usedSegments.get(0));
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
@@ -752,7 +752,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    for (DataSegment segment : availableSegments) {
+    for (DataSegment segment : usedSegments) {
       server2.addDataSegment(segment);
     }
 
@@ -786,7 +786,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
+        .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
@@ -840,7 +840,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    for (DataSegment segment : availableSegments) {
+    for (DataSegment segment : usedSegments) {
       server2.addDataSegment(segment);
     }
     DruidCluster druidCluster = new DruidCluster(
@@ -865,7 +865,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
+        .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
@@ -908,7 +908,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    server1.addDataSegment(availableSegments.get(0));
+    server1.addDataSegment(usedSegments.get(0));
     DruidServer server2 = new DruidServer(
         "serverNorm2",
         "hostNorm2",
@@ -918,7 +918,7 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    server2.addDataSegment(availableSegments.get(1));
+    server2.addDataSegment(usedSegments.get(1));
     DruidServer server3 = new DruidServer(
         "serverNorm3",
         "hostNorm3",
@@ -928,8 +928,8 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    server3.addDataSegment(availableSegments.get(1));
-    server3.addDataSegment(availableSegments.get(2));
+    server3.addDataSegment(usedSegments.get(1));
+    server3.addDataSegment(usedSegments.get(2));
 
     mockPeon.dropSegment(EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
@@ -963,7 +963,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(availableSegments)
+        .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
@@ -1047,7 +1047,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
+            .withUsedSegmentsInTest(usedSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .withBalancerStrategy(balancerStrategy)
@@ -1077,7 +1077,7 @@ public class DruidCoordinatorRuleRunnerTest
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
             .withEmitter(emitter)
-            .withAvailableSegmentsInTest(Collections.singletonList(overFlowSegment))
+            .withUsedSegmentsInTest(Collections.singletonList(overFlowSegment))
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
@@ -1114,7 +1114,7 @@ public class DruidCoordinatorRuleRunnerTest
                                     .build()
         )
         .atLeastOnce();
-    coordinator.removeSegment(EasyMock.anyObject());
+    coordinator.tryMarkSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -1180,7 +1180,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
+            .withUsedSegmentsInTest(usedSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
             .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
@@ -1231,8 +1231,8 @@ public class DruidCoordinatorRuleRunnerTest
         1,
         0
     );
-    List<DataSegment> longerAvailableSegments = Lists.newArrayList(availableSegments);
-    longerAvailableSegments.add(overFlowSegment);
+    List<DataSegment> longerUsedSegments = Lists.newArrayList(usedSegments);
+    longerUsedSegments.add(overFlowSegment);
 
     DruidServer server1 = new DruidServer(
         "serverNorm1",
@@ -1243,8 +1243,8 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    for (DataSegment availableSegment : longerAvailableSegments) {
-      server1.addDataSegment(availableSegment);
+    for (DataSegment segment : longerUsedSegments) {
+      server1.addDataSegment(segment);
     }
     DruidServer server2 = new DruidServer(
         "serverNorm2",
@@ -1255,8 +1255,8 @@ public class DruidCoordinatorRuleRunnerTest
         "normal",
         0
     );
-    for (DataSegment availableSegment : longerAvailableSegments) {
-      server2.addDataSegment(availableSegment);
+    for (DataSegment segment : longerUsedSegments) {
+      server2.addDataSegment(segment);
     }
 
     DruidCluster druidCluster = new DruidCluster(
@@ -1286,7 +1286,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
-        .withAvailableSegmentsInTest(longerAvailableSegments)
+        .withUsedSegmentsInTest(longerUsedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
@@ -1305,7 +1305,7 @@ public class DruidCoordinatorRuleRunnerTest
   @Test
   public void testRulesRunOnNonOvershadowedSegmentsOnly()
   {
-    Set<DataSegment> availableSegments = new HashSet<>();
+    Set<DataSegment> usedSegments = new HashSet<>();
     DataSegment v1 = new DataSegment(
         "test",
         Intervals.of("2012-01-01/2012-01-02"),
@@ -1328,8 +1328,8 @@ public class DruidCoordinatorRuleRunnerTest
         IndexIO.CURRENT_VERSION_ID,
         1
     );
-    availableSegments.add(v1);
-    availableSegments.add(v2);
+    usedSegments.add(v1);
+    usedSegments.add(v2);
 
     mockCoordinator();
     mockPeon.loadSegment(EasyMock.eq(v2), EasyMock.anyObject());
@@ -1369,7 +1369,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params =
         new DruidCoordinatorRuntimeParams.Builder()
             .withDruidCluster(druidCluster)
-            .withAvailableSegmentsInTest(availableSegments)
+            .withUsedSegmentsInTest(usedSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .withBalancerStrategy(balancerStrategy)
@@ -1385,9 +1385,9 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getTiers("unassignedCount").isEmpty());
     Assert.assertTrue(stats.getTiers("unassignedSize").isEmpty());
 
-    Assert.assertEquals(2, availableSegments.size());
-    Assert.assertEquals(availableSegments, params.getAvailableSegments());
-    Assert.assertEquals(availableSegments, afterParams.getAvailableSegments());
+    Assert.assertEquals(2, usedSegments.size());
+    Assert.assertEquals(usedSegments, params.getUsedSegments());
+    Assert.assertEquals(usedSegments, afterParams.getUsedSegments());
 
     EasyMock.verify(mockPeon);
     exec.shutdown();
@@ -1396,7 +1396,7 @@ public class DruidCoordinatorRuleRunnerTest
   private void mockCoordinator()
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    coordinator.removeSegment(EasyMock.anyObject());
+    coordinator.tryMarkSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
   }

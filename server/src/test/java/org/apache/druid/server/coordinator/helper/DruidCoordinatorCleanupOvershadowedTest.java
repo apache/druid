@@ -48,7 +48,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
 {
   DruidCoordinatorCleanupOvershadowed druidCoordinatorCleanupOvershadowed;
   DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
-  private List<DataSegment> availableSegments;
+  private List<DataSegment> usedSegments;
   DateTime start = DateTimes.of("2012-01-01");
   DruidCluster druidCluster;
   private LoadQueuePeon mockPeon = EasyMock.createMock(LoadQueuePeon.class);
@@ -71,7 +71,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
   public void testRun()
   {
     druidCoordinatorCleanupOvershadowed = new DruidCoordinatorCleanupOvershadowed(coordinator);
-    availableSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
+    usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     // Dummy values for comparisons in TreeSet
     EasyMock.expect(mockPeon.getLoadQueueSize())
@@ -103,8 +103,8 @@ public class DruidCoordinatorCleanupOvershadowedTest
             .andReturn(ImmutableSet.of(segmentV1, segmentV2))
             .anyTimes();
     EasyMock.expect(druidDataSource.getName()).andReturn("test").anyTimes();
-    coordinator.removeSegment(segmentV1);
-    coordinator.removeSegment(segmentV0);
+    coordinator.tryMarkSegmentAsUnused(segmentV1);
+    coordinator.tryMarkSegmentAsUnused(segmentV0);
     EasyMock.expectLastCall();
     EasyMock.replay(mockPeon, coordinator, druidServer, druidDataSource);
 
@@ -119,7 +119,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder()
-        .withAvailableSegmentsInTest(availableSegments)
+        .withUsedSegmentsInTest(usedSegments)
         .withCoordinatorStats(new CoordinatorStats())
         .withDruidCluster(druidCluster)
         .build();

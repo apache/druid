@@ -479,7 +479,7 @@ public class SystemSchema extends AbstractSchema
       final List<ImmutableDruidServer> druidServers = serverView.getDruidServers();
       final int serverSegmentsTableSize = SERVER_SEGMENTS_SIGNATURE.getRowOrder().size();
       for (ImmutableDruidServer druidServer : druidServers) {
-        for (DataSegment segment : druidServer.getLazyAllSegments()) {
+        for (DataSegment segment : druidServer.iterateAllSegments()) {
           Object[] row = new Object[serverSegmentsTableSize];
           row[0] = druidServer.getHost();
           row[1] = segment.getId();

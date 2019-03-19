@@ -254,7 +254,7 @@ public class CoordinatorDynamicConfigTest
       int expectedReplicationThrottleLimit,
       int expectedBalancerComputeThreads,
       boolean expectedEmitingBalancingStats,
-      Set<String> expectedKillableDatasources,
+      Set<String> expectedSpecificDataSourcesToKill,
       boolean expectedKillAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> decommissioning,
@@ -269,7 +269,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
     Assert.assertEquals(expectedEmitingBalancingStats, config.emitBalancingStats());
-    Assert.assertEquals(expectedKillableDatasources, config.getKillableDataSources());
+    Assert.assertEquals(expectedSpecificDataSourcesToKill, config.getSpecificDataSourcesToKill());
     Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
     Assert.assertEquals(decommissioning, config.getDecommissioningNodes());

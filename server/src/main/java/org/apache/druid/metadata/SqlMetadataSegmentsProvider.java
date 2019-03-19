@@ -26,18 +26,18 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 
 
-public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManagerProvider
+public class SqlMetadataSegmentsProvider implements MetadataSegmentsProvider
 {
   private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataSegmentManagerConfig> config;
+  private final Supplier<MetadataSegmentsConfig> config;
   private final Supplier<MetadataStorageTablesConfig> storageConfig;
   private final SQLMetadataConnector connector;
   private final Lifecycle lifecycle;
 
   @Inject
-  public SQLMetadataSegmentManagerProvider(
+  public SqlMetadataSegmentsProvider(
       ObjectMapper jsonMapper,
-      Supplier<MetadataSegmentManagerConfig> config,
+      Supplier<MetadataSegmentsConfig> config,
       Supplier<MetadataStorageTablesConfig> storageConfig,
       SQLMetadataConnector connector,
       Lifecycle lifecycle
@@ -51,7 +51,7 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
   }
 
   @Override
-  public MetadataSegmentManager get()
+  public MetadataSegments get()
   {
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -70,7 +70,7 @@ public class SQLMetadataSegmentManagerProvider implements MetadataSegmentManager
         }
     );
 
-    return new SQLMetadataSegmentManager(
+    return new SqlMetadataSegments(
         jsonMapper,
         config,
         storageConfig,

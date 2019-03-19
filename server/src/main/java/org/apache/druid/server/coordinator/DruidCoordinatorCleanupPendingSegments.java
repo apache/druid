@@ -88,7 +88,7 @@ public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorH
     // If there is no running/pending/waiting/complete tasks, pendingSegmentsCleanupEndTime is
     // (DateTimes.nowUtc() - KEEP_PENDING_SEGMENTS_OFFSET).
     final DateTime pendingSegmentsCleanupEndTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
-    for (String dataSource : params.getDataSources().keySet()) {
+    for (String dataSource : params.getDataSourcesWithUsedSegments().keySet()) {
       if (!params.getCoordinatorDynamicConfig().getProtectedPendingSegmentDatasources().contains(dataSource)) {
         log.info(
             "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",

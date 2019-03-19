@@ -338,7 +338,7 @@ public class DruidCoordinatorSegmentCompactorTest
   {
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .newBuilder()
-        .withDataSources(dataSources)
+        .setDataSourcesWithUsedSegments(dataSources)
         .withCompactionConfig(CoordinatorCompactionConfig.from(createCompactionConfigs(keepSegmentGranularity)))
         .build();
     return compactor.run(params).getCoordinatorStats();

@@ -30,13 +30,13 @@ $(document).ready(function() {
       }
   });
 
-  $("#enable_dialog").dialog({
+  $("#use_dialog").dialog({
       autoOpen: false,
       modal:true,
       resizeable: false,
       buttons: {
         Yes : function() {
-          var selected = $('#datasources option:selected').text();
+          var selected = $('#data_sources option:selected').text();
           $.ajax({
             type: 'POST',
             url:'/druid/coordinator/v1/datasources/' + selected,
@@ -44,12 +44,12 @@ $(document).ready(function() {
             contentType:"application/json; charset=utf-8",
             dataType:"text",
             error: function(xhr, status, error) {
-              $("#enable_dialog").dialog("close");
+              $("#use_dialog").dialog("close");
               $("#error_dialog").html(xhr.responseText);
               $("#error_dialog").dialog("open");
             },
             success: function(data, status, xhr) {
-              $("#enable_dialog").dialog("close");
+              $("#use_dialog").dialog("close");
             }
           });
         },
@@ -59,13 +59,13 @@ $(document).ready(function() {
       }
   });
 
-  $("#disable_dialog").dialog({
+  $("#unuse_dialog").dialog({
     autoOpen: false,
     modal:true,
     resizeable: false,
     buttons: {
       Yes : function() {
-        var selected = $('#datasources option:selected').text();
+        var selected = $('#data_sources option:selected').text();
         $.ajax({
           type: 'DELETE',
           url:'/druid/coordinator/v1/datasources/' + selected,
@@ -73,12 +73,12 @@ $(document).ready(function() {
           contentType:"application/json; charset=utf-8",
           dataType:"text",
           error: function(xhr, status, error) {
-            $("#disable_dialog").dialog("close");
+            $("#unuse_dialog").dialog("close");
             $("#error_dialog").html(xhr.responseText);
             $("#error_dialog").dialog("open");
           },
           success: function(data, status, xhr) {
-            $("#disable_dialog").dialog("close");
+            $("#unuse_dialog").dialog("close");
           }
         });
       },
@@ -88,27 +88,27 @@ $(document).ready(function() {
     }
   });
 
-  $.getJSON("/druid/coordinator/v1/metadata/datasources", function(enabled_datasources) {
-    $.each(enabled_datasources, function(index, datasource) {
-      $('#enabled_datasources').append($('<li>' + datasource + '</li>'));
+  $.getJSON("/druid/coordinator/v1/metadata/datasources", function(used_data_sources) {
+    $.each(used_data_sources, function(index, data_source) {
+      $('#used_data_sources').append($('<li>' + data_source + '</li>'));
     });
 
-    $.getJSON("/druid/coordinator/v1/metadata/datasources?includeDisabled", function(db_datasources) {
-      var disabled_datasources = _.difference(db_datasources, enabled_datasources);
-      $.each(disabled_datasources, function(index, datasource) {
-        $('#disabled_datasources').append($('<li>' + datasource + '</li>'));
+    $.getJSON("/druid/coordinator/v1/metadata/datasources?includeUnused", function(all_data_sources) {
+      var unused_data_sources = _.difference(all_data_sources, used_data_sources);
+      $.each(unused_data_sources, function(index, data_source) {
+        $('#unused_data_sources').append($('<li>' + data_source + '</li>'));
       });
-      $.each(db_datasources, function(index, datasource) {
-        $('#datasources').append($('<option></option>').val(datasource).text(datasource));
+      $.each(all_data_sources, function(index, data_source) {
+        $('#data_sources').append($('<option></option>').val(data_source).text(data_source));
       });
     });
   });
 
-  $("#enable").click(function() {
-    $("#enable_dialog").dialog("open");
+  $("#use").click(function() {
+    $("#use_dialog").dialog("open");
   });
 
-  $('#disable').click(function (){
-    $("#disable_dialog").dialog("open")
+  $("#unuse").click(function() {
+    $("#unuse_dialog").dialog("open");
   });
 });

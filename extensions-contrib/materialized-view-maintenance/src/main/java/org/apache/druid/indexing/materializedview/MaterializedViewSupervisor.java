@@ -46,7 +46,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SQLMetadataSegmentManager;
+import org.apache.druid.metadata.SqlMetadataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -66,13 +66,12 @@ import java.util.concurrent.TimeUnit;
 public class MaterializedViewSupervisor implements Supervisor
 {
   private static final EmittingLogger log = new EmittingLogger(MaterializedViewSupervisor.class);
-  private static final Interval ALL_INTERVAL = Intervals.of("0000-01-01/3000-01-01");
   private static final int DEFAULT_MAX_TASK_COUNT = 1;
   // there is a lag between derivatives and base dataSource, to prevent repeatedly building for some delay data. 
   private static final long DEFAULT_MIN_DATA_LAG_MS = 24 * 3600 * 1000L;
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final SQLMetadataSegmentManager segmentManager;
+  private final SqlMetadataSegments metadataSegments;
   private final MaterializedViewSupervisorSpec spec;
   private final TaskMaster taskMaster;
   private final TaskStorage taskStorage;
@@ -98,7 +97,7 @@ public class MaterializedViewSupervisor implements Supervisor
       TaskMaster taskMaster,
       TaskStorage taskStorage,
       MetadataSupervisorManager metadataSupervisorManager,
-      SQLMetadataSegmentManager segmentManager,
+      SqlMetadataSegments metadataSegments,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       MaterializedViewTaskConfig config,
       MaterializedViewSupervisorSpec spec
@@ -107,7 +106,7 @@ public class MaterializedViewSupervisor implements Supervisor
     this.taskMaster = taskMaster;
     this.taskStorage = taskStorage;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
-    this.segmentManager = segmentManager;
+    this.metadataSegments = metadataSegments;
     this.metadataSupervisorManager = metadataSupervisorManager;
     this.config = config;
     this.spec = spec;
@@ -319,17 +318,14 @@ public class MaterializedViewSupervisor implements Supervisor
     // Pair<interval -> version, interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> derivativeSegmentsSnapshot =
         getVersionAndBaseSegments(
-            metadataStorageCoordinator.getUsedSegmentsForInterval(
-                dataSource,
-                ALL_INTERVAL
-            )
+            metadataStorageCoordinator.getUsedSegmentsForInterval(dataSource, Intervals.ETERNITY)
         );
     // Pair<interval -> max(created_date), interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
         getMaxCreateDateAndBaseSegments(
             metadataStorageCoordinator.getUsedSegmentAndCreatedDateForInterval(
                 spec.getBaseDataSource(),
-                ALL_INTERVAL
+                Intervals.ETERNITY
             )
         );
     // baseSegments are used to create HadoopIndexTask
@@ -365,7 +361,7 @@ public class MaterializedViewSupervisor implements Supervisor
     // drop derivative segments which interval equals the interval in toDeleteBaseSegments 
     for (Interval interval : toDropInterval.keySet()) {
       for (DataSegment segment : derivativeSegments.get(interval)) {
-        segmentManager.removeSegment(segment.getId());
+        metadataSegments.tryMarkSegmentAsUnused(segment.getId());
       }
     }
     // data of the latest interval will be built firstly.
@@ -472,8 +468,10 @@ public class MaterializedViewSupervisor implements Supervisor
   private void clearSegments()
   {
     log.info("Clear all metadata of dataSource %s", dataSource);
-    metadataStorageCoordinator.deletePendingSegments(dataSource, ALL_INTERVAL);
-    segmentManager.removeDataSource(dataSource);
+    metadataStorageCoordinator.deletePendingSegments(dataSource, Intervals.ETERNITY);
+    if (!metadataSegments.tryMarkAsUnusedAllSegmentsInDataSource(dataSource)) {
+      log.error("Failed to mark all segments in " + dataSource + " as unused.");
+    }
     metadataStorageCoordinator.deleteDataSourceMetadata(dataSource);
   }
   

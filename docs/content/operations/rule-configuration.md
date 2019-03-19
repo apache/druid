@@ -29,7 +29,10 @@ Coordinator processes use rules to determine what data should be loaded to or dr
 There are three types of rules, i.e., load rules, drop rules, and broadcast rules. Load rules indicate how segments should be assigned to different historical process tiers and how many replicas of a segment should exist in each tier. 
 Drop rules indicate when segments should be dropped entirely from the cluster. Finally, broadcast rules indicate how segments of different data sources should be co-located in Historical processes.
 
-The Coordinator loads a set of rules from the metadata storage. Rules may be specific to a certain datasource and/or a default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The Coordinator will cycle through all available segments and match each segment with the first rule that applies. Each segment may only match a single rule.
+The Coordinator loads a set of rules from the metadata storage. Rules may be specific to a certain data source and/or a
+default set of rules can be configured. Rules are read in order and hence the ordering of rules is important. The
+Coordinator will cycle through all used segments and match each segment with the first rule that applies. Each segment
+may only match a single rule.
 
 Note: It is recommended that the Coordinator console is used to configure rules. However, the Coordinator process does have HTTP endpoints to programmatically configure rules.
 
@@ -236,5 +239,7 @@ marked as unused (segments dropped from the cluster via rules are always marked 
 
 # Reloading Dropped Data
 
-Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid, you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and 
-then enable the datasource in the Druid Coordinator console, or through the Druid Coordinator endpoints.
+Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid,
+you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and then
+mark as used all segments belonging to the data source in the Druid Coordinator console, or through the Druid
+Coordinator endpoints.

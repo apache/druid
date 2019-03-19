@@ -146,6 +146,6 @@ public class ImmutableDruidDataSource
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, properties, idToSegments);
+    return Objects.hash(name, properties);
   }
 }

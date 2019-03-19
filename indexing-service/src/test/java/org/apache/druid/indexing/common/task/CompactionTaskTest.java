@@ -1325,7 +1325,7 @@ public class CompactionTaskTest
     }
 
     @Override
-    public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+    public List<DataSegment> getUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
     {
       return new ArrayList<>(segmentMap.keySet());
     }

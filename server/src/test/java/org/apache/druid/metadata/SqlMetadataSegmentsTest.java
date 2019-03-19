@@ -41,12 +41,12 @@ import org.junit.Test;
 import java.io.IOException;
 
 
-public class SQLMetadataSegmentManagerTest
+public class SqlMetadataSegmentsTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private SQLMetadataSegmentManager manager;
+  private SqlMetadataSegments manager;
   private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
@@ -86,9 +86,9 @@ public class SQLMetadataSegmentManagerTest
   public void setUp() throws Exception
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    manager = new SQLMetadataSegmentManager(
+    manager = new SqlMetadataSegments(
         jsonMapper,
-        Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
+        Suppliers.ofInstance(new MetadataSegmentsConfig()),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector
     );
@@ -121,11 +121,11 @@ public class SQLMetadataSegmentManagerTest
     Assert.assertTrue(manager.isStarted());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
-        manager.getAllDataSourceNames()
+        manager.retrieveAllDataSourceNames()
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(manager.getDataSource("wikipedia").getSegments())
+        ImmutableSet.copyOf(manager.prepareImmutableDataSourceWithUsedSegments("wikipedia").getSegments())
     );
   }
 
@@ -153,7 +153,7 @@ public class SQLMetadataSegmentManagerTest
     Assert.assertTrue(manager.isStarted());
 
     Assert.assertEquals(
-        "wikipedia", Iterables.getOnlyElement(manager.getDataSources()).getName()
+        "wikipedia", Iterables.getOnlyElement(manager.prepareImmutableDataSourcesWithAllUsedSegments()).getName()
     );
   }
 
@@ -163,7 +163,7 @@ public class SQLMetadataSegmentManagerTest
     manager.start();
     manager.poll();
     Assert.assertTrue(manager.isStarted());
-    Assert.assertTrue(manager.removeDataSource("wikipedia"));
+    Assert.assertTrue(manager.tryMarkAsUnusedAllSegmentsInDataSource("wikipedia"));
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
@@ -202,8 +202,8 @@ public class SQLMetadataSegmentManagerTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(manager.getDataSource(newDataSource));
-    Assert.assertTrue(manager.removeDataSource(newDataSource));
+    Assert.assertNull(manager.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    Assert.assertTrue(manager.tryMarkAsUnusedAllSegmentsInDataSource(newDataSource));
   }
 
   @Test
@@ -232,8 +232,8 @@ public class SQLMetadataSegmentManagerTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(manager.getDataSource(newDataSource));
-    Assert.assertTrue(manager.removeSegment(newSegment.getId()));
+    Assert.assertNull(manager.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    Assert.assertTrue(manager.tryMarkSegmentAsUnused(newSegment.getId()));
   }
 
   @Test

@@ -174,7 +174,6 @@ public class DataSourcesResourceTest
         null,
         null,
         null,
-        new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     Response response = DataSourcesResource.getQueryableDataSources("full", null, request);
@@ -259,7 +258,6 @@ public class DataSourcesResourceTest
         null,
         null,
         null,
-        new AuthConfig(),
         authMapper
     );
     Response response = DataSourcesResource.getQueryableDataSources("full", null, request);
@@ -306,7 +304,6 @@ public class DataSourcesResourceTest
         null,
         null,
         null,
-        new AuthConfig(),
         AuthTestUtils.TEST_AUTHORIZER_MAPPER
     );
     Response response = DataSourcesResource.getQueryableDataSources(null, "simple", request);
@@ -332,8 +329,8 @@ public class DataSourcesResourceTest
 
     EasyMock.replay(inventoryView, server);
     DataSourcesResource DataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
-    Response response = DataSourcesResource.getTheDataSource("datasource1", "full");
+        new DataSourcesResource(inventoryView, null, null, null, null);
+    Response response = DataSourcesResource.getDataSource("datasource1", "full");
     ImmutableDruidDataSource result = (ImmutableDruidDataSource) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(dataSource1.toImmutableDruidDataSource(), result);
@@ -348,8 +345,8 @@ public class DataSourcesResourceTest
 
     EasyMock.replay(inventoryView, server);
     DataSourcesResource DataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
-    Assert.assertEquals(204, DataSourcesResource.getTheDataSource("none", null).getStatus());
+        new DataSourcesResource(inventoryView, null, null, null, null);
+    Assert.assertEquals(204, DataSourcesResource.getDataSource("none", null).getStatus());
     EasyMock.verify(inventoryView, server);
   }
 
@@ -366,8 +363,8 @@ public class DataSourcesResourceTest
 
     EasyMock.replay(inventoryView, server);
     DataSourcesResource DataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
-    Response response = DataSourcesResource.getTheDataSource("datasource1", null);
+        new DataSourcesResource(inventoryView, null, null, null, null);
+    Response response = DataSourcesResource.getDataSource("datasource1", null);
     Assert.assertEquals(200, response.getStatus());
     Map<String, Map<String, Object>> result = (Map<String, Map<String, Object>>) response.getEntity();
     Assert.assertEquals(1, ((Map) (result.get("tiers").get(null))).get("segmentCount"));
@@ -406,8 +403,8 @@ public class DataSourcesResourceTest
 
     EasyMock.replay(inventoryView, server, server2, server3);
     DataSourcesResource DataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
-    Response response = DataSourcesResource.getTheDataSource("datasource1", null);
+        new DataSourcesResource(inventoryView, null, null, null, null);
+    Response response = DataSourcesResource.getDataSource("datasource1", null);
     Assert.assertEquals(200, response.getStatus());
     Map<String, Map<String, Object>> result = (Map<String, Map<String, Object>>) response.getEntity();
     Assert.assertEquals(2, ((Map) (result.get("tiers").get("cold"))).get("segmentCount"));
@@ -438,18 +435,18 @@ public class DataSourcesResourceTest
     expectedIntervals.add(Intervals.of("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
     expectedIntervals.add(Intervals.of("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
+        new DataSourcesResource(inventoryView, null, null, null, null);
 
-    Response response = dataSourcesResource.getSegmentDataSourceIntervals("invalidDataSource", null, null);
+    Response response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals("invalidDataSource", null, null);
     Assert.assertEquals(response.getEntity(), null);
 
-    response = dataSourcesResource.getSegmentDataSourceIntervals("datasource1", null, null);
+    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals("datasource1", null, null);
     TreeSet<Interval> actualIntervals = (TreeSet) response.getEntity();
     Assert.assertEquals(2, actualIntervals.size());
     Assert.assertEquals(expectedIntervals.get(0), actualIntervals.first());
     Assert.assertEquals(expectedIntervals.get(1), actualIntervals.last());
 
-    response = dataSourcesResource.getSegmentDataSourceIntervals("datasource1", "simple", null);
+    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals("datasource1", "simple", null);
     TreeMap<Interval, Map<DataSourcesResource.SimpleProperties, Object>> results = (TreeMap) response.getEntity();
     Assert.assertEquals(2, results.size());
     Assert.assertEquals(expectedIntervals.get(0), results.firstKey());
@@ -457,7 +454,7 @@ public class DataSourcesResourceTest
     Assert.assertEquals(1, results.firstEntry().getValue().get(DataSourcesResource.SimpleProperties.count));
     Assert.assertEquals(1, results.lastEntry().getValue().get(DataSourcesResource.SimpleProperties.count));
 
-    response = dataSourcesResource.getSegmentDataSourceIntervals("datasource1", null, "full");
+    response = dataSourcesResource.getIntervalsWithServedSegmentsOrAllServedSegmentsPerIntervals("datasource1", null, "full");
     Map<Interval, Map<SegmentId, Object>> results2 = ((Map<Interval, Map<SegmentId, Object>>) response.getEntity());
     int i = 1;
     for (Map.Entry<Interval, Map<SegmentId, Object>> entry : results2.entrySet()) {
@@ -482,8 +479,8 @@ public class DataSourcesResourceTest
     EasyMock.replay(inventoryView);
 
     DataSourcesResource dataSourcesResource =
-        new DataSourcesResource(inventoryView, null, null, null, new AuthConfig(), null);
-    Response response = dataSourcesResource.getSegmentDataSourceSpecificInterval(
+        new DataSourcesResource(inventoryView, null, null, null, null);
+    Response response = dataSourcesResource.getServedSegmentsInInterval(
         "invalidDataSource",
         "2010-01-01/P1D",
         null,
@@ -491,7 +488,7 @@ public class DataSourcesResourceTest
     );
     Assert.assertEquals(null, response.getEntity());
 
-    response = dataSourcesResource.getSegmentDataSourceSpecificInterval(
+    response = dataSourcesResource.getServedSegmentsInInterval(
         "datasource1",
         "2010-03-01/P1D",
         null,
@@ -499,16 +496,16 @@ public class DataSourcesResourceTest
     ); // interval not present in the datasource
     Assert.assertEquals(ImmutableSet.of(), response.getEntity());
 
-    response = dataSourcesResource.getSegmentDataSourceSpecificInterval("datasource1", "2010-01-01/P1D", null, null);
+    response = dataSourcesResource.getServedSegmentsInInterval("datasource1", "2010-01-01/P1D", null, null);
     Assert.assertEquals(ImmutableSet.of(dataSegmentList.get(0).getId()), response.getEntity());
 
-    response = dataSourcesResource.getSegmentDataSourceSpecificInterval("datasource1", "2010-01-01/P1M", null, null);
+    response = dataSourcesResource.getServedSegmentsInInterval("datasource1", "2010-01-01/P1M", null, null);
     Assert.assertEquals(
         ImmutableSet.of(dataSegmentList.get(1).getId(), dataSegmentList.get(0).getId()),
         response.getEntity()
     );
 
-    response = dataSourcesResource.getSegmentDataSourceSpecificInterval(
+    response = dataSourcesResource.getServedSegmentsInInterval(
         "datasource1",
         "2010-01-01/P1M",
         "simple",
@@ -526,7 +523,7 @@ public class DataSourcesResourceTest
       );
     }
 
-    response = dataSourcesResource.getSegmentDataSourceSpecificInterval("datasource1", "2010-01-01/P1M", null, "full");
+    response = dataSourcesResource.getServedSegmentsInInterval("datasource1", "2010-01-01/P1M", null, "full");
     Map<Interval, Map<SegmentId, Object>> results1 = ((Map<Interval, Map<SegmentId, Object>>) response.getEntity());
     i = 1;
     for (Map.Entry<Interval, Map<SegmentId, Object>> entry : results1.entrySet()) {
@@ -556,10 +553,9 @@ public class DataSourcesResourceTest
         null,
         null,
         indexingServiceClient,
-        new AuthConfig(),
         null
     );
-    Response response = DataSourcesResource.deleteDataSourceSpecificInterval("datasource1", interval);
+    Response response = DataSourcesResource.killSegmentsInInterval("datasource1", interval);
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(null, response.getEntity());
@@ -576,10 +572,9 @@ public class DataSourcesResourceTest
         null,
         null,
         indexingServiceClient,
-        new AuthConfig(),
         null
     );
-    Response response = DataSourcesResource.deleteDataSource("datasource", "true", "???");
+    Response response = DataSourcesResource.tryMarkAsUnusedAllSegmentsOrKillSegmentsInInterval("datasource", "true", "???");
     Assert.assertEquals(400, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertTrue(response.getEntity().toString().contains("java.lang.IllegalArgumentException"));
@@ -598,7 +593,6 @@ public class DataSourcesResourceTest
         null,
         databaseRuleManager,
         null,
-        new AuthConfig(),
         null
     );
 

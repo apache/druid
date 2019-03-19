@@ -24,7 +24,7 @@ import org.joda.time.Period;
 
 /**
  */
-public class MetadataSegmentManagerConfig
+public class MetadataSegmentsConfig
 {
   @JsonProperty
   private Period pollDuration = new Period("PT1M");

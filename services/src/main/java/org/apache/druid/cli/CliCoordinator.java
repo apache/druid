@@ -52,9 +52,9 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.metadata.MetadataRuleManagerProvider;
-import org.apache.druid.metadata.MetadataSegmentManager;
-import org.apache.druid.metadata.MetadataSegmentManagerConfig;
-import org.apache.druid.metadata.MetadataSegmentManagerProvider;
+import org.apache.druid.metadata.MetadataSegments;
+import org.apache.druid.metadata.MetadataSegmentsConfig;
+import org.apache.druid.metadata.MetadataSegmentsProvider;
 import org.apache.druid.metadata.MetadataStorage;
 import org.apache.druid.metadata.MetadataStorageProvider;
 import org.apache.druid.server.audit.AuditManagerProvider;
@@ -145,7 +145,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(MetadataStorage.class)
                   .toProvider(MetadataStorageProvider.class);
 
-            JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentsConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
@@ -163,8 +163,8 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
             }
 
-            binder.bind(MetadataSegmentManager.class)
-                  .toProvider(MetadataSegmentManagerProvider.class)
+            binder.bind(MetadataSegments.class)
+                  .toProvider(MetadataSegmentsProvider.class)
                   .in(ManageLifecycle.class);
 
             binder.bind(MetadataRuleManager.class)

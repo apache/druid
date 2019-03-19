@@ -64,7 +64,8 @@ public interface IndexerMetadataStorageCoordinator
    * @param dataSource The datasource to query
    * @param intervals  The intervals for which all applicable and used datasources are requested.
    *
-   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the requested interval.
+   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
+   * requested interval.
    *
    * @throws IOException
    */

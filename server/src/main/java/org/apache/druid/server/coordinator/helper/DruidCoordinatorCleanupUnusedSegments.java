@@ -34,39 +34,36 @@ import java.util.SortedSet;
 
 /**
  */
-public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
+public class DruidCoordinatorCleanupUnusedSegments implements DruidCoordinatorHelper
 {
-  private static final Logger log = new Logger(DruidCoordinatorCleanupUnneeded.class);
+  private static final Logger log = new Logger(DruidCoordinatorCleanupUnusedSegments.class);
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     CoordinatorStats stats = new CoordinatorStats();
-    Set<DataSegment> availableSegments = params.getAvailableSegments();
+    Set<DataSegment> usedSegments = params.getUsedSegments();
     DruidCluster cluster = params.getDruidCluster();
 
-    if (availableSegments.isEmpty()) {
+    if (usedSegments.isEmpty()) {
       log.info(
-          "Found 0 availableSegments, skipping the cleanup of segments from historicals. This is done to prevent " +
+          "Found 0 used segments, skipping the cleanup of segments from historicals. This is done to prevent " +
           "a race condition in which the coordinator would drop all segments if it started running cleanup before " +
-          "it finished polling the metadata storage for available segments for the first time."
+          "it finished polling the metadata storage for used segments for the first time."
       );
       return params.buildFromExisting().withCoordinatorStats(stats).build();
     }
 
-    // Drop segments that no longer exist in the available segments configuration, *if* it has been populated. (It might
-    // not have been loaded yet since it's filled asynchronously. But it's also filled atomically, so if there are any
-    // segments at all, we should have all of them.)
-    // Note that if metadata store has no segments, then availableSegments will stay empty and nothing will be dropped.
-    // This is done to prevent a race condition in which the coordinator would drop all segments if it started running
-    // cleanup before it finished polling the metadata storage for available segments for the first time.
+    // Drop segments that are no longer marked as used, *if* the usedSegments collection has been populated. Used
+    // segments might not have been loaded yet since it's done asynchronously (in SqlMetadataSegments). But it's also
+    // done atomically (see SqlMetadataSegments code), so if there are any segments at all, we should have all of them.
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();
 
         for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
           for (DataSegment segment : dataSource.getSegments()) {
-            if (!availableSegments.contains(segment)) {
+            if (!usedSegments.contains(segment)) {
               LoadQueuePeon queuePeon = params.getLoadManagementPeons().get(server.getName());
 
               if (!queuePeon.getSegmentsToDrop().contains(segment)) {

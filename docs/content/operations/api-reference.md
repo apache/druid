@@ -113,15 +113,17 @@ Returns the serialized JSON of segments to load and drop for each Historical pro
 
 * `/druid/coordinator/v1/metadata/datasources`
 
-Returns a list of the names of enabled datasources in the cluster.
+Returns a list of the names of data sources with at least one used segment in the cluster.
 
-* `/druid/coordinator/v1/metadata/datasources?includeDisabled`
+* `/druid/coordinator/v1/metadata/datasources?includeUnused`
 
-Returns a list of the names of enabled and disabled datasources in the cluster.
+Returns a list of the names of data sources, regardless of whether there are used segments belonging to those data
+sources in the cluster or not.
 
 * `/druid/coordinator/v1/metadata/datasources?full`
 
-Returns a list of all enabled datasources with all metadata about those datasources as stored in the metadata store.
+Returns a list of all data sources with at least one used segment in the cluster. Returns all metadata about those data
+sources as stored in the metadata store.
 
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}`
 
@@ -224,17 +226,17 @@ Return the tiers that a datasource exists in.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Enables all segments of datasource which are not overshadowed by others.
+Marks as used all segments belonging to a data source.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Enables a segment of a datasource.
+Marks as used a segment of a data source.
 
 ##### DELETE<a name="coordinator-delete"></a>
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Disables a datasource.
+Marks as unused all segments belonging to a data source.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
 * `@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myInterval}`
@@ -243,7 +245,7 @@ Runs a [Kill task](../ingestion/tasks.html) for a given interval and datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Disables a segment.
+Marks as unused a segment of a data source.
 
 #### Retention Rules
 

@@ -86,9 +86,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       return params;
     }
 
-    // find available segments which are not overshadowed by other segments in DB
-    // only those would need to be loaded/dropped
-    // anything overshadowed by served segments is dropped automatically by DruidCoordinatorCleanupOvershadowed
+    // Find used segments which are overshadowed by other used segments. Those would not need to be loaded and dropped.
+    // Segments overshadowed by *served* used segments is dropped automatically by DruidCoordinatorCleanupOvershadowed.
     Set<DataSegment> overshadowed = determineOvershadowedSegments(params);
 
     for (String tier : cluster.getTierNames()) {
@@ -96,17 +95,17 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params
-        .buildFromExistingWithoutAvailableSegments()
+        .buildFromExistingWithoutUsedSegments()
         .withReplicationManager(replicatorThrottler)
         .build();
 
-    // Run through all matched rules for available segments
+    // Run through all matched rules for used segments
     DateTime now = DateTimes.nowUtc();
     MetadataRuleManager databaseRuleManager = paramsWithReplicationManager.getDatabaseRuleManager();
 
     final List<SegmentId> segmentsWithMissingRules = Lists.newArrayListWithCapacity(MAX_MISSING_RULES);
     int missingRules = 0;
-    for (DataSegment segment : params.getAvailableSegments()) {
+    for (DataSegment segment : params.getUsedSegments()) {
       if (overshadowed.contains(segment)) {
         // Skipping overshadowed segments
         continue;
@@ -142,7 +141,7 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
   private Set<DataSegment> determineOvershadowedSegments(DruidCoordinatorRuntimeParams params)
   {
     Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
-    for (DataSegment segment : params.getAvailableSegments()) {
+    for (DataSegment segment : params.getUsedSegments()) {
       timelines
           .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
           .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));

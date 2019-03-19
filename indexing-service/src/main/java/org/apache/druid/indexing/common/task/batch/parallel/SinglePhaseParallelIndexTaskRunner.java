@@ -423,8 +423,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
           .flatMap(report -> report.getSegments().stream())
           .map(SegmentIdWithShardSpec::fromDataSegment)
           .collect(Collectors.toSet());
-      if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers)
-                            .equals(segmentsToPublish)) {
+      if (usedSegmentChecker.findUsedSegments(segmentsIdentifiers).equals(segmentsToPublish)) {
         log.info("Our segments really do exist, awaiting handoff.");
       } else {
         throw new ISE("Failed to publish segments[%s]", segmentsToPublish);

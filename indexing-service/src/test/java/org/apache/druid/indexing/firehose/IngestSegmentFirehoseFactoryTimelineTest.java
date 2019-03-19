@@ -276,7 +276,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       final CoordinatorClient cc = new CoordinatorClient(null, null)
       {
         @Override
-        public List<DataSegment> getDatabaseSegmentDataSourceSegments(String dataSource, List<Interval> intervals)
+        public List<DataSegment> getUsedSegmentsInDataSourceForIntervals(String dataSource, List<Interval> intervals)
         {
           // Expect the interval we asked for
           if (intervals.equals(ImmutableList.of(testCase.interval))) {

@@ -146,12 +146,12 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       List<DataSegment> usedSegments;
       while (true) {
         try {
-          usedSegments =
-              coordinatorClient.getDatabaseSegmentDataSourceSegments(dataSource, Collections.singletonList(interval));
+          List<Interval> intervals = Collections.singletonList(interval);
+          usedSegments = coordinatorClient.getUsedSegmentsInDataSourceForIntervals(dataSource, intervals);
           break;
         }
         catch (Throwable e) {
-          log.warn(e, "Exception getting database segments");
+          log.warn(e, "Exception getting used segments for interval");
           final Duration delay = retryPolicy.getAndIncrementRetryDelay();
           if (delay == null) {
             throw e;

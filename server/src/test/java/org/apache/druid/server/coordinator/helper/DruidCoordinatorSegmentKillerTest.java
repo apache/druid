@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator.helper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.metadata.MetadataSegmentManager;
+import org.apache.druid.metadata.MetadataSegments;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
@@ -84,23 +84,21 @@ public class DruidCoordinatorSegmentKillerTest
     );
   }
 
-  private void testFindIntervalForKillTask(List<Interval> segmentManagerResult, Interval expected)
+  private void testFindIntervalForKillTask(List<Interval> metadataSegmentsResult, Interval expected)
   {
-    MetadataSegmentManager segmentManager = EasyMock.createMock(MetadataSegmentManager.class);
+    MetadataSegments metadataSegments = EasyMock.createMock(MetadataSegments.class);
     EasyMock.expect(
-        segmentManager.getUnusedSegmentIntervals(
+        metadataSegments.getUnusedSegmentIntervals(
             EasyMock.anyString(),
             EasyMock.anyObject(Interval.class),
             EasyMock.anyInt()
         )
-    ).andReturn(
-        segmentManagerResult
-    );
-    EasyMock.replay(segmentManager);
+    ).andReturn(metadataSegmentsResult);
+    EasyMock.replay(metadataSegments);
     IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
 
     DruidCoordinatorSegmentKiller coordinatorSegmentKiller = new DruidCoordinatorSegmentKiller(
-        segmentManager,
+        metadataSegments,
         indexingServiceClient,
         new TestDruidCoordinatorConfig(
             null,
