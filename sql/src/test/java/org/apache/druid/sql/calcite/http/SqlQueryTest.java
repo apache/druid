@@ -38,8 +38,11 @@ public class SqlQueryTest extends CalciteTestBase
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final SqlQuery query = new SqlQuery(
-        "SELECT ?", ResultFormat.ARRAY, true, ImmutableMap.of("useCache", false),
-                                        ImmutableList.of(new SqlParameter(1, SqlType.INTEGER, 1))
+        "SELECT ?",
+        ResultFormat.ARRAY,
+        true,
+        ImmutableMap.of("useCache", false),
+        ImmutableList.of(new SqlParameter(1, SqlType.INTEGER, 1))
     );
     Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
   }
