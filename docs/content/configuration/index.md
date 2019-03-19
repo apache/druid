@@ -423,11 +423,11 @@ The following monitors are available:
 
 ### Emitting Metrics
 
-The Druid servers [emit various metrics](../operations/metrics.html) and alerts via something we call an Emitter. There are three emitter implementations included with the code, a "noop" emitter, one that just logs to log4j ("logging", which is used by default if no emitter is specified) and one that does POSTs of JSON events to a server ("http"). The properties for using the logging emitter are described below.
+The Druid servers [emit various metrics](../operations/metrics.html) and alerts via something we call an Emitter. There are three emitter implementations included with the code, a "noop" emitter (the default if none is specified), one that just logs to log4j ("logging"), and one that does POSTs of JSON events to a server ("http"). The properties for using the logging emitter are described below.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.emitter`|Setting this value to "noop", "logging", "http" or "parametrized" will initialize one of the emitter modules. value "composing" can be used to initialize multiple emitter modules. |noop|
+|`druid.emitter`|Setting this value to "noop", "logging", "http" or "parametrized" will initialize one of the emitter modules. The value "composing" can be used to initialize multiple emitter modules. |noop|
 
 #### Logging Emitter Module
 
