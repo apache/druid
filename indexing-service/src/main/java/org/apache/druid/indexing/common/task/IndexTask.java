@@ -1069,7 +1069,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       }
     }
     catch (TimeoutException | ExecutionException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

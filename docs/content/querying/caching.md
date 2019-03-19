@@ -24,23 +24,41 @@ title: "Query Caching"
 
 # Query Caching
 
-Druid supports query result caching through an LRU cache. Results are stored as a whole or either on a per segment basis along with the 
-parameters of a given query. Segment level caching allows Druid to return final results based partially on segment results in the cache 
-and partially on segment results from scanning historical/real-time segments. Result level caching enables Druid to cache the entire 
-result set, so that query results can be completely retrieved from the cache for identical queries.
+Druid supports query result caching at both the segment and whole-query result level. Cache data can be stored in the
+local JVM heap or in an external distributed key/value store. In all cases, the Druid cache is a query result cache.
+The only difference is whether the result is a _partial result_ for a particular segment, or the result for an entire
+query. In both cases, the cache is invalidated as soon as any underlying data changes; it will never return a stale
+result.
 
-Segment results can be stored in a local heap cache or in an external distributed key/value store. Segment query caches 
-can be enabled at either the Historical and Broker level (it is not recommended to enable caching on both).
+Segment-level caching allows the cache to be leveraged even when some of the underling segments are mutable and
+undergoing real-time ingestion. In this case, Druid will potentially cache query results for immutable historical
+segments, while re-computing results for the real-time segments on each query. Whole-query result level caching is not
+useful in this scenario, since it would be continuously invalidated.
+
+Segment-level caching does require Druid to merge the per-segment results on each query, even when they are served
+from the cache. For this reason, whole-query result level caching can be more efficient if invalidation due to real-time
+ingestion is not an issue.
 
 ## Query caching on Brokers
 
-Enabling caching on the Broker can yield faster results than if query caches were enabled on Historicals for small clusters. This is 
-the recommended setup for smaller production clusters (< 20 servers). Take note that when caching is enabled on the Broker, 
-results from Historicals are returned on a per segment basis, and Historicals will not be able to do any local result merging.
-Result level caching is enabled only on the Broker side.
+Brokers support both segment-level and whole-query result level caching. Segment-level caching is controlled by the
+parameters `useCache` and `populateCache`. Whole-query result level caching is controlled by the parameters
+`useResultLevelCache` and `populateResultLevelCache` and [runtime properties](../configuration/index.html)
+`druid.broker.cache.*`..
+
+Enabling segment-level caching on the Broker can yield faster results than if query caches were enabled on Historicals for small
+clusters. This is the recommended setup for smaller production clusters (< 5 servers). Populating segment-level caches on
+the Broker is _not_ recommended for large production clusters, since when the property `druid.broker.cache.populateCache` is
+set to `true` (and query context parameter `populateCache` is _not_ set to `false`), results from Historicals are returned
+on a per segment basis, and Historicals will not be able to do any local result merging. This impairs the ability of the
+Druid cluster to scale well.
 
 ## Query caching on Historicals
 
-Larger production clusters should enable caching only on the Historicals to avoid having to use Brokers to merge all query 
-results. Enabling caching on the Historicals instead of the Brokers enables the Historicals to do their own local result
-merging and puts less strain on the Brokers.
+Historicals only support segment-level caching. Segment-level caching is controlled by the query context
+parameters `useCache` and `populateCache` and [runtime properties](../configuration/index.html)
+`druid.historical.cache.*`.
+
+Larger production clusters should enable segment-level cache population on Historicals only (not on Brokers) to avoid
+having to use Brokers to merge all query results. Enabling cache population on the Historicals instead of the Brokers
+enables the Historicals to do their own local result merging and puts less strain on the Brokers.

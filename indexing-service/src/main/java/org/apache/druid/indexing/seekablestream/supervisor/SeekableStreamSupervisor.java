@@ -28,7 +28,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -120,8 +119,7 @@ import java.util.stream.Stream;
  * @param <PartitionIdType>    the type of the partition id, for example, partitions in Kafka are int type while partitions in Kinesis are String type
  * @param <SequenceOffsetType> the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
  */
-public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType extends Comparable>
-    implements Supervisor
+public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType> implements Supervisor
 {
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
 
@@ -1167,7 +1165,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           return;
         }
 
-        boolean metadataUpdateSuccess = false;
+        boolean metadataUpdateSuccess;
         if (currentMetadata == null) {
           metadataUpdateSuccess = true;
         } else {
@@ -1177,7 +1175,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
           catch (IOException e) {
             log.error("Resetting DataSourceMetadata failed [%s]", e.getMessage());
-            Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
         }
         if (metadataUpdateSuccess) {
@@ -1763,7 +1761,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       tuningConfigStr = sortingMapper.writeValueAsString(tuningConfig);
     }
     catch (JsonProcessingException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     String hashCode = DigestUtils.sha1Hex(dataSchemaStr
@@ -2113,7 +2111,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
             catch (Exception e) {
               log.error("Something bad happened [%s]", e.getMessage());
-              Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
 
             if (taskGroup.tasks.isEmpty()) {
@@ -2627,13 +2625,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private void updateLatestOffsetsFromStream() throws InterruptedException
   {
     synchronized (recordSupplierLock) {
-      Set<PartitionIdType> partitionIds = null;
+      Set<PartitionIdType> partitionIds;
       try {
         partitionIds = recordSupplier.getPartitionIds(ioConfig.getStream());
       }
       catch (Exception e) {
         log.warn("Could not fetch partitions for topic/stream [%s]", ioConfig.getStream());
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       Set<StreamPartition<PartitionIdType>> partitions = partitionIds

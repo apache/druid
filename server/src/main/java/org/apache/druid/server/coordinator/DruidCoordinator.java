@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -411,14 +410,14 @@ public class DruidCoordinator
                 }
               }
               catch (Exception e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
         );
       }
       catch (Exception e) {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
     catch (Exception e) {
@@ -694,7 +693,7 @@ public class DruidCoordinator
                 }
 
                 // Find all historical servers, group them by subType and sort by ascending usage
-                Set<String> nodesInMaintenance = params.getCoordinatorDynamicConfig().getHistoricalNodesInMaintenance();
+                Set<String> decommissioningServers = params.getCoordinatorDynamicConfig().getDecommissioningNodes();
                 final DruidCluster cluster = new DruidCluster();
                 for (ImmutableDruidServer server : servers) {
                   if (!loadManagementPeons.containsKey(server.getName())) {
@@ -709,7 +708,7 @@ public class DruidCoordinator
                       new ServerHolder(
                           server,
                           loadManagementPeons.get(server.getName()),
-                          nodesInMaintenance.contains(server.getHost())
+                          decommissioningServers.contains(server.getHost())
                       )
                   );
                 }

@@ -41,7 +41,7 @@ This mode is recommended if you intend to use the indexing service as the single
 
 ### Overlord Console
 
-The Overlord provides a UI for managing tasks and workers. For more details, please see [overlord console](../operations/web-consoles.html#overlord-console).
+The Overlord provides a UI for managing tasks and workers. For more details, please see [overlord console](../operations/management-uis.html#overlord-console).
 
 ### Blacklisted Workers
 

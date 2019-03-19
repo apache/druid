@@ -28,7 +28,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marks the object to be managed by {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} and set to be on Stage.LAST
+ * Marks the object to be managed by {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} and set to be on Stage.ANNOUNCEMENTS
  *
  * This Scope gets defined by {@link LifecycleModule}
  */
@@ -36,6 +36,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @ScopeAnnotation
 @PublicApi
-public @interface ManageLifecycleLast
+public @interface ManageLifecycleAnnouncements
 {
 }

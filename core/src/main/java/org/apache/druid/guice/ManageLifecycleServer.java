@@ -17,36 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.guice.http;
+package org.apache.druid.guice;
 
-import com.google.common.base.Throwables;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import com.google.inject.ScopeAnnotation;
+import org.apache.druid.guice.annotations.PublicApi;
 
-public class LifecycleUtils
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Marks the object to be managed by {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} and set to be on Stage.SERVER
+ *
+ * This Scope gets defined by {@link LifecycleModule}
+ */
+@Target({ElementType.TYPE, ElementType.METHOD })
+@Retention(RetentionPolicy.RUNTIME)
+@ScopeAnnotation
+@PublicApi
+public @interface ManageLifecycleServer
 {
-  public static Lifecycle asMmxLifecycle(Lifecycle lifecycle)
-  {
-    final Lifecycle metamxLifecycle = new Lifecycle("http-client");
-    try {
-      lifecycle.addMaybeStartHandler(new Lifecycle.Handler()
-      {
-        @Override
-        public void start() throws Exception
-        {
-          metamxLifecycle.start();
-        }
-
-        @Override
-        public void stop()
-        {
-          metamxLifecycle.stop();
-        }
-      });
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
-
-    return metamxLifecycle;
-  }
 }

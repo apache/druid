@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
@@ -163,6 +164,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       if (isStatementException(e) && getEntry(id).isPresent()) {
         throw new EntryExistsException(id, e);
       } else {
+        Throwables.propagateIfPossible(e);
         throw new RuntimeException(e);
       }
     }
