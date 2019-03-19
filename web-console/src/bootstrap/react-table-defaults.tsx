@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-
+import { Button } from "@blueprintjs/core";
 import * as React from 'react';
 import { Filter, ReactTableDefaults } from "react-table";
-import { Button } from "@blueprintjs/core";
+
 import { Loader } from '../components/loader';
 import { countBy, makeTextFilter } from '../utils';
 

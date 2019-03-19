@@ -17,29 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.jackson;
+package org.apache.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
+import com.google.inject.ScopeAnnotation;
+import org.apache.druid.guice.annotations.PublicApi;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
+ * Marks the object to be managed by {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} and set to be on Stage.SERVER
+ *
+ * This Scope gets defined by {@link LifecycleModule}
  */
-public class SegmentsModule extends SimpleModule
+@Target({ElementType.TYPE, ElementType.METHOD })
+@Retention(RetentionPolicy.RUNTIME)
+@ScopeAnnotation
+@PublicApi
+public @interface ManageLifecycleServer
 {
-  public SegmentsModule()
-  {
-    super("SegmentsModule");
-
-    setMixInAnnotation(ShardSpec.class, ShardSpecMixin.class);
-  }
-
-  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-  @JsonSubTypes({
-      @JsonSubTypes.Type(name = "none", value = NoneShardSpec.class),
-  })
-  public interface ShardSpecMixin
-  {}
 }

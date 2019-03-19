@@ -22,6 +22,13 @@ title: "SQL"
   ~ under the License.
   -->
 
+  <!-- 
+    The format of the tables that describe the functions and operators 
+    should not be changed without updating the script create-sql-function-doc 
+    in web-console/script/create-sql-function-doc, because the script detects
+    patterns in this markdown file and parse it to TypeScript file for web console
+   -->
+
 # SQL
 
 <div class="note caution">

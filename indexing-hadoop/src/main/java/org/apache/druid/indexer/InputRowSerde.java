@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  */
@@ -62,6 +63,34 @@ public class InputRowSerde
   private static final IndexSerdeTypeHelper LONG_HELPER = new LongIndexSerdeTypeHelper();
   private static final IndexSerdeTypeHelper FLOAT_HELPER = new FloatIndexSerdeTypeHelper();
   private static final IndexSerdeTypeHelper DOUBLE_HELPER = new DoubleIndexSerdeTypeHelper();
+
+  private static <T extends Number> void writeNullableNumeric(
+      T ret,
+      final ByteArrayDataOutput out,
+      final Supplier<T> getDefault,
+      final Consumer<T> write)
+  {
+    if (ret == null) {
+      ret = getDefault.get();
+    }
+
+    // Write the null byte only if the default numeric value is still null.
+    if (ret == null) {
+      out.writeByte(NullHandling.IS_NULL_BYTE);
+      return;
+    }
+
+    if (NullHandling.sqlCompatible()) {
+      out.writeByte(NullHandling.IS_NOT_NULL_BYTE);
+    }
+
+    write.accept(ret);
+  }
+
+  private static boolean isNullByteSet(final ByteArrayDataInput in)
+  {
+    return NullHandling.sqlCompatible() && in.readByte() == NullHandling.IS_NULL_BYTE;
+  }
 
   public interface IndexSerdeTypeHelper<T>
   {
@@ -175,12 +204,7 @@ public class InputRowSerde
         exceptionToThrow = pe;
       }
 
-      if (ret == null) {
-        // remove null -> zero conversion when https://github.com/apache/incubator-druid/pull/5278 series of patches is merged
-        // we'll also need to change the serialized encoding so that it can represent numeric nulls
-        ret = DimensionHandlerUtils.ZERO_LONG;
-      }
-      out.writeLong(ret);
+      writeNullableNumeric(ret, out, NullHandling::defaultLongValue, out::writeLong);
 
       if (exceptionToThrow != null) {
         throw exceptionToThrow;
@@ -188,9 +212,10 @@ public class InputRowSerde
     }
 
     @Override
+    @Nullable
     public Long deserialize(ByteArrayDataInput in)
     {
-      return in.readLong();
+      return isNullByteSet(in) ? null : in.readLong();
     }
   }
 
@@ -214,12 +239,7 @@ public class InputRowSerde
         exceptionToThrow = pe;
       }
 
-      if (ret == null) {
-        // remove null -> zero conversion when https://github.com/apache/incubator-druid/pull/5278 series of patches is merged
-        // we'll also need to change the serialized encoding so that it can represent numeric nulls
-        ret = DimensionHandlerUtils.ZERO_FLOAT;
-      }
-      out.writeFloat(ret);
+      writeNullableNumeric(ret, out, NullHandling::defaultFloatValue, out::writeFloat);
 
       if (exceptionToThrow != null) {
         throw exceptionToThrow;
@@ -227,9 +247,10 @@ public class InputRowSerde
     }
 
     @Override
+    @Nullable
     public Float deserialize(ByteArrayDataInput in)
     {
-      return in.readFloat();
+      return isNullByteSet(in) ? null : in.readFloat();
     }
   }
 
@@ -253,12 +274,7 @@ public class InputRowSerde
         exceptionToThrow = pe;
       }
 
-      if (ret == null) {
-        // remove null -> zero conversion when https://github.com/apache/incubator-druid/pull/5278 series of patches is merged
-        // we'll also need to change the serialized encoding so that it can represent numeric nulls
-        ret = DimensionHandlerUtils.ZERO_DOUBLE;
-      }
-      out.writeDouble(ret);
+      writeNullableNumeric(ret, out, NullHandling::defaultDoubleValue, out::writeDouble);
 
       if (exceptionToThrow != null) {
         throw exceptionToThrow;
@@ -266,9 +282,10 @@ public class InputRowSerde
     }
 
     @Override
+    @Nullable
     public Double deserialize(ByteArrayDataInput in)
     {
-      return in.readDouble();
+      return isNullByteSet(in) ? null : in.readDouble();
     }
   }
 

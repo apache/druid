@@ -28,8 +28,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @Type(name = "append", value = ClientAppendQuery.class),
-    @Type(name = "merge", value = ClientMergeQuery.class),
     @Type(name = "kill", value = ClientKillQuery.class),
     @Type(name = "compact", value = ClientCompactQuery.class)
 })

@@ -20,7 +20,6 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.AvaticaParameter;
 import org.apache.calcite.avatica.ColumnMetaData;
@@ -345,7 +344,7 @@ public class DruidStatement implements Closeable
         }
       }
 
-      throw Throwables.propagate(t);
+      throw new RuntimeException(t);
     }
 
     if (oldState != State.DONE) {
@@ -357,7 +356,7 @@ public class DruidStatement implements Closeable
         onClose.run();
       }
       catch (Throwable t) {
-        throw Throwables.propagate(t);
+        throw new RuntimeException(t);
       }
     }
   }
@@ -371,7 +370,7 @@ public class DruidStatement implements Closeable
     catch (Throwable t1) {
       t.addSuppressed(t1);
     }
-    throw Throwables.propagate(t);
+    throw new RuntimeException(t);
   }
 
   @GuardedBy("lock")

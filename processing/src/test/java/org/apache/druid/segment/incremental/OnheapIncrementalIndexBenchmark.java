@@ -23,7 +23,6 @@ import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.carrotsearch.junitbenchmarks.Clock;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
@@ -369,7 +368,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                     }
                   }
                   catch (IndexSizeExceededException e) {
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   currentlyRunning.decrementAndGet();
                   someoneRan.set(true);
