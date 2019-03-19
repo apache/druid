@@ -30,6 +30,10 @@ This extension enables Druid to ingest thrift compact data online (`ByteBuffer`)
 
 You may want to use another version of thrift, change the dependency in pom and compile yourself.
 
+## LZO Support
+
+If you plan to read LZO-compressed Thrift files, you will need to download version 0.4.19 of the [hadoop-lzo JAR](https://mvnrepository.com/artifact/com.hadoop.gplcompression/hadoop-lzo/0.4.19) and place it in your `extensions/druid-thrift-extensions` directory.
+
 ## Thrift Parser
 
 

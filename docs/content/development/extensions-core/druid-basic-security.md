@@ -43,7 +43,7 @@ These configuration properties should be added to the common runtime properties 
 ### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.basic.common.pollingPeriod`|Defines in milliseconds how often nodes should poll the Coordinator for the current escalator/authenticator/authorizer database state.|60000|No|
+|`druid.auth.basic.common.pollingPeriod`|Defines in milliseconds how often processes should poll the Coordinator for the current escalator/authenticator/authorizer database state.|60000|No|
 |`druid.auth.basic.common.maxRandomDelay`|Defines in milliseconds the amount of random delay to add to the pollingPeriod, to spread polling requests across time.|6000|No|
 |`druid.auth.basic.common.maxSyncRetries`|Determines how many times a service will retry if the authentication/authorization database state sync with the Coordinator fails.|10|No|
 |`druid.auth.basic.common.cacheDirectory`|If defined, snapshots of the basic Authenticator and Authorizer database caches will be stored on disk in this directory. If this property is defined, when a service is starting, it will attempt to initialize its caches from these on-disk snapshots, if the service is unable to initialize its state by communicating with the Coordinator.|null|No|
@@ -78,8 +78,8 @@ The configuration examples in the rest of this document will use "MyBasicDBAuthe
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
 |`druid.auth.authenticator.MyBasicDBAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.html) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
-|`druid.auth.authenticator.MyBasicDBAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.html) for the default internal system user, used for internal node communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
-|`druid.auth.authenticator.MyBasicDBAuthenticator.enableCacheNotifications`|If true, the Coordinator will notify Druid nodes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authenticator.MyBasicDBAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.html) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicDBAuthenticator.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
 |`druid.auth.authenticator.MyBasicDBAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
 |`druid.auth.authenticator.MyBasicDBAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
 |`druid.auth.authenticator.MyBasicDBAuthenticator.credentialsValidator.type`|The type of credentials store (db) to validate requests credentials.|db|No|
@@ -90,8 +90,8 @@ The configuration examples in the rest of this document will use "MyBasicDBAuthe
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialAdminPassword`|Initial [Password Provider](../../operations/password-provider.html) for the automatically created default admin user. If no password is specified, the default admin user will not be created. If the default admin user already exists, setting this property will not affect its password.|null|No|
-|`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.html) for the default internal system user, used for internal node communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
-|`druid.auth.authenticator.MyBasicLDAPAuthenticator.enableCacheNotifications`|If true, the Coordinator will notify Druid nodes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.initialInternalClientPassword`|Initial [Password Provider](../../operations/password-provider.html) for the default internal system user, used for internal process communication. If no password is specified, the default internal system user will not be created. If the default internal system user already exists, setting this property will not affect its password.|null|No|
+|`druid.auth.authenticator.MyBasicLDAPAuthenticator.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authenticator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialIterations`|Number of iterations to use for password hashing.|10000|No|
 |`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.type`|The type of credentials store (ldap) to validate requests credentials.|db|No|
@@ -124,7 +124,7 @@ druid.escalator.authorizerName=MyBasicAuthorizer
 |`druid.escalator.internalClientUsername`|The escalator will use this username for requests made as the internal systerm user.|n/a|Yes|
 |`druid.escalator.internalClientPassword`|The escalator will use this [Password Provider](../../operations/password-provider.html) for requests made as the internal system user.|n/a|Yes|
 |`druid.escalator.authorizerName`|Authorizer that requests should be directed to.|n/a|Yes|
-|`druid.escalator.enableCacheNotifications`|If true, the Coordinator will notify Druid nodes whenever a configuration change to this Escalator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.escalator.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Escalator occurs, allowing them to immediately update their state without waiting for polling.|true|No|
 |`druid.escalator.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
 |`druid.escalator.internalClientCredentialPoll`|Defines in seconds how often Escalator will poll for its current internal client credentials|10|No|
 
@@ -147,7 +147,7 @@ druid.auth.authorizer.<authorizerName>.<authorizerProperty>
 #### Properties
 |Property|Description|Default|required|
 |--------|-----------|-------|--------|
-|`druid.auth.authorizer.MyBasicAuthorizer.enableCacheNotifications`|If true, the Coordinator will notify Druid nodes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.|true|No|
+|`druid.auth.authorizer.MyBasicAuthorizer.enableCacheNotifications`|If true, the Coordinator will notify Druid processes whenever a configuration change to this Authorizer occurs, allowing them to immediately update their state without waiting for polling.|true|No|
 |`druid.auth.authorizer.MyBasicAuthorizer.cacheNotificationTimeout`|The timeout in milliseconds for the cache notifications.|5000|No|
 |`druid.auth.authorizer.MyBasicAuthorizer.initialAdminUser`|The initial admin user with role defined in initialAdminRole property if specified, otherwise the default admin role will be assigned.|admin|No|
 |`druid.auth.authorizer.MyBasicAuthorizer.initialAdminRole`|The initial admin role to create if it doesn't already exists.|admin|No|
@@ -180,7 +180,9 @@ Delete the user with name {userName}
 `POST(/druid-ext/basic-security/authentication/db/{authenticatorName}/users/{userName}/credentials)`
 Assign a password used for HTTP basic authentication for {userName}
 Content: JSON password request object
+
 Example request body:
+
 ```
 {
   "password": "helloworld"
@@ -343,7 +345,7 @@ There are two possible resource names for the "CONFIG" resource type, "CONFIG" a
 
 "CONFIG" resource name covers the following endpoints:
 
-|Endpoint|Node Type|
+|Endpoint|Process Type|
 |--------|---------|
 |`/druid/coordinator/v1/config`|coordinator|
 |`/druid/indexer/v1/worker`|overlord|
@@ -353,7 +355,7 @@ There are two possible resource names for the "CONFIG" resource type, "CONFIG" a
 
 "security" resource name covers the following endpoint:
 
-|Endpoint|Node Type|
+|Endpoint|Process Type|
 |--------|---------|
 |`/druid-ext/basic-security/authentication`|coordinator|
 |`/druid-ext/basic-security/authorization`|coordinator|
@@ -363,7 +365,7 @@ There is only one possible resource name for the "STATE" config resource type, "
 
 "STATE" resource name covers the following endpoints:
 
-|Endpoint|Node Type|
+|Endpoint|Process Type|
 |--------|---------|
 |`/druid/coordinator/v1`|coordinator|
 |`/druid/coordinator/v1/rules`|coordinator|
@@ -395,10 +397,10 @@ GET requires READ permission, while POST and DELETE require WRITE permission.
 
 ## Configuration Propagation
 
-To prevent excessive load on the Coordinator, the Authenticator and Authorizer user/role database state is cached on each Druid node.
+To prevent excessive load on the Coordinator, the Authenticator and Authorizer user/role database state is cached on each Druid process.
 
-Each node will periodically poll the Coordinator for the latest database state, controlled by the `druid.auth.basic.common.pollingPeriod` and `druid.auth.basic.common.maxRandomDelay` properties.
+Each process will periodically poll the Coordinator for the latest database state, controlled by the `druid.auth.basic.common.pollingPeriod` and `druid.auth.basic.common.maxRandomDelay` properties.
 
-When a configuration update occurs, the Coordinator can optionally notify each node with the updated database state. This behavior is controlled by the `enableCacheNotifications` and `cacheNotificationTimeout` properties on Authenticators and Authorizers.
+When a configuration update occurs, the Coordinator can optionally notify each process with the updated database state. This behavior is controlled by the `enableCacheNotifications` and `cacheNotificationTimeout` properties on Authenticators and Authorizers.
 
-Note that because of the caching, changes made to the user/role database may not be immediately reflected at each Druid node.
+Note that because of the caching, changes made to the user/role database may not be immediately reflected at each Druid process.

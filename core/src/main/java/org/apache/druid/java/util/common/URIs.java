@@ -17,36 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.guice.http;
+package org.apache.druid.java.util.common;
 
-import com.google.common.base.Throwables;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import com.google.common.base.Preconditions;
 
-public class LifecycleUtils
+import java.net.URI;
+
+public final class URIs
 {
-  public static Lifecycle asMmxLifecycle(Lifecycle lifecycle)
+  public static URI parse(String strUri, String defaultScheme)
   {
-    final Lifecycle metamxLifecycle = new Lifecycle("http-client");
-    try {
-      lifecycle.addMaybeStartHandler(new Lifecycle.Handler()
-      {
-        @Override
-        public void start() throws Exception
-        {
-          metamxLifecycle.start();
-        }
-
-        @Override
-        public void stop()
-        {
-          metamxLifecycle.stop();
-        }
-      });
+    Preconditions.checkNotNull(strUri, "strUri");
+    Preconditions.checkNotNull(defaultScheme, "defaultScheme");
+    final String[] tokens = strUri.split("://");
+    if (tokens.length == 1) {
+      return URI.create(StringUtils.format("%s://%s", defaultScheme, strUri));
+    } else {
+      return URI.create(strUri);
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+  }
 
-    return metamxLifecycle;
+  private URIs()
+  {
   }
 }

@@ -19,6 +19,7 @@
 import 'es6-shim/es6-shim';
 import 'es7-shim'; // Webpack with automatically pick browser.js which does the shim()
 import * as React from 'react';
+(React as any).PropTypes = require('prop-types'); // Trick blueprint 1.0.1 into accepting React 16 as React 15.
 import * as ReactDOM from 'react-dom';
 import "./singletons/react-table-defaults";
 import "./entry.scss";
@@ -34,7 +35,7 @@ ReactDOM.render(
     {
       version: '0.0.1'
     }
-  ),
+  ) as any,
   container
 );
 

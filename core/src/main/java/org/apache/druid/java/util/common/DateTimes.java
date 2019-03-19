@@ -107,7 +107,17 @@ public final class DateTimes
 
   public static DateTime of(String instant)
   {
-    return new DateTime(instant, ISOChronology.getInstanceUTC());
+    try {
+      return new DateTime(instant, ISOChronology.getInstanceUTC());
+    }
+    catch (IllegalArgumentException ex) {
+      try {
+        return new DateTime(Long.valueOf(instant), ISOChronology.getInstanceUTC());
+      }
+      catch (IllegalArgumentException ex2) {
+        throw ex;
+      }
+    }
   }
 
   public static DateTime of(

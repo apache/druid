@@ -54,7 +54,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -84,7 +83,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.CombiningFirehoseFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -407,7 +405,16 @@ public class IndexTask extends AbstractTask implements ChatHandler
     try {
       if (chatHandlerProvider.isPresent()) {
         log.info("Found chat handler of class[%s]", chatHandlerProvider.get().getClass().getName());
-        chatHandlerProvider.get().register(getId(), this, false);
+
+        if (chatHandlerProvider.get().get(getId()).isPresent()) {
+          // This is a workaround for ParallelIndexSupervisorTask to avoid double registering when it runs in the
+          // sequential mode. See ParallelIndexSupervisorTask.runSequential().
+          // Note that all HTTP endpoints are not available in this case. This works only for
+          // ParallelIndexSupervisorTask because it doesn't support APIs for live ingestion reports.
+          log.warn("Chat handler is already registered. Skipping chat handler registration.");
+        } else {
+          chatHandlerProvider.get().register(getId(), this, false);
+        }
       } else {
         log.warn("No chat handler detected");
       }
@@ -418,8 +425,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
                                                          .isPresent();
 
       final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
-
-      setFirehoseFactoryToolbox(firehoseFactory, toolbox);
 
       final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
       // Firehose temporary directory is automatically removed when this IndexTask completes.
@@ -485,25 +490,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     finally {
       if (chatHandlerProvider.isPresent()) {
         chatHandlerProvider.get().unregister(getId());
-      }
-    }
-  }
-
-  // pass toolbox to any IngestSegmentFirehoseFactory
-  private void setFirehoseFactoryToolbox(FirehoseFactory firehoseFactory, TaskToolbox toolbox)
-  {
-    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
-      return;
-    }
-
-    if (firehoseFactory instanceof CombiningFirehoseFactory) {
-      for (FirehoseFactory delegateFactory : ((CombiningFirehoseFactory) firehoseFactory).getDelegateFactoryList()) {
-        if (delegateFactory instanceof IngestSegmentFirehoseFactory) {
-          ((IngestSegmentFirehoseFactory) delegateFactory).setTaskToolbox(toolbox);
-        } else if (delegateFactory instanceof CombiningFirehoseFactory) {
-          setFirehoseFactoryToolbox(delegateFactory, toolbox);
-        }
       }
     }
   }

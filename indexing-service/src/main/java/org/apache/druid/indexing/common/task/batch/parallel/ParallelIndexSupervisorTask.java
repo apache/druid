@@ -38,6 +38,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -236,6 +237,14 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   }
 
   @Override
+  public void stopGracefully(TaskConfig taskConfig)
+  {
+    if (runner != null) {
+      runner.stopGracefully();
+    }
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     setToolbox(toolbox);
@@ -247,18 +256,37 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
     chatHandlerProvider.register(getId(), this, false);
 
     try {
-      if (baseFirehoseFactory.isSplittable()) {
+      if (isParallelMode()) {
         return runParallel(toolbox);
       } else {
-        log.warn(
-            "firehoseFactory[%s] is not splittable. Running sequentially",
-            baseFirehoseFactory.getClass().getSimpleName()
-        );
+        if (!baseFirehoseFactory.isSplittable()) {
+          log.warn(
+              "firehoseFactory[%s] is not splittable. Running sequentially.",
+              baseFirehoseFactory.getClass().getSimpleName()
+          );
+        } else if (ingestionSchema.getTuningConfig().getMaxNumSubTasks() == 1) {
+          log.warn(
+              "maxNumSubTasks is 1. Running sequentially. "
+              + "Please set maxNumSubTasks to something higher than 1 if you want to run in parallel ingestion mode."
+          );
+        } else {
+          throw new ISE("Unknown reason for sequentail mode. Failing this task.");
+        }
+
         return runSequential(toolbox);
       }
     }
     finally {
       chatHandlerProvider.unregister(getId());
+    }
+  }
+
+  private boolean isParallelMode()
+  {
+    if (baseFirehoseFactory.isSplittable() && ingestionSchema.getTuningConfig().getMaxNumSubTasks() > 1) {
+      return true;
+    } else {
+      return false;
     }
   }
 
@@ -271,7 +299,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   private TaskStatus runParallel(TaskToolbox toolbox) throws Exception
   {
     createRunner(toolbox);
-    return TaskStatus.fromCode(getId(), runner.run());
+    return TaskStatus.fromCode(getId(), Preconditions.checkNotNull(runner, "runner").run());
   }
 
   private TaskStatus runSequential(TaskToolbox toolbox)
@@ -470,11 +498,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   public Response getMode(@Context final HttpServletRequest req)
   {
     IndexTaskUtils.datasourceAuthorizationCheck(req, Action.READ, getDataSource(), authorizerMapper);
-    if (runner == null) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("task is not running yet").build();
-    } else {
-      return Response.ok(baseFirehoseFactory.isSplittable() ? "parallel" : "sequential").build();
-    }
+    return Response.ok(isParallelMode() ? "parallel" : "sequential").build();
   }
 
   @GET

@@ -61,7 +61,7 @@ public class DBCredentialsValidator implements CredentialsValidator
   {
     Map<String, BasicAuthenticatorUser> userMap = cacheManager.get().getUserMap(authenticatorName);
     if (userMap == null) {
-      throw new IAE("No authenticator found with prefix: [%s]", authenticatorName);
+      throw new IAE("No userMap is available for authenticator with prefix: [%s]", authenticatorName);
     }
 
     BasicAuthenticatorUser user = userMap.get(username);

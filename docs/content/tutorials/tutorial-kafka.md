@@ -70,6 +70,8 @@ If the supervisor was successfully created, you will get a response containing t
 For more details about what's going on here, check out the
 [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.html).
 
+You can view the current supervisors and tasks in the Druid Console: [http://localhost:8888/unified-console.html#tasks](http://localhost:8888/unified-console.html#tasks).
+
 ## Load data
 
 Let's launch a console producer for our topic and send some data!

@@ -2,6 +2,7 @@ node/
 node_modules/
 resources/
 public/
+assets/
 lib/*.css
 
 coordinator-console/
@@ -11,3 +12,4 @@ index.html
 .tscache
 tscommand-*.tmp.txt
 
+licenses.json

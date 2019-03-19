@@ -26,10 +26,10 @@ import { HeaderBar, HeaderActiveTab } from './components/header-bar';
 import { localStorageGet, localStorageSet } from './utils';
 import { DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE } from './variables';
 import { HomeView } from './views/home-view';
-import { ServersView } from './views/servers-view';
 import { DatasourcesView } from './views/datasource-view';
-import { TasksView } from './views/tasks-view';
 import { SegmentsView } from './views/segments-view';
+import { ServersView } from './views/servers-view';
+import { TasksView } from './views/tasks-view';
 import { SqlView } from './views/sql-view';
 import "./console-application.scss";
 
@@ -59,7 +59,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
       // Status works but SQL 405s => the SQL endpoint is disabled
       AppToaster.show({
-        icon: 'error',
+        iconName: 'error',
         intent: Intent.DANGER,
         timeout: 120000,
         message: <>
@@ -161,7 +161,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
           }} />
         </Switch>
       </div>
-    </HashRouter>
+    </HashRouter>;
   }
 }
 
