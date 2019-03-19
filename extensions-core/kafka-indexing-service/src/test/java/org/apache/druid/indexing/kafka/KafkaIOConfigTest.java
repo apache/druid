@@ -69,10 +69,43 @@ public class KafkaIOConfigTest
     );
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mytopic", config.getStartPartitions().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartPartitions().getPartitionSequenceNumberMap());
-    Assert.assertEquals("mytopic", config.getEndPartitions().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndPartitions().getPartitionSequenceNumberMap());
+    Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assert.assertTrue(config.isUseTransaction());
+    Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
+    Assert.assertFalse("maximumMessageTime", config.getMaximumMessageTime().isPresent());
+    Assert.assertEquals(Collections.EMPTY_SET, config.getExclusiveStartSequenceNumberPartitions());
+  }
+
+  @Test
+  public void testSerdeWithDefaultsAndSequenceNumbers() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"type\": \"kafka\",\n"
+                     + "  \"taskGroupId\": 0,\n"
+                     + "  \"baseSequenceName\": \"my-sequence-name\",\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"0\":1, \"1\":10}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mytopic\", \"partitionSequenceNumberMap\" : {\"0\":15, \"1\":200}},\n"
+                     + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"}\n"
+                     + "}";
+
+    KafkaIndexTaskIOConfig config = (KafkaIndexTaskIOConfig) mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                IOConfig.class
+            )
+        ), IOConfig.class
+    );
+
+    Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
+    Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
@@ -105,10 +138,10 @@ public class KafkaIOConfigTest
     );
 
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mytopic", config.getStartPartitions().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartPartitions().getPartitionSequenceNumberMap());
-    Assert.assertEquals("mytopic", config.getEndPartitions().getStream());
-    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndPartitions().getPartitionSequenceNumberMap());
+    Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 1L, 1, 10L), config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+    Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
+    Assert.assertEquals(ImmutableMap.of(0, 15L, 1, 200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
     Assert.assertFalse(config.isUseTransaction());
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
@@ -172,7 +205,7 @@ public class KafkaIOConfigTest
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("endPartitions"));
+    exception.expectMessage(CoreMatchers.containsString("endSequenceNumbers"));
     mapper.readValue(jsonStr, IOConfig.class);
   }
 

@@ -55,8 +55,8 @@ public class KinesisIOConfigTest
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     KinesisIndexTaskIOConfig config = (KinesisIndexTaskIOConfig) mapper.readValue(
@@ -70,15 +70,15 @@ public class KinesisIOConfigTest
 
     Assert.assertNull(config.getTaskGroupId());
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mystream", config.getStartPartitions().getStream());
+    Assert.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
-        config.getStartPartitions().getPartitionSequenceNumberMap()
+        config.getStartSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertEquals("mystream", config.getEndPartitions().getStream());
+    Assert.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
-        config.getEndPartitions().getPartitionSequenceNumberMap()
+        config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
@@ -98,8 +98,8 @@ public class KinesisIOConfigTest
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\",\n"
@@ -123,15 +123,15 @@ public class KinesisIOConfigTest
 
     Assert.assertEquals((Integer) 0, config.getTaskGroupId());
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mystream", config.getStartPartitions().getStream());
+    Assert.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
-        config.getStartPartitions().getPartitionSequenceNumberMap()
+        config.getStartSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertEquals("mystream", config.getEndPartitions().getStream());
+    Assert.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
-        config.getEndPartitions().getPartitionSequenceNumberMap()
+        config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
     Assert.assertFalse(config.isUseTransaction());
     Assert.assertTrue("maximumMessageTime", config.getMaximumMessageTime().isPresent());
@@ -153,8 +153,8 @@ public class KinesisIOConfigTest
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
@@ -164,34 +164,34 @@ public class KinesisIOConfigTest
   }
 
   @Test
-  public void testStartPartitionsRequired() throws Exception
+  public void teststartSequenceNumbersRequired() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("startPartitions"));
+    exception.expectMessage(CoreMatchers.containsString("startSequenceNumbers"));
     mapper.readValue(jsonStr, IOConfig.class);
   }
 
   @Test
-  public void testEndPartitionsRequired() throws Exception
+  public void testendSequenceNumbersRequired() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("endPartitions"));
+    exception.expectMessage(CoreMatchers.containsString("endSequenceNumbers"));
     mapper.readValue(jsonStr, IOConfig.class);
   }
 
@@ -202,8 +202,8 @@ public class KinesisIOConfigTest
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"notmystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"notmystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
@@ -213,14 +213,14 @@ public class KinesisIOConfigTest
   }
 
   @Test
-  public void testStartAndEndPartitionSetMatch() throws Exception
+  public void testStartAndendSequenceNumbersetMatch() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"2\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"2\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
@@ -235,8 +235,8 @@ public class KinesisIOConfigTest
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);

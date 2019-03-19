@@ -60,7 +60,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFac
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -311,16 +311,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @Deprecated
     private final String baseSequenceName;
     private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint;
+    private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentCheckpoint;
 
     public CheckpointNotice(
         @Nullable Integer nullableTaskGroupId,
         @Deprecated String baseSequenceName,
-        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint,
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentCheckpoint
     )
     {
       this.baseSequenceName = baseSequenceName;
       this.nullableTaskGroupId = nullableTaskGroupId;
       this.previousCheckpoint = previousCheckpoint;
+      this.currentCheckpoint = currentCheckpoint;
     }
 
     @Override
@@ -372,7 +375,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           Map<PartitionIdType, SequenceOffsetType> checkpoint = checkpoints.get(sequenceId);
           // We have already verified the stream of the current checkpoint is same with that in ioConfig.
           // See checkpoint().
-          if (checkpoint.equals(previousCheckpoint.getSeekableStreamPartitions()
+          if (checkpoint.equals(previousCheckpoint.getSeekableStreamSequenceNumbers()
                                                   .getPartitionSequenceNumberMap()
           )) {
             break;
@@ -1094,7 +1097,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @SuppressWarnings("unchecked")
       final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> resetMetadata = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) dataSourceMetadata;
 
-      if (resetMetadata.getSeekableStreamPartitions().getStream().equals(ioConfig.getStream())) {
+      if (resetMetadata.getSeekableStreamSequenceNumbers().getStream().equals(ioConfig.getStream())) {
         // metadata can be null
         final DataSourceMetadata metadata = indexerMetadataStorageCoordinator.getDataSourceMetadata(dataSource);
         if (metadata != null && !checkSourceMetadataMatch(metadata)) {
@@ -1110,12 +1113,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // defend against consecutive reset requests from replicas
         // as well as the case where the metadata store do not have an entry for the reset partitions
         boolean doReset = false;
-        for (Entry<PartitionIdType, SequenceOffsetType> resetPartitionOffset : resetMetadata.getSeekableStreamPartitions()
+        for (Entry<PartitionIdType, SequenceOffsetType> resetPartitionOffset : resetMetadata.getSeekableStreamSequenceNumbers()
                                                                                             .getPartitionSequenceNumberMap()
                                                                                             .entrySet()) {
           final SequenceOffsetType partitionOffsetInMetadataStore = currentMetadata == null
                                                                     ? null
-                                                                    : currentMetadata.getSeekableStreamPartitions()
+                                                                    : currentMetadata.getSeekableStreamSequenceNumbers()
                                                                                      .getPartitionSequenceNumberMap()
                                                                                      .get(resetPartitionOffset.getKey());
           final TaskGroup partitionTaskGroup = activelyReadingTaskGroups.get(
@@ -1149,7 +1152,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
         }
         if (metadataUpdateSuccess) {
-          resetMetadata.getSeekableStreamPartitions().getPartitionSequenceNumberMap().keySet().forEach(partition -> {
+          resetMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap().keySet().forEach(partition -> {
             final int groupId = getTaskGroupIdForPartition(partition);
             killTaskGroupForPartitions(ImmutableSet.of(partition), "DataSourceMetadata is updated while reset");
             activelyReadingTaskGroups.remove(groupId);
@@ -1161,7 +1164,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       } else {
         log.warn(
             "Reset metadata stream [%s] and supervisor's stream name [%s] do not match",
-            resetMetadata.getSeekableStreamPartitions().getStream(),
+            resetMetadata.getSeekableStreamSequenceNumbers().getStream(),
             ioConfig.getStream()
         );
       }
@@ -1237,7 +1240,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // seamless schema migration.
 
       Iterator<PartitionIdType> it = seekableStreamIndexTask.getIOConfig()
-                                                            .getStartPartitions()
+                                                            .getStartSequenceNumbers()
                                                             .getPartitionSequenceNumberMap()
                                                             .keySet()
                                                             .iterator();
@@ -1261,7 +1264,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                         log.debug("Task [%s], status [%s]", taskId, status);
                         if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
                           seekableStreamIndexTask.getIOConfig()
-                                                 .getStartPartitions()
+                                                 .getStartSequenceNumbers()
                                                  .getPartitionSequenceNumberMap()
                                                  .keySet()
                                                  .forEach(
@@ -1269,7 +1272,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                          getTaskGroupIdForPartition(partition),
                                                          taskId,
                                                          seekableStreamIndexTask.getIOConfig()
-                                                                                .getStartPartitions()
+                                                                                .getStartSequenceNumbers()
                                                                                 .getPartitionSequenceNumberMap()
                                                      ));
 
@@ -1297,7 +1300,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           }
                         } else {
                           for (PartitionIdType partition : seekableStreamIndexTask.getIOConfig()
-                                                                                  .getStartPartitions()
+                                                                                  .getStartSequenceNumbers()
                                                                                   .getPartitionSequenceNumberMap()
                                                                                   .keySet()) {
                             if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
@@ -1337,7 +1340,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                       taskGroupId,
                                       ImmutableMap.copyOf(
                                           seekableStreamIndexTask.getIOConfig()
-                                                                 .getStartPartitions()
+                                                                 .getStartSequenceNumbers()
                                                                  .getPartitionSequenceNumberMap()
                                       ),
                                       seekableStreamIndexTask.getIOConfig().getMinimumMessageTime(),
@@ -1465,13 +1468,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> latestDataSourceMetadata = (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) rawDataSourceMetadata;
 
     final boolean hasValidOffsetsFromDb = latestDataSourceMetadata != null &&
-                                          latestDataSourceMetadata.getSeekableStreamPartitions() != null &&
+                                          latestDataSourceMetadata.getSeekableStreamSequenceNumbers() != null &&
                                           ioConfig.getStream().equals(
-                                              latestDataSourceMetadata.getSeekableStreamPartitions().getStream()
+                                              latestDataSourceMetadata.getSeekableStreamSequenceNumbers().getStream()
                                           );
     final Map<PartitionIdType, SequenceOffsetType> latestOffsetsFromDb;
     if (hasValidOffsetsFromDb) {
-      latestOffsetsFromDb = latestDataSourceMetadata.getSeekableStreamPartitions().getPartitionSequenceNumberMap();
+      latestOffsetsFromDb = latestDataSourceMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap();
     } else {
       latestOffsetsFromDb = null;
     }
@@ -1644,7 +1647,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       return generateSequenceName(
           task.getIOConfig()
-              .getStartPartitions()
+              .getStartSequenceNumbers()
               .getPartitionSequenceNumberMap(),
           task.getIOConfig().getMinimumMessageTime(),
           task.getIOConfig().getMaximumMessageTime()
@@ -2250,10 +2253,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             .entrySet()
             .stream()
             .filter(x -> x.getValue().get() != null)
-            .collect(Collectors.collectingAndThen(
-                Collectors.toMap(Entry::getKey, x -> x.getValue().get()),
-                ImmutableMap::copyOf
-            ));
+            .collect(
+                Collectors.collectingAndThen(
+                    Collectors.toMap(Entry::getKey, x -> x.getValue().get()), ImmutableMap::copyOf
+                )
+            );
 
         Set<PartitionIdType> exclusiveStartSequenceNumberPartitions = !useExclusiveStartingSequence
                                                                       ? Collections.emptySet()
@@ -2370,7 +2374,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (!checkSequenceAvailability(partition, sequence)) {
           if (taskTuningConfig.isResetOffsetAutomatically()) {
             resetInternal(
-                createDataSourceMetaData(ioConfig.getStream(), ImmutableMap.of(partition, sequence))
+                createDataSourceMetaDataForReset(ioConfig.getStream(), ImmutableMap.of(partition, sequence))
             );
             throw new ISE(
                 "Previous sequenceNumber [%s] is no longer available for partition [%s] - automatically resetting sequence",
@@ -2413,8 +2417,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (dataSourceMetadata instanceof SeekableStreamDataSourceMetadata
         && checkSourceMetadataMatch(dataSourceMetadata)) {
       @SuppressWarnings("unchecked")
-      SeekableStreamPartitions<PartitionIdType, SequenceOffsetType> partitions = ((SeekableStreamDataSourceMetadata) dataSourceMetadata)
-          .getSeekableStreamPartitions();
+      SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> partitions = ((SeekableStreamDataSourceMetadata) dataSourceMetadata)
+          .getSeekableStreamSequenceNumbers();
       if (partitions != null) {
         if (!ioConfig.getStream().equals(partitions.getStream())) {
           log.warn(
@@ -2629,11 +2633,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     Preconditions.checkArgument(
         spec.getIoConfig()
             .getStream()
-            .equals(((SeekableStreamDataSourceMetadata) currentCheckPoint).getSeekableStreamPartitions()
+            .equals(((SeekableStreamDataSourceMetadata) currentCheckPoint).getSeekableStreamSequenceNumbers()
                                                                           .getStream()),
         "Supervisor stream [%s] and stream in checkpoint [%s] does not match",
         spec.getIoConfig().getStream(),
-        ((SeekableStreamDataSourceMetadata) currentCheckPoint).getSeekableStreamPartitions().getStream()
+        ((SeekableStreamDataSourceMetadata) currentCheckPoint).getSeekableStreamSequenceNumbers().getStream()
     );
 
     log.info("Checkpointing [%s] for taskGroup [%s]", currentCheckPoint, taskGroupId);
@@ -2641,7 +2645,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         new CheckpointNotice(
             taskGroupId,
             baseSequenceName,
-            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) previousCheckPoint
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) previousCheckPoint,
+            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) currentCheckPoint
         )
     );
   }
@@ -2711,14 +2716,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   protected abstract boolean doesTaskTypeMatchSupervisor(Task task);
 
   /**
-   * creates a specific instance of kafka/kinesis datasource metadata
+   * creates a specific instance of kafka/kinesis datasource metadata. Only used for reset.
    *
    * @param stream stream name
    * @param map    partitionId -> sequence
    *
    * @return specific instance of datasource metadata
    */
-  protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaData(
+  protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetaDataForReset(
       String stream,
       Map<PartitionIdType, SequenceOffsetType> map
   );

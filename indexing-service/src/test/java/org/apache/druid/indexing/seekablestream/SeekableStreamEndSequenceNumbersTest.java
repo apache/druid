@@ -29,7 +29,7 @@ import org.junit.Test;
 
 import java.util.Map;
 
-public class SeekableStreamPartitionsTest
+public class SeekableStreamEndSequenceNumbersTest
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
@@ -39,13 +39,16 @@ public class SeekableStreamPartitionsTest
     final String stream = "theStream";
     final Map<Integer, Long> offsetMap = ImmutableMap.of(1, 2L, 3, 4L);
 
-    final SeekableStreamPartitions<Integer, Long> partitions = new SeekableStreamPartitions<>(stream, offsetMap);
+    final SeekableStreamEndSequenceNumbers<Integer, Long> partitions = new SeekableStreamEndSequenceNumbers<>(
+        stream,
+        offsetMap
+    );
     final String serializedString = OBJECT_MAPPER.writeValueAsString(partitions);
 
     // Check round-trip.
-    final SeekableStreamPartitions<Integer, Long> partitions2 = OBJECT_MAPPER.readValue(
+    final SeekableStreamEndSequenceNumbers<Integer, Long> partitions2 = OBJECT_MAPPER.readValue(
         serializedString,
-        new TypeReference<SeekableStreamPartitions<Integer, Long>>() {}
+        new TypeReference<SeekableStreamEndSequenceNumbers<Integer, Long>>() {}
     );
 
     Assert.assertEquals("Round trip", partitions, partitions2);

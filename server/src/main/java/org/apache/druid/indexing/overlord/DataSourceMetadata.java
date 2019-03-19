@@ -45,6 +45,12 @@ public interface DataSourceMetadata
   boolean isValidStart();
 
   /**
+   * TODO
+   * @return
+   */
+  DataSourceMetadata asStartMetadata();
+
+  /**
    * Returns true if any information present in this instance matches analogous information from "other" and
    * so they are conflict-free. In other words, "one.plus(two)" and "two.plus(one)" should return equal
    * instances if "one" matches "two".

@@ -879,7 +879,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final boolean startMetadataMatchesExisting = oldCommitMetadataFromDb == null
                                                  ? startMetadata.isValidStart()
-                                                 : startMetadata.matches(oldCommitMetadataFromDb);
+                                                 : startMetadata.matches(oldCommitMetadataFromDb.asStartMetadata());
 
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.

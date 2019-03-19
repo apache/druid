@@ -49,6 +49,12 @@ public final class ObjectMetadata implements DataSourceMetadata
   }
 
   @Override
+  public DataSourceMetadata asStartMetadata()
+  {
+    return this;
+  }
+
+  @Override
   public boolean matches(DataSourceMetadata other)
   {
     return equals(other);
