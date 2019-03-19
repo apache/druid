@@ -219,7 +219,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
 
   renderTableColumnSelection() {
     return <TableColumnSelection
-      onChange={() => this.setState(this.state)}
+      onChange={() => this.setState({})}
       tableName={lookupTableColumnSelection}
     />;
   }

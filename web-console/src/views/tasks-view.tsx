@@ -315,14 +315,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
 
   renderSupervisorTableColumnSelection() {
     return <TableColumnSelection
-      onChange={() => this.setState(this.state)}
+      onChange={() => this.setState({})}
       tableName={supervisorTableColumnSelection}
     />;
   }
 
   renderTaskTableColumnSelection() {
     return <TableColumnSelection
-      onChange={() => this.setState(this.state)}
+      onChange={() => this.setState({})}
       tableName={taskTableColumnSelection}
     />;
   }

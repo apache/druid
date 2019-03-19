@@ -153,14 +153,14 @@ WHERE "server_type" = 'historical'`);
 
   renderHistoricalTableColumnSelection() {
     return <TableColumnSelection
-      onChange={() => this.setState(this.state)}
+      onChange={() => this.setState({})}
       tableName={historicalTableColumnSelection}
     />;
   }
 
   renderMiddlemanagerTableColumnSelection() {
     return <TableColumnSelection
-      onChange={() => this.setState(this.state)}
+      onChange={() => this.setState({})}
       tableName={middlemanagerTableColumnSelection}
     />;
   }

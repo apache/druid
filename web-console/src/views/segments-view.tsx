@@ -150,7 +150,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
 
   renderTableColumnSelection() {
     return <TableColumnSelection
-      onChange={() => this.setState(this.state)}
+      onChange={() => this.setState({})}
       tableName={segmentTableColumnSelection}
     />;
   }

@@ -354,7 +354,7 @@ GROUP BY 1`);
 
   renderTableColumnSelection() {
     return <TableColumnSelection
-      onChange={() => this.setState(this.state)}
+      onChange={() => this.setState({})}
       tableName={datasourceTableColumnSelection}
     />;
   }
