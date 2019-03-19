@@ -153,15 +153,27 @@ public class DruidServer implements Comparable<DruidServer>
     return metadata.getHostAndTlsPort() != null ? "https" : "http";
   }
 
-  public Iterable<DataSegment> getSegments()
+  /**
+   * Returns an iterable to go over all segments in all data sources, stored on this DruidServer. The order in which
+   * segments are iterated is unspecified.
+   *
+   * Since this DruidServer can be mutated concurrently, the set of segments observed during an iteration may _not_ be
+   * a momentary snapshot of the segments on the server, in other words, it may be that there was no moment when the
+   * DruidServer stored exactly the returned set of segments.
+   *
+   * Note: the iteration may not be as trivially cheap as, for example, iteration over an ArrayList. Try (to some
+   * reasonable extent) to organize the code so that it iterates the returned iterable only once rather than several
+   * times.
+   */
+  public Iterable<DataSegment> iterateAllSegments()
   {
     return () -> dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()).iterator();
   }
 
   /**
    * Returns the current number of segments, stored in this DruidServer object. This number if weakly consistent with
-   * the number of segments if {@link #getSegments} is iterated about the same time, because segments might be added or
-   * removed in parallel.
+   * the number of segments if {@link #iterateAllSegments} is iterated about the same time, because segments might be
+   * added or removed in parallel.
    */
   public int getTotalSegments()
   {
@@ -200,7 +212,7 @@ public class DruidServer implements Comparable<DruidServer>
 
   public DruidServer addDataSegments(DruidServer server)
   {
-    server.getSegments().forEach(this::addDataSegment);
+    server.iterateAllSegments().forEach(this::addDataSegment);
     return this;
   }
 

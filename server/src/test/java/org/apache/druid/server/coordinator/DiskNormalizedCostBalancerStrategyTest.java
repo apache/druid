@@ -88,7 +88,7 @@ public class DiskNormalizedCostBalancerStrategyTest
       segments.add(segment);
       EasyMock.expect(druidServer.getSegment(segment.getId())).andReturn(segment).anyTimes();
     }
-    EasyMock.expect(druidServer.getSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(druidServer.getLazyAllSegments()).andReturn(segments).anyTimes();
 
     EasyMock.replay(druidServer);
     serverHolderList.add(new ServerHolder(druidServer, fromPeon));

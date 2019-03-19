@@ -20,6 +20,7 @@
 package org.apache.druid.curator;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -126,5 +127,10 @@ public class CuratorUtils
           maxZnodeBytes
       );
     }
+  }
+
+  public static boolean isChildAdded(PathChildrenCacheEvent event)
+  {
+    return event.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED);
   }
 }

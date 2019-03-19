@@ -134,7 +134,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
     int numSegments = 0;
     for (ServerHolder sourceHolder : servers) {
-      numSegments += sourceHolder.getServer().getSegments().size();
+      numSegments += sourceHolder.getServer().getLazyAllSegments().size();
     }
 
     if (numSegments == 0) {
@@ -191,7 +191,18 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
     //noinspection ForLoopThatDoesntUseLoopVariable
     for (int iter = 0; (moved + unmoved) < maxSegmentsToMove; ++iter) {
       final BalancerSegmentHolder segmentToMoveHolder = strategy.pickSegmentToMove(toMoveFrom);
-      if (segmentToMoveHolder != null && params.getAvailableSegments().contains(segmentToMoveHolder.getSegment())) {
+      if (segmentToMoveHolder == null) {
+        log.info("All servers to move segments from are empty, ending run.");
+        break;
+      }
+      // DruidCoordinatorRuntimeParams.getAvailableSegments originate from MetadataSegmentManager, i. e. that's a
+      // "desired" or "theoretical" set of segments. segmentToMoveHolder.getSegment originates from ServerInventoryView,
+      // i. e. that may be any segment that happens to be loaded on some server, even if it "shouldn't" from the
+      // "theoretical" point of view (Coordinator closes such discrepancies eventually via
+      // DruidCoordinatorCleanupUnneeded). Therefore the picked segmentToMoveHolder's segment may not need to be
+      // balanced.
+      boolean needToBalancePickedSegment = params.getAvailableSegments().contains(segmentToMoveHolder.getSegment());
+      if (needToBalancePickedSegment) {
         final DataSegment segmentToMove = segmentToMoveHolder.getSegment();
         final ImmutableDruidServer fromServer = segmentToMoveHolder.getFromServer();
         // we want to leave the server the segment is currently on in the list...
