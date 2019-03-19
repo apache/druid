@@ -94,7 +94,7 @@ public class CostBalancerStrategyTest
       segments.put(segment.getId(), segment);
       EasyMock.expect(druidServer.getSegment(segment.getId())).andReturn(segment).anyTimes();
     }
-    EasyMock.expect(druidServer.getSegments()).andReturn(segments.values()).anyTimes();
+    EasyMock.expect(druidServer.getLazyAllSegments()).andReturn(segments.values()).anyTimes();
 
     EasyMock.replay(druidServer);
     serverHolderList.add(new ServerHolder(druidServer, fromPeon));

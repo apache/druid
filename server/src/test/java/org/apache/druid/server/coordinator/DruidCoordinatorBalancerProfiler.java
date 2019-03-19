@@ -116,9 +116,9 @@ public class DruidCoordinatorBalancerProfiler
       EasyMock.expect(server.getName()).andReturn(Integer.toString(i)).atLeastOnce();
       EasyMock.expect(server.getHost()).andReturn(Integer.toString(i)).anyTimes();
       if (i == 0) {
-        EasyMock.expect(server.getSegments()).andReturn(segments).anyTimes();
+        EasyMock.expect(server.getLazyAllSegments()).andReturn(segments).anyTimes();
       } else {
-        EasyMock.expect(server.getSegments()).andReturn(Collections.emptyList()).anyTimes();
+        EasyMock.expect(server.getLazyAllSegments()).andReturn(Collections.emptyList()).anyTimes();
       }
       EasyMock.expect(server.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
       EasyMock.replay(server);
@@ -148,7 +148,7 @@ public class DruidCoordinatorBalancerProfiler
                                 .withLoadManagementPeons(
                                     peonMap
                                 )
-                                .withAvailableSegments(segments)
+                                .withAvailableSegmentsInTest(segments)
                                 .withDynamicConfigs(
                                     CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
@@ -197,7 +197,7 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer1.getSegments()).andReturn(segments).anyTimes();
+    EasyMock.expect(druidServer1.getLazyAllSegments()).andReturn(segments).anyTimes();
     EasyMock.expect(druidServer1.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
@@ -205,7 +205,7 @@ public class DruidCoordinatorBalancerProfiler
     EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(0L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer2.getSegments()).andReturn(Collections.emptyList()).anyTimes();
+    EasyMock.expect(druidServer2.getLazyAllSegments()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
@@ -246,7 +246,7 @@ public class DruidCoordinatorBalancerProfiler
                                         toPeon
                                     )
                                 )
-                                .withAvailableSegments(segments)
+                                .withAvailableSegmentsInTest(segments)
                                 .withDynamicConfigs(
                                     CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
                                         MAX_SEGMENTS_TO_MOVE
