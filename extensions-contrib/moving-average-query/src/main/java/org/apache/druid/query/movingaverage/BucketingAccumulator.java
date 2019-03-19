@@ -23,7 +23,6 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 /**

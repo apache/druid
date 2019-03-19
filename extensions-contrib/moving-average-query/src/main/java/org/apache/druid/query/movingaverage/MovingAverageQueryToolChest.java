@@ -36,7 +36,6 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.server.log.RequestLogger;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 

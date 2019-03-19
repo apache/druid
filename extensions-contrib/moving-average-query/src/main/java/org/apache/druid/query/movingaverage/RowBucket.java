@@ -22,7 +22,6 @@ package org.apache.druid.query.movingaverage;
 import org.apache.druid.data.input.Row;
 import org.joda.time.DateTime;
 
-import java.util.Collection;
 import java.util.List;
 
 /**

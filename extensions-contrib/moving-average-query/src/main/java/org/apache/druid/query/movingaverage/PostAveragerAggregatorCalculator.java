@@ -24,13 +24,9 @@ import com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Function that can be applied to a Sequence to calculate PostAverager results
