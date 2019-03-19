@@ -234,29 +234,14 @@ public class MovingAverageQueryTest
   /**
    * Set up any needed mocks to stub out backend query behavior.
    *
-   * @param query
-   *
    * @throws IOException
    * @throws JsonMappingException
    * @throws JsonParseException
    */
-  protected void defineMocks(Query<?> query) throws IOException
+  protected void defineMocks() throws IOException
   {
     groupByResults.clear();
     timeseriesResults.clear();
-    List<AggregatorFactory> aggs;
-
-    if (query instanceof GroupByQuery) {
-      aggs = ((GroupByQuery) query).getAggregatorSpecs();
-    } else if (query instanceof TimeseriesQuery) {
-      aggs = ((TimeseriesQuery) query).getAggregatorSpecs();
-    } else if (query instanceof MovingAverageQuery) {
-      aggs = ((MovingAverageQuery) query).getAggregatorSpecs();
-    } else {
-      // unrecognized query type
-      aggs = Collections.emptyList();
-
-    }
 
     if (getGroupByResultJson() != null) {
       groupByResults.addAll(jsonMapper.readValue(getGroupByResultJson(), new TypeReference<List<Row>>()
@@ -420,7 +405,7 @@ public class MovingAverageQueryTest
     );
     final Map<String, Object> responseContext = new HashMap<>();
 
-    defineMocks(query);
+    defineMocks();
 
     QueryPlus queryPlus = QueryPlus.wrap(query);
     final Sequence<?> res = query.getRunner(walker).run(queryPlus, responseContext);

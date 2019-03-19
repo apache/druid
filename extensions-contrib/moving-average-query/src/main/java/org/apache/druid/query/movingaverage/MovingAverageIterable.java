@@ -176,15 +176,11 @@ public class MovingAverageIterable implements Iterable<Row>
         return true;
       }
 
-      try {
-        saveNext = internalNext();
-        return true;
+      Row row = internalNext();
+      if (row != null) {
+        saveNext = row;
       }
-      catch (NoSuchElementException e) {
-        return false;
-      }
-
-
+      return (row != null);
     }
 
     /* (non-Javadoc)
@@ -258,7 +254,7 @@ public class MovingAverageIterable implements Iterable<Row>
       if (cacheIter == null && yielder.isDone()) {
         // we should never get here. For some reason, there is
         // no more work to do, so continuing to iterate will infinite loop
-        throw new NoSuchElementException();
+        return null;
       }
 
       // nothing to do here, so move on to the next row
