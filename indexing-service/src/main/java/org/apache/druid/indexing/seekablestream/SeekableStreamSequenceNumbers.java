@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 
 import java.util.Map;
 
@@ -33,14 +34,30 @@ import java.util.Map;
 })
 public interface SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
 {
+  /**
+   * Returns the stream/topic name.
+   */
   String getStream();
 
+  /**
+   * Returns a map of partitionId -> sequenceNumber.
+   */
   Map<PartitionIdType, SequenceOffsetType> getPartitionSequenceNumberMap();
 
+  /**
+   * Merges this and the given other and returns the merged result.
+   *
+   * @see DataSourceMetadata#plus
+   */
   SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> plus(
       SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other
   );
 
+  /**
+   * Subtracts the given other from this and returns the result.
+   *
+   * @see DataSourceMetadata#minus
+   */
   SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> minus(
       SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType> other
   );

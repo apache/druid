@@ -30,6 +30,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
+/**
+ * Represents the end sequenceNumber per partition of a sequence. Note that end sequenceNumbers are always
+ * exclusive/inclusive in Kafka/Kinesis indexing service, respectively.
+ *
+ * To be backward compatible with both Kafka and Kinesis datasource metadata when
+ * serializing and deserializing json, redundant constructor fields stream, topic,
+ * partitionSequenceNumberMap and partitionOffsetMap are created. Only one of topic, stream
+ * should have a non-null value and only one of partitionOffsetMap and partitionSequenceNumberMap
+ * should have a non-null value.
+ *
+ * Redundant getters are used for proper Jackson serialization/deserialization when processing terminologies
+ * used by Kafka and Kinesis (i.e. topic vs. stream)
+ */
 public class SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> implements
     SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
 {

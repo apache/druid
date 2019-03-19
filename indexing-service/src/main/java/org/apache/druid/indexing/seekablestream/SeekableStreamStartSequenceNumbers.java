@@ -34,18 +34,9 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * class that encapsulates a partitionIdToSequenceNumberMap of partitionId -> sequenceNumber.
- * To be backward compatible with both Kafka and Kinesis datasource metadata when
- * serializing and deserializing json, redundant constructor fields stream, topic,
- * partitionSequenceNumberMap and partitionOffsetMap are created. Only one of topic, stream
- * should have a non-null value and only one of partitionOffsetMap and partitionSequenceNumberMap
- * should have a non-null value.
- *
- * Redundant getters are used for proper Jackson serialization/deserialization when processing terminologies
- * used by Kafka and Kinesis (i.e. topic vs. stream)
- *
- * @param <PartitionIdType>    partition id type
- * @param <SequenceOffsetType> sequence number type
+ * Represents the start sequenceNumber per partition of a sequence. This class keeps an additional set of
+ * {@link #exclusivePartitions} for Kinesis indexing service in where each start offset can be either inclusive
+ * or exclusive.
  */
 public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> implements
     SeekableStreamSequenceNumbers<PartitionIdType, SequenceOffsetType>
