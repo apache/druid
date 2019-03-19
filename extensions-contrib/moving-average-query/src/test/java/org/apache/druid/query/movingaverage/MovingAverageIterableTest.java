@@ -39,16 +39,13 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -441,12 +438,12 @@ public class MovingAverageIterableTest
 
     assertTrue(iter.hasNext());
     result = iter.next();
-    assertThat((result.getDimension("gender")).get(0), anyOf(is("f"), is("u")));
+    assertEquals("u", (result.getDimension("gender")).get(0));
     assertEquals(JAN_2, (result.getTimestamp()));
 
     assertTrue(iter.hasNext());
     result = iter.next();
-    assertThat((result.getDimension("gender")).get(0), anyOf(is("f"), is("u")));
+    assertEquals("f", (result.getDimension("gender")).get(0));
     assertEquals(JAN_2, (result.getTimestamp()));
 
     assertFalse(iter.hasNext());
@@ -457,35 +454,35 @@ public class MovingAverageIterableTest
   public void testMissingDataAtMiddle()
   {
 
-    Map<String, Object> event1 = new HashMap<>();
-    Map<String, Object> event2 = new HashMap<>();
-    Map<String, Object> event3 = new HashMap<>();
+    Map<String, Object> eventM = new HashMap<>();
+    Map<String, Object> eventF = new HashMap<>();
+    Map<String, Object> eventU = new HashMap<>();
     Map<String, Object> event4 = new HashMap<>();
 
-    event1.put("gender", "m");
-    event1.put("pageViews", 10L);
-    event2.put("gender", "f");
-    event2.put("pageViews", 20L);
-    event3.put("gender", "u");
-    event3.put("pageViews", 30L);
+    eventM.put("gender", "m");
+    eventM.put("pageViews", 10L);
+    eventF.put("gender", "f");
+    eventF.put("pageViews", 20L);
+    eventU.put("gender", "u");
+    eventU.put("pageViews", 30L);
 
     List<DimensionSpec> ds = new ArrayList<>();
     ds.add(new DefaultDimensionSpec("gender", "gender"));
 
-    Row jan1Row1 = new MapBasedRow(JAN_1, event1);
-    Row jan1Row2 = new MapBasedRow(JAN_1, event2);
-    Row jan1Row3 = new MapBasedRow(JAN_1, event3);
-    Row jan2Row1 = new MapBasedRow(JAN_2, event1);
-    Row jan3Row1 = new MapBasedRow(JAN_3, event1);
-    Row jan3Row2 = new MapBasedRow(JAN_3, event2);
-    Row jan3Row3 = new MapBasedRow(JAN_3, event3);
-    Row jan4Row1 = new MapBasedRow(JAN_4, event1);
+    Row jan1Row1M = new MapBasedRow(JAN_1, eventM);
+    Row jan1Row2F = new MapBasedRow(JAN_1, eventF);
+    Row jan1Row3U = new MapBasedRow(JAN_1, eventU);
+    Row jan2Row1M = new MapBasedRow(JAN_2, eventM);
+    Row jan3Row1M = new MapBasedRow(JAN_3, eventM);
+    Row jan3Row2F = new MapBasedRow(JAN_3, eventF);
+    Row jan3Row3U = new MapBasedRow(JAN_3, eventU);
+    Row jan4Row1M = new MapBasedRow(JAN_4, eventM);
 
     Sequence<RowBucket> seq = Sequences.simple(Arrays.asList(
-        new RowBucket(JAN_1, Arrays.asList(jan1Row1, jan1Row2, jan1Row3)),
-        new RowBucket(JAN_2, Collections.singletonList(jan2Row1)),
-        new RowBucket(JAN_3, Arrays.asList(jan3Row1, jan3Row2, jan3Row3)),
-        new RowBucket(JAN_4, Collections.singletonList(jan4Row1))
+        new RowBucket(JAN_1, Arrays.asList(jan1Row1M, jan1Row2F, jan1Row3U)),
+        new RowBucket(JAN_2, Collections.singletonList(jan2Row1M)),
+        new RowBucket(JAN_3, Arrays.asList(jan3Row1M, jan3Row2F, jan3Row3U)),
+        new RowBucket(JAN_4, Collections.singletonList(jan4Row1M))
     ));
 
     Iterator<Row> iter = new MovingAverageIterable(seq, ds, Collections.singletonList(
@@ -496,6 +493,7 @@ public class MovingAverageIterableTest
                                                    ))
     ).iterator();
 
+    // Jan 1
     assertTrue(iter.hasNext());
     Row result = iter.next();
     assertEquals("m", (result.getDimension("gender")).get(0));
@@ -511,6 +509,7 @@ public class MovingAverageIterableTest
     assertEquals("u", (result.getDimension("gender")).get(0));
     assertEquals(JAN_1, (result.getTimestamp()));
 
+    // Jan 2
     assertTrue(iter.hasNext());
     result = iter.next();
     assertEquals("m", (result.getDimension("gender")).get(0));
@@ -518,14 +517,15 @@ public class MovingAverageIterableTest
 
     assertTrue(iter.hasNext());
     result = iter.next();
-    assertThat((result.getDimension("gender")).get(0), anyOf(is("f"), is("u")));
+    assertEquals("u", (result.getDimension("gender")).get(0));
     assertEquals(JAN_2, (result.getTimestamp()));
 
     assertTrue(iter.hasNext());
     result = iter.next();
-    assertThat((result.getDimension("gender")).get(0), anyOf(is("f"), is("u")));
+    assertEquals("f", (result.getDimension("gender")).get(0));
     assertEquals(JAN_2, (result.getTimestamp()));
 
+    // Jan 3
     assertTrue(iter.hasNext());
     result = iter.next();
     assertEquals("m", (result.getDimension("gender")).get(0));
@@ -541,19 +541,20 @@ public class MovingAverageIterableTest
     assertEquals("u", (result.getDimension("gender")).get(0));
     assertEquals(JAN_3, (result.getTimestamp()));
 
+    // Jan 4
     assertTrue(iter.hasNext());
     result = iter.next();
-    assertThat((result.getDimension("gender")).get(0), anyOf(is("m"), is("f"), is("u")));
+    assertEquals("m", (result.getDimension("gender")).get(0));
     assertEquals(JAN_4, (result.getTimestamp()));
 
     assertTrue(iter.hasNext());
     result = iter.next();
-    assertThat((result.getDimension("gender")).get(0), anyOf(is("m"), is("f"), is("u")));
+    assertEquals("u", (result.getDimension("gender")).get(0));
     assertEquals(JAN_4, (result.getTimestamp()));
 
     assertTrue(iter.hasNext());
     result = iter.next();
-    assertThat((result.getDimension("gender")).get(0), anyOf(is("m"), is("f"), is("u")));
+    assertEquals("f", (result.getDimension("gender")).get(0));
     assertEquals(JAN_4, (result.getTimestamp()));
 
     assertFalse(iter.hasNext());
