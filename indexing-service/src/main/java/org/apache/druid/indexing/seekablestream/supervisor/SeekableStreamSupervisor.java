@@ -1285,116 +1285,126 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           futures.add(
               Futures.transform(
                   taskClient.getStatusAsync(taskId),
-                  (Function<SeekableStreamIndexTaskRunner.Status, Boolean>) status -> {
-                    try {
-                      log.debug("Task [%s], status [%s]", taskId, status);
-                      if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
-                        seekableStreamIndexTask.getIOConfig()
-                                               .getStartPartitions()
-                                               .getPartitionSequenceNumberMap()
-                                               .keySet()
-                                               .forEach(
-                                                   partition -> addDiscoveredTaskToPendingCompletionTaskGroups(
-                                                       getTaskGroupIdForPartition(partition),
-                                                       taskId,
-                                                       seekableStreamIndexTask.getIOConfig()
-                                                                              .getStartPartitions()
-                                                                              .getPartitionSequenceNumberMap()
-                                                   ));
-
-                        // update partitionGroups with the publishing task's sequences (if they are greater than what is
-                        // existing) so that the next tasks will start reading from where this task left off
-                        Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = taskClient.getEndOffsets(
-                            taskId);
-
-                        for (Entry<PartitionIdType, SequenceOffsetType> entry : publishingTaskEndOffsets.entrySet()) {
-                          PartitionIdType partition = entry.getKey();
-                          SequenceOffsetType sequence = entry.getValue();
-                          ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionOffsets = partitionGroups.get(
-                              getTaskGroupIdForPartition(partition)
-                          );
-
-                          boolean succeeded;
-                          do {
-                            succeeded = true;
-                            SequenceOffsetType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
-                            if (previousOffset != null
-                                && (makeSequenceNumber(previousOffset).compareTo(makeSequenceNumber(sequence))) < 0) {
-                              succeeded = partitionOffsets.replace(partition, previousOffset, sequence);
-                            }
-                          } while (!succeeded);
-                        }
-                      } else {
-                        for (PartitionIdType partition : seekableStreamIndexTask.getIOConfig()
+                  new Function<SeekableStreamIndexTaskRunner.Status, Boolean>()
+                  {
+                    @Override
+                    public Boolean apply(SeekableStreamIndexTaskRunner.Status status)
+                    {
+                      try {
+                        log.debug("Task [%s], status [%s]", taskId, status);
+                        if (status == SeekableStreamIndexTaskRunner.Status.PUBLISHING) {
+                          seekableStreamIndexTask.getIOConfig()
+                                                 .getStartPartitions()
+                                                 .getPartitionSequenceNumberMap()
+                                                 .keySet()
+                                                 .forEach(
+                                                     partition -> SeekableStreamSupervisor.this.addDiscoveredTaskToPendingCompletionTaskGroups(
+                                                         SeekableStreamSupervisor.this.getTaskGroupIdForPartition(
+                                                             partition),
+                                                         taskId,
+                                                         seekableStreamIndexTask.getIOConfig()
                                                                                 .getStartPartitions()
                                                                                 .getPartitionSequenceNumberMap()
-                                                                                .keySet()) {
-                          if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
-                            log.warn(
-                                "Stopping task [%s] which does not match the expected partition allocation",
+                                                     ));
+
+                          // update partitionGroups with the publishing task's sequences (if they are greater than what is
+                          // existing) so that the next tasks will start reading from where this task left off
+                          Map<PartitionIdType, SequenceOffsetType> publishingTaskEndOffsets = taskClient.getEndOffsets(
+                              taskId);
+
+                          for (Entry<PartitionIdType, SequenceOffsetType> entry : publishingTaskEndOffsets.entrySet()) {
+                            PartitionIdType partition = entry.getKey();
+                            SequenceOffsetType sequence = entry.getValue();
+                            ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionOffsets = partitionGroups.get(
+                                SeekableStreamSupervisor.this.getTaskGroupIdForPartition(partition)
+                            );
+
+                            boolean succeeded;
+                            do {
+                              succeeded = true;
+                              SequenceOffsetType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
+                              if (previousOffset != null
+                                  && (SeekableStreamSupervisor.this.makeSequenceNumber(previousOffset)
+                                                                   .compareTo(SeekableStreamSupervisor.this.makeSequenceNumber(
+                                                                       sequence))) < 0) {
+                                succeeded = partitionOffsets.replace(partition, previousOffset, sequence);
+                              }
+                            } while (!succeeded);
+                          }
+                        } else {
+                          for (PartitionIdType partition : seekableStreamIndexTask.getIOConfig()
+                                                                                  .getStartPartitions()
+                                                                                  .getPartitionSequenceNumberMap()
+                                                                                  .keySet()) {
+                            if (!taskGroupId.equals(SeekableStreamSupervisor.this.getTaskGroupIdForPartition(partition))) {
+                              log.warn(
+                                  "Stopping task [%s] which does not match the expected partition allocation",
+                                  taskId
+                              );
+                              try {
+                                SeekableStreamSupervisor.this.stopTask(taskId, false)
+                                                             .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+                              }
+                              catch (InterruptedException | ExecutionException | TimeoutException e) {
+                                log.warn(e, "Exception while stopping task");
+                              }
+                              return false;
+                            }
+                          }
+                          // make sure the task's io and tuning configs match with the supervisor config
+                          // if it is current then only create corresponding taskGroup if it does not exist
+                          if (!SeekableStreamSupervisor.this.isTaskCurrent(taskGroupId, taskId)) {
+                            log.info(
+                                "Stopping task [%s] which does not match the expected parameters and ingestion spec",
                                 taskId
                             );
                             try {
-                              stopTask(taskId, false).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
+                              SeekableStreamSupervisor.this.stopTask(taskId, false)
+                                                           .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
                             }
                             catch (InterruptedException | ExecutionException | TimeoutException e) {
                               log.warn(e, "Exception while stopping task");
                             }
                             return false;
-                          }
-                        }
-                        // make sure the task's io and tuning configs match with the supervisor config
-                        // if it is current then only create corresponding taskGroup if it does not exist
-                        if (!isTaskCurrent(taskGroupId, taskId)) {
-                          log.info(
-                              "Stopping task [%s] which does not match the expected parameters and ingestion spec",
-                              taskId
-                          );
-                          try {
-                            stopTask(taskId, false).get(futureTimeoutInSeconds, TimeUnit.SECONDS);
-                          }
-                          catch (InterruptedException | ExecutionException | TimeoutException e) {
-                            log.warn(e, "Exception while stopping task");
-                          }
-                          return false;
-                        } else {
-                          final TaskGroup taskGroup1 = activelyReadingTaskGroups.computeIfAbsent(
-                              taskGroupId,
-                              k -> {
-                                log.info("Creating a new task group for taskGroupId[%d]", taskGroupId);
-                                // We reassign the task's original base sequence name (from the existing task) to the
-                                // task group so that the replica segment allocations are the same.
-                                return new TaskGroup(
-                                    taskGroupId,
-                                    ImmutableMap.copyOf(
-                                        seekableStreamIndexTask.getIOConfig()
-                                                               .getStartPartitions()
-                                                               .getPartitionSequenceNumberMap()
-                                    ),
-                                    seekableStreamIndexTask.getIOConfig().getMinimumMessageTime(),
-                                    seekableStreamIndexTask.getIOConfig().getMaximumMessageTime(),
-                                    seekableStreamIndexTask.getIOConfig().getExclusiveStartSequenceNumberPartitions(),
-                                    seekableStreamIndexTask.getIOConfig().getBaseSequenceName()
-                                );
-                              }
-                          );
-                          taskGroupsToVerify.put(taskGroupId, taskGroup1);
-                          final TaskData prevTaskData = taskGroup1.tasks.putIfAbsent(taskId, new TaskData());
-                          if (prevTaskData != null) {
-                            throw new ISE(
-                                "WTH? a taskGroup[%s] already exists for new task[%s]",
-                                prevTaskData,
-                                taskId
+                          } else {
+                            final TaskGroup taskGroup1 = activelyReadingTaskGroups.computeIfAbsent(
+                                taskGroupId,
+                                k -> {
+                                  log.info("Creating a new task group for taskGroupId[%d]", taskGroupId);
+                                  // We reassign the task's original base sequence name (from the existing task) to the
+                                  // task group so that the replica segment allocations are the same.
+                                  return new TaskGroup(
+                                      taskGroupId,
+                                      ImmutableMap.copyOf(
+                                          seekableStreamIndexTask.getIOConfig()
+                                                                 .getStartPartitions()
+                                                                 .getPartitionSequenceNumberMap()
+                                      ),
+                                      seekableStreamIndexTask.getIOConfig().getMinimumMessageTime(),
+                                      seekableStreamIndexTask.getIOConfig().getMaximumMessageTime(),
+                                      seekableStreamIndexTask.getIOConfig().getExclusiveStartSequenceNumberPartitions(),
+                                      seekableStreamIndexTask.getIOConfig().getBaseSequenceName()
+                                  );
+                                }
                             );
+                            taskGroupsToVerify.put(taskGroupId, taskGroup1);
+                            final TaskData prevTaskData = taskGroup1.tasks.putIfAbsent(taskId, new TaskData());
+                            if (prevTaskData != null) {
+                              throw new ISE(
+                                  "WTH? a taskGroup[%s] already exists for new task[%s]",
+                                  prevTaskData,
+                                  taskId
+                              );
+                            }
+                            SeekableStreamSupervisor.this.verifySameSequenceNameForAllTasksInGroup(taskGroupId);
                           }
-                          verifySameSequenceNameForAllTasksInGroup(taskGroupId);
                         }
+                        return true;
                       }
-                      return true;
-                    }
-                    catch (Throwable t) {
-                      log.error(t, "Something bad while discovering task [%s]", taskId);
-                      return null;
+                      catch (Throwable t) {
+                        log.error(t, "Something bad while discovering task [%s]", taskId);
+                        return null;
+                      }
                     }
                   }, workerExec
               )
