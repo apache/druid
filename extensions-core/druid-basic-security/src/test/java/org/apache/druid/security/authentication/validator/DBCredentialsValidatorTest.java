@@ -103,7 +103,7 @@ public class DBCredentialsValidatorTest
     DBCredentialsValidator validator = new DBCredentialsValidator(Providers.of(cacheManager));
 
     expectedException.expect(IAE.class);
-    expectedException.expectMessage("No authenticator found with prefix: [notbasic]");
+    expectedException.expectMessage("No userMap is available for authenticator with prefix: [notbasic]");
     validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
 
     EasyMock.verify(cacheManager);
