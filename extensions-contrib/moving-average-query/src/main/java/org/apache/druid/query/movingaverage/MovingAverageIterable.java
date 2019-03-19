@@ -23,6 +23,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -161,7 +162,7 @@ public class MovingAverageIterable implements Iterable<Row>
       this.fakeEvents = fakeEvents;
       this.aggMap = aggMap;
 
-      yielder = rows.toYielder(null, new IdentityYieldingAccumulator<RowBucket>());
+      yielder = Yielders.each(rows);
     }
 
     /* (non-Javadoc)
