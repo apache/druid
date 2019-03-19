@@ -24,12 +24,13 @@ import { FormGroup, IconNames } from "./filler";
 import "./table-column-selection.scss";
 
 interface TableColumnSelectionProps extends React.Props<any> {
-  tableName: string;
-  onChange: () => void;
+  columns: string[];
+  onChange: (column: string) => void;
+  tableColumnsHidden: string[];
 }
 
 interface TableColumnSelectionState {
-  tableColumnSelection: any;
+
 }
 
 export class TableColumnSelection extends React.Component<TableColumnSelectionProps, TableColumnSelectionState> {
@@ -37,32 +38,20 @@ export class TableColumnSelection extends React.Component<TableColumnSelectionPr
   constructor(props: TableColumnSelectionProps) {
     super(props);
     this.state = {
-      tableColumnSelection: JSON.parse(localStorage[this.props.tableName])
+
     };
   }
 
-  changeTableColumnSelection(column: string) {
-    const { tableName, onChange } = this.props;
-    const { tableColumnSelection } = this.state;
-    const newSelection = Object.assign({}, tableColumnSelection, {[column]: !tableColumnSelection[column]});
-    localStorage.setItem(tableName, JSON.stringify(newSelection));
-    this.setState({
-      tableColumnSelection: newSelection
-    });
-    onChange();
-  }
-
   render() {
-    const { tableColumnSelection } = this.state;
-    const columns = Object.keys(tableColumnSelection);
+    const { columns, onChange, tableColumnsHidden } = this.props;
     const checkboxes = <FormGroup>
       {
         columns.map(column => {
           return <Checkbox
             label={column}
             key={column}
-            checked={tableColumnSelection[column]}
-            onChange={() => this.changeTableColumnSelection(column)}
+            checked={!tableColumnsHidden.includes(column)}
+            onChange={() => onChange(column)}
           />;
         })
       }
@@ -73,7 +62,7 @@ export class TableColumnSelection extends React.Component<TableColumnSelectionPr
       position={Position.BOTTOM_RIGHT}
       inline
     >
-      <Button text={"Hide columns"} iconName={IconNames.REMOVE_COLUMN_LEFT}/>
+      <Button rightIconName={IconNames.CARET_DOWN} text={"Columns"} />
     </Popover>;
   }
 }

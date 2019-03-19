@@ -28,12 +28,21 @@ import { TableColumnSelection } from "../components/table-column-selection";
 import { AsyncActionDialog } from "../dialogs/async-action-dialog";
 import { SpecDialog } from "../dialogs/spec-dialog";
 import { AppToaster } from '../singletons/toaster';
-import { addFilter, countBy, formatDuration, getDruidErrorMessage, queryDruidSql, QueryManager } from "../utils";
+import {
+  addFilter,
+  countBy,
+  formatDuration,
+  getDruidErrorMessage,
+  queryDruidSql,
+  QueryManager, TableColumnSelectionHandler
+} from "../utils";
 
 import "./tasks-view.scss";
 
 const supervisorTableColumnSelection = "supervisor-table-column-selection";
 const taskTableColumnSelection = "task-table-column-selection";
+const supervisorTableColumns: string[] = ["Datasource", "Type", "Topic/Stream", "Status", "Actions"];
+const taskTableColumns: string[] = ["Task ID", "Type", "Datasource", "Created time", "Status", "Duration", "Actions"];
 
 export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
@@ -78,6 +87,8 @@ function statusToColor(status: string): string {
 export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   private supervisorQueryManager: QueryManager<string, any[]>;
   private taskQueryManager: QueryManager<string, any[]>;
+  private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
+  private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -102,8 +113,16 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
       supervisorSpecDialogOpen: false,
       taskSpecDialogOpen: false,
       alertErrorMsg: null
+
     };
-    this.initTableColumnSelection();
+
+    this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandler(
+      supervisorTableColumnSelection, () => this.setState({})
+    );
+
+    this.taskTableColumnSelectionHandler = new TableColumnSelectionHandler(
+      taskTableColumnSelection, () => this.setState({})
+    );
   }
 
   componentDidMount(): void {
@@ -152,6 +171,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   "location", "duration", "error_msg"
 FROM sys.tasks
 ORDER BY "rank" DESC, "created_time" DESC`);
+
   }
 
   componentWillUnmount(): void {
@@ -298,38 +318,8 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     </AsyncActionDialog>;
   }
 
-  private initTableColumnSelection() {
-    if (localStorage.getItem(supervisorTableColumnSelection) == null) {
-      const columns: string[] = ["Datasource", "Type", "Topic/Stream", "Status", "Actions"];
-      const defaultSetting: any = {};
-      columns.forEach(column => defaultSetting[column] = true);
-      localStorage.setItem(supervisorTableColumnSelection, JSON.stringify(defaultSetting));
-    }
-    if (localStorage.getItem(taskTableColumnSelection) == null) {
-      const columns: string[] = ["Task ID", "Type", "Datasource", "Created time", "Status", "Duration", "Actions"];
-      const defaultSetting: any = {};
-      columns.forEach(column => defaultSetting[column] = true);
-      localStorage.setItem(taskTableColumnSelection, JSON.stringify(defaultSetting));
-    }
-  }
-
-  renderSupervisorTableColumnSelection() {
-    return <TableColumnSelection
-      onChange={() => this.setState({})}
-      tableName={supervisorTableColumnSelection}
-    />;
-  }
-
-  renderTaskTableColumnSelection() {
-    return <TableColumnSelection
-      onChange={() => this.setState({})}
-      tableName={taskTableColumnSelection}
-    />;
-  }
-
   renderSupervisorTable() {
     const { supervisors, supervisorsLoading, supervisorsError } = this.state;
-    const tableColumnSelection = JSON.parse(localStorage[supervisorTableColumnSelection]);
     return <>
       <ReactTable
         data={supervisors || []}
@@ -342,7 +332,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             id: 'datasource',
             accessor: "id",
             width: 300,
-            show: tableColumnSelection["Datasource"]
+            show: this.supervisorTableColumnSelectionHandler.showColumn("Datasource")
           },
           {
             Header: 'Type',
@@ -354,7 +344,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               if (!tuningConfig) return '';
               return tuningConfig.type;
             },
-            show: tableColumnSelection["Type"]
+            show: this.supervisorTableColumnSelectionHandler.showColumn("Type")
           },
           {
             Header: 'Topic/Stream',
@@ -366,7 +356,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               if (!ioConfig) return '';
               return ioConfig.topic || ioConfig.stream || '';
             },
-            show: tableColumnSelection["Topic/Stream"]
+            show: this.supervisorTableColumnSelectionHandler.showColumn("Topic/Stream")
           },
           {
             Header: "Status",
@@ -383,7 +373,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 {value}
               </span>;
             },
-            show: tableColumnSelection["Status"]
+            show: this.supervisorTableColumnSelectionHandler.showColumn("Status")
           },
           {
             Header: 'Actions',
@@ -407,7 +397,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
                 <a onClick={() => this.setState({ terminateSupervisorId: id })}>Terminate</a>
               </div>;
             },
-            show: tableColumnSelection["Actions"]
+            show: this.supervisorTableColumnSelectionHandler.showColumn("Actions")
           }
         ]}
         defaultPageSize={10}
@@ -450,7 +440,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   renderTaskTable() {
     const { goToMiddleManager } = this.props;
     const { tasks, tasksLoading, tasksError, taskFilter, groupTasksBy } = this.state;
-    const tableColumnSelection = JSON.parse(localStorage[taskTableColumnSelection]);
 
     return <>
       <ReactTable
@@ -470,7 +459,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             accessor: "task_id",
             width: 300,
             Aggregated: row => '',
-            show: tableColumnSelection["Task ID"]
+            show: this.taskTableColumnSelectionHandler.showColumn("Task ID")
           },
           {
             Header: "Type",
@@ -479,7 +468,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const value = row.value;
               return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'type', value) }); }}>{value}</a>;
             },
-            show: tableColumnSelection["Type"]
+            show: this.taskTableColumnSelectionHandler.showColumn("Type")
           },
           {
             Header: "Datasource",
@@ -488,14 +477,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const value = row.value;
               return <a onClick={() => { this.setState({ taskFilter: addFilter(taskFilter, 'datasource', value) }); }}>{value}</a>;
             },
-            show: tableColumnSelection["Datasource"]
+            show: this.taskTableColumnSelectionHandler.showColumn("Datasource")
           },
           {
             Header: "Created time",
             accessor: "created_time",
             width: 120,
             Aggregated: row => '',
-            show: tableColumnSelection["Created time"]
+            show: this.taskTableColumnSelectionHandler.showColumn("Created time")
           },
           {
             Header: "Status",
@@ -529,7 +518,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const previewCount = countBy(previewValues);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
             },
-            show: tableColumnSelection["Status"]
+            show: this.taskTableColumnSelectionHandler.showColumn("Status")
           },
           {
             Header: "Duration",
@@ -537,7 +526,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             filterable: false,
             Cell: (row) => row.value > 0 ? formatDuration(row.value) : '',
             Aggregated: () => '',
-            show: tableColumnSelection["Duration"]
+            show: this.taskTableColumnSelectionHandler.showColumn("Duration")
           },
           {
             Header: 'Actions',
@@ -559,7 +548,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               </div>;
             },
             Aggregated: row => '',
-            show: tableColumnSelection["Actions"]
+            show: this.taskTableColumnSelectionHandler.showColumn("Actions")
           }
         ]}
         defaultPageSize={20}
@@ -586,7 +575,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           text="Submit supervisor"
           onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
         />
-        {this.renderSupervisorTableColumnSelection()}
+        <TableColumnSelection
+          columns={supervisorTableColumns}
+          onChange={(column) => this.supervisorTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={this.supervisorTableColumnSelectionHandler.hiddenColumns}
+        />
       </div>
       {this.renderSupervisorTable()}
 
@@ -616,7 +609,11 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           text="Submit task"
           onClick={() => this.setState({ taskSpecDialogOpen: true })}
         />
-        {this.renderTaskTableColumnSelection()}
+        <TableColumnSelection
+          columns={taskTableColumns}
+          onChange={(column) => this.taskTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={this.taskTableColumnSelectionHandler.hiddenColumns}
+        />
       </div>
       {this.renderTaskTable()}
       { supervisorSpecDialogOpen ? <SpecDialog

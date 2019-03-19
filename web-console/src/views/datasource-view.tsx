@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Intent, Popover, Position, Switch } from "@blueprintjs/core";
+import { Button, Intent, Switch } from "@blueprintjs/core";
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from "react-table";
@@ -35,12 +35,15 @@ import {
   formatNumber,
   getDruidErrorMessage,
   lookupBy,
-  pluralIfNeeded, queryDruidSql, QueryManager
+  pluralIfNeeded,
+  queryDruidSql,
+  QueryManager, TableColumnSelectionHandler
 } from "../utils";
 
 import "./datasource-view.scss";
 
 const datasourceTableColumnSelection = "datasource-table-column-selection";
+const tableColumns: string[] = ["Datasource", "Availability", "Retention", "Compaction", "Size", "Num rows", "Actions"];
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -67,6 +70,7 @@ export interface DatasourcesViewState {
   dropDataDatasource: string | null;
   enableDatasource: string | null;
   killDatasource: string | null;
+
 }
 
 export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
@@ -85,6 +89,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   }
 
   private datasourceQueryManager: QueryManager<string, { tiers: string[], defaultRules: any[], datasources: Datasource[] }>;
+  private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -102,8 +107,12 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       dropDataDatasource: null,
       enableDatasource: null,
       killDatasource: null
+
     };
-    this.initTableColumnSelection();
+
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
+      datasourceTableColumnSelection, () => this.setState({})
+    );
   }
 
   componentDidMount(): void {
@@ -155,6 +164,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   SUM("num_rows") AS num_rows
 FROM sys.segments
 GROUP BY 1`);
+
   }
 
   componentWillUnmount(): void {
@@ -343,31 +353,13 @@ GROUP BY 1`);
     />;
   }
 
-  private initTableColumnSelection() {
-    if (localStorage.getItem(datasourceTableColumnSelection) == null) {
-      const columns: string[] = ["Datasource", "Availability", "Retention", "Compaction", "Size", "Num rows", "Actions"];
-      const defaultSetting: any = {};
-      columns.forEach(column => defaultSetting[column] = true);
-      localStorage.setItem(datasourceTableColumnSelection, JSON.stringify(defaultSetting));
-    }
-  }
-
-  renderTableColumnSelection() {
-    return <TableColumnSelection
-      onChange={() => this.setState({})}
-      tableName={datasourceTableColumnSelection}
-    />;
-  }
-
   renderDatasourceTable() {
     const { goToSegments } = this.props;
     const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
-    const tableColumnSelection = JSON.parse(localStorage[datasourceTableColumnSelection]);
     let data = datasources || [];
     if (!showDisabled) {
       data = data.filter(d => !d.disabled);
     }
-
     return <>
       <ReactTable
         data={data}
@@ -387,7 +379,7 @@ GROUP BY 1`);
               const value = row.value;
               return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
             },
-            show: tableColumnSelection["Datasource"]
+            show: this.tableColumnSelectionHandler.showColumn("Datasource")
           },
           {
             Header: "Availability",
@@ -422,7 +414,7 @@ GROUP BY 1`);
 
               }
             },
-            show: tableColumnSelection["Availability"]
+            show: this.tableColumnSelectionHandler.showColumn("Availability")
           },
           {
             Header: 'Retention',
@@ -446,7 +438,7 @@ GROUP BY 1`);
                 <a>&#x270E;</a>
               </span>;
             },
-            show: tableColumnSelection["Retention"]
+            show: this.tableColumnSelectionHandler.showColumn("Retention")
           },
           {
             Header: 'Compaction',
@@ -473,7 +465,7 @@ GROUP BY 1`);
                 <a>&#x270E;</a>
               </span>;
             },
-            show: tableColumnSelection["Compaction"]
+            show: this.tableColumnSelectionHandler.showColumn("Compaction")
           },
           {
             Header: 'Size',
@@ -481,7 +473,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatBytes(row.value),
-            show: tableColumnSelection["Size"]
+            show: this.tableColumnSelectionHandler.showColumn("Size")
           },
           {
             Header: 'Num rows',
@@ -489,7 +481,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatNumber(row.value),
-            show: tableColumnSelection["Num rows"]
+            show: this.tableColumnSelectionHandler.showColumn("Num rows")
           },
           {
             Header: 'Actions',
@@ -511,7 +503,7 @@ GROUP BY 1`);
                 </div>;
               }
             },
-            show: tableColumnSelection["Actions"]
+            show: this.tableColumnSelectionHandler.showColumn("Actions")
           }
         ]}
         defaultPageSize={50}
@@ -547,7 +539,11 @@ GROUP BY 1`);
           label="Show disabled"
           onChange={() => this.setState({ showDisabled: !showDisabled })}
         />
-        {this.renderTableColumnSelection()}
+        <TableColumnSelection
+          columns={tableColumns}
+          onChange={(column) => this.tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={this.tableColumnSelectionHandler.hiddenColumns}
+        />
       </div>
       {this.renderDatasourceTable()}
     </div>;

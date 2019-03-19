@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button } from "@blueprintjs/core";
+import { Button, Intent } from "@blueprintjs/core";
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
@@ -25,6 +25,7 @@ import { Filter } from "react-table";
 
 import { H5, IconNames } from "../components/filler";
 import { TableColumnSelection } from "../components/table-column-selection";
+import { AppToaster } from "../singletons/toaster";
 import {
   addFilter,
   formatBytes,
@@ -32,12 +33,14 @@ import {
   makeBooleanFilter,
   parseList,
   queryDruidSql,
-  QueryManager
+  QueryManager, TableColumnSelectionHandler
 } from "../utils";
 
 import "./segments-view.scss";
 
 const segmentTableColumnSelection = "segment-table-column-selection";
+const tableColumns: string[] = ["Segment ID", "Datasource", "Start", "End", "Version", "Partition",
+  "Size", "Num rows", "Replicas", "Is published", "Is realtime", "Is available"];
 
 export interface SegmentsViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -59,6 +62,7 @@ interface QueryAndSkip {
 
 export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
   private segmentsQueryManager: QueryManager<QueryAndSkip, any[]>;
+  private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -73,8 +77,6 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       segmentsError: null,
       segmentFilter
     };
-
-    this.initTableColumnSelection();
 
     this.segmentsQueryManager = new QueryManager({
       processQuery: async (query: QueryAndSkip) => {
@@ -96,6 +98,10 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         });
       }
     });
+
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
+      segmentTableColumnSelection, () => this.setState({})
+    );
   }
 
   componentWillUnmount(): void {
@@ -138,26 +144,8 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     });
   }
 
-  private initTableColumnSelection() {
-    if (localStorage.getItem(segmentTableColumnSelection) == null) {
-      const columns: string[] = ["Segment ID", "Datasource", "Start", "End", "Version", "Partition",
-        "Size", "Num rows", "Replicas", "Is published", "Is realtime", "Is available"];
-      const defaultSetting: any = {};
-      columns.forEach(column => defaultSetting[column] = true);
-      localStorage.setItem(segmentTableColumnSelection, JSON.stringify(defaultSetting));
-    }
-  }
-
-  renderTableColumnSelection() {
-    return <TableColumnSelection
-      onChange={() => this.setState({})}
-      tableName={segmentTableColumnSelection}
-    />;
-  }
-
   renderSegmentsTable() {
     const { segments, segmentsLoading, segmentsError, segmentFilter } = this.state;
-    const tableColumnSelection = JSON.parse(localStorage[segmentTableColumnSelection]);
 
     return <ReactTable
       data={segments || []}
@@ -179,7 +167,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           Header: "Segment ID",
           accessor: "segment_id",
           width: 300,
-          show: tableColumnSelection["Segment ID"]
+          show: this.tableColumnSelectionHandler.showColumn("Segment ID")
         },
         {
           Header: "Datasource",
@@ -188,7 +176,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) }); }}>{value}</a>;
           },
-          show: tableColumnSelection["Datasource"]
+          show: this.tableColumnSelectionHandler.showColumn("Datasource")
         },
         {
           Header: "Start",
@@ -199,7 +187,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) }); }}>{value}</a>;
           },
-          show: tableColumnSelection["Start"]
+          show: this.tableColumnSelectionHandler.showColumn("Start")
         },
         {
           Header: "End",
@@ -210,21 +198,21 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) }); }}>{value}</a>;
           },
-          show: tableColumnSelection["End"]
+          show: this.tableColumnSelectionHandler.showColumn("End")
         },
         {
           Header: "Version",
           accessor: "version",
           defaultSortDesc: true,
           width: 120,
-          show: tableColumnSelection["Version"]
+          show: this.tableColumnSelectionHandler.showColumn("Version")
         },
         {
           Header: "Partition",
           accessor: "partition_num",
           width: 60,
           filterable: false,
-          show: tableColumnSelection["Partition"]
+          show: this.tableColumnSelectionHandler.showColumn("Partition")
         },
         {
           Header: "Size",
@@ -232,7 +220,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           filterable: false,
           defaultSortDesc: true,
           Cell: row => formatBytes(row.value),
-          show: tableColumnSelection["Size"]
+          show: this.tableColumnSelectionHandler.showColumn("Size")
         },
         {
           Header: "Num rows",
@@ -240,7 +228,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           filterable: false,
           defaultSortDesc: true,
           Cell: row => formatNumber(row.value),
-          show: tableColumnSelection["Num rows"]
+          show: this.tableColumnSelectionHandler.showColumn("Num rows")
         },
         {
           Header: "Replicas",
@@ -248,28 +236,28 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           width: 60,
           filterable: false,
           defaultSortDesc: true,
-          show: tableColumnSelection["Replicas"]
+          show: this.tableColumnSelectionHandler.showColumn("Replicas")
         },
         {
           Header: "Is published",
           id: "is_published",
           accessor: (row) => String(Boolean(row.is_published)),
           Filter: makeBooleanFilter(),
-          show: tableColumnSelection["Is published"]
+          show: this.tableColumnSelectionHandler.showColumn("Is published")
         },
         {
           Header: "Is realtime",
           id: "is_realtime",
           accessor: (row) => String(Boolean(row.is_realtime)),
           Filter: makeBooleanFilter(),
-          show: tableColumnSelection["Is realtime"]
+          show: this.tableColumnSelectionHandler.showColumn("Is realtime")
         },
         {
           Header: "Is available",
           id: "is_available",
           accessor: (row) => String(Boolean(row.is_available)),
           Filter: makeBooleanFilter(),
-          show: tableColumnSelection["Is available"]
+          show: this.tableColumnSelectionHandler.showColumn("Is available")
         }
       ]}
       defaultPageSize={50}
@@ -307,7 +295,11 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           text="Go to SQL"
           onClick={() => goToSql(this.segmentsQueryManager.getLastQuery().query)}
         />
-        {this.renderTableColumnSelection()}
+        <TableColumnSelection
+          columns={tableColumns}
+          onChange={(column) => this.tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={this.tableColumnSelectionHandler.hiddenColumns}
+        />
       </div>
       {this.renderSegmentsTable()}
     </div>;
