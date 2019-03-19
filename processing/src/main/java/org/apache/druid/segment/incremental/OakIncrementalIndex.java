@@ -51,7 +51,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -166,18 +165,15 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   {
     facts.close();
   }
+
   @Override
-  protected AddToFactsResult addToFacts(AggregatorFactory[] metrics,
-                                        boolean deserializeComplexMetrics,
-                                        boolean reportParseExceptions,
-                                        InputRow row,
-                                        AtomicInteger numEntries,
-                                        AtomicLong sizeInBytes,
+  protected AddToFactsResult addToFacts(InputRow row,
                                         IncrementalIndexRow key,
                                         ThreadLocal<InputRow> rowContainer,
                                         Supplier<InputRow> rowSupplier,
                                         boolean skipMaxRowsInMemoryCheck) throws IndexSizeExceededException
   {
+    final AtomicInteger numEntries = getNumEntries();
     return facts.addToOak(row, numEntries, key, rowContainer, skipMaxRowsInMemoryCheck);
   }
 
