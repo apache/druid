@@ -24,3 +24,15 @@ From the root of the repo, run `docker build -t druid:tag -f distribution/docker
 ## Run
 
 Edit `environment` to suite. Run 'docker-compose -f distribution/docker/docker-compose.yml up`
+
+## mysql database connector
+
+This image contains solely the postgres metadata database connector. If you need
+the mysql metadata storage connector, consider adding these lines before the `addgroup`
+run-command.
+
+```
+RUN wget -O /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar \
+ && sha256sum --ignore-missing -c /src/distribution/docker/sha256sums.txt \
+ && ln -s /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar /opt/druid/lib
+```
