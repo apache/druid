@@ -26,17 +26,17 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 /**
- * This is a test for the Kafka indexing service.
+ * This is a test for the Kafka indexing service with transactional topics
  */
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITKafkaIndexingServiceTest extends AbstractKafkaIndexerTest
+public class ITKafkaIndexingServiceTransactionalTest extends AbstractKafkaIndexerTest
 {
-  private static final Logger LOG = new Logger(ITKafkaIndexingServiceTest.class);
+  private static final Logger LOG = new Logger(ITKafkaIndexingServiceTransactionalTest.class);
 
   @Test
   public void testKafka()
   {
-    LOG.info("Starting test: ITKafkaIndexingServiceTest");
+    LOG.info("Starting test: ITKafkaIndexingServiceTransactionalTest");
     doKafkaIndexTest(false);
   }
 
@@ -47,4 +47,5 @@ public class ITKafkaIndexingServiceTest extends AbstractKafkaIndexerTest
     LOG.info("teardown");
     doTearDown();
   }
+
 }
