@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SequenceMetadata;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -77,7 +78,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
 
   @Override
-  protected String getSequenceNumberToStoreAfterRead(String sequenceNumber)
+  protected String getNextStartOffset(String sequenceNumber)
   {
     return sequenceNumber;
   }
@@ -92,7 +93,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected SeekableStreamPartitions<String, String> deserializeSeekableStreamPartitionsFromMetadata(
+  protected SeekableStreamPartitions<String, String> deserializePartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
@@ -159,21 +160,23 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   }
 
   @Override
-  protected boolean isEndSequenceOffsetsExclusive()
+  protected boolean isEndOffsetExclusive()
   {
     return false;
-  }
-
-  @Override
-  protected boolean isStartingSequenceOffsetsExclusive()
-  {
-    return true;
   }
 
   @Override
   protected boolean isEndOfShard(String seqNum)
   {
     return KinesisSequenceNumber.END_OF_SHARD_MARKER.equals(seqNum);
+  }
+
+  @Override
+  public TypeReference<List<SequenceMetadata<String, String>>> getSequenceMetadataTypeReference()
+  {
+    return new TypeReference<List<SequenceMetadata<String, String>>>()
+    {
+    };
   }
 
   @Nullable

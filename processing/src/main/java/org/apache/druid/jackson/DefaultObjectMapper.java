@@ -47,7 +47,6 @@ public class DefaultObjectMapper extends ObjectMapper
     registerModule(new GuavaModule());
     registerModule(new GranularityModule());
     registerModule(new AggregatorsModule());
-    registerModule(new SegmentsModule());
     registerModule(new StringComparatorModule());
     registerModule(new SegmentizerModule());
 

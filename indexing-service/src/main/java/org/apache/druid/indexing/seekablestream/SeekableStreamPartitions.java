@@ -143,9 +143,9 @@ public class SeekableStreamPartitions<PartitionIdType, SequenceOffsetType>
   @Override
   public String toString()
   {
-    return "SeekableStreamPartitions{" +
-           "stream/topic='" + stream + '\'' +
-           ", partitionSequenceNumberMap/partitionOffsetMap=" + partitionIdToSequenceNumberMap +
+    return getClass().getSimpleName() + "{" +
+           "stream='" + stream + '\'' +
+           ", partitionSequenceNumberMap=" + partitionIdToSequenceNumberMap +
            '}';
   }
 }

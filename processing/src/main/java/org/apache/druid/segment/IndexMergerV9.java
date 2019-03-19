@@ -932,8 +932,7 @@ public class IndexMergerV9 implements IndexMerger
     return convert(inDir, outDir, indexSpec, new BaseProgressIndicator(), defaultSegmentWriteOutMediumFactory);
   }
 
-  @Override
-  public File convert(
+  private File convert(
       final File inDir,
       final File outDir,
       final IndexSpec indexSpec,

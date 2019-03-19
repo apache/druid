@@ -22,7 +22,7 @@ package org.apache.druid.segment.indexing;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -88,7 +88,7 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(0, config.getAlertTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), config.getShardSpec());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(1000000, config.getMaxRowsInMemory());
     Assert.assertEquals(0, config.getMergeThreadPriority());
@@ -130,7 +130,7 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(70, config.getAlertTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
+    Assert.assertEquals(new NumberedShardSpec(0, 1), config.getShardSpec());
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMergeThreadPriority());

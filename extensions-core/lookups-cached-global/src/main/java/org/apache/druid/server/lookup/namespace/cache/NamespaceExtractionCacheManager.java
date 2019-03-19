@@ -20,7 +20,6 @@
 package org.apache.druid.server.lookup.namespace.cache;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -73,7 +72,7 @@ public abstract class NamespaceExtractionCacheManager
             catch (Exception e) {
               log.error(e, "Error emitting namespace stats");
               if (Thread.currentThread().isInterrupted()) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
           }
