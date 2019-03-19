@@ -1298,8 +1298,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                  .getPartitionSequenceNumberMap()
                                                  .keySet()
                                                  .forEach(
-                                                     partition -> SeekableStreamSupervisor.this.addDiscoveredTaskToPendingCompletionTaskGroups(
-                                                         SeekableStreamSupervisor.this.getTaskGroupIdForPartition(
+                                                     partition -> addDiscoveredTaskToPendingCompletionTaskGroups(
+                                                         getTaskGroupIdForPartition(
                                                              partition),
                                                          taskId,
                                                          seekableStreamIndexTask.getIOConfig()
@@ -1316,7 +1316,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             PartitionIdType partition = entry.getKey();
                             SequenceOffsetType sequence = entry.getValue();
                             ConcurrentHashMap<PartitionIdType, SequenceOffsetType> partitionOffsets = partitionGroups.get(
-                                SeekableStreamSupervisor.this.getTaskGroupIdForPartition(partition)
+                                getTaskGroupIdForPartition(partition)
                             );
 
                             boolean succeeded;
@@ -1324,8 +1324,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                               succeeded = true;
                               SequenceOffsetType previousOffset = partitionOffsets.putIfAbsent(partition, sequence);
                               if (previousOffset != null
-                                  && (SeekableStreamSupervisor.this.makeSequenceNumber(previousOffset)
-                                                                   .compareTo(SeekableStreamSupervisor.this.makeSequenceNumber(
+                                  && (makeSequenceNumber(previousOffset)
+                                                                   .compareTo(makeSequenceNumber(
                                                                        sequence))) < 0) {
                                 succeeded = partitionOffsets.replace(partition, previousOffset, sequence);
                               }
@@ -1336,13 +1336,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                                                   .getStartPartitions()
                                                                                   .getPartitionSequenceNumberMap()
                                                                                   .keySet()) {
-                            if (!taskGroupId.equals(SeekableStreamSupervisor.this.getTaskGroupIdForPartition(partition))) {
+                            if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
                               log.warn(
                                   "Stopping task [%s] which does not match the expected partition allocation",
                                   taskId
                               );
                               try {
-                                SeekableStreamSupervisor.this.stopTask(taskId, false)
+                                stopTask(taskId, false)
                                                              .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
                               }
                               catch (InterruptedException | ExecutionException | TimeoutException e) {
@@ -1353,13 +1353,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                           }
                           // make sure the task's io and tuning configs match with the supervisor config
                           // if it is current then only create corresponding taskGroup if it does not exist
-                          if (!SeekableStreamSupervisor.this.isTaskCurrent(taskGroupId, taskId)) {
+                          if (!isTaskCurrent(taskGroupId, taskId)) {
                             log.info(
                                 "Stopping task [%s] which does not match the expected parameters and ingestion spec",
                                 taskId
                             );
                             try {
-                              SeekableStreamSupervisor.this.stopTask(taskId, false)
+                              stopTask(taskId, false)
                                                            .get(futureTimeoutInSeconds, TimeUnit.SECONDS);
                             }
                             catch (InterruptedException | ExecutionException | TimeoutException e) {
@@ -1396,7 +1396,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                   taskId
                               );
                             }
-                            SeekableStreamSupervisor.this.verifySameSequenceNameForAllTasksInGroup(taskGroupId);
+                            verifySameSequenceNameForAllTasksInGroup(taskGroupId);
                           }
                         }
                         return true;
