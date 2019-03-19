@@ -171,16 +171,12 @@ public class MovingAverageIterable implements Iterable<Row>
     @Override
     public boolean hasNext()
     {
-
       if (saveNext != null) {
         return true;
       }
 
-      Row row = internalNext();
-      if (row != null) {
-        saveNext = row;
-      }
-      return (row != null);
+      saveNext = internalNext();
+      return (saveNext != null);
     }
 
     /* (non-Javadoc)
@@ -189,76 +185,76 @@ public class MovingAverageIterable implements Iterable<Row>
     @Override
     public Row next()
     {
-
-      if (saveNext != null) {
-        Row retVal = saveNext;
-        saveNext = null;
-        return retVal;
+      if (!hasNext()) {
+        throw new NoSuchElementException();
       }
 
-      return internalNext();
+      Row retVal = saveNext;
+      saveNext = null;
+      return retVal;
     }
 
     private Row internalNext()
     {
-      if (cache == null && !yielder.isDone()) {
-        cache = yielder.get();
-        yielder = yielder.next(cache);
+      // Iterate until there is a row to return or Yielder is exahusted, in such a case return null.
+      // This is used in order to skip empty buckets (iterate to the next one).
+      while (true) {
+        if (cache == null && !yielder.isDone()) {
+          cache = yielder.get();
+          yielder = yielder.next(cache);
 
-        cacheIter = cache.getRows().iterator();
-      }
+          cacheIter = cache.getRows().iterator();
+        }
 
-      Row r;
+        Row r;
 
-      // return rows from the cached RowBucket
-      if (cacheIter != null) {
-        if (cacheIter.hasNext()) {
-          r = cacheIter.next();
-          Map<String, Object> key = MovingAverageHelper.getDimKeyFromRow(dims, r);
-          seenKeys.add(key);
-          r = computeMovingAverage(key, r, false);
-          if (r != null) {
-            return r;
+        // return rows from the cached RowBucket
+        if (cacheIter != null) {
+          if (cacheIter.hasNext()) {
+            r = cacheIter.next();
+            Map<String, Object> key = MovingAverageHelper.getDimKeyFromRow(dims, r);
+            seenKeys.add(key);
+            r = computeMovingAverage(key, r, false);
+            if (r != null) {
+              return r;
+            } else {
+              throw new NoSuchElementException();
+            }
           } else {
-            throw new NoSuchElementException();
-          }
-        } else {
-          Set<Map<String, Object>> averagerKeys = new HashSet<>(averagers.keySet());
-          averagerKeys.removeAll(seenKeys);
-          averagersKeysIter = averagerKeys.iterator();
-          cacheIter = null;
-        }
-      }
-
-      // return fake rows for unseen dimension combinations
-      if (averagersKeysIter != null) {
-        while (averagersKeysIter.hasNext()) {
-          Map<String, Object> dims = averagersKeysIter.next();
-          Map<String, Object> fakeEventsCopy = new HashMap<>(fakeEvents);
-
-          dims.forEach((dim, value) -> {
-            fakeEventsCopy.put(dim, value);
-          });
-
-          r = computeMovingAverage(dims, new MapBasedRow(cache.getDateTime(), fakeEventsCopy), true);
-          if (r != null) {
-            return r;
+            Set<Map<String, Object>> averagerKeys = new HashSet<>(averagers.keySet());
+            averagerKeys.removeAll(seenKeys);
+            averagersKeysIter = averagerKeys.iterator();
+            cacheIter = null;
           }
         }
 
-        seenKeys.clear();
-        averagersKeysIter = null;
-        cache = null;
-      }
+        // return fake rows for unseen dimension combinations
+        if (averagersKeysIter != null) {
+          while (averagersKeysIter.hasNext()) {
+            Map<String, Object> dims = averagersKeysIter.next();
+            Map<String, Object> fakeEventsCopy = new HashMap<>(fakeEvents);
 
-      if (cacheIter == null && yielder.isDone()) {
-        // we should never get here. For some reason, there is
-        // no more work to do, so continuing to iterate will infinite loop
-        return null;
-      }
+            dims.forEach((dim, value) -> {
+              fakeEventsCopy.put(dim, value);
+            });
 
-      // nothing to do here, so move on to the next row
-      return internalNext();
+            r = computeMovingAverage(dims, new MapBasedRow(cache.getDateTime(), fakeEventsCopy), true);
+            if (r != null) {
+              return r;
+            }
+          }
+
+          seenKeys.clear();
+          averagersKeysIter = null;
+          cache = null;
+        }
+
+        if (cacheIter == null && yielder.isDone()) {
+          // we should never get here. For some reason, there is
+          // no more work to do, so continuing to iterate will infinite loop
+          return null;
+        }
+      }
     }
 
     /**
