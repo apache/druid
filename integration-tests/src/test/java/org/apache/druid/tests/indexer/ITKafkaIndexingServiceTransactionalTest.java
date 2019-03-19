@@ -32,12 +32,13 @@ import org.testng.annotations.Test;
 public class ITKafkaIndexingServiceTransactionalTest extends AbstractKafkaIndexerTest
 {
   private static final Logger LOG = new Logger(ITKafkaIndexingServiceTransactionalTest.class);
+  private static final String DATASOURCE = "kafka_indexing_service_txn_test";
 
   @Test
   public void testKafka()
   {
     LOG.info("Starting test: ITKafkaIndexingServiceTransactionalTest");
-    doKafkaIndexTest(true);
+    doKafkaIndexTest(DATASOURCE, true);
   }
 
 

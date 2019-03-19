@@ -58,7 +58,6 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
   private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
   private static final String INDEXER_FILE = "/indexer/kafka_supervisor_spec.json";
   private static final String QUERIES_FILE = "/indexer/kafka_index_queries.json";
-  private static final String DATASOURCE = "kafka_indexing_service_test";
   private static final String TOPIC_NAME = "kafka_indexing_service_topic";
 
   private static final int NUM_EVENTS_TO_SEND = 60;
@@ -105,9 +104,9 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
   private String fullDatasourceName;
 
 
-  void doKafkaIndexTest(boolean txnEnabled)
+  void doKafkaIndexTest(String dataSourceName, boolean txnEnabled)
   {
-    fullDatasourceName = DATASOURCE + config.getExtraDatasourceNameSuffix();
+    fullDatasourceName = dataSourceName + config.getExtraDatasourceNameSuffix();
     // create topic
     try {
       int sessionTimeoutMs = 10000;
@@ -331,7 +330,7 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
     }
 
     // remove segments
-    if (segmentsExist) {
+    if (segmentsExist && fullDatasourceName != null) {
       unloadAndKillData(fullDatasourceName);
     }
   }
