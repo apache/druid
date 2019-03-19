@@ -1367,7 +1367,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             }
                             return false;
                           } else {
-                            final TaskGroup taskGroup1 = activelyReadingTaskGroups.computeIfAbsent(
+                            final TaskGroup taskGroup = activelyReadingTaskGroups.computeIfAbsent(
                                 taskGroupId,
                                 k -> {
                                   log.info("Creating a new task group for taskGroupId[%d]", taskGroupId);
@@ -1387,8 +1387,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                   );
                                 }
                             );
-                            taskGroupsToVerify.put(taskGroupId, taskGroup1);
-                            final TaskData prevTaskData = taskGroup1.tasks.putIfAbsent(taskId, new TaskData());
+                            taskGroupsToVerify.put(taskGroupId, taskGroup);
+                            final TaskData prevTaskData = taskGroup.tasks.putIfAbsent(taskId, new TaskData());
                             if (prevTaskData != null) {
                               throw new ISE(
                                   "WTH? a taskGroup[%s] already exists for new task[%s]",
@@ -1645,7 +1645,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     taskGroupList.add(newTaskGroup);
   }
-
+  // Sanity check to ensure that tasks have the same sequence name as their task group
   private void verifySameSequenceNameForAllTasksInGroup(int groupId)
   {
     String taskGroupSequenceName = activelyReadingTaskGroups.get(groupId).baseSequenceName;
