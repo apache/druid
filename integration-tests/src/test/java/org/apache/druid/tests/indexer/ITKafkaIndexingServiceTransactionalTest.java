@@ -37,7 +37,7 @@ public class ITKafkaIndexingServiceTransactionalTest extends AbstractKafkaIndexe
   public void testKafka()
   {
     LOG.info("Starting test: ITKafkaIndexingServiceTransactionalTest");
-    doKafkaIndexTest(false);
+    doKafkaIndexTest(true);
   }
 
 
