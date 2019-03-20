@@ -16,8 +16,16 @@
  * limitations under the License.
  */
 
-export * from './general';
-export * from './druid-query';
-export * from './query-manager';
-export * from './rune-decoder';
-export * from './table-column-selection-handler';
+.table-column-selection {
+
+  float: right;
+
+  .pt-popover-content {
+    padding: 10px 10px 1px 10px;
+  }
+
+  .form-group {
+    margin-bottom: 0;
+  }
+
+}
