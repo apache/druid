@@ -29,7 +29,7 @@ import * as React from 'react';
 import { FormGroup, IconNames } from '../components/filler';
 import { localStorageGet, localStorageSet } from "../utils";
 
-const druidEditingAuthor = "druid-editing-author";
+const druidEditingAuthor = "DRUID_EDITING_AUTHOR";
 
 export interface SnitchDialogProps extends IDialogProps {
   onSave: (author: string, comment: string) => void;
