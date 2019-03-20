@@ -23,6 +23,7 @@ import * as React from 'react';
 import { Alignment, IconNames, Navbar, NavbarDivider, NavbarGroup } from "../components/filler";
 import { AboutDialog } from "../dialogs/about-dialog";
 import { CoordinatorDynamicConfigDialog } from '../dialogs/coordinator-dynamic-config';
+import { OverlordDynamicConfigDialog } from "../dialogs/overlord-dynamic-config";
 import {
   DRUID_DOCS,
   DRUID_GITHUB,
@@ -42,6 +43,7 @@ export interface HeaderBarProps extends React.Props<any> {
 export interface HeaderBarState {
   aboutDialogOpen: boolean;
   coordinatorDynamicConfigDialogOpen: boolean;
+  overlordDynamicConfigDialogOpen: boolean;
 }
 
 export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
@@ -49,7 +51,8 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
     super(props);
     this.state = {
       aboutDialogOpen: false,
-      coordinatorDynamicConfigDialogOpen: false
+      coordinatorDynamicConfigDialogOpen: false,
+      overlordDynamicConfigDialogOpen: false
     };
   }
 
@@ -104,7 +107,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
 
   render() {
     const { active } = this.props;
-    const { aboutDialogOpen, coordinatorDynamicConfigDialogOpen } = this.state;
+    const { aboutDialogOpen, coordinatorDynamicConfigDialogOpen, overlordDynamicConfigDialogOpen } = this.state;
 
     const legacyMenu = <Menu>
       <MenuItem iconName={IconNames.GRAPH} text="Legacy coordinator console" href={LEGACY_COORDINATOR_CONSOLE} target="_blank" />
@@ -120,6 +123,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
 
     const configMenu = <Menu>
       <MenuItem iconName={IconNames.COG} text="Coordinator dynamic config" onClick={() => this.setState({ coordinatorDynamicConfigDialogOpen: true })}/>
+      <MenuItem iconName={IconNames.WRENCH} text="Overlord dynamic config" onClick={() => this.setState({ overlordDynamicConfigDialogOpen: true })}/>
       <MenuItem iconName={IconNames.PROPERTIES} className={classNames(Classes.MINIMAL, { 'pt-active': active === 'lookups' })} text="Lookups" href="#lookups"/>
     </Menu>;
 
@@ -152,6 +156,9 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
       /> : null }
       { coordinatorDynamicConfigDialogOpen ? <CoordinatorDynamicConfigDialog
         onClose={() => this.setState({ coordinatorDynamicConfigDialogOpen: false })}
+      /> : null }
+      { overlordDynamicConfigDialogOpen ? <OverlordDynamicConfigDialog
+        onClose={() => this.setState({ overlordDynamicConfigDialogOpen: false })}
       /> : null }
     </Navbar>;
   }
