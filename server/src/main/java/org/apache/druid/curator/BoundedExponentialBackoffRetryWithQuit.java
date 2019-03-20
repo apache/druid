@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.logger.Logger;
  * BoundedExponentialBackoffRetryWithQuit extends BoundedExponentialBackoffRetry for simplicity. It's not actually a
  * BoundedExponentialBackoffRetry from the Liskov substitution principle point of view,
  * but it doesn't matter in this code.
+ *
+ * see discussions in https://github.com/apache/incubator-druid/pull/6740
  */
 public class BoundedExponentialBackoffRetryWithQuit extends BoundedExponentialBackoffRetry
 {
