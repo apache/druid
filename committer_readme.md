@@ -1,3 +1,21 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
 
 ## PR action item checklist for committers
 
@@ -6,7 +24,7 @@
      - **`Design Review`** - for changes that will be hard to undo after they appear in some Druid release, and/or
      changes that will have lasting consequences in the codebase. Examples:
         - Major architectural changes or API changes
-        - Adding new or changing behaviour of existing query types (e. g. changing and algorithm behind some query type
+        - Adding new or changing behaviour of existing query types (e. g. changing an algorithm behind some query type
         or changing from floating point to double precision)
         - Adding new or changing existing HTTP requests and responses (e. g. a new HTTP endpoint)
         - Adding new or changing existing interfaces for extensions (`@PublicApi` and `@ExtensionPoint`)
@@ -19,10 +37,18 @@
      configuration options, emitted metric names, HTTP endpoint paths and parameters that are added or changed in the
      PR. If they are not listed, ask the PR author to update the PR description.
 
-     - **`Incompatible`** - for changes that may change the behaviour of Druid clusters if a new version of Druid with
-     the subject change is rolled out, unless some server or query configurations are altered, or break Druid extensions
-     on the source level because extensions API is changed. See examples above, in the section describing the
-     `Design Review` tag.
+     - **`Incompatible`** - for changes that alter public API elements (@PublicApi or @ExtensionPoint), runtime
+     configuration options, emitted metric names, HTTP endpoint behavior, or server behavior in some way that affects
+     one of the following:
+
+        - Ability to do a rolling update [as documented](http://druid.io/docs/latest/operations/rolling-updates.html)
+        without needing any modifications to server configurations or query workload.
+        - Ability to roll back a Druid cluster to a prior version.
+        - Ability to continue using old Druid extensions without recompiling them.
+
+     Note that no matter what, we must support the ability to do a rolling update somehow (even if some special care is
+     needed), and the ability to roll back to at least the immediate prior Druid version. If a change makes either one
+     of these impossible then it should be re-designed.
 
      All `Incompatible` PRs should be tagged `Design Review` too, but not vice versa: some `Design Review` issues,
      proposals and PRs may not be `Incompatible`.
@@ -49,8 +75,20 @@
      - Consider adding one or several **`Area -`** tags. Consider creating a new `Area -` tag if none of the existing
      `Area` tags is applicable to the PR.
 
-2. Consider adding `Bug` and `Security` PRs to the next Druid milestone. Don't add PRs that are neither `Bug` nor
-`Security`-related to milestones.
+2. Consider adding any `Bug` and `Security` PRs to the next Druid milestone whenever they are important enough to fix
+before the next release. This ensures that they will be considered by the next release manager as potential release
+blockers. Please don't add PRs that are neither `Bug` nor `Security`-related to milestones until after they are
+committed, to avoid cluttering the release manager's workflow.
 
 3. If the PR has obvious problems, such as an empty description or the PR fails the CI, ask the PR author to fix these
 problems even if you don't plan to review the PR.
+
+## PR merge action item checklist
+
+1. Add the PR to the next release milestone.
+
+2. If the PR is labeled `Incompatible` and the next release milestone differs from the previous only in the "patch"
+number (such as 0.10.1, while the previous release is 0.10 or 0.10.0), rename the next milestone so that it bumps the
+"minor" number (e. g. 0.10 -> 0.11).
+
+3. Consider thanking the author for contribution, especially a new contributor.
