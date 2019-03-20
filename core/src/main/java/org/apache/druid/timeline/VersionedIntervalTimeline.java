@@ -143,7 +143,8 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     );
   }
 
-  public int getNumObjects() {
+  public int getNumObjects()
+  {
     return numObjects.get();
   }
 
