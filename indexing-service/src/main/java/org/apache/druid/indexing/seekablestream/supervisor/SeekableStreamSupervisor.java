@@ -1345,7 +1345,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                       ),
                                       seekableStreamIndexTask.getIOConfig().getMinimumMessageTime(),
                                       seekableStreamIndexTask.getIOConfig().getMaximumMessageTime(),
-                                      seekableStreamIndexTask.getIOConfig().getExclusiveStartSequenceNumberPartitions()
+                                      seekableStreamIndexTask.getIOConfig()
+                                                             .getStartSequenceNumbers()
+                                                             .getExclusivePartitions()
                                   );
                                 }
                             );

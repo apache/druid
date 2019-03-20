@@ -407,7 +407,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
 
@@ -474,7 +473,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -564,7 +562,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -695,7 +692,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -808,7 +804,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -874,7 +869,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             DateTimes.of("2010"),
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -959,7 +953,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1031,7 +1024,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1084,7 +1076,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -1158,7 +1149,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1228,7 +1218,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1284,7 +1273,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -1387,7 +1375,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1470,7 +1457,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1485,7 +1471,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -1564,7 +1549,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1579,7 +1563,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -1656,7 +1639,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1671,7 +1653,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -1756,7 +1737,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1837,7 +1817,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1852,7 +1831,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -1932,7 +1910,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -1972,7 +1949,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisIndexTaskIOConfig(
             null,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(stream, ImmutableMap.of(shardId1, "2"), ImmutableSet.of()),
+            new SeekableStreamStartSequenceNumbers<>(stream, ImmutableMap.of(shardId1, "2"), ImmutableSet.of(shardId1)),
             new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(shardId1, "5")),
             true,
             null,
@@ -1980,7 +1957,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            ImmutableSet.of(shardId1),
             null,
             null,
             false
@@ -2067,7 +2043,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         )
     );
@@ -2120,7 +2095,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         new KinesisIndexTaskIOConfig(
             null,
             "sequence0",
-            new SeekableStreamStartSequenceNumbers<>(stream, ImmutableMap.of(shardId1, "0"), ImmutableSet.of()),
+            new SeekableStreamStartSequenceNumbers<>(stream, ImmutableMap.of(shardId1, "0"), ImmutableSet.of(shardId1)),
             new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(shardId1, "6")),
             true,
             null,
@@ -2128,7 +2103,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            ImmutableSet.of(shardId1),
             null,
             null,
             false
@@ -2192,7 +2166,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             "awsEndpoint",
-            null,
             null,
             null,
             null,
@@ -2319,7 +2292,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
             false
         ),
         context
@@ -2413,7 +2385,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         null,
         null,
         "awsEndpoint",
-        null,
         null,
         null,
         null,

@@ -28,7 +28,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Set;
 
 public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>
 {
@@ -55,7 +54,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("endpoint") String endpoint,
       @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
-      @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<String> exclusiveStartSequenceNumberPartitions,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
       @JsonProperty("deaggregate") boolean deaggregate
@@ -68,8 +66,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         endSequenceNumbers,
         useTransaction,
         minimumMessageTime,
-        maximumMessageTime,
-        exclusiveStartSequenceNumberPartitions
+        maximumMessageTime
     );
     Preconditions.checkArgument(
         endSequenceNumbers.getPartitionSequenceNumberMap()
@@ -136,7 +133,6 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
            ", endpoint='" + endpoint + '\'' +
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
-           ", exclusiveStartSequenceNumberPartitions=" + getExclusiveStartSequenceNumberPartitions() +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +

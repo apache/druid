@@ -64,8 +64,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
         endSequenceNumbers == null ? endPartitions : endSequenceNumbers,
         useTransaction,
         minimumMessageTime,
-        maximumMessageTime,
-        null
+        maximumMessageTime
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -108,6 +107,23 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
         minimumMessageTime,
         maximumMessageTime
     );
+  }
+
+  @JsonProperty
+  public SeekableStreamEndSequenceNumbers<Integer, Long> getStartPartitions()
+  {
+    // Converting to start sequence numbers. This is allowed for Kafka because the start offset is always inclusive.
+    final SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers = getStartSequenceNumbers();
+    return new SeekableStreamEndSequenceNumbers<>(
+        startSequenceNumbers.getStream(),
+        startSequenceNumbers.getPartitionSequenceNumberMap()
+    );
+  }
+
+  @JsonProperty
+  public SeekableStreamEndSequenceNumbers<Integer, Long> getEndPartitions()
+  {
+    return getEndSequenceNumbers();
   }
 
   @JsonProperty

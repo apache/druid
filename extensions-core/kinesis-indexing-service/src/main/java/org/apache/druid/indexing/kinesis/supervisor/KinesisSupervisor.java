@@ -122,7 +122,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return new KinesisIndexTaskIOConfig(
         groupId,
         baseSequenceName,
-        new SeekableStreamStartSequenceNumbers<>(ioConfig.getStream(), startPartitions, exclusiveStartSequenceNumberPartitions),
+        new SeekableStreamStartSequenceNumbers<>(
+            ioConfig.getStream(),
+            startPartitions,
+            exclusiveStartSequenceNumberPartitions
+        ),
         new SeekableStreamEndSequenceNumbers<>(ioConfig.getStream(), endPartitions),
         true,
         minimumMessageTime,
@@ -130,7 +134,6 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         ioConfig.getEndpoint(),
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
-        exclusiveStartSequenceNumberPartitions,
         ioConfig.getAwsAssumedRoleArn(),
         ioConfig.getAwsExternalId(),
         ioConfig.isDeaggregate()

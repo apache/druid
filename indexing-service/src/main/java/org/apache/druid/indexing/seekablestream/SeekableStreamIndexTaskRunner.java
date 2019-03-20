@@ -422,7 +422,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(entry.getKey())
           );
 
-          if (!isAtStart || ioConfig.getExclusiveStartSequenceNumberPartitions().contains(entry.getKey())) {
+          if (!isAtStart || ioConfig.getStartSequenceNumbers().getExclusivePartitions().contains(entry.getKey())) {
             lastReadOffsets.put(entry.getKey(), entry.getValue());
           }
         }
@@ -652,7 +652,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                     new SeekableStreamStartSequenceNumbers<>(
                         stream,
                         sequenceToCheckpoint.getStartOffsets(),
-                        ioConfig.getExclusiveStartSequenceNumberPartitions()
+                        ioConfig.getStartSequenceNumbers().getExclusivePartitions()
                     )
                 ),
                 createDataSourceMetadata(

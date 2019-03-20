@@ -41,7 +41,6 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final boolean useTransaction;
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
-  private final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
 
   public SeekableStreamIndexTaskIOConfig(
       final @Nullable Integer taskGroupId, // can be null for backward compabitility
@@ -50,8 +49,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> endSequenceNumbers,
       final Boolean useTransaction,
       final DateTime minimumMessageTime,
-      final DateTime maximumMessageTime,
-      final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
+      final DateTime maximumMessageTime
   )
   {
     this.taskGroupId = taskGroupId;
@@ -61,9 +59,6 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
-    this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions == null
-                                                  ? Collections.emptySet()
-                                                  : exclusiveStartSequenceNumberPartitions;
 
     Preconditions.checkArgument(
         startSequenceNumbers.getStream().equals(endSequenceNumbers.getStream()),
@@ -76,15 +71,6 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
                        .equals(endSequenceNumbers.getPartitionSequenceNumberMap().keySet()),
         "start partition set and end partition set must match"
     );
-  }
-
-  // exclusive starting sequence partitions are used only for kinesis where the starting
-  // sequence number for certain partitions are discarded because they've already been
-  // read by a previous task
-  @JsonProperty
-  public Set<PartitionIdType> getExclusiveStartSequenceNumberPartitions()
-  {
-    return exclusiveStartSequenceNumberPartitions;
   }
 
   @Nullable
