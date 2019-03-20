@@ -22,7 +22,9 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.IAE;
+import org.skife.jdbi.v2.Handle;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -77,6 +79,13 @@ public class SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetTyp
     this(stream, null, partitionSequenceNumberMap, null);
   }
 
+  /**
+   * Converts this end sequence numbers into start sequence numbers. This conversion is required when checking two
+   * sequence numbers are "matched" in {@code IndexerSQLMetadataStorageCoordinator#updateDataSourceMetadataWithHandle}
+   * because only sequences numbers of the same type can be compared.
+   *
+   * @param isExclusiveEndOffset flag that end offsets are exclusive. Should be true for Kafka and false for Kinesis.
+   */
   public SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> asStartPartitions(
       boolean isExclusiveEndOffset
   )

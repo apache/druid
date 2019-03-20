@@ -109,6 +109,11 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
     );
   }
 
+  /**
+   * This method is for compatibilty so that newer version of KafkaIndexTaskIOConfig can be read by
+   * old version of Druid. Note that this method returns end sequence numbers instead of start. This is because
+   * {@link SeekableStreamStartSequenceNumbers} didn't exist before.
+   */
   @JsonProperty
   public SeekableStreamEndSequenceNumbers<Integer, Long> getStartPartitions()
   {
@@ -120,6 +125,10 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
     );
   }
 
+  /**
+   * This method is for compatibilty so that newer version of KafkaIndexTaskIOConfig can be read by
+   * old version of Druid.
+   */
   @JsonProperty
   public SeekableStreamEndSequenceNumbers<Integer, Long> getEndPartitions()
   {

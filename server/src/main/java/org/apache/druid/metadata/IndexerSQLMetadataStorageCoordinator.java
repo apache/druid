@@ -81,7 +81,6 @@ import java.util.stream.StreamSupport;
 public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
-  private static final int ALLOCATE_SEGMENT_QUIET_TRIES = 3;
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
