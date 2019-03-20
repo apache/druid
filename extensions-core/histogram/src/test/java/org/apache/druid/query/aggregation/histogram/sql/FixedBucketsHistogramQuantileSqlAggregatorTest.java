@@ -231,7 +231,7 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                            .granularity(Granularities.ALL)
                            .virtualColumns(
                                new ExpressionVirtualColumn(
-                                   "a4:v",
+                                   "v0",
                                    "(\"m1\" * 2)",
                                    ValueType.FLOAT,
                                    TestExprMacroTable.INSTANCE
@@ -242,7 +242,7 @@ public class FixedBucketsHistogramQuantileSqlAggregatorTest extends CalciteTestB
                                    "a0:agg", "m1", 20, 0.0d, 10.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
                                ),
                                new FixedBucketsHistogramAggregatorFactory(
-                                   "a4:agg", "a4:v", 40, 0.0d, 20.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
+                                   "a4:agg", "v0", 40, 0.0d, 20.0d, FixedBucketsHistogram.OutlierHandlingMode.IGNORE
                                ),
                                new FilteredAggregatorFactory(
                                    new FixedBucketsHistogramAggregatorFactory(

@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Coordinator Node"
+title: "Coordinator Process"
 ---
 
 <!--
@@ -22,11 +22,11 @@ title: "Coordinator Node"
   ~ under the License.
   -->
 
-# Coordinator Node
+# Coordinator Process
 
 ### Configuration
 
-For Coordinator Node Configuration, see [Coordinator Configuration](../configuration/index.html#coordinator).
+For Coordinator Process Configuration, see [Coordinator Configuration](../configuration/index.html#coordinator).
 
 ### HTTP endpoints
 
@@ -34,11 +34,11 @@ For a list of API endpoints supported by the Coordinator, see [Coordinator API](
 
 ### Overview
 
-The Druid Coordinator node is primarily responsible for segment management and distribution. More specifically, the Druid Coordinator node communicates to Historical nodes to load or drop segments based on configurations. The Druid Coordinator is responsible for loading new segments, dropping outdated segments, managing segment replication, and balancing segment load.
+The Druid Coordinator process is primarily responsible for segment management and distribution. More specifically, the Druid Coordinator process communicates to Historical processes to load or drop segments based on configurations. The Druid Coordinator is responsible for loading new segments, dropping outdated segments, managing segment replication, and balancing segment load.
 
 The Druid Coordinator runs periodically and the time between each run is a configurable parameter. Each time the Druid Coordinator runs, it assesses the current state of the cluster before deciding on the appropriate actions to take. Similar to the Broker and Historical processses, the Druid Coordinator maintains a connection to a Zookeeper cluster for current cluster information. The Coordinator also maintains a connection to a database containing information about available segments and rules. Available segments are stored in a segment table and list all segments that should be loaded in the cluster. Rules are stored in a rule table and indicate how segments should be handled.
 
-Before any unassigned segments are serviced by Historical nodes, the available Historical nodes for each tier are first sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always assigned to the nodes with least capacity to maintain a level of balance between nodes. The Coordinator does not directly communicate with a historical node when assigning it a new segment; instead the Coordinator creates some temporary information about the new segment under load queue path of the historical node. Once this request is seen, the historical node will load the segment and begin servicing it.
+Before any unassigned segments are serviced by Historical processes, the available Historical processes for each tier are first sorted in terms of capacity, with least capacity servers having the highest priority. Unassigned segments are always assigned to the processes with least capacity to maintain a level of balance between processes. The Coordinator does not directly communicate with a historical process when assigning it a new segment; instead the Coordinator creates some temporary information about the new segment under load queue path of the historical process. Once this request is seen, the historical process will load the segment and begin servicing it.
 
 ### Running
 
@@ -57,16 +57,16 @@ Note that if all segments in database are deleted(or marked unused), then Coordi
 
 ### Segment Availability
 
-If a Historical node restarts or becomes unavailable for any reason, the Druid Coordinator will notice a node has gone missing and treat all segments served by that node as being dropped. Given a sufficient period of time, the segments may be reassigned to other Historical nodes in the cluster. However, each segment that is dropped is not immediately forgotten. Instead, there is a transitional data structure that stores all dropped segments with an associated lifetime. The lifetime represents a period of time in which the Coordinator will not reassign a dropped segment. Hence, if a historical node becomes unavailable and available again within a short period of time, the historical node will start up and serve segments from its cache without any those segments being reassigned across the cluster.
+If a Historical process restarts or becomes unavailable for any reason, the Druid Coordinator will notice a process has gone missing and treat all segments served by that process as being dropped. Given a sufficient period of time, the segments may be reassigned to other Historical processes in the cluster. However, each segment that is dropped is not immediately forgotten. Instead, there is a transitional data structure that stores all dropped segments with an associated lifetime. The lifetime represents a period of time in which the Coordinator will not reassign a dropped segment. Hence, if a historical process becomes unavailable and available again within a short period of time, the historical process will start up and serve segments from its cache without any those segments being reassigned across the cluster.
 
 ### Balancing Segment Load
 
-To ensure an even distribution of segments across Historical nodes in the cluster, the Coordinator node will find the total size of all segments being served by every Historical node each time the Coordinator runs. For every Historical node tier in the cluster, the Coordinator node will determine the Historical node with the highest utilization and the Historical node with the lowest utilization. The percent difference in utilization between the two nodes is computed, and if the result exceeds a certain threshold, a number of segments will be moved from the highest utilized node to the lowest utilized node. There is a configurable limit on the number of segments that can be moved from one node to another each time the Coordinator runs. Segments to be moved are selected at random and only moved if the resulting utilization calculation indicates the percentage difference between the highest and lowest servers has decreased.
+To ensure an even distribution of segments across Historical processes in the cluster, the Coordinator process will find the total size of all segments being served by every Historical process each time the Coordinator runs. For every Historical process tier in the cluster, the Coordinator process will determine the Historical process with the highest utilization and the Historical process with the lowest utilization. The percent difference in utilization between the two processes is computed, and if the result exceeds a certain threshold, a number of segments will be moved from the highest utilized process to the lowest utilized process. There is a configurable limit on the number of segments that can be moved from one process to another each time the Coordinator runs. Segments to be moved are selected at random and only moved if the resulting utilization calculation indicates the percentage difference between the highest and lowest servers has decreased.
 
 ### Compacting Segments
 
 Each run, the Druid Coordinator compacts small segments abutting each other. This is useful when you have a lot of small
-segments which may degrade the query performance as well as increasing the disk space usage.
+segments which may degrade query performance as well as increase disk space usage. See [Segment Size Optimization](../operations/segment-optimization.html) for details.
 
 The Coordinator first finds the segments to compact together based on the [segment search policy](#segment-search-policy).
 Once some segments are found, it launches a [compaction task](../ingestion/tasks.html#compaction-task) to compact those segments.
@@ -113,28 +113,20 @@ If it finds such segments, it simply skips them.
 
 ### The Coordinator Console
 
-The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. After the Coordinator starts, the console can be accessed at:
-
-```
-http://<COORDINATOR_IP>:<COORDINATOR_PORT>
-```
-
- There exists a full cluster view (which shows only the realtime and Historical nodes), as well as views for individual Historical nodes, datasources and segments themselves. Segment information can be displayed in raw JSON form or as part of a sortable and filterable table.
-
-The Coordinator console also exposes an interface to creating and editing rules. All valid datasources configured in the segment database, along with a default datasource, are available for configuration. Rules of different types can be added, deleted or edited.
+The Druid Coordinator exposes a web GUI for displaying cluster information and rule configuration. For more details, please see [coordinator console](../operations/management-uis.html#coordinator-consoles).
 
 ### FAQ
 
-1. **Do clients ever contact the Coordinator node?**
+1. **Do clients ever contact the Coordinator process?**
 
     The Coordinator is not involved in a query.
 
-    Historical nodes never directly contact the Coordinator node. The Druid Coordinator tells the Historical nodes to load/drop data via Zookeeper, but the Historical nodes are completely unaware of the Coordinator.
+    Historical processes never directly contact the Coordinator process. The Druid Coordinator tells the Historical processes to load/drop data via Zookeeper, but the Historical processes are completely unaware of the Coordinator.
 
-    Brokers also never contact the Coordinator. Brokers base their understanding of the data topology on metadata exposed by the Historical nodes via ZK and are completely unaware of the Coordinator.
+    Brokers also never contact the Coordinator. Brokers base their understanding of the data topology on metadata exposed by the Historical processes via ZK and are completely unaware of the Coordinator.
 
-2. **Does it matter if the Coordinator node starts up before or after other processes?**
+2. **Does it matter if the Coordinator process starts up before or after other processes?**
 
-    No. If the Druid Coordinator is not started up, no new segments will be loaded in the cluster and outdated segments will not be dropped. However, the Coordinator node can be started up at any time, and after a configurable delay, will start running Coordinator tasks.
+    No. If the Druid Coordinator is not started up, no new segments will be loaded in the cluster and outdated segments will not be dropped. However, the Coordinator process can be started up at any time, and after a configurable delay, will start running Coordinator tasks.
 
     This also means that if you have a working cluster and all of your Coordinators die, the cluster will continue to function, it just won’t experience any changes to its data topology.

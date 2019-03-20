@@ -106,11 +106,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentManager segmentManager
   )
   {
-    this(jsonMapper, config, announcer, serverAnnouncer, segmentManager,
-         Executors.newScheduledThreadPool(
-             config.getNumLoadingThreads(),
-             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
-         )
+    this(
+        jsonMapper,
+        config,
+        announcer,
+        serverAnnouncer,
+        segmentManager,
+        Executors.newScheduledThreadPool(
+            config.getNumLoadingThreads(),
+            Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
+        )
     );
   }
 
@@ -151,7 +156,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       started = true;
       log.info("Started.");
@@ -171,7 +176,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         serverAnnouncer.unannounce();
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         started = false;
@@ -250,7 +255,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
    * throw a SegmentLoadingException
    *
-   * @throws SegmentLoadingException
+   * @throws SegmentLoadingException if it fails to load the given segment
    */
   private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback) throws SegmentLoadingException
   {
@@ -305,6 +310,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         }
       }
       loadSegment(segment, DataSegmentChangeCallback.NOOP);
+      // announce segment even if the segment file already exists.
       try {
         announcer.announceSegment(segment);
       }
@@ -727,14 +733,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             (request, statusRef) -> result.add(new DataSegmentChangeRequestAndStatus(request, statusRef.get()))
         );
 
-        super.set(result);
+        set(result);
       }
-    }
-
-    @Override
-    public boolean setException(Throwable throwable)
-    {
-      return super.setException(throwable);
     }
 
     @Override

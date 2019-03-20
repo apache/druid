@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Kinesis Indexing Service"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Kinesis Indexing Service
 
@@ -192,7 +193,7 @@ For Roaring bitmaps:
 |-----|----|-----------|--------|
 |`stream`|String|The Kinesis stream to read.|yes|
 |`endpoint`|String|The AWS Kinesis stream endpoint for a region. You can find a list of endpoints [here](http://docs.aws.amazon.com/general/latest/gr/rande.html#ak_region).|no (default == kinesis.us-east-1.amazonaws.com)|
-|`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
+|`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against process failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKinesisshards}`.|no (default == 1)|
 |`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment.|no (default == PT1H)|
 |`startDelay`|ISO8601 Period|The period to wait before the supervisor starts managing tasks.|no (default == PT5S)|
@@ -282,7 +283,7 @@ in data loss (assuming the tasks run before Kinesis purges those sequence number
 
 A running task will normally be in one of two states: *reading* or *publishing*. A task will remain in reading state for
 `taskDuration`, at which point it will transition to publishing state. A task will remain in publishing state for as long
-as it takes to generate segments, push segments to deep storage, and have them be loaded and served by a Historical node
+as it takes to generate segments, push segments to deep storage, and have them be loaded and served by a Historical process
 (or until `completionTimeout` elapses).
 
 The number of reading tasks is controlled by `replicas` and `taskCount`. In general, there will be `replicas * taskCount`
@@ -339,7 +340,7 @@ for this segment granularity is created for further events. Kinesis Indexing Tas
 means that all the segments created by a task will not be held up till the task duration is over. As soon as maxRowsPerSegment,
 maxTotalRows or intermediateHandoffPeriod limit is hit, all the segments held by the task at that point in time will be handed-off
 and new set of segments will be created for further events. This means that the task can run for longer durations of time
-without accumulating old segments locally on Middle Manager nodes and it is encouraged to do so.
+without accumulating old segments locally on Middle Manager processes and it is encouraged to do so.
 
 Kinesis Indexing Service may still produce some small segments. Lets say the task duration is 4 hours, segment granularity
 is set to an HOUR and Supervisor was started at 9:10 then after 4 hours at 13:10, new set of tasks will be started and

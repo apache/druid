@@ -24,7 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
-import org.apache.druid.guice.http.LifecycleUtils;
 import org.apache.druid.https.SSLClientConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -391,7 +390,7 @@ public class ITTLSTest
 
     HttpClient client = HttpClientInit.createClient(
         builder.build(),
-        LifecycleUtils.asMmxLifecycle(lifecycle)
+        lifecycle
     );
 
     HttpClient adminClient = new CredentialedHttpClient(
@@ -418,7 +417,7 @@ public class ITTLSTest
 
     HttpClient client = HttpClientInit.createClient(
         builder.build(),
-        LifecycleUtils.asMmxLifecycle(lifecycle)
+        lifecycle
     );
 
     HttpClient adminClient = new CredentialedHttpClient(
@@ -531,7 +530,7 @@ public class ITTLSTest
       return response;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

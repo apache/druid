@@ -123,7 +123,7 @@ public class CoordinatorServerView implements InventoryView
 
   private void removeServer(DruidServer server)
   {
-    for (DataSegment segment : server.getSegments()) {
+    for (DataSegment segment : server.iterateAllSegments()) {
       serverRemovedSegment(server.getMetadata(), segment);
     }
   }

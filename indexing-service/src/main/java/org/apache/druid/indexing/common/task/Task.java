@@ -46,8 +46,6 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "append", value = AppendTask.class),
-    @JsonSubTypes.Type(name = "merge", value = MergeTask.class),
     @JsonSubTypes.Type(name = "kill", value = KillTask.class),
     @JsonSubTypes.Type(name = "move", value = MoveTask.class),
     @JsonSubTypes.Type(name = "archive", value = ArchiveTask.class),
@@ -59,7 +57,6 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "noop", value = NoopTask.class),
-    @JsonSubTypes.Type(name = "same_interval_merge", value = SameIntervalMergeTask.class),
     @JsonSubTypes.Type(name = "compact", value = CompactionTask.class)
 })
 public interface Task

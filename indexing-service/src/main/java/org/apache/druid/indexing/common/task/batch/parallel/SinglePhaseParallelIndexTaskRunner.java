@@ -84,7 +84,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   /** subTaskId -> report */
   private final ConcurrentHashMap<String, PushedSegmentsReport> segmentsMap = new ConcurrentHashMap<>();
 
-  private volatile boolean stopped;
+  private volatile boolean subTaskScheduleAndMonitorStopped;
   private volatile TaskMonitor<ParallelIndexSubTask> taskMonitor;
 
   private int nextSpecId = 0;
@@ -111,6 +111,11 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   @Override
   public TaskState run() throws Exception
   {
+    if (baseFirehoseFactory.getNumSplits() == 0) {
+      log.warn("There's no input split to process");
+      return TaskState.SUCCESS;
+    }
+    
     final Iterator<ParallelIndexSubTaskSpec> subTaskSpecIterator = subTaskSpecIterator().iterator();
     final long taskStatusCheckingPeriod = ingestionSchema.getTuningConfig().getTaskStatusCheckPeriodMs();
 
@@ -153,7 +158,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
               if (!subTaskSpecIterator.hasNext()) {
                 // We have no more subTasks to run
                 if (taskMonitor.getNumRunningTasks() == 0 && taskCompleteEvents.size() == 0) {
-                  stopped = true;
+                  subTaskScheduleAndMonitorStopped = true;
                   if (taskMonitor.isSucceeded()) {
                     // Publishing all segments reported so far
                     publish(toolbox);
@@ -182,7 +187,7 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
             case FAILED:
               // TaskMonitor already tried everything it can do for failed tasks. We failed.
               state = TaskState.FAILED;
-              stopped = true;
+              subTaskScheduleAndMonitorStopped = true;
               final TaskStatusPlus lastStatus = taskCompleteEvent.getLastStatus();
               if (lastStatus != null) {
                 log.error("Failed because of the failed sub task[%s]", lastStatus.getId());
@@ -202,30 +207,39 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
       }
     }
     finally {
-      log.info("Cleaning up resources");
-      // Cleanup resources
-      taskCompleteEvents.clear();
-      taskMonitor.stop();
-
-      if (state != TaskState.SUCCESS) {
-        log.info(
-            "This task is finished with [%s] state. Killing [%d] remaining subtasks.",
-            state,
-            taskMonitor.getNumRunningTasks()
-        );
-        // if this fails, kill all sub tasks
-        // Note: this doesn't work when this task is killed by users. We need a way for gracefully shutting down tasks
-        // for resource cleanup.
-        taskMonitor.killAll();
+      stopInternal();
+      if (!state.isComplete()) {
+        state = TaskState.FAILED;
       }
     }
 
     return state;
   }
 
+  @Override
+  public void stopGracefully()
+  {
+    subTaskScheduleAndMonitorStopped = true;
+    stopInternal();
+  }
+
+  /**
+   * Stop task scheduling and monitoring, and kill all running tasks.
+   * This method is thread-safe.
+   */
+  private void stopInternal()
+  {
+    log.info("Cleaning up resources");
+
+    taskCompleteEvents.clear();
+    if (taskMonitor != null) {
+      taskMonitor.stop();
+    }
+  }
+
   private boolean isRunning()
   {
-    return !stopped && !Thread.currentThread().isInterrupted();
+    return !subTaskScheduleAndMonitorStopped && !Thread.currentThread().isInterrupted();
   }
 
   @VisibleForTesting
@@ -238,6 +252,13 @@ public class SinglePhaseParallelIndexTaskRunner implements ParallelIndexTaskRunn
   ParallelIndexIngestionSpec getIngestionSchema()
   {
     return ingestionSchema;
+  }
+
+  @VisibleForTesting
+  @Nullable
+  TaskMonitor<ParallelIndexSubTask> getTaskMonitor()
+  {
+    return taskMonitor;
   }
 
   @Override
