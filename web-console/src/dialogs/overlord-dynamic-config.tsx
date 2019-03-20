@@ -55,7 +55,7 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
     let config: Record<string, any> | null = null;
     try {
       const configResp = await axios.get("/druid/indexer/v1/worker");
-      config = configResp.data;
+      config = configResp.data || {};
     } catch (e) {
       AppToaster.show({
         iconName: IconNames.ERROR,
