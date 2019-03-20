@@ -156,6 +156,7 @@ WHERE "server_type" = 'historical'`);
 
   renderServersTable() {
     const { servers, serversLoading, serversError, serverFilter, groupByTier } = this.state;
+    const { serverTableColumnSelectionHandler } = this;
 
     const fillIndicator = (value: number) => {
       return <div className="fill-indicator">
@@ -180,7 +181,7 @@ WHERE "server_type" = 'historical'`);
           accessor: "server",
           width: 300,
           Aggregated: row => '',
-          show: this.serverTableColumnSelectionHandler.showColumn("Server")
+          show: serverTableColumnSelectionHandler.showColumn("Server")
         },
         {
           Header: "Tier",
@@ -189,7 +190,7 @@ WHERE "server_type" = 'historical'`);
             const value = row.value;
             return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) }); }}>{value}</a>;
           },
-          show: this.serverTableColumnSelectionHandler.showColumn("Tier")
+          show: serverTableColumnSelectionHandler.showColumn("Tier")
         },
         {
           Header: "Curr size",
@@ -207,7 +208,7 @@ WHERE "server_type" = 'historical'`);
             if (row.value === null) return '';
             return formatBytes(row.value);
           },
-          show: this.serverTableColumnSelectionHandler.showColumn("Curr size")
+          show: serverTableColumnSelectionHandler.showColumn("Curr size")
         },
         {
           Header: "Max size",
@@ -225,7 +226,7 @@ WHERE "server_type" = 'historical'`);
             if (row.value === null) return '';
             return formatBytes(row.value);
           },
-          show: this.serverTableColumnSelectionHandler.showColumn("Max size")
+          show: serverTableColumnSelectionHandler.showColumn("Max size")
         },
         {
           Header: "Usage",
@@ -244,7 +245,7 @@ WHERE "server_type" = 'historical'`);
             if (row.value === null) return '';
             return fillIndicator(row.value);
           },
-          show: this.serverTableColumnSelectionHandler.showColumn("Usage")
+          show: serverTableColumnSelectionHandler.showColumn("Usage")
         },
         {
           Header: "Load/drop queues",
@@ -265,13 +266,13 @@ WHERE "server_type" = 'historical'`);
             const segmentsToDropSize = sum(originals, s => s.segmentsToDropSize);
             return formatQueues(segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize);
           },
-          show: this.serverTableColumnSelectionHandler.showColumn("Load/drop queues")
+          show: serverTableColumnSelectionHandler.showColumn("Load/drop queues")
         },
         {
           Header: "Host",
           accessor: "host",
           Aggregated: () => '',
-          show: this.serverTableColumnSelectionHandler.showColumn("Host")
+          show: serverTableColumnSelectionHandler.showColumn("Host")
         },
         {
           Header: "Port",
@@ -287,7 +288,7 @@ WHERE "server_type" = 'historical'`);
             return ports.join(', ') || 'No port';
           },
           Aggregated: () => '',
-          show: this.serverTableColumnSelectionHandler.showColumn("Port")
+          show: serverTableColumnSelectionHandler.showColumn("Port")
         }
       ]}
       defaultPageSize={10}
@@ -298,6 +299,7 @@ WHERE "server_type" = 'historical'`);
   renderMiddleManagerTable() {
     const { goToTask } = this.props;
     const { middleManagers, middleManagersLoading, middleManagersError, middleManagerFilter } = this.state;
+    const { middleManagerTableColumnSelectionHandler } = this;
 
     return <ReactTable
       data={middleManagers || []}
@@ -317,7 +319,7 @@ WHERE "server_type" = 'historical'`);
             const value = row.value;
             return <a onClick={() => { this.setState({ middleManagerFilter: addFilter(middleManagerFilter, 'host', value) }); }}>{value}</a>;
           },
-          show: this.middleManagerTableColumnSelectionHandler.showColumn("Host")
+          show: middleManagerTableColumnSelectionHandler.showColumn("Host")
         },
         {
           Header: "Usage",
@@ -325,7 +327,7 @@ WHERE "server_type" = 'historical'`);
           width: 60,
           accessor: (row) => `${row.currCapacityUsed} / ${row.worker.capacity}`,
           filterable: false,
-          show: this.middleManagerTableColumnSelectionHandler.showColumn("Usage")
+          show: middleManagerTableColumnSelectionHandler.showColumn("Usage")
         },
         {
           Header: "Availability groups",
@@ -333,17 +335,17 @@ WHERE "server_type" = 'historical'`);
           width: 60,
           accessor: (row) => row.availabilityGroups.length,
           filterable: false,
-          show: this.middleManagerTableColumnSelectionHandler.showColumn("Availability groups")
+          show: middleManagerTableColumnSelectionHandler.showColumn("Availability groups")
         },
         {
           Header: "Last completed task time",
           accessor: "lastCompletedTaskTime",
-          show: this.middleManagerTableColumnSelectionHandler.showColumn("Last completed task time")
+          show: middleManagerTableColumnSelectionHandler.showColumn("Last completed task time")
         },
         {
           Header: "Blacklisted until",
           accessor: "blacklistedUntil",
-          show: this.middleManagerTableColumnSelectionHandler.showColumn("Blacklisted until")
+          show: middleManagerTableColumnSelectionHandler.showColumn("Blacklisted until")
         }
       ]}
       defaultPageSize={10}
@@ -367,6 +369,7 @@ WHERE "server_type" = 'historical'`);
   render() {
     const { goToSql } = this.props;
     const { groupByTier } = this.state;
+    const { serverTableColumnSelectionHandler, middleManagerTableColumnSelectionHandler } = this;
 
     return <div className="servers-view app-view">
       <div className="control-bar">
@@ -388,8 +391,8 @@ WHERE "server_type" = 'historical'`);
         />
         <TableColumnSelection
           columns={serverTableColumns}
-          onChange={(column) => this.serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={this.serverTableColumnSelectionHandler.hiddenColumns}
+          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
         />
       </div>
       {this.renderServersTable()}
@@ -405,8 +408,8 @@ WHERE "server_type" = 'historical'`);
         />
         <TableColumnSelection
           columns={middleManagerTableColumns}
-          onChange={(column) => this.middleManagerTableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={this.middleManagerTableColumnSelectionHandler.hiddenColumns}
+          onChange={(column) => middleManagerTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={middleManagerTableColumnSelectionHandler.hiddenColumns}
         />
       </div>
       {this.renderMiddleManagerTable()}

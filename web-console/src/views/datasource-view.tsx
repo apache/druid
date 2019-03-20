@@ -356,6 +356,7 @@ GROUP BY 1`);
   renderDatasourceTable() {
     const { goToSegments } = this.props;
     const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
+    const { tableColumnSelectionHandler } = this;
     let data = datasources || [];
     if (!showDisabled) {
       data = data.filter(d => !d.disabled);
@@ -379,7 +380,7 @@ GROUP BY 1`);
               const value = row.value;
               return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
             },
-            show: this.tableColumnSelectionHandler.showColumn("Datasource")
+            show: tableColumnSelectionHandler.showColumn("Datasource")
           },
           {
             Header: "Availability",
@@ -414,7 +415,7 @@ GROUP BY 1`);
 
               }
             },
-            show: this.tableColumnSelectionHandler.showColumn("Availability")
+            show: tableColumnSelectionHandler.showColumn("Availability")
           },
           {
             Header: 'Retention',
@@ -438,7 +439,7 @@ GROUP BY 1`);
                 <a>&#x270E;</a>
               </span>;
             },
-            show: this.tableColumnSelectionHandler.showColumn("Retention")
+            show: tableColumnSelectionHandler.showColumn("Retention")
           },
           {
             Header: 'Compaction',
@@ -465,7 +466,7 @@ GROUP BY 1`);
                 <a>&#x270E;</a>
               </span>;
             },
-            show: this.tableColumnSelectionHandler.showColumn("Compaction")
+            show: tableColumnSelectionHandler.showColumn("Compaction")
           },
           {
             Header: 'Size',
@@ -473,7 +474,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatBytes(row.value),
-            show: this.tableColumnSelectionHandler.showColumn("Size")
+            show: tableColumnSelectionHandler.showColumn("Size")
           },
           {
             Header: 'Num rows',
@@ -481,7 +482,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatNumber(row.value),
-            show: this.tableColumnSelectionHandler.showColumn("Num rows")
+            show: tableColumnSelectionHandler.showColumn("Num rows")
           },
           {
             Header: 'Actions',
@@ -503,7 +504,7 @@ GROUP BY 1`);
                 </div>;
               }
             },
-            show: this.tableColumnSelectionHandler.showColumn("Actions")
+            show: tableColumnSelectionHandler.showColumn("Actions")
           }
         ]}
         defaultPageSize={50}
@@ -520,6 +521,7 @@ GROUP BY 1`);
   render() {
     const { goToSql } = this.props;
     const { showDisabled } = this.state;
+    const { tableColumnSelectionHandler } = this;
 
     return <div className="data-sources-view app-view">
       <div className="control-bar">
@@ -541,8 +543,8 @@ GROUP BY 1`);
         />
         <TableColumnSelection
           columns={tableColumns}
-          onChange={(column) => this.tableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={this.tableColumnSelectionHandler.hiddenColumns}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
       </div>
       {this.renderDatasourceTable()}
