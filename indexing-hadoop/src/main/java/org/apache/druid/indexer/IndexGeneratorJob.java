@@ -38,9 +38,11 @@ import org.apache.druid.data.input.Rows;
 import org.apache.druid.indexer.hadoop.SegmentInputRow;
 import org.apache.druid.indexer.path.DatasourcePathSpec;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -310,6 +312,7 @@ public class IndexGeneratorJob implements Jobby
     private static final HashFunction hashFunction = Hashing.murmur3_128();
 
     private AggregatorFactory[] aggregators;
+    private Lifecycle lifecycle;
 
     private AggregatorFactory[] aggsForSerializingSegmentInputRow;
     private Map<String, InputRowSerde.IndexSerdeTypeHelper> typeHelperMap;
@@ -319,6 +322,13 @@ public class IndexGeneratorJob implements Jobby
         throws IOException, InterruptedException
     {
       super.setup(context);
+      lifecycle = config.injector.getInstance(Lifecycle.class);
+      try {
+        lifecycle.start();
+      }
+      catch (Throwable t) {
+        throw new IOE(t, "Error when setup lifecycle.");
+      }
       aggregators = config.getSchema().getDataSchema().getAggregators();
 
       if (DatasourcePathSpec.checkIfReindexingAndIsUseAggEnabled(config.getSchema().getIOConfig().getPathSpec())) {
@@ -336,6 +346,15 @@ public class IndexGeneratorJob implements Jobby
                                                            .getParser()
                                                            .getParseSpec()
                                                            .getDimensionsSpec());
+    }
+
+    @Override
+    protected void cleanup(Context context) throws IOException, InterruptedException
+    {
+      super.cleanup(context);
+      if (lifecycle != null) {
+        lifecycle.stop();
+      }
     }
 
     @Override

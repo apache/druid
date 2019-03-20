@@ -121,9 +121,9 @@ public class JobHelper
   }
 
   /**
-   * Uploads jar files to hdfs and configures the classpath.
+   * Uploads resource files to hdfs and configures the classpath.
    * Snapshot jar files are uploaded to intermediateClasspath and not shared across multiple jobs.
-   * Non-Snapshot jar files are uploaded to a distributedClasspath and shared across multiple jobs.
+   * Non-Snapshot resource files are uploaded to a distributedClasspath and shared across multiple jobs.
    *
    * @param distributedClassPath  classpath shared across multiple jobs
    * @param intermediateClassPath classpath exclusive for this job. used to upload SNAPSHOT jar files.
@@ -143,7 +143,7 @@ public class JobHelper
       classpathProperty = System.getProperty("java.class.path");
     }
 
-    String[] jarFiles = classpathProperty.split(File.pathSeparator);
+    String[] resourceFiles = classpathProperty.split(File.pathSeparator);
 
     final Configuration conf = job.getConfiguration();
     final FileSystem fs = distributedClassPath.getFileSystem(conf);
@@ -152,17 +152,18 @@ public class JobHelper
       return;
     }
 
-    for (String jarFilePath : jarFiles) {
+    for (String resourceFilePath : resourceFiles) {
 
-      final File jarFile = new File(jarFilePath);
-      if (jarFile.getName().endsWith(".jar")) {
+      final File resourceFile = new File(resourceFilePath);
+      if (resourceFile.getName().endsWith(".jar") ||
+          resourceFile.getName().endsWith(".properties")) {
         try {
           RetryUtils.retry(
               () -> {
-                if (isSnapshot(jarFile)) {
-                  addSnapshotJarToClassPath(jarFile, intermediateClassPath, fs, job);
+                if (isSnapshot(resourceFile)) {
+                  addSnapshotJarToClassPath(resourceFile, intermediateClassPath, fs, job);
                 } else {
-                  addJarToClassPath(jarFile, distributedClassPath, intermediateClassPath, fs, job);
+                  addResourceToClassPath(resourceFile, distributedClassPath, intermediateClassPath, fs, job);
                 }
                 return true;
               },
@@ -172,6 +173,22 @@ public class JobHelper
         }
         catch (Exception e) {
           throw new RuntimeException(e);
+        }
+      } else if (resourceFile.isDirectory()) {
+        for (File propFile : resourceFile.listFiles((dir, name) -> name.endsWith(".properties"))) {
+          try {
+            RetryUtils.retry(
+                () -> {
+                  addResourceToClassPath(propFile, distributedClassPath, intermediateClassPath, fs, job);
+                  return true;
+                },
+                shouldRetryPredicate(),
+                NUM_RETRIES
+            );
+          }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
         }
       }
     }
@@ -195,8 +212,8 @@ public class JobHelper
     };
   }
 
-  static void addJarToClassPath(
-      File jarFile,
+  static void addResourceToClassPath(
+      File resourceFile,
       Path distributedClassPath,
       Path intermediateClassPath,
       FileSystem fs,
@@ -209,15 +226,15 @@ public class JobHelper
     fs.mkdirs(distributedClassPath);
 
     // Non-snapshot jar files are uploaded to the shared classpath.
-    final Path hdfsPath = new Path(distributedClassPath, jarFile.getName());
-    if (shouldUploadOrReplace(jarFile, hdfsPath, fs)) {
+    final Path hdfsPath = new Path(distributedClassPath, resourceFile.getName());
+    if (shouldUploadOrReplace(resourceFile, hdfsPath, fs)) {
       // Muliple jobs can try to upload the jar here,
       // to avoid them from overwriting files, first upload to intermediateClassPath and then rename to the distributedClasspath.
-      final Path intermediateHdfsPath = new Path(intermediateClassPath, jarFile.getName());
-      uploadJar(jarFile, intermediateHdfsPath, fs);
+      final Path intermediateHdfsPath = new Path(intermediateClassPath, resourceFile.getName());
+      uploadResource(resourceFile, intermediateHdfsPath, fs);
       IOException exception = null;
       try {
-        log.info("Renaming jar to path[%s]", hdfsPath);
+        log.info("Renaming resource to path[%s]", hdfsPath);
         fs.rename(intermediateHdfsPath, hdfsPath);
         if (!fs.exists(hdfsPath)) {
           throw new IOE("File does not exist even after moving from[%s] to [%s]", intermediateHdfsPath, hdfsPath);
@@ -227,7 +244,7 @@ public class JobHelper
         // rename failed, possibly due to race condition. check if some other job has uploaded the jar file.
         try {
           if (!fs.exists(hdfsPath)) {
-            log.error(e, "IOException while Renaming jar file");
+            log.error(e, "IOException while Renaming resource file");
             exception = e;
           }
         }
@@ -284,16 +301,16 @@ public class JobHelper
     final Path hdfsPath = new Path(intermediateClassPath, jarFile.getName());
     // Prevent uploading same file multiple times in same run.
     if (!fs.exists(hdfsPath)) {
-      uploadJar(jarFile, hdfsPath, fs);
+      uploadResource(jarFile, hdfsPath, fs);
     }
     job.addFileToClassPath(hdfsPath);
   }
 
-  static void uploadJar(File jarFile, final Path path, final FileSystem fs) throws IOException
+  static void uploadResource(File resourceFile, final Path path, final FileSystem fs) throws IOException
   {
-    log.info("Uploading jar to path[%s]", path);
+    log.info("Uploading resource to path[%s]", path);
     try (OutputStream os = fs.create(path)) {
-      Files.asByteSource(jarFile).copyTo(os);
+      Files.asByteSource(resourceFile).copyTo(os);
     }
   }
 

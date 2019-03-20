@@ -146,6 +146,29 @@ public class Initialization
     return (Collection<T>) modules;
   }
 
+  /**
+   * Look for implementations for the given class from both classpath and extensions directory, using {@link
+   * ServiceLoader}. A user should never put the same two extensions in classpath and extensions directory, if he/she
+   * does that, the one that is in the classpath will be loaded, the other will be ignored.
+   *
+   * @param config       Extensions configuration
+   * @param serviceClass The class to look the implementations of (e.g., DruidModule)
+   * @param onlyLoadFromClassLoader Whether only load extensions from classloader
+   *
+   * @return A collection that contains implementations (of distinct concrete classes) of the given class. The order of
+   * elements in the returned collection is not specified and not guaranteed to be the same for different calls to
+   * getFromExtensions().
+   */
+  public static synchronized <T> Collection<T> getFromExtensions(
+      ExtensionsConfig config,
+      Class<T> serviceClass,
+      boolean onlyLoadFromClassLoader)
+  {
+    Collection<T> modulesToLoad = new ServiceLoadingFromExtensions<>(config, serviceClass, onlyLoadFromClassLoader).implsToLoad;
+    extensionsMap.put(serviceClass, modulesToLoad);
+    return modulesToLoad;
+  }
+
   private static class ServiceLoadingFromExtensions<T>
   {
     private final ExtensionsConfig extensionsConfig;
@@ -155,12 +178,22 @@ public class Initialization
 
     private ServiceLoadingFromExtensions(ExtensionsConfig extensionsConfig, Class<T> serviceClass)
     {
+      this(extensionsConfig, serviceClass, false);
+    }
+
+    private ServiceLoadingFromExtensions(
+        ExtensionsConfig extensionsConfig,
+        Class<T> serviceClass,
+        boolean onlyLoadFromClassLoader)
+    {
       this.extensionsConfig = extensionsConfig;
       this.serviceClass = serviceClass;
       if (extensionsConfig.searchCurrentClassloader()) {
         addAllFromCurrentClassLoader();
       }
-      addAllFromFileSystem();
+      if (!onlyLoadFromClassLoader) {
+        addAllFromFileSystem();
+      }
     }
 
     private void addAllFromCurrentClassLoader()
@@ -361,7 +394,10 @@ public class Initialization
     }
   }
 
-  public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<? extends Module> modules)
+  public static Injector makeInjectorWithModules(
+      final Injector baseInjector,
+      Iterable<? extends Module> modules,
+      boolean onlyLoadExtensionFromClassLoader)
   {
     final ModuleList defaultModules = new ModuleList(baseInjector);
     defaultModules.addModules(
@@ -412,11 +448,16 @@ public class Initialization
 
     ModuleList extensionModules = new ModuleList(baseInjector);
     final ExtensionsConfig config = baseInjector.getInstance(ExtensionsConfig.class);
-    for (DruidModule module : Initialization.getFromExtensions(config, DruidModule.class)) {
+    for (DruidModule module : Initialization.getFromExtensions(config, DruidModule.class, onlyLoadExtensionFromClassLoader)) {
       extensionModules.addModule(module);
     }
 
     return Guice.createInjector(Modules.override(intermediateModules).with(extensionModules.getModules()));
+  }
+
+  public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<? extends Module> modules)
+  {
+    return makeInjectorWithModules(baseInjector, modules, false);
   }
 
   private static class ModuleList

@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
@@ -83,7 +84,7 @@ import java.util.SortedSet;
  */
 public class HadoopDruidIndexerConfig
 {
-  private static final Injector injector;
+  static final Injector injector;
 
   public static final String CONFIG_PROPERTY = "druid.indexer.config";
   public static final Charset JAVA_NATIVE_CHARSET = Charset.forName("Unicode");
@@ -115,9 +116,9 @@ public class HadoopDruidIndexerConfig
                 JsonConfigProvider.bind(binder, "druid.hadoop.security.kerberos", HadoopKerberosConfig.class);
               }
             },
-            new IndexingHadoopModule()
-        )
-    );
+            new IndexingHadoopModule(),
+            new LookupModule()
+        ), true);
     JSON_MAPPER = injector.getInstance(ObjectMapper.class);
     INDEX_IO = injector.getInstance(IndexIO.class);
     INDEX_MERGER_V9 = injector.getInstance(IndexMergerV9.class);

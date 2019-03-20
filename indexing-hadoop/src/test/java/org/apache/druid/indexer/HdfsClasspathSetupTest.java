@@ -135,7 +135,7 @@ public class HdfsClasspathSetupTest
   {
     Job job = Job.getInstance(conf, "test-job");
     DistributedFileSystem fs = miniCluster.getFileSystem();
-    JobHelper.addJarToClassPath(dummyJarFile, finalClasspath, intermediatePath, fs, job);
+    JobHelper.addResourceToClassPath(dummyJarFile, finalClasspath, intermediatePath, fs, job);
     Path expectedJarPath = new Path(finalClasspath, dummyJarFile.getName());
     // check file gets uploaded to final HDFS path
     Assert.assertTrue(fs.exists(expectedJarPath));
@@ -180,7 +180,7 @@ public class HdfsClasspathSetupTest
                   int id = barrier.await();
                   Job job = Job.getInstance(conf, "test-job-" + id);
                   Path intermediatePathForJob = new Path(intermediatePath, "job-" + id);
-                  JobHelper.addJarToClassPath(dummyJarFile, finalClasspath, intermediatePathForJob, fs, job);
+                  JobHelper.addResourceToClassPath(dummyJarFile, finalClasspath, intermediatePathForJob, fs, job);
                   // check file gets uploaded to final HDFS path
                   Assert.assertTrue(fs.exists(expectedJarPath));
                   // check that the intermediate file is not present
