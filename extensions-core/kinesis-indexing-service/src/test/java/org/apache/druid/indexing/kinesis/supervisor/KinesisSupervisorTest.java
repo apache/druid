@@ -1322,7 +1322,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
       // start sequenceNumbers should be exclusive for the second batch of tasks
       Assert.assertEquals(
           ImmutableSet.of("0", "1"),
-          ((KinesisIndexTask) task).getIOConfig().getExclusiveStartSequenceNumberPartitions()
+          ((KinesisIndexTask) task).getIOConfig().getStartSequenceNumbers().getExclusivePartitions()
       );
     }
   }
@@ -3558,7 +3558,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
             minimumMessageTime,
             maximumMessageTime,
             "awsEndpoint",
-            null,
             null,
             null,
             null,

@@ -85,7 +85,7 @@ public class KinesisIOConfigTest
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
     Assert.assertEquals(config.getRecordsPerFetch(), 4000);
     Assert.assertEquals(config.getFetchDelayMillis(), 0);
-    Assert.assertEquals(Collections.emptySet(), config.getExclusiveStartSequenceNumberPartitions());
+    Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
     Assert.assertFalse(config.isDeaggregate());
@@ -98,7 +98,7 @@ public class KinesisIOConfigTest
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}, \"exclusivePartitions\" : {[\"0\"]}},\n"
                      + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
@@ -106,7 +106,6 @@ public class KinesisIOConfigTest
                      + "  \"endpoint\": \"kinesis.us-east-2.amazonaws.com\",\n"
                      + "  \"recordsPerFetch\": 1000,\n"
                      + "  \"fetchDelayMillis\": 1000,\n"
-                     + "  \"exclusiveStartSequenceNumberPartitions\": [\"0\"],\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
                      + "  \"awsExternalId\": \"awsexternalid\",\n"
                      + "  \"deaggregate\": true\n"
@@ -139,7 +138,7 @@ public class KinesisIOConfigTest
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
     Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
-    Assert.assertEquals(config.getExclusiveStartSequenceNumberPartitions(), ImmutableSet.of("0"));
+    Assert.assertEquals(config.getStartSequenceNumbers().getExclusivePartitions(), ImmutableSet.of("0"));
     Assert.assertEquals(1000, config.getRecordsPerFetch());
     Assert.assertEquals(1000, config.getFetchDelayMillis());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
