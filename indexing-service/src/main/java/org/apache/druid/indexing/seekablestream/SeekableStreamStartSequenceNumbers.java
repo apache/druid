@@ -94,25 +94,27 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
       );
     }
 
-    final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> otherEnd =
+    final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> otherStart =
         (SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType>) other;
 
-    if (stream.equals(otherEnd.stream)) {
+    if (stream.equals(otherStart.stream)) {
       // Same stream, merge sequences.
       final Map<PartitionIdType, SequenceOffsetType> newMap = new HashMap<>(partitionSequenceNumberMap);
-      newMap.putAll(otherEnd.partitionSequenceNumberMap);
+      newMap.putAll(otherStart.partitionSequenceNumberMap);
 
+      // A partition is exclusive if it's
+      // 1) exclusive in "this" and it's not in "other"'s partitionSequenceNumberMap or
+      // 2) exslucive in "other"
       final Set<PartitionIdType> newExclusivePartitions = new HashSet<>();
-
       partitionSequenceNumberMap.forEach(
           (partitionId, sequenceOffset) -> {
             if (exclusivePartitions.contains(partitionId)
-                && !otherEnd.partitionSequenceNumberMap.containsKey(partitionId)) {
+                && !otherStart.partitionSequenceNumberMap.containsKey(partitionId)) {
               newExclusivePartitions.add(partitionId);
             }
           }
       );
-      newExclusivePartitions.addAll(otherEnd.exclusivePartitions);
+      newExclusivePartitions.addAll(otherStart.exclusivePartitions);
 
       return new SeekableStreamStartSequenceNumbers<>(
           stream,
@@ -120,7 +122,8 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
           newExclusivePartitions
       );
     } else {
-      return null;
+      // Different stream, prefer "other".
+      return other;
     }
   }
 
@@ -137,17 +140,18 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
       );
     }
 
-    final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> otherEnd =
+    final SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType> otherStart =
         (SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetType>) other;
 
-    if (stream.equals(otherEnd.stream)) {
+    if (stream.equals(otherStart.stream)) {
       // Same stream, remove partitions present in "that" from "this"
       final Map<PartitionIdType, SequenceOffsetType> newMap = new HashMap<>();
       final Set<PartitionIdType> newExclusivePartitions = new HashSet<>();
 
       for (Entry<PartitionIdType, SequenceOffsetType> entry : partitionSequenceNumberMap.entrySet()) {
-        if (!otherEnd.partitionSequenceNumberMap.containsKey(entry.getKey())) {
+        if (!otherStart.partitionSequenceNumberMap.containsKey(entry.getKey())) {
           newMap.put(entry.getKey(), entry.getValue());
+          // A partition is exclusive if it's exclusive in "this" and not in "other"'s partitionSequenceNumberMap
           if (exclusivePartitions.contains(entry.getKey())) {
             newExclusivePartitions.add(entry.getKey());
           }
@@ -160,6 +164,7 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
           newExclusivePartitions
       );
     } else {
+      // Different stream, prefer "this".
       return this;
     }
   }
