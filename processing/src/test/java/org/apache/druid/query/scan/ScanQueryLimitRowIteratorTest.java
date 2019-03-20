@@ -99,11 +99,11 @@ public class ScanQueryLimitRowIteratorTest
    * Expect no batching to occur and limit to be applied
    */
   @Test
-  public void testNonTimeOrderedScan()
+  public void testNonOrderedScan()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .timeOrder(ScanQuery.Order.NONE)
+                            .order(ScanQuery.Order.NONE)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
@@ -140,11 +140,11 @@ public class ScanQueryLimitRowIteratorTest
    * is a sequence of single-event ScanResultValues.
    */
   @Test
-  public void testBrokerTimeOrderedScan()
+  public void testBrokerOrderedScan()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .timeOrder(ScanQuery.Order.DESCENDING)
+                            .order(ScanQuery.Order.DESCENDING)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
@@ -179,11 +179,11 @@ public class ScanQueryLimitRowIteratorTest
    * (unbatching and sorting occurs in ScanQueryRunnerFactory#mergeRunners()).
    */
   @Test
-  public void testHistoricalTimeOrderedScan()
+  public void testHistoricalOrderedScan()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .timeOrder(ScanQuery.Order.DESCENDING)
+                            .order(ScanQuery.Order.DESCENDING)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)

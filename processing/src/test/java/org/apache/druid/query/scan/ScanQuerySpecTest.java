@@ -53,7 +53,7 @@ public class ScanQuerySpecTest
         + "\"resultFormat\":\"list\","
         + "\"batchSize\":20480,"
         + "\"limit\":3,"
-        + "\"timeOrder\":\"none\","
+        + "\"order\":\"none\","
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
         + "\"legacy\":null,"

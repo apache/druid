@@ -182,7 +182,7 @@ public class ScanBenchmark
     return Druids.newScanQueryBuilder()
                  .dataSource("blah")
                  .intervals(intervalSpec)
-                 .timeOrder(ordering);
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
@@ -203,7 +203,7 @@ public class ScanBenchmark
                  .filters(filter)
                  .dataSource("blah")
                  .intervals(intervalSpec)
-                 .timeOrder(ordering);
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
@@ -216,7 +216,7 @@ public class ScanBenchmark
                  .filters(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()))
                  .intervals(intervalSpec)
                  .dataSource("blah")
-                 .timeOrder(ordering);
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
@@ -231,7 +231,7 @@ public class ScanBenchmark
                  .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))
                  .intervals(intervalSpec)
                  .dataSource("blah")
-                 .timeOrder(ordering);
+                 .order(ordering);
   }
 
   @Setup

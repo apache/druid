@@ -41,19 +41,19 @@ public class ScanQueryConfig
   }
 
   @JsonProperty
-  private int maxRowsQueuedForTimeOrdering = 100000;
+  private int maxRowsQueuedForOrdering = 100000;
 
-  public int getMaxRowsQueuedForTimeOrdering()
+  public int getMaxRowsQueuedForOrdering()
   {
-    return maxRowsQueuedForTimeOrdering;
+    return maxRowsQueuedForOrdering;
   }
 
   @JsonProperty
-  private int maxSegmentsTimeOrderedInMemory = 50;
+  private int maxSegmentsOrderedInMemory = 50;
 
-  public int getMaxSegmentsTimeOrderedInMemory()
+  public int getMaxSegmentsOrderedInMemory()
   {
-    return maxSegmentsTimeOrderedInMemory;
+    return maxSegmentsOrderedInMemory;
   }
 
   @Override

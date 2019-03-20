@@ -526,7 +526,7 @@ public class ScanQueryRunnerTest
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
           .limit(limit)
-          .timeOrder(ScanQuery.Order.ASCENDING)
+          .order(ScanQuery.Order.ASCENDING)
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .build();
 
@@ -585,7 +585,7 @@ public class ScanQueryRunnerTest
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
           .limit(limit)
-          .timeOrder(ScanQuery.Order.DESCENDING)
+          .order(ScanQuery.Order.DESCENDING)
           .build();
 
       HashMap<String, Object> context = new HashMap<>();
@@ -668,7 +668,7 @@ public class ScanQueryRunnerTest
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-          .timeOrder(ScanQuery.Order.ASCENDING)
+          .order(ScanQuery.Order.ASCENDING)
           .limit(limit)
           .build();
 
@@ -729,7 +729,7 @@ public class ScanQueryRunnerTest
           .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot", null))
           .columns(QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.indexMetric)
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-          .timeOrder(ScanQuery.Order.DESCENDING)
+          .order(ScanQuery.Order.DESCENDING)
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .limit(limit)
           .build();

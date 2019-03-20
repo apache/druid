@@ -31,15 +31,15 @@ public class ScanQueryConfigTest
 
   private final ImmutableMap<String, String> CONFIG_MAP = ImmutableMap
       .<String, String>builder()
-      .put("maxSegmentsTimeOrderedInMemory", "1")
-      .put("maxRowsQueuedForTimeOrdering", "1")
+      .put("maxSegmentsOrderedInMemory", "1")
+      .put("maxRowsQueuedForOrdering", "1")
       .put("legacy", "true")
       .build();
 
   private final ImmutableMap<String, String> CONFIG_MAP2 = ImmutableMap
       .<String, String>builder()
       .put("legacy", "false")
-      .put("maxSegmentsTimeOrderedInMemory", "42")
+      .put("maxSegmentsOrderedInMemory", "42")
       .build();
 
   private final ImmutableMap<String, String> CONFIG_MAP_EMPTY = ImmutableMap
@@ -50,18 +50,18 @@ public class ScanQueryConfigTest
   public void testSerde()
   {
     final ScanQueryConfig config = MAPPER.convertValue(CONFIG_MAP, ScanQueryConfig.class);
-    Assert.assertEquals(1, config.getMaxRowsQueuedForTimeOrdering());
-    Assert.assertEquals(1, config.getMaxSegmentsTimeOrderedInMemory());
+    Assert.assertEquals(1, config.getMaxRowsQueuedForOrdering());
+    Assert.assertEquals(1, config.getMaxSegmentsOrderedInMemory());
     Assert.assertTrue(config.isLegacy());
 
     final ScanQueryConfig config2 = MAPPER.convertValue(CONFIG_MAP2, ScanQueryConfig.class);
-    Assert.assertEquals(100000, config2.getMaxRowsQueuedForTimeOrdering());
-    Assert.assertEquals(42, config2.getMaxSegmentsTimeOrderedInMemory());
+    Assert.assertEquals(100000, config2.getMaxRowsQueuedForOrdering());
+    Assert.assertEquals(42, config2.getMaxSegmentsOrderedInMemory());
     Assert.assertFalse(config2.isLegacy());
 
     final ScanQueryConfig config3 = MAPPER.convertValue(CONFIG_MAP_EMPTY, ScanQueryConfig.class);
-    Assert.assertEquals(100000, config3.getMaxRowsQueuedForTimeOrdering());
-    Assert.assertEquals(50, config3.getMaxSegmentsTimeOrderedInMemory());
+    Assert.assertEquals(100000, config3.getMaxRowsQueuedForOrdering());
+    Assert.assertEquals(50, config3.getMaxSegmentsOrderedInMemory());
     Assert.assertFalse(config3.isLegacy());
   }
 }

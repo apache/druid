@@ -63,7 +63,7 @@ public class ScanQueryRunnerFactoryTest
     this.query = Druids.newScanQueryBuilder()
                        .batchSize(batchSize)
                        .limit(limit)
-                       .timeOrder(order)
+                       .order(order)
                        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                        .dataSource("some datasource")
                        .resultFormat(resultFormat)

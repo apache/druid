@@ -971,7 +971,7 @@ public class Druids
           .columns(query.getColumns())
           .legacy(query.isLegacy())
           .context(query.getContext())
-          .timeOrder(query.getOrder());
+          .order(query.getOrder());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -1051,7 +1051,7 @@ public class Druids
       return this;
     }
 
-    public ScanQueryBuilder timeOrder(ScanQuery.Order order)
+    public ScanQueryBuilder order(ScanQuery.Order order)
     {
       this.order = order;
       return this;

@@ -100,7 +100,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                 input -> input.run(queryPlus, responseContext)
             )
         );
-      } else if (query.getLimit() <= scanQueryConfig.getMaxRowsQueuedForTimeOrdering()) {
+      } else if (query.getLimit() <= scanQueryConfig.getMaxRowsQueuedForOrdering()) {
         // Use priority queue strategy
         return sortAndLimitScanResultValues(
             Sequences.concat(Sequences.map(
@@ -109,7 +109,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             )),
             query
         );
-      } else if (numSegments <= scanQueryConfig.getMaxSegmentsTimeOrderedInMemory()) {
+      } else if (numSegments <= scanQueryConfig.getMaxSegmentsOrderedInMemory()) {
         // Use n-way merge strategy
         final Sequence<ScanResultValue> unbatched =
             Sequences.map(
@@ -137,8 +137,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           + " %,d segments or lower the row limit below %,d.",
           numSegments,
           query.getLimit(),
-          scanQueryConfig.getMaxSegmentsTimeOrderedInMemory(),
-          scanQueryConfig.getMaxRowsQueuedForTimeOrdering()
+          scanQueryConfig.getMaxSegmentsOrderedInMemory(),
+          scanQueryConfig.getMaxRowsQueuedForOrdering()
       );
     };
   }
