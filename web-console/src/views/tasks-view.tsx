@@ -296,7 +296,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     return <AsyncActionDialog
       action={
         terminateSupervisorId ? async () => {
-          const resp = await axios.post(`/druid/indexer/v1/supervisor/${terminateSupervisorId}/reset`, {});
+          const resp = await axios.post(`/druid/indexer/v1/supervisor/${terminateSupervisorId}/terminate`, {});
           return resp.data;
         } : null
       }
