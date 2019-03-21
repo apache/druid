@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~   http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing,
+  ~ software distributed under the License is distributed on an
+  ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  ~ KIND, either express or implied.  See the License for the
+  ~ specific language governing permissions and limitations
+  ~ under the License.
+  -->
+
+<!--
+  ~ This is an example file for how to route druid security exceptions to another
+  ~ log file for IT security-minded folks.  This audit was based on 0.13-master.
+  -->
+
+<Configuration status="warn">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+    </Console>
+    <File name="Security" fileName="/home/somewhere/logs/druid/druid_security_exceptions.log">
+      <PatternLayout pattern="%d{ISO8601} %p [%t] %c - %m%n"/>
+    </File>
+  </Appenders>
+  <Loggers>
+    <Logger name="org.apache.druid.security.basic.BasicAuthUtils" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.security.basic.CommonCacheNotifier" level="info">
+      <Filters>
+        <RegexFilter regex=".*Malformed url for DruidNode.*" onMatch="ACCEPT" onMismatch="DENY"/>
+        <RegexFilter regex=".*WTF.*" onMatch="ACCEPT" onMismatch="DENY"/>
+        <RegexFilter regex=".*Failed to get response for cache notification.*" onMatch="ACCEPT" onMismatch="DENY"/>
+        <RegexFilter regex=".*Error occured while handling updates for cachedUserMaps.*" onMatch="ACCEPT" onMismatch="DENY"/>
+      </Filters>
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.security.basic.authentication.endpoint.DefaultBasicAuthenticatorResourceHandler" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.security.basic.authorization.endpoint.CoordinatorBasicAuthorizerResourceHandler" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.security.basic.authorization.endpoint.DefaultBasicAuthorizerResourceHandler" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.guice.ConfigProvider" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.java.util.emitter.core.ParametrizedUriEmitter" level="info">
+      <Filters>
+        <RegexFilter regex=".*Error while creating or starting an HttpPostEmitter for URI.*" onMatch="ACCEPT" onMismatch="DENY"/>
+      </Filters>
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.storage.hdfs.HdfsStorageAuthentication" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.hadoop.fs.HadoopFsWrapper" level="info">
+      <Filters>
+        <RegexFilter regex=".*IllegalAccessException.*" onMatch="ACCEPT" onMismatch="DENY"/>
+      </Filters>
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.indexer.JobHelper" level="info">
+      <Filters>
+        <RegexFilter regex=".*trying to authenticate user.*" onMatch="ACCEPT" onMismatch="DENY"/>
+        <RegexFilter regex=".*Failed to authenticate user principal.*" onMatch="ACCEPT" onMismatch="DENY"/>
+      </Filters>
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.security.kerberos.DruidKerberosAuthenticationHandler" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.security.kerberos.DruidKerberosUtil" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.security.kerberos.KerberosAuthenticator" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.security.kerberos.ResponseCookieHandler" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.firehose.s3.StaticS3FirehoseFactory" level="info">
+      <Filters>
+        <RegexFilter regex=".*Access denied for.*" onMatch="ACCEPT" onMismatch="DENY"/>
+        <RegexFilter regex=".*failed to get the object list under the directory due to permission.*" onMatch="ACCEPT" onMismatch="DENY"/>
+      </Filters>
+      <AppenderRef ref="Security"/>
+    </Logger>
+    <Logger name="org.apache.druid.server.listener.resource.AbstractListenerHandler" level="info">
+      <AppenderRef ref="Security"/>
+    </Logger>
+
+    <Root level="info">
+      <AppenderRef ref="Console"/>
+    </Root>
+
+  </Loggers>
+</Configuration>
