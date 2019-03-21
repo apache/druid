@@ -179,7 +179,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     this.taskQueryManager.terminate();
   }
 
-  private async submitSupervisor(spec: JSON) {
+  private submitSupervisor = async (spec: JSON) => {
     try {
       await axios.post('/druid/indexer/v1/supervisor', spec);
     } catch (e) {
@@ -197,7 +197,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     this.supervisorQueryManager.rerunLastQuery();
   }
 
-  private async submitTask(spec: JSON) {
+  private submitTask = async (spec: JSON) => {
     try {
       await axios.post('/druid/indexer/v1/task', spec);
     } catch (e) {
