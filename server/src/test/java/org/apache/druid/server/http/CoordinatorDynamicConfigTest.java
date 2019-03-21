@@ -224,7 +224,7 @@ public class CoordinatorDynamicConfigTest
   public void testUpdate()
   {
     CoordinatorDynamicConfig current = CoordinatorDynamicConfig.builder()
-                                                               .withKillDataSourceWhitelist(ImmutableSet.of("x"))
+                                                               .withSpecificDataSourcesToKill(ImmutableSet.of("x"))
                                                                .build();
 
     Assert.assertEquals(

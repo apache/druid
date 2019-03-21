@@ -82,7 +82,6 @@ public class CoordinatorDynamicConfig
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
-
       // Type is Object here so that we can support both string and list as
       // coordinator console can not send array of strings in the update request.
       // See https://github.com/apache/incubator-druid/issues/3055
@@ -279,7 +278,7 @@ public class CoordinatorDynamicConfig
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", emitBalancingStats=" + emitBalancingStats +
            ", killAllDataSources=" + killAllDataSources +
-           ", killDataSourceWhitelist=" + specificDataSourcesToKill +
+           ", specificDataSourcesToKill=" + specificDataSourcesToKill +
            ", protectedPendingSegmentDatasources=" + protectedPendingSegmentDatasources +
            ", maxSegmentsInNodeLoadingQueue=" + maxSegmentsInNodeLoadingQueue +
            ", decommissioningNodes=" + decommissioningNodes +
@@ -482,9 +481,9 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withKillDataSourceWhitelist(Set<String> killDataSourceWhitelist)
+    public Builder withSpecificDataSourcesToKill(Set<String> specificDataSourcesToKill)
     {
-      this.specificDataSourcesToKill = killDataSourceWhitelist;
+      this.specificDataSourcesToKill = specificDataSourcesToKill;
       return this;
     }
 

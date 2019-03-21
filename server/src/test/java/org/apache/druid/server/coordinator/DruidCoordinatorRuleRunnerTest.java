@@ -1421,7 +1421,7 @@ public class DruidCoordinatorRuleRunnerTest
                                    .withReplicationThrottleLimit(24)
                                    .withBalancerComputeThreads(0)
                                    .withEmitBalancingStats(false)
-                                   .withKillDataSourceWhitelist(null)
+                                   .withSpecificDataSourcesToKill(null)
                                    .withKillAllDataSources(false)
                                    .withMaxSegmentsInNodeLoadingQueue(1000)
                                    .build();
