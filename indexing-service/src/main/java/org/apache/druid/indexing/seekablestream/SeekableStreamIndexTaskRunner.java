@@ -281,8 +281,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               previous.getValue(),
               current.getValue(),
               true,
-              exclusive ? previous.getValue().keySet() : null,
-              isEndOffsetExclusive()
+              exclusive ? previous.getValue().keySet() : null
           ));
           previous = current;
           exclusive = true;
@@ -293,8 +292,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             previous.getValue(),
             endOffsets,
             false,
-            exclusive ? previous.getValue().keySet() : null,
-            isEndOffsetExclusive()
+            exclusive ? previous.getValue().keySet() : null
         ));
       } else {
         addSequence(new SequenceMetadata<>(
@@ -303,8 +301,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap(),
             endOffsets,
             false,
-            null,
-            isEndOffsetExclusive()
+            null
         ));
       }
     }
@@ -1518,8 +1515,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               sequenceNumbers,
               endOffsets,
               false,
-              exclusiveStartPartitions,
-              isEndOffsetExclusive()
+              exclusiveStartPartitions
           );
           addSequence(newSequence);
         }

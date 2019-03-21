@@ -104,7 +104,7 @@ public class SeekableStreamStartSequenceNumbers<PartitionIdType, SequenceOffsetT
 
       // A partition is exclusive if it's
       // 1) exclusive in "this" and it's not in "other"'s partitionSequenceNumberMap or
-      // 2) exslucive in "other"
+      // 2) exclusive in "other"
       final Set<PartitionIdType> newExclusivePartitions = new HashSet<>();
       partitionSequenceNumberMap.forEach(
           (partitionId, sequenceOffset) -> {

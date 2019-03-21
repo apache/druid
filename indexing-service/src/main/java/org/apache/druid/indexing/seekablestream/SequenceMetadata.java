@@ -52,7 +52,6 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
    * {@link #setEndOffsets)} can be called by both the main thread and the HTTP thread.
    */
   private final ReentrantLock lock = new ReentrantLock();
-  private final boolean exclusiveEndOffset;
 
   final Map<PartitionIdType, SequenceOffsetType> startOffsets;
   final Map<PartitionIdType, SequenceOffsetType> endOffsets;
@@ -66,8 +65,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       @JsonProperty("startOffsets") Map<PartitionIdType, SequenceOffsetType> startOffsets,
       @JsonProperty("endOffsets") Map<PartitionIdType, SequenceOffsetType> endOffsets,
       @JsonProperty("checkpointed") boolean checkpointed,
-      @JsonProperty("exclusiveStartPartitions") Set<PartitionIdType> exclusiveStartPartitions,
-      @JsonProperty("exclusiveEndOffset") Boolean exclusiveEndOffset
+      @JsonProperty("exclusiveStartPartitions") Set<PartitionIdType> exclusiveStartPartitions
   )
   {
     Preconditions.checkNotNull(sequenceName);
@@ -83,7 +81,6 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     this.exclusiveStartPartitions = exclusiveStartPartitions == null
                                     ? Collections.emptySet()
                                     : exclusiveStartPartitions;
-    this.exclusiveEndOffset = exclusiveEndOffset == null;
   }
 
   @JsonProperty
@@ -132,12 +129,6 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     finally {
       lock.unlock();
     }
-  }
-
-  @JsonProperty
-  public boolean isExclusiveEndOffset()
-  {
-    return exclusiveEndOffset;
   }
 
   @JsonProperty
@@ -232,7 +223,6 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
              ", assignments=" + assignments +
              ", sentinel=" + sentinel +
              ", checkpointed=" + checkpointed +
-             ", exclusiveEndOffset=" + exclusiveEndOffset +
              '}';
     }
     finally {
