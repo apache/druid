@@ -123,7 +123,7 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
         ScanResultValue srv = yielder.get();
         // Only replace once using the columns from the first event
         columns = columns.isEmpty() ? srv.getColumns() : columns;
-        eventsToAdd.add(Iterables.getOnlyElement((List) srv.getEvents()));
+        eventsToAdd.add(Iterables.getOnlyElement((List<Object>) srv.getEvents()));
         yielder = yielder.next(null);
         count++;
       }

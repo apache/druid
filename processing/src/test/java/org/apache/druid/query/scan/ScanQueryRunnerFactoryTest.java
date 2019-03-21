@@ -119,7 +119,7 @@ public class ScanQueryRunnerFactoryTest
     });
     Sequence<ScanResultValue> inputSequence = Sequences.simple(srvs);
     List<ScanResultValue> output =
-        factory.sortAndLimitScanResultValues(
+        factory.sortAndLimitScanResultValuesPriorityQueue(
             inputSequence,
             query,
             null
