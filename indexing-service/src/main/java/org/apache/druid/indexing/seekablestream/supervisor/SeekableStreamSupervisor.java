@@ -2441,7 +2441,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     synchronized (recordSupplierLock) {
       StreamPartition<PartitionIdType> topicPartition = new StreamPartition<>(ioConfig.getStream(), partition);
       if (!recordSupplier.getAssignment().contains(topicPartition)) {
-        recordSupplier.assign(Collections.singleton(topicPartition));
+        final Set partitions = Collections.singleton(topicPartition);
+        recordSupplier.assign(partitions);
+        try {
+          recordSupplier.seekToEarliest(partitions);
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
       }
 
       return useEarliestOffset
