@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { localStorageGet, localStorageSet } from "./general";
+import { localStorageGet, localStorageSet } from "../utils";
 
 export class TableColumnSelectionHandler {
   tableName: string;

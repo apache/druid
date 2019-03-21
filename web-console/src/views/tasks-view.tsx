@@ -32,15 +32,13 @@ import {
   addFilter,
   countBy,
   formatDuration,
-  getDruidErrorMessage,
+  getDruidErrorMessage, LocalStorageKeys,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from "../utils";
 
 import "./tasks-view.scss";
 
-const supervisorTableColumnSelection = "supervisor-table-column-selection";
-const taskTableColumnSelection = "task-table-column-selection";
 const supervisorTableColumns: string[] = ["Datasource", "Type", "Topic/Stream", "Status", "Actions"];
 const taskTableColumns: string[] = ["Task ID", "Type", "Datasource", "Created time", "Status", "Duration", "Actions"];
 
@@ -117,11 +115,11 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     };
 
     this.supervisorTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      supervisorTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.SUPERVISOR_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
 
     this.taskTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      taskTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
 
