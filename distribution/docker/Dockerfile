@@ -39,7 +39,7 @@ RUN addgroup --gid 1000 druid \
  && chmod 775 /opt/druid/var
 
 FROM amd64/busybox:1.30.0-glibc as busybox
-FROM gcr.io/distroless/java
+FROM gcr.io/distroless/java:8
 LABEL maintainer="Don Bowman <don@agilicus.com>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox
