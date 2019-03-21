@@ -61,6 +61,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -311,19 +312,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @Deprecated
     private final String baseSequenceName;
     private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint;
-    private final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentCheckpoint;
 
-    public CheckpointNotice(
+    CheckpointNotice(
         @Nullable Integer nullableTaskGroupId,
         @Deprecated String baseSequenceName,
-        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint,
-        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> currentCheckpoint
+        SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> previousCheckpoint
     )
     {
       this.baseSequenceName = baseSequenceName;
       this.nullableTaskGroupId = nullableTaskGroupId;
       this.previousCheckpoint = previousCheckpoint;
-      this.currentCheckpoint = currentCheckpoint;
     }
 
     @Override
@@ -2633,31 +2631,28 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public void checkpoint(
       @Nullable Integer taskGroupId,
       @Deprecated String baseSequenceName,
-      DataSourceMetadata previousCheckPoint,
-      DataSourceMetadata currentCheckPoint
+      DataSourceMetadata checkpointMetadata
   )
   {
-    Preconditions.checkNotNull(previousCheckPoint, "previousCheckpoint");
-    Preconditions.checkNotNull(currentCheckPoint, "current checkpoint cannot be null");
+    Preconditions.checkNotNull(checkpointMetadata, "checkpointMetadata");
+
+    //noinspection unchecked
+    final SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> seekableMetadata =
+        (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) checkpointMetadata;
+
     Preconditions.checkArgument(
-        spec.getIoConfig()
-            .getStream()
-            .equals(((SeekableStreamDataSourceMetadata) currentCheckPoint).getSeekableStreamSequenceNumbers()
-                                                                          .getStream()),
+        spec.getIoConfig().getStream().equals(seekableMetadata.getSeekableStreamSequenceNumbers().getStream()),
         "Supervisor stream [%s] and stream in checkpoint [%s] does not match",
         spec.getIoConfig().getStream(),
-        ((SeekableStreamDataSourceMetadata) currentCheckPoint).getSeekableStreamSequenceNumbers().getStream()
+        seekableMetadata.getSeekableStreamSequenceNumbers().getStream()
+    );
+    Preconditions.checkArgument(
+        seekableMetadata.getSeekableStreamSequenceNumbers() instanceof SeekableStreamStartSequenceNumbers,
+        "checkpointMetadata must be SeekableStreamStartSequenceNumbers"
     );
 
-    log.info("Checkpointing [%s] for taskGroup [%s]", currentCheckPoint, taskGroupId);
-    addNotice(
-        new CheckpointNotice(
-            taskGroupId,
-            baseSequenceName,
-            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) previousCheckPoint,
-            (SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType>) currentCheckPoint
-        )
-    );
+    log.info("Checkpointing [%s] for taskGroup [%s]", checkpointMetadata, taskGroupId);
+    addNotice(new CheckpointNotice(taskGroupId, baseSequenceName, seekableMetadata));
   }
 
   /**

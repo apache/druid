@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
@@ -645,17 +646,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 task.getDataSource(),
                 ioConfig.getTaskGroupId(),
                 task.getIOConfig().getBaseSequenceName(),
+                null,
                 createDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(
                         stream,
                         sequenceToCheckpoint.getStartOffsets(),
-                        ioConfig.getStartSequenceNumbers().getExclusivePartitions()
-                    )
-                ),
-                createDataSourceMetadata(
-                    new SeekableStreamEndSequenceNumbers<>(
-                        stream,
-                        currOffsets
+                        ImmutableSet.of()
                     )
                 )
             );

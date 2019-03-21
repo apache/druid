@@ -2861,8 +2861,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
         new KinesisDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(stream, checkpoints.get(0), checkpoints.get(0).keySet())
-        ),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, fakeCheckpoints, ImmutableSet.of()))
+        )
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -2984,7 +2983,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.checkpoint(
         0,
         ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, Collections.emptyMap(), ImmutableSet.of())),
         new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, Collections.emptyMap(), ImmutableSet.of()))
     );
 
@@ -3095,13 +3093,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
 
-    final TreeMap<Integer, Map<String, String>> newCheckpoints = new TreeMap<>();
-    newCheckpoints.put(0, ImmutableMap.of(shardId1, "10"));
     supervisor.checkpoint(
         null,
         ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, checkpoints.get(0), ImmutableSet.of())),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, newCheckpoints.get(0), ImmutableSet.of()))
+        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, checkpoints.get(0), ImmutableSet.of()))
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -3685,8 +3680,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   private class TestableKinesisSupervisor extends KinesisSupervisor
   {
-    private final KinesisSupervisorSpec spec;
-
     public TestableKinesisSupervisor(
         TaskStorage taskStorage,
         TaskMaster taskMaster,
@@ -3707,7 +3700,6 @@ public class KinesisSupervisorTest extends EasyMockSupport
           rowIngestionMetersFactory,
           null
       );
-      this.spec = spec;
     }
 
     @Override

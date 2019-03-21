@@ -2327,8 +2327,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.checkpoint(
         0,
         ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, checkpoints.get(0), ImmutableSet.of())),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, fakeCheckpoints, fakeCheckpoints.keySet()))
+        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, checkpoints.get(0), ImmutableSet.of()))
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -2407,7 +2406,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.checkpoint(
         0,
         ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, Collections.emptyMap(), ImmutableSet.of())),
         new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, Collections.emptyMap(), ImmutableSet.of()))
     );
 
@@ -2508,15 +2506,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     supervisor.runInternal();
 
-    final TreeMap<Integer, Map<Integer, Long>> newCheckpoints = new TreeMap<>();
-    newCheckpoints.put(0, ImmutableMap.of(0, 10L));
     supervisor.checkpoint(
         null,
         ((KafkaIndexTask) id1).getIOConfig().getBaseSequenceName(),
-        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, checkpoints.get(0), ImmutableSet.of())),
-        new KafkaDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<>(topic, newCheckpoints.get(0))
-        )
+        new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, checkpoints.get(0), ImmutableSet.of()))
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {

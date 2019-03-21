@@ -587,8 +587,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
                 0,
-                new KinesisDataSourceMetadata(startPartitions),
-                new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(stream, currentOffsets))
+                new KinesisDataSourceMetadata(startPartitions)
             )
         )
     );
@@ -725,8 +724,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
                 0,
-                new KinesisDataSourceMetadata(startPartitions),
-                new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(stream, currentOffsets))
+                new KinesisDataSourceMetadata(startPartitions)
             )
         )
     );
@@ -737,8 +735,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 0,
                 new KinesisDataSourceMetadata(
                     new SeekableStreamStartSequenceNumbers<>(stream, currentOffsets, ImmutableSet.of())
-                ),
-                new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(stream, nextOffsets))
+                )
             )
         )
     );
@@ -2701,8 +2698,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
               String supervisorId,
               @Nullable Integer taskGroupId,
               String baseSequenceName,
-              @Nullable DataSourceMetadata previousDataSourceMetadata,
-              @Nullable DataSourceMetadata currentDataSourceMetadata
+              @Nullable DataSourceMetadata checkpointMetadata
           )
           {
             log.info("Adding checkpoint hash to the set");
@@ -2710,8 +2706,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
                 Objects.hash(
                     supervisorId,
                     taskGroupId,
-                    previousDataSourceMetadata,
-                    currentDataSourceMetadata
+                    checkpointMetadata
                 )
             );
             return true;
