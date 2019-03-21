@@ -52,7 +52,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
-
 public class AbstractKafkaIndexerTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(AbstractKafkaIndexerTest.class);
@@ -102,7 +101,6 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
   private IntegrationTestingConfig config;
 
   private String fullDatasourceName;
-
 
   void doKafkaIndexTest(String dataSourceName, boolean txnEnabled)
   {
@@ -224,7 +222,6 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
       throw new RuntimeException(e);
     }
 
-
     InputStream is = AbstractKafkaIndexerTest.class.getResourceAsStream(QUERIES_FILE);
     if (null == is) {
       throw new ISE("could not open query file: %s", QUERIES_FILE);
@@ -306,8 +303,7 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
       throw Throwables.propagate(e);
     }
   }
-
-
+  
   private void addFilteredProperties(IntegrationTestingConfig config, Properties properties)
   {
     for (Map.Entry<String, String> entry : config.getProperties().entrySet()) {

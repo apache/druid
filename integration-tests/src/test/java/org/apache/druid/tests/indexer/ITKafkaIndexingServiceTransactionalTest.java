@@ -41,12 +41,10 @@ public class ITKafkaIndexingServiceTransactionalTest extends AbstractKafkaIndexe
     doKafkaIndexTest(DATASOURCE, true);
   }
 
-
   @AfterClass
   public void afterClass()
   {
     LOG.info("teardown");
     doTearDown();
   }
-
 }

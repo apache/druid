@@ -41,7 +41,6 @@ public class ITKafkaIndexingServiceTest extends AbstractKafkaIndexerTest
     doKafkaIndexTest(DATASOURCE, false);
   }
 
-
   @AfterClass
   public void afterClass()
   {
