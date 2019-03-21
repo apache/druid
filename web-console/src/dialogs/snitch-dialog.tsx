@@ -27,6 +27,9 @@ import {
 import * as React from 'react';
 
 import { FormGroup, IconNames } from '../components/filler';
+import { localStorageGet, localStorageSet } from "../utils";
+
+const druidEditingAuthor = "DRUID_EDITING_AUTHOR";
 
 export interface SnitchDialogProps extends IDialogProps {
   onSave: (author: string, comment: string) => void;
@@ -53,12 +56,25 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     };
   }
 
+  componentDidMount(): void {
+    this.getDefaultAuthor();
+  }
+
   save = () => {
     const { onSave, onClose } = this.props;
     const { author, comment } = this.state;
 
     onSave(author, comment);
     if (onClose) onClose();
+  }
+
+  getDefaultAuthor() {
+    const author: string | null = localStorageGet(druidEditingAuthor);
+    if (author) {
+      this.setState({
+        author
+      });
+    }
   }
 
   changeAuthor(newAuthor: string)  {
@@ -68,6 +84,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
       author: newAuthor,
       saveDisabled: !newAuthor || !comment
     });
+    localStorageSet(druidEditingAuthor, newAuthor);
   }
 
   changeComment(newComment: string)  {
