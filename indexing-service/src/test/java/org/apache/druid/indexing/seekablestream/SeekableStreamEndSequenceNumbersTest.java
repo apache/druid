@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
@@ -29,7 +30,7 @@ import org.junit.Test;
 
 import java.util.Map;
 
-public class SeekableStreamPartitionsTest
+public class SeekableStreamEndSequenceNumbersTest
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
 
@@ -39,13 +40,16 @@ public class SeekableStreamPartitionsTest
     final String stream = "theStream";
     final Map<Integer, Long> offsetMap = ImmutableMap.of(1, 2L, 3, 4L);
 
-    final SeekableStreamPartitions<Integer, Long> partitions = new SeekableStreamPartitions<>(stream, offsetMap);
+    final SeekableStreamEndSequenceNumbers<Integer, Long> partitions = new SeekableStreamEndSequenceNumbers<>(
+        stream,
+        offsetMap
+    );
     final String serializedString = OBJECT_MAPPER.writeValueAsString(partitions);
 
     // Check round-trip.
-    final SeekableStreamPartitions<Integer, Long> partitions2 = OBJECT_MAPPER.readValue(
+    final SeekableStreamEndSequenceNumbers<Integer, Long> partitions2 = OBJECT_MAPPER.readValue(
         serializedString,
-        new TypeReference<SeekableStreamPartitions<Integer, Long>>() {}
+        new TypeReference<SeekableStreamEndSequenceNumbers<Integer, Long>>() {}
     );
 
     Assert.assertEquals("Round trip", partitions, partitions2);
@@ -67,6 +71,28 @@ public class SeekableStreamPartitionsTest
     Assert.assertEquals(
         offsetMap,
         OBJECT_MAPPER.convertValue(asMap.get("partitionOffsetMap"), new TypeReference<Map<Integer, Long>>() {})
+    );
+  }
+
+  @Test
+  public void testConvertToStart()
+  {
+    final String stream = "topic";
+    final Map<Integer, Long> offsetMap = ImmutableMap.of(1, 2L, 3, 4L);
+
+    final SeekableStreamEndSequenceNumbers<Integer, Long> endSequenceNumbers = new SeekableStreamEndSequenceNumbers<>(
+        stream,
+        offsetMap
+    );
+
+    Assert.assertEquals(
+        new SeekableStreamStartSequenceNumbers<>(stream, offsetMap, ImmutableSet.of(1, 3)),
+        endSequenceNumbers.asStartPartitions(false)
+    );
+
+    Assert.assertEquals(
+        new SeekableStreamStartSequenceNumbers<>(stream, offsetMap, ImmutableSet.of()),
+        endSequenceNumbers.asStartPartitions(true)
     );
   }
 }
