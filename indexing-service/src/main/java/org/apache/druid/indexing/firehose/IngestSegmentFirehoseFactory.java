@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Iterables;
@@ -225,7 +224,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                                     );
                                   }
                                   catch (IOException e) {
-                                    throw Throwables.propagate(e);
+                                    throw new RuntimeException(e);
                                   }
                                 }
                               }
@@ -240,7 +239,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       return new IngestSegmentFirehose(adapters, transformSpec, dims, metricsList, dimFilter);
     }
     catch (SegmentLoadingException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

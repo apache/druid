@@ -16,25 +16,25 @@
  * limitations under the License.
  */
 
-import classNames from 'classnames';
-import * as React from 'react';
 import {
   Button,
-  InputGroup,
-  Dialog,
   Classes,
+  Dialog,
   Intent,
   ProgressBar
 } from "@blueprintjs/core";
-import { Icon, FormGroup, ButtonGroup, NumericInput, TagInput } from '../components/filler';
+import classNames from 'classnames';
+import * as React from 'react';
+
+import { ButtonGroup, FormGroup, Icon, NumericInput, TagInput } from '../components/filler';
 import { AppToaster } from '../singletons/toaster';
 
 export interface AsyncAlertDialogProps extends React.Props<any> {
-  action: null | (() => Promise<void>),
-  onClose: (success: boolean) => void,
+  action: null | (() => Promise<void>);
+  onClose: (success: boolean) => void;
   confirmButtonText: string;
   cancelButtonText?: string;
-  className?: string,
+  className?: string;
   icon?: string;
   intent?: Intent;
   successText: string;
@@ -42,7 +42,7 @@ export interface AsyncAlertDialogProps extends React.Props<any> {
 }
 
 export interface AsyncAlertDialogState {
-  working: boolean
+  working: boolean;
 }
 
 export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, AsyncAlertDialogState> {
@@ -59,7 +59,7 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
 
     this.setState({ working: true });
     try {
-      await action()
+      await action();
     } catch (e) {
       AppToaster.show({
         message: `${failText}: ${e.message}`,
@@ -92,8 +92,8 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
       onClose={handleClose}
     >
       <div className={Classes.ALERT_BODY}>
-        { icon && <Icon icon={icon} /> }
-        { !working && <div className={Classes.ALERT_CONTENTS}>{children}</div> }
+        {icon && <Icon icon={icon} />}
+        {!working && <div className={Classes.ALERT_CONTENTS}>{children}</div>}
       </div>
       {
         working ?
@@ -103,6 +103,6 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
             <Button text={cancelButtonText || 'Cancel'} onClick={handleClose}/>
           </div>
       }
-    </Dialog>
+    </Dialog>;
   }
 }

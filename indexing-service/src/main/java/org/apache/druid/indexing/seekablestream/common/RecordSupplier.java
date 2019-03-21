@@ -36,12 +36,10 @@ import java.util.Set;
  * @param <SequenceOffsetType> Sequence Number Type
  */
 @Beta
-public interface RecordSupplier<PartitionIdType, SequenceOffsetType extends Comparable> extends Closeable
+public interface RecordSupplier<PartitionIdType, SequenceOffsetType> extends Closeable
 {
   /**
    * assigns the given partitions to this RecordSupplier
-   * and seek to the earliest sequence number. Previously
-   * assigned partitions will be replaced.
    *
    * @param partitions parititions to assign
    */

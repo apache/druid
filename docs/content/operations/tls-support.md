@@ -37,9 +37,9 @@ and `druid.tlsPort` properties on each process. Please see `Configuration` secti
 # Jetty Server TLS Configuration
 
 Druid uses Jetty as an embedded web server. To get familiar with TLS/SSL in general and related concepts like Certificates etc.
-reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.3.x/configuring-ssl.html) might be helpful.
+reading this [Jetty documentation](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html) might be helpful.
 To get more in depth knowledge of TLS/SSL support in Java in general, please refer to this [guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
-The documentation [here](http://www.eclipse.org/jetty/documentation/9.3.x/configuring-ssl.html#configuring-sslcontextfactory)
+The documentation [here](http://www.eclipse.org/jetty/documentation/9.4.x/configuring-ssl.html#configuring-sslcontextfactory)
 can help in understanding TLS/SSL configurations listed below. This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
 values for the below mentioned configs among others provided by Java implementation.
 
@@ -54,13 +54,14 @@ The following table contains configuration options related to client certificate
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
-|`druid.server.https.requireClientCertificate`|If set to true, clients must identify themselves by providing a TLS certificate.  If `requireClientCertificate` is false, the rest of the options in this table are ignored.|false|no|
-|`druid.server.https.trustStoreType`|The type of the trust store containing certificates used to validate client certificates. Not needed if `requireClientCertificate` is false.|`java.security.KeyStore.getDefaultType()`|no|
-|`druid.server.https.trustStorePath`|The file path or URL of the trust store containing certificates used to validate client certificates. Not needed if `requireClientCertificate` is false.|none|yes, only if `requireClientCertificate` is true|
-|`druid.server.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate client certificate chains. Not needed if `requireClientCertificate` is false.|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
-|`druid.server.https.trustStorePassword`|The [Password Provider](../../operations/password-provider.html) or String password for the Trust Store.  Not needed if `requireClientCertificate` is false.|none|no|
-|`druid.server.https.validateHostnames`|If set to true, check that the client's hostname matches the CN/subjectAltNames in the client certificate.  Not used if `requireClientCertificate` is false.|true|no|
-|`druid.server.https.crlPath`|Specifies a path to a file containing static [Certificate Revocation Lists](https://en.wikipedia.org/wiki/Certificate_revocation_list), used to check if a client certificate has been revoked. Not used if `requireClientCertificate` is false.|null|no|
+|`druid.server.https.requireClientCertificate`|If set to true, clients must identify themselves by providing a TLS certificate, without which connections will fail.|false|no|
+|`druid.server.https.requestClientCertificate`|If set to true, clients may optionally identify themselves by providing a TLS certificate. Connections will not fail if TLS certificate is not provided. This property is ignored if `requireClientCertificate` is set to true. If `requireClientCertificate` and `requestClientCertificate` are false, the rest of the options in this table are ignored.|false|no|
+|`druid.server.https.trustStoreType`|The type of the trust store containing certificates used to validate client certificates. Not needed if `requireClientCertificate` and `requestClientCertificate` are false.|`java.security.KeyStore.getDefaultType()`|no|
+|`druid.server.https.trustStorePath`|The file path or URL of the trust store containing certificates used to validate client certificates. Not needed if `requireClientCertificate` and `requestClientCertificate` are false.|none|yes, only if `requireClientCertificate` is true|
+|`druid.server.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate client certificate chains. Not needed if `requireClientCertificate` and `requestClientCertificate` are false.|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
+|`druid.server.https.trustStorePassword`|The [Password Provider](../operations/password-provider.html) or String password for the Trust Store.  Not needed if `requireClientCertificate` and `requestClientCertificate` are false.|none|no|
+|`druid.server.https.validateHostnames`|If set to true, check that the client's hostname matches the CN/subjectAltNames in the client certificate.  Not used if `requireClientCertificate` and `requestClientCertificate` are false.|true|no|
+|`druid.server.https.crlPath`|Specifies a path to a file containing static [Certificate Revocation Lists](https://en.wikipedia.org/wiki/Certificate_revocation_list), used to check if a client certificate has been revoked. Not used if `requireClientCertificate` and `requestClientCertificate` are false.|null|no|
 
 The following table contains non-mandatory advanced configuration options, use caution.
 

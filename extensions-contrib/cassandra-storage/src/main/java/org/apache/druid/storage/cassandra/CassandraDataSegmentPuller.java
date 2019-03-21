@@ -22,11 +22,11 @@ package org.apache.druid.storage.cassandra;
 import com.google.common.base.Predicates;
 import com.google.inject.Inject;
 import com.netflix.astyanax.recipes.storage.ChunkedStorage;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.utils.CompressionUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;

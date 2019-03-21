@@ -22,7 +22,6 @@ package org.apache.druid.common.config;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
@@ -94,7 +93,7 @@ public class JacksonConfigManager
           return jsonMapper.writeValueAsBytes(obj);
         }
         catch (JsonProcessingException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
 
@@ -105,7 +104,7 @@ public class JacksonConfigManager
           return jsonMapper.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
 
@@ -120,7 +119,7 @@ public class JacksonConfigManager
           return jsonMapper.readValue(bytes, clazz);
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     };
@@ -137,7 +136,7 @@ public class JacksonConfigManager
           return jsonMapper.writeValueAsBytes(obj);
         }
         catch (JsonProcessingException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
 
@@ -148,7 +147,7 @@ public class JacksonConfigManager
           return jsonMapper.writeValueAsString(obj);
         }
         catch (JsonProcessingException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
 
@@ -163,7 +162,7 @@ public class JacksonConfigManager
           return jsonMapper.readValue(bytes, clazz);
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     };

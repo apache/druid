@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 export interface HeaderRows {
   header: string[];
   rows: any[][];
@@ -86,7 +85,11 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
         throw new Error(`Unsupported query type in treatQueryTypeAs: '${treatQueryTypeAs}'`);
       }
     } else {
-      throw new Error(`Unsupported query type '${queryType}'. Supported query types are: '${SUPPORTED_QUERY_TYPES.join("', '")}'. If this is a custom query you can parse the result as a known query type by setting 'treatQueryTypeAs' in the context to one of the supported types.`);
+      throw new Error([
+        `Unsupported query type '${queryType}'.`,
+        `Supported query types are: '${SUPPORTED_QUERY_TYPES.join("', '")}'.`,
+        `If this is a custom query you can parse the result as a known query type by setting 'treatQueryTypeAs' in the context to one of the supported types.`
+      ].join(' '));
     }
   }
 

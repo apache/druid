@@ -117,11 +117,12 @@ public class DruidCoordinatorCleanupOvershadowedTest
             ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         ));
 
-    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams.newBuilder()
-                                                                        .withAvailableSegments(availableSegments)
-                                                                        .withCoordinatorStats(new CoordinatorStats())
-                                                                        .withDruidCluster(druidCluster)
-                                                                        .build();
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .newBuilder()
+        .withAvailableSegmentsInTest(availableSegments)
+        .withCoordinatorStats(new CoordinatorStats())
+        .withDruidCluster(druidCluster)
+        .build();
     druidCoordinatorCleanupOvershadowed.run(params);
     EasyMock.verify(coordinator, druidDataSource, druidServer);
   }
