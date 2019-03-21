@@ -134,7 +134,7 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
     try {
       LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
       final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
-      final  Properties consumerProperties = new Properties();
+      final Properties consumerProperties = new Properties();
       consumerProperties.putAll(consumerConfigs);
       consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
 
