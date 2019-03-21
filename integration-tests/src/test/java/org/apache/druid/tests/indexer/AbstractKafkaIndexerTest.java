@@ -28,6 +28,7 @@ import kafka.utils.ZkUtils;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.ZkConnection;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -38,7 +39,6 @@ import org.apache.druid.testing.utils.RetryUtil;
 import org.apache.druid.testing.utils.TestQueryHelper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.joda.time.DateTime;
@@ -135,15 +135,10 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
     String spec;
     try {
       LOG.info("supervisorSpec name: [%s]", INDEXER_FILE);
-      Properties consumerProperties = new Properties();
+      final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
+      final  Properties consumerProperties = new Properties();
+      consumerProperties.putAll(consumerConfigs);
       consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
-      consumerProperties.put("metadata.max.age.ms", "10000");
-      consumerProperties.put("key.deserializer", ByteArrayDeserializer.class.getName());
-      consumerProperties.put("value.deserializer", ByteArrayDeserializer.class.getName());
-      consumerProperties.put("group.id", StringUtils.format("kafka-supervisor-%s", RandomIdUtils.getRandomId()));
-      consumerProperties.put("auto.offset.reset", "none");
-      consumerProperties.put("enable.auto.commit", "false");
-      consumerProperties.put("isolation.level", "read_committed");
 
       spec = getTaskAsString(INDEXER_FILE);
       spec = StringUtils.replace(spec, "%%DATASOURCE%%", fullDatasourceName);
