@@ -16,8 +16,38 @@
  * limitations under the License.
  */
 
-export * from './general';
-export * from './druid-query';
-export * from './query-manager';
-export * from './rune-decoder';
-export * from './table-column-selection-handler';
+.overlord-dynamic-config {
+
+  &.pt-dialog {
+    width: 600px;
+  }
+
+  margin-top: 5vh;
+
+  .pt-dialog-body {
+    max-height: 70vh;
+
+    .auto-form {
+      max-height: 60vh;
+      overflow: auto;
+
+      .ace_editor {
+        height: 25vh !important;
+      }
+    }
+
+    .html-select {
+      width: 195px;
+    }
+
+    .config-comment {
+      margin-top: 10px;
+      padding: 0 15px;
+
+      textarea {
+        max-width: 200px;
+        padding: 0 15px;
+      }
+    }
+  }
+}
