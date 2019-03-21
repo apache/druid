@@ -121,7 +121,8 @@ public class ScanQueryRunnerFactoryTest
     List<ScanResultValue> output =
         factory.sortAndLimitScanResultValues(
             inputSequence,
-            query
+            query,
+            null
         ).toList();
 
     // check each scan result value has one event
