@@ -80,7 +80,20 @@ Omitting these fields from your spec will result in HTTP requests with no Basic 
 |property|description|default|
 |--------|-----------|-------|
 |httpAuthenticationUsername|Username to use for authentication with specified URIs|None|
-|httpAuthenticationPassword|Password to use for authentication with specified URIs|None|
+|httpAuthenticationPassword|json object with a field called password containing the password to use for authentication with specified URIs|None|
+
+Example with authentication fields:
+
+```json
+{
+    "type"    : "http",
+    "uris"  : ["http://example.com/uri1", "http://example2.com/uri2"],
+    "httpAuthenticationUsername": "username",
+    "httpAuthenticationPassword": {
+        "password": "password123"
+    }
+}
+```
 
 
 The below configurations can be optionally used for tuning the firehose performance.

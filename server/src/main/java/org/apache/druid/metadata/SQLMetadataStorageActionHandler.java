@@ -83,6 +83,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   )
   {
     this.connector = connector;
+    //noinspection UnnecessaryFullyQualifiedName
     this.jsonMapper = new DefaultObjectMapper((DefaultObjectMapper) jsonMapper).addMixIn(org.apache.druid.metadata.PasswordProvider.class, org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
