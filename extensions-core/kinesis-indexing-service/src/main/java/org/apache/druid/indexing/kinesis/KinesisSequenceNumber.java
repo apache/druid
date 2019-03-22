@@ -20,15 +20,14 @@
 package org.apache.druid.indexing.kinesis;
 
 
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 
-import javax.validation.constraints.NotNull;
 import java.math.BigInteger;
 
+// OrderedSequenceNumber.equals() should be used instead.
+@SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
 public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
 {
-
   /**
    * In Kinesis, when a shard is closed due to shard splitting, a null ShardIterator is returned.
    * The EOS marker is placed at the end of the Kinesis Record Supplier buffer, such that when
@@ -36,17 +35,24 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
    * reading and start publishing
    */
   public static final String END_OF_SHARD_MARKER = "EOS";
+
+  // this special marker is used by the KinesisSupervisor to set the endOffsets
+  // of newly created indexing tasks. This is necessary because streaming tasks do not
+  // have endPartitionOffsets. This marker signals to the task that it should continue
+  // to ingest data until taskDuration has elapsed or the task was stopped or paused or killed
+  public static final String NO_END_SEQUENCE_NUMBER = "NO_END_SEQUENCE_NUMBER";
+
   // this flag is used to indicate either END_OF_SHARD_MARKER
   // or NO_END_SEQUENCE_NUMBER so that they can be properly compared
   // with other sequence numbers
   private final boolean isMaxSequenceNumber;
   private final BigInteger intSequence;
 
-  private KinesisSequenceNumber(@NotNull String sequenceNumber, boolean isExclusive)
+  private KinesisSequenceNumber(String sequenceNumber, boolean isExclusive)
   {
     super(sequenceNumber, isExclusive);
     if (END_OF_SHARD_MARKER.equals(sequenceNumber)
-        || SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
+        || NO_END_SEQUENCE_NUMBER.equals(sequenceNumber)) {
       isMaxSequenceNumber = true;
       this.intSequence = null;
     } else {
@@ -66,7 +72,7 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
   }
 
   @Override
-  public int compareTo(@NotNull OrderedSequenceNumber<String> o)
+  public int compareTo(OrderedSequenceNumber<String> o)
   {
     KinesisSequenceNumber num = (KinesisSequenceNumber) o;
     if (isMaxSequenceNumber && num.isMaxSequenceNumber) {
@@ -79,5 +85,4 @@ public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
       return this.intSequence.compareTo(new BigInteger(o.get()));
     }
   }
-
 }
