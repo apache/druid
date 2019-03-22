@@ -276,7 +276,7 @@ with the actual schema `struct<_col0:string,_col1:string>`, to preserve Druid sc
 }
 ```
 * The 'contrib' extension supported a `mapFieldNameFormat` property, which provided a way to specify a dimension to
- flatten `OrcMap` columns with primitive type keys. This functionality has also been replaced with
+ flatten `OrcMap` columns with primitive types. This functionality has also been replaced with
  [`flattenSpec` expressions](../../ingestion/flatten-json.html). For example: `"mapFieldNameFormat": "<PARENT>_<CHILD>"`
  for a dimension `nestedData_dim1`, to preserve Druid schema could be replaced with 
  ```json
