@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -120,7 +119,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       }
     }
     catch (InterruptedException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -132,7 +131,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       writeLock.lockInterruptibly();
     }
     catch (InterruptedException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     try {
       if (entry == null) {
@@ -197,7 +196,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       readLock.lockInterruptibly();
     }
     catch (InterruptedException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     try {
       if (entry == null) {

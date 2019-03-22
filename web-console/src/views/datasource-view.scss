@@ -20,6 +20,10 @@
   height: 100%;
   width: 100%;
 
+  .clickable-cell {
+    cursor: pointer;
+  }
+
   .ReactTable {
     position: absolute;
     top: 50px;

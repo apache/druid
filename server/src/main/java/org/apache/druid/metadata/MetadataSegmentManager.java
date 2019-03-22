@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -58,6 +59,14 @@ public interface MetadataSegmentManager
   ImmutableDruidDataSource getDataSource(String dataSourceName);
 
   Collection<ImmutableDruidDataSource> getDataSources();
+
+  /**
+   * Returns an iterable to go over all segments in all data sources. The order in which segments are iterated is
+   * unspecified. Note: the iteration may not be as trivially cheap as, for example, iteration over an ArrayList. Try
+   * (to some reasonable extent) to organize the code so that it iterates the returned iterable only once rather than
+   * several times.
+   */
+  Iterable<DataSegment> iterateAllSegments();
 
   Collection<String> getAllDataSourceNames();
 

@@ -38,7 +38,7 @@ import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.jackson.CommaListJoinSerializer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -146,7 +146,7 @@ public class DataSegment implements Comparable<DataSegment>
     // dataSource
     this.dimensions = prepareDimensionsOrMetrics(dimensions, DIMENSIONS_INTERNER);
     this.metrics = prepareDimensionsOrMetrics(metrics, METRICS_INTERNER);
-    this.shardSpec = (shardSpec == null) ? NoneShardSpec.instance() : shardSpec;
+    this.shardSpec = (shardSpec == null) ? new NumberedShardSpec(0, 1) : shardSpec;
     this.binaryVersion = binaryVersion;
     this.size = size;
   }
@@ -373,7 +373,7 @@ public class DataSegment implements Comparable<DataSegment>
       this.loadSpec = ImmutableMap.of();
       this.dimensions = ImmutableList.of();
       this.metrics = ImmutableList.of();
-      this.shardSpec = NoneShardSpec.instance();
+      this.shardSpec = new NumberedShardSpec(0, 1);
       this.size = -1;
     }
 
