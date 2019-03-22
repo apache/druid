@@ -177,20 +177,21 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                                             .collect(Collectors.toList()))
                                          .collect(Collectors.toList());
 
+          // Starting from the innermost Sequences.map:
           // (1) Deaggregate each ScanResultValue returned by the query runners
           // (2) Combine the deaggregated ScanResultValues into a single sequence
           // (3) Create a sequence of results from each runner in the group and flatmerge based on timestamp
           // (4) Create a sequence of results from each runner group
           // (5) Join all the results into a single sequence
 
-          return Sequences.concat(                                                    // (5)
-              Sequences.map(                                                          // (4)
+          return Sequences.concat(
+              Sequences.map(
                   Sequences.simple(groupedRunners),
                   runnerGroup ->
-                      Sequences.map(                                                  // (3)
+                      Sequences.map(
                           Sequences.simple(runnerGroup),
-                          (input) -> Sequences.concat(                                // (2)
-                              Sequences.map(                                          // (1)
+                          (input) -> Sequences.concat(
+                              Sequences.map(
                                   input.run(queryPlus, responseContext),
                                   srv -> Sequences.simple(srv.toSingleEventScanResultValues())
                               )
@@ -246,7 +247,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           }
         }
     );
-    boolean doneScanning = false;
+    boolean doneScanning = yielder.isDone();
     // We need to scan limit elements and anything else in the last segment
     int numRowsScanned = 0;
     Interval finalInterval = null;

@@ -20,11 +20,14 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.SegmentDescriptor;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,7 +35,6 @@ import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 
 @RunWith(Parameterized.class)
@@ -101,7 +103,7 @@ public class ScanQueryRunnerFactoryTest
     List<ScanResultValue> srvs = new ArrayList<>(numElements);
     List<Long> expectedEventTimestamps = new ArrayList<>();
     for (int i = 0; i < numElements; i++) {
-      long timestamp = (ThreadLocalRandom.current().nextLong());
+      long timestamp = DateTimes.of("2015-01-01").plusHours(i).getMillis();
       expectedEventTimestamps.add(timestamp);
       srvs.add(ScanQueryTestHelper.generateScanResultValue(timestamp, resultFormat, 1));
     }
@@ -122,7 +124,7 @@ public class ScanQueryRunnerFactoryTest
         factory.sortAndLimitScanResultValuesPriorityQueue(
             inputSequence,
             query,
-            null
+            ImmutableList.of(new SegmentDescriptor(new Interval(DateTimes.of("2010-01-01"), DateTimes.of("2019-01-01").plusHours(1)), "1", 0))
         ).toList();
 
     // check each scan result value has one event
