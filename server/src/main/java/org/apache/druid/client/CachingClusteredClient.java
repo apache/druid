@@ -385,6 +385,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           break;
         }
         hasher.putString(p.getServer().getSegment().getId().toString(), StandardCharsets.UTF_8);
+        hasher.putString(p.rhs.getInterval().toString(), StandardCharsets.UTF_8);
       }
 
       if (hasOnlyHistoricalSegments) {
