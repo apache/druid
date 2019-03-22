@@ -245,7 +245,7 @@ public class ExpressionsTest extends CalciteTestBase
             inputRef("hexstr")
         ),
         DruidExpression.fromExpression("parse_long(\"hexstr\")"),
-        0L
+        NullHandling.sqlCompatible() ? null : 0L
     );
   }
 
