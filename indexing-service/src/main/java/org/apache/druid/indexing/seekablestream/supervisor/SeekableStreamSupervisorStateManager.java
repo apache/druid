@@ -21,11 +21,14 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
 
 import java.util.List;
+import java.util.Set;
 
 public class SeekableStreamSupervisorStateManager
 {
@@ -47,6 +50,8 @@ public class SeekableStreamSupervisorStateManager
   private final CircularBuffer<ThrowableEvent> throwableEvents;
   private final int unhealthinessThreshold;
   private boolean firstRun;
+  private boolean currentRunSuccessful;
+  private int numConsecutiveUnsuccessfulRuns;
 
   public SeekableStreamSupervisorStateManager(
       SupervisorState initialState,
@@ -58,6 +63,7 @@ public class SeekableStreamSupervisorStateManager
     this.throwableEvents = new CircularBuffer<>(maxSavedExceptions);
     this.unhealthinessThreshold = unhealthinessThreshold;
     this.firstRun = true;
+    this.currentRunSuccessful = true;
   }
 
   public Optional<SupervisorState> setStateIfFirstRun(SupervisorState state)
@@ -75,23 +81,36 @@ public class SeekableStreamSupervisorStateManager
     return state;
   }
 
+  public SupervisorState storeThrowableEventAndDetermineNewState(Throwable t)
+  {
+    if (t instanceof NonTransientStreamException) {
+      return storeThrowableEventAndUpdateState(t, SupervisorState.UNABLE_TO_CONNECT_TO_STREAM);
+    }
+    return state;
+  }
+
   /**
    * Returns the new supervisor state
    */
   public SupervisorState storeThrowableEventAndUpdateState(Throwable t, SupervisorState newState)
   {
-    throwableEvents.add(
-        new ThrowableEvent(
-            DateTimes.nowUtc(),
-            t
-        )
-    );
-    return null;
+    synchronized (throwableEvents)
+    {
+      throwableEvents.add(
+          new ThrowableEvent(
+              DateTimes.nowUtc(),
+              t
+          )
+      );
+    }
+    return setState(state);
   }
 
-  public void markFirstRunFinished()
+  public void markRunFinished()
   {
-    this.firstRun = false;
+    if (!currentRunSuccessful) {
+      numConsecutiveUnsuccessfulRuns++;
+    }
   }
 
   public List<ThrowableEvent> getThrowableEventList()

@@ -1016,7 +1016,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       stateManager.setState(SeekableStreamSupervisorStateManager.SupervisorState.CREATING_TASKS);
       createNewTasks();
       stateManager.setStateIfFirstRun(SeekableStreamSupervisorStateManager.SupervisorState.RUNNING);
-      stateManager.markFirstRunFinished();
     } else {
       log.info("[%s] supervisor is suspended.", dataSource);
       gracefulShutdownInternal();
@@ -1028,6 +1027,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       log.info(generateReport(false).toString());
     }
+    stateManager.markRunFinished();
   }
 
   private void possiblyRegisterListener()
