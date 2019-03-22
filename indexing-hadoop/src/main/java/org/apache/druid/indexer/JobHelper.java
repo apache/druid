@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.io.Files;
-import org.apache.druid.indexer.updater.HadoopDruidConverterConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -32,7 +31,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
@@ -47,7 +45,6 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -793,7 +790,7 @@ public class JobHelper
       try {
         throw new IAE(
             "Cannot figure out loadSpec %s",
-            HadoopDruidConverterConfig.jsonMapper.writeValueAsString(loadSpec)
+            HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(loadSpec)
         );
       }
       catch (JsonProcessingException e) {
@@ -801,64 +798,6 @@ public class JobHelper
       }
     }
     return segmentLocURI;
-  }
-
-  public static ProgressIndicator progressIndicatorForContext(
-      final TaskAttemptContext context
-  )
-  {
-    return new ProgressIndicator()
-    {
-
-      @Override
-      public void progress()
-      {
-        context.progress();
-      }
-
-      @Override
-      public void start()
-      {
-        context.progress();
-        context.setStatus("STARTED");
-      }
-
-      @Override
-      public void stop()
-      {
-        context.progress();
-        context.setStatus("STOPPED");
-      }
-
-      @Override
-      public void startSection(String section)
-      {
-        context.progress();
-        context.setStatus(StringUtils.format("STARTED [%s]", section));
-      }
-
-      @Override
-      public void stopSection(String section)
-      {
-        context.progress();
-        context.setStatus(StringUtils.format("STOPPED [%s]", section));
-      }
-    };
-  }
-
-  public static boolean deleteWithRetry(final FileSystem fs, final Path path, final boolean recursive)
-  {
-    try {
-      return RetryUtils.retry(
-          () -> fs.delete(path, recursive),
-          shouldRetryPredicate(),
-          NUM_RETRIES
-      );
-    }
-    catch (Exception e) {
-      log.error(e, "Failed to cleanup path[%s]", path);
-      throw new RuntimeException(e);
-    }
   }
 
   public static String getJobTrackerAddress(Configuration config)

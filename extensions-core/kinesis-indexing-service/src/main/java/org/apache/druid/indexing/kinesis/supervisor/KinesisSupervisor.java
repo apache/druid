@@ -40,10 +40,11 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -55,6 +56,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -120,15 +122,18 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
     return new KinesisIndexTaskIOConfig(
         groupId,
         baseSequenceName,
-        new SeekableStreamPartitions<>(ioConfig.getStream(), startPartitions),
-        new SeekableStreamPartitions<>(ioConfig.getStream(), endPartitions),
+        new SeekableStreamStartSequenceNumbers<>(
+            ioConfig.getStream(),
+            startPartitions,
+            exclusiveStartSequenceNumberPartitions
+        ),
+        new SeekableStreamEndSequenceNumbers<>(ioConfig.getStream(), endPartitions),
         true,
         minimumMessageTime,
         maximumMessageTime,
         ioConfig.getEndpoint(),
         ioConfig.getRecordsPerFetch(),
         ioConfig.getFetchDelayMillis(),
-        exclusiveStartSequenceNumberPartitions,
         ioConfig.getAwsAssumedRoleArn(),
         ioConfig.getAwsExternalId(),
         ioConfig.isDeaggregate()
@@ -204,9 +209,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         taskTuningConfig.getFetchSequenceNumberTimeout(),
         taskTuningConfig.getMaxRecordsPerPoll()
     );
-
   }
-
 
   @Override
   protected void scheduleReporting(ScheduledExecutorService reportingExec)
@@ -261,13 +264,13 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaData(
+  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
       String stream,
       Map<String, String> map
   )
   {
     return new KinesisDataSourceMetadata(
-        new SeekableStreamPartitions<>(stream, map)
+        new SeekableStreamStartSequenceNumbers<>(stream, map, Collections.emptySet())
     );
   }
 
@@ -300,12 +303,18 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   @Override
   protected String getEndOfPartitionMarker()
   {
-    return SeekableStreamPartitions.NO_END_SEQUENCE_NUMBER;
+    return KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER;
   }
 
   @Override
   protected boolean isEndOfShard(String seqNum)
   {
     return KinesisSequenceNumber.END_OF_SHARD_MARKER.equals(seqNum);
+  }
+
+  @Override
+  protected boolean useExclusiveStartSequenceNumberForStartSequence()
+  {
+    return true;
   }
 }

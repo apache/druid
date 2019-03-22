@@ -48,9 +48,11 @@ import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SequenceMetadata;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -210,7 +212,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
     this.savedParseExceptions = savedParseExceptions;
     this.rowIngestionMeters = rowIngestionMetersFactory.createRowIngestionMeters();
 
-    this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionSequenceNumberMap());
+    this.endOffsets.putAll(ioConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap());
     this.ingestionState = IngestionState.NOT_STARTED;
   }
 
@@ -294,19 +296,19 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
 
       appenderator = appenderator0;
 
-      final String topic = ioConfig.getStartPartitions().getStream();
+      final String topic = ioConfig.getStartSequenceNumbers().getStream();
 
       // Start up, set up initial offsets.
       final Object restoredMetadata = driver.startJob();
       if (restoredMetadata == null) {
-        nextOffsets.putAll(ioConfig.getStartPartitions().getPartitionSequenceNumberMap());
+        nextOffsets.putAll(ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap());
       } else {
         final Map<String, Object> restoredMetadataMap = (Map) restoredMetadata;
-        final SeekableStreamPartitions<Integer, Long> restoredNextPartitions = toolbox.getObjectMapper().convertValue(
+        final SeekableStreamEndSequenceNumbers<Integer, Long> restoredNextPartitions = toolbox.getObjectMapper().convertValue(
             restoredMetadataMap.get(METADATA_NEXT_PARTITIONS),
             toolbox.getObjectMapper().getTypeFactory().constructParametrizedType(
-                SeekableStreamPartitions.class,
-                SeekableStreamPartitions.class,
+                SeekableStreamStartSequenceNumbers.class,
+                SeekableStreamStartSequenceNumbers.class,
                 Integer.class,
                 Long.class
             )
@@ -314,19 +316,19 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
         nextOffsets.putAll(restoredNextPartitions.getPartitionSequenceNumberMap());
 
         // Sanity checks.
-        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartPartitions().getStream())) {
+        if (!restoredNextPartitions.getStream().equals(ioConfig.getStartSequenceNumbers().getStream())) {
           throw new ISE(
               "WTF?! Restored topic[%s] but expected topic[%s]",
               restoredNextPartitions.getStream(),
-              ioConfig.getStartPartitions().getStream()
+              ioConfig.getStartSequenceNumbers().getStream()
           );
         }
 
-        if (!nextOffsets.keySet().equals(ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet())) {
+        if (!nextOffsets.keySet().equals(ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet())) {
           throw new ISE(
               "WTF?! Restored partitions[%s] but expected partitions[%s]",
               nextOffsets.keySet(),
-              ioConfig.getStartPartitions().getPartitionSequenceNumberMap().keySet()
+              ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet()
           );
         }
       }
@@ -351,8 +353,9 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
             public Object getMetadata()
             {
               return ImmutableMap.of(
-                  METADATA_NEXT_PARTITIONS, new SeekableStreamPartitions<>(
-                      ioConfig.getStartPartitions().getStream(),
+                  METADATA_NEXT_PARTITIONS,
+                  new SeekableStreamEndSequenceNumbers<>(
+                      ioConfig.getStartSequenceNumbers().getStream(),
                       snapshot
                   )
               );
@@ -501,13 +504,13 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       }
 
       final TransactionalSegmentPublisher publisher = (segments, commitMetadata) -> {
-        final SeekableStreamPartitions<Integer, Long> finalPartitions = toolbox.getObjectMapper().convertValue(
+        final SeekableStreamEndSequenceNumbers<Integer, Long> finalPartitions = toolbox.getObjectMapper().convertValue(
             ((Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata")).get(METADATA_NEXT_PARTITIONS),
             toolbox.getObjectMapper()
                    .getTypeFactory()
                    .constructParametrizedType(
-                       SeekableStreamPartitions.class,
-                       SeekableStreamPartitions.class,
+                       SeekableStreamEndSequenceNumbers.class,
+                       SeekableStreamEndSequenceNumbers.class,
                        Integer.class,
                        Long.class
                    )
@@ -523,7 +526,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
         if (ioConfig.isUseTransaction()) {
           action = new SegmentTransactionalInsertAction(
               segments,
-              new KafkaDataSourceMetadata(ioConfig.getStartPartitions()),
+              new KafkaDataSourceMetadata(ioConfig.getStartSequenceNumbers()),
               new KafkaDataSourceMetadata(finalPartitions)
           );
         } else {
@@ -698,8 +701,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
       RecordSupplier<Integer, Long> recordSupplier,
-      Set<StreamPartition<Integer>> assignment,
-      Map<Integer, Long> currOffsets
+      Set<StreamPartition<Integer>> assignment
   )
   {
     throw new UnsupportedOperationException();
@@ -712,7 +714,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
   }
 
   @Override
-  protected SeekableStreamPartitions<Integer, Long> deserializePartitionsFromMetadata(
+  protected SeekableStreamEndSequenceNumbers<Integer, Long> deserializePartitionsFromMetadata(
       ObjectMapper mapper,
       Object object
   )
@@ -774,11 +776,13 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
     boolean result = taskToolbox.getTaskActionClient()
                                 .submit(new ResetDataSourceMetadataAction(
                                     task.getDataSource(),
-                                    new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(
-                                        ioConfig.getStartPartitions()
-                                                .getStream(),
-                                        partitionOffsetMap
-                                    ))
+                                    new KafkaDataSourceMetadata(
+                                        new SeekableStreamStartSequenceNumbers<>(
+                                            ioConfig.getStartSequenceNumbers().getStream(),
+                                            partitionOffsetMap,
+                                            Collections.emptySet()
+                                        )
+                                    )
                                 ));
 
     if (result) {
@@ -1200,7 +1204,7 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
 
   @Override
   protected SeekableStreamDataSourceMetadata<Integer, Long> createDataSourceMetadata(
-      SeekableStreamPartitions<Integer, Long> partitions
+      SeekableStreamSequenceNumbers<Integer, Long> partitions
   )
   {
     throw new UnsupportedOperationException();
