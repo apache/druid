@@ -264,6 +264,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         }
       }
       yielder = yielder.next(null);
+      // Finish scanning the interval containing the limit row
       if (numRowsScanned > limit && finalInterval == null) {
         long timestampOfLimitRow = next.getFirstEventTimestamp(scanQuery.getResultFormat());
         for (SegmentDescriptor descriptor : descriptorsOrdered) {
