@@ -37,17 +37,26 @@ The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.orc.m
 |Field     | Type        | Description                                                                            | Required|
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
 |type      | String      | This should say `orc`                                                                  | yes|
-|parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Any parse spec that extends ParseSpec is possible but only their TimestampSpec and DimensionsSpec are used. | yes|
+|parseSpec | JSON Object | Specifies the timestamp and dimensions of the data (`timeAndDims` and `orc` format) and a `flattenSpec` (`orc` format) | yes|
 
-The parser support auto field discovery and flattening if provided with a 
-[flattenSpec](../../ingestion/flatten-json.html) with `orc` as the `format`. 
-[All column types](https://orc.apache.org/docs/types.html) with the exception of `union` types are supported. Columns of
- `list` type if filled with primitives may be used as a multi-value dimension, or specific elements can be extracted with 
+The parser supports two `parseSpec` formats: `orc` and `timeAndDims`. 
+
+`orc` supports auto field discovery and flattening, if specified with a [flattenSpec](../../ingestion/flatten-json.html). 
+If no `flattenSpec` is specified, `useFieldDiscovery` will be enabled by default. Specifying a `dimensionSpec` is 
+optional if `useFieldDiscovery` is enabled: if a `dimensionSpec` is supplied, the list of `dimensions` it defines will be
+the set of ingested dimensions, if missing the discovered fields will make up the list.
+ 
+`timeAndDims` parse spec must specify which fields will be extracted as dimensions through the `dimensionSpec`.
+
+[All column types](https://orc.apache.org/docs/types.html) are supported, with the exception of `union` types. Columns of
+ `list` type, if filled with primitives, may be used as a multi-value dimension, or specific elements can be extracted with 
 `flattenSpec` expressions. Likewise, primitive fields may be extracted from `map` and `struct` types in the same manner.
+Auto field discovery will automatically create a string dimension for every (non-timestamp) primitive or `list` of 
+primitives, as well as any flatten expressions defined in the `flattenSpec`.
 
 ### Examples
 
-#### `orc` parser, `orc` parseSpec
+#### `orc` parser, `orc` parseSpec, auto field discovery, flatten expressions
 
 ```json
 {
@@ -86,9 +95,99 @@ The parser support auto field discovery and flattening if provided with a
           "timestampSpec": {
             "column": "timestamp",
             "format": "millis"
+          }
+        }
+      },
+      ...
+    },
+    "tuningConfig": <hadoop-tuning-config>
+    }
+  }
+}
+```
+
+#### `orc` parser, `orc` parseSpec, field discovery with no flattenSpec or dimensionSpec
+
+```json
+{
+  "type": "index_hadoop",
+  "spec": {
+    "ioConfig": {
+      "type": "hadoop",
+      "inputSpec": {
+        "type": "static",
+        "inputFormat": "org.apache.orc.mapreduce.OrcInputFormat",
+        "paths": "path/to/file.orc"
+      },
+      ...
+    },
+    "dataSchema": {
+      "dataSource": "example",
+      "parser": {
+        "type": "orc",
+        "parseSpec": {
+          "format": "orc",
+          "timestampSpec": {
+            "column": "timestamp",
+            "format": "millis"
+          }
+        }
+      },
+      ...
+    },
+    "tuningConfig": <hadoop-tuning-config>
+    }
+  }
+}
+```
+
+#### `orc` parser, `orc` parseSpec, no autodiscovery
+
+```json
+{
+  "type": "index_hadoop",
+  "spec": {
+    "ioConfig": {
+      "type": "hadoop",
+      "inputSpec": {
+        "type": "static",
+        "inputFormat": "org.apache.orc.mapreduce.OrcInputFormat",
+        "paths": "path/to/file.orc"
+      },
+      ...
+    },
+    "dataSchema": {
+      "dataSource": "example",
+      "parser": {
+        "type": "orc",
+        "parseSpec": {
+          "format": "orc",
+          "flattenSpec": {
+            "useFieldDiscovery": false,
+            "fields": [
+              {
+                "type": "path",
+                "name": "nestedDim",
+                "expr": "$.nestedData.dim1"
+              },
+              {
+                "type": "path",
+                "name": "listDimFirstItem",
+                "expr": "$.listDim[1]"
+              }
+            ]
+          },
+          "timestampSpec": {
+            "column": "timestamp",
+            "format": "millis"
           },
           "dimensionsSpec": {
-            "dimensions": [],
+            "dimensions": [
+              "dim1",
+              "dim3",
+              "nestedDim",
+              "listDimFirstItem"
+            ],
             "dimensionExclusions": [],
             "spatialDimensions": []
           }
@@ -144,4 +243,46 @@ The parser support auto field discovery and flattening if provided with a
   }
 }
 
+```
+
+### Migration from 'contrib' extension
+This extension, first available in version 0.15.0, replaces the previous 'contrib' extension which was available until 
+0.14.0-incubating. While this extension can index any data the 'contrib' extension could, the json spec for the 
+ingestion task is *incompatible*, and will need modified to work with the newer 'core' extension. 
+
+To migrate to 0.15.0+:
+* In `inputSpec` of `ioConfig`, `inputFormat` must be changed from `"org.apache.hadoop.hive.ql.io.orc.OrcNewInputFormat"` to 
+`"org.apache.orc.mapreduce.OrcInputFormat"`
+* The 'contrib' extension supported a `typeString` property, which provided the schema of the
+ORC file, of which was essentially required to have the types correct, but notably _not_ the column names, which 
+facilitated column renaming. In the 'core' extension, column renaming can be achieved with 
+[`flattenSpec` expressions](../../ingestion/flatten-json.html). For example, `"typeString":"struct<time:string,name:string>"`
+with the actual schema `struct<_col0:string,_col1:string>`, to preserve Druid schema would need replaced with:
+```json
+"flattenSpec": {
+  "fields": [
+    {
+      "type": "path",
+      "name": "name",
+      "expr": "$._col1"
+    }
+  ]
+  ...
+}
+```
+* The 'contrib' extension supported a `mapFieldNameFormat` property, which provided a way to specify a dimension to
+ flatten `OrcMap` columns with primitive type keys. This functionality has also been replaced with
+ [`flattenSpec` expressions](../../ingestion/flatten-json.html). For example: `"mapFieldNameFormat": "<PARENT>_<CHILD>"`
+ for a dimension `nestedData_dim1`, to preserve Druid schema could be replaced with 
+ ```json
+"flattenSpec": {
+  "fields": [
+    {
+      "type": "path",
+      "name": "nestedData_dim1",
+      "expr": "$.nestedData.dim1"
+    }
+  ]
+  ...
+}
 ```

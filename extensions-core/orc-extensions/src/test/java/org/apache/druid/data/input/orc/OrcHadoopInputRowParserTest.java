@@ -51,6 +51,7 @@ public class OrcHadoopInputRowParserTest
   @Test
   public void testTest1() throws IOException, InterruptedException
   {
+    // total auto-discover fields (no flattenSpec, no dimensionSpec)
     HadoopDruidIndexerConfig config = loadHadoopDruidIndexerConfig("example/test_1_hadoop_job.json");
     Job job = Job.getInstance(new Configuration());
     config.intoConfiguration(job);
@@ -61,6 +62,7 @@ public class OrcHadoopInputRowParserTest
      */
     OrcStruct data = getFirstRow(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
+    assertEquals(3, rows.get(0).getDimensions().size());
     assertEquals("bar", rows.get(0).getDimension("col1").get(0));
     String s1 = rows.get(0).getDimension("col2").get(0);
     String s2 = rows.get(0).getDimension("col2").get(1);
@@ -83,6 +85,7 @@ public class OrcHadoopInputRowParserTest
      */
     OrcStruct data = getFirstRow(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
+    assertEquals(7, rows.get(0).getDimensions().size());
     assertEquals("bar", rows.get(0).getDimension("col1").get(0));
     assertEquals("dat1", rows.get(0).getDimension("col2").get(0));
     assertEquals("dat2", rows.get(0).getDimension("col2").get(1));
@@ -112,6 +115,7 @@ public class OrcHadoopInputRowParserTest
 
     OrcStruct data = getFirstRow(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
+    assertEquals(14, rows.get(0).getDimensions().size());
     assertEquals("false", rows.get(0).getDimension("boolean1").get(0));
     assertEquals("1", rows.get(0).getDimension("byte1").get(0));
     assertEquals("1024", rows.get(0).getDimension("short1").get(0));
@@ -131,6 +135,7 @@ public class OrcHadoopInputRowParserTest
     // first row has empty 'map' column, so lets read another!
     List<InputRow> allRows = getAllRows(config);
     InputRow anotherRow = allRows.get(0);
+    assertEquals(14, rows.get(0).getDimensions().size());
     assertEquals("true", anotherRow.getDimension("boolean1").get(0));
     assertEquals("100", anotherRow.getDimension("byte1").get(0));
     assertEquals("2048", anotherRow.getDimension("short1").get(0));
@@ -162,6 +167,7 @@ public class OrcHadoopInputRowParserTest
 
     OrcStruct data = getFirstRow(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
+    assertEquals(4, rows.get(0).getDimensions().size());
     assertEquals("2", rows.get(0).getDimension("userid").get(0));
     assertEquals("foo", rows.get(0).getDimension("string1").get(0));
     assertEquals("0.8", rows.get(0).getDimension("subtype").get(0));
@@ -183,6 +189,7 @@ public class OrcHadoopInputRowParserTest
 
     OrcStruct data = getFirstRow(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
+    assertEquals(1, rows.get(0).getDimensions().size());
     assertEquals("1900-12-25T00:00:00.000Z", rows.get(0).getDimension("date").get(0));
     assertEquals(DateTimes.of("1900-05-05T12:34:56.1Z"), rows.get(0).getTimestamp());
   }
@@ -201,6 +208,7 @@ public class OrcHadoopInputRowParserTest
 
     OrcStruct data = getFirstRow(job, ((StaticPathSpec) config.getPathSpec()).getPaths());
     List<InputRow> rows = (List<InputRow>) config.getParser().parseBatch(data);
+    assertEquals(1, rows.get(0).getDimensions().size());
     assertEquals("2038-12-25T00:00:00.000Z", rows.get(0).getDimension("date").get(0));
     assertEquals(DateTimes.of("2038-05-05T12:34:56.1Z"), rows.get(0).getTimestamp());
   }

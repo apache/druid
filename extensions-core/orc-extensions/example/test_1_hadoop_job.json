@@ -23,19 +23,9 @@
         "type": "orc",
         "parseSpec": {
           "format": "orc",
-          "flattenSpec": {
-            "useFieldDiscovery": true,
-            "fields": []
-          },
           "timestampSpec": {
             "column": "timestamp",
             "format": "auto"
-          },
-          "dimensionsSpec": {
-            "dimensions": [
-            ],
-            "dimensionExclusions": [],
-            "spatialDimensions": []
           }
         }
       },

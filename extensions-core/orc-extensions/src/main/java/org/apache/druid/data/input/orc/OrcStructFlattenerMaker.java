@@ -57,7 +57,8 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
     List<TypeDescription> children = obj.getSchema().getChildren();
     List<String> primitiveFields = new ArrayList<>();
     for (int i = 0; i < fields.size(); i++) {
-      if (children.get(i).getCategory().isPrimitive()) {
+      if (children.get(i).getCategory().isPrimitive() || (children.get(i).getCategory().equals(TypeDescription.Category.LIST) &&
+                                                          children.get(i).getChildren().get(0).getCategory().isPrimitive())) {
         primitiveFields.add(fields.get(i));
       }
     }
