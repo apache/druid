@@ -75,12 +75,6 @@ public abstract class DruidCoordinatorConfig
     return "curator";
   }
 
-  @Config("druid.coordinator.curator.loadqueuepeon.numCreateThreads")
-  public int getNumZookeeperNodeCreatingThreads()
-  {
-    return 10;
-  }
-
   @Config("druid.coordinator.curator.loadqueuepeon.numCallbackThreads")
   public int getNumCuratorCallBackThreads()
   {

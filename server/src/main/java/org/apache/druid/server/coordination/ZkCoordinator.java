@@ -74,7 +74,9 @@ public class ZkCoordinator
     this.me = me;
     this.curator = curator;
     this.segmentLoadUnloadService = Execs.multiThreaded(
-        config.getNumLoadingThreads(), "ZKCoordinator--%d");
+        config.getNumLoadingThreads(),
+        "ZKCoordinator--%d"
+    );
   }
 
   @LifecycleStart
@@ -113,15 +115,14 @@ public class ZkCoordinator
                 final ChildData child = event.getData();
                 switch (event.getType()) {
                   case CHILD_ADDED:
-                    log.info("Child zNode added at [%s]", event.getData().getPath());
                     segmentLoadUnloadService.submit(() -> {
                       final String path = child.getPath();
                       DataSegmentChangeRequest request = new SegmentChangeRequestNoop();
                       try {
                         final DataSegmentChangeRequest finalRequest = jsonMapper.readValue(
-                            child.getData(), DataSegmentChangeRequest.class
+                            child.getData(),
+                            DataSegmentChangeRequest.class
                         );
-                        log.info("Starting request[%s] with zNode[%s]", finalRequest.asString(), path);
 
                         finalRequest.go(
                             dataSegmentChangeHandler,
@@ -149,6 +150,7 @@ public class ZkCoordinator
                         );
                       }
                       catch (Exception e) {
+                        // Something went wrong in either deserializing the request using jsonMapper or when invoking it
                         try {
                           curator.delete().guaranteed().forPath(path);
                         }
