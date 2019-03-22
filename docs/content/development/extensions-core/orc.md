@@ -262,6 +262,11 @@ with the actual schema `struct<_col0:string,_col1:string>`, to preserve Druid sc
 "flattenSpec": {
   "fields": [
     {
+        "type": "path",
+        "name": "time",
+        "expr": "$._col0"
+    },
+    {
       "type": "path",
       "name": "name",
       "expr": "$._col1"
