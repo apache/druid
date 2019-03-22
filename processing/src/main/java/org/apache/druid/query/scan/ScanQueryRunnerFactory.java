@@ -164,6 +164,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
         if (maxNumPartitionsInSegment <= scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()) {
           // Use n-way merge strategy
+
+          // Create a list of grouped runner lists (i.e. each sublist/"runner group" corresponds to an interval) ->
+          // there should be no interval overlap
           List<List<QueryRunner<ScanResultValue>>> groupedRunners =
               partitionsGroupedByInterval.entrySet()
                                          .stream()
@@ -172,14 +175,16 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                                             .map(segQueryRunnerPair -> segQueryRunnerPair.rhs)
                                                             .collect(Collectors.toList()))
                                          .collect(Collectors.toList());
-          return Sequences.concat(
-              Sequences.map(
-                  Sequences.simple(groupedRunners), // Sequence of runnerGroups
+
+
+          return Sequences.concat( // 5) Join all the results into a single sequence
+              Sequences.map( // 4) Create a sequence of results from each runner group
+                  Sequences.simple(groupedRunners),
                   runnerGroup ->
-                      Sequences.map(
+                      Sequences.map( // 3) Create a sequence of results from each runner in the group and flatmerge based on timestamp
                           Sequences.simple(runnerGroup),
-                          (input) -> Sequences.concat(
-                              Sequences.map(
+                          (input) -> Sequences.concat( // 2) Combine the deaggregated ScanResultValues into a single sequence
+                              Sequences.map( // 1) Deaggregate each ScanResultValue returned by the query runners
                                   input.run(queryPlus, responseContext),
                                   srv -> Sequences.simple(srv.toSingleEventScanResultValues())
                               )
@@ -277,8 +282,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     }
     return Sequences.simple(sortedElements);
   }
-
-  @VisibleForTesting
 
 
   @Override
