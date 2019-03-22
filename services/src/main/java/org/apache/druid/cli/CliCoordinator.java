@@ -251,7 +251,6 @@ public class CliCoordinator extends ServerRunnable
           )
           {
             boolean useHttpLoadQueuePeon = "http".equalsIgnoreCase(config.getLoadQueuePeonType());
-            int poolSize = useHttpLoadQueuePeon ? 1 : config.getNumZookeeperNodeCreatingThreads();
             ExecutorService callBackExec;
             if (useHttpLoadQueuePeon) {
               callBackExec = Execs.singleThreaded("LoadQueuePeon-callbackexec--%d");
@@ -262,7 +261,7 @@ public class CliCoordinator extends ServerRunnable
             return new LoadQueueTaskMaster(
                 curator,
                 jsonMapper,
-                factory.create(poolSize, "Master-PeonExec--%d"),
+                factory.create(1, "Master-PeonExec--%d"),
                 callBackExec,
                 config,
                 httpClient,
