@@ -136,12 +136,15 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             + "query runners...something went wrong!"
         );
 
+        // Combine the two lists of segment descriptors and query runners into a single list of
+        // segment descriptors - query runner pairs
         List<Pair<SegmentDescriptor, QueryRunner<ScanResultValue>>> descriptorsAndRunnersOrdered = new ArrayList<>();
-
         for (int i = 0; i < queryRunnersOrdered.size(); i++) {
           descriptorsAndRunnersOrdered.add(new Pair<>(descriptorsOrdered.get(i), queryRunnersOrdered.get(i)));
         }
 
+        // Group the list of pairs by interval.  The LinkedHashMap will have an interval paired with a list of all the
+        // query runners for that segment
         LinkedHashMap<Interval, List<Pair<SegmentDescriptor, QueryRunner<ScanResultValue>>>> partitionsGroupedByInterval =
             descriptorsAndRunnersOrdered.stream()
                                         .collect(Collectors.groupingBy(
@@ -150,19 +153,25 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                             Collectors.toList()
                                         ));
 
+        // Find the segment with the largest numbers of partitions.  This will be used to compare with the
+        // maxSegmentPartitionsOrderedInMemory limit to determine if the query is at risk of consuming too much memory.
         int maxNumPartitionsInSegment =
             partitionsGroupedByInterval.values()
                                        .stream()
                                        .map(x -> x.size())
-                                       .max(Comparator.comparing(Integer::valueOf)).get();
+                                       .max(Comparator.comparing(Integer::valueOf))
+                                       .get();
 
-        if (maxNumPartitionsInSegment <= scanQueryConfig.getMaxSegmentsOrderedInMemory()) {
+        if (maxNumPartitionsInSegment <= scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()) {
           // Use n-way merge strategy
-          List<List<QueryRunner<ScanResultValue>>> groupedRunners = new ArrayList<>(descriptorsAndRunnersOrdered.size());
-          for (Map.Entry<Interval, List<Pair<SegmentDescriptor, QueryRunner<ScanResultValue>>>> entry :
-              partitionsGroupedByInterval.entrySet()) {
-            groupedRunners.add(entry.getValue().stream().map(x -> x.rhs).collect(Collectors.toList()));
-          }
+          List<List<QueryRunner<ScanResultValue>>> groupedRunners =
+              partitionsGroupedByInterval.entrySet()
+                                         .stream()
+                                         .map(entry -> entry.getValue()
+                                                            .stream()
+                                                            .map(segQueryRunnerPair -> segQueryRunnerPair.rhs)
+                                                            .collect(Collectors.toList()))
+                                         .collect(Collectors.toList());
           return Sequences.concat(
               Sequences.map(
                   Sequences.simple(groupedRunners), // Sequence of runnerGroups
@@ -192,7 +201,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             + " %,d partitions or lower the row limit below %,d.",
             maxNumPartitionsInSegment,
             query.getLimit(),
-            scanQueryConfig.getMaxSegmentsOrderedInMemory(),
+            scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory(),
             scanQueryConfig.getMaxRowsQueuedForOrdering()
         );
       }
@@ -268,6 +277,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     }
     return Sequences.simple(sortedElements);
   }
+
+  @VisibleForTesting
+
 
   @Override
   public QueryToolChest<ScanResultValue, ScanQuery> getToolchest()

@@ -49,11 +49,11 @@ public class ScanQueryConfig
   }
 
   @JsonProperty
-  private int maxSegmentsOrderedInMemory = 50;
+  private int maxSegmentPartitionsOrderedInMemory = 50;
 
-  public int getMaxSegmentsOrderedInMemory()
+  public int getMaxSegmentPartitionsOrderedInMemory()
   {
-    return maxSegmentsOrderedInMemory;
+    return maxSegmentPartitionsOrderedInMemory;
   }
 
   @Override

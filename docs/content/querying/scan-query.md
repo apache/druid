@@ -158,7 +158,7 @@ The format of the result when resultFormat equals `compactedList`:
 The Scan query currently supports ordering based on timestamp for non-legacy queries.  Note that using time ordering
 will yield results that do not indicate which segment rows are from (`segmentId` will show up as `null`).  Furthermore,
 time ordering is only supported where the result set limit is less than `druid.query.scan.maxRowsQueuedForOrdering` 
-rows **or** fewer than `druid.query.scan.maxSegmentsOrderedInMemory` segments are scanned per Historical.  The 
+rows **or** fewer than `druid.query.scan.maxSegmentPartitionsOrderedInMemory` segments are scanned per Historical.  The 
 reasoning behind these limitations is that the implementation of time ordering uses two strategies that can consume too 
 much heap memory if left unbounded.  These strategies (listed below) are chosen on a per-Historical basis depending on
 query result set limit and the number of segments being scanned.
@@ -174,10 +174,10 @@ from this by limiting the number of rows in the query result set when time order
 time-ordered, an n-way merge can be performed on the results from each segment.  This approach doesn't persist the entire
 result set in memory (like the Priority Queue) as it streams back batches as they are returned from the merge function.
 However, attempting to query too many segments could also result in high memory usage due to the need to open 
-decompression and decoding buffers for each.  The `druid.query.scan.maxSegmentsOrderedInMemory` limit protects
+decompression and decoding buffers for each.  The `druid.query.scan.maxSegmentPartitionsOrderedInMemory` limit protects
 from this by capping the number of segments opened per historical when time ordering is used.
 
-Both `druid.query.scan.maxRowsQueuedForOrdering` and `druid.query.scan.maxSegmentsOrderedInMemory` are 
+Both `druid.query.scan.maxRowsQueuedForOrdering` and `druid.query.scan.maxSegmentPartitionsOrderedInMemory` are 
 configurable and can be tuned based on hardware specs and number of dimensions being queried.
   
 ## Legacy mode
@@ -200,5 +200,5 @@ is complete.
 |property|description|values|default|
 |--------|-----------|------|-------|
 |druid.query.scan.maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used|An integer in [0, 2147483647]|100000|
-|druid.query.scan.maxSegmentsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used|An integer in [0, 2147483647]|50|
+|druid.query.scan.maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used|An integer in [0, 2147483647]|50|
 |druid.query.scan.legacy|Whether legacy mode should be turned on for Scan queries|true or false|false|

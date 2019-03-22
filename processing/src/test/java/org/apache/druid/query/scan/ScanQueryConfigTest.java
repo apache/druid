@@ -31,7 +31,7 @@ public class ScanQueryConfigTest
 
   private final ImmutableMap<String, String> CONFIG_MAP = ImmutableMap
       .<String, String>builder()
-      .put("maxSegmentsOrderedInMemory", "1")
+      .put("maxSegmentPartitionsOrderedInMemory", "1")
       .put("maxRowsQueuedForOrdering", "1")
       .put("legacy", "true")
       .build();
@@ -39,7 +39,7 @@ public class ScanQueryConfigTest
   private final ImmutableMap<String, String> CONFIG_MAP2 = ImmutableMap
       .<String, String>builder()
       .put("legacy", "false")
-      .put("maxSegmentsOrderedInMemory", "42")
+      .put("maxSegmentPartitionsOrderedInMemory", "42")
       .build();
 
   private final ImmutableMap<String, String> CONFIG_MAP_EMPTY = ImmutableMap
@@ -51,17 +51,17 @@ public class ScanQueryConfigTest
   {
     final ScanQueryConfig config = MAPPER.convertValue(CONFIG_MAP, ScanQueryConfig.class);
     Assert.assertEquals(1, config.getMaxRowsQueuedForOrdering());
-    Assert.assertEquals(1, config.getMaxSegmentsOrderedInMemory());
+    Assert.assertEquals(1, config.getMaxSegmentPartitionsOrderedInMemory());
     Assert.assertTrue(config.isLegacy());
 
     final ScanQueryConfig config2 = MAPPER.convertValue(CONFIG_MAP2, ScanQueryConfig.class);
     Assert.assertEquals(100000, config2.getMaxRowsQueuedForOrdering());
-    Assert.assertEquals(42, config2.getMaxSegmentsOrderedInMemory());
+    Assert.assertEquals(42, config2.getMaxSegmentPartitionsOrderedInMemory());
     Assert.assertFalse(config2.isLegacy());
 
     final ScanQueryConfig config3 = MAPPER.convertValue(CONFIG_MAP_EMPTY, ScanQueryConfig.class);
     Assert.assertEquals(100000, config3.getMaxRowsQueuedForOrdering());
-    Assert.assertEquals(50, config3.getMaxSegmentsOrderedInMemory());
+    Assert.assertEquals(50, config3.getMaxSegmentPartitionsOrderedInMemory());
     Assert.assertFalse(config3.isLegacy());
   }
 }
