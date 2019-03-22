@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.kinesis.supervisor;
 
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 
 import java.util.Collections;
+import java.util.List;
 
 public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, String>
 {
@@ -31,7 +33,9 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       Integer partitions,
       Integer replicas,
       Long durationSeconds,
-      boolean suspended
+      boolean suspended,
+      SeekableStreamSupervisorStateManager.SupervisorState state,
+      List<SeekableStreamSupervisorStateManager.ThrowableEvent> recentErrors
   )
   {
     super(
@@ -44,7 +48,9 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
         Collections.emptyMap(),
         null,
         null,
-        suspended
+        suspended,
+        state,
+        recentErrors
     );
   }
 

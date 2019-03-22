@@ -252,7 +252,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         numPartitions,
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
-        spec.isSuspended()
+        spec.isSuspended(),
+        stateManager.getState(),
+        stateManager.getThrowableEventList()
     );
   }
 

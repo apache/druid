@@ -20,15 +20,17 @@
 package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
 
 import java.util.List;
 
-public class SupervisorStateManager
+public class SeekableStreamSupervisorStateManager
 {
-  public enum SupervisorState {
+  public enum SupervisorState
+  {
     WAITING_TO_RUN,
     CONNECTING_TO_STREAM,
     DISCOVERING_INITIAL_TASKS,
@@ -46,7 +48,7 @@ public class SupervisorStateManager
   private final int unhealthinessThreshold;
   private boolean firstRun;
 
-  public SupervisorStateManager(
+  public SeekableStreamSupervisorStateManager(
       SupervisorState initialState,
       int maxSavedExceptions,
       int unhealthinessThreshold
@@ -55,21 +57,53 @@ public class SupervisorStateManager
     this.state = initialState;
     this.throwableEvents = new CircularBuffer<>(maxSavedExceptions);
     this.unhealthinessThreshold = unhealthinessThreshold;
+    this.firstRun = true;
   }
 
-  public void setState(SupervisorState state)
+  public Optional<SupervisorState> setStateIfFirstRun(SupervisorState state)
+  {
+    if (firstRun) {
+      this.state = state;
+      return Optional.of(state);
+    }
+    return Optional.absent();
+  }
+
+  public SupervisorState setState(SupervisorState state)
   {
     this.state = state;
+    return state;
   }
 
-  public void storeThrowableEventAndUpdateState(Throwable t)
+  /**
+   * Returns the new supervisor state
+   */
+  public SupervisorState storeThrowableEventAndUpdateState(Throwable t, SupervisorState newState)
   {
-    throwableEvents.add(new ThrowableEvent(DateTimes.nowUtc(), t));
+    throwableEvents.add(
+        new ThrowableEvent(
+            DateTimes.nowUtc(),
+            t
+        )
+    );
+    return null;
+  }
+
+  public void markFirstRunFinished()
+  {
+    this.firstRun = false;
   }
 
   public List<ThrowableEvent> getThrowableEventList()
   {
-    return throwableEvents.toList();
+    synchronized (throwableEvents) {
+      return throwableEvents.toList();
+    }
+  }
+
+  public SupervisorState getState()
+  {
+    return state;
   }
 
   public static class ThrowableEvent

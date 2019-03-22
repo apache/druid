@@ -44,6 +44,8 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final Long aggregateLag;
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
+  private final SeekableStreamSupervisorStateManager.SupervisorState state;
+  private final List<SeekableStreamSupervisorStateManager.ThrowableEvent> recentErrors;
 
   public SeekableStreamSupervisorReportPayload(
       String dataSource,
@@ -55,7 +57,9 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       @Nullable Map<PartitionIdType, SequenceOffsetType> minimumLag,
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
-      boolean suspended
+      boolean suspended,
+      SeekableStreamSupervisorStateManager.SupervisorState state,
+      List<SeekableStreamSupervisorStateManager.ThrowableEvent> recentErrors
   )
   {
     this.dataSource = dataSource;
@@ -70,6 +74,8 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
     this.aggregateLag = aggregateLag;
     this.offsetsLastUpdated = offsetsLastUpdated;
     this.suspended = suspended;
+    this.state = state;
+    this.recentErrors = recentErrors;
   }
 
   public void addTask(TaskReportData data)
@@ -153,5 +159,17 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   public DateTime getOffsetsLastUpdated()
   {
     return offsetsLastUpdated;
+  }
+
+  @JsonProperty
+  public SeekableStreamSupervisorStateManager.SupervisorState getState()
+  {
+    return state;
+  }
+
+  @JsonProperty
+  public List<SeekableStreamSupervisorStateManager.ThrowableEvent> getRecentErrors()
+  {
+    return recentErrors;
   }
 }
