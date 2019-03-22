@@ -151,13 +151,6 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     </Dialog>;
   }
 
-  renderHistoryButton() {
-    const { historyRecords } = this.props;
-    const { showFinalStep } = this.state;
-    if (showFinalStep || historyRecords === undefined) return null;
-    return <Button style={{float: "left"}} className={"pt-minimal"} text="Audit history" onClick={this.goToHistory}/>;
-  }
-
   renderHistoryDialog() {
     const { historyRecords } = this.props;
     return <HistoryDialog
@@ -175,6 +168,11 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     const { showFinalStep } = this.state;
 
     return <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+      {showFinalStep || historyRecords === undefined
+        ? null
+        : <Button style={{position: "absolute", left: "5px"}} className={"pt-minimal"} text="Audit history" onClick={this.goToHistory}/>
+      }
+
       { showFinalStep
         ? <Button onClick={this.back} iconName={IconNames.ARROW_LEFT}>Back</Button>
         : onReset ? <Button onClick={this.reset} intent={"none" as any}>Reset</Button> : null
@@ -200,7 +198,6 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
       </div>
 
       <div className={Classes.DIALOG_FOOTER}>
-        {this.renderHistoryButton()}
         {this.renderActions(saveDisabled)}
       </div>
     </Dialog>;
