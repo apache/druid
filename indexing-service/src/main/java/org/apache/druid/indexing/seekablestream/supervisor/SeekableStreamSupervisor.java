@@ -444,6 +444,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   protected final ObjectMapper sortingMapper;
   protected final List<PartitionIdType> partitionIds = new CopyOnWriteArrayList<>();
+  protected final SupervisorStateManager stateManager;
   protected volatile DateTime sequenceLastUpdated;
 
 
@@ -480,7 +481,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private volatile boolean stopped = false;
   private volatile boolean lifecycleStarted = false;
 
-
   public SeekableStreamSupervisor(
       final String supervisorId,
       final TaskStorage taskStorage,
@@ -509,6 +509,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.exec = Execs.singleThreaded(supervisorId);
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
+    this.stateManager = new SupervisorStateManager(
+        SupervisorStateManager.SupervisorState.WAITING_TO_RUN,
+        100,
+        4); // TODO make configurable
 
     int workerThreads = (this.tuningConfig.getWorkerThreads() != null
                          ? this.tuningConfig.getWorkerThreads()
@@ -1151,12 +1155,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
         }
         if (metadataUpdateSuccess) {
-          resetMetadata.getSeekableStreamSequenceNumbers().getPartitionSequenceNumberMap().keySet().forEach(partition -> {
-            final int groupId = getTaskGroupIdForPartition(partition);
-            killTaskGroupForPartitions(ImmutableSet.of(partition), "DataSourceMetadata is updated while reset");
-            activelyReadingTaskGroups.remove(groupId);
-            partitionGroups.get(groupId).replaceAll((partitionId, sequence) -> getNotSetMarker());
-          });
+          resetMetadata.getSeekableStreamSequenceNumbers()
+                       .getPartitionSequenceNumberMap()
+                       .keySet()
+                       .forEach(partition -> {
+                         final int groupId = getTaskGroupIdForPartition(partition);
+                         killTaskGroupForPartitions(
+                             ImmutableSet.of(partition),
+                             "DataSourceMetadata is updated while reset"
+                         );
+                         activelyReadingTaskGroups.remove(groupId);
+                         partitionGroups.get(groupId).replaceAll((partitionId, sequence) -> getNotSetMarker());
+                       });
         } else {
           throw new ISE("Unable to reset metadata");
         }
@@ -1421,10 +1431,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<String> taskIds = new ArrayList<>();
 
     for (String taskId : taskGroup.taskIds()) {
-      final ListenableFuture<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> checkpointsFuture = taskClient.getCheckpointsAsync(
-          taskId,
-          true
-      );
+      final ListenableFuture<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> checkpointsFuture =
+          taskClient.getCheckpointsAsync(
+              taskId,
+              true
+          );
       futures.add(checkpointsFuture);
       taskIds.add(taskId);
     }

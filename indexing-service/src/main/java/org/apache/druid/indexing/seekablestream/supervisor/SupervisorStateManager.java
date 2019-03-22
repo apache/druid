@@ -28,7 +28,7 @@ import java.util.List;
 
 public class SupervisorStateManager
 {
-  public enum State {
+  public enum SupervisorState {
     WAITING_TO_RUN,
     CONNECTING_TO_STREAM,
     DISCOVERING_INITIAL_TASKS,
@@ -41,23 +41,23 @@ public class SupervisorStateManager
     UNHEALTHY
   }
 
-  private State state;
+  private SupervisorState state;
   private final CircularBuffer<ThrowableEvent> throwableEvents;
   private final int unhealthinessThreshold;
+  private boolean firstRun;
 
   public SupervisorStateManager(
-      State initialState,
-      int bufferCapacity,
+      SupervisorState initialState,
+      int maxSavedExceptions,
       int unhealthinessThreshold
   )
   {
     this.state = initialState;
-    // TODO make capacity configurable
-    this.throwableEvents = new CircularBuffer<>(bufferCapacity);
+    this.throwableEvents = new CircularBuffer<>(maxSavedExceptions);
     this.unhealthinessThreshold = unhealthinessThreshold;
   }
 
-  public void setState(State state)
+  public void setState(SupervisorState state)
   {
     this.state = state;
   }
