@@ -109,8 +109,8 @@ committer who visits an issue or a PR authored by a non-committer.
      - `Area - Zookeeper/Curator` - for any PRs and issues related to ZooKeeper, Curator, and node discovery in Druid.
 
 
-3. Consider adding any `Bug` and `Security` PRs to the next Druid milestone whenever they are important enough to fix
-before the next release. This ensures that they will be considered by the next release manager as potential release
+3. **Consider adding any `Bug` and `Security` PRs to the next Druid milestone** whenever they are important enough to
+fix before the next release. This ensures that they will be considered by the next release manager as potential release
 blockers. Please don't add PRs that are neither `Bug` nor `Security`-related to milestones until after they are
 committed, to avoid cluttering the release manager's workflow.
 
@@ -118,8 +118,8 @@ committed, to avoid cluttering the release manager's workflow.
 problems even if you don't plan to review the PR.
 
 5. If you create an issue that is relatively small and self-contained and you don't plan to work on it in the near
-future, consider tagging it `Contributions Welcome` so that other people know that the issue is free to pick up and is
-relatively easily doable even for those who are not very familiar with the codebase.
+future, consider tagging it **`Contributions Welcome`** so that other people know that the issue is free to pick up and
+is relatively easily doable even for those who are not very familiar with the codebase.
 
 ## PR merge action item checklist
 
