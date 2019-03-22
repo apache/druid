@@ -29,12 +29,15 @@ import * as React from 'react';
 import { FormGroup, IconNames } from '../components/filler';
 import { localStorageGet, localStorageSet } from "../utils";
 
+import { HistoryDialog } from "./history-dialog";
+
 const druidEditingAuthor = "DRUID_EDITING_AUTHOR";
 
 export interface SnitchDialogProps extends IDialogProps {
   onSave: (author: string, comment: string) => void;
   saveDisabled?: boolean;
   onReset?: () => void;
+  historyRecords?: any[];
 }
 
 export interface SnitchDialogState {
@@ -43,6 +46,8 @@ export interface SnitchDialogState {
 
   showFinalStep?: boolean;
   saveDisabled?: boolean;
+
+  showHistory?: boolean;
 }
 
 export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialogState> {
@@ -104,13 +109,20 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
 
   back = () => {
     this.setState({
-      showFinalStep: false
+      showFinalStep: false,
+      showHistory: false
     });
   }
 
   goToFinalStep = () => {
     this.setState({
       showFinalStep: true
+    });
+  }
+
+  goToHistory = () => {
+    this.setState({
+      showHistory: true
     });
   }
 
@@ -139,8 +151,27 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     </Dialog>;
   }
 
+  renderHistoryButton() {
+    const { historyRecords } = this.props;
+    const { showFinalStep } = this.state;
+    if (showFinalStep || historyRecords === undefined) return null;
+    return <Button style={{float: "left"}} className={"pt-minimal"} text="Audit history" onClick={this.goToHistory}/>;
+  }
+
+  renderHistoryDialog() {
+    const { historyRecords } = this.props;
+    return <HistoryDialog
+      {...this.props}
+      historyRecords={historyRecords}
+    >
+      <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+        <Button onClick={this.back} iconName={IconNames.ARROW_LEFT}>Back</Button>
+      </div>
+    </HistoryDialog>;
+  }
+
   renderActions(saveDisabled?: boolean) {
-    const { onReset } = this.props;
+    const { onReset, historyRecords } = this.props;
     const { showFinalStep } = this.state;
 
     return <div className={Classes.DIALOG_FOOTER_ACTIONS}>
@@ -158,15 +189,18 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
 
   render() {
     const { onClose, className, children, saveDisabled } = this.props;
-    const { showFinalStep } = this.state;
+    const { showFinalStep, showHistory } = this.state;
 
     if (showFinalStep) return this.renderFinalStep();
+    if (showHistory) return this.renderHistoryDialog();
 
     return <Dialog isOpen inline {...this.props}>
       <div className={Classes.DIALOG_BODY}>
         {children}
       </div>
+
       <div className={Classes.DIALOG_FOOTER}>
+        {this.renderHistoryButton()}
         {this.renderActions(saveDisabled)}
       </div>
     </Dialog>;

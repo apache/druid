@@ -16,32 +16,55 @@
  * limitations under the License.
  */
 
-.coordinator-dynamic-config {
+.history-dialog {
   &.pt-dialog {
-    margin-top: 5vh;
+    width: 600px;
     top: 5%;
   }
 
-  .pt-dialog-body {
-    max-height: 70vh;
+  .history-record-container {
 
-    .auto-form {
+    padding: 15px 15px 0 15px;
+
+    h3 {
+      padding-left: 10px;
+    }
+
+    .no-record {
+      height: 25vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .history-record-entries {
+
+      margin-bottom: 10px;
       max-height: 60vh;
-      overflow: auto;
-    }
+      overflow: scroll;
 
-    .html-select {
-      width: 195px;
-    }
+      .history-record-entry {
 
-    .config-comment {
-      margin-top: 10px;
-      padding: 0 15px;
+        padding: 5px;
+        border-style: dot-dash;
+        word-wrap: break-word;
 
-      textarea {
-        max-width: 200px;
-        padding: 0 15px;
+        hr {
+          margin: 5px 0 5px 0;
+        }
+
+        .history-record-title {
+          justify-content: space-between;
+          display: flex;
+
+
+        }
+
+        .history-record-comment-title {
+          margin-bottom: 5px;
+        }
       }
     }
   }
 }
+
