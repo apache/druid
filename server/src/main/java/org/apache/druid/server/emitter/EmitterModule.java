@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.emitter;
 
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
@@ -130,10 +131,10 @@ public class EmitterModule implements Module
     {
       final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<Emitter>(){});
 
-      emitter = findEmitter(emitterType, emitterBindings);
-
-      if (emitter == null) {
+      if (Strings.isNullOrEmpty(emitterType)) {
         emitter = findEmitter(NoopEmitterModule.EMITTER_TYPE, emitterBindings);
+      } else {
+        emitter = findEmitter(emitterType, emitterBindings);
       }
 
       if (emitter == null) {
