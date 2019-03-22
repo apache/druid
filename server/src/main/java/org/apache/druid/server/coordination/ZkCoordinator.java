@@ -143,7 +143,7 @@ public class ZkCoordinator
                                     log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
                                   }
                                   log.error(e, "Exception while removing zNode[%s]", path);
-                                  throw Throwables.propagate(e);
+                                  throw new RuntimeException(e);
                                 } 
                               }
                             }
