@@ -336,9 +336,7 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
 
 interface JSONCollapseProps extends React.Props<any> {
   stringValue: string;
-  buttonName: string;
-  buttonStyle?: any;
-  textareaStyle?: any;
+  buttonText: string;
 }
 
 interface JSONCollapseState {
@@ -354,22 +352,20 @@ export class JSONCollapse extends React.Component<JSONCollapseProps, JSONCollaps
   }
 
   render() {
-    const { stringValue, buttonName, buttonStyle, textareaStyle  } = this.props;
+    const { stringValue, buttonText} = this.props;
     const { isOpen } = this.state;
     const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);
-    return <div>
+    return <div className={"json-collapse"}>
       <Button
         className={`pt-minimal ${isOpen ? " pt-active" : ""}`}
         onClick={() => this.setState({isOpen: !isOpen})}
-        text={buttonName}
-        style={buttonStyle}
+        text={buttonText}
       />
       <div>
         <Collapse isOpen={isOpen}>
           <TextArea
             readOnly
             value={prettyValue}
-            style={textareaStyle}
           />
         </Collapse>
       </div>

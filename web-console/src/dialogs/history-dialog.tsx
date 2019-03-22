@@ -53,8 +53,6 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
                 const auditInfo = record.auditInfo;
                 const auditTime = record.auditTime;
                 const formattedTime = auditTime.replace("T", " ").substring(0, auditTime.length - 5);
-                const payloadButtonStyle = {position: "relative", left: "86%"};
-                const textareaStyle = {width: "100%", height: "30vh", marginTop: "5px"};
 
                 return <div key={record.auditTime} className={"history-record-entry"}>
                   <Card>
@@ -66,9 +64,7 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
                     <p>{auditInfo.comment === "" ? "(No comment)" : auditInfo.comment}</p>
                     <JSONCollapse
                       stringValue={record.payload}
-                      buttonName={"Payload"}
-                      buttonStyle={payloadButtonStyle}
-                      textareaStyle={textareaStyle}
+                      buttonText={"Payload"}
                     />
                   </Card>
                 </div>;
