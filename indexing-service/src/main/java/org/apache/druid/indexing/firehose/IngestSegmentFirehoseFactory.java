@@ -81,25 +81,31 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
   private static final EmittingLogger log = new EmittingLogger(IngestSegmentFirehoseFactory.class);
   private static final long DEFAULT_MAX_INPUT_SEGMENT_BYTES_PER_TASK = 150 * 1024 * 1024;
   private final String dataSource;
+  // Exactly one of interval and segmentIds should be non-null. Typically 'interval' is specified directly
+  // by the user creating this firehose and 'segmentIds' is used for sub-tasks if it is split for parallel
+  // batch ingestion.
+  @Nullable
   private final Interval interval;
+  @Nullable
   private final List<WindowedSegmentId> segmentIds;
   private final DimFilter dimFilter;
   private final List<String> dimensions;
   private final List<String> metrics;
   private final long maxInputSegmentBytesPerTask;
-  private List<InputSplit<List<WindowedSegmentId>>> splits;
   private final IndexIO indexIO;
   private final CoordinatorClient coordinatorClient;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final RetryPolicyFactory retryPolicyFactory;
 
+  private List<InputSplit<List<WindowedSegmentId>>> splits;
+
   @JsonCreator
   public IngestSegmentFirehoseFactory(
       @JsonProperty("dataSource") final String dataSource,
-      @JsonProperty("interval") Interval interval,
+      @Nullable @JsonProperty("interval") Interval interval,
       // Specifying "segments" is intended only for when this FirehoseFactory has split itself,
       // not for direct end user use.
-      @JsonProperty("segments") List<WindowedSegmentId> segmentIds,
+      @Nullable @JsonProperty("segments") List<WindowedSegmentId> segmentIds,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
@@ -202,6 +208,10 @@ public class IngestSegmentFirehoseFactory implements FiniteFirehoseFactory<Input
     try {
       final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = getTimeline();
 
+      // Download all segments locally.
+      // Note: this requires enough local storage space to fit all of the segments, even though
+      // IngestSegmentFirehose iterates over the segments in series. We may want to change this
+      // to download files lazily, perhaps sharing code with PrefetchableTextFilesFirehoseFactory.
       final SegmentLoader segmentLoader = segmentLoaderFactory.manufacturate(temporaryDirectory);
       Map<DataSegment, File> segmentFileMap = Maps.newLinkedHashMap();
       for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
