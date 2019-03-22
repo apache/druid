@@ -421,7 +421,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-
   // Map<{group RandomIdUtils}, {actively reading task group}>; see documentation for TaskGroup class
   private final ConcurrentHashMap<Integer, TaskGroup> activelyReadingTaskGroups = new ConcurrentHashMap<>();
 

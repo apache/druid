@@ -30,6 +30,7 @@ import com.amazonaws.services.kinesis.model.ExpiredIteratorException;
 import com.amazonaws.services.kinesis.model.GetRecordsRequest;
 import com.amazonaws.services.kinesis.model.GetRecordsResult;
 import com.amazonaws.services.kinesis.model.InvalidArgumentException;
+import com.amazonaws.services.kinesis.model.LimitExceededException;
 import com.amazonaws.services.kinesis.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.ResourceNotFoundException;
@@ -46,6 +47,8 @@ import org.apache.druid.common.aws.AWSCredentialsUtils;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
+import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -579,12 +582,21 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
   @Override
   public Set<String> getPartitionIds(String stream)
   {
-    checkIfClosed();
-    return kinesis.describeStream(stream)
-                  .getStreamDescription()
-                  .getShards()
-                  .stream()
-                  .map(Shard::getShardId).collect(Collectors.toSet());
+    try {
+      checkIfClosed();
+      return kinesis.describeStream(stream)
+                    .getStreamDescription()
+                    .getShards()
+                    .stream()
+                    .map(Shard::getShardId).collect(Collectors.toSet());
+    }
+    catch (ResourceNotFoundException e) {
+      throw new PossiblyTransientStreamException(e);
+    }
+    catch (LimitExceededException e) {
+      throw new TransientStreamException(e);
+    }
+
   }
 
   @Override
@@ -681,6 +693,10 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String>
     }
     catch (ResourceNotFoundException e) {
       log.warn(e, "Caught ResourceNotFoundException while getting shardIterator");
+      throw new PossiblyTransientStreamException(e);
+    }
+    catch (ProvisionedThroughputExceededException e) {
+      throw new TransientStreamException(e);
     }
 
     return getSequenceNumberInternal(partition, shardIterator);
