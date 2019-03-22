@@ -137,7 +137,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         );
 
         // Combine the two lists of segment descriptors and query runners into a single list of
-        // segment descriptors - query runner pairs
+        // segment descriptors - query runner pairs.  This makes it easier to use stream operators.
         List<Pair<SegmentDescriptor, QueryRunner<ScanResultValue>>> descriptorsAndRunnersOrdered = new ArrayList<>();
         for (int i = 0; i < queryRunnersOrdered.size(); i++) {
           descriptorsAndRunnersOrdered.add(new Pair<>(descriptorsOrdered.get(i), queryRunnersOrdered.get(i)));
@@ -166,7 +166,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           // Use n-way merge strategy
 
           // Create a list of grouped runner lists (i.e. each sublist/"runner group" corresponds to an interval) ->
-          // there should be no interval overlap
+          // there should be no interval overlap.  We create a list of lists so we can create a sequence of sequences.
+          // There's no easy way to convert a LinkedHashMap to a sequence because it's non-iterable.
           List<List<QueryRunner<ScanResultValue>>> groupedRunners =
               partitionsGroupedByInterval.entrySet()
                                          .stream()
@@ -176,15 +177,20 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                                             .collect(Collectors.toList()))
                                          .collect(Collectors.toList());
 
+          // (1) Deaggregate each ScanResultValue returned by the query runners
+          // (2) Combine the deaggregated ScanResultValues into a single sequence
+          // (3) Create a sequence of results from each runner in the group and flatmerge based on timestamp
+          // (4) Create a sequence of results from each runner group
+          // (5) Join all the results into a single sequence
 
-          return Sequences.concat( // 5) Join all the results into a single sequence
-              Sequences.map( // 4) Create a sequence of results from each runner group
+          return Sequences.concat(                                                    // (5)
+              Sequences.map(                                                          // (4)
                   Sequences.simple(groupedRunners),
                   runnerGroup ->
-                      Sequences.map( // 3) Create a sequence of results from each runner in the group and flatmerge based on timestamp
+                      Sequences.map(                                                  // (3)
                           Sequences.simple(runnerGroup),
-                          (input) -> Sequences.concat( // 2) Combine the deaggregated ScanResultValues into a single sequence
-                              Sequences.map( // 1) Deaggregate each ScanResultValue returned by the query runners
+                          (input) -> Sequences.concat(                                // (2)
+                              Sequences.map(                                          // (1)
                                   input.run(queryPlus, responseContext),
                                   srv -> Sequences.simple(srv.toSingleEventScanResultValues())
                               )
@@ -210,7 +216,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
             scanQueryConfig.getMaxRowsQueuedForOrdering()
         );
       }
-
     };
   }
 
