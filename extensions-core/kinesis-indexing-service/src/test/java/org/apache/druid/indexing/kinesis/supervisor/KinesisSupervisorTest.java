@@ -58,8 +58,10 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -111,8 +113,6 @@ import static org.easymock.EasyMock.expectLastCall;
 
 public class KinesisSupervisorTest extends EasyMockSupport
 {
-
-
   private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
   private static final String DATASOURCE = "testDS";
   private static final int TEST_CHAT_THREADS = 3;
@@ -120,10 +120,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
   private static final String stream = "stream";
-  private static String shardId1 = "1";
-  private static String shardId0 = "0";
-  private static StreamPartition<String> shard1Partition = StreamPartition.of(stream, shardId1);
-  private static StreamPartition<String> shard0Partition = StreamPartition.of(stream, shardId0);
+  private static final String shardId1 = "1";
+  private static final String shardId0 = "0";
+  private static final StreamPartition<String> shard1Partition = StreamPartition.of(stream, shardId1);
+  private static final StreamPartition<String> shard0Partition = StreamPartition.of(stream, shardId0);
 
   private static DataSchema dataSchema;
   private KinesisRecordSupplier supervisorRecordSupplier;
@@ -1422,12 +1422,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
     KinesisSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(2, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(2, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(stream, payload.getStream());
     Assert.assertEquals(0, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
@@ -1559,12 +1561,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
     KinesisSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(2, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(2, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(stream, payload.getStream());
     Assert.assertEquals(0, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
@@ -1747,12 +1751,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
     KinesisSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(2, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(2, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(stream, payload.getStream());
     Assert.assertEquals(1, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData activeReport = payload.getActiveTasks().get(0);
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
@@ -3467,7 +3473,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            null
+            null,
+            new SeekableStreamSupervisorConfig()
         ),
         rowIngestionMetersFactory
     );
@@ -3643,7 +3650,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            null
+            null,
+            new SeekableStreamSupervisorConfig()
         ),
         rowIngestionMetersFactory
     );
@@ -3705,7 +3713,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
           mapper,
           spec,
           rowIngestionMetersFactory,
-          null
+          null,
+          new SeekableStreamSupervisorConfig()
       );
       this.spec = spec;
     }

@@ -63,6 +63,8 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -1288,12 +1290,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(NUM_PARTITIONS, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(topic, payload.getStream());
     Assert.assertEquals(0, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
@@ -1394,12 +1398,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(NUM_PARTITIONS, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(topic, payload.getStream());
     Assert.assertEquals(0, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
@@ -1531,12 +1537,14 @@ public class KafkaSupervisorTest extends EasyMockSupport
     KafkaSupervisorReportPayload payload = report.getPayload();
 
     Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
-    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
-    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(3600L, payload.getDurationSeconds());
+    Assert.assertEquals(NUM_PARTITIONS, payload.getPartitions());
+    Assert.assertEquals(1, payload.getReplicas());
     Assert.assertEquals(topic, payload.getStream());
     Assert.assertEquals(1, payload.getActiveTasks().size());
     Assert.assertEquals(1, payload.getPublishingTasks().size());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, payload.getState());
+    Assert.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData activeReport = payload.getActiveTasks().get(0);
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
@@ -2948,7 +2956,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            new SeekableStreamSupervisorConfig()
         ),
         rowIngestionMetersFactory
     );
@@ -3076,7 +3085,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
           taskClientFactory,
           mapper,
           spec,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          new SeekableStreamSupervisorConfig()
       );
     }
 

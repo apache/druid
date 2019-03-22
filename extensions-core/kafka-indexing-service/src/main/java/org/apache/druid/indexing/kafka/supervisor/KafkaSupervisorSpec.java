@@ -30,6 +30,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -39,7 +40,6 @@ import java.util.Map;
 
 public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
 {
-
   @JsonCreator
   public KafkaSupervisorSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
@@ -54,7 +54,8 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
       @JacksonInject @Json ObjectMapper mapper,
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject DruidMonitorSchedulerConfig monitorSchedulerConfig,
-      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory
+      @JacksonInject RowIngestionMetersFactory rowIngestionMetersFactory,
+      @JacksonInject SeekableStreamSupervisorConfig supervisorConfig
   )
   {
     super(
@@ -96,7 +97,8 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         mapper,
         emitter,
         monitorSchedulerConfig,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        supervisorConfig
     );
   }
 
@@ -110,7 +112,8 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         (KafkaIndexTaskClientFactory) indexTaskClientFactory,
         mapper,
         this,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        supervisorConfig
     );
   }
 
@@ -144,7 +147,8 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         mapper,
         emitter,
         monitorSchedulerConfig,
-        rowIngestionMetersFactory
+        rowIngestionMetersFactory,
+        supervisorConfig
     );
   }
 

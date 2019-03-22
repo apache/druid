@@ -45,6 +45,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -92,7 +93,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       final ObjectMapper mapper,
       final KinesisSupervisorSpec spec,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
-      final AWSCredentialsConfig awsCredentialsConfig
+      final AWSCredentialsConfig awsCredentialsConfig,
+      final SeekableStreamSupervisorConfig supervisorConfig
   )
   {
     super(
@@ -104,7 +106,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         mapper,
         spec,
         rowIngestionMetersFactory,
-        true
+        true,
+        supervisorConfig
     );
 
     this.spec = spec;
@@ -247,7 +250,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
         numPartitions,
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
-        spec.isSuspended()
+        spec.isSuspended(),
+        stateManager.getSupervisorState(),
+        stateManager.getExceptionEvents()
     );
   }
 

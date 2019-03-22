@@ -43,6 +43,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -105,7 +106,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
       final KafkaIndexTaskClientFactory taskClientFactory,
       final ObjectMapper mapper,
       final KafkaSupervisorSpec spec,
-      final RowIngestionMetersFactory rowIngestionMetersFactory
+      final RowIngestionMetersFactory rowIngestionMetersFactory,
+      final SeekableStreamSupervisorConfig supervisorConfig
   )
   {
     super(
@@ -117,7 +119,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         mapper,
         spec,
         rowIngestionMetersFactory,
-        false
+        false,
+        supervisorConfig
     );
 
     this.spec = spec;
@@ -191,7 +194,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         includeOffsets ? partitionLag : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? sequenceLastUpdated : null,
-        spec.isSuspended()
+        spec.isSuspended(),
+        stateManager.getSupervisorState(),
+        stateManager.getExceptionEvents()
     );
   }
 

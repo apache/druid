@@ -50,6 +50,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.SeekableStreamSupervisorModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -331,7 +332,8 @@ public class CliOverlord extends ServerRunnable
           }
         },
         new IndexingServiceFirehoseModule(),
-        new IndexingServiceTaskLogsModule()
+        new IndexingServiceTaskLogsModule(),
+        new SeekableStreamSupervisorModule()
     );
   }
 
