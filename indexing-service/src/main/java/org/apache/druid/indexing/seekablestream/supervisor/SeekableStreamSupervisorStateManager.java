@@ -19,15 +19,19 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
 import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.utils.CircularBuffer;
+import org.codehaus.plexus.util.ExceptionUtils;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SeekableStreamSupervisorStateManager
 {
@@ -46,7 +50,10 @@ public class SeekableStreamSupervisorStateManager
   }
 
   private SupervisorState state;
-  private final CircularBuffer<ThrowableEvent> throwableEvents;
+  // Group error (throwable) events by the type of Throwable (i.e. class name)
+  private final ConcurrentHashMap<String, List<ThrowableEvent>> throwableEvents;
+  // Remove all throwableEvents that aren't in this set at the end of each run (transient)
+  private final Set<String> errorsEncounteredOnRun;
   private final int unhealthinessThreshold;
   private boolean atLeastOneSuccessfulRun;
   private boolean currentRunSuccessful;
@@ -59,7 +66,8 @@ public class SeekableStreamSupervisorStateManager
   )
   {
     this.state = initialState;
-    this.throwableEvents = new CircularBuffer<>(maxSavedExceptions);
+    this.throwableEvents = new ConcurrentHashMap<>();
+    this.errorsEncounteredOnRun = new HashSet<>();
     this.unhealthinessThreshold = unhealthinessThreshold;
     this.atLeastOneSuccessfulRun = false;
     this.currentRunSuccessful = true;
@@ -80,6 +88,7 @@ public class SeekableStreamSupervisorStateManager
     return state;
   }
 
+  // Returns new state
   public SupervisorState storeThrowableEventAndDetermineNewState(Throwable t)
   {
     if (t instanceof NonTransientStreamException) {
@@ -92,17 +101,19 @@ public class SeekableStreamSupervisorStateManager
     return state;
   }
 
+  // Returns new state
   public SupervisorState storeThrowableEventAndUpdateState(Throwable t, SupervisorState newState)
   {
-    synchronized (throwableEvents) {
-      throwableEvents.add(
-          new ThrowableEvent(
-              DateTimes.nowUtc(),
-              t
-          )
-      );
-    }
-    return setState(state);
+    List<ThrowableEvent> throwableEventsForClassT = throwableEvents.getOrDefault(t.getClass().getCanonicalName(), new ArrayList<>());
+    throwableEventsForClassT.add(
+        new ThrowableEvent(
+            t.getMessage(),
+            ExceptionUtils.getStackTrace(t),
+            DateTimes.nowUtc()
+        ));
+    throwableEvents.put(t.getClass().getCanonicalName(), throwableEventsForClassT);
+    this.state = newState;
+    return state;
   }
 
   public void markRunFinished()
@@ -112,13 +123,21 @@ public class SeekableStreamSupervisorStateManager
     } else {
       atLeastOneSuccessfulRun = true;
     }
+
+    for (String throwableClass : errorsEncounteredOnRun)
+    {
+      if (!throwableEvents.keySet().contains(throwableClass))
+      {
+        throwableEvents.remove(throwableClass);
+      }
+    }
+    // At this point, all the events in throwableEvents should be non-transient
+    errorsEncounteredOnRun.clear();
   }
 
-  public List<ThrowableEvent> getThrowableEventList()
+  public Map<String, List<ThrowableEvent>> getThrowableEventList()
   {
-    synchronized (throwableEvents) {
-      return throwableEvents.toList();
-    }
+    return throwableEvents;
   }
 
   public SupervisorState getState()
@@ -126,30 +145,21 @@ public class SeekableStreamSupervisorStateManager
     return state;
   }
 
-  public static class ThrowableEvent
+  public class ThrowableEvent
   {
-    private final DateTime timestamp;
-    private final Throwable t;
+    private String message;
+    private String stackTrace;
+    private DateTime timestamp;
 
     public ThrowableEvent(
-        DateTime timestamp,
-        Throwable t
+        String message,
+        String stackTrace,
+        DateTime timestamp
     )
     {
+      this.stackTrace = stackTrace;
+      this.message = message;
       this.timestamp = timestamp;
-      this.t = t;
-    }
-
-    @JsonProperty
-    public DateTime getTimestamp()
-    {
-      return timestamp;
-    }
-
-    @JsonProperty
-    public Throwable getThrowable()
-    {
-      return t;
     }
   }
 }
