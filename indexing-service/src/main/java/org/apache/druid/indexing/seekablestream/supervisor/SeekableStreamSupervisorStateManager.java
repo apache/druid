@@ -21,14 +21,13 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
+import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
 
 import java.util.List;
-import java.util.Set;
 
 public class SeekableStreamSupervisorStateManager
 {
@@ -49,7 +48,7 @@ public class SeekableStreamSupervisorStateManager
   private SupervisorState state;
   private final CircularBuffer<ThrowableEvent> throwableEvents;
   private final int unhealthinessThreshold;
-  private boolean firstRun;
+  private boolean atLeastOneSuccessfulRun;
   private boolean currentRunSuccessful;
   private int numConsecutiveUnsuccessfulRuns;
 
@@ -62,13 +61,13 @@ public class SeekableStreamSupervisorStateManager
     this.state = initialState;
     this.throwableEvents = new CircularBuffer<>(maxSavedExceptions);
     this.unhealthinessThreshold = unhealthinessThreshold;
-    this.firstRun = true;
+    this.atLeastOneSuccessfulRun = false;
     this.currentRunSuccessful = true;
   }
 
-  public Optional<SupervisorState> setStateIfFirstRun(SupervisorState state)
+  public Optional<SupervisorState> setStateIfNoSuccessfulRunYet(SupervisorState state)
   {
-    if (firstRun) {
+    if (atLeastOneSuccessfulRun) {
       this.state = state;
       return Optional.of(state);
     }
@@ -85,17 +84,17 @@ public class SeekableStreamSupervisorStateManager
   {
     if (t instanceof NonTransientStreamException) {
       return storeThrowableEventAndUpdateState(t, SupervisorState.UNABLE_TO_CONNECT_TO_STREAM);
+    } else if (t instanceof PossiblyTransientStreamException) {
+      if (atLeastOneSuccessfulRun) {
+        return storeThrowableEventAndUpdateState(t, SupervisorState.LOST_CONTACT_WITH_STREAM);
+      }
     }
     return state;
   }
 
-  /**
-   * Returns the new supervisor state
-   */
   public SupervisorState storeThrowableEventAndUpdateState(Throwable t, SupervisorState newState)
   {
-    synchronized (throwableEvents)
-    {
+    synchronized (throwableEvents) {
       throwableEvents.add(
           new ThrowableEvent(
               DateTimes.nowUtc(),
@@ -110,6 +109,8 @@ public class SeekableStreamSupervisorStateManager
   {
     if (!currentRunSuccessful) {
       numConsecutiveUnsuccessfulRuns++;
+    } else {
+      atLeastOneSuccessfulRun = true;
     }
   }
 
