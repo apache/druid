@@ -131,6 +131,8 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new DirectOperatorConversion(SqlStdOperatorTable.ACOS, "acos"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.ATAN, "atan"))
           .add(new DirectOperatorConversion(SqlStdOperatorTable.ATAN2, "atan2"))
+          .add(new DirectOperatorConversion(SqlStdOperatorTable.RADIANS, "toRadians"))
+          .add(new DirectOperatorConversion(SqlStdOperatorTable.DEGREES, "toDegrees"))
           .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.NOT, "!"))
           .add(new UnaryPrefixOperatorConversion(SqlStdOperatorTable.UNARY_MINUS, "-"))
           .add(new UnaryFunctionOperatorConversion(SqlStdOperatorTable.IS_NULL, "isnull"))

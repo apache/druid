@@ -7669,4 +7669,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testRadiansAndDegrees() throws Exception
+  {
+    testQuery(
+        "SELECT RADIANS(m1 * 15), DEGREES(m2) FROM numfoo WHERE dim1 = '1'",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "toRadians((\"m1\" * 15))", ValueType.DOUBLE),
+                    expressionVirtualColumn("v1", "toDegrees(\"m2\")", ValueType.DOUBLE)
+                )
+                .columns("v0", "v1")
+                .filters(selector("dim1", "1", null))
+                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{Math.toRadians(60), Math.toDegrees(4)}
+        )
+    );
+  }
 }
