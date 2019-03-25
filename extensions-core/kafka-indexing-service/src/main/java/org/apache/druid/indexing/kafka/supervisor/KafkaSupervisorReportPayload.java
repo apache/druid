@@ -41,7 +41,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       @Nullable Long aggregateLag,
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
-      SeekableStreamSupervisorStateManager.SupervisorState state,
+      SeekableStreamSupervisorStateManager.State state,
       List<SeekableStreamSupervisorStateManager.ThrowableEvent> recentErrors
 
   )

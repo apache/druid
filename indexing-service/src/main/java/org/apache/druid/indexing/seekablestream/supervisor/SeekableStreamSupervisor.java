@@ -510,9 +510,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
     this.stateManager = new SeekableStreamSupervisorStateManager(
-        SeekableStreamSupervisorStateManager.SupervisorState.WAITING_TO_RUN,
-        100,
-        4); // TODO make configurable
+        SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
+        10); // TODO make configurable
 
     int workerThreads = (this.tuningConfig.getWorkerThreads() != null
                          ? this.tuningConfig.getWorkerThreads()
@@ -1001,9 +1000,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       throws ExecutionException, InterruptedException, TimeoutException, JsonProcessingException
   {
     possiblyRegisterListener();
-    stateManager.setStateIfFirstRun(SeekableStreamSupervisorStateManager.SupervisorState.CONNECTING_TO_STREAM);
+    stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
     updatePartitionDataFromStream();
-    stateManager.setStateIfFirstRun(SeekableStreamSupervisorStateManager.SupervisorState.DISCOVERING_INITIAL_TASKS);
+    stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
     discoverTasks();
     updateTaskStatus();
     checkTaskDuration();
@@ -1013,13 +1012,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // if suspended, ensure tasks have been requested to gracefully stop
     if (!spec.isSuspended()) {
       log.info("[%s] supervisor is running.", dataSource);
-      stateManager.setState(SeekableStreamSupervisorStateManager.SupervisorState.CREATING_TASKS);
+      stateManager.setState(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
       createNewTasks();
-      stateManager.setStateIfFirstRun(SeekableStreamSupervisorStateManager.SupervisorState.RUNNING);
+      stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.RUNNING);
     } else {
       log.info("[%s] supervisor is suspended.", dataSource);
       gracefulShutdownInternal();
-      stateManager.setState(SeekableStreamSupervisorStateManager.SupervisorState.SUSPENDED);
+      stateManager.setState(SeekableStreamSupervisorStateManager.State.SUSPENDED);
     }
 
     if (log.isDebugEnabled()) {

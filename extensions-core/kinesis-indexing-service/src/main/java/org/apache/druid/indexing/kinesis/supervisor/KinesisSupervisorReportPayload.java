@@ -34,7 +34,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       Integer replicas,
       Long durationSeconds,
       boolean suspended,
-      SeekableStreamSupervisorStateManager.SupervisorState state,
+      SeekableStreamSupervisorStateManager.State state,
       List<SeekableStreamSupervisorStateManager.ThrowableEvent> recentErrors
   )
   {

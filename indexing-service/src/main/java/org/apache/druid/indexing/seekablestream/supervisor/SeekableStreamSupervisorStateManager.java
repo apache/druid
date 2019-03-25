@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SeekableStreamSupervisorStateManager
 {
-  public enum SupervisorState
+  public enum State
   {
     WAITING_TO_RUN,
     CONNECTING_TO_STREAM,
@@ -51,7 +51,7 @@ public class SeekableStreamSupervisorStateManager
     UNHEALTHY
   }
 
-  private SupervisorState state;
+  private State state;
   // Group error (throwable) events by the type of Throwable (i.e. class name)
   private final ConcurrentHashMap<Class, List<ThrowableEvent>> throwableEvents;
   // Remove all throwableEvents that aren't in this set at the end of each run (transient)
@@ -61,7 +61,7 @@ public class SeekableStreamSupervisorStateManager
   private boolean currentRunSuccessful;
 
   public SeekableStreamSupervisorStateManager(
-      SupervisorState initialState,
+      State initialState,
       int unhealthinessThreshold
   )
   {
@@ -73,7 +73,7 @@ public class SeekableStreamSupervisorStateManager
     this.currentRunSuccessful = true;
   }
 
-  public Optional<SupervisorState> setStateIfNoSuccessfulRunYet(SupervisorState state)
+  public Optional<State> setStateIfNoSuccessfulRunYet(State state)
   {
     if (!atLeastOneSuccessfulRun) {
       return Optional.of(setState(state));
@@ -81,9 +81,9 @@ public class SeekableStreamSupervisorStateManager
     return Optional.absent();
   }
 
-  public SupervisorState setState(SupervisorState state)
+  public State setState(State state)
   {
-    if (state.equals(SupervisorState.SUSPENDED))
+    if (state.equals(State.SUSPENDED))
     {
       atLeastOneSuccessfulRun = false; // We want the startup states again
     }
@@ -126,18 +126,23 @@ public class SeekableStreamSupervisorStateManager
     // At this point, all the events in throwableEvents should be non-transient
     errorsEncounteredOnRun.clear();
 
-    boolean stateUpdated = false;
+    boolean noIssuesAboveThreshold = true;
     for (Map.Entry<Class, List<ThrowableEvent>> events : throwableEvents.entrySet()) {
-      if (events.getValue().size() > unhealthinessThreshold && events.getKey().equals(NonTransientStreamException.class)) {
-        setState(SupervisorState.UNABLE_TO_CONNECT_TO_STREAM);
-        stateUpdated = true;
-      } else if (events.getValue().size() > unhealthinessThreshold) {
-        setState(SupervisorState.UNHEALTHY);
-        stateUpdated = true;
+      if (events.getValue().size() > unhealthinessThreshold) {
+        if (events.getKey().equals(NonTransientStreamException.class)) {
+          setState(State.UNABLE_TO_CONNECT_TO_STREAM);
+          noIssuesAboveThreshold = false;
+        } else if (events.getKey().equals(TransientStreamException.class)) {
+          setState(State.LOST_CONTACT_WITH_STREAM);
+          noIssuesAboveThreshold = false;
+        } else {
+          setState(State.UNHEALTHY);
+          noIssuesAboveThreshold = false;
+        }
       }
     }
-    if (!stateUpdated) {
-      setState(SupervisorState.RUNNING);
+    if (noIssuesAboveThreshold) {
+      setState(State.RUNNING);
     }
   }
 
@@ -146,7 +151,7 @@ public class SeekableStreamSupervisorStateManager
     return throwableEvents;
   }
 
-  public SupervisorState getState()
+  public State getState()
   {
     return state;
   }
