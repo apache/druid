@@ -37,7 +37,6 @@ import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -69,6 +68,7 @@ public class MaterializedViewSupervisor implements Supervisor
   private static final int DEFAULT_MAX_TASK_COUNT = 1;
   // there is a lag between derivatives and base dataSource, to prevent repeatedly building for some delay data. 
   private static final long DEFAULT_MIN_DATA_LAG_MS = 24 * 3600 * 1000L;
+
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final SqlMetadataSegments metadataSegments;
@@ -317,16 +317,11 @@ public class MaterializedViewSupervisor implements Supervisor
   {
     // Pair<interval -> version, interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> derivativeSegmentsSnapshot =
-        getVersionAndBaseSegments(
-            metadataStorageCoordinator.getUsedSegmentsForInterval(dataSource, Intervals.ETERNITY)
-        );
+        getVersionAndBaseSegments(metadataStorageCoordinator.getUsedSegments(dataSource));
     // Pair<interval -> max(created_date), interval -> list<DataSegment>>
     Pair<Map<Interval, String>, Map<Interval, List<DataSegment>>> baseSegmentsSnapshot =
         getMaxCreateDateAndBaseSegments(
-            metadataStorageCoordinator.getUsedSegmentAndCreatedDateForInterval(
-                spec.getBaseDataSource(),
-                Intervals.ETERNITY
-            )
+            metadataStorageCoordinator.getUsedSegmentsAndCreatedDates(spec.getBaseDataSource())
         );
     // baseSegments are used to create HadoopIndexTask
     Map<Interval, List<DataSegment>> baseSegments = baseSegmentsSnapshot.rhs;
@@ -468,7 +463,7 @@ public class MaterializedViewSupervisor implements Supervisor
   private void clearSegments()
   {
     log.info("Clear all metadata of dataSource %s", dataSource);
-    metadataStorageCoordinator.deletePendingSegments(dataSource, Intervals.ETERNITY);
+    metadataStorageCoordinator.deletePendingSegments(dataSource);
     if (!metadataSegments.tryMarkAsUnusedAllSegmentsInDataSource(dataSource)) {
       log.error("Failed to mark all segments in " + dataSource + " as unused.");
     }

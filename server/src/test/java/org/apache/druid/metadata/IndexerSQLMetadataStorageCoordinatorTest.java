@@ -934,7 +934,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       prevSegmentId = identifier.toString();
     }
 
-    final int numDeleted = coordinator.deletePendingSegments(dataSource, new Interval(begin, secondBegin));
+    final int numDeleted = coordinator.deletePendingSegmentsCreatedInInterval(dataSource, new Interval(begin, secondBegin));
     Assert.assertEquals(10, numDeleted);
   }
 }

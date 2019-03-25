@@ -59,15 +59,14 @@ import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
-import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -117,13 +116,27 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
   {
+    if (intervals == null || intervals.isEmpty()) {
+      throw new IAE("null/empty intervals");
+    }
+    return doGetUsedSegments(dataSource, intervals);
+  }
+
+  @Override
+  public List<DataSegment> getUsedSegments(String dataSource)
+  {
+    return doGetUsedSegments(dataSource, Collections.emptyList());
+  }
+
+  /**
+   * @param intervals empty list means unrestricted interval.
+   */
+  private List<DataSegment> doGetUsedSegments(final String dataSource, final List<Interval> intervals)
+  {
     return connector.retryWithHandle(
         handle -> {
-          final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalsWithHandle(
-              handle,
-              dataSource,
-              intervals
-          );
+          final VersionedIntervalTimeline<String, DataSegment> timeline =
+              getTimelineForIntervalsWithHandle(handle, dataSource, intervals);
 
           return intervals
               .stream()
@@ -178,29 +191,25 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final List<Interval> intervals
   )
   {
-    if (intervals == null || intervals.isEmpty()) {
-      throw new IAE("null/empty intervals");
-    }
-
     final StringBuilder sb = new StringBuilder();
-    sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ? AND (");
-    for (int i = 0; i < intervals.size(); i++) {
-      sb.append(
-          StringUtils.format("(start <= ? AND %1$send%1$s >= ?)", connector.getQuoteString())
-      );
-      if (i == intervals.size() - 1) {
-        sb.append(")");
-      } else {
-        sb.append(" OR ");
+    sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ?");
+    if (!intervals.isEmpty()) {
+      sb.append(" AND (");
+      for (int i = 0; i < intervals.size(); i++) {
+        sb.append(
+            StringUtils.format("(start <= ? AND %1$send%1$s >= ?)", connector.getQuoteString())
+        );
+        if (i == intervals.size() - 1) {
+          sb.append(")");
+        } else {
+          sb.append(" OR ");
+        }
       }
     }
 
-    Query<Map<String, Object>> sql = handle.createQuery(
-        StringUtils.format(
-            sb.toString(),
-            dbTables.getSegmentsTable()
-        )
-    ).bind(0, dataSource);
+    Query<Map<String, Object>> sql = handle
+        .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
+        .bind(0, dataSource);
 
     for (int i = 0; i < intervals.size(); i++) {
       Interval interval = intervals.get(i);
@@ -714,19 +723,32 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public int deletePendingSegments(String dataSource, Interval deleteInterval)
+  public int deletePendingSegmentsCreatedInInterval(String dataSource, Interval deleteInterval)
   {
     return connector.getDBI().inTransaction(
         (handle, status) -> handle
             .createStatement(
                 StringUtils.format(
-                    "delete from %s where datasource = :dataSource and created_date >= :start and created_date < :end",
+                    "DELETE FROM %s WHERE datasource = :dataSource AND created_date >= :start AND created_date < :end",
                     dbTables.getPendingSegmentsTable()
                 )
             )
             .bind("dataSource", dataSource)
             .bind("start", deleteInterval.getStart().toString())
             .bind("end", deleteInterval.getEnd().toString())
+            .execute()
+    );
+  }
+
+  @Override
+  public int deletePendingSegments(String dataSource)
+  {
+    return connector.getDBI().inTransaction(
+        (handle, status) -> handle
+            .createStatement(
+                StringUtils.format("DELETE FROM %s WHERE datasource = :dataSource", dbTables.getPendingSegmentsTable())
+            )
+            .bind("dataSource", dataSource)
             .execute()
     );
   }
@@ -1115,37 +1137,48 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
-  public List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval)
+  public List<Pair<DataSegment, String>> getUsedSegmentsAndCreatedDates(String dataSource)
   {
+    return doGetUsedSegmentsAndCreatedDates(dataSource, null);
+  }
+
+  /**
+   * @param interval if null, assumed unrestricted interval
+   */
+  private List<Pair<DataSegment, String>> doGetUsedSegmentsAndCreatedDates(
+      String dataSource,
+      @Nullable Interval interval
+  )
+  {
+    String rawQueryString = "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource AND used = true";
+    if (interval != null) {
+      rawQueryString += StringUtils.format(" AND start >= :start AND %1$send%1$s <= :end", connector.getQuoteString());
+    }
+    final String queryString = StringUtils.format(rawQueryString, dbTables.getSegmentsTable());
     return connector.retryWithHandle(
-        handle -> handle.createQuery(
-            StringUtils.format(
-                "SELECT created_date, payload FROM %1$s WHERE dataSource = :dataSource " +
-                "AND start >= :start AND %2$send%2$s <= :end AND used = true",
-                dbTables.getSegmentsTable(), connector.getQuoteString()
-            )
-        )
-                        .bind("dataSource", dataSource)
-                        .bind("start", interval.getStart().toString())
-                        .bind("end", interval.getEnd().toString())
-                        .map(new ResultSetMapper<Pair<DataSegment, String>>()
-                        {
-                          @Override
-                          public Pair<DataSegment, String> map(int index, ResultSet r, StatementContext ctx)
-                              throws SQLException
-                          {
-                            try {
-                              return new Pair<>(
-                                  jsonMapper.readValue(r.getBytes("payload"), DataSegment.class),
-                                  r.getString("created_date")
-                              );
-                            }
-                            catch (IOException e) {
-                              throw new RuntimeException(e);
-                            }
-                          }
-                        })
-                        .list()
+        handle -> {
+          Query<Map<String, Object>> query = handle
+              .createQuery(queryString)
+              .bind("dataSource", dataSource);
+          if (interval != null) {
+            query = query
+                .bind("start", interval.getStart().toString())
+                .bind("end", interval.getEnd().toString());
+          }
+          return query
+              .map((int index, ResultSet r, StatementContext ctx) -> {
+                try {
+                  return new Pair<>(
+                      jsonMapper.readValue(r.getBytes("payload"), DataSegment.class),
+                      r.getString("created_date")
+                  );
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              })
+              .list();
+        }
     );
   }
 

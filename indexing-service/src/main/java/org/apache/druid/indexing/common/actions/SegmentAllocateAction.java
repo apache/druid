@@ -179,7 +179,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       }
 
       // Could not allocate a pending segment. There's a chance that this is because someone else inserted a segment
-      // overlapping with this row between when we called "mdc.getUsedSegmentsForInterval" and now. Check it again,
+      // overlapping with this row between when we called "msc.getUsedSegmentsForInterval" and now. Check it again,
       // and if it's different, repeat.
 
       if (!ImmutableSet.copyOf(msc.getUsedSegmentsForInterval(dataSource, rowInterval)).equals(usedSegmentsForRow)) {

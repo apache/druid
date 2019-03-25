@@ -77,11 +77,17 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<Pair<DataSegment, String>> getUsedSegmentAndCreatedDateForInterval(String dataSource, Interval interval)
+  public List<DataSegment> getUsedSegments(String dataSource)
   {
     return ImmutableList.of();
   }
-  
+
+  @Override
+  public List<Pair<DataSegment, String>> getUsedSegmentsAndCreatedDates(String dataSource)
+  {
+    return ImmutableList.of();
+  }
+
   @Override
   public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> intervals)
   {
@@ -133,7 +139,13 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public int deletePendingSegments(String dataSource, Interval deleteInterval)
+  public int deletePendingSegmentsCreatedInInterval(String dataSource, Interval deleteInterval)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int deletePendingSegments(String dataSource)
   {
     throw new UnsupportedOperationException();
   }
