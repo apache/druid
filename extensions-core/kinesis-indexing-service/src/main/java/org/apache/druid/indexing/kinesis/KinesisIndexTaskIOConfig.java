@@ -22,12 +22,12 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.Set;
 
 public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>
 {
@@ -46,15 +46,14 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   public KinesisIndexTaskIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId,
       @JsonProperty("baseSequenceName") String baseSequenceName,
-      @JsonProperty("startPartitions") SeekableStreamPartitions<String, String> startPartitions,
-      @JsonProperty("endPartitions") SeekableStreamPartitions<String, String> endPartitions,
+      @JsonProperty("startSequenceNumbers") SeekableStreamStartSequenceNumbers<String, String> startSequenceNumbers,
+      @JsonProperty("endSequenceNumbers") SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers,
       @JsonProperty("useTransaction") Boolean useTransaction,
       @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("endpoint") String endpoint,
       @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
-      @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<String> exclusiveStartSequenceNumberPartitions,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
       @JsonProperty("deaggregate") boolean deaggregate
@@ -63,17 +62,19 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     super(
         taskGroupId,
         baseSequenceName,
-        startPartitions,
-        endPartitions,
+        startSequenceNumbers,
+        endSequenceNumbers,
         useTransaction,
         minimumMessageTime,
-        maximumMessageTime,
-        exclusiveStartSequenceNumberPartitions
+        maximumMessageTime
     );
-    Preconditions.checkArgument(endPartitions.getPartitionSequenceNumberMap()
-                                             .values()
-                                             .stream()
-                                             .noneMatch(x -> x.equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)));
+    Preconditions.checkArgument(
+        endSequenceNumbers.getPartitionSequenceNumberMap()
+                          .values()
+                          .stream()
+                          .noneMatch(x -> x.equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)),
+        "End sequenceNumbers must not have the end of shard marker (EOS)"
+    );
 
     this.endpoint = Preconditions.checkNotNull(endpoint, "endpoint");
     this.recordsPerFetch = recordsPerFetch != null ? recordsPerFetch : DEFAULT_RECORDS_PER_FETCH;
@@ -124,15 +125,14 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   {
     return "KinesisIndexTaskIOConfig{" +
            "baseSequenceName='" + getBaseSequenceName() + '\'' +
-           ", startPartitions=" + getStartPartitions() +
-           ", endPartitions=" + getEndPartitions() +
+           ", startPartitions=" + getStartSequenceNumbers() +
+           ", endPartitions=" + getEndSequenceNumbers() +
            ", useTransaction=" + isUseTransaction() +
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +
            ", endpoint='" + endpoint + '\'' +
            ", recordsPerFetch=" + recordsPerFetch +
            ", fetchDelayMillis=" + fetchDelayMillis +
-           ", exclusiveStartSequenceNumberPartitions=" + getExclusiveStartSequenceNumberPartitions() +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +

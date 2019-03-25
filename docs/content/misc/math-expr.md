@@ -70,6 +70,7 @@ The following built-in functions are available.
 |format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.html)|
+|parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|

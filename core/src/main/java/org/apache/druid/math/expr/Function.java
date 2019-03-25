@@ -122,6 +122,48 @@ interface Function
     }
   }
 
+  class ParseLong implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "parse_long";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      final int radix;
+      if (args.size() == 1) {
+        radix = 10;
+      } else if (args.size() == 2) {
+        radix = args.get(1).eval(bindings).asInt();
+      } else {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+
+      final String input = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+      if (input == null) {
+        return ExprEval.ofLong(null);
+      }
+
+      final long retVal;
+      try {
+        if (radix == 16 && (input.startsWith("0x") || input.startsWith("0X"))) {
+          // Strip leading 0x from hex strings.
+          retVal = Long.parseLong(input.substring(2), radix);
+        } else {
+          retVal = Long.parseLong(input, radix);
+        }
+      }
+      catch (NumberFormatException e) {
+        return ExprEval.ofLong(null);
+      }
+
+      return ExprEval.of(retVal);
+    }
+  }
+
   class Pi implements Function
   {
     private static final double PI = Math.PI;
