@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -123,7 +124,7 @@ public class ScanQueryRunnerFactoryTest
         factory.sortAndLimitScanResultValuesPriorityQueue(
             inputSequence,
             query,
-            ImmutableList.of(new Interval(DateTimes.of("2010-01-01"), DateTimes.of("2019-01-01").plusHours(1)))
+            ImmutableList.of(new SegmentDescriptor(new Interval(DateTimes.of("2010-01-01"), DateTimes.of("2019-01-01").plusHours(1)), "1", 0))
         ).toList();
 
     // check each scan result value has one event
