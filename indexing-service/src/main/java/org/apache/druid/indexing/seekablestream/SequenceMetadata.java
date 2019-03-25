@@ -216,11 +216,12 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     lock.lock();
     try {
       return "SequenceMetadata{" +
-             "sequenceName='" + sequenceName + '\'' +
-             ", sequenceId=" + sequenceId +
-             ", startOffsets=" + startOffsets +
-             ", endOffsets=" + endOffsets +
+             "sequenceId=" + sequenceId +
+             ", sequenceName='" + sequenceName + '\'' +
              ", assignments=" + assignments +
+             ", startOffsets=" + startOffsets +
+             ", exclusiveStartPartitions=" + exclusiveStartPartitions +
+             ", endOffsets=" + endOffsets +
              ", sentinel=" + sentinel +
              ", checkpointed=" + checkpointed +
              '}';
