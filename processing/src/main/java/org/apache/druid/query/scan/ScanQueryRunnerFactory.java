@@ -259,9 +259,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     Interval finalInterval = null;
     while (!doneScanning) {
       ScanResultValue next = yielder.get();
-      numRowsScanned++;
       List<ScanResultValue> singleEventScanResultValues = next.toSingleEventScanResultValues();
       for (ScanResultValue srv : singleEventScanResultValues) {
+        numRowsScanned++;
         // Using an intermediate unbatched ScanResultValue is not that great memory-wise, but the column list
         // needs to be preserved for queries using the compactedList result format
         q.offer(srv);
