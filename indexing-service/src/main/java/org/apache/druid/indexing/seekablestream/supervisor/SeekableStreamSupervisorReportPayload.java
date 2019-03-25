@@ -45,7 +45,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   private final DateTime offsetsLastUpdated;
   private final boolean suspended;
   private final SeekableStreamSupervisorStateManager.State state;
-  private final List<SeekableStreamSupervisorStateManager.ThrowableEvent> recentErrors;
+  private final Map<Class, List<SeekableStreamSupervisorStateManager.ThrowableEvent>> recentErrors;
 
   public SeekableStreamSupervisorReportPayload(
       String dataSource,
@@ -59,7 +59,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
-      List<SeekableStreamSupervisorStateManager.ThrowableEvent> recentErrors
+      Map<Class, List<SeekableStreamSupervisorStateManager.ThrowableEvent>> recentErrors
   )
   {
     this.dataSource = dataSource;
@@ -168,7 +168,7 @@ public abstract class SeekableStreamSupervisorReportPayload<PartitionIdType, Seq
   }
 
   @JsonProperty
-  public List<SeekableStreamSupervisorStateManager.ThrowableEvent> getRecentErrors()
+  public Map<Class, List<SeekableStreamSupervisorStateManager.ThrowableEvent>> getRecentErrors()
   {
     return recentErrors;
   }

@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -83,8 +83,7 @@ public class SeekableStreamSupervisorStateManager
 
   public State setState(State state)
   {
-    if (state.equals(State.SUSPENDED))
-    {
+    if (state.equals(State.SUSPENDED)) {
       atLeastOneSuccessfulRun = false; // We want the startup states again
     }
     this.state = state;
@@ -131,14 +130,12 @@ public class SeekableStreamSupervisorStateManager
       if (events.getValue().size() > unhealthinessThreshold) {
         if (events.getKey().equals(NonTransientStreamException.class)) {
           setState(State.UNABLE_TO_CONNECT_TO_STREAM);
-          noIssuesAboveThreshold = false;
         } else if (events.getKey().equals(TransientStreamException.class)) {
           setState(State.LOST_CONTACT_WITH_STREAM);
-          noIssuesAboveThreshold = false;
         } else {
           setState(State.UNHEALTHY);
-          noIssuesAboveThreshold = false;
         }
+        noIssuesAboveThreshold = false;
       }
     }
     if (noIssuesAboveThreshold) {
