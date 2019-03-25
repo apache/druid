@@ -513,7 +513,6 @@ public class KinesisIndexTaskTest extends EasyMockSupport
     Assert.assertEquals(ImmutableList.of("g"), readSegmentColumn("dim1", desc2));
   }
 
-
   @Test(timeout = 120_000L)
   public void testIncrementalHandOff() throws Exception
   {
