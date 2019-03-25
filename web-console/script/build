@@ -27,6 +27,9 @@ echo "Copying blueprint assets in..."
 sed 's|url("assets|url("/assets|g' "./node_modules/@blueprintjs/core/dist/blueprint.css" > lib/blueprint.css
 cp -r "./node_modules/@blueprintjs/core/dist/assets" .
 
+echo "Adding SQL function doc..."
+PATH="./target/node:$PATH" ./script/create-sql-function-doc
+
 echo "Transpiling ReactTable CSS..."
 PATH="./target/node:$PATH" ./node_modules/.bin/stylus lib/react-table.styl -o lib/react-table.css
 

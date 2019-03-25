@@ -30,7 +30,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.guice.annotations.Json;
@@ -619,7 +618,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
             return jsonFactory.createParser(input).readValueAs(JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING);
           }
           catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
         }
 

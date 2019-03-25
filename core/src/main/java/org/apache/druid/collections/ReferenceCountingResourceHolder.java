@@ -19,7 +19,6 @@
 
 package org.apache.druid.collections;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
 import sun.misc.Cleaner;
@@ -137,7 +136,7 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
         closer.close();
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

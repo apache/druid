@@ -20,7 +20,6 @@
 package org.apache.druid.server.lookup.namespace.cache;
 
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -92,7 +91,7 @@ public class NamespaceExtractionCacheManagersTest
                   thunder.await();
                 }
                 catch (InterruptedException e) {
-                  throw Throwables.propagate(e);
+                  throw new RuntimeException(e);
                 }
                 for (int i = 0; i < 1000; ++i) {
                   CacheHandler cacheHandler = manager.createCache();

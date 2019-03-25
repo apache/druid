@@ -36,7 +36,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -55,7 +55,7 @@ public class CountSqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
+      final DruidQuerySignature querySignature,
       final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
@@ -66,7 +66,7 @@ public class CountSqlAggregator implements SqlAggregator
   {
     final List<DruidExpression> args = Aggregations.getArgumentsForSimpleAggregator(
         plannerContext,
-        rowSignature,
+        querySignature.getRowSignature(),
         aggregateCall,
         project
     );
@@ -83,12 +83,9 @@ public class CountSqlAggregator implements SqlAggregator
       if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct()) {
         return APPROX_COUNT_DISTINCT.toDruidAggregation(
             plannerContext,
-            rowSignature,
+            querySignature,
             rexBuilder,
-            name,
-            aggregateCall,
-            project,
-            existingAggregations,
+            name, aggregateCall, project, existingAggregations,
             finalizeAggregations
         );
       } else {
@@ -99,7 +96,7 @@ public class CountSqlAggregator implements SqlAggregator
 
       // COUNT(x) should count all non-null values of x.
       final RexNode rexNode = Expressions.fromFieldAccess(
-          rowSignature,
+          querySignature.getRowSignature(),
           project,
           Iterables.getOnlyElement(aggregateCall.getArgList())
       );
@@ -107,7 +104,7 @@ public class CountSqlAggregator implements SqlAggregator
       if (rexNode.getType().isNullable()) {
         final DimFilter nonNullFilter = Expressions.toFilter(
             plannerContext,
-            rowSignature,
+            querySignature,
             rexBuilder.makeCall(SqlStdOperatorTable.IS_NOT_NULL, ImmutableList.of(rexNode))
         );
 
@@ -116,7 +113,7 @@ public class CountSqlAggregator implements SqlAggregator
           throw new ISE("Could not create not-null filter for rexNode[%s]", rexNode);
         }
 
-        return Aggregation.create(new CountAggregatorFactory(name)).filter(rowSignature, nonNullFilter);
+        return Aggregation.create(new CountAggregatorFactory(name)).filter(querySignature, nonNullFilter);
       } else {
         return Aggregation.create(new CountAggregatorFactory(name));
       }

@@ -19,10 +19,7 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
-import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.druid.java.util.common.ISE;
@@ -33,17 +30,9 @@ import org.apache.druid.query.aggregation.FloatMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
-import org.apache.druid.sql.calcite.aggregation.Aggregations;
-import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
-import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
 
-import javax.annotation.Nullable;
-import java.util.List;
-
-public class MinSqlAggregator implements SqlAggregator
+public class MinSqlAggregator extends SimpleSqlAggregator
 {
   @Override
   public SqlAggFunction calciteFunction()
@@ -51,49 +40,16 @@ public class MinSqlAggregator implements SqlAggregator
     return SqlStdOperatorTable.MIN;
   }
 
-  @Nullable
   @Override
-  public Aggregation toDruidAggregation(
-      final PlannerContext plannerContext,
-      final RowSignature rowSignature,
-      final RexBuilder rexBuilder,
+  Aggregation getAggregation(
       final String name,
       final AggregateCall aggregateCall,
-      final Project project,
-      final List<Aggregation> existingAggregations,
-      final boolean finalizeAggregations
+      final ExprMacroTable macroTable,
+      final String fieldName,
+      final String expression
   )
   {
-    if (aggregateCall.isDistinct()) {
-      return null;
-    }
-
-    final List<DruidExpression> arguments = Aggregations.getArgumentsForSimpleAggregator(
-        plannerContext,
-        rowSignature,
-        aggregateCall,
-        project
-    );
-
-    if (arguments == null) {
-      return null;
-    }
-
-    final DruidExpression arg = Iterables.getOnlyElement(arguments);
     final ValueType valueType = Calcites.getValueTypeForSqlTypeName(aggregateCall.getType().getSqlTypeName());
-    final ExprMacroTable macroTable = plannerContext.getExprMacroTable();
-
-    final String fieldName;
-    final String expression;
-
-    if (arg.isDirectColumnAccess()) {
-      fieldName = arg.getDirectColumn();
-      expression = null;
-    } else {
-      fieldName = null;
-      expression = arg.getExpression();
-    }
-
     return Aggregation.create(createMinAggregatorFactory(valueType, name, fieldName, expression, macroTable));
   }
 

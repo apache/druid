@@ -16,17 +16,20 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
 import {
   Button,
-  InputGroup,
+  Classes,
   Dialog,
   IDialogProps,
-  Classes,
-  Intent,
+  InputGroup,
+  Intent
 } from "@blueprintjs/core";
-import { IconNames, FormGroup } from '../components/filler';
+import * as React from 'react';
 
+import { FormGroup, IconNames } from '../components/filler';
+import { localStorageGet, localStorageSet } from "../utils";
+
+const druidEditingAuthor = "DRUID_EDITING_AUTHOR";
 
 export interface SnitchDialogProps extends IDialogProps {
   onSave: (author: string, comment: string) => void;
@@ -50,7 +53,11 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
       comment: "",
       author: "",
       saveDisabled: true
-    }
+    };
+  }
+
+  componentDidMount(): void {
+    this.getDefaultAuthor();
   }
 
   save = () => {
@@ -61,6 +68,15 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     if (onClose) onClose();
   }
 
+  getDefaultAuthor() {
+    const author: string | null = localStorageGet(druidEditingAuthor);
+    if (author) {
+      this.setState({
+        author
+      });
+    }
+  }
+
   changeAuthor(newAuthor: string)  {
     const { author, comment } = this.state;
 
@@ -68,6 +84,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
       author: newAuthor,
       saveDisabled: !newAuthor || !comment
     });
+    localStorageSet(druidEditingAuthor, newAuthor);
   }
 
   changeComment(newComment: string)  {
@@ -136,7 +153,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
         ? <Button disabled={saveDisabled} text="Save" onClick={this.save} intent={Intent.PRIMARY as any} rightIconName={IconNames.TICK}/>
         : <Button disabled={saveDisabled} text="Next" onClick={this.goToFinalStep} intent={Intent.PRIMARY as any} rightIconName={IconNames.ARROW_RIGHT}/>
       }
-    </div>
+    </div>;
   }
 
   render() {
