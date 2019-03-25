@@ -268,20 +268,21 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         if (q.size() > limit) {
           q.poll();
         }
-      }
-      yielder = yielder.next(null);
-      // Finish scanning the interval containing the limit row
-      if (numRowsScanned > limit && finalInterval == null) {
-        long timestampOfLimitRow = next.getFirstEventTimestamp(scanQuery.getResultFormat());
-        for (SegmentDescriptor descriptor : descriptorsOrdered) {
-          if (descriptor.getInterval().contains(timestampOfLimitRow)) {
-            finalInterval = descriptor.getInterval();
+
+        // Finish scanning the interval containing the limit row
+        if (numRowsScanned > limit && finalInterval == null) {
+          long timestampOfLimitRow = srv.getFirstEventTimestamp(scanQuery.getResultFormat());
+          for (SegmentDescriptor descriptor : descriptorsOrdered) {
+            if (descriptor.getInterval().contains(timestampOfLimitRow)) {
+              finalInterval = descriptor.getInterval();
+            }
+          }
+          if (finalInterval == null) {
+            throw new ISE("WTH???  Row came from an unscanned interval?");
           }
         }
-        if (finalInterval == null) {
-          throw new ISE("WTH???  Row came from an unscanned interval?");
-        }
       }
+      yielder = yielder.next(null);
       doneScanning = yielder.isDone() ||
                      (finalInterval != null &&
                       !finalInterval.contains(next.getFirstEventTimestamp(scanQuery.getResultFormat())));
