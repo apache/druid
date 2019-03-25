@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 import com.google.common.base.Optional;
 import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
 import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
+import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.codehaus.plexus.util.ExceptionUtils;
 import org.joda.time.DateTime;
@@ -51,17 +52,15 @@ public class SeekableStreamSupervisorStateManager
 
   private SupervisorState state;
   // Group error (throwable) events by the type of Throwable (i.e. class name)
-  private final ConcurrentHashMap<String, List<ThrowableEvent>> throwableEvents;
+  private final ConcurrentHashMap<Class, List<ThrowableEvent>> throwableEvents;
   // Remove all throwableEvents that aren't in this set at the end of each run (transient)
-  private final Set<String> errorsEncounteredOnRun;
+  private final Set<Class> errorsEncounteredOnRun;
   private final int unhealthinessThreshold;
   private boolean atLeastOneSuccessfulRun;
   private boolean currentRunSuccessful;
-  private int numConsecutiveUnsuccessfulRuns;
 
   public SeekableStreamSupervisorStateManager(
       SupervisorState initialState,
-      int maxSavedExceptions,
       int unhealthinessThreshold
   )
   {
@@ -75,67 +74,73 @@ public class SeekableStreamSupervisorStateManager
 
   public Optional<SupervisorState> setStateIfNoSuccessfulRunYet(SupervisorState state)
   {
-    if (atLeastOneSuccessfulRun) {
-      this.state = state;
-      return Optional.of(state);
+    if (!atLeastOneSuccessfulRun) {
+      return Optional.of(setState(state));
     }
     return Optional.absent();
   }
 
   public SupervisorState setState(SupervisorState state)
   {
+    if (state.equals(SupervisorState.SUSPENDED))
+    {
+      atLeastOneSuccessfulRun = false; // We want the startup states again
+    }
     this.state = state;
     return state;
   }
 
-  // Returns new state
-  public SupervisorState storeThrowableEventAndDetermineNewState(Throwable t)
+  public void storeThrowableEvent(Throwable t)
   {
-    if (t instanceof NonTransientStreamException) {
-      return storeThrowableEventAndUpdateState(t, SupervisorState.UNABLE_TO_CONNECT_TO_STREAM);
+    if (t instanceof PossiblyTransientStreamException && !atLeastOneSuccessfulRun) {
+      t = new NonTransientStreamException(t);
     } else if (t instanceof PossiblyTransientStreamException) {
-      if (atLeastOneSuccessfulRun) {
-        return storeThrowableEventAndUpdateState(t, SupervisorState.LOST_CONTACT_WITH_STREAM);
-      }
+      t = new TransientStreamException(t);
     }
-    return state;
-  }
 
-  // Returns new state
-  public SupervisorState storeThrowableEventAndUpdateState(Throwable t, SupervisorState newState)
-  {
-    List<ThrowableEvent> throwableEventsForClassT = throwableEvents.getOrDefault(t.getClass().getCanonicalName(), new ArrayList<>());
+    List<ThrowableEvent> throwableEventsForClassT = throwableEvents.getOrDefault(
+        t.getClass().getCanonicalName(),
+        new ArrayList<>()
+    );
     throwableEventsForClassT.add(
         new ThrowableEvent(
             t.getMessage(),
             ExceptionUtils.getStackTrace(t),
             DateTimes.nowUtc()
         ));
-    throwableEvents.put(t.getClass().getCanonicalName(), throwableEventsForClassT);
-    this.state = newState;
-    return state;
+    throwableEvents.put(t.getClass(), throwableEventsForClassT);
   }
 
   public void markRunFinished()
   {
-    if (!currentRunSuccessful) {
-      numConsecutiveUnsuccessfulRuns++;
-    } else {
+    if (currentRunSuccessful) {
       atLeastOneSuccessfulRun = true;
     }
 
-    for (String throwableClass : errorsEncounteredOnRun)
-    {
-      if (!throwableEvents.keySet().contains(throwableClass))
-      {
+    for (Class throwableClass : errorsEncounteredOnRun) {
+      if (!throwableEvents.keySet().contains(throwableClass)) {
         throwableEvents.remove(throwableClass);
       }
     }
     // At this point, all the events in throwableEvents should be non-transient
     errorsEncounteredOnRun.clear();
+
+    boolean stateUpdated = false;
+    for (Map.Entry<Class, List<ThrowableEvent>> events : throwableEvents.entrySet()) {
+      if (events.getValue().size() > unhealthinessThreshold && events.getKey().equals(NonTransientStreamException.class)) {
+        setState(SupervisorState.UNABLE_TO_CONNECT_TO_STREAM);
+        stateUpdated = true;
+      } else if (events.getValue().size() > unhealthinessThreshold) {
+        setState(SupervisorState.UNHEALTHY);
+        stateUpdated = true;
+      }
+    }
+    if (!stateUpdated) {
+      setState(SupervisorState.RUNNING);
+    }
   }
 
-  public Map<String, List<ThrowableEvent>> getThrowableEventList()
+  public Map<Class, List<ThrowableEvent>> getThrowableEventList()
   {
     return throwableEvents;
   }
