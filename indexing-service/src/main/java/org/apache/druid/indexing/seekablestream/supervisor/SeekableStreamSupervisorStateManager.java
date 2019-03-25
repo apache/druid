@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
 import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
@@ -150,7 +151,7 @@ public class SeekableStreamSupervisorStateManager
     return state;
   }
 
-  public class ThrowableEvent
+  public static class ThrowableEvent
   {
     private String message;
     private String stackTrace;
@@ -165,6 +166,24 @@ public class SeekableStreamSupervisorStateManager
       this.stackTrace = stackTrace;
       this.message = message;
       this.timestamp = timestamp;
+    }
+
+    @JsonProperty
+    public String getMessage()
+    {
+      return message;
+    }
+
+    @JsonProperty
+    public String getStackTrace()
+    {
+      return stackTrace;
+    }
+
+    @JsonProperty
+    public DateTime getTimestamp()
+    {
+      return timestamp;
     }
   }
 }
