@@ -124,7 +124,7 @@ public class ScanQueryRunnerFactoryTest
         factory.sortAndLimitScanResultValuesPriorityQueue(
             inputSequence,
             query,
-            ImmutableList.of(new SegmentDescriptor(new Interval(DateTimes.of("2010-01-01"), DateTimes.of("2019-01-01").plusHours(1)), "1", 0))
+            ImmutableList.of(new Interval(DateTimes.of("2010-01-01"), DateTimes.of("2019-01-01").plusHours(1)))
         ).toList();
 
     // check each scan result value has one event

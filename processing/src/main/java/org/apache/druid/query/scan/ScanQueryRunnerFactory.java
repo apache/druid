@@ -67,6 +67,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   @Inject
   public ScanQueryRunnerFactory(
       ScanQueryQueryToolChest toolChest,
+
       ScanQueryEngine engine,
       ScanQueryConfig scanQueryConfig
   )
@@ -92,12 +93,12 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     return (queryPlus, responseContext) -> {
       ScanQuery query = (ScanQuery) queryPlus.getQuery();
 
-      List<SegmentDescriptor> descriptorsOrdered =
-          ((MultipleSpecificSegmentSpec) query.getQuerySegmentSpec()).getDescriptors(); // Ascending time order
+      List<Interval> intervalsOrdered =
+          query.getQuerySegmentSpec().getIntervals(); // Ascending time order
       List<QueryRunner<ScanResultValue>> queryRunnersOrdered = Lists.newArrayList(queryRunners); // Ascending time order by default
 
       if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
-        descriptorsOrdered = Lists.reverse(descriptorsOrdered);
+        intervalsOrdered = Lists.reverse(intervalsOrdered);
         queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
       }
 
@@ -127,28 +128,28 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                 input -> input.run(queryPlus, responseContext)
             )),
             query,
-            descriptorsOrdered
+            intervalsOrdered
         );
       } else {
         Preconditions.checkState(
-            descriptorsOrdered.size() == queryRunnersOrdered.size(),
-            "Number of segment descriptors does not equal number of "
+            intervalsOrdered.size() == queryRunnersOrdered.size(),
+            "Number of intervals from the query segment spec does not equal number of "
             + "query runners...something went wrong!"
         );
 
         // Combine the two lists of segment descriptors and query runners into a single list of
         // segment descriptors - query runner pairs.  This makes it easier to use stream operators.
-        List<Pair<SegmentDescriptor, QueryRunner<ScanResultValue>>> descriptorsAndRunnersOrdered = new ArrayList<>();
+        List<Pair<Interval, QueryRunner<ScanResultValue>>> intervalsAndRunnersOrdered = new ArrayList<>();
         for (int i = 0; i < queryRunnersOrdered.size(); i++) {
-          descriptorsAndRunnersOrdered.add(new Pair<>(descriptorsOrdered.get(i), queryRunnersOrdered.get(i)));
+          intervalsAndRunnersOrdered.add(new Pair<>(intervalsOrdered.get(i), queryRunnersOrdered.get(i)));
         }
 
         // Group the list of pairs by interval.  The LinkedHashMap will have an interval paired with a list of all the
         // query runners for that segment
-        LinkedHashMap<Interval, List<Pair<SegmentDescriptor, QueryRunner<ScanResultValue>>>> partitionsGroupedByInterval =
-            descriptorsAndRunnersOrdered.stream()
+        LinkedHashMap<Interval, List<Pair<Interval, QueryRunner<ScanResultValue>>>> partitionsGroupedByInterval =
+            intervalsAndRunnersOrdered.stream()
                                         .collect(Collectors.groupingBy(
-                                            x -> x.lhs.getInterval(),
+                                            x -> x.lhs,
                                             LinkedHashMap::new,
                                             Collectors.toList()
                                         ));
@@ -224,7 +225,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   Sequence<ScanResultValue> sortAndLimitScanResultValuesPriorityQueue(
       Sequence<ScanResultValue> inputSequence,
       ScanQuery scanQuery,
-      List<SegmentDescriptor> descriptorsOrdered
+      List<Interval> intervalsOrdered
   )
   {
     Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
@@ -267,9 +268,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       // Finish scanning the interval containing the limit row
       if (numRowsScanned > limit && finalInterval == null) {
         long timestampOfLimitRow = next.getFirstEventTimestamp(scanQuery.getResultFormat());
-        for (SegmentDescriptor descriptor : descriptorsOrdered) {
-          if (descriptor.getInterval().contains(timestampOfLimitRow)) {
-            finalInterval = descriptor.getInterval();
+        for (Interval interval : intervalsOrdered) {
+          if (interval.contains(timestampOfLimitRow)) {
+            finalInterval = interval;
           }
         }
         if (finalInterval == null) {
