@@ -45,10 +45,10 @@ import java.util.Map;
  * 1) No time ordering: expects a Sequence of ScanResultValues which each contain up to query.batchSize events.
  *    The iterator will be "done" when the limit of events is reached.  The final ScanResultValue might contain
  *    fewer than batchSize events so that the limit number of events is returned.
- * 2) Time Ordering, CTX_KEY_OUTERMOST==null or true: Same behaviour as no time ordering
- * 3) Time Ordering, CTX_KEY_OUTERMOST=false: The Sequence returned in this case should contain ScanResultValues
- *    that contain only one event each.  This iterator will perform batching according to query.batchSize until
- *    the limit is reached.
+ * 2) Time Ordering, CTX_KEY_OUTERMOST false: Same behaviour as no time ordering
+ * 3) Time Ordering, CTX_KEY_OUTERMOST=true or null: The Sequence processed in this case should contain ScanResultValues
+ *    that contain only one event each for the CachingClusteredClient n-way merge.  This iterator will perform
+ *    batching according to query batch size until the limit is reached.
  */
 public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultValue>
 {
@@ -98,9 +98,9 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
     }
 
     // We want to perform multi-event ScanResultValue limiting if we are not time-ordering or are at the
-    // outer level if we are time-ordering
+    // inner-level if we are time-ordering
     if (query.getOrder() == ScanQuery.Order.NONE ||
-        query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
+        !query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
       ScanResultValue batch = yielder.get();
       List events = (List) batch.getEvents();
       if (events.size() <= limit - count) {
@@ -115,8 +115,8 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
         return new ScanResultValue(batch.getSegmentId(), batch.getColumns(), events.subList(0, numLeft));
       }
     } else {
-      // Perform single-event ScanResultValue batching.  Each scan result value from the yielder in this case will only
-      // have one event so there's no need to iterate through events.
+      // Perform single-event ScanResultValue batching at the outer level.  Each scan result value from the yielder
+      // in this case will only have one event so there's no need to iterate through events.
       int batchSize = query.getBatchSize();
       List<Object> eventsToAdd = new ArrayList<>(batchSize);
       List<String> columns = new ArrayList<>();
