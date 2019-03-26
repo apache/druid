@@ -29,7 +29,6 @@ import java.util.Map;
 
 public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<Integer, Long>
 {
-
   public KafkaSupervisorReportPayload(
       String dataSource,
       String topic,
@@ -43,7 +42,6 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
       Map<Class, List<SeekableStreamSupervisorStateManager.ThrowableEvent>> recentErrors
-
   )
   {
     super(
@@ -61,7 +59,6 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
         recentErrors
     );
   }
-
 
   @Override
   public String toString()
@@ -81,5 +78,4 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
            ", suspended=" + getSuspended() +
            '}';
   }
-
 }
