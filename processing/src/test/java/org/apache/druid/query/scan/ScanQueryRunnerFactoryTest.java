@@ -121,7 +121,7 @@ public class ScanQueryRunnerFactoryTest
     });
     Sequence<ScanResultValue> inputSequence = Sequences.simple(srvs);
     List<ScanResultValue> output =
-        factory.sortAndLimitScanResultValuesPriorityQueue(
+        factory.priorityQueueSortAndLimit(
             inputSequence,
             query,
             ImmutableList.of(new SegmentDescriptor(new Interval(DateTimes.of("2010-01-01"), DateTimes.of("2019-01-01").plusHours(1)), "1", 0))
@@ -154,5 +154,11 @@ public class ScanQueryRunnerFactoryTest
     for (int i = 0; i < query.getLimit() && i < output.size(); i++) {
       Assert.assertEquals((long) expectedEventTimestamps.get(i), output.get(i).getFirstEventTimestamp(resultFormat));
     }
+  }
+
+  @Test
+  public void testNWayMerge()
+  {
+
   }
 }

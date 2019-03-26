@@ -126,7 +126,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
 
         if (query.getLimit() <= scanQueryConfig.getMaxRowsQueuedForOrdering()) {
           // Use priority queue strategy
-          return sortAndLimitScanResultValuesPriorityQueue(
+          return priorityQueueSortAndLimit(
               Sequences.concat(Sequences.map(
                   Sequences.simple(queryRunnersOrdered),
                   input -> input.run(queryPlus, responseContext)
@@ -182,35 +182,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                                               .collect(Collectors.toList()))
                                            .collect(Collectors.toList());
 
-            // Starting from the innermost Sequences.map:
-            // (1) Deaggregate each ScanResultValue returned by the query runners
-            // (2) Combine the deaggregated ScanResultValues into a single sequence
-            // (3) Create a sequence of results from each runner in the group and flatmerge based on timestamp
-            // (4) Create a sequence of results from each runner group
-            // (5) Join all the results into a single sequence
-
-            return Sequences.concat(
-                Sequences.map(
-                    Sequences.simple(groupedRunners),
-                    runnerGroup ->
-                        Sequences.map(
-                            Sequences.simple(runnerGroup),
-                            (input) -> Sequences.concat(
-                                Sequences.map(
-                                    input.run(queryPlus, responseContext),
-                                    srv -> Sequences.simple(srv.toSingleEventScanResultValues())
-                                )
-                            )
-                        ).flatMerge(
-                            seq -> seq,
-                            Ordering.from(new ScanResultValueTimestampComparator(
-                                query
-                            )).reverse()
-                        )
-                )
-            ).limit(
-                Math.toIntExact(query.getLimit())
-            );
+            return nWayMergeAndLimit(groupedRunners, queryPlus, responseContext);
           }
           throw new UOE(
               "Time ordering for queries of %,d partitions per segment and a row limit of %,d is not supported."
@@ -227,7 +199,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   }
 
   @VisibleForTesting
-  Sequence<ScanResultValue> sortAndLimitScanResultValuesPriorityQueue(
+  Sequence<ScanResultValue> priorityQueueSortAndLimit(
       Sequence<ScanResultValue> inputSequence,
       ScanQuery scanQuery,
       List<SegmentDescriptor> descriptorsOrdered
@@ -297,6 +269,43 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     return Sequences.simple(sortedElements);
   }
 
+  @VisibleForTesting
+  Sequence<ScanResultValue> nWayMergeAndLimit(
+      List<List<QueryRunner<ScanResultValue>>> groupedRunners,
+      QueryPlus<ScanResultValue> queryPlus,
+      Map<String, Object> responseContext
+  )
+  {
+    // Starting from the innermost Sequences.map:
+    // (1) Deaggregate each ScanResultValue returned by the query runners
+    // (2) Combine the deaggregated ScanResultValues into a single sequence
+    // (3) Create a sequence of results from each runner in the group and flatmerge based on timestamp
+    // (4) Create a sequence of results from each runner group
+    // (5) Join all the results into a single sequence
+
+    return Sequences.concat(
+        Sequences.map(
+            Sequences.simple(groupedRunners),
+            runnerGroup ->
+                Sequences.map(
+                    Sequences.simple(runnerGroup),
+                    (input) -> Sequences.concat(
+                        Sequences.map(
+                            input.run(queryPlus, responseContext),
+                            srv -> Sequences.simple(srv.toSingleEventScanResultValues())
+                        )
+                    )
+                ).flatMerge(
+                    seq -> seq,
+                    Ordering.from(new ScanResultValueTimestampComparator(
+                        (ScanQuery) queryPlus.getQuery()
+                    )).reverse()
+                )
+        )
+    ).limit(
+        Math.toIntExact(((ScanQuery) (queryPlus.getQuery())).getLimit())
+    );
+  }
 
   @Override
   public QueryToolChest<ScanResultValue, ScanQuery> getToolchest()

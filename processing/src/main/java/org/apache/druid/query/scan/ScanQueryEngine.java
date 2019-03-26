@@ -259,7 +259,7 @@ public class ScanQueryEngine
   }
 
   /**
-   * If we're performing time-ordering, we want to scan through the first `limit` rows ignoring the number
+   * If we're performing time-ordering, we want to scan through the first `limit` rows in each segment ignoring the number
    * of rows already counted on other segments.
    */
   private long calculateLimit(ScanQuery query, Map<String, Object> responseContext)
