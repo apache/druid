@@ -17,45 +17,34 @@
  * under the License.
  */
 
-package org.apache.druid.tasklogs;
+package org.apache.druid.tests.indexer;
 
-import com.google.common.base.Optional;
-import com.google.common.io.ByteSource;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.testing.guice.DruidTestModuleFactory;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.Guice;
+import org.testng.annotations.Test;
 
-import java.io.File;
-
-public class NoopTaskLogs implements TaskLogs
+/**
+ * This is a test for the Kafka indexing service with transactional topics
+ */
+@Guice(moduleFactory = DruidTestModuleFactory.class)
+public class ITKafkaIndexingServiceTransactionalTest extends AbstractKafkaIndexerTest
 {
-  private final Logger log = new Logger(TaskLogs.class);
+  private static final Logger LOG = new Logger(ITKafkaIndexingServiceTransactionalTest.class);
+  private static final String DATASOURCE = "kafka_indexing_service_txn_test";
 
-  @Override
-  public Optional<ByteSource> streamTaskLog(String taskid, long offset)
+  @Test
+  public void testKafka()
   {
-    return Optional.absent();
+    LOG.info("Starting test: ITKafkaIndexingServiceTransactionalTest");
+    doKafkaIndexTest(DATASOURCE, true);
   }
 
-  @Override
-  public void pushTaskLog(String taskid, File logFile)
+  @AfterClass
+  public void afterClass()
   {
-    log.info("Not pushing logs for task: %s", taskid);
-  }
-
-  @Override
-  public void pushTaskReports(String taskid, File reportFile)
-  {
-    log.info("Not pushing reports for task: %s", taskid);
-  }
-
-  @Override
-  public void killAll()
-  {
-    log.info("Noop: No task logs are deleted.");
-  }
-
-  @Override
-  public void killOlderThan(long timestamp)
-  {
-    log.info("Noop: No task logs are deleted.");
+    LOG.info("teardown");
+    doTearDown();
   }
 }

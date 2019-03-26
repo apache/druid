@@ -75,6 +75,11 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
 {
+  public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
+      new TypeReference<TreeMap<Integer, Map<String, String>>>()
+      {
+      };
+
   private static final String NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;
   private final AWSCredentialsConfig awsCredentialsConfig;
@@ -151,20 +156,10 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
       RowIngestionMetersFactory rowIngestionMetersFactory
   ) throws JsonProcessingException
   {
-    final String checkpoints = sortingMapper.writerFor(new TypeReference<TreeMap<Integer, Map<String, String>>>()
-    {
-    }).writeValueAsString(sequenceOffsets);
-    final Map<String, Object> context = spec.getContext() == null
-                                        ? ImmutableMap.of(
-        "checkpoints",
-        checkpoints,
-        IS_INCREMENTAL_HANDOFF_SUPPORTED,
-        true
-    ) : ImmutableMap.<String, Object>builder()
-                                            .put("checkpoints", checkpoints)
-                                            .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
-                                            .putAll(spec.getContext())
-                                            .build();
+    final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
+    final Map<String, Object> context = createBaseTaskContexts();
+    context.put(CHECKPOINTS_CTX_KEY, checkpoints);
+
     List<SeekableStreamIndexTask<String, String>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
       String taskId = Joiner.on("_").join(baseSequenceName, RandomIdUtils.getRandomId());
@@ -313,7 +308,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String>
   }
 
   @Override
-  protected boolean useExclusiveStartSequenceNumberForStartSequence()
+  protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
   }
