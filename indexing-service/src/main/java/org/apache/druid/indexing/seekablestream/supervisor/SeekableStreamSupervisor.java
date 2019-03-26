@@ -122,6 +122,7 @@ import java.util.stream.Stream;
 public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType> implements Supervisor
 {
   public static final String IS_INCREMENTAL_HANDOFF_SUPPORTED = "IS_INCREMENTAL_HANDOFF_SUPPORTED";
+  public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
 
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
@@ -164,7 +165,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         ImmutableMap<PartitionIdType, SequenceOffsetType> startingSequences,
         Optional<DateTime> minimumMessageTime,
         Optional<DateTime> maximumMessageTime,
-        Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
+        @Nullable Set<PartitionIdType> exclusiveStartSequenceNumberPartitions
     )
     {
       this.groupId = groupId;
@@ -174,7 +175,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       this.checkpointSequences.put(0, startingSequences);
       this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions != null
                                                     ? exclusiveStartSequenceNumberPartitions
-                                                    : new HashSet<>();
+                                                    : Collections.emptySet();
       this.baseSequenceName = generateSequenceName(startingSequences, minimumMessageTime, maximumMessageTime);
     }
 
@@ -2382,7 +2383,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (!getNotSetMarker().equals(sequence)) {
         // if we are given a startingOffset (set by a previous task group which is pending completion) then use it
         if (!isEndOfShard(sequence)) {
-          builder.put(partition, makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForStartSequence()));
+          builder.put(partition, makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence()));
         }
       } else {
         // if we don't have a startingOffset (first run or we had some previous failures and reset the sequences) then
@@ -2428,7 +2429,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           }
         }
       }
-      return makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForStartSequence());
+      return makeSequenceNumber(sequence, useExclusiveStartSequenceNumberForNonFirstSequence());
     } else {
       boolean useEarliestSequenceNumber = ioConfig.isUseEarliestSequenceNumber();
       if (subsequentlyDiscoveredPartitions.contains(partition)) {
@@ -2504,7 +2505,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (PartitionIdType partition : startPartitions.keySet()) {
       endPartitions.put(partition, getEndOfPartitionMarker());
     }
-    Set<PartitionIdType> exclusiveStartSequenceNumberPartitions = activelyReadingTaskGroups.get(groupId).exclusiveStartSequenceNumberPartitions;
+    Set<PartitionIdType> exclusiveStartSequenceNumberPartitions = activelyReadingTaskGroups
+        .get(groupId)
+        .exclusiveStartSequenceNumberPartitions;
 
     DateTime minimumMessageTime = activelyReadingTaskGroups.get(groupId).minimumMessageTime.orNull();
     DateTime maximumMessageTime = activelyReadingTaskGroups.get(groupId).maximumMessageTime.orNull();
@@ -2696,6 +2699,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
+  protected Map<String, Object> createBaseTaskContexts()
+  {
+    final Map<String, Object> contexts = new HashMap<>();
+    contexts.put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
+    if (spec.getContext() != null) {
+      contexts.putAll(spec.getContext());
+    }
+    return contexts;
+  }
+
   /**
    * creates a specific task IOConfig instance for Kafka/Kinesis
    *
@@ -2863,5 +2876,5 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * For example, in Kinesis, the start offsets are inclusive for the first sequence, but exclusive for following
    * sequences. In Kafka, start offsets are always inclusive.
    */
-  protected abstract boolean useExclusiveStartSequenceNumberForStartSequence();
+  protected abstract boolean useExclusiveStartSequenceNumberForNonFirstSequence();
 }

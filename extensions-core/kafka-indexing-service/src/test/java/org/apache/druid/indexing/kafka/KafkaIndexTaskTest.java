@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kafka;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,6 +68,7 @@ import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisor;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.test.TestBroker;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -2143,9 +2145,10 @@ public class KafkaIndexTaskTest
     // and this task should start reading from offset 2 for partition 0
     sequences.put(1, ImmutableMap.of(0, 2L));
     final Map<String, Object> context = new HashMap<>();
-    context.put("checkpoints", objectMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
-    {
-    }).writeValueAsString(sequences));
+    context.put(
+        SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY,
+        objectMapper.writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF).writeValueAsString(sequences)
+    );
 
     final KafkaIndexTask task = createTask(
         null,
@@ -2454,7 +2457,7 @@ public class KafkaIndexTaskTest
   private KafkaIndexTask createTask(
       final String taskId,
       final KafkaIndexTaskIOConfig ioConfig
-  )
+  ) throws JsonProcessingException
   {
     return createTask(taskId, DATA_SCHEMA, ioConfig);
   }
@@ -2463,7 +2466,7 @@ public class KafkaIndexTaskTest
       final String taskId,
       final KafkaIndexTaskIOConfig ioConfig,
       final Map<String, Object> context
-  )
+  ) throws JsonProcessingException
   {
     return createTask(taskId, DATA_SCHEMA, ioConfig, context);
   }
@@ -2472,7 +2475,18 @@ public class KafkaIndexTaskTest
       final String taskId,
       final DataSchema dataSchema,
       final KafkaIndexTaskIOConfig ioConfig
-  )
+  ) throws JsonProcessingException
+  {
+    final Map<String, Object> context = new HashMap<>();
+    return createTask(taskId, dataSchema, ioConfig, context);
+  }
+
+  private KafkaIndexTask createTask(
+      final String taskId,
+      final DataSchema dataSchema,
+      final KafkaIndexTaskIOConfig ioConfig,
+      final Map<String, Object> context
+  ) throws JsonProcessingException
   {
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
         1000,
@@ -2493,57 +2507,17 @@ public class KafkaIndexTaskTest
         maxParseExceptions,
         maxSavedParseExceptions
     );
-    final Map<String, Object> context = isIncrementalHandoffSupported
-                                        ? ImmutableMap.of(
-        SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED,
-        true
-    )
-                                        : null;
-    final KafkaIndexTask task = new KafkaIndexTask(
-        taskId,
-        null,
-        cloneDataSchema(dataSchema),
-        tuningConfig,
-        ioConfig,
-        context,
-        null,
-        null,
-        rowIngestionMetersFactory,
-        objectMapper
-    );
-    task.setPollRetryMs(POLL_RETRY_MS);
-    return task;
-  }
-
-
-  private KafkaIndexTask createTask(
-      final String taskId,
-      final DataSchema dataSchema,
-      final KafkaIndexTaskIOConfig ioConfig,
-      final Map<String, Object> context
-  )
-  {
-    final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
-        1000,
-        null,
-        maxRowsPerSegment,
-        null,
-        new Period("P1Y"),
-        null,
-        null,
-        null,
-        true,
-        reportParseExceptions,
-        handoffConditionTimeout,
-        resetOffsetAutomatically,
-        null,
-        null,
-        logParseExceptions,
-        maxParseExceptions,
-        maxSavedParseExceptions
-    );
     if (isIncrementalHandoffSupported) {
       context.put(SeekableStreamSupervisor.IS_INCREMENTAL_HANDOFF_SUPPORTED, true);
+
+      if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
+        final TreeMap<Integer, Map<Integer, Long>> checkpoints = new TreeMap<>();
+        checkpoints.put(0, ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+        final String checkpointsJson = objectMapper
+            .writerFor(KafkaSupervisor.CHECKPOINTS_TYPE_REF)
+            .writeValueAsString(checkpoints);
+        context.put(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY, checkpointsJson);
+      }
     }
 
     final KafkaIndexTask task = new KafkaIndexTask(
@@ -2629,8 +2603,8 @@ public class KafkaIndexTaskTest
       objectMapper.registerModule(module);
     }
     final TaskConfig taskConfig = new TaskConfig(
-        new File(directory, "taskBaseDir").getPath(),
-        null,
+        new File(directory, "baseDir").getPath(),
+        new File(directory, "baseTaskDir").getPath(),
         null,
         50000,
         null,
