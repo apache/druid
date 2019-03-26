@@ -100,7 +100,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private DataSegmentKiller dataSegmentKiller;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
     allocator = new TestSegmentAllocator(DATA_SOURCE, Granularities.HOUR);

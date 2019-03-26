@@ -598,7 +598,7 @@ public class MemcachedCache implements Cache
 
   @Override
   @LifecycleStop
-  public void close() throws IOException
+  public void close()
   {
     monitor.stop();
   }
