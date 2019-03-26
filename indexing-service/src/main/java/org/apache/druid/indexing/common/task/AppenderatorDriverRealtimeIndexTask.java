@@ -233,7 +233,7 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
   }
 
   @Override
-  public TaskStatus run(final TaskToolbox toolbox) throws Exception
+  public TaskStatus run(final TaskToolbox toolbox)
   {
     runThread = Thread.currentThread();
 
