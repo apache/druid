@@ -32,7 +32,8 @@ import java.util.concurrent.TimeoutException;
  *
  * Fields:
  * - "errorCode" is a well-defined errorCode code taken from a specific list (see the static constants). "Unknown exception"
- * represents all wrapped exceptions other than interrupt/timeout/cancellation.
+ * represents all wrapped exceptions other than interrupt, timeout, cancellation, resource limit exceeded, unauthorized
+ * request, and unsupported operation.
  * - "errorMessage" is the toString of the wrapped exception
  * - "errorClass" is the class of the wrapped exception
  * - "host" is the host that the errorCode occurred on
@@ -47,6 +48,7 @@ public class QueryInterruptedException extends RuntimeException
   public static final String QUERY_CANCELLED = "Query cancelled";
   public static final String RESOURCE_LIMIT_EXCEEDED = "Resource limit exceeded";
   public static final String UNAUTHORIZED = "Unauthorized request.";
+  public static final String UNSUPPORTED_OPERATION = "Unsupported operation";
   public static final String UNKNOWN_EXCEPTION = "Unknown exception";
 
   private final String errorCode;
@@ -135,6 +137,8 @@ public class QueryInterruptedException extends RuntimeException
       return QUERY_TIMEOUT;
     } else if (e instanceof ResourceLimitExceededException) {
       return RESOURCE_LIMIT_EXCEEDED;
+    } else if (e instanceof UnsupportedOperationException) {
+      return UNSUPPORTED_OPERATION;
     } else {
       return UNKNOWN_EXCEPTION;
     }
