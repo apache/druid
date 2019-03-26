@@ -97,9 +97,10 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
       throw new UOE(ScanQuery.ResultFormat.RESULT_FORMAT_VALUE_VECTOR + " is not supported yet");
     }
 
-    // We want to perform batching if we are not time-ordering or are at the outer level if we are re time-ordering
+    // We want to perform multi-event ScanResultValue limiting if we are not time-ordering or are at the
+    // outer level if we are time-ordering
     if (query.getOrder() == ScanQuery.Order.NONE ||
-        !query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
+        query.getContextBoolean(ScanQuery.CTX_KEY_OUTERMOST, true)) {
       ScanResultValue batch = yielder.get();
       List events = (List) batch.getEvents();
       if (events.size() <= limit - count) {
@@ -114,8 +115,8 @@ public class ScanQueryLimitRowIterator implements CloseableIterator<ScanResultVa
         return new ScanResultValue(batch.getSegmentId(), batch.getColumns(), events.subList(0, numLeft));
       }
     } else {
-      // Perform single-event ScanResultValue batching.  Each scan result value in this case will only have one event
-      // so there's no need to iterate through events.
+      // Perform single-event ScanResultValue batching.  Each scan result value from the yielder in this case will only
+      // have one event so there's no need to iterate through events.
       int batchSize = query.getBatchSize();
       List<Object> eventsToAdd = new ArrayList<>(batchSize);
       List<String> columns = new ArrayList<>();
