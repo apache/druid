@@ -399,13 +399,7 @@ public class StringUtils
       return new String(single, StandardCharsets.UTF_8);
     }
     if (Integer.MAX_VALUE / count < len) {
-      String errMsg = StringUtils.format(
-          "The byte array of this string [%s] is too large, "
-          + "so if it is repeated [%d] times, it will cause OutOfMemoryError!",
-          s,
-          count
-      );
-      throw new RuntimeException(errMsg);
+      throw new RuntimeException("The produced string is too large.");
     }
     final int limit = len * count;
     final byte[] multiple = new byte[limit];
