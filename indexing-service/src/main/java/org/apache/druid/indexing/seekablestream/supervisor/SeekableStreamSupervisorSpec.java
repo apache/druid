@@ -37,6 +37,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -51,6 +52,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
   private final DataSchema dataSchema;
   private final SeekableStreamSupervisorTuningConfig tuningConfig;
   private final SeekableStreamSupervisorIOConfig ioConfig;
+  @Nullable
   private final Map<String, Object> context;
   protected final ServiceEmitter emitter;
   protected final DruidMonitorSchedulerConfig monitorSchedulerConfig;
@@ -61,7 +63,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("tuningConfig") SeekableStreamSupervisorTuningConfig tuningConfig,
       @JsonProperty("ioConfig") SeekableStreamSupervisorIOConfig ioConfig,
-      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("context") @Nullable Map<String, Object> context,
       @JsonProperty("suspended") Boolean suspended,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
@@ -107,6 +109,7 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return ioConfig;
   }
 
+  @Nullable
   @JsonProperty
   public Map<String, Object> getContext()
   {
