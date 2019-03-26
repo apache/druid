@@ -79,6 +79,9 @@
     <inspection_tool class="IteratorHasNextCallsIteratorNext" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="IteratorNextDoesNotThrowNoSuchElementException" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="Java8MapForEach" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="JavadocReference" enabled="true" level="ERROR" enabled_by_default="true">
+      <option name="REPORT_INACCESSIBLE" value="false" />
+    </inspection_tool>
     <inspection_tool class="JsonDuplicatePropertyKeys" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="JsonStandardCompliance" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="LengthOneStringInIndexOf" enabled="true" level="ERROR" enabled_by_default="true" />
@@ -269,6 +272,30 @@
         <constraint name="b" within="" contains="" />
         <constraint name="c" within="" contains="" />
       </searchConfiguration>
+      <searchConfiguration name="No need to wrap a collection as unmodifiable before addAll()" text="$c$.addAll(Collections.$unmodifiableMethod$($c2$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="c" within="" contains="" />
+        <constraint name="unmodifiableMethod" regexp="unmodifiable.*" within="" contains="" />
+        <constraint name="c2" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="No need to copy a collection as immutable before addAll()" text="$m$.addAll($ImmutableCollection$.copyOf($x$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="m" within="" contains="" />
+        <constraint name="x" maxCount="2147483647" within="" contains="" />
+        <constraint name="ImmutableCollection" regexp="Immutable.*" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="No need to wrap a map as unmodifiable before putAll()" text="$m$.putAll(Collections.$unmodifiableMapMethod$($m2$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="m" within="" contains="" />
+        <constraint name="m2" within="" contains="" />
+        <constraint name="unmodifiableMapMethod" regexp="unmodifiable.*" within="" contains="" />
+      </searchConfiguration>
+      <searchConfiguration name="No need to copy a map to immutable before putAll()" text="$m$.putAll($ImmutableMap$.copyOf($x$))" recursive="true" caseInsensitive="true" type="JAVA">
+        <constraint name="__context__" target="true" within="" contains="" />
+        <constraint name="m" within="" contains="" />
+        <constraint name="x" maxCount="2147483647" within="" contains="" />
+        <constraint name="ImmutableMap" regexp="Immutable.*" within="" contains="" />
+      </searchConfiguration>
     </inspection_tool>
     <inspection_tool class="SimplifyStreamApiCallChains" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="SpellCheckingInspection" enabled="false" level="TYPO" enabled_by_default="false">
@@ -278,6 +305,10 @@
     </inspection_tool>
     <inspection_tool class="StaticCallOnSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StaticFieldReferenceOnSubclass" enabled="true" level="ERROR" enabled_by_default="true" />
+    <inspection_tool class="StaticPseudoFunctionalStyleMethod" enabled="true" level="INFORMATION" enabled_by_default="true">
+      <!-- The current rate of false-positives produced by this inspection is very high,
+           see https://youtrack.jetbrains.com/issue/IDEA-153047#focus=streamItem-27-3326648.0-0 -->
+    </inspection_tool>
     <inspection_tool class="StringConcatenationInFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationInMessageFormatCall" enabled="true" level="ERROR" enabled_by_default="true" />
     <inspection_tool class="StringConcatenationMissingWhitespace" enabled="true" level="WARNING" enabled_by_default="true" />

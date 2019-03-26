@@ -272,7 +272,8 @@ public class JettyServerModule extends JerseyServletModule
         }
 
         sslContextFactory.setNeedClientAuth(tlsServerConfig.isRequireClientCertificate());
-        if (tlsServerConfig.isRequireClientCertificate()) {
+        sslContextFactory.setWantClientAuth(tlsServerConfig.isRequestClientCertificate());
+        if (tlsServerConfig.isRequireClientCertificate() || tlsServerConfig.isRequestClientCertificate()) {
           if (tlsServerConfig.getCrlPath() != null) {
             // setValidatePeerCerts is used just to enable revocation checking using a static CRL file.
             // Certificate validation is always performed when client certificates are required.
@@ -441,7 +442,7 @@ public class JettyServerModule extends JerseyServletModule
             }
           }
         },
-        Lifecycle.Stage.LAST
+        Lifecycle.Stage.SERVER
     );
 
     return server;

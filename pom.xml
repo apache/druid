@@ -1489,6 +1489,9 @@
                                 <exclude>NOTICE.BINARY</exclude>
                                 <exclude>LABELS.md</exclude>
                                 <exclude>.github/ISSUE_TEMPLATE/*.md</exclude>
+                                <exclude>git.version</exclude>
+                                <exclude>node_modules/**</exclude>
+                                <exclude>coordinator-console/**</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

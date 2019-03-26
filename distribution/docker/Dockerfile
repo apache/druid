@@ -28,10 +28,6 @@ RUN \
  && tar -zxf ./distribution/target/apache-druid-${VER}-bin.tar.gz -C /opt \
  && ln -s /opt/apache-druid-${VER} /opt/druid
 
-RUN wget -O /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar http://central.maven.org/maven2/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar \
- && sha256sum --ignore-missing -c /src/distribution/docker/sha256sums.txt \
- && ln -s /opt/druid/extensions/mysql-metadata-storage/mysql-connector-java-5.1.38.jar /opt/druid/lib
-
 RUN addgroup --gid 1000 druid \
  && adduser --home /opt/druid --shell /bin/sh --no-create-home --uid 1000 --gecos '' --gid 1000 --disabled-password druid \
  && mkdir -p /opt/druid/var \

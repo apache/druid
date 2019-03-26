@@ -16,28 +16,34 @@
  * limitations under the License.
  */
 
+import { Button, Intent, Switch } from "@blueprintjs/core";
 import axios from 'axios';
 import * as React from 'react';
-import * as classNames from 'classnames';
-import ReactTable from "react-table";
-import { Filter } from "react-table";
-import { Button, Intent, Switch } from "@blueprintjs/core";
+import ReactTable, { Filter } from "react-table";
+
 import { IconNames } from "../components/filler";
-import { AppToaster } from '../singletons/toaster';
 import { RuleEditor } from '../components/rule-editor';
+import { TableColumnSelection } from "../components/table-column-selection";
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
+import { CompactionDialog } from "../dialogs/compaction-dialog";
 import { RetentionDialog } from '../dialogs/retention-dialog';
+import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
-  formatNumber,
-  formatBytes,
   countBy,
+  formatBytes,
+  formatNumber,
+  getDruidErrorMessage,
   lookupBy,
-  QueryManager,
-  pluralIfNeeded, queryDruidSql, getDruidErrorMessage
+  pluralIfNeeded,
+  queryDruidSql,
+  QueryManager, TableColumnSelectionHandler
 } from "../utils";
 
 import "./datasource-view.scss";
+
+const datasourceTableColumnSelection = "datasource-table-column-selection";
+const tableColumns: string[] = ["Datasource", "Availability", "Retention", "Compaction", "Size", "Num rows", "Actions"];
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -54,15 +60,17 @@ export interface DatasourcesViewState {
   datasourcesLoading: boolean;
   datasources: Datasource[] | null;
   tiers: string[];
-  defaultRules: any[]
+  defaultRules: any[];
   datasourcesError: string | null;
   datasourcesFilter: Filter[];
 
   showDisabled: boolean;
   retentionDialogOpenOn: { datasource: string, rules: any[] } | null;
+  compactionDialogOpenOn: {datasource: string, configData: any} | null;
   dropDataDatasource: string | null;
   enableDatasource: string | null;
   killDatasource: string | null;
+
 }
 
 export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
@@ -73,7 +81,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   static formatRules(rules: any[]): string {
     if (rules.length === 0) {
       return 'No rules';
-    } if (rules.length <= 2) {
+    } else if (rules.length <= 2) {
       return rules.map(RuleEditor.ruleToString).join(', ');
     } else {
       return `${RuleEditor.ruleToString(rules[0])} +${rules.length - 1} more rules`;
@@ -81,6 +89,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   }
 
   private datasourceQueryManager: QueryManager<string, { tiers: string[], defaultRules: any[], datasources: Datasource[] }>;
+  private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -94,10 +103,16 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
 
       showDisabled: false,
       retentionDialogOpenOn: null,
+      compactionDialogOpenOn: null,
       dropDataDatasource: null,
       enableDatasource: null,
       killDatasource: null
+
     };
+
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
+      datasourceTableColumnSelection, () => this.setState({})
+    );
   }
 
   componentDidMount(): void {
@@ -149,6 +164,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   SUM("num_rows") AS num_rows
 FROM sys.segments
 GROUP BY 1`);
+
   }
 
   componentWillUnmount(): void {
@@ -161,7 +177,7 @@ GROUP BY 1`);
     return <AsyncActionDialog
       action={
         dropDataDatasource ? async () => {
-          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dropDataDatasource}`, {})
+          const resp = await axios.delete(`/druid/coordinator/v1/datasources/${dropDataDatasource}`, {});
           return resp.data;
         } : null
       }
@@ -186,7 +202,7 @@ GROUP BY 1`);
     return <AsyncActionDialog
       action={
         enableDatasource ? async () => {
-          const resp = await axios.post(`/druid/coordinator/v1/datasources/${enableDatasource}`, {})
+          const resp = await axios.post(`/druid/coordinator/v1/datasources/${enableDatasource}`, {});
           return resp.data;
         } : null
       }
@@ -271,6 +287,44 @@ GROUP BY 1`);
     }, 50);
   }
 
+  private saveCompaction = async (compactionConfig: any) => {
+    if (compactionConfig === null) return;
+    try {
+      await axios.post(`/druid/coordinator/v1/config/compaction`, compactionConfig);
+      this.setState({compactionDialogOpenOn: null});
+      this.datasourceQueryManager.rerunLastQuery();
+    } catch (e) {
+      AppToaster.show({
+        message: e,
+        intent: Intent.DANGER
+      });
+    }
+  }
+
+  private deleteCompaction = async () => {
+    const {compactionDialogOpenOn} = this.state;
+    if (compactionDialogOpenOn === null) return;
+    const datasource = compactionDialogOpenOn.datasource;
+    AppToaster.show({
+      message: `Are you sure you want to delete ${datasource}'s compaction?`,
+      intent: Intent.DANGER,
+      action: {
+        text: "Confirm",
+        onClick: async () => {
+          try {
+            await axios.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
+            this.setState({compactionDialogOpenOn: null}, () => this.datasourceQueryManager.rerunLastQuery());
+          } catch (e) {
+            AppToaster.show({
+              message: e,
+              intent: Intent.DANGER
+            });
+          }
+        }
+      }
+    });
+  }
+
   renderRetentionDialog() {
     const { retentionDialogOpenOn, tiers } = this.state;
     if (!retentionDialogOpenOn) return null;
@@ -285,21 +339,34 @@ GROUP BY 1`);
     />;
   }
 
+  renderCompactionDialog() {
+    const { datasources, compactionDialogOpenOn } = this.state;
+
+    if (!compactionDialogOpenOn || !datasources) return;
+
+    return <CompactionDialog
+      datasource={compactionDialogOpenOn.datasource}
+      configData={compactionDialogOpenOn.configData}
+      onClose={() => this.setState({compactionDialogOpenOn: null})}
+      onSave={this.saveCompaction}
+      onDelete={this.deleteCompaction}
+    />;
+  }
+
   renderDatasourceTable() {
     const { goToSegments } = this.props;
     const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
-
+    const { tableColumnSelectionHandler } = this;
     let data = datasources || [];
     if (!showDisabled) {
-      data = data.filter(d => !d.disabled)
+      data = data.filter(d => !d.disabled);
     }
-
     return <>
       <ReactTable
         data={data}
         loading={datasourcesLoading}
         noDataText={!datasourcesLoading && datasources && !datasources.length ? 'No datasources' : (datasourcesError || '')}
-        filterable={true}
+        filterable
         filtered={datasourcesFilter}
         onFilteredChange={(filtered, column) => {
           this.setState({ datasourcesFilter: filtered });
@@ -311,8 +378,9 @@ GROUP BY 1`);
             width: 150,
             Cell: row => {
               const value = row.value;
-              return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }) }}>{value}</a>
-            }
+              return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
+            },
+            show: tableColumnSelectionHandler.showColumn("Datasource")
           },
           {
             Header: "Availability",
@@ -346,7 +414,8 @@ GROUP BY 1`);
                 </span>;
 
               }
-            }
+            },
+            show: tableColumnSelectionHandler.showColumn("Availability")
           },
           {
             Header: 'Retention',
@@ -362,11 +431,15 @@ GROUP BY 1`);
                 text = DatasourcesView.formatRules(rules);
               }
 
-              return <span>
+              return <span
+                onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}
+                className={"clickable-cell"}
+              >
                 {text}&nbsp;
-                <a onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}>&#x270E;</a>
+                <a>&#x270E;</a>
               </span>;
-            }
+            },
+            show: tableColumnSelectionHandler.showColumn("Retention")
           },
           {
             Header: 'Compaction',
@@ -375,29 +448,41 @@ GROUP BY 1`);
             filterable: false,
             Cell: row => {
               const { compaction } = row.original;
+              const compactionOpenOn: {datasource: string, configData: any} | null = {
+                datasource: row.original.datasource,
+                configData: compaction
+              };
               let text: string;
               if (compaction) {
                 text = `Target: ${formatBytes(compaction.targetCompactionSizeBytes)}`;
               } else {
                 text = 'None';
               }
-              return <span>{text} <a onClick={() => alert('ToDo')}>&#x270E;</a></span>;
+              return <span
+                className={"clickable-cell"}
+                onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}
+              >
+                {text}&nbsp;
+                <a>&#x270E;</a>
+              </span>;
             },
-            show: false // This feature is not ready, it will be enabled later
+            show: tableColumnSelectionHandler.showColumn("Compaction")
           },
           {
             Header: 'Size',
             accessor: 'size',
             filterable: false,
             width: 100,
-            Cell: (row) => formatBytes(row.value)
+            Cell: (row) => formatBytes(row.value),
+            show: tableColumnSelectionHandler.showColumn("Size")
           },
           {
             Header: 'Num rows',
             accessor: 'num_rows',
             filterable: false,
             width: 100,
-            Cell: (row) => formatNumber(row.value)
+            Cell: (row) => formatNumber(row.value),
+            show: tableColumnSelectionHandler.showColumn("Num rows")
           },
           {
             Header: 'Actions',
@@ -412,13 +497,14 @@ GROUP BY 1`);
                 return <div>
                   <a onClick={() => this.setState({ enableDatasource: datasource })}>Enable</a>&nbsp;&nbsp;&nbsp;
                   <a onClick={() => this.setState({ killDatasource: datasource })}>Permanently delete</a>
-                </div>
+                </div>;
               } else {
                 return <div>
                   <a onClick={() => this.setState({ dropDataDatasource: datasource })}>Drop data</a>
-                </div>
+                </div>;
               }
-            }
+            },
+            show: tableColumnSelectionHandler.showColumn("Actions")
           }
         ]}
         defaultPageSize={50}
@@ -428,12 +514,14 @@ GROUP BY 1`);
       {this.renderEnableAction()}
       {this.renderKillAction()}
       {this.renderRetentionDialog()}
+      {this.renderCompactionDialog()}
     </>;
   }
 
   render() {
     const { goToSql } = this.props;
     const { showDisabled } = this.state;
+    const { tableColumnSelectionHandler } = this;
 
     return <div className="data-sources-view app-view">
       <div className="control-bar">
@@ -453,9 +541,13 @@ GROUP BY 1`);
           label="Show disabled"
           onChange={() => this.setState({ showDisabled: !showDisabled })}
         />
+        <TableColumnSelection
+          columns={tableColumns}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
+        />
       </div>
       {this.renderDatasourceTable()}
-    </div>
+    </div>;
   }
 }
-

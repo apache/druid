@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.io.UnsupportedEncodingException;
@@ -80,7 +79,7 @@ public class StringUtils
     }
     catch (UnsupportedEncodingException e) {
       // Should never happen
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -103,7 +102,7 @@ public class StringUtils
     }
     catch (UnsupportedEncodingException e) {
       // Should never happen
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

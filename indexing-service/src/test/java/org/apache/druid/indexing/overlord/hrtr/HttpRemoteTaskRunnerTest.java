@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.hrtr;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -1327,7 +1326,7 @@ public class HttpRemoteTaskRunnerTest
           Thread.sleep(500);
         }
         catch (InterruptedException ex) {
-          throw Throwables.propagate(ex);
+          throw new RuntimeException(ex);
         }
 
         if (toImmutable().getCurrCapacityUsed() > worker.getCapacity()) {
@@ -1370,7 +1369,7 @@ public class HttpRemoteTaskRunnerTest
                   Thread.sleep(100);
                 }
                 catch (InterruptedException ex) {
-                  throw Throwables.propagate(ex);
+                  throw new RuntimeException(ex);
                 }
 
                 tasksSnapshotRef.get().put(announcement.getTaskId(), announcement);

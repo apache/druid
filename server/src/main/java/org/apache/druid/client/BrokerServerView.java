@@ -219,7 +219,7 @@ public class BrokerServerView implements TimelineServerView
 
   private QueryableDruidServer removeServer(DruidServer server)
   {
-    for (DataSegment segment : server.getSegments()) {
+    for (DataSegment segment : server.iterateAllSegments()) {
       serverRemovedSegment(server.getMetadata(), segment);
     }
     return clients.remove(server.getName());

@@ -142,7 +142,7 @@ public class S3TaskLogs implements TaskLogs
     }
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, IOException.class);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

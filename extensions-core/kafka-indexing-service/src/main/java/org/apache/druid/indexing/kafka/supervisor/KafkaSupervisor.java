@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -39,10 +38,11 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -59,6 +59,7 @@ import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -78,6 +79,11 @@ import java.util.stream.Collectors;
  */
 public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 {
+  public static final TypeReference<TreeMap<Integer, Map<Integer, Long>>> CHECKPOINTS_TYPE_REF =
+      new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
+      {
+      };
+
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
   private static final long MINIMUM_GET_OFFSET_PERIOD_MILLIS = 5000;
   private static final long INITIAL_GET_OFFSET_DELAY_MILLIS = 15000;
@@ -206,8 +212,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
     return new KafkaIndexTaskIOConfig(
         groupId,
         baseSequenceName,
-        new SeekableStreamPartitions<>(kafkaIoConfig.getTopic(), startPartitions),
-        new SeekableStreamPartitions<>(kafkaIoConfig.getTopic(), endPartitions),
+        new SeekableStreamStartSequenceNumbers<>(kafkaIoConfig.getTopic(), startPartitions, Collections.emptySet()),
+        new SeekableStreamEndSequenceNumbers<>(kafkaIoConfig.getTopic(), endPartitions),
         kafkaIoConfig.getConsumerProperties(),
         kafkaIoConfig.getPollTimeout(),
         true,
@@ -227,20 +233,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
       RowIngestionMetersFactory rowIngestionMetersFactory
   ) throws JsonProcessingException
   {
-    final String checkpoints = sortingMapper.writerWithType(new TypeReference<TreeMap<Integer, Map<Integer, Long>>>()
-    {
-    }).writeValueAsString(sequenceOffsets);
-    final Map<String, Object> context = spec.getContext() == null
-                                        ? ImmutableMap.of(
-        "checkpoints",
-        checkpoints,
-        IS_INCREMENTAL_HANDOFF_SUPPORTED,
-        true
-    ) : ImmutableMap.<String, Object>builder()
-                                            .put("checkpoints", checkpoints)
-                                            .put(IS_INCREMENTAL_HANDOFF_SUPPORTED, true)
-                                            .putAll(spec.getContext())
-                                            .build();
+    final String checkpoints = sortingMapper.writerFor(CHECKPOINTS_TYPE_REF).writeValueAsString(sequenceOffsets);
+    final Map<String, Object> context = createBaseTaskContexts();
+    context.put(CHECKPOINTS_CTX_KEY, checkpoints);
 
     List<SeekableStreamIndexTask<Integer, Long>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
@@ -281,9 +276,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
   }
 
   @Override
-  protected KafkaDataSourceMetadata createDataSourceMetaData(String topic, Map<Integer, Long> map)
+  protected KafkaDataSourceMetadata createDataSourceMetaDataForReset(String topic, Map<Integer, Long> map)
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(topic, map));
+    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(topic, map, Collections.emptySet()));
   }
 
   @Override
@@ -351,6 +346,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
 
   @Override
   protected boolean isEndOfShard(Long seqNum)
+  {
+    return false;
+  }
+
+  @Override
+  protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return false;
   }
