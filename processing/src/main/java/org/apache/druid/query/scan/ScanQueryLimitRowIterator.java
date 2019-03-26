@@ -35,7 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-
 /**
  * This iterator supports iteration through a Sequence returned by a ScanResultValue QueryRunner.  Its behaviour
  * varies depending on whether the query is returning time-ordered values and whether the CTX_KEY_OUTERMOST flag is

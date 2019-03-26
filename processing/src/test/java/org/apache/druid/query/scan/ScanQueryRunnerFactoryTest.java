@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 
 @RunWith(Parameterized.class)
@@ -165,7 +164,7 @@ public class ScanQueryRunnerFactoryTest
       scanResultValues3.add(ScanQueryTestHelper.generateScanResultValue(timestamp, resultFormat, 1));
     }
 
-    if ( query.getOrder() == ScanQuery.Order.DESCENDING) {
+    if (query.getOrder() == ScanQuery.Order.DESCENDING) {
       Collections.reverse(scanResultValues1);
       Collections.reverse(scanResultValues2);
       Collections.reverse(scanResultValues3);

@@ -158,7 +158,8 @@ The format of the result when resultFormat equals `compactedList`:
 The Scan query currently supports ordering based on timestamp for non-legacy queries.  Note that using time ordering
 will yield results that do not indicate which segment rows are from (`segmentId` will show up as `null`).  Furthermore,
 time ordering is only supported where the result set limit is less than `druid.query.scan.maxRowsQueuedForOrdering` 
-rows **or** all segments scanned have fewer than `druid.query.scan.maxSegmentPartitionsOrderedInMemory` partitions.  The 
+rows **or** all segments scanned have fewer than `druid.query.scan.maxSegmentPartitionsOrderedInMemory` partitions.  Also,
+time ordering is not support for queries issued directly to historicals unless a list of segments is specified.  The 
 reasoning behind these limitations is that the implementation of time ordering uses two strategies that can consume too 
 much heap memory if left unbounded.  These strategies (listed below) are chosen on a per-Historical basis depending on
 query result set limit and the number of segments being scanned.
