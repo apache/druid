@@ -206,7 +206,6 @@ public class DimFilterHavingSpec extends BaseHavingSpec
         }
         outputStream.write(HavingSpecUtil.STRING_SEPARATOR);
       }
-
       return outputStream.toByteArray();
     }
     catch (IOException ex) {

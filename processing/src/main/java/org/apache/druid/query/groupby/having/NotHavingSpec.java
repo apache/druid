@@ -107,7 +107,6 @@ public class NotHavingSpec extends BaseHavingSpec
     ByteBuffer buffer = ByteBuffer.allocate(1 + havingSpecBytes.length)
                                   .put(HavingSpecUtil.CACHE_TYPE_ID_NOT)
                                   .put(havingSpecBytes);
-
     return buffer.array();
   }
 }

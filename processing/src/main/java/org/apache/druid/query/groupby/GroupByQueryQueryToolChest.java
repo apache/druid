@@ -502,7 +502,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             builder.appendStrings(subTotalSpec);
           }
         }
-
         return builder.build();
       }
 

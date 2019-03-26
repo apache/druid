@@ -35,8 +35,14 @@ import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.groupby.having.AndHavingSpec;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
+import org.apache.druid.query.groupby.having.EqualToHavingSpec;
 import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
+import org.apache.druid.query.groupby.having.HavingSpec;
+import org.apache.druid.query.groupby.having.LessThanHavingSpec;
+import org.apache.druid.query.groupby.having.NotHavingSpec;
+import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
@@ -44,6 +50,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.List;
 
 public class GroupByQueryQueryToolChestTest
 {
@@ -148,7 +155,6 @@ public class GroupByQueryQueryToolChestTest
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
-
     final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
@@ -215,6 +221,93 @@ public class GroupByQueryQueryToolChestTest
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
+    final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
+        null,
+        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+    ).getCacheStrategy(query2);
+
+    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assert.assertFalse(Arrays.equals(
+        strategy1.computeResultLevelCacheKey(query1),
+        strategy2.computeResultLevelCacheKey(query2)
+    ));
+  }
+
+  @Test
+  public void testResultLevelCacheKeyWithAndHavingSpec()
+  {
+    final List<HavingSpec> havings = Arrays.asList(
+        new GreaterThanHavingSpec("agg", Double.valueOf(1.3)),
+        new OrHavingSpec(
+            Arrays.asList(
+                new LessThanHavingSpec("lessAgg", Long.valueOf(1L)),
+                new NotHavingSpec(new EqualToHavingSpec("equalAgg", Double.valueOf(2)))
+            )
+        )
+    );
+    final HavingSpec andHavingSpec = new AndHavingSpec(havings);
+
+    final List<HavingSpec> havings2 = Arrays.asList(
+        new GreaterThanHavingSpec("agg", Double.valueOf(13.0)),
+        new OrHavingSpec(
+            Arrays.asList(
+                new LessThanHavingSpec("lessAgg", Long.valueOf(1L)),
+                new NotHavingSpec(new EqualToHavingSpec("equalAgg", Double.valueOf(22)))
+            )
+        )
+    );
+    final HavingSpec andHavingSpec2 = new AndHavingSpec(havings2);
+
+    final GroupByQuery query1 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setPostAggregatorSpecs(
+            ImmutableList.of(
+                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                ImmutableList.of(
+                    new OrderByColumnSpec("post", OrderByColumnSpec.Direction.DESCENDING)
+                ),
+                Integer.MAX_VALUE
+            )
+        )
+        .setHavingSpec(andHavingSpec)
+        .build();
+
+    final GroupByQuery query2 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(new DefaultDimensionSpec("quality", "alias"))
+        .setAggregatorSpecs(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index"))
+        .setPostAggregatorSpecs(
+            ImmutableList.of(
+                new ExpressionPostAggregator("post", "alias + 'x'", null, TestExprMacroTable.INSTANCE)
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                ImmutableList.of(
+                    new OrderByColumnSpec("post", OrderByColumnSpec.Direction.DESCENDING)
+                ),
+                Integer.MAX_VALUE
+            )
+        )
+        .setHavingSpec(andHavingSpec2)
+        .build();
+
+    final CacheStrategy<Row, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
+        null,
+        QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
+    ).getCacheStrategy(query1);
 
     final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
@@ -311,7 +404,6 @@ public class GroupByQueryQueryToolChestTest
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
 
-
     final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
@@ -378,7 +470,6 @@ public class GroupByQueryQueryToolChestTest
         null,
         QueryRunnerTestHelper.sameThreadIntervalChunkingQueryRunnerDecorator()
     ).getCacheStrategy(query1);
-
 
     final CacheStrategy<Row, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
         null,
