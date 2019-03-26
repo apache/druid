@@ -61,6 +61,9 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
       final ScanQuery scanQuery = ((ScanQuery) (queryPlus.getQuery()))
           .withNonNullLegacy(scanQueryConfig);
       final QueryPlus<ScanResultValue> queryPlusWithNonNullLegacy = queryPlus.withQuery(scanQuery);
+      if (scanQuery.getLimit() == Long.MAX_VALUE) {
+        return runner.run(queryPlusWithNonNullLegacy, responseContext);
+      }
       return new BaseSequence<>(
           new BaseSequence.IteratorMaker<ScanResultValue, ScanQueryLimitRowIterator>()
           {
