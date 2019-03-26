@@ -26,6 +26,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -109,5 +110,24 @@ public class AndHavingSpec extends BaseHavingSpec
     sb.append("{havingSpecs=").append(havingSpecs);
     sb.append('}');
     return sb.toString();
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final byte[][] havingBytes = new byte[havingSpecs.size()][];
+    int havingBytesSize = 0;
+    int index = 0;
+    for (HavingSpec spec : havingSpecs) {
+      havingBytes[index] = spec.getCacheKey();
+      havingBytesSize += havingBytes[index].length;
+      ++index;
+    }
+    ByteBuffer buffer = ByteBuffer.allocate(1 + havingBytesSize)
+                                  .put(HavingSpecUtil.CACHE_TYPE_ID_AND);
+    for (byte[] havingByte : havingBytes) {
+      buffer.put(havingByte);
+    }
+    return buffer.array();
   }
 }

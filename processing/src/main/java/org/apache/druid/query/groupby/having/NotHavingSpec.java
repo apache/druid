@@ -25,6 +25,7 @@ import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ValueType;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
@@ -97,5 +98,16 @@ public class NotHavingSpec extends BaseHavingSpec
   public int hashCode()
   {
     return havingSpec != null ? havingSpec.hashCode() : 0;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    byte[] havingSpecBytes = havingSpec.getCacheKey();
+    ByteBuffer buffer = ByteBuffer.allocate(1 + havingSpecBytes.length)
+                                  .put(HavingSpecUtil.CACHE_TYPE_ID_NOT)
+                                  .put(havingSpecBytes);
+
+    return buffer.array();
   }
 }

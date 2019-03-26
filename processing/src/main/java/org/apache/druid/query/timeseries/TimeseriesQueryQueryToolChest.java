@@ -275,6 +275,24 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       }
 
       @Override
+      public byte[] computeResultLevelCacheKey(TimeseriesQuery query)
+      {
+        final CacheKeyBuilder builder = new CacheKeyBuilder(TIMESERIES_QUERY)
+            .appendBoolean(query.isDescending())
+            .appendBoolean(query.isSkipEmptyBuckets())
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimensionsFilter())
+            .appendCacheables(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns())
+            .appendCacheables(query.getPostAggregatorSpecs())
+            .appendInt(query.getLimit());
+        if (query.isGrandTotal()) {
+          builder.appendBoolean(query.getContextValue(TimeseriesQuery.CTX_GRAND_TOTAL));
+        }
+        return builder.build();
+      }
+
+      @Override
       public TypeReference<Object> getCacheObjectClazz()
       {
         return OBJECT_TYPE_REFERENCE;

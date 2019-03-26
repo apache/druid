@@ -31,4 +31,10 @@ public class AlwaysHavingSpec extends BaseHavingSpec
   {
     return true;
   }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new byte[]{HavingSpecUtil.CACHE_TYPE_ID_ALWAYS};
+  }
 }

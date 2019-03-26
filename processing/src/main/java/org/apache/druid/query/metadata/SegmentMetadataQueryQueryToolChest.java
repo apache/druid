@@ -195,6 +195,12 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       }
 
       @Override
+      public byte[] computeResultLevelCacheKey(SegmentMetadataQuery query)
+      {
+        return computeCacheKey(query);
+      }
+
+      @Override
       public TypeReference<SegmentAnalysis> getCacheObjectClazz()
       {
         return getResultTypeReference();

@@ -22,8 +22,10 @@ package org.apache.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.ValueType;
@@ -33,6 +35,8 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.Transformer;
 import org.joda.time.DateTime;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -168,6 +172,47 @@ public class DimFilterHavingSpec extends BaseHavingSpec
     }
 
     return new TransformSpec(filter, transforms).toTransformer(rowSignature);
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    try {
+      final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+      outputStream.write(HavingSpecUtil.CACHE_TYPE_ID_DIM_FILTER);
+      outputStream.write(isFinalize() ? 1 : 0);
+      outputStream.write(dimFilter.getCacheKey());
+
+      for (Map.Entry<String, AggregatorFactory> entry : aggregators.entrySet()) {
+        final String key = entry.getKey();
+        final AggregatorFactory val = entry.getValue();
+        if (!Strings.isNullOrEmpty(key)) {
+          outputStream.write(StringUtils.toUtf8(key));
+        }
+        outputStream.write(HavingSpecUtil.STRING_SEPARATOR);
+        byte[] aggregatorBytes = val.getCacheKey();
+        outputStream.write(aggregatorBytes);
+      }
+
+      for (Map.Entry<String, ValueType> entry : rowSignature.entrySet()) {
+        final String key = entry.getKey();
+        final String val = entry.getValue().toString();
+        if (!Strings.isNullOrEmpty(key)) {
+          outputStream.write(StringUtils.toUtf8(key));
+        }
+        outputStream.write(HavingSpecUtil.STRING_SEPARATOR);
+        if (!Strings.isNullOrEmpty(val)) {
+          outputStream.write(StringUtils.toUtf8(val));
+        }
+        outputStream.write(HavingSpecUtil.STRING_SEPARATOR);
+      }
+
+      return outputStream.toByteArray();
+    }
+    catch (IOException ex) {
+      // If ByteArrayOutputStream.write has problems, that is a very bad thing
+      throw new RuntimeException(ex);
+    }
   }
 
   private static class RowAsInputRow implements InputRow
