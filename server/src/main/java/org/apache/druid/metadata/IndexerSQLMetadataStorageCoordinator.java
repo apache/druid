@@ -893,7 +893,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Not in the desired start state.
       log.error(
           "Not updating metadata, existing state[%s] in metadata store doesn't match to the new start state[%s].",
-          oldCommitMetadataBytesFromDb,
+          oldCommitMetadataFromDb,
           startMetadata
       );
       return DataSourceMetadataUpdateResult.FAILURE;
