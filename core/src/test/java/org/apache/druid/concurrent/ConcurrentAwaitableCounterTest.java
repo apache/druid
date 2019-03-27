@@ -44,6 +44,7 @@ public class ConcurrentAwaitableCounterTest
           finish.countDown();
         }
         catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
           throw new RuntimeException(e);
         }
 
@@ -57,6 +58,7 @@ public class ConcurrentAwaitableCounterTest
           finish.countDown();
         }
         catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
           throw new RuntimeException(e);
         }
       }).start();
@@ -76,6 +78,7 @@ public class ConcurrentAwaitableCounterTest
         Assert.assertEquals(1, value[0]);
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
 

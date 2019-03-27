@@ -57,6 +57,7 @@ public class LifecycleLockTest
             finishLatch.countDown();
           }
           catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e);
           }
         }
@@ -99,6 +100,7 @@ public class LifecycleLockTest
             finishLatch.countDown();
           }
           catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e);
           }
         }

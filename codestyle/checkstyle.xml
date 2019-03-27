@@ -220,8 +220,7 @@
     </module>
 
     <module name="Regexp">
-      <property name="severity" value="warning"/>
-      <property name="format" value='catch \([^)]*InterruptedException[^)]*\)\s*\{\s*throw'/>
+      <property name="format" value='catch \([^)]InterruptedException[^)]*\)\s*\{\s*throw'/>
       <property name="illegalPattern" value="true"/>
       <property name="message" value="InterruptedExceptions shouldn't be ignored in new code"/>
     </module>

@@ -50,6 +50,7 @@ public class ReferenceCountingResourceHolderTest
             Thread.sleep(1);
           }
           catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e);
           }
         }
@@ -62,6 +63,7 @@ public class ReferenceCountingResourceHolderTest
         thread.join();
       }
       catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
     }

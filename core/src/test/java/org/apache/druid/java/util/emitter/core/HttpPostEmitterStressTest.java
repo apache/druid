@@ -107,6 +107,7 @@ public class HttpPostEmitterStressTest
                 Thread.sleep(10);
               }
               catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
               }
             }
