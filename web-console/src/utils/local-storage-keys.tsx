@@ -24,19 +24,20 @@ export const LocalStorageKeys = {
   SERVER_TABLE_COLUMN_SELECTION: "historical-table-column-selection" as "historical-table-column-selection",
   MIDDLEMANAGER_TABLE_COLUMN_SELECTION: "middleManager-table-column-selection" as "middleManager-table-column-selection",
   LOOKUP_TABLE_COLUMN_SELECTION: "lookup-table-column-selection" as "lookup-table-column-selection",
-  DRUID_EDITING_AUTHOR: "druid-editing-author" as "druid-editing-author"
+  DRUID_EDITING_AUTHOR: "druid-editing-author" as "druid-editing-author",
+  QUERY_KEY: 'druid-console-query' as 'druid-console-query'
 
 };
 export type LocalStorageKeys = typeof LocalStorageKeys[keyof typeof LocalStorageKeys];
 
 // ----------------------------
 
-export function localStorageSet(key: string, value: string): void {
+export function localStorageSet(key: LocalStorageKeys, value: string): void {
   if (typeof localStorage === 'undefined') return;
   localStorage.setItem(key, value);
 }
 
-export function localStorageGet(key: string): string | null {
+export function localStorageGet(key: LocalStorageKeys): string | null {
   if (typeof localStorage === 'undefined') return null;
   return localStorage.getItem(key);
 }
