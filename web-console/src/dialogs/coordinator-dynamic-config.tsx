@@ -85,13 +85,13 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     });
   }
 
-  private saveClusterConfig = async (author: string, comment: string) => {
+  private saveClusterConfig = async (comment: string) => {
     const { onClose } = this.props;
     const newState: any = this.state.dynamicConfig;
     try {
       await axios.post("/druid/coordinator/v1/config", newState, {
         headers: {
-          "X-Druid-Author": author,
+          "X-Druid-Author": "console",
           "X-Druid-Comment": comment
         }
       });

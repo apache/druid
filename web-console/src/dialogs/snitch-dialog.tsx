@@ -27,21 +27,17 @@ import {
 import * as React from 'react';
 
 import { FormGroup, IconNames } from '../components/filler';
-import { localStorageGet, localStorageSet } from "../utils";
 
 import { HistoryDialog } from "./history-dialog";
 
-const druidEditingAuthor = "DRUID_EDITING_AUTHOR";
-
 export interface SnitchDialogProps extends IDialogProps {
-  onSave: (author: string, comment: string) => void;
+  onSave: (comment: string) => void;
   saveDisabled?: boolean;
   onReset?: () => void;
   historyRecords?: any[];
 }
 
 export interface SnitchDialogState {
-  author: string;
   comment: string;
 
   showFinalStep?: boolean;
@@ -56,48 +52,24 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
 
     this.state = {
       comment: "",
-      author: "",
       saveDisabled: true
     };
   }
 
-  componentDidMount(): void {
-    this.getDefaultAuthor();
-  }
-
   save = () => {
     const { onSave, onClose } = this.props;
-    const { author, comment } = this.state;
+    const { comment } = this.state;
 
-    onSave(author, comment);
+    onSave(comment);
     if (onClose) onClose();
   }
 
-  getDefaultAuthor() {
-    const author: string | null = localStorageGet(druidEditingAuthor);
-    if (author) {
-      this.setState({
-        author
-      });
-    }
-  }
-
-  changeAuthor(newAuthor: string)  {
-    const { author, comment } = this.state;
-
-    this.setState({
-      author: newAuthor,
-      saveDisabled: !newAuthor || !comment
-    });
-    localStorageSet(druidEditingAuthor, newAuthor);
-  }
-
   changeComment(newComment: string)  {
-    const { author, comment } = this.state;
+    const { comment } = this.state;
 
     this.setState({
       comment: newComment,
-      saveDisabled: !author || !newComment
+      saveDisabled: !newComment
     });
   }
 
@@ -128,13 +100,10 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
 
   renderFinalStep() {
     const { onClose, children } = this.props;
-    const { saveDisabled, author, comment } = this.state;
+    const { saveDisabled, comment } = this.state;
 
     return <Dialog {...this.props}>
       <div className={`dialog-body ${Classes.DIALOG_BODY}`}>
-        <FormGroup label={"Who is making this change?"}>
-          <InputGroup value={author} onChange={(e: any) => this.changeAuthor(e.target.value)}/>
-        </FormGroup>
         <FormGroup label={"Why are you making this change?"} className={"comment"}>
           <InputGroup
             className="pt-large"
@@ -170,7 +139,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     return <div className={Classes.DIALOG_FOOTER_ACTIONS}>
       {showFinalStep || historyRecords === undefined
         ? null
-        : <Button style={{position: "absolute", left: "5px"}} className={"pt-minimal"} text="Audit history" onClick={this.goToHistory}/>
+        : <Button style={{position: "absolute", left: "5px"}} className={"pt-minimal"} text="History" onClick={this.goToHistory}/>
       }
 
       { showFinalStep

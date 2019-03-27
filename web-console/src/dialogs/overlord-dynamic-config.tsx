@@ -87,13 +87,13 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
     });
   }
 
-  private saveConfig = async (author: string, comment: string) => {
+  private saveConfig = async (comment: string) => {
     const { onClose } = this.props;
     const newState: any = this.state.dynamicConfig;
     try {
       await axios.post("/druid/indexer/v1/worker", newState, {
         headers: {
-          "X-Druid-Author": author,
+          "X-Druid-Author": "console",
           "X-Druid-Comment": comment
         }
       });

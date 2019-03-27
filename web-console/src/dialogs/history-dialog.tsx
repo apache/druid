@@ -46,7 +46,7 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
       content = <div className={"no-record"}>No history records available</div>;
     } else {
        content = <>
-          <h3>Audit history</h3>
+          <h3>History</h3>
           <div className={"history-record-entries"}>
             {
               historyRecords.map((record: any) => {
@@ -57,7 +57,7 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
                 return <div key={record.auditTime} className={"history-record-entry"}>
                   <Card>
                     <div className={"history-record-title"}>
-                      <h5><i>{auditInfo.author === "" ? "Anonymous" : auditInfo.author}</i></h5>
+                      <h5>Change</h5>
                       <p>{formattedTime}</p>
                     </div>
                     <hr/>

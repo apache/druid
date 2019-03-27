@@ -44,7 +44,7 @@ export interface RetentionDialogProps extends React.Props<any> {
   tiers: string[];
   onEditDefaults: () => void;
   onCancel: () => void;
-  onSave: (datasource: string, newRules: any[], author: string, comment: string) => void;
+  onSave: (datasource: string, newRules: any[], comment: string) => void;
 }
 
 export interface RetentionDialogState {
@@ -81,11 +81,11 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
     this.historyQueryManager.runQuery(`dummy`);
   }
 
-  private save = (author: string, comment: string) => {
+  private save = (comment: string) => {
     const { datasource, onSave } = this.props;
     const { currentRules } = this.state;
 
-    onSave(datasource, currentRules, author, comment);
+    onSave(datasource, currentRules, comment);
   }
 
   private changeRule = (newRule: any, index: number) => {
