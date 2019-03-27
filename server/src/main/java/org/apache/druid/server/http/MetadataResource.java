@@ -158,7 +158,7 @@ public class MetadataResource
     if (datasources != null && !datasources.isEmpty()) {
       druidDataSources = druidDataSources.stream()
                                          .filter(src -> datasources.contains(src.getName()))
-                                         .collect(Collectors.toSet());
+                                         .collect(Collectors.toList());
     }
     final Stream<DataSegment> metadataSegments = druidDataSources
         .stream()
