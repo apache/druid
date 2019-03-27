@@ -1,8 +1,8 @@
 ---
-name: Regular
+name: Other
 about: Not a template, just create a regular issue
 title: ""
-labels: 
+labels:
 assignees: ''
 
 ---
