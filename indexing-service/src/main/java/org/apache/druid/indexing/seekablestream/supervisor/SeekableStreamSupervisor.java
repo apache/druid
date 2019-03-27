@@ -61,6 +61,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -490,7 +491,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final ObjectMapper mapper,
       final SeekableStreamSupervisorSpec spec,
       final RowIngestionMetersFactory rowIngestionMetersFactory,
-      final boolean useExclusiveStartingSequence
+      final boolean useExclusiveStartingSequence,
+      final SeekableStreamSupervisorConfig streamSupervisorConfig
   )
   {
     this.taskStorage = taskStorage;
@@ -511,7 +513,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
     this.stateManager = new SeekableStreamSupervisorStateManager(
         SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
-        10); // TODO make configurable
+        streamSupervisorConfig.getSupervisorUnhealthinessThreshold(),
+        streamSupervisorConfig.getSupervisorUnhealthinessThreshold(),
+        streamSupervisorConfig.getSupervisorTaskHealthinessThreshold(),
+        streamSupervisorConfig.getSupervisorTaskHealthinessThreshold()
+    );
 
     int workerThreads = (this.tuningConfig.getWorkerThreads() != null
                          ? this.tuningConfig.getWorkerThreads()
@@ -1033,7 +1039,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     } else {
       log.info(generateReport(false).toString());
     }
-    stateManager.markRunFinished();
+    stateManager.markRunFinishedAndEvaluateHealth();
   }
 
   private void possiblyRegisterListener()

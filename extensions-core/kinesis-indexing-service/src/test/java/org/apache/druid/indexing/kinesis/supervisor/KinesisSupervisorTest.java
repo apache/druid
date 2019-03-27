@@ -58,6 +58,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
@@ -3467,7 +3468,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            null
+            null,
+            new SeekableStreamSupervisorConfig()
         ),
         rowIngestionMetersFactory
     );
@@ -3643,7 +3645,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            null
+            null,
+            new SeekableStreamSupervisorConfig()
         ),
         rowIngestionMetersFactory
     );
@@ -3705,7 +3708,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
           mapper,
           spec,
           rowIngestionMetersFactory,
-          null
+          null,
+          new SeekableStreamSupervisorConfig()
       );
       this.spec = spec;
     }

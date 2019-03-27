@@ -63,6 +63,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.Status;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.TaskReportData;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -2948,7 +2949,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            new SeekableStreamSupervisorConfig()
         ),
         rowIngestionMetersFactory
     );
@@ -3076,7 +3078,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
           taskClientFactory,
           mapper,
           spec,
-          rowIngestionMetersFactory
+          rowIngestionMetersFactory,
+          new SeekableStreamSupervisorConfig()
       );
     }
 

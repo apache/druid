@@ -21,10 +21,13 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
 import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
 import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.utils.CircularBuffer;
 import org.codehaus.plexus.util.ExceptionUtils;
 import org.joda.time.DateTime;
 
@@ -57,21 +60,33 @@ public class SeekableStreamSupervisorStateManager
   private final ConcurrentHashMap<Class, List<ThrowableEvent>> throwableEvents;
   // Remove all throwableEvents that aren't in this set at the end of each run (transient)
   private final Set<Class> errorsEncounteredOnRun;
+  private final int healthinessThreshold;
   private final int unhealthinessThreshold;
-  private boolean atLeastOneSuccessfulRun;
-  private boolean currentRunSuccessful;
+  private final int healthinessTaskThreshold;
+  private final int unhealthinessTaskThreshold;
+
+  private boolean atLeastOneSuccessfulRun = false;
+  private boolean currentRunSuccessful = true;
+  private int numConsecutiveSuccessfulRuns = 0;
+  private int numConsecutiveFailingRuns = 0;
+  private CircularBuffer<TaskState> completedTaskHistory;
 
   public SeekableStreamSupervisorStateManager(
       State initialState,
-      int unhealthinessThreshold
+      int healthinessThreshold,
+      int unhealthinessThreshold,
+      int healthinessTaskThreshold,
+      int unhealthinessTaskThreshold
   )
   {
     this.state = initialState;
     this.throwableEvents = new ConcurrentHashMap<>();
     this.errorsEncounteredOnRun = new HashSet<>();
+    this.healthinessThreshold = healthinessThreshold;
     this.unhealthinessThreshold = unhealthinessThreshold;
-    this.atLeastOneSuccessfulRun = false;
-    this.currentRunSuccessful = true;
+    this.healthinessTaskThreshold = healthinessTaskThreshold;
+    this.unhealthinessTaskThreshold = unhealthinessTaskThreshold;
+    this.completedTaskHistory = new CircularBuffer<>(Math.max(healthinessTaskThreshold, unhealthinessTaskThreshold));
   }
 
   public Optional<State> setStateIfNoSuccessfulRunYet(State state)
@@ -113,7 +128,7 @@ public class SeekableStreamSupervisorStateManager
     currentRunSuccessful = false;
   }
 
-  public void markRunFinished()
+  public void markRunFinishedAndEvaluateHealth()
   {
     if (currentRunSuccessful) {
       atLeastOneSuccessfulRun = true;
@@ -127,7 +142,7 @@ public class SeekableStreamSupervisorStateManager
     // At this point, all the events in throwableEvents should be non-transient
     errorsEncounteredOnRun.clear();
 
-    boolean noIssuesAboveThreshold = true;
+    boolean noIssues = true;
     for (Map.Entry<Class, List<ThrowableEvent>> events : throwableEvents.entrySet()) {
       if (events.getValue().size() > unhealthinessThreshold) {
         if (events.getKey().equals(NonTransientStreamException.class)) {
@@ -137,14 +152,25 @@ public class SeekableStreamSupervisorStateManager
         } else {
           setState(State.UNHEALTHY);
         }
-        noIssuesAboveThreshold = false;
+        noIssues = false;
       }
     }
 
     // TODO check task health here
 
-    if (noIssuesAboveThreshold) {
+    if (noIssues) {
+      numConsecutiveSuccessfulRuns++;
+      numConsecutiveFailingRuns = 0;
+    } else {
+      numConsecutiveFailingRuns++;
+      numConsecutiveSuccessfulRuns = 0;
+    }
+
+    if (ImmutableSet.of(State.UNHEALTHY, State.UNABLE_TO_CONNECT_TO_STREAM, State.LOST_CONTACT_WITH_STREAM)
+                    .contains(state) && numConsecutiveSuccessfulRuns > healthinessThreshold) {
       setState(State.RUNNING);
+    } else if (state == State.RUNNING && numConsecutiveFailingRuns > unhealthinessThreshold) {
+      setState(State.UNHEALTHY);
     }
   }
 

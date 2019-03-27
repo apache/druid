@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
@@ -32,7 +33,10 @@ public class SeekableStreamSupervisorStateManagerTest
   {
     stateManager = new SeekableStreamSupervisorStateManager(
         SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
-        3
+        1,
+        1,
+        1,
+        1
     );
   }
 
@@ -47,7 +51,7 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.CREATING_TASKS, stateManager.getState());
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
-    stateManager.markRunFinished();
+    stateManager.markRunFinishedAndEvaluateHealth();
 
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
@@ -57,7 +61,7 @@ public class SeekableStreamSupervisorStateManagerTest
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
-    stateManager.markRunFinished();
+    stateManager.markRunFinishedAndEvaluateHealth();
   }
 
   @Test
