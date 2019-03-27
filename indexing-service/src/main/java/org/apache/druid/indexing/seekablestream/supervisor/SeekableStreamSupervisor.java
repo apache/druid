@@ -1019,7 +1019,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // if suspended, ensure tasks have been requested to gracefully stop
     if (!spec.isSuspended()) {
       log.info("[%s] supervisor is running.", dataSource);
-      stateManager.setState(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
+      stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
       createNewTasks();
       stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.RUNNING);
     } else {

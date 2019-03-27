@@ -189,7 +189,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<Integer, Long>
         includeOffsets ? sequenceLastUpdated : null,
         spec.isSuspended(),
         stateManager.getState(),
-        stateManager.getThrowableEventList()
+        stateManager.getThrowableEvents()
     );
   }
 

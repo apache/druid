@@ -109,6 +109,7 @@ public class SeekableStreamSupervisorStateManager
             DateTimes.nowUtc()
         ));
     throwableEvents.put(t.getClass(), throwableEventsForClassT);
+    currentRunSuccessful = false;
   }
 
   public void markRunFinished()
@@ -138,12 +139,15 @@ public class SeekableStreamSupervisorStateManager
         noIssuesAboveThreshold = false;
       }
     }
+
+    // TODO check task health here
+
     if (noIssuesAboveThreshold) {
       setState(State.RUNNING);
     }
   }
 
-  public Map<Class, List<ThrowableEvent>> getThrowableEventList()
+  public Map<Class, List<ThrowableEvent>> getThrowableEvents()
   {
     return throwableEvents;
   }
@@ -177,6 +181,7 @@ public class SeekableStreamSupervisorStateManager
     }
 
     @JsonProperty
+    // TODO only serialize/expose if a debug-level property is set
     public String getStackTrace()
     {
       return stackTrace;
