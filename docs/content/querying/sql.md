@@ -601,7 +601,7 @@ Note that a segment can be served by more than one stream ingestion tasks or His
 |partition_num|LONG|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
 |num_replicas|LONG|Number of replicas of this segment currently being served|
 |num_rows|LONG|Number of rows in current segment, this value could be null if unkown to Broker at query time|
-|is_published|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store with `used=0`|
+|is_published|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store with `used=1`|
 |is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime)|
 |is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
 |payload|STRING|JSON-serialized data segment payload|
