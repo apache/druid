@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-import * as React from "react";
 import { Button, Classes, Dialog, Intent } from "@blueprintjs/core";
-import "./spec-dialog.scss"
-import AceEditor from "react-ace";
+import "brace/mode/json";
 import "brace/theme/solarized_dark";
-import "brace/mode/json"
+import * as React from "react";
+import AceEditor from "react-ace";
+
+import "./spec-dialog.scss";
 
 export interface SpecDialogProps extends React.Props<any> {
   onSubmit: (spec: JSON) => void;
@@ -47,7 +48,7 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
     super(props);
     this.state = {
       spec: ""
-    }
+    };
   }
 
   private postSpec(): void {
@@ -72,11 +73,11 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
         mode="json"
         theme="solarized_dark"
         className={"post-spec-dialog-textarea"}
-        onChange={ (e) => {this.setState({ spec: e })} }
+        onChange={(e) => { this.setState({ spec: e }); }}
         fontSize={12}
         showPrintMargin={false}
-        showGutter={true}
-        highlightActiveLine={true}
+        showGutter
+        highlightActiveLine
         value={spec}
         width={"100%"}
         setOptions={{
@@ -84,7 +85,7 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
           enableLiveAutocompletion: true,
           showLineNumbers: true,
           enableSnippets: true,
-          tabSize: 2,
+          tabSize: 2
         }}
       />
       <div className={Classes.DIALOG_FOOTER}>

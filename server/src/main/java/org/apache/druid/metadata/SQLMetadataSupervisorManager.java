@@ -19,7 +19,9 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
@@ -32,6 +34,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
@@ -51,6 +54,8 @@ import java.util.Map;
 @ManageLifecycle
 public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
 {
+  private static final Logger log = new Logger(SQLMetadataSupervisorManager.class);
+
   private final ObjectMapper jsonMapper;
   private final SQLMetadataConnector connector;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
@@ -124,21 +129,27 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                       public Pair<String, VersionedSupervisorSpec> map(int index, ResultSet r, StatementContext ctx)
                           throws SQLException
                       {
+                        SupervisorSpec payload;
                         try {
-                          SupervisorSpec payload = jsonMapper.readValue(
+                          payload = jsonMapper.readValue(
                               r.getBytes("payload"),
                               new TypeReference<SupervisorSpec>()
                               {
                               }
                           );
-                          return Pair.of(
-                              r.getString("spec_id"),
-                              new VersionedSupervisorSpec(payload, r.getString("created_date"))
-                          );
+                        }
+                        catch (JsonParseException | JsonMappingException e) {
+                          log.warn("Failed to deserialize payload for spec_id[%s]", r.getString("spec_id"));
+                          payload = null;
                         }
                         catch (IOException e) {
                           throw new RuntimeException(e);
                         }
+
+                        return Pair.of(
+                            r.getString("spec_id"),
+                            new VersionedSupervisorSpec(payload, r.getString("created_date"))
+                        );
                       }
                     }
                 ).fold(

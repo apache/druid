@@ -357,7 +357,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         task = objectMapper.readValue(resultSet.getBytes("payload"), entryType);
       }
       catch (IOException e) {
-        log.error(e, "Encountered exception while deserializing task payload, setting task to null");
+        log.warn("Encountered exception[%s] while deserializing task payload, setting payload to null", e.getMessage());
         task = null;
       }
       try {

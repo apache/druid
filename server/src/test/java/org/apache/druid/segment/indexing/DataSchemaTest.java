@@ -288,7 +288,7 @@ public class DataSchemaTest
   }
   
   @Test
-  public void testEmptyDatasource() throws Exception
+  public void testEmptyDatasource()
   {
     Map<String, Object> parser = jsonMapper.convertValue(
         new StringInputRowParser(

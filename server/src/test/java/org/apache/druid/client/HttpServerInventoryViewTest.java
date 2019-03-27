@@ -259,7 +259,7 @@ public class HttpServerInventoryViewTest
     DruidServer druidServer = httpServerInventoryView.getInventoryValue("host:8080");
     Assert.assertEquals(
         ImmutableMap.of(segment3.getId(), segment3, segment4.getId(), segment4),
-        Maps.uniqueIndex(druidServer.getSegments(), DataSegment::getId)
+        Maps.uniqueIndex(druidServer.iterateAllSegments(), DataSegment::getId)
     );
 
     druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));

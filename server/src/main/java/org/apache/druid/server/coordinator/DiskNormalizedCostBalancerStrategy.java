@@ -47,8 +47,8 @@ public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
     }
 
     int nSegments = 1;
-    if (server.getServer().getSegments().size() > 0) {
-      nSegments = server.getServer().getSegments().size();
+    if (server.getServer().getLazyAllSegments().size() > 0) {
+      nSegments = server.getServer().getLazyAllSegments().size();
     }
 
     double normalizedCost = cost / nSegments;

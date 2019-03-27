@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.nary.BinaryFn;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.hadoop.conf.Configurable;
@@ -697,37 +696,33 @@ public class DeterminePartitionsJob implements Jobby
             // One more shard to go
             final ShardSpec shardSpec;
 
-            if (currentDimPartitions.partitions.isEmpty()) {
-              shardSpec = NoneShardSpec.instance();
+            if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD) {
+              // Combine with previous shard
+              final DimPartition previousDimPartition = currentDimPartitions.partitions.remove(
+                  currentDimPartitions.partitions.size() - 1
+              );
+
+              final SingleDimensionShardSpec previousShardSpec = (SingleDimensionShardSpec) previousDimPartition.shardSpec;
+
+              shardSpec = new SingleDimensionShardSpec(
+                  currentDimPartitions.dim,
+                  previousShardSpec.getStart(),
+                  null,
+                  previousShardSpec.getPartitionNum()
+              );
+
+              log.info("Removing possible shard: %s", previousShardSpec);
+
+              currentDimPartition.rows += previousDimPartition.rows;
+              currentDimPartition.cardinality += previousDimPartition.cardinality;
             } else {
-              if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD) {
-                // Combine with previous shard
-                final DimPartition previousDimPartition = currentDimPartitions.partitions.remove(
-                    currentDimPartitions.partitions.size() - 1
-                );
-
-                final SingleDimensionShardSpec previousShardSpec = (SingleDimensionShardSpec) previousDimPartition.shardSpec;
-
-                shardSpec = new SingleDimensionShardSpec(
-                    currentDimPartitions.dim,
-                    previousShardSpec.getStart(),
-                    null,
-                    previousShardSpec.getPartitionNum()
-                );
-
-                log.info("Removing possible shard: %s", previousShardSpec);
-
-                currentDimPartition.rows += previousDimPartition.rows;
-                currentDimPartition.cardinality += previousDimPartition.cardinality;
-              } else {
-                // Create new shard
-                shardSpec = new SingleDimensionShardSpec(
-                    currentDimPartitions.dim,
-                    currentDimPartitionStart,
-                    null,
-                    currentDimPartitions.partitions.size()
-                );
-              }
+              // Create new shard
+              shardSpec = new SingleDimensionShardSpec(
+                  currentDimPartitions.dim,
+                  currentDimPartitionStart,
+                  null,
+                  currentDimPartitions.partitions.size()
+              );
             }
 
             log.info(

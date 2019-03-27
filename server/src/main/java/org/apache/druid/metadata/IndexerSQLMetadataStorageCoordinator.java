@@ -81,7 +81,6 @@ import java.util.stream.StreamSupport;
 public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
-  private static final int ALLOCATE_SEGMENT_QUIET_TRIES = 3;
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
@@ -877,17 +876,30 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       oldCommitMetadataFromDb = jsonMapper.readValue(oldCommitMetadataBytesFromDb, DataSourceMetadata.class);
     }
 
-    final boolean startMetadataMatchesExisting = oldCommitMetadataFromDb == null
-                                                 ? startMetadata.isValidStart()
-                                                 : startMetadata.matches(oldCommitMetadataFromDb);
+    final boolean startMetadataMatchesExisting;
+
+    if (oldCommitMetadataFromDb == null) {
+      startMetadataMatchesExisting = startMetadata.isValidStart();
+    } else {
+      // Checking against the last committed metadata.
+      // Converting the last one into start metadata for checking since only the same type of metadata can be matched.
+      // Even though kafka/kinesis indexing services use different sequenceNumber types for representing
+      // start and end sequenceNumbers, the below conversion is fine because the new start sequenceNumbers are supposed
+      // to be same with end sequenceNumbers of the last commit.
+      startMetadataMatchesExisting = startMetadata.asStartMetadata().matches(oldCommitMetadataFromDb.asStartMetadata());
+    }
 
     if (!startMetadataMatchesExisting) {
       // Not in the desired start state.
-      log.info("Not updating metadata, existing state is not the expected start state.");
-      log.debug("Existing database state [%s], request's start metadata [%s]", oldCommitMetadataFromDb, startMetadata);
+      log.error(
+          "Not updating metadata, existing state[%s] in metadata store doesn't match to the new start state[%s].",
+          oldCommitMetadataFromDb,
+          startMetadata
+      );
       return DataSourceMetadataUpdateResult.FAILURE;
     }
 
+    // Only endOffsets should be stored in metadata store
     final DataSourceMetadata newCommitMetadata = oldCommitMetadataFromDb == null
                                                  ? endMetadata
                                                  : oldCommitMetadataFromDb.plus(endMetadata);

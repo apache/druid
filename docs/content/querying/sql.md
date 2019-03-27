@@ -22,6 +22,13 @@ title: "SQL"
   ~ under the License.
   -->
 
+  <!-- 
+    The format of the tables that describe the functions and operators 
+    should not be changed without updating the script create-sql-function-doc 
+    in web-console/script/create-sql-function-doc, because the script detects
+    patterns in this markdown file and parse it to TypeScript file for web console
+   -->
+
 # SQL
 
 <div class="note caution">
@@ -171,6 +178,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`STRLEN(expr)`|Synonym for `LENGTH`.|
 |`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.html).|
 |`LOWER(expr)`|Returns expr in all lowercase.|
+|`PARSE_LONG(string[, radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|

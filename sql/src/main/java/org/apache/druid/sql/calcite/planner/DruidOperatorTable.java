@@ -56,6 +56,7 @@ import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
@@ -172,6 +173,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new PositionOperatorConversion())
           .add(new RegexpExtractOperatorConversion())
           .add(new RTrimOperatorConversion())
+          .add(new ParseLongOperatorConversion())
           .add(new StrposOperatorConversion())
           .add(new SubstringOperatorConversion())
           .add(new AliasedOperatorConversion(new SubstringOperatorConversion(), "SUBSTR"))

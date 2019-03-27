@@ -30,7 +30,6 @@ import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.exceptions.JedisException;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,7 +150,7 @@ public class RedisCache implements Cache
 
   @Override
   @LifecycleStop
-  public void close() throws IOException
+  public void close()
   {
     pool.close();
   }
