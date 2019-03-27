@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.codehaus.plexus.util.ExceptionUtils;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -165,7 +166,7 @@ public class SeekableStreamSupervisorStateManager
 
     public ThrowableEvent(
         String message,
-        String stackTrace,
+        @Nullable String stackTrace,
         DateTime timestamp
     )
     {
@@ -181,7 +182,8 @@ public class SeekableStreamSupervisorStateManager
     }
 
     @JsonProperty
-    // TODO only serialize/expose if a debug-level property is set
+    @Nullable
+    // TODO only set if a debug-level property is set
     public String getStackTrace()
     {
       return stackTrace;
