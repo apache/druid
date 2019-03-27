@@ -31,7 +31,6 @@ public class ClientCompactQueryTuningConfig
 {
   // These default values should be synchronized with those of IndexTuningConfig
   private static final int DEFAULT_MAX_ROWS_IN_MEMORY = 75_000;
-  private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
   private static final long DEFAULT_PUSH_TIMEOUT = 0;
@@ -39,7 +38,8 @@ public class ClientCompactQueryTuningConfig
   @Nullable
   private final Integer maxRowsPerSegment;
   private final int maxRowsInMemory;
-  private final int maxTotalRows;
+  @Nullable
+  private final Integer maxTotalRows;
   private final IndexSpec indexSpec;
   private final int maxPendingPersists;
   private final long pushTimeout;
@@ -71,7 +71,7 @@ public class ClientCompactQueryTuningConfig
   {
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-    this.maxTotalRows = maxTotalRows == null ? DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
+    this.maxTotalRows = maxTotalRows;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
     this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
     this.pushTimeout = pushTimeout == null ? DEFAULT_PUSH_TIMEOUT : pushTimeout;
@@ -97,7 +97,8 @@ public class ClientCompactQueryTuningConfig
   }
 
   @JsonProperty
-  public int getMaxTotalRows()
+  @Nullable
+  public Integer getMaxTotalRows()
   {
     return maxTotalRows;
   }
@@ -131,7 +132,7 @@ public class ClientCompactQueryTuningConfig
     }
     ClientCompactQueryTuningConfig that = (ClientCompactQueryTuningConfig) o;
     return maxRowsInMemory == that.maxRowsInMemory &&
-           maxTotalRows == that.maxTotalRows &&
+           Objects.equals(maxTotalRows, that.maxTotalRows) &&
            maxPendingPersists == that.maxPendingPersists &&
            pushTimeout == that.pushTimeout &&
            Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&

@@ -218,13 +218,39 @@ public class CoordinatorResourceTestClient
     }
   }
 
-  private StatusResponseHolder makeRequest(HttpMethod method, String url)
+  public void registerAutoCompaction(String compactionConfig)
+  {
+    makePostRequest(
+        StringUtils.format("%s/druid/coordinator/v1/config/compaction", coordinator),
+        compactionConfig
+    );
+  }
+
+  private void makePostRequest(final String url, final String jsonSpec)
   {
     try {
       StatusResponseHolder response = httpClient.go(
-          new Request(method, new URL(url)),
+          new Request(HttpMethod.POST, new URL(url)).setContent("application/json", StringUtils.toUtf8(jsonSpec)),
           responseHandler
       ).get();
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while making request to url[%s] status[%s] content[%s]",
+            url,
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private StatusResponseHolder makeRequest(HttpMethod method, String url)
+  {
+    try {
+      StatusResponseHolder response = httpClient.go(new Request(method, new URL(url)), responseHandler).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while making request to url[%s] status[%s] content[%s]",
