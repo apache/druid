@@ -887,7 +887,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       // Even though kafka/kinesis indexing services use different sequenceNumber types for representing
       // start and end sequenceNumbers, the below conversion is fine because the new start sequenceNumbers are supposed
       // to be same with end sequenceNumbers of the last commit.
-      startMetadataMatchesExisting = startMetadata.matches(oldCommitMetadataFromDb.asStartMetadata());
+      startMetadataMatchesExisting = startMetadata.asStartMetadata().matches(oldCommitMetadataFromDb.asStartMetadata());
     }
 
     if (!startMetadataMatchesExisting) {
