@@ -16,9 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.Result;
 import org.hamcrest.collection.IsMapContaining;
 import org.hamcrest.collection.IsMapWithSize;
 import org.joda.time.DateTime;
@@ -34,10 +38,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.Result;
 
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.junit.Assert.assertEquals;

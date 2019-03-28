@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

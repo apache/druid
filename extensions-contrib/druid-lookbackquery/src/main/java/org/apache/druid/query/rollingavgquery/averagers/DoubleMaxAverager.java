@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.rollingavgquery.averagers;
 
 public class DoubleMaxAverager extends BaseAverager<Number, Double>

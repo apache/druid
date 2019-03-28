@@ -16,13 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.rollingavgquery;
 
-import java.util.ArrayList;
-import java.util.Collection;
+package org.apache.druid.query.rollingavgquery;
 
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  *

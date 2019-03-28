@@ -16,15 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.rollingavgquery;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-
 import com.google.inject.Binder;
 import com.google.inject.multibindings.MapBinder;
-
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;

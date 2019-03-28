@@ -16,23 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.rollingavgquery.AveragerFactoryWrapper;
-import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-
-import org.joda.time.Period;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Function;
@@ -40,6 +28,7 @@ import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
@@ -55,8 +44,17 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.HavingSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
+import org.apache.druid.query.rollingavgquery.AveragerFactoryWrapper;
+import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
+import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.joda.time.Period;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Class that defines the fields in a druid Lookback query
@@ -206,8 +204,6 @@ public class LookbackQuery extends BaseQuery<Result<LookbackResultValue>>
       });
     }
     postProcFn = postProcFunction;
-
-
   }
 
   public static LookbackQueryBuilder builder()

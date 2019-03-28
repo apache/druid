@@ -16,10 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BaseQuery;
@@ -36,8 +37,8 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.joda.time.DateTime;
-import org.joda.time.Period;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 
 import java.util.ArrayList;
 import java.util.HashMap;

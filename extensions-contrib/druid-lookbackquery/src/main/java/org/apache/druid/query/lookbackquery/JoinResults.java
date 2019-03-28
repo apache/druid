@@ -16,9 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
+import com.google.common.base.Function;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.Result;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
@@ -26,12 +32,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-
-import com.google.common.base.Function;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.Result;
 
 /**
  * Joins the result of a Timeseries measurement query and Timeseries cohort query

@@ -16,8 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.rollingavgquery;
 
+import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Yielder;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -26,10 +30,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-
-import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
 
 /**
  *

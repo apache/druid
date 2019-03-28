@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.rollingavgquery;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -27,7 +28,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -43,6 +43,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.having.HavingSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
+import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import java.util.ArrayList;

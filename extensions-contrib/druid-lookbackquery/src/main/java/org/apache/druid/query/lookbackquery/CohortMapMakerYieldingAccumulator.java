@@ -16,11 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
-import org.joda.time.DateTime;
-
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
+import org.joda.time.DateTime;
 
 /**
  * A Yielder for incrementally consuming the cohort result set. Each call to next() consumes

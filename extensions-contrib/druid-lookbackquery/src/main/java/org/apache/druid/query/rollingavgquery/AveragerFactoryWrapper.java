@@ -16,16 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.rollingavgquery;
 
-import java.util.Comparator;
-import java.util.List;
-
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
+
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * A wrapper around averagers that makes them appear to be aggregators.

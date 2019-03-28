@@ -16,24 +16,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.rollingavgquery;
 
-import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.query.QueryContexts;
-import org.joda.time.Interval;
-import org.joda.time.Period;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
-
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.ISE;
@@ -41,23 +27,31 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.server.QueryStats;
-import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
+import org.joda.time.Interval;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * The QueryRunner for RollingAverage query
@@ -128,24 +122,6 @@ public class RollingAverageQueryRunner implements QueryRunner<Row>
       gbqResponse.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
       Sequence<Row> results = gbq.getRunner(walker).run(QueryPlus.wrap(gbq), gbqResponse);
-      try {
-        // use localhost for remote address
-        requestLogger.log(new RequestLogLine(
-            DateTimes.nowUtc(),
-            "127.0.0.1",
-            gbq,
-            new QueryStats(
-                ImmutableMap.<String, Object>of(
-                    "query/time", 0,
-                    "query/bytes", 0,
-                    "success", true
-                ))
-        ));
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-
       resultsSeq = results;
     } else {
       // no dimensions, so optimize this as a TimeSeries
@@ -166,24 +142,7 @@ public class RollingAverageQueryRunner implements QueryRunner<Row>
       tsqResponse.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
       Sequence<Result<TimeseriesResultValue>> results = tsq.getRunner(walker).run(QueryPlus.wrap(tsq), tsqResponse);
-      try {
-        // use localhost for remote address
-        requestLogger.log(new RequestLogLine(
-            DateTimes.nowUtc(),
-            "127.0.0.1",
-            tsq,
-            new QueryStats(
-                ImmutableMap.<String, Object>of(
-                    "query/time", 0,
-                    "query/bytes", 0,
-                    "success", true
-                ))
-        ));
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-
+      
       resultsSeq = Sequences.map(results, new TimeseriesResultToRow());
     }
 

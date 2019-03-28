@@ -16,13 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.rollingavgquery.averagers;
 
-import java.util.Comparator;
-import java.util.List;
+package org.apache.druid.query.rollingavgquery.averagers;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Interface representing Averager in the rollingAverage query.

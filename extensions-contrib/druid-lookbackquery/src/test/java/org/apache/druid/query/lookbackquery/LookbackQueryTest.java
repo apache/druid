@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
 import com.fasterxml.jackson.databind.Module;
@@ -26,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
 import com.google.inject.util.Providers;
-import org.apache.druid.query.rollingavgquery.DigitsRollingAverageQueryModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -34,13 +34,14 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.Query;
+import org.apache.druid.query.rollingavgquery.DigitsRollingAverageQueryModule;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.junit.Assert;

@@ -16,15 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
-import org.apache.druid.query.rollingavgquery.averagers.DoubleMeanAveragerFactory;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.Query;
@@ -40,11 +38,13 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
+import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
+import org.apache.druid.query.rollingavgquery.averagers.DoubleMeanAveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-
 import org.joda.time.Period;
 
 import java.util.Arrays;

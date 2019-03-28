@@ -16,9 +16,14 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.Yielder;
+import org.apache.druid.query.Result;
 import org.apache.druid.query.lookbackquery.CohortMapMakerYieldingAccumulator.ResultMap;
 import org.easymock.EasyMockSupport;
 import org.easymock.IAnswer;
@@ -28,11 +33,6 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.query.Result;
 
 import static junit.framework.TestCase.assertSame;
 import static org.easymock.EasyMock.anyObject;

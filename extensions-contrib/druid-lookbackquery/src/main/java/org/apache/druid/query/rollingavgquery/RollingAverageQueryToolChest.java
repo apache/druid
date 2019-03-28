@@ -16,18 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.rollingavgquery;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.inject.Inject;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.QueryMetrics;
@@ -37,7 +32,12 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.server.log.RequestLogger;
+
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The QueryToolChest for RollingAverage Query

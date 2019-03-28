@@ -16,14 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
+
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.PostAggregator;
 
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.PostAggregator;
 
 /**
  * A wrapper class to rename given PostAggregator

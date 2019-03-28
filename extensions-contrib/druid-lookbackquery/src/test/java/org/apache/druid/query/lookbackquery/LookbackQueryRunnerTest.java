@@ -16,18 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
-import org.apache.druid.query.rollingavgquery.RollingAverageQueryToolChest;
-import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -47,11 +46,12 @@ import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
 import org.apache.druid.query.groupby.having.LessThanHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
+import org.apache.druid.query.rollingavgquery.RollingAverageQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.server.log.RequestLogger;
-
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
@@ -69,15 +69,14 @@ import java.util.Map;
 
 import static org.easymock.EasyMock.and;
 import static org.easymock.EasyMock.anyObject;
-import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.capture;
-import static org.easymock.EasyMock.replay;
+import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.isA;
 import static org.easymock.EasyMock.mock;
+import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.strictMock;
 import static org.easymock.EasyMock.verify;
-
 
 public class LookbackQueryRunnerTest
 {

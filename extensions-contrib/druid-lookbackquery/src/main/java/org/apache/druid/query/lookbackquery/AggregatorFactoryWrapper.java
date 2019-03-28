@@ -16,15 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.lookbackquery;
 
-import java.util.Comparator;
-import java.util.List;
+package org.apache.druid.query.lookbackquery;
 
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
+
+import java.util.Comparator;
+import java.util.List;
 
 public class AggregatorFactoryWrapper extends AggregatorFactory
 {

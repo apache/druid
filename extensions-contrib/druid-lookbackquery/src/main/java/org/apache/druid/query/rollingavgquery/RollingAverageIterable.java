@@ -16,10 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.rollingavgquery;
 
-import org.apache.druid.query.rollingavgquery.averagers.Averager;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
+package org.apache.druid.query.rollingavgquery;
 
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -29,6 +27,8 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.rollingavgquery.averagers.Averager;
+import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;

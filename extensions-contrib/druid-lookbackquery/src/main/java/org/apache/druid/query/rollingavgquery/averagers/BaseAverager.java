@@ -16,12 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.rollingavgquery.averagers;
+
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import java.lang.reflect.Array;
 import java.util.Map;
-
-import org.apache.druid.query.aggregation.AggregatorFactory;
 
 /**
  * Common base class available for use by averagers. The base class implements methods that

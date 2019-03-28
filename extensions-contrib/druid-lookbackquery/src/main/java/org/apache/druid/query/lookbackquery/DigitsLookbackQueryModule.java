@@ -16,20 +16,19 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.query.lookbackquery;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.MapBinder;
-
 import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Query;
-
+import org.apache.druid.query.QueryToolChest;
 import java.util.Arrays;
 import java.util.List;
 

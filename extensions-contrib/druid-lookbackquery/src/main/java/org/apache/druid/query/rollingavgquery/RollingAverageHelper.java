@@ -16,15 +16,16 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.druid.query.rollingavgquery;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+package org.apache.druid.query.rollingavgquery;
 
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.dimension.DimensionSpec;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class RollingAverageHelper
 {
