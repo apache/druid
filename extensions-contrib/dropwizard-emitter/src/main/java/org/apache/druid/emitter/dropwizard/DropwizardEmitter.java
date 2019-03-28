@@ -32,7 +32,6 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,12 +68,7 @@ public class DropwizardEmitter implements Emitter
   public void start()
   {
     for (DropwizardReporter reporter : reporters) {
-      try {
-        reporter.start(metricsRegistry);
-      }
-      catch (IOException e) {
-        log.error(e, "Error while flushing Dropwizard reporter");
-      }
+      reporter.start(metricsRegistry);
     }
     started.set(true);
   }
@@ -156,12 +150,7 @@ public class DropwizardEmitter implements Emitter
   public void flush()
   {
     for (DropwizardReporter reporter : reporters) {
-      try {
-        reporter.flush();
-      }
-      catch (IOException e) {
-        log.error(e, "Error while flushing Dropwizard reporter");
-      }
+      reporter.flush();
     }
   }
 
@@ -169,12 +158,7 @@ public class DropwizardEmitter implements Emitter
   public void close()
   {
     for (DropwizardReporter reporter : reporters) {
-      try {
-        reporter.close();
-      }
-      catch (IOException e) {
-        log.error(e, "Error while closing Dropwizard reporter");
-      }
+      reporter.close();
     }
   }
 

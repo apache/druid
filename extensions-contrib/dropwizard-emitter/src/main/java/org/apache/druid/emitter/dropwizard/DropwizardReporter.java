@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.emitter.dropwizard.reporters.DropwizardConsoleReporter;
 import org.apache.druid.emitter.dropwizard.reporters.DropwizardJMXReporter;
 
-import java.io.IOException;
-
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "console", value = DropwizardConsoleReporter.class),
@@ -35,9 +33,9 @@ import java.io.IOException;
 public interface DropwizardReporter
 {
 
-  void start(MetricRegistry metricRegistry) throws IOException;
+  void start(MetricRegistry metricRegistry);
 
-  void flush() throws IOException;
+  void flush();
 
-  void close() throws IOException;
+  void close();
 }
