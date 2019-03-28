@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.joda.time.Period;
 
@@ -54,7 +54,7 @@ public class DataSourceCompactionConfig
   private final Integer maxRowsPerSegment;
   private final int maxNumSegmentsToCompact;
   private final Period skipOffsetFromLatest;
-  private final UserCompactTuningConfig tuningConfig;
+  private final UserCompactionTaskQueryTuningConfig tuningConfig;
   private final Map<String, Object> taskContext;
 
   @JsonCreator
@@ -67,7 +67,7 @@ public class DataSourceCompactionConfig
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxNumSegmentsToCompact") @Nullable Integer maxNumSegmentsToCompact,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
-      @JsonProperty("tuningConfig") @Nullable UserCompactTuningConfig tuningConfig,
+      @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
@@ -156,7 +156,7 @@ public class DataSourceCompactionConfig
 
   @JsonProperty
   @Nullable
-  public UserCompactTuningConfig getTuningConfig()
+  public UserCompactionTaskQueryTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }
@@ -205,10 +205,10 @@ public class DataSourceCompactionConfig
     );
   }
 
-  public static class UserCompactTuningConfig extends ClientCompactQueryTuningConfig
+  public static class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQueryTuningConfig
   {
     @JsonCreator
-    public UserCompactTuningConfig(
+    public UserCompactionTaskQueryTuningConfig(
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,

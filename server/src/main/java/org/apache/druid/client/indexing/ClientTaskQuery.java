@@ -34,7 +34,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = "kill", value = ClientKillUnusedSegmentsTaskQuery.class),
-    @Type(name = "compact", value = ClientCompactTaskQuery.class)
+    @Type(name = "compact", value = ClientCompactionTaskQuery.class)
 })
 public interface ClientTaskQuery
 {

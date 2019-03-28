@@ -48,7 +48,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
       boolean keepSegmentGranularity,
       @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
-      @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
   )
   {

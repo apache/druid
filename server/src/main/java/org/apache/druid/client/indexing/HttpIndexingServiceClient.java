@@ -71,7 +71,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       boolean keepSegmentGranularity,
       @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
-      @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
   )
   {
@@ -87,7 +87,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     context.put("priority", compactionTaskPriority);
 
     return runTask(
-        new ClientCompactTaskQuery(
+        new ClientCompactionTaskQuery(
             dataSource,
             segments,
             keepSegmentGranularity,

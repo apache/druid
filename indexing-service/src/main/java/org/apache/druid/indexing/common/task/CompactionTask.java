@@ -30,7 +30,7 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.ClientCompactTaskQuery;
+import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -105,9 +105,9 @@ import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 /**
- * The client representation of this task is {@link ClientCompactTaskQuery}. JSON
+ * The client representation of this task is {@link ClientCompactionTaskQuery}. JSON
  * serialization fields of this class must correspond to those of {@link
- * ClientCompactTaskQuery}.
+ * ClientCompactionTaskQuery}.
  */
 public class CompactionTask extends AbstractTask
 {

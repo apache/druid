@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -94,11 +94,11 @@ public class DataSourceCompactionConfigTest
   @Test
   public void testSerdeUserCompactTuningConfig() throws IOException
   {
-    final UserCompactTuningConfig config = new UserCompactTuningConfig(null, null, null, null, null);
+    final DataSourceCompactionConfig.UserCompactionTaskQueryTuningConfig config = new DataSourceCompactionConfig.UserCompactionTaskQueryTuningConfig(null, null, null, null, null);
     final String json = objectMapper.writeValueAsString(config);
     // Check maxRowsPerSegment doesn't exist in the JSON string
     Assert.assertFalse(json.contains("maxRowsPerSegment"));
-    final UserCompactTuningConfig fromJson = objectMapper.readValue(json, UserCompactTuningConfig.class);
+    final DataSourceCompactionConfig.UserCompactionTaskQueryTuningConfig fromJson = objectMapper.readValue(json, UserCompactionTaskQueryTuningConfig.class);
     Assert.assertEquals(config, fromJson);
   }
 }

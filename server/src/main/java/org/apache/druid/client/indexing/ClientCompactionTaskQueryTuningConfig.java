@@ -22,14 +22,17 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-public class ClientCompactQueryTuningConfig
+public class ClientCompactionTaskQueryTuningConfig
 {
-  // These default values should be synchronized with those of IndexTuningConfig
+  /**
+   * These default values should be synchronized with those of {@link
+   * org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig}
+   */
   private static final int DEFAULT_MAX_ROWS_IN_MEMORY = 75_000;
   private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
@@ -44,12 +47,12 @@ public class ClientCompactQueryTuningConfig
   private final int maxPendingPersists;
   private final long pushTimeout;
 
-  public static ClientCompactQueryTuningConfig from(
-      @Nullable UserCompactTuningConfig userCompactTuningConfig,
+  public static ClientCompactionTaskQueryTuningConfig from(
+      @Nullable DataSourceCompactionConfig.UserCompactionTaskQueryTuningConfig userCompactTuningConfig,
       @Nullable Integer maxRowsPerSegment
   )
   {
-    return new ClientCompactQueryTuningConfig(
+    return new ClientCompactionTaskQueryTuningConfig(
         maxRowsPerSegment,
         userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxRowsInMemory(),
         userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxTotalRows(),
@@ -60,7 +63,7 @@ public class ClientCompactQueryTuningConfig
   }
 
   @JsonCreator
-  public ClientCompactQueryTuningConfig(
+  public ClientCompactionTaskQueryTuningConfig(
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
@@ -129,7 +132,7 @@ public class ClientCompactQueryTuningConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ClientCompactQueryTuningConfig that = (ClientCompactQueryTuningConfig) o;
+    ClientCompactionTaskQueryTuningConfig that = (ClientCompactionTaskQueryTuningConfig) o;
     return maxRowsInMemory == that.maxRowsInMemory &&
            maxTotalRows == that.maxTotalRows &&
            maxPendingPersists == that.maxPendingPersists &&
@@ -154,7 +157,7 @@ public class ClientCompactQueryTuningConfig
   @Override
   public String toString()
   {
-    return "ClientCompactQueryTuningConfig{" +
+    return "ClientCompactionTaskQueryTuningConfig{" +
            "maxRowsPerSegment=" + maxRowsPerSegment +
            ", maxRowsInMemory=" + maxRowsInMemory +
            ", maxTotalRows=" + maxTotalRows +

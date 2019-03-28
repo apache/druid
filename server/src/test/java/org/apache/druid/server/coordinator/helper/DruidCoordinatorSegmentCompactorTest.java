@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator.helper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -68,7 +68,7 @@ public class DruidCoordinatorSegmentCompactorTest
         boolean keepSegmentGranularity,
         @Nullable Long targetCompactionSizeBytes,
         int compactionTaskPriority,
-        ClientCompactQueryTuningConfig tuningConfig,
+        ClientCompactionTaskQueryTuningConfig tuningConfig,
         Map<String, Object> context
     )
     {

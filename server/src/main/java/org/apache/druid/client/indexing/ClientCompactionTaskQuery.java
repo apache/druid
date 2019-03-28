@@ -31,23 +31,23 @@ import java.util.Map;
  * Client representation of {@link org.apache.druid.indexing.common.task.CompactionTask}. JSON serialization fields of
  * this class must correspond to those of {@link org.apache.druid.indexing.common.task.CompactionTask}.
  */
-public class ClientCompactTaskQuery implements ClientTaskQuery
+public class ClientCompactionTaskQuery implements ClientTaskQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
   private final boolean keepSegmentGranularity;
   @Nullable
   private final Long targetCompactionSizeBytes;
-  private final ClientCompactQueryTuningConfig tuningConfig;
+  private final ClientCompactionTaskQueryTuningConfig tuningConfig;
   private final Map<String, Object> context;
 
   @JsonCreator
-  public ClientCompactTaskQuery(
+  public ClientCompactionTaskQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
-      @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
+      @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -93,7 +93,7 @@ public class ClientCompactTaskQuery implements ClientTaskQuery
   }
 
   @JsonProperty
-  public ClientCompactQueryTuningConfig getTuningConfig()
+  public ClientCompactionTaskQueryTuningConfig getTuningConfig()
   {
     return tuningConfig;
   }

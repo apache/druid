@@ -22,8 +22,8 @@ package org.apache.druid.server.coordinator.helper;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import org.apache.druid.client.indexing.ClientCompactTaskQuery;
-import org.apache.druid.client.indexing.ClientCompactQueryTuningConfig;
+import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -97,7 +97,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             throw new ISE("WTH? got a null paylord from overlord for task[%s]", status.getId());
           }
           if (COMPACT_TASK_TYPE.equals(response.getPayload().getType())) {
-            final ClientCompactTaskQuery compactQuery = (ClientCompactTaskQuery) response.getPayload();
+            final ClientCompactionTaskQuery compactQuery = (ClientCompactionTaskQuery) response.getPayload();
             final Interval interval = JodaUtils.umbrellaInterval(
                 compactQuery.getSegments()
                             .stream()
@@ -186,7 +186,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             config.isKeepSegmentGranularity(),
             config.getTargetCompactionSizeBytes(),
             config.getTaskPriority(),
-            ClientCompactQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
+            ClientCompactionTaskQueryTuningConfig.from(config.getTuningConfig(), config.getMaxRowsPerSegment()),
             config.getTaskContext()
         );
         LOG.info(
