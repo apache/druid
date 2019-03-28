@@ -40,6 +40,22 @@ public class ScanQueryConfig
     return this;
   }
 
+  @JsonProperty
+  private int maxRowsQueuedForOrdering = 100000;
+
+  public int getMaxRowsQueuedForOrdering()
+  {
+    return maxRowsQueuedForOrdering;
+  }
+
+  @JsonProperty
+  private int maxSegmentPartitionsOrderedInMemory = 50;
+
+  public int getMaxSegmentPartitionsOrderedInMemory()
+  {
+    return maxSegmentPartitionsOrderedInMemory;
+  }
+
   @Override
   public boolean equals(final Object o)
   {
