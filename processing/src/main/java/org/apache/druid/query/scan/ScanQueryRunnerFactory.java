@@ -207,6 +207,12 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   {
     Comparator<ScanResultValue> priorityQComparator = new ScanResultValueTimestampComparator(scanQuery);
 
+    if (scanQuery.getLimit() > Integer.MAX_VALUE) {
+      throw new UOE("Limit of %,d rows not supported for priority queue strategy of time-ordering scan results",
+                    scanQuery.getLimit()
+      );
+    }
+
     // Converting the limit from long to int could theoretically throw an ArithmeticException but this branch
     // only runs if limit < MAX_LIMIT_FOR_IN_MEMORY_TIME_ORDERING (which should be < Integer.MAX_VALUE)
     int limit = Math.toIntExact(scanQuery.getLimit());
@@ -282,7 +288,6 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
     // (3) Create a sequence of results from each runner in the group and flatmerge based on timestamp
     // (4) Create a sequence of results from each runner group
     // (5) Join all the results into a single sequence
-
     return Sequences.concat(
         Sequences.map(
             Sequences.simple(groupedRunners),
@@ -303,7 +308,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                 )
         )
     ).limit(
-        Math.toIntExact(((ScanQuery) (queryPlus.getQuery())).getLimit())
+        ((ScanQuery) (queryPlus.getQuery())).getLimit()
     );
   }
 

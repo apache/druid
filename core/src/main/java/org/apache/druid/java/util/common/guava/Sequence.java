@@ -82,7 +82,7 @@ public interface Sequence<T>
     return accumulate(new ArrayList<>(), Accumulators.list());
   }
 
-  default Sequence<T> limit(int limit)
+  default Sequence<T> limit(long limit)
   {
     return new LimitedSequence<>(this, limit);
   }

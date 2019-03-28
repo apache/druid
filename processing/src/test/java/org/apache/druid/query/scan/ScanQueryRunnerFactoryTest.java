@@ -22,6 +22,7 @@ package org.apache.druid.query.scan;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -83,7 +84,7 @@ public class ScanQueryRunnerFactoryTest
   {
     List<Integer> numsElements = ImmutableList.of(0, 10, 100);
     List<Integer> batchSizes = ImmutableList.of(1, 100);
-    List<Long> limits = ImmutableList.of(3L, 1000L);
+    List<Long> limits = ImmutableList.of(3L, 1000L, Long.MAX_VALUE);
     List<ScanQuery.ResultFormat> resultFormats = ImmutableList.of(
         ScanQuery.ResultFormat.RESULT_FORMAT_LIST,
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST
@@ -125,17 +126,25 @@ public class ScanQueryRunnerFactoryTest
       return retVal;
     });
     Sequence<ScanResultValue> inputSequence = Sequences.simple(srvs);
-    List<ScanResultValue> output =
-        factory.priorityQueueSortAndLimit(
-            inputSequence,
-            query,
-            ImmutableList.of(new SegmentDescriptor(new Interval(
-                DateTimes.of("2010-01-01"),
-                DateTimes.of("2019-01-01").plusHours(1)
-            ), "1", 0))
-        ).toList();
-
-    validateSortedOutput(output, expectedEventTimestamps);
+    try {
+      List<ScanResultValue> output = factory.priorityQueueSortAndLimit(
+          inputSequence,
+          query,
+          ImmutableList.of(new SegmentDescriptor(new Interval(
+              DateTimes.of("2010-01-01"),
+              DateTimes.of("2019-01-01").plusHours(1)
+          ), "1", 0))
+      ).toList();
+      if (query.getLimit() > Integer.MAX_VALUE) {
+        Assert.fail("Unsupported exception should have been thrown due to high limit");
+      }
+      validateSortedOutput(output, expectedEventTimestamps);
+    }
+    catch (UOE e) {
+      if (query.getLimit() <= Integer.MAX_VALUE) {
+        Assert.fail("Unsupported operation exception should not have been thrown here");
+      }
+    }
   }
 
   @Test
