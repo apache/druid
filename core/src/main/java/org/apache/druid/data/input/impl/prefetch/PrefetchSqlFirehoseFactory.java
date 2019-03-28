@@ -147,7 +147,6 @@ public abstract class PrefetchSqlFirehoseFactory<T>
 
   @Override
   public Firehose connect(InputRowParser<Map<String, Object>> firehoseParser, @Nullable File temporaryDirectory)
-      throws IOException
   {
     if (objects == null) {
       objects = ImmutableList.copyOf(Preconditions.checkNotNull(initObjects(), "objects"));

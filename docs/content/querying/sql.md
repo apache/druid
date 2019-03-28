@@ -178,6 +178,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`STRLEN(expr)`|Synonym for `LENGTH`.|
 |`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.html).|
 |`LOWER(expr)`|Returns expr in all lowercase.|
+|`PARSE_LONG(string[, radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
@@ -589,21 +590,21 @@ Segments table provides details on all Druid segments, whether they are publishe
 #### CAVEAT
 Note that a segment can be served by more than one stream ingestion tasks or Historical processes, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple ingestion tasks, until a segment is eventually served by a Historical, at that point the segment is immutable. Broker prefers to query a segment from Historical over an ingestion task. But if a segment has multiple realtime replicas, for eg. kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks because only one of the ingestion tasks is queried by the Broker and it is not gauranteed that the same task gets picked everytime. The `num_rows` column of segments table can have inconsistent values during this period. There is an open [issue](https://github.com/apache/incubator-druid/issues/5915) about this inconsistency with stream ingestion tasks.
 
-|Column|Notes|
-|------|-----|
-|segment_id|Unique segment identifier|
-|datasource|Name of datasource|
-|start|Interval start time (in ISO 8601 format)|
-|end|Interval end time (in ISO 8601 format)|
-|size|Size of segment in bytes|
-|version|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
-|partition_num|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
-|num_replicas|Number of replicas of this segment currently being served|
-|num_rows|Number of rows in current segment, this value could be null if unkown to Broker at query time|
-|is_published|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store|
-|is_available|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any server(Historical or realtime)|
-|is_realtime|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
-|payload|JSON-serialized data segment payload|
+|Column|Type|Notes|
+|------|-----|-----|
+|segment_id|STRING|Unique segment identifier|
+|datasource|STRING|Name of datasource|
+|start|STRING|Interval start time (in ISO 8601 format)|
+|end|STRING|Interval end time (in ISO 8601 format)|
+|size|LONG|Size of segment in bytes|
+|version|STRING|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
+|partition_num|LONG|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
+|num_replicas|LONG|Number of replicas of this segment currently being served|
+|num_rows|LONG|Number of rows in current segment, this value could be null if unkown to Broker at query time|
+|is_published|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store with `used=1`|
+|is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime)|
+|is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
+|payload|STRING|JSON-serialized data segment payload|
 
 For example to retrieve all segments for datasource "wikipedia", use the query:
 
@@ -628,16 +629,16 @@ ORDER BY 2 DESC
 ### SERVERS table
 Servers table lists all data servers(any server that hosts a segment). It includes both Historicals and Peons.
 
-|Column|Notes|
-|------|-----|
-|server|Server name in the form host:port|
-|host|Hostname of the server|
-|plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
-|tls_port|TLS port of the server, or -1 if TLS is disabled|
-|server_type|Type of Druid service. Possible values include: Historical, realtime and indexer_executor(Peon).|
-|tier|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
-|current_size|Current size of segments in bytes on this server|
-|max_size|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
+|Column|Type|Notes|
+|------|-----|-----|
+|server|STRING|Server name in the form host:port|
+|host|STRING|Hostname of the server|
+|plaintext_port|LONG|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|tls_port|LONG|TLS port of the server, or -1 if TLS is disabled|
+|server_type|STRING|Type of Druid service. Possible values include: Historical, realtime and indexer_executor(Peon).|
+|tier|STRING|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
+|current_size|LONG|Current size of segments in bytes on this server|
+|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
 
 To retrieve information about all servers, use the query:
 
@@ -649,10 +650,10 @@ SELECT * FROM sys.servers;
 
 SERVER_SEGMENTS is used to join servers with segments table
 
-|Column|Notes|
-|------|-----|
-|server|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
-|segment_id|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
+|Column|Type|Notes|
+|------|-----|-----|
+|server|STRING|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
+|segment_id|STRING|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
 
 JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource, 
 grouped by server, example query:
@@ -672,21 +673,21 @@ GROUP BY servers.server;
 The tasks table provides information about active and recently-completed indexing tasks. For more information 
 check out [ingestion tasks](#../ingestion/tasks.html)
 
-|Column|Notes|
-|------|-----|
-|task_id|Unique task identifier|
-|type|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.html)|
-|datasource|Datasource name being indexed|
-|created_time|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to 1970-01-01T00:00:00Z|
-|queue_insertion_time|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the Overlord|
-|status|Status of a task can be RUNNING, FAILED, SUCCESS|
-|runner_status|Runner status of a completed task would be NONE, for in-progress tasks this can be RUNNING, WAITING, PENDING|
-|duration|Time it took to finish the task in milliseconds, this value is present only for completed tasks|
-|location|Server name where this task is running in the format host:port, this information is present only for RUNNING tasks|
-|host|Hostname of the server where task is running|
-|plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
-|tls_port|TLS port of the server, or -1 if TLS is disabled|
-|error_msg|Detailed error message in case of FAILED tasks|
+|Column|Type|Notes|
+|------|-----|-----|
+|task_id|STRING|Unique task identifier|
+|type|STRING|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.html)|
+|datasource|STRING|Datasource name being indexed|
+|created_time|STRING|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to 1970-01-01T00:00:00Z|
+|queue_insertion_time|STRING|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the Overlord|
+|status|STRING|Status of a task can be RUNNING, FAILED, SUCCESS|
+|runner_status|STRING|Runner status of a completed task would be NONE, for in-progress tasks this can be RUNNING, WAITING, PENDING|
+|duration|LONG|Time it took to finish the task in milliseconds, this value is present only for completed tasks|
+|location|STRING|Server name where this task is running in the format host:port, this information is present only for RUNNING tasks|
+|host|STRING|Hostname of the server where task is running|
+|plaintext_port|LONG|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|tls_port|LONG|TLS port of the server, or -1 if TLS is disabled|
+|error_msg|STRING|Detailed error message in case of FAILED tasks|
 
 For example, to retrieve tasks information filtered by status, use the query
 

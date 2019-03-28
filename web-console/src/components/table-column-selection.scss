@@ -17,8 +17,10 @@
  */
 
 .table-column-selection {
-
-  float: right;
+  &.pt-popover-target{
+    position: absolute;
+    right: 0;
+  }
 
   .pt-popover-content {
     padding: 10px 10px 1px 10px;

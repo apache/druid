@@ -55,8 +55,8 @@ public class KinesisIOConfigTest
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     KinesisIndexTaskIOConfig config = (KinesisIndexTaskIOConfig) mapper.readValue(
@@ -70,22 +70,22 @@ public class KinesisIOConfigTest
 
     Assert.assertNull(config.getTaskGroupId());
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mystream", config.getStartPartitions().getStream());
+    Assert.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
-        config.getStartPartitions().getPartitionSequenceNumberMap()
+        config.getStartSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertEquals("mystream", config.getEndPartitions().getStream());
+    Assert.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
-        config.getEndPartitions().getPartitionSequenceNumberMap()
+        config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
     Assert.assertTrue(config.isUseTransaction());
     Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
     Assert.assertEquals(config.getRecordsPerFetch(), 4000);
     Assert.assertEquals(config.getFetchDelayMillis(), 0);
-    Assert.assertEquals(Collections.emptySet(), config.getExclusiveStartSequenceNumberPartitions());
+    Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
     Assert.assertNull(config.getAwsAssumedRoleArn());
     Assert.assertNull(config.getAwsExternalId());
     Assert.assertFalse(config.isDeaggregate());
@@ -98,15 +98,14 @@ public class KinesisIOConfigTest
                      + "  \"taskGroupId\": 0,\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}},\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}, \"exclusivePartitions\" : [\"0\"] },\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}},\n"
                      + "  \"useTransaction\": false,\n"
                      + "  \"minimumMessageTime\": \"2016-05-31T12:00Z\",\n"
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-2.amazonaws.com\",\n"
                      + "  \"recordsPerFetch\": 1000,\n"
                      + "  \"fetchDelayMillis\": 1000,\n"
-                     + "  \"exclusiveStartSequenceNumberPartitions\": [\"0\"],\n"
                      + "  \"awsAssumedRoleArn\": \"role\",\n"
                      + "  \"awsExternalId\": \"awsexternalid\",\n"
                      + "  \"deaggregate\": true\n"
@@ -123,15 +122,15 @@ public class KinesisIOConfigTest
 
     Assert.assertEquals((Integer) 0, config.getTaskGroupId());
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mystream", config.getStartPartitions().getStream());
+    Assert.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "1", "1", "10"),
-        config.getStartPartitions().getPartitionSequenceNumberMap()
+        config.getStartSequenceNumbers().getPartitionSequenceNumberMap()
     );
-    Assert.assertEquals("mystream", config.getEndPartitions().getStream());
+    Assert.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
     Assert.assertEquals(
         ImmutableMap.of("0", "15", "1", "200"),
-        config.getEndPartitions().getPartitionSequenceNumberMap()
+        config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
     Assert.assertFalse(config.isUseTransaction());
     Assert.assertTrue("maximumMessageTime", config.getMaximumMessageTime().isPresent());
@@ -139,7 +138,7 @@ public class KinesisIOConfigTest
     Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
     Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
-    Assert.assertEquals(config.getExclusiveStartSequenceNumberPartitions(), ImmutableSet.of("0"));
+    Assert.assertEquals(config.getStartSequenceNumbers().getExclusivePartitions(), ImmutableSet.of("0"));
     Assert.assertEquals(1000, config.getRecordsPerFetch());
     Assert.assertEquals(1000, config.getFetchDelayMillis());
     Assert.assertEquals("role", config.getAwsAssumedRoleArn());
@@ -153,8 +152,8 @@ public class KinesisIOConfigTest
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
@@ -164,34 +163,34 @@ public class KinesisIOConfigTest
   }
 
   @Test
-  public void testStartPartitionsRequired() throws Exception
+  public void teststartSequenceNumbersRequired() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("startPartitions"));
+    exception.expectMessage(CoreMatchers.containsString("startSequenceNumbers"));
     mapper.readValue(jsonStr, IOConfig.class);
   }
 
   @Test
-  public void testEndPartitionsRequired() throws Exception
+  public void testendSequenceNumbersRequired() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
     exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("endPartitions"));
+    exception.expectMessage(CoreMatchers.containsString("endSequenceNumbers"));
     mapper.readValue(jsonStr, IOConfig.class);
   }
 
@@ -202,8 +201,8 @@ public class KinesisIOConfigTest
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"notmystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"notmystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
@@ -213,14 +212,14 @@ public class KinesisIOConfigTest
   }
 
   @Test
-  public void testStartAndEndPartitionSetMatch() throws Exception
+  public void testStartAndendSequenceNumbersetMatch() throws Exception
   {
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
                      + "  \"endpoint\": \"kinesis.us-east-1.amazonaws.com\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"2\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"2\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
@@ -235,8 +234,8 @@ public class KinesisIOConfigTest
     String jsonStr = "{\n"
                      + "  \"type\": \"kinesis\",\n"
                      + "  \"baseSequenceName\": \"my-sequence-name\",\n"
-                     + "  \"startPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
-                     + "  \"endPartitions\": {\"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
+                     + "  \"startSequenceNumbers\": {\"type\":\"start\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"1\", \"1\":\"10\"}},\n"
+                     + "  \"endSequenceNumbers\": {\"type\":\"end\", \"stream\":\"mystream\", \"partitionSequenceNumberMap\" : {\"0\":\"15\", \"1\":\"200\"}}\n"
                      + "}";
 
     exception.expect(JsonMappingException.class);
