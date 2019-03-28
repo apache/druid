@@ -16,7 +16,8 @@
     "test": "jest --silent 2>&1",
     "generate-licenses-file": "license-checker --production --json --out licenses.json",
     "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;MIT;CC0-1.0' --summary",
-    "start": "webpack-dev-server --hot --open"
+    "start": "webpack-dev-server --hot --open",
+    "stylelint": "stylelint 'src/**/*.scss'"
   },
   "dependencies": {
     "@blueprintjs/core": "1.0.1",

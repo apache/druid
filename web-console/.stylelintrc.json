@@ -2,6 +2,7 @@
   "plugins": [
     "stylelint-scss"
   ],
+  "defaultSeverity": "error",
   "extends": "stylelint-config-recommended-scss",
   "rules": {
     "indentation": 2,
@@ -10,6 +11,7 @@
     "scss/at-import-no-partial-leading-underscore": true,
     "scss/dollar-variable-colon-space-after": "always",
     "scss/dollar-variable-colon-space-before": "never",
-    "no-descending-specificity": null
+    "no-descending-specificity": null,
+    "no-missing-end-of-source-newline": true
   }
 }
