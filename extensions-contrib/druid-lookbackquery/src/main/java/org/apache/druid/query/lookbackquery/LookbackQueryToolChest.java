@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -35,7 +36,6 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.server.log.RequestLogger;
 
 import javax.annotation.Nullable;
 
@@ -49,9 +49,8 @@ public class LookbackQueryToolChest extends QueryToolChest<Result<LookbackResult
   private final ServiceEmitter emitter;
   private final ObjectMapper mapper;
   private final ObjectMapper smileMapper;
+  private final Provider<QuerySegmentWalker> walker;
   private QueryToolChestWarehouse warehouse;
-  private final QuerySegmentWalker walker;
-  private final RequestLogger requestLogger;
   private final LookBackQueryMetricsFactory lookBackQueryMetricsFactory;
 
   /**
@@ -62,7 +61,6 @@ public class LookbackQueryToolChest extends QueryToolChest<Result<LookbackResult
    * @param emitter
    * @param mapper
    * @param smileMapper
-   * @param walker
    */
   @Inject
   public LookbackQueryToolChest(
@@ -70,18 +68,14 @@ public class LookbackQueryToolChest extends QueryToolChest<Result<LookbackResult
       ServiceEmitter emitter,
       ObjectMapper mapper,
       @Smile ObjectMapper smileMapper,
-      @Nullable QuerySegmentWalker walker,
-      RequestLogger requestLogger
-  )
+      @Nullable Provider<QuerySegmentWalker> walker)
   {
-
     this.httpClient = httpClient;
     this.emitter = emitter;
     this.mapper = mapper;
     this.smileMapper = smileMapper;
-    this.walker = walker;
-    this.requestLogger = requestLogger;
     this.lookBackQueryMetricsFactory = DefaultLookBackQueryMetricsFactory.instance();
+    this.walker = walker;
   }
 
 
@@ -102,7 +96,7 @@ public class LookbackQueryToolChest extends QueryToolChest<Result<LookbackResult
   @Override
   public QueryRunner<Result<LookbackResultValue>> mergeResults(QueryRunner<Result<LookbackResultValue>> queryRunner)
   {
-    return new LookbackQueryRunner(httpClient, emitter, mapper, smileMapper, warehouse, walker, requestLogger);
+    return new LookbackQueryRunner(httpClient, emitter, mapper, smileMapper, warehouse, walker.get());
   }
 
   @Override

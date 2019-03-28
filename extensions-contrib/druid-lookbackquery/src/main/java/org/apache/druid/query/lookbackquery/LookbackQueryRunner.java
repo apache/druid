@@ -51,7 +51,6 @@ import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
-import org.apache.druid.server.log.RequestLogger;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -81,7 +80,6 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
 
   private final QueryToolChestWarehouse warehouse;
   private final QuerySegmentWalker walker;
-  private final RequestLogger requestLogger;
 
   public LookbackQueryRunner(
       HttpClient httpClient,
@@ -89,25 +87,19 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
       ObjectMapper mapper,
       ObjectMapper smileMapper,
       QueryToolChestWarehouse warehouse,
-      QuerySegmentWalker walker,
-      RequestLogger requestLogger
-  )
+      QuerySegmentWalker walker)
   {
     this.warehouse = warehouse;
     this.walker = walker;
-    this.requestLogger = requestLogger;
   }
 
   // Used for unit testing
   LookbackQueryRunner(
       QuerySegmentWalker walker,
-      QueryToolChestWarehouse warehouse,
-      RequestLogger logger
-  )
+      QueryToolChestWarehouse warehouse)
   {
     this.warehouse = warehouse;
     this.walker = walker;
-    this.requestLogger = logger;
   }
 
   /**
@@ -115,6 +107,7 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
    */
   static class LookbackResultValueToRow implements Function<Result<LookbackResultValue>, Row>
   {
+    @Override
     public Row apply(Result<LookbackResultValue> lookbackResult)
     {
       Result<?> l = (Result<?>) lookbackResult;
@@ -135,6 +128,7 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
    */
   static class RowToLookbackResultValue implements Function<Row, Result<LookbackResultValue>>
   {
+    @Override
     public Result<LookbackResultValue> apply(Row row)
     {
       LookbackResultValue lrv = new LookbackResultValue(((MapBasedRow) row).getEvent());
@@ -145,6 +139,7 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
 
   static class QueryResultToLookbackResultValue implements Function<Object, Result<LookbackResultValue>>
   {
+    @Override
     public Result<LookbackResultValue> apply(Object row)
     {
       if (row instanceof MapBasedRow) {
@@ -422,7 +417,8 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
       Query<Object> cohortQuery = getCohortQuery(finalizeContextMap, measurementQuery, lookbackOffset, queryId);
       futures.add(EXECUTOR.submit(new Callable<Sequence<?>>()
       {
-        public Sequence<?> call() throws Exception
+        @Override
+        public Sequence<?> call()
         {
 
           HashMap<String, Object> cohortResponse = new HashMap<>();

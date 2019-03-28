@@ -142,7 +142,7 @@ public class RollingAverageQueryRunner implements QueryRunner<Row>
       tsqResponse.put(QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
 
       Sequence<Result<TimeseriesResultValue>> results = tsq.getRunner(walker).run(QueryPlus.wrap(tsq), tsqResponse);
-      
+
       resultsSeq = Sequences.map(results, new TimeseriesResultToRow());
     }
 

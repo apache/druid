@@ -22,6 +22,7 @@ package org.apache.druid.query.lookbackquery;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.DruidBinders;
@@ -29,7 +30,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryToolChest;
-import java.util.Arrays;
+
 import java.util.List;
 
 /**
@@ -42,7 +43,7 @@ public class DigitsLookbackQueryModule implements DruidModule
   public void configure(Binder binder)
   {
     MapBinder<Class<? extends Query>, QueryToolChest> toolChests = DruidBinders.queryToolChestBinder(binder);
-
+    
     //Bind the query toolchest to the query class and add the binding to toolchest
     toolChests.addBinding(LookbackQuery.class).to(LookbackQueryToolChest.class);
 
@@ -53,8 +54,11 @@ public class DigitsLookbackQueryModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Arrays.<Module>asList(new SimpleModule("DigitsLookbackQueryModule")
-                                     .registerSubtypes(new NamedType(LookbackQuery.class, "lookback")));
+    return ImmutableList.of(
+        new SimpleModule(getClass().getSimpleName())
+            .registerSubtypes(
+                new NamedType(LookbackQuery.class, "lookback"))
+    );
   }
 
 }
