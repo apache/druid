@@ -988,9 +988,10 @@ public class DruidQuery
         dataSource,
         filtration.getQuerySegmentSpec(),
         selectProjection != null ? VirtualColumns.create(selectProjection.getVirtualColumns()) : VirtualColumns.EMPTY,
-        ScanQuery.RESULT_FORMAT_COMPACTED_LIST,
+        ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
         0,
         scanLimit,
+        null, // Will default to "none"
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(outputRowSignature.getRowOrder())),
         false,
