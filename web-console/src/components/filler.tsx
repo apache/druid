@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button } from '@blueprintjs/core';
+import { Button, Collapse } from '@blueprintjs/core';
 import classNames from 'classnames';
 import * as React from 'react';
 import AceEditor from "react-ace";
@@ -47,7 +47,7 @@ export const IconNames = {
   ARROW_LEFT: "arrow-left" as "arrow-left",
   CARET_RIGHT: "caret-right" as "caret-right",
   TICK: "tick" as "tick",
-  ARROW_RIGHT: "right-arrow" as "right-arrow",
+  ARROW_RIGHT: "arrow-right" as "arrow-right",
   TRASH: "trash" as "trash",
   CARET_DOWN: "caret-down" as "caret-down",
   ARROW_UP: "arrow-up" as "arrow-up",
@@ -152,13 +152,15 @@ export class HTMLSelect extends React.Component<{ key?: string; style?: any; onC
   }
 }
 
-export class TextArea extends React.Component<{ className?: string; onChange?: any; value?: string }, {}> {
+export class TextArea extends React.Component<{ className?: string; onChange?: any; value?: string, readOnly?: boolean, style?: any}, {}> {
   render() {
-    const { className, value, onChange } = this.props;
+    const { className, value, onChange, readOnly, style } = this.props;
     return <textarea
+      readOnly={readOnly}
       className={classNames("pt-input", className)}
       value={value}
       onChange={onChange}
+      style={style}
     />;
   }
 }
@@ -267,6 +269,7 @@ interface JSONInputProps extends React.Props<any> {
   onChange: (newJSONValue: any) => void;
   value: any;
   updateInputValidity: (valueValid: boolean) => void;
+  height?: string;
 }
 
 interface JSONInputState {
@@ -298,7 +301,7 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
   }
 
   render() {
-    const { onChange, updateInputValidity } = this.props;
+    const { onChange, updateInputValidity, height } = this.props;
     const { stringValue } = this.state;
     return <AceEditor
       className={"bp3-fill"}
@@ -314,7 +317,7 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
       focus
       fontSize={12}
       width={'100%'}
-      height={"8vh"}
+      height={height ? height : "8vh"}
       showPrintMargin={false}
       showGutter={false}
       value={stringValue}
@@ -328,5 +331,44 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
         tabSize: 2
       }}
     />;
+  }
+}
+
+interface JSONCollapseProps extends React.Props<any> {
+  stringValue: string;
+  buttonText: string;
+}
+
+interface JSONCollapseState {
+  isOpen: boolean;
+}
+
+export class JSONCollapse extends React.Component<JSONCollapseProps, JSONCollapseState> {
+  constructor(props: any) {
+    super(props);
+    this.state = {
+      isOpen: false
+    };
+  }
+
+  render() {
+    const { stringValue, buttonText} = this.props;
+    const { isOpen } = this.state;
+    const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);
+    return <div className={"json-collapse"}>
+      <Button
+        className={`pt-minimal ${isOpen ? " pt-active" : ""}`}
+        onClick={() => this.setState({isOpen: !isOpen})}
+        text={buttonText}
+      />
+      <div>
+        <Collapse isOpen={isOpen}>
+          <TextArea
+            readOnly
+            value={prettyValue}
+          />
+        </Collapse>
+      </div>
+    </div>;
   }
 }
