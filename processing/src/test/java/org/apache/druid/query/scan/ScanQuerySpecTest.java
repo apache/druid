@@ -53,6 +53,7 @@ public class ScanQuerySpecTest
         + "\"resultFormat\":\"list\","
         + "\"batchSize\":20480,"
         + "\"limit\":3,"
+        + "\"order\":\"none\","
         + "\"filter\":null,"
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
         + "\"legacy\":null,"
@@ -64,9 +65,10 @@ public class ScanQuerySpecTest
         new TableDataSource(QueryRunnerTestHelper.dataSource),
         new LegacySegmentSpec(Intervals.of("2011-01-12/2011-01-14")),
         VirtualColumns.EMPTY,
-        null,
+        ScanQuery.ResultFormat.RESULT_FORMAT_LIST,
         0,
         3,
+        ScanQuery.Order.NONE,
         null,
         Arrays.asList("market", "quality", "index"),
         null,
