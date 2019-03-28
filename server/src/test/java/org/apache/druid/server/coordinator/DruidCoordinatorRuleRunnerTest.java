@@ -61,6 +61,10 @@ import java.util.stream.Stream;
  */
 public class DruidCoordinatorRuleRunnerTest
 {
+  public static final CoordinatorDynamicConfig COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS = CoordinatorDynamicConfig
+      .builder()
+      .withMillisLagSinceCoordinatorStartBeforeCanMarkAsUnusedOvershadowedSegments(0L)
+      .build();
   private DruidCoordinator coordinator;
   private LoadQueuePeon mockPeon;
   private List<DataSegment> usedSegments;
@@ -608,7 +612,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -694,7 +698,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisLagSinceCoordinatorStartBeforeCanMarkAsUnusedOvershadowedSegments(0L).build())
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -785,7 +789,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -864,7 +868,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -962,7 +966,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -1285,7 +1289,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisToWaitBeforeDeleting(0L).build())
+        .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(longerUsedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -1413,7 +1417,7 @@ public class DruidCoordinatorRuleRunnerTest
   private CoordinatorDynamicConfig createCoordinatorDynamicConfig()
   {
     return CoordinatorDynamicConfig.builder()
-                                   .withMillisToWaitBeforeDeleting(0)
+                                   .withMillisLagSinceCoordinatorStartBeforeCanMarkAsUnusedOvershadowedSegments(0)
                                    .withMergeBytesLimit(0)
                                    .withMergeSegmentsLimit(0)
                                    .withMaxSegmentsToMove(0)
@@ -1421,8 +1425,8 @@ public class DruidCoordinatorRuleRunnerTest
                                    .withReplicationThrottleLimit(24)
                                    .withBalancerComputeThreads(0)
                                    .withEmitBalancingStats(false)
-                                   .withSpecificDataSourcesToKill(null)
-                                   .withKillAllDataSources(false)
+                                   .withSpecificDataSourcesToKillUnusedSegmentsIn(null)
+                                   .withKillUnusedSegmentsInAllDataSources(false)
                                    .withMaxSegmentsInNodeLoadingQueue(1000)
                                    .build();
   }

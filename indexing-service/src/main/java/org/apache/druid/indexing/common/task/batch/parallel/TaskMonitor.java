@@ -191,7 +191,7 @@ public class TaskMonitor<T extends Task>
           iterator.remove();
           final String taskId = entry.runningTask.getId();
           log.info("Request to kill subtask[%s]", taskId);
-          indexingServiceClient.killTask(taskId);
+          indexingServiceClient.cancelTask(taskId);
           numRunningTasks--;
           numKilledTasks++;
         }

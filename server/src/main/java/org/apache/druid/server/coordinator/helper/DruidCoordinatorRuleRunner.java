@@ -47,7 +47,7 @@ import java.util.Set;
 public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorRuleRunner.class);
-  private static int MAX_MISSING_RULES = 10;
+  private static final int MAX_MISSING_RULES = 10;
 
   private final ReplicationThrottler replicatorThrottler;
 
@@ -86,8 +86,10 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
       return params;
     }
 
-    // Find used segments which are overshadowed by other used segments. Those would not need to be loaded and dropped.
-    // Segments overshadowed by *served* used segments is dropped automatically by DruidCoordinatorCleanupOvershadowed.
+    // Find used segments which are overshadowed by other used segments. Those would not need to be loaded and
+    // eventually will be unloaded from Historical servers. Segments overshadowed by *served* used segments are marked
+    // as unused in DruidCoordinatorMarkAsUnusedOvershadowedSegments, and then eventually Coordinator sends commands to
+    // Historical nodes to unload such segments in DruidCoordinatorUnloadUnusedSegments.
     Set<DataSegment> overshadowed = determineOvershadowedSegments(params);
 
     for (String tier : cluster.getTierNames()) {

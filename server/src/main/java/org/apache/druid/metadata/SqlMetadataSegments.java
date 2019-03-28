@@ -595,7 +595,8 @@ public class SqlMetadataSegments implements MetadataSegments
             Iterator<Interval> iter = handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource and start >= :start and %2$send%2$s <= :end and used = false ORDER BY start, %2$send%2$s",
+                        "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND start >= :start "
+                        + "AND %2$send%2$s <= :end AND used = false ORDER BY start, %2$send%2$s",
                         getSegmentsTable(),
                         connector.getQuoteString()
                     )

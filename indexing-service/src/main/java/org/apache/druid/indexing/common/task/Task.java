@@ -46,7 +46,7 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "kill", value = KillTask.class),
+    @JsonSubTypes.Type(name = "kill", value = KillUnusedSegmentsTask.class),
     @JsonSubTypes.Type(name = "move", value = MoveTask.class),
     @JsonSubTypes.Type(name = "archive", value = ArchiveTask.class),
     @JsonSubTypes.Type(name = "restore", value = RestoreTask.class),

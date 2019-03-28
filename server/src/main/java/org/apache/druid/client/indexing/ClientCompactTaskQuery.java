@@ -27,7 +27,11 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
-public class ClientCompactQuery implements ClientQuery
+/**
+ * Client representation of {@link org.apache.druid.indexing.common.task.CompactionTask}. JSON serialization fields of
+ * this class must correspond to those of {@link org.apache.druid.indexing.common.task.CompactionTask}.
+ */
+public class ClientCompactTaskQuery implements ClientTaskQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
@@ -38,7 +42,7 @@ public class ClientCompactQuery implements ClientQuery
   private final Map<String, Object> context;
 
   @JsonCreator
-  public ClientCompactQuery(
+  public ClientCompactTaskQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,

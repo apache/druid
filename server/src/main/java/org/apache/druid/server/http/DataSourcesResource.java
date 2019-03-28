@@ -205,7 +205,7 @@ public class DataSourcesResource
     boolean killSegments = kill != null && Boolean.valueOf(kill);
     if (killSegments) {
       try {
-        indexingServiceClient.killSegments(dataSourceName, Intervals.of(interval));
+        indexingServiceClient.killUnusedSegments(dataSourceName, Intervals.of(interval));
       }
       catch (IllegalArgumentException e) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -253,7 +253,7 @@ public class DataSourcesResource
     }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
-      indexingServiceClient.killSegments(dataSourceName, theInterval);
+      indexingServiceClient.killUnusedSegments(dataSourceName, theInterval);
     }
     catch (Exception e) {
       return Response.serverError()

@@ -61,11 +61,11 @@ import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.coordinator.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.DruidCoordinatorCleanupPendingSegments;
+import org.apache.druid.server.coordinator.DruidCoordinatorKillStalePendingSegments;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
+import org.apache.druid.server.coordinator.helper.DruidCoordinatorUnusedSegmentsKiller;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
@@ -224,11 +224,11 @@ public class CliCoordinator extends ServerRunnable
             conditionalMultibind.addConditionBinding(
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),
-                DruidCoordinatorSegmentKiller.class
+                DruidCoordinatorUnusedSegmentsKiller.class
             ).addConditionBinding(
                 "druid.coordinator.kill.pendingSegments.on",
                 Predicates.equalTo("true"),
-                DruidCoordinatorCleanupPendingSegments.class
+                DruidCoordinatorKillStalePendingSegments.class
             );
 
             bindAnnouncer(

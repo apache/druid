@@ -544,7 +544,7 @@ public class DataSourcesResourceTest
     Interval theInterval = Intervals.of(interval.replace('_', '/'));
 
     IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
-    indexingServiceClient.killSegments("datasource1", theInterval);
+    indexingServiceClient.killUnusedSegments("datasource1", theInterval);
     EasyMock.expectLastCall().once();
     EasyMock.replay(indexingServiceClient, server);
 

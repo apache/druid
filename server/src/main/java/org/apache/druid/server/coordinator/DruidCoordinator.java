@@ -61,8 +61,8 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataSegments;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorCleanupUnusedSegments;
+import org.apache.druid.server.coordinator.helper.DruidCoordinatorMarkAsUnusedOvershadowedSegments;
+import org.apache.druid.server.coordinator.helper.DruidCoordinatorUnloadUnusedSegments;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
@@ -606,7 +606,7 @@ public class DruidCoordinator
 
   public abstract class CoordinatorRunnable implements Runnable
   {
-    private final long startTime = System.currentTimeMillis();
+    private final long startTimeNanos = System.nanoTime();
     private final List<DruidCoordinatorHelper> helpers;
     private final int startingLeaderCounter;
 
@@ -651,7 +651,7 @@ public class DruidCoordinator
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams
                 .newBuilder()
-                .withStartTime(startTime)
+                .withStartTimeNanos(startTimeNanos)
                 .withDataSourcesWithUsedSegments(metadataSegments.prepareImmutableDataSourcesWithAllUsedSegments())
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
@@ -746,8 +746,8 @@ public class DruidCoordinator
                              .build();
               },
               new DruidCoordinatorRuleRunner(DruidCoordinator.this),
-              new DruidCoordinatorCleanupUnusedSegments(),
-              new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
+              new DruidCoordinatorUnloadUnusedSegments(),
+              new DruidCoordinatorMarkAsUnusedOvershadowedSegments(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
               new DruidCoordinatorLogger(DruidCoordinator.this)
           ),

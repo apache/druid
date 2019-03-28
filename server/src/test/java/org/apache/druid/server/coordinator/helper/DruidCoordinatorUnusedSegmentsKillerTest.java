@@ -34,7 +34,7 @@ import java.util.List;
 
 /**
  */
-public class DruidCoordinatorSegmentKillerTest
+public class DruidCoordinatorUnusedSegmentsKillerTest
 {
   @Test
   public void testFindIntervalForKillTask()
@@ -97,7 +97,7 @@ public class DruidCoordinatorSegmentKillerTest
     EasyMock.replay(metadataSegments);
     IndexingServiceClient indexingServiceClient = EasyMock.createMock(IndexingServiceClient.class);
 
-    DruidCoordinatorSegmentKiller coordinatorSegmentKiller = new DruidCoordinatorSegmentKiller(
+    DruidCoordinatorUnusedSegmentsKiller coordinatorSegmentKiller = new DruidCoordinatorUnusedSegmentsKiller(
         metadataSegments,
         indexingServiceClient,
         new TestDruidCoordinatorConfig(

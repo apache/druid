@@ -197,7 +197,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     }
 
     @Override
-    public String killTask(String taskId)
+    public String cancelTask(String taskId)
     {
       final Future<TaskStatus> taskStatusFuture = tasks.remove(taskId);
       if (taskStatusFuture != null) {

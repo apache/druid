@@ -31,7 +31,7 @@ import java.util.Map;
 public class NoopIndexingServiceClient implements IndexingServiceClient
 {
   @Override
-  public void killSegments(String dataSource, Interval interval)
+  public void killUnusedSegments(String dataSource, Interval interval)
   {
 
   }
@@ -68,7 +68,7 @@ public class NoopIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public String killTask(String taskId)
+  public String cancelTask(String taskId)
   {
     return null;
   }

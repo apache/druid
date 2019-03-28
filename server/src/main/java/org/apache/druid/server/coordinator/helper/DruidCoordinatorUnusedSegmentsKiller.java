@@ -31,14 +31,15 @@ import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 
 /**
  */
-public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
+public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHelper
 {
-  private static final Logger log = new Logger(DruidCoordinatorSegmentKiller.class);
+  private static final Logger log = new Logger(DruidCoordinatorUnusedSegmentsKiller.class);
 
   private final long period;
   private final long retainDuration;
@@ -50,7 +51,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
-  public DruidCoordinatorSegmentKiller(
+  public DruidCoordinatorUnusedSegmentsKiller(
       MetadataSegments metadataSegments,
       IndexingServiceClient indexingServiceClient,
       DruidCoordinatorConfig config
@@ -82,8 +83,8 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillAllDataSources();
-    Collection<String> specificDataSourcesToKill = params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKill();
+    boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillUnusedSegmentsInAllDataSources();
+    Collection<String> specificDataSourcesToKill = params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
 
     if (killAllDataSources && specificDataSourcesToKill != null && !specificDataSourcesToKill.isEmpty()) {
       log.error(
@@ -106,7 +107,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
         final Interval intervalToKill = findIntervalForKillTask(dataSource, maxSegmentsToKill);
         if (intervalToKill != null) {
           try {
-            indexingServiceClient.killSegments(dataSource, intervalToKill);
+            indexingServiceClient.killUnusedSegments(dataSource, intervalToKill);
           }
           catch (Exception ex) {
             log.error(ex, "Failed to submit kill task for dataSource [%s]", dataSource);
@@ -122,6 +123,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   }
 
   @VisibleForTesting
+  @Nullable
   Interval findIntervalForKillTask(String dataSource, int limit)
   {
     List<Interval> unusedSegmentIntervals = metadataSegments.getUnusedSegmentIntervals(

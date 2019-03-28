@@ -33,15 +33,15 @@ import org.joda.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 
-public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorHelper
+public class DruidCoordinatorKillStalePendingSegments implements DruidCoordinatorHelper
 {
-  private static final Logger log = new Logger(DruidCoordinatorCleanupPendingSegments.class);
+  private static final Logger log = new Logger(DruidCoordinatorKillStalePendingSegments.class);
   private static final Period KEEP_PENDING_SEGMENTS_OFFSET = new Period("P1D");
 
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
-  public DruidCoordinatorCleanupPendingSegments(IndexingServiceClient indexingServiceClient)
+  public DruidCoordinatorKillStalePendingSegments(IndexingServiceClient indexingServiceClient)
   {
     this.indexingServiceClient = indexingServiceClient;
   }
@@ -85,15 +85,15 @@ public class DruidCoordinatorCleanupPendingSegments implements DruidCoordinatorH
     // is no running/pending/waiting tasks.
     Preconditions.checkState(!createdTimes.isEmpty(), "Failed to gather createdTimes of tasks");
 
-    // If there is no running/pending/waiting/complete tasks, pendingSegmentsCleanupEndTime is
+    // If there is no running/pending/waiting/complete tasks, stalePendingSegmentsCutoffCreationTime is
     // (DateTimes.nowUtc() - KEEP_PENDING_SEGMENTS_OFFSET).
-    final DateTime pendingSegmentsCleanupEndTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
+    final DateTime stalePendingSegmentsCutoffCreationTime = createdTimes.get(0).minus(KEEP_PENDING_SEGMENTS_OFFSET);
     for (String dataSource : params.getDataSourcesWithUsedSegments().keySet()) {
-      if (!params.getCoordinatorDynamicConfig().getProtectedPendingSegmentDatasources().contains(dataSource)) {
+      if (!params.getCoordinatorDynamicConfig().getDataSourcesToNotKillStalePendingSegmentsIn().contains(dataSource)) {
         log.info(
             "Killed [%d] pendingSegments created until [%s] for dataSource[%s]",
-            indexingServiceClient.killPendingSegments(dataSource, pendingSegmentsCleanupEndTime),
-            pendingSegmentsCleanupEndTime,
+            indexingServiceClient.killPendingSegments(dataSource, stalePendingSegmentsCutoffCreationTime),
+            stalePendingSegmentsCutoffCreationTime,
             dataSource
         );
       }

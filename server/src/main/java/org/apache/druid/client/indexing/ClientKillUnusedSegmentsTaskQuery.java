@@ -24,14 +24,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
 /**
+ * Client representation of {@link org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}. JSON searialization
+ * fields of this class must correspond to those of {@link
+ * org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}, except for "id" and "context" fields.
  */
-public class ClientKillQuery implements ClientQuery
+public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
 {
   private final String dataSource;
   private final Interval interval;
 
   @JsonCreator
-  public ClientKillQuery(
+  public ClientKillUnusedSegmentsTaskQuery(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval
   )

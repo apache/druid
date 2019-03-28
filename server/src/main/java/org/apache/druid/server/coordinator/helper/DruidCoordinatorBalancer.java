@@ -198,7 +198,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       // DruidCoordinatorRuntimeParams.getUsedSegments originate from MetadataSegments, i. e. that's a set of segments
       // that *should* be loaded. segmentToMoveHolder.getSegment originates from ServerInventoryView,  i. e. that may be
       // any segment that happens to be loaded on some server, even if it is not used. (Coordinator closes such
-      // discrepancies eventually via DruidCoordinatorCleanupUnusedSegments). Therefore the picked segmentToMoveHolder's
+      // discrepancies eventually via DruidCoordinatorUnloadUnusedSegments). Therefore the picked segmentToMoveHolder's
       // segment may not need to be balanced.
       boolean needToBalancePickedSegment = params.getUsedSegments().contains(segmentToMoveHolder.getSegment());
       if (needToBalancePickedSegment) {

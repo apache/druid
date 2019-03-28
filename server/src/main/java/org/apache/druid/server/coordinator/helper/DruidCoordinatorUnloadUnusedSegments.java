@@ -34,9 +34,9 @@ import java.util.SortedSet;
 
 /**
  */
-public class DruidCoordinatorCleanupUnusedSegments implements DruidCoordinatorHelper
+public class DruidCoordinatorUnloadUnusedSegments implements DruidCoordinatorHelper
 {
-  private static final Logger log = new Logger(DruidCoordinatorCleanupUnusedSegments.class);
+  private static final Logger log = new Logger(DruidCoordinatorUnloadUnusedSegments.class);
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
@@ -54,9 +54,10 @@ public class DruidCoordinatorCleanupUnusedSegments implements DruidCoordinatorHe
       return params.buildFromExisting().withCoordinatorStats(stats).build();
     }
 
-    // Drop segments that are no longer marked as used, *if* the usedSegments collection has been populated. Used
-    // segments might not have been loaded yet since it's done asynchronously (in SqlMetadataSegments). But it's also
-    // done atomically (see SqlMetadataSegments code), so if there are any segments at all, we should have all of them.
+    // Unload segments that are no longer marked as used from historical servers, *if* the usedSegments collection has
+    // been populated. Used segments might not have been loaded yet since it's done asynchronously (in
+    // SqlMetadataSegments). But it's also done atomically (see SqlMetadataSegments code), so if there are any segments
+    // at all, we should have all of them.
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();

@@ -223,9 +223,10 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testUpdate()
   {
-    CoordinatorDynamicConfig current = CoordinatorDynamicConfig.builder()
-                                                               .withSpecificDataSourcesToKill(ImmutableSet.of("x"))
-                                                               .build();
+    CoordinatorDynamicConfig current = CoordinatorDynamicConfig
+        .builder()
+        .withSpecificDataSourcesToKillUnusedSegmentsIn(ImmutableSet.of("x"))
+        .build();
 
     Assert.assertEquals(
         current,
@@ -246,7 +247,7 @@ public class CoordinatorDynamicConfigTest
 
   private void assertConfig(
       CoordinatorDynamicConfig config,
-      long expectedMillisToWaitBeforeDeleting,
+      long expectedMillisLagBeforeCanMaskAsUnusedOvershadowedSegments,
       long expectedMergeBytesLimit,
       int expectedMergeSegmentsLimit,
       int expectedMaxSegmentsToMove,
@@ -261,7 +262,10 @@ public class CoordinatorDynamicConfigTest
       int decommissioningMaxPercentOfMaxSegmentsToMove
   )
   {
-    Assert.assertEquals(expectedMillisToWaitBeforeDeleting, config.getMillisToWaitBeforeDeleting());
+    Assert.assertEquals(
+        expectedMillisLagBeforeCanMaskAsUnusedOvershadowedSegments,
+        config.getMillisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments()
+    );
     Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
     Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());
     Assert.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
@@ -269,10 +273,13 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
     Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
     Assert.assertEquals(expectedEmitingBalancingStats, config.emitBalancingStats());
-    Assert.assertEquals(expectedSpecificDataSourcesToKill, config.getSpecificDataSourcesToKill());
-    Assert.assertEquals(expectedKillAllDataSources, config.isKillAllDataSources());
+    Assert.assertEquals(expectedSpecificDataSourcesToKill, config.getSpecificDataSourcesToKillUnusedSegmentsIn());
+    Assert.assertEquals(expectedKillAllDataSources, config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
     Assert.assertEquals(decommissioning, config.getDecommissioningNodes());
-    Assert.assertEquals(decommissioningMaxPercentOfMaxSegmentsToMove, config.getDecommissioningMaxPercentOfMaxSegmentsToMove());
+    Assert.assertEquals(
+        decommissioningMaxPercentOfMaxSegmentsToMove,
+        config.getDecommissioningMaxPercentOfMaxSegmentsToMove()
+    );
   }
 }

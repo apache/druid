@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
@@ -55,7 +56,7 @@ public class DruidCoordinatorRuntimeParams
     return segmentsSet;
   }
 
-  private final long startTime;
+  private final long startTimeNanos;
   private final DruidCluster druidCluster;
   private final MetadataRuleManager databaseRuleManager;
   private final SegmentReplicantLookup segmentReplicantLookup;
@@ -72,7 +73,7 @@ public class DruidCoordinatorRuntimeParams
   private final BalancerStrategy balancerStrategy;
 
   private DruidCoordinatorRuntimeParams(
-      long startTime,
+      long startTimeNanos,
       DruidCluster druidCluster,
       MetadataRuleManager databaseRuleManager,
       SegmentReplicantLookup segmentReplicantLookup,
@@ -88,7 +89,7 @@ public class DruidCoordinatorRuntimeParams
       BalancerStrategy balancerStrategy
   )
   {
-    this.startTime = startTime;
+    this.startTimeNanos = startTimeNanos;
     this.druidCluster = druidCluster;
     this.databaseRuleManager = databaseRuleManager;
     this.segmentReplicantLookup = segmentReplicantLookup;
@@ -104,9 +105,9 @@ public class DruidCoordinatorRuntimeParams
     this.balancerStrategy = balancerStrategy;
   }
 
-  public long getStartTime()
+  public long getStartTimeNanos()
   {
-    return startTime;
+    return startTimeNanos;
   }
 
   public DruidCluster getDruidCluster()
@@ -178,9 +179,13 @@ public class DruidCoordinatorRuntimeParams
     return balancerStrategy;
   }
 
-  public boolean hasDeletionWaitTimeElapsed()
+  public boolean lagSinceCoordinatorStartElapsedBeforeCanMarkAsUnusedOvershadowedSegements()
   {
-    return (System.currentTimeMillis() - getStartTime() > coordinatorDynamicConfig.getMillisToWaitBeforeDeleting());
+    long nanosElapsedSinceCoordinatorStart = System.nanoTime() - getStartTimeNanos();
+    long lagNanos = TimeUnit.MILLISECONDS.toNanos(
+        coordinatorDynamicConfig.getMillisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments()
+    );
+    return nanosElapsedSinceCoordinatorStart > lagNanos;
   }
 
   public static Builder newBuilder()
@@ -191,7 +196,7 @@ public class DruidCoordinatorRuntimeParams
   public Builder buildFromExisting()
   {
     return new Builder(
-        startTime,
+        startTimeNanos,
         druidCluster,
         databaseRuleManager,
         segmentReplicantLookup,
@@ -211,7 +216,7 @@ public class DruidCoordinatorRuntimeParams
   public Builder buildFromExistingWithoutUsedSegments()
   {
     return new Builder(
-        startTime,
+        startTimeNanos,
         druidCluster,
         databaseRuleManager,
         segmentReplicantLookup,
@@ -230,7 +235,7 @@ public class DruidCoordinatorRuntimeParams
 
   public static class Builder
   {
-    private long startTime;
+    private @Nullable Long startTimeNanos;
     private DruidCluster druidCluster;
     private MetadataRuleManager databaseRuleManager;
     private SegmentReplicantLookup segmentReplicantLookup;
@@ -247,7 +252,7 @@ public class DruidCoordinatorRuntimeParams
 
     Builder()
     {
-      this.startTime = 0;
+      this.startTimeNanos = null;
       this.druidCluster = null;
       this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
@@ -263,7 +268,7 @@ public class DruidCoordinatorRuntimeParams
     }
 
     Builder(
-        long startTime,
+        long startTimeNanos,
         DruidCluster cluster,
         MetadataRuleManager databaseRuleManager,
         SegmentReplicantLookup segmentReplicantLookup,
@@ -279,7 +284,7 @@ public class DruidCoordinatorRuntimeParams
         BalancerStrategy balancerStrategy
     )
     {
-      this.startTime = startTime;
+      this.startTimeNanos = startTimeNanos;
       this.druidCluster = cluster;
       this.databaseRuleManager = databaseRuleManager;
       this.segmentReplicantLookup = segmentReplicantLookup;
@@ -297,8 +302,9 @@ public class DruidCoordinatorRuntimeParams
 
     public DruidCoordinatorRuntimeParams build()
     {
+      Preconditions.checkNotNull(startTimeNanos, "startTime must be set");
       return new DruidCoordinatorRuntimeParams(
-          startTime,
+          startTimeNanos,
           druidCluster,
           databaseRuleManager,
           segmentReplicantLookup,
@@ -315,9 +321,9 @@ public class DruidCoordinatorRuntimeParams
       );
     }
 
-    public Builder withStartTime(long time)
+    public Builder withStartTimeNanos(long startTimeNanos)
     {
-      startTime = time;
+      this.startTimeNanos = startTimeNanos;
       return this;
     }
 

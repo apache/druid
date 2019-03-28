@@ -44,9 +44,9 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class DruidCoordinatorCleanupOvershadowedTest
+public class DruidCoordinatorMarkAsUnusedOvershadowedSegmentsTest
 {
-  DruidCoordinatorCleanupOvershadowed druidCoordinatorCleanupOvershadowed;
+  DruidCoordinatorMarkAsUnusedOvershadowedSegments druidCoordinatorMarkAsUnusedOvershadowedSegments;
   DruidCoordinator coordinator = EasyMock.createStrictMock(DruidCoordinator.class);
   private List<DataSegment> usedSegments;
   DateTime start = DateTimes.of("2012-01-01");
@@ -70,7 +70,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
   @Test
   public void testRun()
   {
-    druidCoordinatorCleanupOvershadowed = new DruidCoordinatorCleanupOvershadowed(coordinator);
+    druidCoordinatorMarkAsUnusedOvershadowedSegments = new DruidCoordinatorMarkAsUnusedOvershadowedSegments(coordinator);
     usedSegments = ImmutableList.of(segmentV1, segmentV0, segmentV2);
 
     // Dummy values for comparisons in TreeSet
@@ -123,7 +123,7 @@ public class DruidCoordinatorCleanupOvershadowedTest
         .withCoordinatorStats(new CoordinatorStats())
         .withDruidCluster(druidCluster)
         .build();
-    druidCoordinatorCleanupOvershadowed.run(params);
+    druidCoordinatorMarkAsUnusedOvershadowedSegments.run(params);
     EasyMock.verify(coordinator, druidDataSource, druidServer);
   }
 }
