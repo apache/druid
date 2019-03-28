@@ -5,6 +5,11 @@ image_pull_secrets:
   - DOCKER_CONFIG_JSON
 
 steps:
+- name: docker
+  image: registry.build.lqm.io/dind
+  privileged: true
+  detach: true
+
 - name: publish artifact
   image: registry.build.lqm.io/dind
   environment:
