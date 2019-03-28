@@ -271,7 +271,10 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   {
     try {
       final FullResponseHolder responseHolder = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/task/%s", taskId))
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format("/druid/indexer/v1/task/%s", StringUtils.urlEncode(taskId))
+          )
       );
 
       return jsonMapper.readValue(

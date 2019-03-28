@@ -261,6 +261,8 @@ public class ITCompactionTest extends AbstractIndexerTest
         "Waiting for compaction task to be finished"
     );
 
+    coordinator.unregisterAutoCompaction(fullDatasourceName);
+
     waitForCompactedSegmentsToBeLoaded(versionBeforeCompaction);
   }
 

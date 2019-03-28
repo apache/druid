@@ -226,6 +226,19 @@ public class CoordinatorResourceTestClient
     );
   }
 
+  public void unregisterAutoCompaction(String dataSourceName)
+  {
+    try {
+      makeRequest(
+          HttpMethod.DELETE,
+          StringUtils.format("%sconfig/compaction/%s", getCoordinatorURL(), StringUtils.urlEncode(dataSourceName))
+      );
+    }
+    catch (Exception e) {
+      throw new RE(e, "Failed to unregister auto compaction for dataSource[%s]", dataSourceName);
+    }
+  }
+
   private void makePostRequest(final String url, final String jsonSpec)
   {
     try {
