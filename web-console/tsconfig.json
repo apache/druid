@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": true,
+    "noEmitOnError": true,
+    "declaration": false,
+    "removeComments": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": false,
+    "skipLibCheck": true,
+    "importHelpers": true,
+    "target": "es5",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["dom", "es2016"],
+    "jsx": "react",
+    "rootDirs": ["lib","src"],
+
+    "outDir": "build"
+  },
+
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "lib/sql-function-doc.ts"
+  ],
+  "exclude": [
+    "**/*.test.ts"
+  ]
+}

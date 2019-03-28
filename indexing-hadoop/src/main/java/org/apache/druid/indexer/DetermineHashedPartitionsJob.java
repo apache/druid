@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
@@ -37,7 +36,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -75,6 +73,7 @@ public class DetermineHashedPartitionsJob implements Jobby
   private final HadoopDruidIndexerConfig config;
   private String failureCause;
   private Job groupByJob;
+  private long startTime;
 
   public DetermineHashedPartitionsJob(
       HadoopDruidIndexerConfig config
@@ -91,7 +90,7 @@ public class DetermineHashedPartitionsJob implements Jobby
        * Group by (timestamp, dimensions) so we can correctly count dimension values as they would appear
        * in the final segment.
        */
-      final long startTime = System.currentTimeMillis();
+      startTime = System.currentTimeMillis();
       groupByJob = Job.getInstance(
           new Configuration(),
           StringUtils.format("%s-determine_partitions_hashed-%s", config.getDataSource(), config.getIntervals())
@@ -124,6 +123,11 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       groupByJob.submit();
       log.info("Job %s submitted, status available at: %s", groupByJob.getJobName(), groupByJob.getTrackingURL());
+
+      // Store the jobId in the file
+      if (groupByJob.getJobID() != null) {
+        JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), groupByJob.getJobID().toString());
+      }
 
       if (!groupByJob.waitForCompletion(true)) {
         log.error("Job failed: %s", groupByJob.getJobID());
@@ -179,23 +183,19 @@ public class DetermineHashedPartitionsJob implements Jobby
           log.info("Creating [%,d] shards", numberOfShards);
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
-          if (numberOfShards == 1) {
-            actualSpecs.add(new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++));
-          } else {
-            for (int i = 0; i < numberOfShards; ++i) {
-              actualSpecs.add(
-                  new HadoopyShardSpec(
-                      new HashBasedNumberedShardSpec(
-                          i,
-                          numberOfShards,
-                          null,
-                          HadoopDruidIndexerConfig.JSON_MAPPER
-                      ),
-                      shardCount++
-                  )
-              );
-              log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
-            }
+          for (int i = 0; i < numberOfShards; ++i) {
+            actualSpecs.add(
+                new HadoopyShardSpec(
+                    new HashBasedNumberedShardSpec(
+                        i,
+                        numberOfShards,
+                        null,
+                        HadoopDruidIndexerConfig.JSON_MAPPER
+                    ),
+                    shardCount++
+                )
+            );
+            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
           }
 
           shardSpecs.put(bucket.getMillis(), actualSpecs);
@@ -214,7 +214,7 @@ public class DetermineHashedPartitionsJob implements Jobby
       return true;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

@@ -34,7 +34,7 @@ final class ReservoirSegmentSampler
     int numSoFar = 0;
 
     for (ServerHolder server : serverHolders) {
-      for (DataSegment segment : server.getServer().getSegments().values()) {
+      for (DataSegment segment : server.getServer().getLazyAllSegments()) {
         int randNum = ThreadLocalRandom.current().nextInt(numSoFar + 1);
         // w.p. 1 / (numSoFar+1), swap out the server and segment
         if (randNum == numSoFar) {

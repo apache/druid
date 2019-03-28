@@ -21,16 +21,9 @@ PWD="$(pwd)"
 WHEREAMI="$(dirname "$0")"
 WHEREAMI="$(cd "$WHEREAMI" && pwd)"
 
-RLWRAP=""
-
-if [ -x "$(command -v rlwrap)" ]
-then
-  RLWRAP="rlwrap -C dsql"
-fi
-
 if [ -x "$(command -v python2)" ]
 then
-  exec $RLWRAP python2 "$WHEREAMI/dsql-main" "$@"
+  exec python2 "$WHEREAMI/dsql-main" "$@"
 else
-  exec $RLWRAP "$WHEREAMI/dsql-main" "$@"
+  exec "$WHEREAMI/dsql-main" "$@"
 fi

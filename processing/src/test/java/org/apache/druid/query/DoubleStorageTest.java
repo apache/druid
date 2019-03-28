@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -57,6 +56,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -93,17 +93,18 @@ public class DoubleStorageTest
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
       scanQueryQueryToolChest,
-      new ScanQueryEngine()
+      new ScanQueryEngine(),
+      new ScanQueryConfig()
   );
 
-  private ScanQuery.ScanQueryBuilder newTestQuery()
+  private Druids.ScanQueryBuilder newTestQuery()
   {
-    return ScanQuery.newScanQueryBuilder()
-                    .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .columns(Collections.emptyList())
-                    .intervals(QueryRunnerTestHelper.fullOnInterval)
-                    .limit(Integer.MAX_VALUE)
-                    .legacy(false);
+    return Druids.newScanQueryBuilder()
+                 .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
+                 .columns(Collections.emptyList())
+                 .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
+                 .limit(Integer.MAX_VALUE)
+                 .legacy(false);
   }
 
 
@@ -115,7 +116,7 @@ public class DoubleStorageTest
   private static final String DIM_NAME = "testDimName";
   private static final String DIM_VALUE = "testDimValue";
   private static final String DIM_FLOAT_NAME = "testDimFloatName";
-  private static final String SEGMENT_ID = "segmentId";
+  private static final SegmentId SEGMENT_ID = SegmentId.dummy("segmentId");
   private static final Interval INTERVAL = Intervals.of("2011-01-13T00:00:00.000Z/2011-01-22T00:00:00.001Z");
 
   private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
@@ -148,7 +149,7 @@ public class DoubleStorageTest
   public static Collection<?> dataFeeder()
   {
     SegmentAnalysis expectedSegmentAnalysisDouble = new SegmentAnalysis(
-        "segmentId",
+        SEGMENT_ID.toString(),
         ImmutableList.of(INTERVAL),
         ImmutableMap.of(
             TIME_COLUMN,
@@ -190,7 +191,7 @@ public class DoubleStorageTest
     );
 
     SegmentAnalysis expectedSegmentAnalysisFloat = new SegmentAnalysis(
-        "segmentId",
+        SEGMENT_ID.toString(),
         ImmutableList.of(INTERVAL),
         ImmutableMap.of(
             TIME_COLUMN,
@@ -249,7 +250,7 @@ public class DoubleStorageTest
     QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         METADATA_QR_FACTORY,
         SEGMENT_ID,
-        new QueryableIndexSegment("segmentId", index),
+        new QueryableIndexSegment(index, SEGMENT_ID),
         null
     );
 
@@ -282,7 +283,7 @@ public class DoubleStorageTest
     QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         SCAN_QUERY_RUNNER_FACTORY,
         SEGMENT_ID,
-        new QueryableIndexSegment("segmentId", index),
+        new QueryableIndexSegment(index, SEGMENT_ID),
         null
     );
 
@@ -295,7 +296,7 @@ public class DoubleStorageTest
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query), context).toList();
 
     ScanResultValue expectedScanResult = new ScanResultValue(
-        SEGMENT_ID,
+        SEGMENT_ID.toString(),
         ImmutableList.of(TIME_COLUMN, DIM_NAME, DIM_FLOAT_NAME),
         getStreamOfEvents().collect(Collectors.toList())
     );
@@ -326,7 +327,7 @@ public class DoubleStorageTest
         index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
       }
       catch (IndexSizeExceededException e) {
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     });
 

@@ -226,22 +226,22 @@ Response for above query would look something like below...
 #### Strategies
 
 GroupBy queries can be executed using two different strategies. The default strategy for a cluster is determined by the
-"druid.query.groupBy.defaultStrategy" runtime property on the broker. This can be overridden using "groupByStrategy" in
+"druid.query.groupBy.defaultStrategy" runtime property on the Broker. This can be overridden using "groupByStrategy" in
 the query context. If neither the context field nor the property is set, the "v2" strategy will be used.
 
 - "v2", the default, is designed to offer better performance and memory management. This strategy generates
-per-segment results using a fully off-heap map. Data nodes merge the per-segment results using a fully off-heap
+per-segment results using a fully off-heap map. Data processes merge the per-segment results using a fully off-heap
 concurrent facts map combined with an on-heap string dictionary. This may optionally involve spilling to disk. Data
-nodes return sorted results to the broker, which merges result streams using an N-way merge. The broker materializes
+processes return sorted results to the Broker, which merges result streams using an N-way merge. The broker materializes
 the results if necessary (e.g. if the query sorts on columns other than its dimensions). Otherwise, it streams results
 back as they are merged.
 
-- "v1", a legacy engine, generates per-segment results on data nodes (historical, realtime, middleManager) using a map which
-is partially on-heap (dimension keys and the map itself) and partially off-heap (the aggregated values). Data nodes then
+- "v1", a legacy engine, generates per-segment results on data processes (Historical, realtime, MiddleManager) using a map which
+is partially on-heap (dimension keys and the map itself) and partially off-heap (the aggregated values). Data processes then
 merge the per-segment results using Druid's indexing mechanism. This merging is multi-threaded by default, but can
-optionally be single-threaded. The broker merges the final result set using Druid's indexing mechanism again. The broker
-merging is always single-threaded. Because the broker merges results using the indexing mechanism, it must materialize
-the full result set before returning any results. On both the data nodes and the broker, the merging index is fully
+optionally be single-threaded. The Broker merges the final result set using Druid's indexing mechanism again. The broker
+merging is always single-threaded. Because the Broker merges results using the indexing mechanism, it must materialize
+the full result set before returning any results. On both the data processes and the Broker, the merging index is fully
 on-heap by default, but it can optionally store aggregated values off-heap.
 
 #### Differences between v1 and v2
@@ -257,9 +257,9 @@ that can complete successfully in one engine may exceed resource limits and fail
 - groupBy v1 imposes no limit on the number of concurrently running queries, whereas groupBy v2 controls memory usage
 by using a finite-sized merge buffer pool. By default, the number of merge buffers is 1/4 the number of processing
 threads. You can adjust this as necessary to balance concurrency and memory usage.
-- groupBy v1 supports caching on either the broker or historical nodes, whereas groupBy v2 only supports caching on
-historical nodes.
-- groupBy v1 supports using [chunkPeriod](query-context.html) to parallelize merging on the broker, whereas groupBy v2
+- groupBy v1 supports caching on either the Broker or Historical processes, whereas groupBy v2 only supports caching on
+Historical processes.
+- groupBy v1 supports using [chunkPeriod](query-context.html) to parallelize merging on the Broker, whereas groupBy v2
 ignores chunkPeriod.
 - groupBy v2 supports both array-based aggregation and hash-based aggregation. The array-based aggregation is used only
 when the grouping key is a single indexed string column. In array-based aggregation, the dictionary-encoded value is used
@@ -304,7 +304,7 @@ concurrent query load.
 
 ##### Limit pushdown optimization
 
-Druid pushes down the `limit` spec in groupBy queries to the segments on historicals wherever possible to early prune unnecessary intermediate results and minimize the amount of data transferred to brokers. By default, this technique is applied only when all fields in the `orderBy` spec is a subset of the grouping keys. This is because the `limitPushDown` doesn't guarantee the exact results if the `orderBy` spec includes any fields that are not in the grouping keys. However, you can enable this technique even in such cases if you can sacrifice some accuracy for fast query processing like in topN queries. See `forceLimitPushDown` in [advanced groupBy v2 configurations](#groupby-v2-configurations).
+Druid pushes down the `limit` spec in groupBy queries to the segments on Historicals wherever possible to early prune unnecessary intermediate results and minimize the amount of data transferred to Brokers. By default, this technique is applied only when all fields in the `orderBy` spec is a subset of the grouping keys. This is because the `limitPushDown` doesn't guarantee the exact results if the `orderBy` spec includes any fields that are not in the grouping keys. However, you can enable this technique even in such cases if you can sacrifice some accuracy for fast query processing like in topN queries. See `forceLimitPushDown` in [advanced groupBy v2 configurations](#groupby-v2-configurations).
 
 
 ##### Optimizing hash table
@@ -316,10 +316,10 @@ The default number of initial buckets is 1024 and the default max load factor of
 
 ##### Parallel combine
 
-Once a historical finishes aggregation using the hash table, it sorts the aggregated results and merges them before sending to the
-broker for N-way merge aggregation in the broker. By default, historicals use all their available processing threads
+Once a Historical finishes aggregation using the hash table, it sorts the aggregated results and merges them before sending to the
+Broker for N-way merge aggregation in the broker. By default, Historicals use all their available processing threads
 (configured by `druid.processing.numThreads`) for aggregation, but use a single thread for sorting and merging
-aggregates which is an http thread to send data to brokers.
+aggregates which is an http thread to send data to Brokers.
 
 This is to prevent some heavy groupBy queries from blocking other queries. In Druid, the processing threads are shared
 between all submitted queries and they are _not interruptible_. It means, if a heavy query takes all available
@@ -334,11 +334,11 @@ data is actually spilled (see [Memory tuning and resource limits](#memory-tuning
 
 Once parallel combine is enabled, the groupBy v2 engine can create a combining tree for merging sorted aggregates. Each
 intermediate node of the tree is a thread merging aggregates from the child nodes. The leaf node threads read and merge
-aggregates from hash tables including spilled ones. Usually, leaf nodes are slower than intermediate nodes because they
+aggregates from hash tables including spilled ones. Usually, leaf processes are slower than intermediate nodes because they
 need to read data from disk. As a result, less threads are used for intermediate nodes by default. You can change the
 degree of intermediate nodes. See `intermediateCombineDegree` in [Advanced groupBy v2 configurations](#groupby-v2-configurations).
 
-Please note that each historical needs two merge buffers to process a groupBy v2 query with parallel combine: one for
+Please note that each Historical needs two merge buffers to process a groupBy v2 query with parallel combine: one for
 computing intermediate aggregates from each segment and another for combining intermediate aggregates in parallel.
 
 
@@ -356,15 +356,15 @@ results acceptable.
 
 #### Nested groupBys
 
-Nested groupBys (dataSource of type "query") are performed differently for "v1" and "v2". The broker first runs the
+Nested groupBys (dataSource of type "query") are performed differently for "v1" and "v2". The Broker first runs the
 inner groupBy query in the usual way. "v1" strategy then materializes the inner query's results on-heap with Druid's
 indexing mechanism, and runs the outer query on these materialized results. "v2" strategy runs the outer query on the
 inner query's results stream with off-heap fact map and on-heap string dictionary that can spill to disk. Both
-strategy perform the outer query on the broker in a single-threaded fashion.
+strategy perform the outer query on the Broker in a single-threaded fashion.
 
 #### Configurations
 
-This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on broker, historical, and MiddleManager nodes. You can set the query context parameters through the [query context](query-context.html).
+This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and MiddleManager processes. You can set the query context parameters through the [query context](query-context.html).
   
 ##### Configurations for groupBy v2
 
@@ -385,7 +385,7 @@ Supported query contexts:
 
 #### Advanced configurations
 
-##### Common configuragions for all groupBy strategies
+##### Common configurations for all groupBy strategies
 
 Supported runtime properties:
 
@@ -424,7 +424,7 @@ Supported query contexts:
 |`intermediateCombineDegree`|Overrides the value of `druid.query.groupBy.intermediateCombineDegree`|None|
 |`numParallelCombineThreads`|Overrides the value of `druid.query.groupBy.numParallelCombineThreads`|None|
 |`sortByDimsFirst`|Sort the results first by dimension values and then by timestamp.|false|
-|`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the broker will push limit application down to the historical nodes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|false|
+|`forceLimitPushDown`|When all fields in the orderby are part of the grouping key, the Broker will push limit application down to the Historical processes. When the sorting order uses fields that are not in the grouping key, applying this optimization can result in approximate results with unknown accuracy, so this optimization is disabled by default in that case. Enabling this context flag turns on limit push down for limit/orderbys that contain non-grouping key columns.|false|
 
 
 ##### GroupBy v1 configurations

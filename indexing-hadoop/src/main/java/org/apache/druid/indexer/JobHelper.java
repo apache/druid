@@ -22,10 +22,7 @@ package org.apache.druid.indexer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.io.Files;
-import org.apache.druid.indexer.updater.HadoopDruidConverterConfig;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -34,10 +31,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.ProgressIndicator;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,7 +45,6 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -59,8 +55,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -92,7 +90,6 @@ public class JobHelper
   }
 
   public static final String INDEX_ZIP = "index.zip";
-  public static final String DESCRIPTOR_JSON = "descriptor.json";
 
   /**
    * Dose authenticate against a secured hadoop cluster
@@ -173,7 +170,7 @@ public class JobHelper
           );
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     }
@@ -343,7 +340,25 @@ public class JobHelper
       config.addInputPaths(job);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static void writeJobIdToFile(String hadoopJobIdFileName, String hadoopJobId)
+  {
+    if (hadoopJobId != null && hadoopJobIdFileName != null) {
+      try {
+        HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(
+            new OutputStreamWriter(new FileOutputStream(new File(hadoopJobIdFileName)), StandardCharsets.UTF_8),
+            hadoopJobId
+        );
+        log.info("MR job id [%s] is written to the file [%s]", hadoopJobId, hadoopJobIdFileName);
+      }
+      catch (IOException e) {
+        log.warn(e, "Error writing job id [%s] to the file [%s]", hadoopJobId, hadoopJobIdFileName);
+      }
+    } else {
+      log.info("Either job id or file name is null for the submitted job. Skipping writing the file [%s]", hadoopJobIdFileName);
     }
   }
 
@@ -403,7 +418,6 @@ public class JobHelper
       final Progressable progressable,
       final File mergedBase,
       final Path finalIndexZipFilePath,
-      final Path finalDescriptorPath,
       final Path tmpPath,
       DataSegmentPusher dataSegmentPusher
   )
@@ -452,12 +466,6 @@ public class JobHelper
       );
     }
 
-    writeSegmentDescriptor(
-        outputFS,
-        finalSegment,
-        finalDescriptorPath,
-        progressable
-    );
     return finalSegment;
   }
 
@@ -490,7 +498,6 @@ public class JobHelper
                   progressable
               )) {
                 HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(descriptorOut, segment);
-                descriptorOut.flush();
               }
             }
             catch (RuntimeException | IOException ex) {
@@ -662,7 +669,7 @@ public class JobHelper
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -783,7 +790,7 @@ public class JobHelper
       try {
         throw new IAE(
             "Cannot figure out loadSpec %s",
-            HadoopDruidConverterConfig.jsonMapper.writeValueAsString(loadSpec)
+            HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(loadSpec)
         );
       }
       catch (JsonProcessingException e) {
@@ -791,64 +798,6 @@ public class JobHelper
       }
     }
     return segmentLocURI;
-  }
-
-  public static ProgressIndicator progressIndicatorForContext(
-      final TaskAttemptContext context
-  )
-  {
-    return new ProgressIndicator()
-    {
-
-      @Override
-      public void progress()
-      {
-        context.progress();
-      }
-
-      @Override
-      public void start()
-      {
-        context.progress();
-        context.setStatus("STARTED");
-      }
-
-      @Override
-      public void stop()
-      {
-        context.progress();
-        context.setStatus("STOPPED");
-      }
-
-      @Override
-      public void startSection(String section)
-      {
-        context.progress();
-        context.setStatus(StringUtils.format("STARTED [%s]", section));
-      }
-
-      @Override
-      public void stopSection(String section)
-      {
-        context.progress();
-        context.setStatus(StringUtils.format("STOPPED [%s]", section));
-      }
-    };
-  }
-
-  public static boolean deleteWithRetry(final FileSystem fs, final Path path, final boolean recursive)
-  {
-    try {
-      return RetryUtils.retry(
-          () -> fs.delete(path, recursive),
-          shouldRetryPredicate(),
-          NUM_RETRIES
-      );
-    }
-    catch (Exception e) {
-      log.error(e, "Failed to cleanup path[%s]", path);
-      throw Throwables.propagate(e);
-    }
   }
 
   public static String getJobTrackerAddress(Configuration config)

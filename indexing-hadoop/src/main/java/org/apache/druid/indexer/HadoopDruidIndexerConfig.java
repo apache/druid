@@ -28,7 +28,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
@@ -168,7 +167,7 @@ public class HadoopDruidIndexerConfig
       );
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -182,7 +181,7 @@ public class HadoopDruidIndexerConfig
       );
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -199,7 +198,7 @@ public class HadoopDruidIndexerConfig
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -212,6 +211,7 @@ public class HadoopDruidIndexerConfig
 
   private HadoopIngestionSpec schema;
   private PathSpec pathSpec;
+  private String hadoopJobIdFileName;
   private final Map<Long, ShardSpecLookup> shardSpecLookups = new HashMap<>();
   private final Map<Long, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = new HashMap<>();
   private final Granularity rollupGran;
@@ -373,6 +373,16 @@ public class HadoopDruidIndexerConfig
   public int getMaxParseExceptions()
   {
     return schema.getTuningConfig().getMaxParseExceptions();
+  }
+
+  public void setHadoopJobIdFileName(String hadoopJobIdFileName)
+  {
+    this.hadoopJobIdFileName = hadoopJobIdFileName;
+  }
+
+  public String getHadoopJobIdFileName()
+  {
+    return hadoopJobIdFileName;
   }
 
   /**
@@ -547,10 +557,7 @@ public class HadoopDruidIndexerConfig
 
   public Path makeDescriptorInfoPath(DataSegment segment)
   {
-    return new Path(
-        makeDescriptorInfoDir(),
-        StringUtils.removeChar(StringUtils.format("%s.json", segment.getIdentifier()), ':')
-    );
+    return new Path(makeDescriptorInfoDir(), StringUtils.removeChar(segment.getId() + ".json", ':'));
   }
 
   public void addJobProperties(Job job)
@@ -573,7 +580,7 @@ public class HadoopDruidIndexerConfig
       conf.set(HadoopDruidIndexerConfig.CONFIG_PROPERTY, HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(this));
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

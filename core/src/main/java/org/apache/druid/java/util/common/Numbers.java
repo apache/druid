@@ -92,6 +92,14 @@ public final class Numbers
     }
   }
 
+  public static int toIntExact(long value, String error)
+  {
+    if ((int) value != value) {
+      throw new ArithmeticException(error);
+    }
+    return (int) value;
+  }
+
   private Numbers()
   {
   }

@@ -54,7 +54,7 @@ import java.util.concurrent.Executor;
 )
 public class CliRealtimeExample extends ServerRunnable
 {
-  private static final Logger log = new Logger(CliBroker.class);
+  private static final Logger log = new Logger(CliRealtimeExample.class);
 
   @Inject
   private Properties properties;
@@ -105,7 +105,7 @@ public class CliRealtimeExample extends ServerRunnable
   private static class NoopInventoryView implements InventoryView
   {
     @Override
-    public DruidServer getInventoryValue(String string)
+    public DruidServer getInventoryValue(String serverKey)
     {
       return null;
     }

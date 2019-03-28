@@ -20,7 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -46,6 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ *
  */
 public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
@@ -105,7 +105,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     long maxAggregatorIntermediateSize = Integer.BYTES * incrementalIndexSchema.getMetrics().length;
     maxAggregatorIntermediateSize += Arrays.stream(incrementalIndexSchema.getMetrics())
-                                           .mapToLong(aggregator -> aggregator.getMaxIntermediateSizeWithNulls() + Long.BYTES * 2)
+                                           .mapToLong(aggregator -> aggregator.getMaxIntermediateSizeWithNulls()
+                                                                    + Long.BYTES * 2)
                                            .sum();
     return maxAggregatorIntermediateSize;
   }
@@ -140,12 +141,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   @Override
   protected AddToFactsResult addToFacts(
-      AggregatorFactory[] metrics,
-      boolean deserializeComplexMetrics,
-      boolean reportParseExceptions,
       InputRow row,
-      AtomicInteger numEntries,
-      AtomicLong sizeInBytes,
       IncrementalIndexRow key,
       ThreadLocal<InputRow> rowContainer,
       Supplier<InputRow> rowSupplier,
@@ -156,7 +152,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
-
+    final AggregatorFactory[] metrics = getMetrics();
+    final AtomicInteger numEntries = getNumEntries();
+    final AtomicLong sizeInBytes = getBytesInMemory();
     if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
       aggs = concurrentGet(priorIndex);
       parseExceptionMessages = doAggregate(metrics, aggs, rowContainer, row);
@@ -276,7 +274,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       closer.close();
     }
     catch (IOException e) {
-      Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -301,7 +299,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     final boolean countCheck = size() < maxRowCount;
     // if maxBytesInMemory = -1, then ignore sizeCheck
-    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory() < maxBytesInMemory;
+    final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory().get() < maxBytesInMemory;
     final boolean canAdd = countCheck && sizeCheck;
     if (!countCheck && !sizeCheck) {
       outOfRowsReason = StringUtils.format(

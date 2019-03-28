@@ -24,7 +24,7 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -46,7 +46,7 @@ public interface SqlAggregator
    * they will be applied to your aggregator in a later step.
    *
    * @param plannerContext       SQL planner context
-   * @param rowSignature         signature of the rows being aggregated
+   * @param querySignature       signature of the rows row signature and re-usable virtual column references
    * @param rexBuilder           a rexBuilder, in case you need one
    * @param name                 desired output name of the aggregation
    * @param aggregateCall        aggregate call object
@@ -62,10 +62,9 @@ public interface SqlAggregator
   @Nullable
   Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
+      DruidQuerySignature querySignature,
       RexBuilder rexBuilder,
-      String name,
-      AggregateCall aggregateCall,
+      String name, AggregateCall aggregateCall,
       Project project,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations

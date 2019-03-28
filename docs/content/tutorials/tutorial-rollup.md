@@ -99,9 +99,8 @@ We'll ingest this data using the following ingestion task spec, located at `quic
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000,
-      "maxRowsInMemory" : 25000,
-      "forceExtendableShardSpecs" : true
+      "maxRowsPerSegment" : 5000000,
+      "maxRowsInMemory" : 25000
     }
   }
 }

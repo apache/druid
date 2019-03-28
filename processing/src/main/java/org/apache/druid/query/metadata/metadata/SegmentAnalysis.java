@@ -32,6 +32,14 @@ import java.util.Objects;
 
 public class SegmentAnalysis implements Comparable<SegmentAnalysis>
 {
+  /**
+   * Segment id is stored as a String rather than {@link org.apache.druid.timeline.SegmentId}, because when a
+   * SegmentAnalysis object is sent across Druid nodes, on the reciever (deserialization) side it's impossible to
+   * unambiguously convert a segment id string (as transmitted in the JSON format) back into a {@code SegmentId} object
+   * ({@link org.apache.druid.timeline.SegmentId#tryParse} javadoc explains that ambiguities in details). It would be
+   * fine to have the type of this field of Object, setting it to {@code SegmentId} on the sender side and remaining as
+   * a String on the reciever side, but it's even less type-safe than always storing the segment id as a String.
+   */
   private final String id;
   private final List<Interval> interval;
   private final Map<String, ColumnAnalysis> columns;
@@ -173,10 +181,6 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   @Override
   public int compareTo(SegmentAnalysis rhs)
   {
-    // Nulls first
-    if (rhs == null) {
-      return 1;
-    }
     return id.compareTo(rhs.getId());
   }
 }

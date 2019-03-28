@@ -25,29 +25,36 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CollectionUtils;
 
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.Collection;
 
 /**
+ * This class should not be subclassed, it isn't declared final only to make it possible to mock the class with EasyMock
+ * in tests.
+ *
+ * @see DruidServer - a mutable counterpart of this class
  */
 public class ImmutableDruidServer
 {
   private final DruidServerMetadata metadata;
   private final long currSize;
   private final ImmutableMap<String, ImmutableDruidDataSource> dataSources;
-  private final ImmutableMap<String, DataSegment> segments;
+  private final int totalSegments;
 
   public ImmutableDruidServer(
       DruidServerMetadata metadata,
       long currSize,
       ImmutableMap<String, ImmutableDruidDataSource> dataSources,
-      ImmutableMap<String, DataSegment> segments
+      int totalSegments
   )
   {
     this.metadata = Preconditions.checkNotNull(metadata);
     this.currSize = currSize;
-    this.segments = segments;
     this.dataSources = dataSources;
+    this.totalSegments = totalSegments;
   }
 
   public String getName()
@@ -100,9 +107,14 @@ public class ImmutableDruidServer
     return metadata.getPriority();
   }
 
-  public DataSegment getSegment(String segmentName)
+  @Nullable
+  public DataSegment getSegment(SegmentId segmentId)
   {
-    return segments.get(segmentName);
+    ImmutableDruidDataSource dataSource = dataSources.get(segmentId.getDataSource());
+    if (dataSource == null) {
+      return null;
+    }
+    return dataSource.getSegment(segmentId);
   }
 
   public Iterable<ImmutableDruidDataSource> getDataSources()
@@ -115,9 +127,22 @@ public class ImmutableDruidServer
     return dataSources.get(name);
   }
 
-  public Map<String, DataSegment> getSegments()
+  /**
+   * Returns a lazy collection with all segments in all data sources, stored on this ImmutableDruidServer. The order
+   * of segments in this collection is unspecified.
+   *
+   * Calling {@link Collection#size()} on the returned collection is cheap, O(1).
+   *
+   * Note: iteration over the returned collection may not be as trivially cheap as, for example, iteration over an
+   * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned collection only
+   * once rather than several times.
+   */
+  public Collection<DataSegment> getLazyAllSegments()
   {
-    return segments;
+    return CollectionUtils.createLazyCollectionFromStream(
+        () -> dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()),
+        totalSegments
+    );
   }
 
   public String getURL()

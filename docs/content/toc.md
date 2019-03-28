@@ -48,12 +48,12 @@ layout: toc
 
 ## Data Ingestion
   * [Ingestion overview](/docs/VERSION/ingestion/index.html)
+  * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
   * [Data Formats](/docs/VERSION/ingestion/data-formats.html)
   * [Tasks Overview](/docs/VERSION/ingestion/tasks.html)
   * [Ingestion Spec](/docs/VERSION/ingestion/ingestion-spec.html)
     * [Transform Specs](/docs/VERSION/ingestion/transform-spec.html)
     * [Firehoses](/docs/VERSION/ingestion/firehose.html)
-  * [Schema Design](/docs/VERSION/ingestion/schema-design.html)
   * [Schema Changes](/docs/VERSION/ingestion/schema-changes.html)
   * [Batch File Ingestion](/docs/VERSION/ingestion/batch-ingestion.html)
     * [Native Batch Ingestion](/docs/VERSION/ingestion/native_tasks.html)
@@ -101,13 +101,12 @@ layout: toc
   * [Overview](/docs/VERSION/design/index.html)
   * Storage
     * [Segments](/docs/VERSION/design/segments.html)
-  * Node Types
-    * [Historical](/docs/VERSION/design/historical.html)
-    * [Broker](/docs/VERSION/design/broker.html)
+  * [Processes and Servers](/docs/VERSION/design/processes.html)
     * [Coordinator](/docs/VERSION/design/coordinator.html)
-    * [Indexing Service](/docs/VERSION/design/indexing-service.html)
-      * [Overlord](/docs/VERSION/design/overlord.html)
-      * [MiddleManager](/docs/VERSION/design/middlemanager.html)
+    * [Overlord](/docs/VERSION/design/overlord.html)
+    * [Broker](/docs/VERSION/design/broker.html)
+    * [Historical](/docs/VERSION/design/historical.html)
+    * [MiddleManager](/docs/VERSION/design/middlemanager.html)
       * [Peons](/docs/VERSION/design/peons.html)
     * [Realtime (Deprecated)](/docs/VERSION/design/realtime.html)
   * Dependencies
@@ -129,13 +128,16 @@ layout: toc
   * [Alerts](/docs/VERSION/operations/alerts.html)
   * [Updating the Cluster](/docs/VERSION/operations/rolling-updates.html)
   * [Different Hadoop Versions](/docs/VERSION/operations/other-hadoop.html)
+  * [High Availability](/docs/VERSION/operations/high-availability.html)
   * [Performance FAQ](/docs/VERSION/operations/performance-faq.html)
+  * [Management UIs](/docs/VERSION/operations/management-uis.html)
   * [Dump Segment Tool](/docs/VERSION/operations/dump-segment.html)
   * [Insert Segment Tool](/docs/VERSION/operations/insert-segment-to-db.html)
   * [Pull Dependencies Tool](/docs/VERSION/operations/pull-deps.html)
   * [Recommendations](/docs/VERSION/operations/recommendations.html)
   * [TLS Support](/docs/VERSION/operations/tls-support.html)
   * [Password Provider](/docs/VERSION/operations/password-provider.html)
+  * [HTTP Compression](/docs/VERSION/operations/http-compression.html)
 
 ## Configuration
   * [Configuration Reference](/docs/VERSION/configuration/index.html)

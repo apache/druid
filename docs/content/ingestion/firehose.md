@@ -110,7 +110,10 @@ A sample ingest firehose spec is shown below -
 #### SqlFirehose
 
 SqlFirehoseFactory can be used to ingest events residing in RDBMS. The database connection information is provided as part of the ingestion spec. For each query, the results are fetched locally and indexed. If there are multiple queries from which data needs to be indexed, queries are prefetched in the background upto `maxFetchCapacityBytes` bytes.
-An example is shown below:
+
+Requires one of the following extensions:
+ * [MySQL Metadata Store](../development/extensions-core/mysql.html).
+ * [PostgreSQL Metadata Store](../development/extensions-core/postgresql.html).
 
 ```json
 {
@@ -118,26 +121,33 @@ An example is shown below:
     "database": {
         "type": "mysql",
         "connectorConfig" : {
-        "connectURI" : "jdbc:mysql://host:port/schema",
-        "user" : "user",
-        "password" : "password"
+            "connectURI" : "jdbc:mysql://host:port/schema",
+            "user" : "user",
+            "password" : "password"
         }
      },
     "sqls" : ["SELECT * FROM table1", "SELECT * FROM table2"]
 }
 ```
 
-
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|This should be "sql".||Yes|
-|database|Specifies the database connection details.`type` should specify the database type and `connectorConfig` should specify the database connection properties via `connectURI`, `user` and `password`||Yes|
+|database|Specifies the database connection details.||Yes|
 |maxCacheCapacityBytes|Maximum size of the cache space in bytes. 0 means disabling cache. Cached files are not removed until the ingestion task completes.|1073741824|No|
 |maxFetchCapacityBytes|Maximum size of the fetch space in bytes. 0 means disabling prefetch. Prefetched files are removed immediately once they are read.|1073741824|No|
 |prefetchTriggerBytes|Threshold to trigger prefetching SQL result objects.|maxFetchCapacityBytes / 2|No|
 |fetchTimeout|Timeout for fetching the result set.|60000|No|
 |foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|false|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.||Yes|
+
+#### Database
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|The type of database to query. Valid values are `mysql` and `postgresql`_||Yes|
+|connectorConfig|specify the database connection properties via `connectURI`, `user` and `password`||Yes|
+
 
 ### CombiningFirehose
 
@@ -181,8 +191,9 @@ When using this firehose, events can be sent by submitting a POST request to the
 |property|description|required?|
 |--------|-----------|---------|
 |type|This should be "receiver"|yes|
-|serviceName|name used to announce the event receiver service endpoint|yes|
-|bufferSize| size of buffer used by firehose to store events|no default(100000)|
+|serviceName|Name used to announce the event receiver service endpoint|yes|
+|maxIdleTime|A firehose is automatically shut down after not receiving any events for this period of time, in milliseconds. If not specified, a firehose is never shut down due to being idle. Zero and negative values have the same effect.|no|
+|bufferSize|Size of buffer used by firehose to store events|no, default is 100000|
 
 Shut down time for EventReceiverFirehose can be specified by submitting a POST request to
 

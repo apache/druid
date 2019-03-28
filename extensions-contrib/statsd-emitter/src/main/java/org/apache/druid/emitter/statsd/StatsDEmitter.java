@@ -53,7 +53,7 @@ public class StatsDEmitter implements Emitter
         config.getPrefix(),
         config.getHostname(),
         config.getPort(),
-        EMPTY_ARRAY,
+        config.isDogstatsd() ? config.getDogstatsdConstantTags().toArray(new String[0]) : EMPTY_ARRAY,
         new StatsDClientErrorHandler()
         {
           private int exceptionCount = 0;
@@ -106,7 +106,7 @@ public class StatsDEmitter implements Emitter
       if (statsDMetric != null) {
         List<String> fullNameList;
         String[] tags;
-        if (config.getDogstatsd()) {
+        if (config.isDogstatsd()) {
           if (config.getIncludeHost()) {
             dimsBuilder.put("hostname", host);
           }
@@ -133,7 +133,7 @@ public class StatsDEmitter implements Emitter
         fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
         fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
 
-        if (config.getDogstatsd() && (value instanceof Float || value instanceof Double)) {
+        if (config.isDogstatsd() && (value instanceof Float || value instanceof Double)) {
           switch (statsDMetric.type) {
             case count:
               statsd.count(fullName, value.doubleValue(), tags);
@@ -146,7 +146,7 @@ public class StatsDEmitter implements Emitter
               break;
           }
         } else {
-          long val = statsDMetric.convertRange && !config.getDogstatsd() ?
+          long val = statsDMetric.convertRange && !config.isDogstatsd() ?
               Math.round(value.doubleValue() * 100) :
               value.longValue();
 

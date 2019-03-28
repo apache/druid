@@ -243,12 +243,10 @@ public class CoordinatorServerViewTest extends CuratorTestBase
 
   private void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment) throws Exception
   {
-    curator.delete().guaranteed().forPath(
-        ZKPaths.makePath(
-            ZKPaths.makePath(inventoryPath, druidServer.getHost()),
-            segment.getIdentifier()
-        )
-    );
+    curator
+        .delete()
+        .guaranteed()
+        .forPath(ZKPaths.makePath(inventoryPath, druidServer.getHost(), segment.getId().toString()));
   }
 
   private Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> createExpected(
@@ -330,7 +328,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     };
 
     overlordServerView = new CoordinatorServerView(
-        baseView
+        baseView,
+        new CoordinatorSegmentWatcherConfig()
     );
 
     baseView.start();

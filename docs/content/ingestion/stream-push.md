@@ -41,8 +41,8 @@ time). Older messages will not be processed in real-time. Historical data is bes
 ### Server
 
 Druid can use [Tranquility Server](https://github.com/druid-io/tranquility/blob/master/docs/server.md), which
-lets you send data to Druid without developing a JVM app. You can run Tranquility server colocated with Druid middleManagers
-and historical processes.
+lets you send data to Druid without developing a JVM app. You can run Tranquility server colocated with Druid MiddleManagers
+and Historical processes.
 
 Tranquility server is started by issuing:
 
@@ -125,7 +125,7 @@ The windowPeriod is the slack time permitted for events. For example, a windowPe
 than ten minutes in the future, will be dropped.
 
 These are important configurations because they influence how long tasks will be alive for, and how
-long data stays in the realtime system before being handed off to the historical nodes. For example,
+long data stays in the realtime system before being handed off to the Historical processes. For example,
 if your configuration has segmentGranularity "hour" and windowPeriod ten minutes, tasks will stay
 around listening for events for an hour and ten minutes. For this reason, to prevent excessive
 buildup of tasks, it is recommended that your windowPeriod be less than your segmentGranularity.

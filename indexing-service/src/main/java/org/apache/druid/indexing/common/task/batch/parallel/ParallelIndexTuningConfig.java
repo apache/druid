@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -34,7 +35,7 @@ import java.util.Objects;
 @JsonTypeName("index_parallel")
 public class ParallelIndexTuningConfig extends IndexTuningConfig
 {
-  private static final int DEFAULT_MAX_NUM_BATCH_TASKS = Integer.MAX_VALUE; // unlimited
+  private static final int DEFAULT_MAX_NUM_BATCH_TASKS = 1;
   private static final int DEFAULT_MAX_RETRY = 3;
   private static final long DEFAULT_TASK_STATUS_CHECK_PERIOD_MS = 1000;
 
@@ -76,14 +77,14 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
 
   @JsonCreator
   public ParallelIndexTuningConfig(
-      @JsonProperty("targetPartitionSize") @Nullable Integer targetPartitionSize,
+      @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
       @JsonProperty("numShards") @Nullable Integer numShards,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-      @JsonProperty("forceExtendableShardSpecs") @Nullable Boolean forceExtendableShardSpecs,
       @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
       @JsonProperty("reportParseExceptions") @Nullable Boolean reportParseExceptions,
       @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
@@ -100,6 +101,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   {
     super(
         targetPartitionSize,
+        maxRowsPerSegment,
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,
@@ -109,7 +111,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         indexSpec,
         maxPendingPersists,
         null,
-        forceExtendableShardSpecs,
         forceGuaranteedRollup,
         reportParseExceptions,
         null,
@@ -128,6 +129,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
 
     this.chatHandlerTimeout = DEFAULT_CHAT_HANDLER_TIMEOUT;
     this.chatHandlerNumRetries = DEFAULT_CHAT_HANDLER_NUM_RETRIES;
+
+    Preconditions.checkArgument(this.maxNumSubTasks > 0, "maxNumSubTasks must be positive");
   }
 
   @JsonProperty

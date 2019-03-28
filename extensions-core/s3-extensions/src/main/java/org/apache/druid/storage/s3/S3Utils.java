@@ -172,11 +172,6 @@ public class S3Utils
     ) + "/index.zip";
   }
 
-  static String descriptorPathForSegmentPath(String s3Path)
-  {
-    return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/descriptor.json";
-  }
-
   static String indexZipForSegmentPath(String s3Path)
   {
     return s3Path.substring(0, s3Path.lastIndexOf('/')) + "/index.zip";
@@ -251,7 +246,10 @@ public class S3Utils
         .withMaxKeys(1);
     final ListObjectsV2Result result = s3Client.listObjectsV2(request);
 
-    if (result.getKeyCount() == 0) {
+    // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
+    // it is observed that even though the getObjectSummaries returns some data
+    // keyCount is still zero.
+    if (result.getObjectSummaries().size() == 0) {
       throw new ISE("Cannot find object for bucket[%s] and key[%s]", bucket, key);
     }
     final S3ObjectSummary objectSummary = result.getObjectSummaries().get(0);

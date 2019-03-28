@@ -24,7 +24,7 @@ title: "Kerberos"
 
 # Kerberos
 
-Druid Extension to enable Authentication for Druid Nodes using Kerberos.
+Druid Extension to enable Authentication for Druid Processes using Kerberos.
 This extension adds an Authenticator which is used to protect HTTP Endpoints using the simple and protected GSSAPI negotiation mechanism [SPNEGO](https://en.wikipedia.org/wiki/SPNEGO).
 Make sure to [include](../../operations/including-extensions.html) `druid-kerberos` as an extension.
 
@@ -51,14 +51,14 @@ The configuration examples in the rest of this document will use "kerberos" as t
 ### Properties
 |Property|Possible Values|Description|Default|required|
 |--------|---------------|-----------|-------|--------|
-|`druid.auth.authenticator.kerberos.serverPrincipal`|`HTTP/_HOST@EXAMPLE.COM`| SPNego service principal used by druid nodes|empty|Yes|
-|`druid.auth.authenticator.kerberos.serverKeytab`|`/etc/security/keytabs/spnego.service.keytab`|SPNego service keytab used by druid nodes|empty|Yes|
+|`druid.auth.authenticator.kerberos.serverPrincipal`|`HTTP/_HOST@EXAMPLE.COM`| SPNego service principal used by druid processes|empty|Yes|
+|`druid.auth.authenticator.kerberos.serverKeytab`|`/etc/security/keytabs/spnego.service.keytab`|SPNego service keytab used by druid processes|empty|Yes|
 |`druid.auth.authenticator.kerberos.authToLocal`|`RULE:[1:$1@$0](druid@EXAMPLE.COM)s/.*/druid DEFAULT`|It allows you to set a general rule for mapping principal names to local user names. It will be used if there is not an explicit mapping for the principal name that is being translated.|DEFAULT|No|
 |`druid.auth.authenticator.kerberos.excludedPaths`|`['/status','/health']`| Array of HTTP paths which which does NOT need to be authenticated.|None|No|
 |`druid.auth.authenticator.kerberos.cookieSignatureSecret`|`secretString`| Secret used to sign authentication cookies. It is advisable to explicitly set it, if you have multiple druid ndoes running on same machine with different ports as the Cookie Specification does not guarantee isolation by port.|<Random value>|No|
 |`druid.auth.authenticator.kerberos.authorizerName`|Depends on available authorizers|Authorizer that requests should be directed to|Empty|Yes|
 
-As a note, it is required that the SPNego principal in use by the druid nodes must start with HTTP (This specified by [RFC-4559](https://tools.ietf.org/html/rfc4559)) and must be of the form "HTTP/_HOST@REALM".
+As a note, it is required that the SPNego principal in use by the druid processes must start with HTTP (This specified by [RFC-4559](https://tools.ietf.org/html/rfc4559)) and must be of the form "HTTP/_HOST@REALM".
 The special string _HOST will be replaced automatically with the value of config `druid.host`
 
 ### Auth to Local Syntax
@@ -74,14 +74,14 @@ In such cases, max request header size that druid can handle can be increased by
 
 ## Configuring Kerberos Escalated Client
 
-Druid internal nodes communicate with each other using an escalated http Client. A Kerberos enabled escalated HTTP Client can be configured by following properties -
+Druid internal processes communicate with each other using an escalated http Client. A Kerberos enabled escalated HTTP Client can be configured by following properties -
 
 
 |Property|Example Values|Description|Default|required|
 |--------|---------------|-----------|-------|--------|
-|`druid.escalator.type`|`kerberos`| Type of Escalator client used for internal node communication.|n/a|Yes|
-|`druid.escalator.internalClientPrincipal`|`druid@EXAMPLE.COM`| Principal user name, used for internal node communication|n/a|Yes|
-|`druid.escalator.internalClientKeytab`|`/etc/security/keytabs/druid.keytab`|Path to keytab file used for internal node communication|n/a|Yes|
+|`druid.escalator.type`|`kerberos`| Type of Escalator client used for internal process communication.|n/a|Yes|
+|`druid.escalator.internalClientPrincipal`|`druid@EXAMPLE.COM`| Principal user name, used for internal process communication|n/a|Yes|
+|`druid.escalator.internalClientKeytab`|`/etc/security/keytabs/druid.keytab`|Path to keytab file used for internal process communication|n/a|Yes|
 |`druid.escalator.authorizerName`|`MyBasicAuthorizer`|Authorizer that requests should be directed to.|n/a|Yes|
 
 ## Accessing Druid HTTP end points when kerberos security is enabled
@@ -98,14 +98,14 @@ Druid internal nodes communicate with each other using an escalated http Client.
     curl --negotiate -u:anyUser -b ~/cookies.txt -c ~/cookies.txt -X POST -H'Content-Type: application/json' <HTTP_END_POINT>
     ```
 
-    e.g to send a query from file `query.json` to druid broker use this command -
+    e.g to send a query from file `query.json` to the Druid Broker use this command -
 
     ```
     curl --negotiate -u:anyUser -b ~/cookies.txt -c ~/cookies.txt -X POST -H'Content-Type: application/json'  http://broker-host:port/druid/v2/?pretty -d @query.json
     ```
     Note: Above command will authenticate the user first time using SPNego negotiate mechanism and store the authentication cookie in file. For subsequent requests the cookie will be used for authentication.
 
-## Accessing coordinator or overlord console from web browser
+## Accessing Coordinator or Overlord console from web browser
 To access Coordinator/Overlord console from browser you will need to configure your browser for SPNego authentication as follows -
 
 1. Safari - No configurations required.

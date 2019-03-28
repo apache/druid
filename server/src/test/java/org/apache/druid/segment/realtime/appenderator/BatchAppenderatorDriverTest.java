@@ -122,12 +122,12 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new SegmentIdentifier(DATA_SOURCE, Intervals.of("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
-            new SegmentIdentifier(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0))
+            new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
+            new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0))
         ),
         published.getSegments()
                  .stream()
-                 .map(SegmentIdentifier::fromDataSegment)
+                 .map(SegmentIdWithShardSpec::fromDataSegment)
                  .collect(Collectors.toSet())
     );
 
@@ -158,13 +158,13 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
     Assert.assertEquals(
         ImmutableSet.of(
-            new SegmentIdentifier(DATA_SOURCE, Intervals.of("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
-            new SegmentIdentifier(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
-            new SegmentIdentifier(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(1, 0))
+            new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
+            new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(0, 0)),
+            new SegmentIdWithShardSpec(DATA_SOURCE, Intervals.of("2000T01/PT1H"), VERSION, new NumberedShardSpec(1, 0))
         ),
         published.getSegments()
                  .stream()
-                 .map(SegmentIdentifier::fromDataSegment)
+                 .map(SegmentIdWithShardSpec::fromDataSegment)
                  .collect(Collectors.toSet())
     );
 
@@ -195,6 +195,6 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segments, commitMetadata) -> new SegmentPublishResult(ImmutableSet.of(), true);
+    return (segments, commitMetadata) -> SegmentPublishResult.ok(ImmutableSet.of());
   }
 }

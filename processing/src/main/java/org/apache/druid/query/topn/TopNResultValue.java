@@ -38,9 +38,7 @@ public class TopNResultValue implements Iterable<DimensionAndMetricValueExtracto
   private final List<DimensionAndMetricValueExtractor> value;
 
   @JsonCreator
-  public TopNResultValue(
-      List<?> value
-  )
+  public TopNResultValue(List<?> value)
   {
     this.value = (value == null) ? new ArrayList<>() : Lists.transform(
         value,

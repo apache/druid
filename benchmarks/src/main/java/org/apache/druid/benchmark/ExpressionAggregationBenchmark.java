@@ -32,6 +32,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -240,10 +241,18 @@ public class ExpressionAggregationBenchmark
     {
       throw new UnsupportedOperationException();
     }
+
     @Override
     public void close()
     {
+      // nothing to close
+    }
 
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+      inspector.visit("xSelector", xSelector);
+      inspector.visit("ySelector", ySelector);
     }
   }
 }

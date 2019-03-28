@@ -36,7 +36,7 @@ JavaScript can be used to extend Druid in a variety of ways:
 - [Post-aggregators](../querying/post-aggregations.html#javascript-post-aggregator)
 - [Input parsers](../ingestion/data-formats.html#javascript)
 - [Router strategy](../development/router.html#javascript)
-- [Worker select strategy](../configuration/indexing-service.html#javascript)
+- [Worker select strategy](../configuration/index.html#javascript-worker-select-strategy)
 
 JavaScript can be injected dynamically at runtime, making it convenient to rapidly prototype new functionality
 without needing to write and deploy Druid extensions.
@@ -59,7 +59,7 @@ unpredictable results if global variables are used.
 ## Performance
 
 Simple JavaScript functions typically have a slight performance penalty to native speed. More complex JavaScript
-functions can have steeper performance penalties. Druid compiles JavaScript functions once per node per query.
+functions can have steeper performance penalties. Druid compiles JavaScript functions once on each data process per query.
 
 You may need to pay special attention to garbage collection when making heavy use of JavaScript functions, especially
 garbage collection of the compiled classes themselves. Be sure to use a garbage collector configuration that supports

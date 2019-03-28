@@ -25,8 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -561,8 +559,7 @@ public class KerberosAuthenticator implements Authenticator
     } else {
       authorization = authorization.substring(org.apache.hadoop.security.authentication.client.KerberosAuthenticator.NEGOTIATE
                                                   .length()).trim();
-      final Base64 base64 = new Base64(0);
-      final byte[] clientToken = base64.decode(authorization);
+      final byte[] clientToken = StringUtils.decodeBase64String(authorization);
       try {
         DerInputStream ticketStream = new DerInputStream(clientToken);
         DerValue[] values = ticketStream.getSet(clientToken.length, true);
@@ -608,7 +605,7 @@ public class KerberosAuthenticator implements Authenticator
         }
       }
       catch (Exception ex) {
-        Throwables.propagate(ex);
+        throw new RuntimeException(ex);
       }
     }
 

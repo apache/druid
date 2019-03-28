@@ -59,6 +59,7 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -196,7 +197,7 @@ public class ServerManager implements QuerySegmentWalker
         );
 
     return CPUTimeMetricQueryRunner.safeBuild(
-        new FinalizeResultsQueryRunner<T>(
+        new FinalizeResultsQueryRunner<>(
             toolChest.mergeResults(factory.mergeRunners(exec, queryRunners)),
             toolChest
         ),
@@ -290,18 +291,19 @@ public class ServerManager implements QuerySegmentWalker
   )
   {
     SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
-    String segmentId = adapter.getIdentifier();
+    SegmentId segmentId = adapter.getId();
+    String segmentIdString = segmentId.toString();
 
-    MetricsEmittingQueryRunner metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
+    MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
         new ReferenceCountingSegmentQueryRunner<>(factory, adapter, segmentDescriptor),
         QueryMetrics::reportSegmentTime,
-        queryMetrics -> queryMetrics.segment(segmentId)
+        queryMetrics -> queryMetrics.segment(segmentIdString)
     );
 
-    CachingQueryRunner cachingQueryRunner = new CachingQueryRunner<>(
-        segmentId,
+    CachingQueryRunner<T> cachingQueryRunner = new CachingQueryRunner<>(
+        segmentIdString,
         segmentDescriptor,
         objectMapper,
         cache,
@@ -311,26 +313,26 @@ public class ServerManager implements QuerySegmentWalker
         cacheConfig
     );
 
-    BySegmentQueryRunner bySegmentQueryRunner = new BySegmentQueryRunner<>(
+    BySegmentQueryRunner<T> bySegmentQueryRunner = new BySegmentQueryRunner<>(
         segmentId,
         adapter.getDataInterval().getStart(),
         cachingQueryRunner
     );
 
-    MetricsEmittingQueryRunner metricsEmittingQueryRunnerOuter = new MetricsEmittingQueryRunner<>(
+    MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerOuter = new MetricsEmittingQueryRunner<>(
         emitter,
         toolChest,
         bySegmentQueryRunner,
         QueryMetrics::reportSegmentAndCacheTime,
-        queryMetrics -> queryMetrics.segment(segmentId)
+        queryMetrics -> queryMetrics.segment(segmentIdString)
     ).withWaitMeasuredFromNow();
 
-    SpecificSegmentQueryRunner specificSegmentQueryRunner = new SpecificSegmentQueryRunner<>(
+    SpecificSegmentQueryRunner<T> specificSegmentQueryRunner = new SpecificSegmentQueryRunner<>(
         metricsEmittingQueryRunnerOuter,
         segmentSpec
     );
 
-    PerSegmentOptimizingQueryRunner perSegmentOptimizingQueryRunner = new PerSegmentOptimizingQueryRunner<>(
+    PerSegmentOptimizingQueryRunner<T> perSegmentOptimizingQueryRunner = new PerSegmentOptimizingQueryRunner<>(
         specificSegmentQueryRunner,
         new PerSegmentQueryOptimizationContext(segmentDescriptor)
     );

@@ -85,19 +85,19 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
 {
   private static final int NUM_SUB_TASKS = 10;
 
-  // specId -> spec
+  /** specId -> spec */
   private final ConcurrentMap<String, ParallelIndexSubTaskSpec> subTaskSpecs = new ConcurrentHashMap<>();
 
-  // specId -> taskStatusPlus
+  /** specId -> taskStatusPlus */
   private final ConcurrentMap<String, TaskStatusPlus> runningSpecs = new ConcurrentHashMap<>();
 
-  // specId -> taskStatusPlus list
-  private final ConcurrentMap<String, List<TaskStatusPlus>> taskHistories = new ConcurrentHashMap<>();
+  /** specId -> taskStatusPlus list */
+  private final ConcurrentHashMap<String, List<TaskStatusPlus>> taskHistories = new ConcurrentHashMap<>();
 
-  // taskId -> subTaskSpec
+  /** taskId -> subTaskSpec */
   private final ConcurrentMap<String, ParallelIndexSubTaskSpec> taskIdToSpec = new ConcurrentHashMap<>();
 
-  // taskId -> task
+  /** taskId -> task */
   private final CopyOnWriteArrayList<TestSubTask> runningTasks = new CopyOnWriteArrayList<>();
 
   private ExecutorService service;
@@ -499,7 +499,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
     {
       setRunner(
           new TestRunner(
@@ -508,10 +508,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
               indexingServiceClient
           )
       );
-      return TaskStatus.fromCode(
-          getId(),
-          getRunner().run()
-      );
+      return getRunner();
     }
   }
 

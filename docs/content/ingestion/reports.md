@@ -88,9 +88,9 @@ The `errorMsg` field shows a message describing the error that caused a task to 
 
 ### Row stats
 
-The non-parallel [Native Batch Task](../native_tasks.md), the Hadoop batch task, and the tasks created by the Kafka Indexing Service support retrieval of row stats while the task is running.
+The non-parallel [Native Batch Task](../ingestion/native_tasks.html), the Hadoop batch task, and the tasks created by the Kafka Indexing Service support retrieval of row stats while the task is running.
 
-The live report can be accessed with a GET to the following URL on a peon running a task:
+The live report can be accessed with a GET to the following URL on a Peon running a task:
 
 ```
 http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/rowStats
@@ -133,7 +133,7 @@ An example report is shown below. The `movingAverages` section contains 1 minute
 }
 ```
 
-Note that this is only supported by the non-parallel [Native Batch Task](../native_tasks.md), the Hadoop Batch task, and the tasks created by the Kafka Indexing Service.
+Note that this is only supported by the non-parallel [Native Batch Task](../ingestion/native_tasks.html), the Hadoop Batch task, and the tasks created by the Kafka Indexing Service.
 
 For the Kafka Indexing Service, a GET to the following Overlord API will retrieve live row stat reports from each task being managed by the supervisor and provide a combined report.
 
@@ -143,10 +143,10 @@ http://<OVERLORD-HOST>:<OVERLORD-PORT>/druid/indexer/v1/supervisor/<supervisor-i
 
 ### Unparseable Events
 
-Current lists of unparseable events can be retrieved from a running task with a GET to the following peon API:
+Current lists of unparseable events can be retrieved from a running task with a GET to the following Peon API:
 
 ```
 http://<middlemanager-host>:<worker-port>/druid/worker/v1/chat/<task-id>/unparseableEvents
 ```
 
-Note that this is only supported by the non-parallel [Native Batch Task](../native_tasks.md) and the tasks created by the Kafka Indexing Service.
+Note that this is only supported by the non-parallel [Native Batch Task](../ingestion/native_tasks.html) and the tasks created by the Kafka Indexing Service.

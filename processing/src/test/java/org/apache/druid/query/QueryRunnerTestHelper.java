@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.MergeSequence;
@@ -60,12 +60,12 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -74,28 +74,23 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
+ *
  */
 public class QueryRunnerTestHelper
 {
 
-  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {};
+  public static final QueryWatcher NOOP_QUERYWATCHER = (query, future) -> {
+  };
 
-  public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
+  public static final Interval fullOnInterval = Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z");
+  public static final SegmentId segmentId = SegmentId.of(dataSource, fullOnInterval, "dummy_version", 0);
   public static final UnionDataSource unionDataSource = new UnionDataSource(
-      Lists.transform(
-          Lists.newArrayList(dataSource, dataSource, dataSource, dataSource), new Function<String, TableDataSource>()
-          {
-            @Nullable
-            @Override
-            public TableDataSource apply(@Nullable String input)
-            {
-              return new TableDataSource(input);
-            }
-          }
-      )
+      Stream.of(dataSource, dataSource, dataSource, dataSource).map(TableDataSource::new).collect(Collectors.toList())
   );
 
   public static final Granularity dayGran = Granularities.DAY;
@@ -238,7 +233,7 @@ public class QueryRunnerTestHelper
   public static final String[] expectedFullOnIndexValuesDesc;
 
   static {
-    List<String> list = new ArrayList(Arrays.asList(expectedFullOnIndexValues));
+    List<String> list = new ArrayList<>(Arrays.asList(expectedFullOnIndexValues));
     Collections.reverse(list);
     expectedFullOnIndexValuesDesc = list.toArray(new String[0]);
   }
@@ -254,8 +249,9 @@ public class QueryRunnerTestHelper
   public static final QuerySegmentSpec secondOnly = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2011-04-02T00:00:00.000Z/P1D"))
   );
-  public static final QuerySegmentSpec fullOnInterval = new MultipleIntervalSegmentSpec(
-      Collections.singletonList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
+
+  public static final QuerySegmentSpec fullOnIntervalSpec = new MultipleIntervalSegmentSpec(
+      Collections.singletonList(fullOnInterval)
   );
   public static final QuerySegmentSpec emptyInterval = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2020-04-02T00:00:00.000Z/P1D"))
@@ -336,22 +332,20 @@ public class QueryRunnerTestHelper
     final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     return ImmutableList.of(
-        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
+        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), ("rtIndex")),
         makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, segmentId), "noRollupRtIndex"),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, segmentId), "mMappedTestIndex"),
         makeQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, noRollupMMappedTestIndex),
+            new QueryableIndexSegment(noRollupMMappedTestIndex, segmentId),
             "noRollupMMappedTestIndex"
         ),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex), "mergedRealtimeIndex")
+        makeQueryRunner(factory, new QueryableIndexSegment(mergedRealtimeIndex, segmentId), "mergedRealtimeIndex")
     );
   }
 
   @SuppressWarnings("unchecked")
-  public static Collection<?> makeUnionQueryRunners(
-      QueryRunnerFactory factory
-  )
+  public static Collection<?> makeUnionQueryRunners(QueryRunnerFactory factory)
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
@@ -359,10 +353,10 @@ public class QueryRunnerTestHelper
 
     return Arrays.asList(
         makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
-        makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
+        makeUnionQueryRunner(factory, new QueryableIndexSegment(mMappedTestIndex, segmentId), "mMappedTestIndex"),
         makeUnionQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, mergedRealtimeIndex),
+            new QueryableIndexSegment(mergedRealtimeIndex, segmentId),
             "mergedRealtimeIndex"
         )
     );
@@ -393,7 +387,7 @@ public class QueryRunnerTestHelper
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter,
       final String runnerName
   )
@@ -481,7 +475,7 @@ public class QueryRunnerTestHelper
         .applyPostMergeDecoration();
   }
 
-  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null)
     {
@@ -506,7 +500,7 @@ public class QueryRunnerTestHelper
   public static IntervalChunkingQueryRunnerDecorator sameThreadIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
         new ServiceEmitter("dummy", "dummy", new NoopEmitter())
     );
@@ -524,7 +518,7 @@ public class QueryRunnerTestHelper
   public static TimeseriesQueryRunnerFactory newTimeseriesQueryRunnerFactory()
   {
     return new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(noopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );

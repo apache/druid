@@ -23,9 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.ClientAppendQuery;
 import org.apache.druid.client.indexing.ClientKillQuery;
-import org.apache.druid.client.indexing.ClientMergeQuery;
 import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
@@ -37,7 +35,6 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -47,7 +44,6 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
@@ -57,7 +53,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.File;
-import java.util.List;
 
 public class TaskSerdeTest
 {
@@ -98,14 +93,13 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertFalse(tuningConfig.isForceExtendableShardSpecs());
     Assert.assertFalse(tuningConfig.isReportParseExceptions());
     Assert.assertEquals(new IndexSpec(), tuningConfig.getIndexSpec());
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
     Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
     Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNull(tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
   }
 
   @Test
@@ -116,7 +110,22 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
+    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
+    Assert.assertNull(tuningConfig.getNumShards());
+
+    tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\"}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+
+    tuningConfig = jsonMapper.readValue(
+        "{\"type\":\"index\", \"maxRowsPerSegment\":10}",
+        IndexTask.IndexTuningConfig.class
+    );
+
+    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
     Assert.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
@@ -124,7 +133,7 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
@@ -132,7 +141,7 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
@@ -141,7 +150,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertEquals(10, (int) tuningConfig.getTargetPartitionSize());
+    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1}",
@@ -149,7 +158,7 @@ public class TaskSerdeTest
     );
 
     Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNull(tuningConfig.getTargetPartitionSize());
+    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
   }
 
   @Test
@@ -184,6 +193,7 @@ public class TaskSerdeTest
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
@@ -193,7 +203,6 @@ public class TaskSerdeTest
                 null,
                 indexSpec,
                 3,
-                true,
                 true,
                 false,
                 null,
@@ -241,11 +250,7 @@ public class TaskSerdeTest
     Assert.assertEquals(taskTuningConfig.getMaxPendingPersists(), task2TuningConfig.getMaxPendingPersists());
     Assert.assertEquals(taskTuningConfig.getMaxRowsInMemory(), task2TuningConfig.getMaxRowsInMemory());
     Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
-    Assert.assertEquals(taskTuningConfig.getTargetPartitionSize(), task2TuningConfig.getTargetPartitionSize());
-    Assert.assertEquals(
-        taskTuningConfig.isForceExtendableShardSpecs(),
-        task2TuningConfig.isForceExtendableShardSpecs()
-    );
+    Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
     Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
   }
 
@@ -270,6 +275,7 @@ public class TaskSerdeTest
             ),
             new IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null), true),
             new IndexTuningConfig(
+                null,
                 10000,
                 10,
                 null,
@@ -279,7 +285,6 @@ public class TaskSerdeTest
                 null,
                 indexSpec,
                 3,
-                true,
                 true,
                 false,
                 null,
@@ -317,99 +322,6 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertTrue(task.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
     Assert.assertTrue(task2.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
-  }
-
-  @Test
-  public void testMergeTaskSerde() throws Exception
-  {
-    final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(Intervals.of("2010-01-01/P1D"))
-                   .version("1234")
-                   .build()
-    );
-    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
-    final MergeTask task = new MergeTask(
-        null,
-        "foo",
-        segments,
-        aggregators,
-        true,
-        indexSpec,
-        true,
-        null,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final MergeTask task2 = (MergeTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getSegments(), task2.getSegments());
-    Assert.assertEquals(
-        task.getAggregators().get(0).getName(),
-        task2.getAggregators().get(0).getName()
-    );
-
-    final MergeTask task3 = (MergeTask) jsonMapper.readValue(
-        jsonMapper.writeValueAsString(
-            new ClientMergeQuery(
-                "foo",
-                segments,
-                aggregators
-            )
-        ), Task.class
-    );
-
-    Assert.assertEquals("foo", task3.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task3.getInterval());
-    Assert.assertEquals(segments, task3.getSegments());
-    Assert.assertEquals(aggregators, task3.getAggregators());
-  }
-
-  @Test
-  public void testSameIntervalMergeTaskSerde() throws Exception
-  {
-    final List<AggregatorFactory> aggregators = ImmutableList.of(new CountAggregatorFactory("cnt"));
-    final SameIntervalMergeTask task = new SameIntervalMergeTask(
-        null,
-        "foo",
-        Intervals.of("2010-01-01/P1D"),
-        aggregators,
-        true,
-        indexSpec,
-        true,
-        null,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final SameIntervalMergeTask task2 = (SameIntervalMergeTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getRollup(), task2.getRollup());
-    Assert.assertEquals(task.getIndexSpec(), task2.getIndexSpec());
-    Assert.assertEquals(
-        task.getAggregators().get(0).getName(),
-        task2.getAggregators().get(0).getName()
-    );
   }
 
   @Test
@@ -526,63 +438,6 @@ public class TaskSerdeTest
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
         task2.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
-  }
-
-  @Test
-  public void testAppendTaskSerde() throws Exception
-  {
-    final List<DataSegment> segments = ImmutableList.of(
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(Intervals.of("2010-01-01/P1D"))
-                   .version("1234")
-                   .build(),
-        DataSegment.builder()
-                   .dataSource("foo")
-                   .interval(Intervals.of("2010-01-02/P1D"))
-                   .version("5678")
-                   .build()
-    );
-    final AppendTask task = new AppendTask(
-        null,
-        "foo",
-        segments,
-        ImmutableList.of(
-            new CountAggregatorFactory("cnt")
-        ),
-        indexSpec,
-        true,
-        null,
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final AppendTask task2 = (AppendTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P2D"), task.getInterval());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getSegments(), task2.getSegments());
-
-    final AppendTask task3 = (AppendTask) jsonMapper.readValue(
-        jsonMapper.writeValueAsString(
-            new ClientAppendQuery(
-                "foo",
-                segments
-            )
-        ), Task.class
-    );
-
-    Assert.assertEquals("foo", task3.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P2D"), task3.getInterval());
-    Assert.assertEquals(task3.getSegments(), segments);
-    Assert.assertEquals(task.getAggregators(), task2.getAggregators());
   }
 
   @Test

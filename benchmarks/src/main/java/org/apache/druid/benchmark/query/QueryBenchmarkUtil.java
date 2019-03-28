@@ -31,6 +31,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.util.Map;
 
@@ -38,7 +39,7 @@ public class QueryBenchmarkUtil
 {
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
@@ -48,7 +49,7 @@ public class QueryBenchmarkUtil
     );
   }
 
-  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
       @Override

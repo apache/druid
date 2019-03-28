@@ -25,8 +25,13 @@ title: "Native Index Tasks"
 # Native Index Tasks
 
 Druid currently has two types of native batch indexing tasks, `index_parallel` which runs tasks
-in parallel on multiple middle manager nodes, and `index` which will run a single indexing task locally on a single
-middle manager.
+in parallel on multiple MiddleManager processes, and `index` which will run a single indexing task locally on a single
+MiddleManager.
+
+Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.
+
+To run either kind of native batch indexing task, write an ingestion spec as specified below. Then POST it to the
+[`/druid/indexer/v1/task` endpoint on the Overlord](../operations/api-reference.html#tasks), or use the `post-index-task` script included with Druid.
 
 Parallel Index Task
 --------------------------------
@@ -34,7 +39,7 @@ Parallel Index Task
 The Parallel Index Task is a task for parallel batch indexing. This task only uses Druid's resource and
 doesn't depend on other external systems like Hadoop. This task currently works in a single phase without shuffling intermediate
 data. `index_parallel` task is a supervisor task which basically generates multiple worker tasks and submits
-them to overlords. Each worker task reads input data and makes segments. Once they successfully generate segments for all
+them to Overlords. Each worker task reads input data and makes segments. Once they successfully generate segments for all
 input, they report the generated segment list to the supervisor task. The supervisor task periodically checks the worker
 task statuses. If one of them fails, it retries the failed task until the retrying number reaches the configured limit.
 If all worker tasks succeed, then it collects the reported list of generated segments and publishes those segments at once.
@@ -49,7 +54,17 @@ which specifies a split and submits worker tasks using those specs. As a result,
 the implementation of splittable firehoses. Please note that multiple tasks can be created for the same worker task spec
 if one of them fails.
 
-Since this task doesn't shuffle intermediate data, it isn't available for [perfect rollup](../ingestion/index.html#roll-up-modes). 
+You may want to consider the below points:
+- Since this task doesn't shuffle intermediate data, it isn't available for [perfect rollup](../ingestion/index.html#roll-up-modes).
+- The number of tasks for parallel ingestion is decided by `maxNumSubTasks` in the tuningConfig.
+  Since the supervisor task creates up to `maxNumSubTasks` worker tasks regardless of the available task slots,
+  it may affect to other ingestion performance. As a result, it's important to set `maxNumSubTasks` properly.
+  See the below [Capacity Planning](#capacity-planning) section for more details.
+- By default, batch ingestion replaces all data in any segment that it writes to. If you'd like to add to the segment
+  instead, set the appendToExisting flag in ioConfig. Note that it only replaces data in segments where it actively adds
+  data: if there are segments in your granularitySpec's intervals that have no data written by this task, they will be
+  left alone.
+
 
 An example ingestion spec is:
 
@@ -117,6 +132,10 @@ An example ingestion spec is:
           "baseDir": "examples/indexing/",
           "filter": "wikipedia_index_data*"
         }
+    },
+    "tuningconfig": {
+        "type": "index_parallel",
+        "maxNumSubTasks": 2
     }
   }
 }
@@ -137,13 +156,21 @@ This field is required.
 
 See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
 
+If you specify `intervals` explicitly in your dataSchema's granularitySpec, batch ingestion will lock the full intervals
+specified when it starts up, and you will learn quickly if the specified interval overlaps with locks held by other
+tasks (eg, Kafka ingestion). Otherwise, batch ingestion will lock each interval as it is discovered, so you may only
+learn that the task overlaps with a higher-priority task later in ingestion.  If you specify `intervals` explicitly, any
+rows outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the
+time range of the data so that locking failure happens faster, and so that you don't accidentally replace data outside
+that range if there's some stray data with unexpected timestamps.
+
 #### IOConfig
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be `index_parallel`.|none|yes|
 |firehose|Specify a [Firehose](../ingestion/firehose.html) here.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs (which can be forced by setting 'forceExtendableShardSpecs' in the tuning config).|false|no|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
 
 #### TuningConfig
 
@@ -152,18 +179,17 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be `index_parallel`.|none|yes|
-|targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|5000000|no|
+|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
 |maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if targetPartitionSize is set.|null|no|
+|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.|null|no|
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
 |reportParseExceptions|If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentWriteOutMediumFactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
-|maxNumSubTasks|Maximum number of tasks which can be run at the same time.|Integer.MAX_VALUE|no|
+|maxNumSubTasks|Maximum number of tasks which can be run at the same time. The supervisor task would spawn worker tasks up to `maxNumSubTasks` regardless of the available task slots. If this value is set to 1, the supervisor task processes data ingestion on its own instead of spawning worker tasks. If this value is set to too large, too many worker tasks can be created which might block other ingestion. Check [Capacity Planning](#capacity-planning) for more details.|1|no|
 |maxRetry|Maximum number of retries on task failures.|3|no|
 |taskStatusCheckPeriodMs|Polling period in milleseconds to check running task statuses.|1000|no|
 |chatHandlerTimeout|Timeout for reporting the pushed segments in worker tasks.|PT10S|no|
@@ -337,7 +363,7 @@ An example of the result is
       },
       "tuningConfig": {
         "type": "index_parallel",
-        "targetPartitionSize": 5000000,
+        "maxRowsPerSegment": 5000000,
         "maxRowsInMemory": 1000000,
         "maxTotalRows": 20000000,
         "numShards": null,
@@ -350,11 +376,10 @@ An example of the result is
           "longEncoding": "longs"
         },
         "maxPendingPersists": 0,
-        "forceExtendableShardSpecs": false,
         "reportParseExceptions": false,
         "pushTimeout": 0,
         "segmentWriteOutMediumFactory": null,
-        "maxNumSubTasks": 2147483647,
+        "maxNumSubTasks": 4,
         "maxRetry": 3,
         "taskStatusCheckPeriodMs": 1000,
         "chatHandlerTimeout": "PT10S",
@@ -389,6 +414,27 @@ An example of the result is
 * `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspec/{SUB_TASK_SPEC_ID}/history`
 
 Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
+
+### Capacity Planning
+
+The supervisor task can create up to `maxNumSubTasks` worker tasks no matter how many task slots are currently available.
+As a result, total number of tasks which can be run at the same time is `(maxNumSubTasks + 1)` (including the supervisor task).
+Please note that this can be even larger than total number of task slots (sum of the capacity of all workers).
+If `maxNumSubTasks` is larger than `n (available task slots)`, then
+`maxNumSubTasks` tasks are created by the supervisor task, but only `n` tasks would be started.
+Others will wait in the pending state until any running task is finished.
+
+If you are using the Parallel Index Task with stream ingestion together,
+we would recommend to limit the max capacity for batch ingestion to prevent
+stream ingestion from being blocked by batch ingestion. Suppose you have
+`t` Parallel Index Tasks to run at the same time, but want to limit
+the max number of tasks for batch ingestion to `b`. Then, (sum of `maxNumSubTasks`
+of all Parallel Index Tasks + `t` (for supervisor tasks)) must be smaller than `b`.
+
+If you have some tasks of a higher priority than others, you may set their
+`maxNumSubTasks` to a higher value than lower priority tasks.
+This may help the higher priority tasks to finish earlier than lower priority tasks
+by assigning more task slots to them.
 
 Local Index Task
 ----------------
@@ -454,12 +500,17 @@ The Local Index Task is designed to be used for smaller data sets. The task exec
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000,
+      "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 1000000
     }
   }
 }
 ```
+
+By default, batch ingestion replaces all data in any segment that it writes to. If you'd like to add to the segment
+instead, set the appendToExisting flag in ioConfig. Note that it only replaces data in segments where it actively adds
+data: if there are segments in your granularitySpec's intervals that have no data written by this task, they will be
+left alone.
 
 #### Task Properties
 
@@ -476,13 +527,19 @@ This field is required.
 
 See [Ingestion Spec DataSchema](../ingestion/ingestion-spec.html#dataschema)
 
+If you do not specify `intervals` explicitly in your dataSchema's granularitySpec, the Local Index Task will do an extra
+pass over the data to determine the range to lock when it starts up.  If you specify `intervals` explicitly, any rows
+outside the specified intervals will be thrown away. We recommend setting `intervals` explicitly if you know the time
+range of the data because it allows the task to skip the extra pass, and so that you don't accidentally replace data outside
+that range if there's some stray data with unexpected timestamps.
+
 #### IOConfig
 
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
 |firehose|Specify a [Firehose](../ingestion/firehose.html) here.|none|yes|
-|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs (which can be forced by setting 'forceExtendableShardSpecs' in the tuning config).|false|no|
+|appendToExisting|Creates segments as additional shards of the latest version, effectively appending to the segment set instead of replacing it. This will only work if the existing segment set has extendable-type shardSpecs.|false|no|
 
 #### TuningConfig
 
@@ -491,16 +548,15 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |property|description|default|required?|
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|none|yes|
-|targetPartitionSize|Used in sharding. Determines how many rows are in each segment.|5000000|no|
+|maxRowsPerSegment|Used in sharding. Determines how many rows are in each segment.|5000000|no|
 |maxRowsInMemory|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|1000000|no|
 |maxBytesInMemory|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is maxBytesInMemory * (2 + maxPendingPersists)|1/6 of max JVM memory|no|
 |maxTotalRows|Total number of rows in segments waiting for being pushed. Used in determining when intermediate pushing should occur.|20000000|no|
-|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if targetPartitionSize is set.|null|no|
+|numShards|Directly specify the number of shards to create. If this is specified and 'intervals' is specified in the granularitySpec, the index task can skip the determine intervals/partitions pass through the data. numShards cannot be specified if maxRowsPerSegment is set.|null|no|
 |partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with `forceGuaranteedRollup` = true, will be ignored otherwise.|null|no|
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
 |maxPendingPersists|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|0 (meaning one persist can be running concurrently with ingestion, and none can be queued up)|no|
-|forceExtendableShardSpecs|Forces use of extendable shardSpecs. Experimental feature intended for use with the [Kafka indexing service extension](../development/extensions-core/kafka-ingestion.html).|false|no|
-|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.html#roll-up-modes). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. This flag cannot be used with either `appendToExisting` of IOConfig or `forceExtendableShardSpecs`. For more details, see the below __Segment pushing modes__ section.|false|no|
+|forceGuaranteedRollup|Forces guaranteeing the [perfect rollup](../ingestion/index.html#roll-up-modes). The perfect rollup optimizes the total size of generated segments and querying time while indexing time will be increased. If this is set to true, the index task will read the entire input data twice: one for finding the optimal number of partitions per time chunk and one for generating segments. Note that the result segments would be hash-partitioned. You can set `forceExtendableShardSpecs` if you plan to append more data to the same time range in the future. This flag cannot be used with `appendToExisting` of IOConfig. For more details, see the below __Segment pushing modes__ section.|false|no|
 |reportParseExceptions|DEPRECATED. If true, exceptions encountered during parsing will be thrown and will halt ingestion; if false, unparseable rows and fields will be skipped. Setting `reportParseExceptions` to true will override existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to no more than 1.|false|no|
 |pushTimeout|Milliseconds to wait for pushing segments. It must be >= 0, where 0 means to wait forever.|0|no|
 |segmentWriteOutMediumFactory|Segment write-out medium to use when creating segments. See [SegmentWriteOutMediumFactory](#segmentWriteOutMediumFactory).|Not specified, the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type` is used|no|
@@ -548,14 +604,14 @@ the Index task supports two segment pushing modes, i.e., _bulk pushing mode_ and
 [perfect rollup and best-effort rollup](../ingestion/index.html#roll-up-modes), respectively.
 
 In the bulk pushing mode, every segment is pushed at the very end of the index task. Until then, created segments
-are stored in the memory and local storage of the node running the index task. As a result, this mode might cause a
+are stored in the memory and local storage of the process running the index task. As a result, this mode might cause a
 problem due to limited storage capacity, and is not recommended to use in production.
 
 On the contrary, in the incremental pushing mode, segments are incrementally pushed, that is they can be pushed
 in the middle of the index task. More precisely, the index task collects data and stores created segments in the memory
-and disks of the node running that task until the total number of collected rows exceeds `maxTotalRows`. Once it exceeds,
+and disks of the process running that task until the total number of collected rows exceeds `maxTotalRows`. Once it exceeds,
 the index task immediately pushes all segments created until that moment, cleans all pushed segments up, and
 continues to ingest remaining data.
 
 To enable bulk pushing mode, `forceGuaranteedRollup` should be set in the TuningConfig. Note that this option cannot
-be used with either `forceExtendableShardSpecs` of TuningConfig or `appendToExisting` of IOConfig.
+be used with `appendToExisting` of IOConfig.

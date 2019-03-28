@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
@@ -33,6 +32,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,10 +53,10 @@ public class ReservoirSegmentSamplerTest
   private DataSegment segment2;
   private DataSegment segment3;
   private DataSegment segment4;
-  Map<String, DataSegment> segmentsMap1;
-  Map<String, DataSegment> segmentsMap2;
-  Map<String, DataSegment> segmentsMap3;
-  Map<String, DataSegment> segmentsMap4;
+  List<DataSegment> segments1;
+  List<DataSegment> segments2;
+  List<DataSegment> segments3;
+  List<DataSegment> segments4;
   List<DataSegment> segments;
 
   @Before
@@ -125,22 +125,10 @@ public class ReservoirSegmentSamplerTest
 
     segments = Lists.newArrayList(segment1, segment2, segment3, segment4);
 
-    segmentsMap1 = ImmutableMap.of(
-        "datasource1_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z",
-        segment1
-    );
-    segmentsMap2 = ImmutableMap.of(
-        "datasource1_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z",
-        segment2
-    );
-    segmentsMap3 = ImmutableMap.of(
-        "datasource2_2012-01-01T00:00:00.000Z_2012-01-01T01:00:00.000Z_2012-03-01T00:00:00.000Z",
-        segment3
-    );
-    segmentsMap4 = ImmutableMap.of(
-        "datasource2_2012-02-01T00:00:00.000Z_2012-02-01T01:00:00.000Z_2012-03-01T00:00:00.000Z",
-        segment4
-    );
+    segments1 = Collections.singletonList(segment1);
+    segments2 = Collections.singletonList(segment2);
+    segments3 = Collections.singletonList(segment3);
+    segments4 = Collections.singletonList(segment4);
   }
 
   //checks if every segment is selected at least once out of 5000 trials
@@ -150,7 +138,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer1.getName()).andReturn("1").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer1.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer1.getSegments()).andReturn(segmentsMap1).anyTimes();
+    EasyMock.expect(druidServer1.getLazyAllSegments()).andReturn(segments1).anyTimes();
     EasyMock.expect(druidServer1.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer1);
 
@@ -158,7 +146,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer2.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer2.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer2.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer2.getSegments()).andReturn(segmentsMap2).anyTimes();
+    EasyMock.expect(druidServer2.getLazyAllSegments()).andReturn(segments2).anyTimes();
     EasyMock.expect(druidServer2.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer2);
 
@@ -166,7 +154,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer3.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer3.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer3.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer3.getSegments()).andReturn(segmentsMap3).anyTimes();
+    EasyMock.expect(druidServer3.getLazyAllSegments()).andReturn(segments3).anyTimes();
     EasyMock.expect(druidServer3.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer3);
 
@@ -174,7 +162,7 @@ public class ReservoirSegmentSamplerTest
     EasyMock.expect(druidServer4.getTier()).andReturn("normal").anyTimes();
     EasyMock.expect(druidServer4.getCurrSize()).andReturn(30L).atLeastOnce();
     EasyMock.expect(druidServer4.getMaxSize()).andReturn(100L).atLeastOnce();
-    EasyMock.expect(druidServer4.getSegments()).andReturn(segmentsMap4).anyTimes();
+    EasyMock.expect(druidServer4.getLazyAllSegments()).andReturn(segments4).anyTimes();
     EasyMock.expect(druidServer4.getSegment(EasyMock.anyObject())).andReturn(null).anyTimes();
     EasyMock.replay(druidServer4);
 
@@ -203,7 +191,5 @@ public class ReservoirSegmentSamplerTest
     for (DataSegment segment : segments) {
       Assert.assertEquals(segmentCountMap.get(segment), new Integer(1));
     }
-
-
   }
 }

@@ -36,9 +36,8 @@ import java.util.stream.Collectors;
 
 /**
  */
-public class Rows
+public final class Rows
 {
-
   /**
    * @param timeStamp rollup up timestamp to be used to create group key
    * @param inputRow  input row
@@ -73,7 +72,8 @@ public class Rows
   }
 
   /**
-   * Convert an object to a number. Nulls are treated as zeroes.
+   * Convert an object to a number. Nulls are treated as zeroes unless
+   * druid.generic.useDefaultValueForNull is set to false.
    *
    * @param name       field name of the object being converted (may be used for exception messages)
    * @param inputValue the actual object being converted
@@ -123,4 +123,6 @@ public class Rows
     }
     return metricValueString;
   }
+
+  private Rows() {}
 }

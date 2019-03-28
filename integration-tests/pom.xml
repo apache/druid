@@ -28,11 +28,11 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>0.13.0-incubating-SNAPSHOT</version>
+        <version>0.15.0-incubating-SNAPSHOT</version>
     </parent>
 
     <properties>
-        <apache.kafka.version>0.10.2.0</apache.kafka.version>
+        <apache.kafka.version>2.1.0</apache.kafka.version>
     </properties>
 
     <dependencies>
@@ -50,17 +50,6 @@
             <groupId>org.apache.druid.extensions</groupId>
             <artifactId>druid-datasketches</artifactId>
             <version>${project.parent.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.druid.extensions</groupId>
-            <artifactId>druid-kafka-eight</artifactId>
-            <version>${project.parent.version}</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>kafka_2.10</artifactId>
-                    <groupId>org.apache.kafka</groupId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>
@@ -126,7 +115,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_2.11</artifactId>
+            <artifactId>kafka_2.12</artifactId>
             <version>${apache.kafka.version}</version>
             <exclusions>
                 <exclusion>
@@ -231,6 +220,7 @@
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}
                                 -Ddruid.test.config.hadoopDir=${env.HADOOP_DIR}
+                                -Ddruid.test.config.extraDatasourceNameSuffix=\ Россия\ 한국\ 中国!?
                                 -Ddruid.zk.service.host=${env.DOCKER_IP}
                                 -Ddruid.client.https.trustStorePath=client_tls/truststore.jks
                                 -Ddruid.client.https.trustStorePassword=druid123

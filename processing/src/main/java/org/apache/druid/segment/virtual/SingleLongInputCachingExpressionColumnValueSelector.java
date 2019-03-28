@@ -98,6 +98,10 @@ public class SingleLongInputCachingExpressionColumnValueSelector implements Colu
   @Override
   public ExprEval getObject()
   {
+    // things can still call this even when underlying selector is null (e.g. ExpressionColumnValueSelector#isNull)
+    if (selector.isNull()) {
+      return ExprEval.ofLong(null);
+    }
     // No assert for null handling, as the delegate selector already has it.
     final long input = selector.getLong();
     final boolean cached = input == lastInput && lastOutput != null;

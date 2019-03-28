@@ -43,6 +43,7 @@ import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -108,14 +109,14 @@ public class MapVirtualColumnGroupByTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
         )
     );
 
     runner = QueryRunnerTestHelper.makeQueryRunner(
         factory,
-        "index",
-        new IncrementalIndexSegment(incrementalIndex, "index"),
+        SegmentId.dummy("index"),
+        new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("index")),
         "incremental"
     );
   }

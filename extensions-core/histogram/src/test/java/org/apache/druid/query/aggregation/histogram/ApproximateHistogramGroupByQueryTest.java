@@ -145,9 +145,7 @@ public class ApproximateHistogramGroupByQueryTest
   {
     this.factory = factory;
     this.runner = runner;
-
-    //Note: this is needed in order to properly register the serde for Histogram.
-    new ApproximateHistogramDruidModule().configure(null);
+    ApproximateHistogramDruidModule.registerSerde();
   }
 
   @After
@@ -174,7 +172,7 @@ public class ApproximateHistogramGroupByQueryTest
             QueryRunnerTestHelper.marketDimension,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
@@ -233,7 +231,7 @@ public class ApproximateHistogramGroupByQueryTest
             QueryRunnerTestHelper.marketDimension,
             "marketalias"
         ))
-        .setInterval(QueryRunnerTestHelper.fullOnInterval)
+        .setInterval(QueryRunnerTestHelper.fullOnIntervalSpec)
         .setLimitSpec(
             new DefaultLimitSpec(
                 Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),

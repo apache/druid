@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.rules;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -58,6 +57,10 @@ public class BroadcastDistributionRuleTest
   private final List<DataSegment> largeSegments = new ArrayList<>();
   private final List<DataSegment> largeSegments2 = new ArrayList<>();
   private DataSegment smallSegment;
+  private DruidCluster secondCluster;
+  private ServerHolder activeServer;
+  private ServerHolder decommissioningServer1;
+  private ServerHolder decommissioningServer2;
 
   @Before
   public void setUp()
@@ -197,6 +200,50 @@ public class BroadcastDistributionRuleTest
         )
     );
 
+    activeServer = new ServerHolder(
+        new DruidServer(
+            "active",
+            "host1",
+            null,
+            100,
+            ServerType.HISTORICAL,
+            "tier1",
+            0
+        ).addDataSegment(largeSegments.get(0))
+         .toImmutableDruidServer(),
+        new LoadQueuePeonTester()
+    );
+
+    decommissioningServer1 = new ServerHolder(
+        new DruidServer(
+            "decommissioning1",
+            "host2",
+            null,
+            100,
+            ServerType.HISTORICAL,
+            "tier1",
+            0
+        ).addDataSegment(smallSegment)
+         .toImmutableDruidServer(),
+        new LoadQueuePeonTester(),
+        true
+    );
+
+    decommissioningServer2 = new ServerHolder(
+        new DruidServer(
+            "decommissioning2",
+            "host3",
+            null,
+            100,
+            ServerType.HISTORICAL,
+            "tier1",
+            0
+        ).addDataSegment(largeSegments.get(1))
+         .toImmutableDruidServer(),
+        new LoadQueuePeonTester(),
+        true
+    );
+
     druidCluster = new DruidCluster(
         null,
         ImmutableMap.of(
@@ -214,6 +261,18 @@ public class BroadcastDistributionRuleTest
             ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         )
     );
+
+    secondCluster = new DruidCluster(
+        null,
+        ImmutableMap.of(
+            "tier1",
+            Stream.of(
+                activeServer,
+                decommissioningServer1,
+                decommissioningServer2
+            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+        )
+    );
   }
 
   @Test
@@ -227,14 +286,14 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Lists.newArrayList(
+                                     .withAvailableSegmentsInTest(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),
                                          largeSegments.get(2),
                                          largeSegments2.get(0),
                                          largeSegments2.get(1)
-                                     )).build(),
+                                     ).build(),
         smallSegment
     );
 
@@ -254,6 +313,46 @@ public class BroadcastDistributionRuleTest
     assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
   }
 
+  /**
+   * Servers:
+   * name             | segments
+   * -----------------+--------------
+   * active           | large segment
+   * decommissioning1 | small segment
+   * decommissioning2 | large segment
+   *
+   * After running the rule for the small segment:
+   * active           | large & small segments
+   * decommissioning1 |
+   * decommissionint2 | large segment
+   */
+  @Test
+  public void testBroadcastDecommissioning()
+  {
+    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
+
+    CoordinatorStats stats = rule.run(
+        null,
+        DruidCoordinatorRuntimeParams.newBuilder()
+                                     .withDruidCluster(secondCluster)
+                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(secondCluster))
+                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
+                                     .withAvailableSegmentsInTest(
+                                         smallSegment,
+                                         largeSegments.get(0),
+                                         largeSegments.get(1)
+                                     ).build(),
+        smallSegment
+    );
+
+    assertEquals(1L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
+    assertEquals(false, stats.hasPerTierStats());
+
+    assertEquals(1, activeServer.getPeon().getSegmentsToLoad().size());
+    assertEquals(1, decommissioningServer1.getPeon().getSegmentsToDrop().size());
+    assertEquals(0, decommissioningServer2.getPeon().getSegmentsToLoad().size());
+  }
+
   @Test
   public void testBroadcastToMultipleDataSources()
   {
@@ -267,14 +366,14 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Lists.newArrayList(
+                                     .withAvailableSegmentsInTest(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),
                                          largeSegments.get(2),
                                          largeSegments2.get(0),
                                          largeSegments2.get(1)
-                                     )).build(),
+                                     ).build(),
         smallSegment
     );
 
@@ -305,14 +404,14 @@ public class BroadcastDistributionRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withAvailableSegments(Lists.newArrayList(
+                                     .withAvailableSegmentsInTest(
                                          smallSegment,
                                          largeSegments.get(0),
                                          largeSegments.get(1),
                                          largeSegments.get(2),
                                          largeSegments2.get(0),
                                          largeSegments2.get(1)
-                                     )).build(),
+                                     ).build(),
         smallSegment
     );
 

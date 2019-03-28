@@ -187,12 +187,12 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
   }
 
   @Override
-  public List<String> getDatasourceNames()
+  public List<String> getDataSourceNames()
   {
     final DruidRel<?> druidRight = (DruidRel) this.right;
     Set<String> datasourceNames = new LinkedHashSet<>();
-    datasourceNames.addAll(left.getDatasourceNames());
-    datasourceNames.addAll(druidRight.getDatasourceNames());
+    datasourceNames.addAll(left.getDataSourceNames());
+    datasourceNames.addAll(druidRight.getDataSourceNames());
     return new ArrayList<>(datasourceNames);
   }
 
@@ -375,12 +375,12 @@ public class DruidSemiJoin extends DruidRel<DruidSemiJoin>
         newPartialQuery = newPartialQuery.withAggregateProject(leftPartialQuery.getAggregateProject());
       }
 
-      if (leftPartialQuery.getSortProject() != null) {
-        newPartialQuery = newPartialQuery.withSortProject(leftPartialQuery.getSortProject());
-      }
-
       if (leftPartialQuery.getSort() != null) {
         newPartialQuery = newPartialQuery.withSort(leftPartialQuery.getSort());
+      }
+
+      if (leftPartialQuery.getSortProject() != null) {
+        newPartialQuery = newPartialQuery.withSortProject(leftPartialQuery.getSortProject());
       }
 
       return left.withPartialQuery(newPartialQuery);

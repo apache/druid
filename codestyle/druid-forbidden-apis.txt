@@ -20,6 +20,9 @@ com.google.common.collect.Sets#newHashSet() @ Create java.util.HashSet directly
 com.google.common.collect.Sets#newLinkedHashSet() @ Create java.util.LinkedHashSet directly
 com.google.common.collect.Sets#newTreeSet() @ Create java.util.TreeSet directly
 com.google.common.collect.Sets#newTreeSet(java.util.Comparator) @ Create java.util.TreeSet directly
+com.google.common.util.concurrent.MoreExecutors#sameThreadExecutor() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
+com.google.common.util.concurrent.MoreExecutors#newDirectExecutorService() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
+com.google.common.util.concurrent.MoreExecutors#directExecutor() @ Use org.apache.druid.java.util.common.concurrent.Execs#directExecutor()
 com.google.common.util.concurrent.Futures#transform(com.google.common.util.concurrent.ListenableFuture, com.google.common.util.concurrent.AsyncFunction) @ Use org.apache.druid.java.util.common.concurrent.ListenableFutures#transformAsync
 java.io.File#toURL() @ Use java.io.File#toURI() and java.net.URI#toURL() instead
 java.lang.String#matches(java.lang.String) @ Use startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
@@ -28,5 +31,15 @@ java.lang.String#replaceAll(java.lang.String,java.lang.String) @ Use one of the 
 java.lang.String#replaceFirst(java.lang.String,java.lang.String) @ Use String.indexOf() and substring methods, or compile and cache a Pattern explicitly
 java.util.LinkedList @ Use ArrayList or ArrayDeque instead
 java.util.Random#<init>() @ Use ThreadLocalRandom.current() or the constructor with a seed (the latter in tests only!)
+java.lang.Math#random() @ Use ThreadLocalRandom.current()
 java.util.regex.Pattern#matches(java.lang.String,java.lang.CharSequence) @ Use String.startsWith(), endsWith(), contains(), or compile and cache a Pattern explicitly
 org.apache.commons.io.FileUtils#getTempDirectory() @ Use org.junit.rules.TemporaryFolder for tests instead
+
+@defaultMessage Use Locale.ENGLISH
+com.ibm.icu.text.DateFormatSymbols#<init>()
+com.ibm.icu.text.SimpleDateFormat#<init>()
+com.ibm.icu.text.SimpleDateFormat#<init>(java.lang.String)
+
+@defaultMessage For performance reasons, use the utf8Base64 / encodeBase64 / encodeBase64String / decodeBase64 / decodeBase64String methods in StringUtils
+org.apache.commons.codec.binary.Base64
+com.google.common.io.BaseEncoding.base64

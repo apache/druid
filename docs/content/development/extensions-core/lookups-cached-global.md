@@ -38,9 +38,9 @@ Static configuration is no longer supported. Lookups can be configured through
 
 Globally cached lookups are appropriate for lookups which are not possible to pass at query time due to their size,
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers,
-and are small enough to reasonably populate on a node. This usually means tens to tens of thousands of entries per lookup.
+and are small enough to reasonably populate in-memory. This usually means tens to tens of thousands of entries per lookup.
 
-Globally cached lookups all draw from the same cache pool, allowing each node to have a fixed cache pool that can be used by cached lookups.
+Globally cached lookups all draw from the same cache pool, allowing each process to have a fixed cache pool that can be used by cached lookups.
 
 Globally cached lookups can be specified as part of the [cluster wide config for lookups](../../querying/lookups.html) as a type of `cachedNamespace`
 
@@ -93,9 +93,9 @@ The parameters are as follows
 |`firstCacheTimeout`|How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait|No|`0` (do not wait)|
 |`injective`|If the underlying map is [injective](../../querying/lookups.html#query-execution) (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
 
-If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid.manager.lookups.hostUpdateTimeout`. If `firstCacheTimeout` is NOT set, then management is essentially asynchronous and does not know if a lookup succeeded or failed in starting. In such a case logs from the lookup nodes should be monitored for repeated failures.
+If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid.manager.lookups.hostUpdateTimeout`. If `firstCacheTimeout` is NOT set, then management is essentially asynchronous and does not know if a lookup succeeded or failed in starting. In such a case logs from the processes using lookups should be monitored for repeated failures.
 
-Proper functionality of globally cached lookups requires the following extension to be loaded on the broker, peon, and historical nodes:
+Proper functionality of globally cached lookups requires the following extension to be loaded on the Broker, Peon, and Historical processes:
 `druid-lookups-cached-global`
 
 ## Example configuration
@@ -131,7 +131,7 @@ In a simple case where only one [tier](../../querying/lookups.html#dynamic-confi
 }
 ```
 
-Where the coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2/country_code` should return
+Where the Coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2/country_code` should return
 
 ```json
 {
@@ -160,8 +160,8 @@ Where the coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2
 
 ## Cache Settings
 
-Lookups are cached locally on historical nodes. The following are settings used by the nodes which service queries when 
-setting namespaces (broker, peon, historical)
+Lookups are cached locally on Historical processes. The following are settings used by the processes which service queries when 
+setting namespaces (Broker, Peon, Historical)
 
 |Property|Description|Default|
 |--------|-----------|-------|

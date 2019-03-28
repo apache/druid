@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.groupby;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -43,6 +42,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -118,8 +118,7 @@ public class GroupByQueryRunnerFactoryTest
                       );
                     }
                     catch (Exception e) {
-                      Throwables.propagate(e);
-                      return null;
+                      throw new RuntimeException(e);
                     }
                   }
                 }
@@ -170,6 +169,6 @@ public class GroupByQueryRunnerFactoryTest
 
     closerRule.closeLater(incrementalIndex);
 
-    return new IncrementalIndexSegment(incrementalIndex, "test");
+    return new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("test"));
   }
 }

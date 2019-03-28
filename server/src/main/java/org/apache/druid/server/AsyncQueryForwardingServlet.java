@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -247,11 +246,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       catch (IOException e) {
         log.warn(e, "Exception parsing query");
         final String errorMessage = e.getMessage() == null ? "no error message" : e.getMessage();
-        requestLogger.log(
-            new RequestLogLine(
+        requestLogger.logNativeQuery(
+            RequestLogLine.forNative(
+                null,
                 DateTimes.nowUtc(),
                 request.getRemoteAddr(),
-                null,
                 new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
             )
         );
@@ -311,7 +310,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         proxyRequest.getHeaders().put(HttpHeader.CONTENT_LENGTH, String.valueOf(bytes.length));
       }
       catch (JsonProcessingException e) {
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -470,11 +469,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
           failedQueryCount.incrementAndGet();
         }
         emitQueryTime(requestTimeNs, success);
-        requestLogger.log(
-            new RequestLogLine(
+        requestLogger.logNativeQuery(
+            RequestLogLine.forNative(
+                query,
                 DateTimes.nowUtc(),
                 req.getRemoteAddr(),
-                query,
                 new QueryStats(
                     ImmutableMap.of(
                         "query/time",
@@ -501,11 +500,11 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         final String errorMessage = failure.getMessage();
         failedQueryCount.incrementAndGet();
         emitQueryTime(System.nanoTime() - startNs, false);
-        requestLogger.log(
-            new RequestLogLine(
+        requestLogger.logNativeQuery(
+            RequestLogLine.forNative(
+                query,
                 DateTimes.nowUtc(),
                 req.getRemoteAddr(),
-                query,
                 new QueryStats(
                     ImmutableMap.of(
                         "success",

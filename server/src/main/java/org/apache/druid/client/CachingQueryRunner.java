@@ -22,7 +22,6 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -46,7 +45,7 @@ import java.util.Map;
 
 public class CachingQueryRunner<T> implements QueryRunner<T>
 {
-  private final String segmentIdentifier;
+  private final String cacheId;
   private final SegmentDescriptor segmentDescriptor;
   private final QueryRunner<T> base;
   private final QueryToolChest toolChest;
@@ -56,7 +55,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   private final CacheConfig cacheConfig;
 
   public CachingQueryRunner(
-      String segmentIdentifier,
+      String cacheId,
       SegmentDescriptor segmentDescriptor,
       ObjectMapper mapper,
       Cache cache,
@@ -67,7 +66,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   )
   {
     this.base = base;
-    this.segmentIdentifier = segmentIdentifier;
+    this.cacheId = cacheId;
     this.segmentDescriptor = segmentDescriptor;
     this.toolChest = toolchest;
     this.cache = cache;
@@ -87,7 +86,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
     final Cache.NamedKey key;
     if (strategy != null && (useCache || populateCache)) {
       key = CacheUtil.computeSegmentCacheKey(
-          segmentIdentifier,
+          cacheId,
           segmentDescriptor,
           strategy.computeCacheKey(query)
       );
@@ -119,7 +118,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
                       );
                     }
                     catch (IOException e) {
-                      throw Throwables.propagate(e);
+                      throw new RuntimeException(e);
                     }
                   }
 

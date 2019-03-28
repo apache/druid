@@ -23,6 +23,7 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,28 +36,28 @@ public class SegmentReplicantLookup
 {
   public static SegmentReplicantLookup make(DruidCluster cluster)
   {
-    final Table<String, String, Integer> segmentsInCluster = HashBasedTable.create();
-    final Table<String, String, Integer> loadingSegments = HashBasedTable.create();
+    final Table<SegmentId, String, Integer> segmentsInCluster = HashBasedTable.create();
+    final Table<SegmentId, String, Integer> loadingSegments = HashBasedTable.create();
 
     for (SortedSet<ServerHolder> serversByType : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serversByType) {
         ImmutableDruidServer server = serverHolder.getServer();
 
-        for (DataSegment segment : server.getSegments().values()) {
-          Integer numReplicants = segmentsInCluster.get(segment.getIdentifier(), server.getTier());
+        for (DataSegment segment : server.getLazyAllSegments()) {
+          Integer numReplicants = segmentsInCluster.get(segment.getId(), server.getTier());
           if (numReplicants == null) {
             numReplicants = 0;
           }
-          segmentsInCluster.put(segment.getIdentifier(), server.getTier(), numReplicants + 1);
+          segmentsInCluster.put(segment.getId(), server.getTier(), numReplicants + 1);
         }
 
         // Also account for queued segments
         for (DataSegment segment : serverHolder.getPeon().getSegmentsToLoad()) {
-          Integer numReplicants = loadingSegments.get(segment.getIdentifier(), server.getTier());
+          Integer numReplicants = loadingSegments.get(segment.getId(), server.getTier());
           if (numReplicants == null) {
             numReplicants = 0;
           }
-          loadingSegments.put(segment.getIdentifier(), server.getTier(), numReplicants + 1);
+          loadingSegments.put(segment.getId(), server.getTier(), numReplicants + 1);
         }
       }
     }
@@ -64,23 +65,25 @@ public class SegmentReplicantLookup
     return new SegmentReplicantLookup(segmentsInCluster, loadingSegments);
   }
 
-  private final Table<String, String, Integer> segmentsInCluster;
+  private final Table<SegmentId, String, Integer> segmentsInCluster;
+  private final Table<SegmentId, String, Integer> loadingSegments;
 
-  private final Table<String, String, Integer> loadingSegments;
-
-  private SegmentReplicantLookup(Table<String, String, Integer> segmentsInCluster, Table<String, String, Integer> loadingSegments)
+  private SegmentReplicantLookup(
+      Table<SegmentId, String, Integer> segmentsInCluster,
+      Table<SegmentId, String, Integer> loadingSegments
+  )
   {
     this.segmentsInCluster = segmentsInCluster;
     this.loadingSegments = loadingSegments;
   }
 
-  public Map<String, Integer> getClusterTiers(String segmentId)
+  public Map<String, Integer> getClusterTiers(SegmentId segmentId)
   {
     Map<String, Integer> retVal = segmentsInCluster.row(segmentId);
     return (retVal == null) ? new HashMap<>() : retVal;
   }
 
-  public int getLoadedReplicants(String segmentId)
+  int getLoadedReplicants(SegmentId segmentId)
   {
     Map<String, Integer> allTiers = segmentsInCluster.row(segmentId);
     int retVal = 0;
@@ -90,19 +93,19 @@ public class SegmentReplicantLookup
     return retVal;
   }
 
-  public int getLoadedReplicants(String segmentId, String tier)
+  int getLoadedReplicants(SegmentId segmentId, String tier)
   {
     Integer retVal = segmentsInCluster.get(segmentId, tier);
     return (retVal == null) ? 0 : retVal;
   }
 
-  public int getLoadingReplicants(String segmentId, String tier)
+  private int getLoadingReplicants(SegmentId segmentId, String tier)
   {
     Integer retVal = loadingSegments.get(segmentId, tier);
     return (retVal == null) ? 0 : retVal;
   }
 
-  public int getLoadingReplicants(String segmentId)
+  private int getLoadingReplicants(SegmentId segmentId)
   {
     Map<String, Integer> allTiers = loadingSegments.row(segmentId);
     int retVal = 0;
@@ -112,12 +115,12 @@ public class SegmentReplicantLookup
     return retVal;
   }
 
-  public int getTotalReplicants(String segmentId)
+  public int getTotalReplicants(SegmentId segmentId)
   {
     return getLoadedReplicants(segmentId) + getLoadingReplicants(segmentId);
   }
 
-  public int getTotalReplicants(String segmentId, String tier)
+  public int getTotalReplicants(SegmentId segmentId, String tier)
   {
     return getLoadedReplicants(segmentId, tier) + getLoadingReplicants(segmentId, tier);
   }

@@ -21,7 +21,6 @@ package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -30,7 +29,6 @@ import com.google.inject.util.Modules;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
-import org.apache.druid.guice.AWSModule;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidProcessingConfigModule;
@@ -79,7 +77,6 @@ import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -87,16 +84,15 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  */
 public class Initialization
 {
   private static final Logger log = new Logger(Initialization.class);
-  private static final ConcurrentMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
+  private static final ConcurrentHashMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
 
-  private static final Map<Class, Collection> extensionsMap = new HashMap<>();
+  private static final ConcurrentHashMap<Class<?>, Collection<?>> extensionsMap = new ConcurrentHashMap<>();
 
   /**
    * @param clazz service class
@@ -107,7 +103,7 @@ public class Initialization
   public static <T> Collection<T> getLoadedImplementations(Class<T> clazz)
   {
     @SuppressWarnings("unchecked")
-    Collection<T> retVal = extensionsMap.get(clazz);
+    Collection<T> retVal = (Collection<T>) extensionsMap.get(clazz);
     if (retVal == null) {
       return new HashSet<>();
     }
@@ -138,11 +134,16 @@ public class Initialization
    * elements in the returned collection is not specified and not guaranteed to be the same for different calls to
    * getFromExtensions().
    */
-  public static synchronized <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> serviceClass)
+  public static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> serviceClass)
   {
-    Collection<T> modulesToLoad = new ServiceLoadingFromExtensions<>(config, serviceClass).implsToLoad;
-    extensionsMap.put(serviceClass, modulesToLoad);
-    return modulesToLoad;
+    // It's not clear whether we should recompute modules even if they have been computed already for the serviceClass,
+    // but that's how it used to be an preserving the old behaviour here.
+    Collection<?> modules = extensionsMap.compute(
+        serviceClass,
+        (serviceC, ignored) -> new ServiceLoadingFromExtensions<>(config, serviceC).implsToLoad
+    );
+    //noinspection unchecked
+    return (Collection<T>) modules;
   }
 
   private static class ServiceLoadingFromExtensions<T>
@@ -181,7 +182,7 @@ public class Initialization
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     }
@@ -356,7 +357,7 @@ public class Initialization
       return urls;
     }
     catch (IOException ex) {
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
   }
 
@@ -376,7 +377,6 @@ public class Initialization
         new HttpClientModule("druid.broker.http", EscalatedClient.class),
         new CuratorModule(),
         new AnnouncerModule(),
-        new AWSModule(),
         new MetricsModule(),
         new SegmentWriteOutMediumModule(),
         new ServerModule(),

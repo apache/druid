@@ -22,7 +22,6 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.inventory.CuratorInventoryManager;
 import org.apache.druid.curator.inventory.CuratorInventoryManagerStrategy;
@@ -33,6 +32,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -48,7 +48,6 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
 {
 
   private final EmittingLogger log;
-  private final CuratorFramework curator;
   private final CuratorInventoryManager<DruidServer, InventoryType> inventoryManager;
   private final AtomicBoolean started = new AtomicBoolean(false);
 
@@ -65,7 +64,6 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   )
   {
     this.log = log;
-    this.curator = curator;
     this.inventoryManager = new CuratorInventoryManager<>(
         curator,
         new InventoryManagerConfig()
@@ -92,7 +90,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
               return jsonMapper.readValue(bytes, DruidServer.class);
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
 
@@ -104,7 +102,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
             }
             catch (IOException e) {
               log.error(e, "Could not parse json: %s", StringUtils.fromUtf8(bytes));
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
 
@@ -246,17 +244,14 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
     }
   }
 
-  protected void addSingleInventory(
-      final DruidServer container,
-      final DataSegment inventory
-  )
+  protected void addSingleInventory(final DruidServer container, final DataSegment inventory)
   {
-    log.debug("Server[%s] added segment[%s]", container.getName(), inventory.getIdentifier());
+    log.debug("Server[%s] added segment[%s]", container.getName(), inventory.getId());
 
-    if (container.getSegment(inventory.getIdentifier()) != null) {
+    if (container.getSegment(inventory.getId()) != null) {
       log.warn(
           "Not adding or running callbacks for existing segment[%s] on server[%s]",
-          inventory.getIdentifier(),
+          inventory.getId(),
           container.getName()
       );
 
@@ -270,26 +265,44 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
     );
   }
 
-  protected void removeSingleInventory(final DruidServer container, String inventoryKey)
+  void removeSingleInventory(DruidServer container, SegmentId segmentId)
   {
-    log.debug("Server[%s] removed segment[%s]", container.getName(), inventoryKey);
-    final DataSegment segment = container.getSegment(inventoryKey);
-
-    if (segment == null) {
+    log.debug("Server[%s] removed segment[%s]", container.getName(), segmentId);
+    if (!doRemoveSingleInventory(container, segmentId)) {
       log.warn(
           "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
-          inventoryKey,
+          segmentId,
           container.getName()
       );
-
-      return;
     }
+  }
 
-    container.removeDataSegment(inventoryKey);
-
-    runSegmentCallbacks(
-        input -> input.segmentRemoved(container.getMetadata(), segment)
+  void removeSingleInventory(final DruidServer container, String segmentId)
+  {
+    log.debug("Server[%s] removed segment[%s]", container.getName(), segmentId);
+    for (SegmentId possibleSegmentId : SegmentId.iterateAllPossibleParsings(segmentId)) {
+      if (doRemoveSingleInventory(container, possibleSegmentId)) {
+        return;
+      }
+    }
+    log.warn(
+        "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
+        segmentId,
+        container.getName()
     );
+  }
+
+  private boolean doRemoveSingleInventory(DruidServer container, SegmentId segmentId)
+  {
+    DataSegment segment = container.removeDataSegment(segmentId);
+    if (segment != null) {
+      runSegmentCallbacks(
+          input -> input.segmentRemoved(container.getMetadata(), segment)
+      );
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @Override
@@ -297,10 +310,10 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
   {
     try {
       DruidServer server = getInventoryValue(serverKey);
-      return server != null && server.getSegment(segment.getIdentifier()) != null;
+      return server != null && server.getSegment(segment.getId()) != null;
     }
     catch (Exception ex) {
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
   }
 
@@ -316,10 +329,7 @@ public abstract class AbstractCuratorServerInventoryView<InventoryType> implemen
       InventoryType inventory
   );
 
-  protected abstract DruidServer removeInnerInventory(
-      DruidServer container,
-      String inventoryKey
-  );
+  protected abstract DruidServer removeInnerInventory(DruidServer container, String inventoryKey);
 
   protected abstract void segmentCallbackRemoved(SegmentCallback callback);
 }

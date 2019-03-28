@@ -23,11 +23,9 @@ import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -39,6 +37,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
   private static final Logger log = new Logger(HadoopDruidDetermineConfigurationJob.class);
   private final HadoopDruidIndexerConfig config;
   private Jobby job;
+  private String hadoopJobIdFile;
 
   @Inject
   public HadoopDruidDetermineConfigurationJob(
@@ -55,6 +54,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
 
     if (config.isDeterminingPartitions()) {
       job = config.getPartitionsSpec().getPartitionJob(config);
+      config.setHadoopJobIdFileName(hadoopJobIdFile);
       return JobHelper.runSingleJob(job, config);
     } else {
       int shardsPerInterval = config.getPartitionsSpec().getNumShards();
@@ -62,28 +62,24 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
       int shardCount = 0;
       for (Interval segmentGranularity : config.getSegmentGranularIntervals().get()) {
         DateTime bucket = segmentGranularity.getStart();
-        if (shardsPerInterval > 0) {
-          List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(shardsPerInterval);
-          for (int i = 0; i < shardsPerInterval; i++) {
-            specs.add(
-                new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(
-                        i,
-                        shardsPerInterval,
-                        config.getPartitionsSpec().getPartitionDimensions(),
-                        HadoopDruidIndexerConfig.JSON_MAPPER
-                    ),
-                    shardCount++
-                )
-            );
-          }
-          shardSpecs.put(bucket.getMillis(), specs);
-          log.info("DateTime[%s], spec[%s]", bucket, specs);
-        } else {
-          final HadoopyShardSpec spec = new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++);
-          shardSpecs.put(bucket.getMillis(), Collections.singletonList(spec));
-          log.info("DateTime[%s], spec[%s]", bucket, spec);
+        // negative shardsPerInterval means a single shard
+        final int realShardsPerInterval = shardsPerInterval < 0 ? 1 : shardsPerInterval;
+        List<HadoopyShardSpec> specs = Lists.newArrayListWithCapacity(realShardsPerInterval);
+        for (int i = 0; i < realShardsPerInterval; i++) {
+          specs.add(
+              new HadoopyShardSpec(
+                  new HashBasedNumberedShardSpec(
+                      i,
+                      realShardsPerInterval,
+                      config.getPartitionsSpec().getPartitionDimensions(),
+                      HadoopDruidIndexerConfig.JSON_MAPPER
+                  ),
+                  shardCount++
+              )
+          );
         }
+        shardSpecs.put(bucket.getMillis(), specs);
+        log.info("DateTime[%s], spec[%s]", bucket, specs);
       }
       config.setShardSpecs(shardSpecs);
       return true;
@@ -108,5 +104,10 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
     }
 
     return job.getErrorMessage();
+  }
+
+  public void setHadoopJobIdFile(String hadoopJobIdFile)
+  {
+    this.hadoopJobIdFile = hadoopJobIdFile;
   }
 }

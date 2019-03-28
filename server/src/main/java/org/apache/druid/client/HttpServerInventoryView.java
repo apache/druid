@@ -25,6 +25,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -50,6 +52,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -61,24 +64,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 /**
- * This class uses internal-discovery i.e. {@link DruidNodeDiscoveryProvider} to discover various queryable nodes in the cluster
- * such as historicals and realtime peon processes.
- * For each queryable server, it uses HTTP GET /druid-internal/v1/segments (see docs in SegmentListerResource.getSegments(..),
- * to keep sync'd state of segments served by those servers.
+ * This class uses internal-discovery i.e. {@link DruidNodeDiscoveryProvider} to discover various queryable nodes in the
+ * cluster such as historicals and realtime peon processes.
+ *
+ * For each queryable server, it uses HTTP GET /druid-internal/v1/segments (see docs for {@link
+ * org.apache.druid.server.http.SegmentListerResource#getSegments}), to keep sync'd state of segments served by those
+ * servers.
  */
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
-  public static final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> SEGMENT_LIST_RESP_TYPE_REF = new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
-  {
-  };
+  public static final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> SEGMENT_LIST_RESP_TYPE_REF =
+      new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>() {};
 
   private final EmittingLogger log = new EmittingLogger(HttpServerInventoryView.class);
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
@@ -109,8 +111,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   private final ObjectMapper smileMapper;
   private final HttpServerInventoryViewConfig config;
 
-  private final CountDownLatch inventoryInitializationLatch = new CountDownLatch(1);
-
   @Inject
   public HttpServerInventoryView(
       final @Smile ObjectMapper smileMapper,
@@ -130,7 +130,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
 
   @LifecycleStart
-  public void start() throws Exception
+  public void start()
   {
     synchronized (lifecycleLock) {
       if (!lifecycleLock.canStart()) {
@@ -193,12 +193,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       }
       finally {
         lifecycleLock.exitStart();
-      }
-
-      log.info("Waiting for Server Inventory Initialization...");
-
-      while (!inventoryInitializationLatch.await(1, TimeUnit.MINUTES)) {
-        log.info("Still waiting for Server Inventory Initialization...");
       }
 
       log.info("Started HttpServerInventoryView.");
@@ -277,10 +271,10 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   @Override
   public Collection<DruidServer> getInventory()
   {
-    return servers.values()
-                  .stream()
-                  .map(serverHolder -> serverHolder.druidServer)
-                  .collect(Collectors.toList());
+    // Returning a lazy collection, because currently getInventory() is always used for one-time iteration. It's OK for
+    // storing in a field and repetitive iteration as well, because the lambda is very cheap - just a final field
+    // access.
+    return Collections2.transform(servers.values(), serverHolder -> serverHolder.druidServer);
   }
 
   private void runSegmentCallbacks(
@@ -368,8 +362,6 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         );
       }
     }
-
-    inventoryInitializationLatch.countDown();
 
     log.info("Calling SegmentCallback.segmentViewInitialized() for all callbacks.");
 
@@ -490,7 +482,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
   public boolean isSegmentLoadedByServer(String serverKey, DataSegment segment)
   {
     DruidServerHolder holder = servers.get(serverKey);
-    return holder != null && holder.druidServer.getSegment(segment.getIdentifier()) != null;
+    return holder != null && holder.druidServer.getSegment(segment.getId()) != null;
   }
 
   private class DruidServerHolder
@@ -535,7 +527,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     boolean isSyncedSuccessfullyAtleastOnce()
     {
       try {
-        return syncer.awaitInitialization(1);
+        return syncer.awaitInitialization(1, TimeUnit.MILLISECONDS);
       }
       catch (InterruptedException ex) {
         throw new RE(
@@ -553,12 +545,13 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         @Override
         public void fullSync(List<DataSegmentChangeRequest> changes)
         {
-          Map<String, DataSegment> toRemove = new HashMap<>(druidServer.getSegments());
+          Map<SegmentId, DataSegment> toRemove = Maps.newHashMapWithExpectedSize(druidServer.getTotalSegments());
+          druidServer.iterateAllSegments().forEach(segment -> toRemove.put(segment.getId(), segment));
 
           for (DataSegmentChangeRequest request : changes) {
             if (request instanceof SegmentChangeRequestLoad) {
               DataSegment segment = ((SegmentChangeRequestLoad) request).getSegment();
-              toRemove.remove(segment.getIdentifier());
+              toRemove.remove(segment.getId());
               addSegment(segment);
             } else {
               log.error(
@@ -597,7 +590,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     private void addSegment(final DataSegment segment)
     {
       if (finalPredicate.apply(Pair.of(druidServer.getMetadata(), segment))) {
-        if (druidServer.getSegment(segment.getIdentifier()) == null) {
+        if (druidServer.getSegment(segment.getId()) == null) {
           druidServer.addDataSegment(segment);
           runSegmentCallbacks(
               new Function<SegmentCallback, CallbackAction>()
@@ -612,7 +605,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         } else {
           log.warn(
               "Not adding or running callbacks for existing segment[%s] on server[%s]",
-              segment.getIdentifier(),
+              segment.getId(),
               druidServer.getName()
           );
         }
@@ -621,9 +614,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     private void removeSegment(final DataSegment segment)
     {
-      if (druidServer.getSegment(segment.getIdentifier()) != null) {
-        druidServer.removeDataSegment(segment.getIdentifier());
-
+      if (druidServer.removeDataSegment(segment.getId()) != null) {
         runSegmentCallbacks(
             new Function<SegmentCallback, CallbackAction>()
             {
@@ -637,7 +628,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
       } else {
         log.warn(
             "Not running cleanup or callbacks for non-existing segment[%s] on server[%s]",
-            segment.getIdentifier(),
+            segment.getId(),
             druidServer.getName()
         );
       }

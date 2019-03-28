@@ -114,7 +114,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     long size = 0;
     expungeCollectedCaches();
     for (WeakReference<ConcurrentMap<String, String>> cacheRef : caches) {
-      final Map<String, String> cache = cacheRef.get();
+      final ConcurrentMap<String, String> cache = cacheRef.get();
       if (cache == null) {
         continue;
       }

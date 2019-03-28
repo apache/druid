@@ -20,6 +20,9 @@
 package org.apache.druid.indexing.kafka;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -27,70 +30,95 @@ import java.util.Map;
 
 public class KafkaDataSourceMetadataTest
 {
-  private static final KafkaDataSourceMetadata KM0 = KM("foo", ImmutableMap.of());
-  private static final KafkaDataSourceMetadata KM1 = KM("foo", ImmutableMap.of(0, 2L, 1, 3L));
-  private static final KafkaDataSourceMetadata KM2 = KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L));
-  private static final KafkaDataSourceMetadata KM3 = KM("foo", ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata START0 = startMetadata(ImmutableMap.of());
+  private static final KafkaDataSourceMetadata START1 = startMetadata(ImmutableMap.of(0, 2L, 1, 3L));
+  private static final KafkaDataSourceMetadata START2 = startMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L));
+  private static final KafkaDataSourceMetadata START3 = startMetadata(ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata END0 = endMetadata(ImmutableMap.of());
+  private static final KafkaDataSourceMetadata END1 = endMetadata(ImmutableMap.of(0, 2L, 2, 5L));
+  private static final KafkaDataSourceMetadata END2 = endMetadata(ImmutableMap.of(0, 2L, 1, 4L));
 
   @Test
   public void testMatches()
   {
-    Assert.assertTrue(KM0.matches(KM0));
-    Assert.assertTrue(KM0.matches(KM1));
-    Assert.assertTrue(KM0.matches(KM2));
-    Assert.assertTrue(KM0.matches(KM3));
+    Assert.assertTrue(START0.matches(START0));
+    Assert.assertTrue(START0.matches(START1));
+    Assert.assertTrue(START0.matches(START2));
+    Assert.assertTrue(START0.matches(START3));
 
-    Assert.assertTrue(KM1.matches(KM0));
-    Assert.assertTrue(KM1.matches(KM1));
-    Assert.assertFalse(KM1.matches(KM2));
-    Assert.assertTrue(KM1.matches(KM3));
+    Assert.assertTrue(START1.matches(START0));
+    Assert.assertTrue(START1.matches(START1));
+    Assert.assertFalse(START1.matches(START2));
+    Assert.assertTrue(START1.matches(START3));
 
-    Assert.assertTrue(KM2.matches(KM0));
-    Assert.assertFalse(KM2.matches(KM1));
-    Assert.assertTrue(KM2.matches(KM2));
-    Assert.assertTrue(KM2.matches(KM3));
+    Assert.assertTrue(START2.matches(START0));
+    Assert.assertFalse(START2.matches(START1));
+    Assert.assertTrue(START2.matches(START2));
+    Assert.assertTrue(START2.matches(START3));
 
-    Assert.assertTrue(KM3.matches(KM0));
-    Assert.assertTrue(KM3.matches(KM1));
-    Assert.assertTrue(KM3.matches(KM2));
-    Assert.assertTrue(KM3.matches(KM3));
+    Assert.assertTrue(START3.matches(START0));
+    Assert.assertTrue(START3.matches(START1));
+    Assert.assertTrue(START3.matches(START2));
+    Assert.assertTrue(START3.matches(START3));
+
+    Assert.assertTrue(END0.matches(END0));
+    Assert.assertTrue(END0.matches(END1));
+    Assert.assertTrue(END0.matches(END2));
+
+    Assert.assertTrue(END1.matches(END0));
+    Assert.assertTrue(END1.matches(END1));
+    Assert.assertTrue(END1.matches(END2));
+
+    Assert.assertTrue(END2.matches(END0));
+    Assert.assertTrue(END2.matches(END1));
+    Assert.assertTrue(END2.matches(END2));
   }
 
   @Test
   public void testIsValidStart()
   {
-    Assert.assertTrue(KM0.isValidStart());
-    Assert.assertTrue(KM1.isValidStart());
-    Assert.assertTrue(KM2.isValidStart());
-    Assert.assertTrue(KM3.isValidStart());
+    Assert.assertTrue(START0.isValidStart());
+    Assert.assertTrue(START1.isValidStart());
+    Assert.assertTrue(START2.isValidStart());
+    Assert.assertTrue(START3.isValidStart());
   }
 
   @Test
   public void testPlus()
   {
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
-        KM1.plus(KM3)
+        startMetadata(ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
+        START1.plus(START3)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
-        KM0.plus(KM2)
+        startMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        START0.plus(START2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
-        KM1.plus(KM2)
+        startMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        START1.plus(START2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
-        KM2.plus(KM1)
+        startMetadata(ImmutableMap.of(0, 2L, 1, 3L, 2, 5L)),
+        START2.plus(START1)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
-        KM2.plus(KM2)
+        startMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        START2.plus(START2)
+    );
+
+    Assert.assertEquals(
+        endMetadata(ImmutableMap.of(0, 2L, 2, 5L)),
+        END0.plus(END1)
+    );
+
+    Assert.assertEquals(
+        endMetadata(ImmutableMap.of(0, 2L, 1, 4L, 2, 5L)),
+        END1.plus(END2)
     );
   }
 
@@ -98,33 +126,48 @@ public class KafkaDataSourceMetadataTest
   public void testMinus()
   {
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(1, 3L)),
-        KM1.minus(KM3)
+        startMetadata(ImmutableMap.of(1, 3L)),
+        START1.minus(START3)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of()),
-        KM0.minus(KM2)
+        startMetadata(ImmutableMap.of()),
+        START0.minus(START2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of()),
-        KM1.minus(KM2)
+        startMetadata(ImmutableMap.of()),
+        START1.minus(START2)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of(2, 5L)),
-        KM2.minus(KM1)
+        startMetadata(ImmutableMap.of(2, 5L)),
+        START2.minus(START1)
     );
 
     Assert.assertEquals(
-        KM("foo", ImmutableMap.of()),
-        KM2.minus(KM2)
+        startMetadata(ImmutableMap.of()),
+        START2.minus(START2)
+    );
+
+    Assert.assertEquals(
+        endMetadata(ImmutableMap.of(1, 4L)),
+        END2.minus(END1)
+    );
+
+    Assert.assertEquals(
+        endMetadata(ImmutableMap.of(2, 5L)),
+        END1.minus(END2)
     );
   }
 
-  private static KafkaDataSourceMetadata KM(String topic, Map<Integer, Long> offsets)
+  private static KafkaDataSourceMetadata startMetadata(Map<Integer, Long> offsets)
   {
-    return new KafkaDataSourceMetadata(new KafkaPartitions(topic, offsets));
+    return new KafkaDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>("foo", offsets, ImmutableSet.of()));
+  }
+
+  private static KafkaDataSourceMetadata endMetadata(Map<Integer, Long> offsets)
+  {
+    return new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>("foo", offsets));
   }
 }

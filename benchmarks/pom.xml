@@ -27,7 +27,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>0.13.0-incubating-SNAPSHOT</version>
+    <version>0.15.0-incubating-SNAPSHOT</version>
   </parent>
 
   <prerequisites>
@@ -60,6 +60,28 @@
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-sql</artifactId>
       <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-datasketches</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-datasketches</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-histogram</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions</groupId>
+      <artifactId>druid-histogram</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>

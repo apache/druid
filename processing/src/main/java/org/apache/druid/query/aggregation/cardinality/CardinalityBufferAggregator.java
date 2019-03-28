@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.cardinality;
 
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.cardinality.types.CardinalityAggregatorColumnSelectorStrategy;
@@ -112,6 +113,8 @@ public class CardinalityBufferAggregator implements BufferAggregator
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    inspector.visit("selectorPluses", selectorPluses);
+    for (int i = 0; i < selectorPluses.length; i++) {
+      inspector.visit(StringUtils.format("selector-%d", i), selectorPluses[i].getSelector());
+    }
   }
 }

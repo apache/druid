@@ -35,6 +35,7 @@ import com.google.inject.name.Names;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.netty.util.SuppressForbidden;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
@@ -90,7 +91,6 @@ import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
@@ -108,7 +108,6 @@ import org.eclipse.jetty.server.Server;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -254,12 +253,6 @@ public class CliPeon extends GuiceRunnable
                   .to(CoordinatorBasedSegmentHandoffNotifierFactory.class)
                   .in(LazySingleton.class);
 
-            // Override the default SegmentLoaderConfig because we don't actually care about the
-            // configuration based locations.  This will override them anyway.  This is also stopping
-            // configuration of other parameters, but I don't think that's actually a problem.
-            // Note, if that is actually not a problem, then that probably means we have the wrong abstraction.
-            binder.bind(SegmentLoaderConfig.class)
-                  .toInstance(new SegmentLoaderConfig().withLocations(Collections.emptyList()));
             binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
@@ -303,7 +296,7 @@ public class CliPeon extends GuiceRunnable
               return mapper.readValue(config.getTaskFile(), Task.class);
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
 
@@ -345,6 +338,7 @@ public class CliPeon extends GuiceRunnable
     );
   }
 
+  @SuppressForbidden(reason = "System#out, System#err")
   @Override
   public void run()
   {
@@ -375,17 +369,18 @@ public class CliPeon extends GuiceRunnable
           Runtime.getRuntime().removeShutdownHook(hook);
         }
         catch (IllegalStateException e) {
-          log.warn("Cannot remove shutdown hook, already shutting down");
+          System.err.println("Cannot remove shutdown hook, already shutting down!");
         }
       }
       catch (Throwable t) {
-        log.error(t, "Error when starting up.  Failing.");
+        System.err.println("Error!");
+        System.err.println(Throwables.getStackTraceAsString(t));
         System.exit(1);
       }
-      log.info("Finished peon task");
+      System.out.println("Finished peon task");
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

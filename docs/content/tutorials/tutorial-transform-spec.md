@@ -114,9 +114,8 @@ We will ingest the sample data using the following spec, which demonstrates the 
     },
     "tuningConfig" : {
       "type" : "index",
-      "targetPartitionSize" : 5000000,
-      "maxRowsInMemory" : 25000,
-      "forceExtendableShardSpecs" : true
+      "maxRowsPerSegment" : 5000000,
+      "maxRowsInMemory" : 25000
     }
   }
 }

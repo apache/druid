@@ -89,7 +89,7 @@ public class TimeExtractOperatorConversion implements SqlOperatorConversion
     );
 
     final DateTimeZone timeZone = call.getOperands().size() > 2 && !RexLiteral.isNullLiteral(call.getOperands().get(2))
-                                  ? DateTimes.inferTzfromString(RexLiteral.stringValue(call.getOperands().get(2)))
+                                  ? DateTimes.inferTzFromString(RexLiteral.stringValue(call.getOperands().get(2)))
                                   : plannerContext.getTimeZone();
 
     return applyTimeExtract(timeExpression, unit, timeZone);

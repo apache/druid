@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -67,6 +68,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -286,9 +288,15 @@ public class QueryMaker
   }
 
   @SuppressWarnings("unchecked")
-  private <T> Sequence<T> runQuery(final Query<T> query)
+  private <T> Sequence<T> runQuery(Query<T> query)
   {
     Hook.QUERY_PLAN.run(query);
+
+    final String queryId = UUID.randomUUID().toString();
+    plannerContext.addNativeQueryId(queryId);
+    query = query.withId(queryId)
+                 .withSqlQueryId(plannerContext.getSqlQueryId());
+
     final AuthenticationResult authenticationResult = plannerContext.getAuthenticationResult();
     return queryLifecycleFactory.factorize().runSimple(query, authenticationResult, null);
   }
@@ -486,8 +494,17 @@ public class QueryMaker
         throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
       }
     } else if (sqlType == SqlTypeName.OTHER) {
-      // Complex type got out somehow.
-      coercedValue = value.getClass().getName();
+      // Complex type, try to serialize if we should, else print class name
+      if (plannerContext.getPlannerConfig().shouldSerializeComplexValues()) {
+        try {
+          coercedValue = jsonMapper.writeValueAsString(value);
+        }
+        catch (JsonProcessingException jex) {
+          throw new ISE(jex, "Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
+        }
+      } else {
+        coercedValue = value.getClass().getName();
+      }
     } else {
       throw new ISE("Cannot coerce[%s] to %s", value.getClass().getName(), sqlType);
     }

@@ -61,7 +61,7 @@ public class IntervalsResourceTest
         new DataSegment(
             "datasource1",
             Intervals.of("2010-01-01T00:00:00.000Z/P1D"),
-            null,
+            "",
             null,
             null,
             null,
@@ -74,7 +74,7 @@ public class IntervalsResourceTest
         new DataSegment(
             "datasource1",
             Intervals.of("2010-01-22T00:00:00.000Z/P1D"),
-            null,
+            "",
             null,
             null,
             null,
@@ -87,7 +87,7 @@ public class IntervalsResourceTest
         new DataSegment(
             "datasource2",
             Intervals.of("2010-01-01T00:00:00.000Z/P1D"),
-            null,
+            "",
             null,
             null,
             null,

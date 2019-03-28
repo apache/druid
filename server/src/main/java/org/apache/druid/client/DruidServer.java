@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -29,16 +28,24 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
+ * A mutable collection of metadata of segments ({@link DataSegment} objects), stored on a particular Druid server
+ * (typically historical).
+ *
+ * This class should not be subclassed, it isn't declared final only to make it possible to mock the class with EasyMock
+ * in tests.
+ *
+ * @see ImmutableDruidServer - an immutable counterpart of this class
  */
-public class DruidServer implements Comparable
+public class DruidServer implements Comparable<DruidServer>
 {
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_NUM_REPLICANTS = 2;
@@ -46,20 +53,13 @@ public class DruidServer implements Comparable
 
   private static final Logger log = new Logger(DruidServer.class);
 
-  private final Object lock = new Object();
-
-  private final ConcurrentMap<String, DruidDataSource> dataSources;
-  private final ConcurrentMap<String, DataSegment> segments;
-
   private final DruidServerMetadata metadata;
 
-  private volatile long currSize;
+  private final ConcurrentHashMap<String, DruidDataSource> dataSources = new ConcurrentHashMap<>();
+  private final AtomicInteger totalSegments = new AtomicInteger();
+  private final AtomicLong currSize = new AtomicLong(0);
 
-  public DruidServer(
-      DruidNode node,
-      DruidServerConfig config,
-      ServerType type
-  )
+  public DruidServer(DruidNode node, DruidServerConfig config, ServerType type)
   {
     this(
         node.getHostAndPortToUse(),
@@ -84,9 +84,6 @@ public class DruidServer implements Comparable
   )
   {
     this.metadata = new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, type, tier, priority);
-
-    this.dataSources = new ConcurrentHashMap<String, DruidDataSource>();
-    this.segments = new ConcurrentHashMap<String, DataSegment>();
   }
 
   @JsonProperty
@@ -119,7 +116,7 @@ public class DruidServer implements Comparable
 
   public long getCurrSize()
   {
-    return currSize;
+    return currSize.get();
   }
 
   @JsonProperty
@@ -156,88 +153,102 @@ public class DruidServer implements Comparable
     return metadata.getHostAndTlsPort() != null ? "https" : "http";
   }
 
-  public Map<String, DataSegment> getSegments()
+  /**
+   * Returns an iterable to go over all segments in all data sources, stored on this DruidServer. The order in which
+   * segments are iterated is unspecified.
+   *
+   * Since this DruidServer can be mutated concurrently, the set of segments observed during an iteration may _not_ be
+   * a momentary snapshot of the segments on the server, in other words, it may be that there was no moment when the
+   * DruidServer stored exactly the returned set of segments.
+   *
+   * Note: the iteration may not be as trivially cheap as, for example, iteration over an ArrayList. Try (to some
+   * reasonable extent) to organize the code so that it iterates the returned iterable only once rather than several
+   * times.
+   */
+  public Iterable<DataSegment> iterateAllSegments()
   {
-    // Copying the map slows things down a lot here, don't use Immutable Map here
-    return Collections.unmodifiableMap(segments);
+    return () -> dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()).iterator();
   }
 
-  public DataSegment getSegment(String segmentName)
+  /**
+   * Returns the current number of segments, stored in this DruidServer object. This number if weakly consistent with
+   * the number of segments if {@link #iterateAllSegments} is iterated about the same time, because segments might be
+   * added or removed in parallel.
+   */
+  public int getTotalSegments()
   {
-    return segments.get(segmentName);
+    return totalSegments.get();
+  }
+
+  public DataSegment getSegment(SegmentId segmentId)
+  {
+    DruidDataSource dataSource = dataSources.get(segmentId.getDataSource());
+    if (dataSource == null) {
+      return null;
+    }
+    return dataSource.getSegment(segmentId);
   }
 
   public DruidServer addDataSegment(DataSegment segment)
   {
-    synchronized (lock) {
-      final String segmentId = segment.getIdentifier();
-      DataSegment shouldNotExist = segments.get(segmentId);
-
-      if (shouldNotExist != null) {
-        log.warn("Asked to add data segment that already exists!? server[%s], segment[%s]", getName(), segmentId);
-        return this;
-      }
-
-      String dataSourceName = segment.getDataSource();
-      DruidDataSource dataSource = dataSources.get(dataSourceName);
-
-      if (dataSource == null) {
-        dataSource = new DruidDataSource(
-            dataSourceName,
-            ImmutableMap.of("client", "side")
-        );
-        dataSources.put(dataSourceName, dataSource);
-      }
-
-      dataSource.addSegment(segment);
-
-      segments.put(segmentId, segment);
-      currSize += segment.getSize();
-    }
+    // ConcurrentHashMap.compute() ensures that all actions for specific dataSource are linearizable.
+    dataSources.compute(
+        segment.getDataSource(),
+        (dataSourceName, dataSource) -> {
+          if (dataSource == null) {
+            dataSource = new DruidDataSource(dataSourceName, ImmutableMap.of("client", "side"));
+          }
+          if (dataSource.addSegmentIfAbsent(segment)) {
+            currSize.addAndGet(segment.getSize());
+            totalSegments.incrementAndGet();
+          } else {
+            log.warn("Asked to add data segment that already exists!? server[%s], segment[%s]", getName(), segment);
+          }
+          return dataSource;
+        }
+    );
     return this;
   }
 
   public DruidServer addDataSegments(DruidServer server)
   {
-    synchronized (lock) {
-      server.segments.values().forEach(this::addDataSegment);
-    }
+    server.iterateAllSegments().forEach(this::addDataSegment);
     return this;
   }
 
-  public DruidServer removeDataSegment(String segmentId)
+  @Nullable
+  public DataSegment removeDataSegment(SegmentId segmentId)
   {
-    synchronized (lock) {
-      DataSegment segment = segments.get(segmentId);
-
-      if (segment == null) {
-        log.warn("Asked to remove data segment that doesn't exist!? server[%s], segment[%s]", getName(), segmentId);
-        return this;
-      }
-
-      DruidDataSource dataSource = dataSources.get(segment.getDataSource());
-
-      if (dataSource == null) {
-        log.warn(
-            "Asked to remove data segment from dataSource[%s] that doesn't exist, but the segment[%s] exists!?!?!?! wtf?  server[%s]",
-            segment.getDataSource(),
-            segmentId,
-            getName()
-        );
-        return this;
-      }
-
-      dataSource.removePartition(segmentId);
-
-      segments.remove(segmentId);
-      currSize -= segment.getSize();
-
-      if (dataSource.isEmpty()) {
-        dataSources.remove(dataSource.getName());
-      }
-    }
-
-    return this;
+    // To pass result from inside the lambda.
+    DataSegment[] segmentRemoved = new DataSegment[1];
+    // ConcurrentHashMap.compute() ensures that all actions for specific dataSource are linearizable.
+    dataSources.compute(
+        segmentId.getDataSource(),
+        (dataSourceName, dataSource) -> {
+          if (dataSource == null) {
+            log.warn(
+                "Asked to remove data segment from a data source that doesn't exist!? server[%s], segment[%s]",
+                getName(),
+                segmentId
+            );
+            // Returning null from the lambda here makes the ConcurrentHashMap to not record any entry.
+            //noinspection ReturnOfNull
+            return null;
+          }
+          DataSegment segment = dataSource.removeSegment(segmentId);
+          if (segment != null) {
+            segmentRemoved[0] = segment;
+            currSize.addAndGet(-segment.getSize());
+            totalSegments.decrementAndGet();
+          } else {
+            log.warn("Asked to remove data segment that doesn't exist!? server[%s], segment[%s]", getName(), segmentId);
+          }
+          // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+          //noinspection ReturnOfNull
+          return dataSource.isEmpty() ? null : dataSource;
+        }
+    );
+    return segmentRemoved[0];
   }
 
   public DruidDataSource getDataSource(String dataSource)
@@ -256,17 +267,13 @@ public class DruidServer implements Comparable
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof DruidServer)) {
       return false;
     }
 
     DruidServer that = (DruidServer) o;
 
-    if (!metadata.equals(that.metadata)) {
-      return false;
-    }
-
-    return true;
+    return metadata.equals(that.metadata);
   }
 
   @Override
@@ -282,37 +289,23 @@ public class DruidServer implements Comparable
   }
 
   @Override
-  public int compareTo(Object o)
+  public int compareTo(DruidServer o)
   {
-    if (this == o) {
-      return 0;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return 1;
-    }
-
-    return getName().compareTo(((DruidServer) o).getName());
+    return getName().compareTo(o.getName());
   }
 
   public ImmutableDruidServer toImmutableDruidServer()
   {
-    return new ImmutableDruidServer(
-        metadata,
-        currSize,
-        ImmutableMap.copyOf(
-            Maps.transformValues(
-                dataSources,
-                new Function<DruidDataSource, ImmutableDruidDataSource>()
-                {
-                  @Override
-                  public ImmutableDruidDataSource apply(DruidDataSource input)
-                  {
-                    return input.toImmutableDruidDataSource();
-                  }
-                }
-            )
-        ),
-        ImmutableMap.copyOf(segments)
+    ImmutableMap<String, ImmutableDruidDataSource> immutableDataSources = ImmutableMap.copyOf(
+        Maps.transformValues(this.dataSources, DruidDataSource::toImmutableDruidDataSource)
     );
+    // Computing the size and the total number of segments using the resulting immutableDataSources rather that taking
+    // currSize.get() and totalSegments.get() to avoid inconsistency: segments could be added and deleted while we are
+    // running toImmutableDruidDataSource().
+    long size =
+        immutableDataSources.values().stream().mapToLong(ImmutableDruidDataSource::getTotalSizeOfSegments).sum();
+    int totalSegments =
+        immutableDataSources.values().stream().mapToInt(dataSource -> dataSource.getSegments().size()).sum();
+    return new ImmutableDruidServer(metadata, size, immutableDataSources, totalSegments);
   }
 }

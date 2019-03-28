@@ -20,14 +20,12 @@
 package org.apache.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.NoopIndexingServiceClient;
-import org.apache.druid.guice.ServerModule;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -47,7 +45,6 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -76,11 +73,6 @@ public class TestUtils
         }
     );
     indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
-
-    final List<? extends Module> list = new ServerModule().getJacksonModules();
-    for (Module module : list) {
-      jsonMapper.registerModule(module);
-    }
 
     this.rowIngestionMetersFactory = new DropwizardRowIngestionMetersFactory();
 
