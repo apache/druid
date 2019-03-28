@@ -44,9 +44,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.HavingSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
-import org.apache.druid.query.rollingavgquery.AveragerFactoryWrapper;
-import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -111,7 +108,6 @@ public class LookbackQuery extends BaseQuery<Result<LookbackResultValue>>
     // This is typed AggregatorFactory instead of AveragerFactory<?> because the common
     // groupBy code for sorting doesn't know about Averager's. So instead we wrap the averagers
     // in a wrapper that makes them look like aggregators for purposes of sorting, having, and limiting.
-    List<AggregatorFactory> combinedAveragers = new ArrayList<>();
 
     combinedPostAggSpecs.addAll(this.postAggregatorSpecs);
 
@@ -150,34 +146,8 @@ public class LookbackQuery extends BaseQuery<Result<LookbackResultValue>>
           combinedPostAggSpecs.add(new PostAggregatorWrapper(agg, prefix));
         }
       }
-    } else if (query instanceof RollingAverageQuery) {
-      RollingAverageQuery rollingQuery = (RollingAverageQuery) query;
-      List<AggregatorFactory> innerAggSpecs = rollingQuery.getAggregatorSpecs();
-      combinedAggregatorSpecs.addAll(innerAggSpecs);
-      for (AggregatorFactory agg : innerAggSpecs) {
-        for (String prefix : this.lookbackPrefixes) {
-          combinedAggregatorSpecs.add(new AggregatorFactoryWrapper(agg, prefix));
-        }
-      }
-
-      List<PostAggregator> innerPostAggSpecs = rollingQuery.getPostAggregatorSpecs();
-      combinedPostAggSpecs.addAll(innerPostAggSpecs);
-      for (PostAggregator agg : innerPostAggSpecs) {
-        for (String prefix : this.lookbackPrefixes) {
-          combinedPostAggSpecs.add(new PostAggregatorWrapper(agg, prefix));
-        }
-      }
-
-      List<AveragerFactory<?, ?>> innerAveragers = rollingQuery.getAveragerSpecs();
-      for (AveragerFactory<?, ?> avg : innerAveragers) {
-        combinedAveragers.add(new AveragerFactoryWrapper(avg, ""));
-        for (String prefix : this.lookbackPrefixes) {
-          combinedAveragers.add(new AveragerFactoryWrapper(avg, prefix));
-        }
-      }
     }
 
-    combinedAggregatorSpecs.addAll(combinedAveragers);
     Function<Sequence<Row>, Sequence<Row>> postProcFunction =
         this.limitSpec.build(
             getDimensions(),
@@ -235,8 +205,6 @@ public class LookbackQuery extends BaseQuery<Result<LookbackResultValue>>
     switch (q.getType()) {
       case Query.GROUP_BY:
         return ((GroupByQuery) q).getDimensions();
-      case RollingAverageQuery.ROLLING_AVG_QUERY_TYPE:
-        return ((RollingAverageQuery) q).getDimensions();
       default:
         return Collections.emptyList();
     }

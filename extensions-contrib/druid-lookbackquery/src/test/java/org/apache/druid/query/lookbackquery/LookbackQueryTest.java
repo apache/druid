@@ -41,7 +41,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.apache.druid.query.rollingavgquery.DigitsRollingAverageQueryModule;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.junit.Assert;
@@ -87,11 +86,6 @@ public class LookbackQueryTest
       jsonMapper.registerModule(m);
     }
 
-    DruidModule rollingAverageModule = new DigitsRollingAverageQueryModule();
-    for (Module m : rollingAverageModule.getJacksonModules()) {
-      jsonMapper.registerModule(m);
-    }
-
   }
 
   //@Test
@@ -118,25 +112,6 @@ public class LookbackQueryTest
   {
     Query query = new LookbackQuery(
         LookbackQueryTestResources.groupByQueryDataSource,
-        LookbackQueryTestResources.singleLookbackPostAggList,
-        null,
-        Collections.singletonList(LookbackQueryTestResources.period),
-        null,
-        null,
-        null
-    );
-
-    String json = jsonMapper.writeValueAsString(query);
-    Query serdeQuery = jsonMapper.readValue(json, Query.class);
-
-    Assert.assertEquals(query, serdeQuery);
-  }
-
-  //@Test
-  public void testQuerySerializationRollingAverage() throws IOException
-  {
-    Query query = new LookbackQuery(
-        LookbackQueryTestResources.rollingAverageQueryDataSource,
         LookbackQueryTestResources.singleLookbackPostAggList,
         null,
         Collections.singletonList(LookbackQueryTestResources.period),

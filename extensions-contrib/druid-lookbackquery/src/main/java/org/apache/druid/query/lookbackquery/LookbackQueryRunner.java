@@ -46,8 +46,6 @@ import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -262,7 +260,6 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
     private final List<String> prefixes;
     private final List<Period> offsets;
     private final List<AggregatorFactory> metrics;
-    private final List<AveragerFactory<?, ?>> averagers;
     private final List<PostAggregator> innerPostAggs;
 
     public GeneratePostAggResults(LookbackQuery query)
@@ -276,17 +273,10 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
         case Query.TIMESERIES:
           this.metrics = ((TimeseriesQuery) innerQuery).getAggregatorSpecs();
           this.innerPostAggs = ((TimeseriesQuery) innerQuery).getPostAggregatorSpecs();
-          this.averagers = null;
           break;
         case Query.GROUP_BY:
           this.metrics = ((GroupByQuery) innerQuery).getAggregatorSpecs();
           this.innerPostAggs = ((GroupByQuery) innerQuery).getPostAggregatorSpecs();
-          this.averagers = null;
-          break;
-        case RollingAverageQuery.ROLLING_AVG_QUERY_TYPE:
-          this.metrics = ((RollingAverageQuery) innerQuery).getAggregatorSpecs();
-          this.innerPostAggs = ((RollingAverageQuery) innerQuery).getPostAggregatorSpecs();
-          this.averagers = ((RollingAverageQuery) innerQuery).getAveragerSpecs();
           break;
         default:
           throw new ISE("Query type [%s]is not supported", innerQuery.getType());
@@ -320,18 +310,6 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
               prefixes.get(ii) + postAgg.getName(),
               cohortValues == null ? null : cohortValues.get(postAgg.getName())
           );
-        }
-      }
-
-      if (averagers != null) {
-        for (AveragerFactory<?, ?> averager : averagers) {
-          for (int ii = 0; ii < offsets.size(); ++ii) {
-            Map<String, Object> cohortValues = cohortValuesSet.get(offsets.get(ii));
-            measurementValues.put(
-                prefixes.get(ii) + averager.getName(),
-                cohortValues == null ? null : cohortValues.get(averager.getName())
-            );
-          }
         }
       }
 
@@ -471,7 +449,7 @@ public class LookbackQueryRunner implements QueryRunner<Result<LookbackResultVal
                 lookbackOffsets.get(index)
             )
         );
-      } else if (queryType.equals(Query.GROUP_BY) || queryType.equals(RollingAverageQuery.ROLLING_AVG_QUERY_TYPE)) {
+      } else if (queryType.equals(Query.GROUP_BY)) {
         results = Sequences.map(
             results,
             new JoinGroupByResults(futures.get(index), lookbackOffsets.get(index), lookbackQuery.getDimensions())

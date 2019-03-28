@@ -31,8 +31,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -118,7 +116,6 @@ public class LookbackQueryHelper
     List<DimensionSpec> dimensionSpecs = lookbackQuery.getDimensions();
     List<AggregatorFactory> innerAggs;
     List<PostAggregator> innerPostAggs;
-    List<AveragerFactory<?, ?>> innerAveragers = null;
     Set<String> fieldNames = new HashSet<>();
 
     if (lookBackQueryPostAggs.isEmpty()) {
@@ -135,12 +132,6 @@ public class LookbackQueryHelper
         innerAggs = ((GroupByQuery) innerQuery).getAggregatorSpecs();
         innerPostAggs = ((GroupByQuery) innerQuery).getPostAggregatorSpecs();
         break;
-      case RollingAverageQuery.ROLLING_AVG_QUERY_TYPE:
-        RollingAverageQuery q = (RollingAverageQuery) innerQuery;
-        innerAggs = q.getAggregatorSpecs();
-        innerPostAggs = q.getPostAggregatorSpecs();
-        innerAveragers = q.getAveragerSpecs();
-        break;
       default:
         throw new ISE("Query type [%s]is not supported", innerQuery.getType());
     }
@@ -155,12 +146,6 @@ public class LookbackQueryHelper
 
     for (PostAggregator postAggregator : innerPostAggs) {
       fieldNames.add(postAggregator.getName());
-    }
-
-    if (innerAveragers != null) {
-      for (AveragerFactory<?, ?> avgFactory : innerAveragers) {
-        fieldNames.add(avgFactory.getName());
-      }
     }
 
     for (PostAggregator postAggregator : lookBackQueryPostAggs) {

@@ -38,9 +38,6 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
-import org.apache.druid.query.rollingavgquery.averagers.AveragerFactory;
-import org.apache.druid.query.rollingavgquery.averagers.DoubleMeanAveragerFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -99,12 +96,6 @@ public class LookbackQueryTestResources
           totalPageViews
       );
 
-  public static final AveragerFactory<Double, Double> meanPageViews = new DoubleMeanAveragerFactory(
-      "meanPageViews",
-      7,
-      1,
-      "pageViews"
-  );
 
   public static final Query<Result<TimeseriesResultValue>> timeSeriesQuery = new TimeseriesQuery(
       tableDataSource,
@@ -147,26 +138,10 @@ public class LookbackQueryTestResources
       null
   );
 
-  public static final Query<Row> rollingAverageQuery = new RollingAverageQuery(
-      tableDataSource,
-      oneDayQuerySegmentSpec,
-      null,
-      Granularities.DAY,
-      Arrays.asList(dim1, dim2),
-      Arrays.asList(pageViews, timeSpent),
-      Collections.singletonList(pageViewsPerTimeSpent),
-      null,
-      Collections.singletonList(meanPageViews),
-      null,
-      null,
-      null
-  );
-
   public static final QueryDataSource timeSeriesQueryDataSource = new QueryDataSource(timeSeriesQuery);
   public static final QueryDataSource timeSeriesQueryUnionDataSource = new QueryDataSource(
       timeSeriesQueryWithUnionDataSource);
   public static final QueryDataSource groupByQueryDataSource = new QueryDataSource(groupByQuery);
-  public static final QueryDataSource rollingAverageQueryDataSource = new QueryDataSource(rollingAverageQuery);
 
   public static final QuerySegmentSpec twoDaysQuerySegmentSpec = new MultipleIntervalSegmentSpec(
       Collections.singletonList(Intervals.of("2015-10-10T00:00:00.000Z/2015-10-12T00:00:00.000Z"))

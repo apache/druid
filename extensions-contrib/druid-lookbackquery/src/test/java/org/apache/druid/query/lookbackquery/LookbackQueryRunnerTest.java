@@ -35,7 +35,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -46,8 +45,6 @@ import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
 import org.apache.druid.query.groupby.having.LessThanHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.rollingavgquery.RollingAverageQuery;
-import org.apache.druid.query.rollingavgquery.RollingAverageQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -93,7 +90,6 @@ public class LookbackQueryRunnerTest
       new ImmutableMap.Builder()
           .put(TimeseriesQuery.class, new TimeseriesQueryQueryToolChest(null))
           .put(GroupByQuery.class, new GroupByQueryQueryToolChest(null, null))
-          .put(RollingAverageQuery.class, new RollingAverageQueryToolChest(null, null))
           .build()
   );
 
@@ -131,7 +127,7 @@ public class LookbackQueryRunnerTest
     )).andReturn(measurementResultSeq);
     replay(mockQueryRunner, mockWalker);
 
-    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse, mockLogger);
+    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse);
     Sequence<Result<LookbackResultValue>> actualResult = runner.run(QueryPlus.wrap(query), new HashMap<>());
 
     List<Result<LookbackResultValue>> results = new ArrayList<>();
@@ -219,7 +215,7 @@ public class LookbackQueryRunnerTest
         measurementResultSeq);
     replay(mockQueryRunner, mockWalker);
 
-    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse, mockLogger);
+    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse);
     Sequence<Result<LookbackResultValue>> actualResult = runner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Result<LookbackResultValue>> actualResultList =
         Sequences.toList(actualResult, new ArrayList<>());
@@ -304,7 +300,7 @@ public class LookbackQueryRunnerTest
         measurementResultSeq);
     replay(mockQueryRunner, mockWalker);
 
-    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse, mockLogger);
+    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse);
     Sequence<Result<LookbackResultValue>> actualResult = runner.run(QueryPlus.wrap(query), new HashMap<>());
     List<Result<LookbackResultValue>> actualResultList =
         Sequences.toList(actualResult, new ArrayList<>());
@@ -431,99 +427,6 @@ public class LookbackQueryRunnerTest
 
     Assert.assertEquals(expectedResultList, actualResultList);
   }
-
-  //@Test
-  public void testRollingAvgQueryWithLookback()
-  {
-
-    RollingAverageQuery rollingAverageQuery = new RollingAverageQuery(
-        new TableDataSource("slice1"),
-        LookbackQueryTestResources.oneDayQuerySegmentSpec,
-        null,
-        LookbackQueryTestResources.dayGran,
-        Arrays.asList(LookbackQueryTestResources.dim1, LookbackQueryTestResources.dim2),
-        Arrays.asList(LookbackQueryTestResources.pageViews, LookbackQueryTestResources.timeSpent),
-        null,
-        null,
-        Arrays.asList(LookbackQueryTestResources.meanPageViews),
-        null,
-        null,
-        null
-    );
-
-    List<PostAggregator> lookbackPostAggs = Lists.<PostAggregator>newArrayList(
-        LookbackQueryTestResources.totalPageViews,
-        LookbackQueryTestResources.totalTimeSpent
-    );
-
-    LookbackQuery lookbackQuery = LookbackQuery.builder()
-                                               .setLookbackOffsets(lookbackOffsets)
-                                               .setDatasource(new QueryDataSource(rollingAverageQuery))
-                                               .setPostAggregatorSpecs(lookbackPostAggs)
-                                               .setContext(ImmutableMap.<String, Object>of("queryId", "2"))
-                                               .build();
-
-    List<Object> measurementResults = Arrays.asList(
-        createExpectedRow(measurementDateTime, "gender", "f", "country", "usa", "pageViews", 2,
-                          "timeSpent", 3, "meanPageViews", 2
-        ),
-        createExpectedRow(measurementDateTime, "gender", "m", "country", "usa", "pageViews", 2,
-                          "timeSpent", 3, "meanPageViews", 2
-        ),
-        createExpectedRow(measurementDateTime, "gender", "f", "country", "france", "pageViews", 2,
-                          "timeSpent", 3, "meanPageViews", 2
-        ),
-        createExpectedRow(measurementDateTime, "gender", "m", "country", "france", "pageViews", 2,
-                          "timeSpent", 3, "meanPageViews", 2
-        )
-    );
-
-    List<Object> cohortResults = Arrays.asList(
-        createExpectedRow(cohortDateTime, "gender", "f", "country", "usa", "pageViews", 4, "timeSpent",
-                          5, "meanPageViews", 4
-        ),
-        createExpectedRow(cohortDateTime, "gender", "m", "country", "usa", "pageViews", 4, "timeSpent",
-                          5, "meanPageViews", 4
-        ),
-        createExpectedRow(cohortDateTime, "gender", "f", "country", "france", "pageViews", 4,
-                          "timeSpent", 5, "meanPageViews", 4
-        ),
-        createExpectedRow(cohortDateTime, "gender", "m", "country", "france", "pageViews", 4,
-                          "timeSpent", 5, "meanPageViews", 4
-        )
-    );
-
-    // Generate the results that should be obtained after running the mock query
-    List<Result<LookbackResultValue>> actualResultList =
-        getActualResults(lookbackQuery, measurementResults, cohortResults);
-
-    // Expected Result
-    List<Result<LookbackResultValue>> expectedResultList = Arrays.asList(
-        getResult(measurementDateTime, LOOKBACK, "gender", "f", "country",
-                  "usa", "pageViews", 2, "timeSpent", 3, "totalPageViews", 6.0, "totalTimeSpent",
-                  8.0, "meanPageViews", 2, "lookback_P-1D_pageViews", 4,
-                  "lookback_P-1D_timeSpent", 5, "lookback_P-1D_meanPageViews", 4
-        ),
-        getResult(measurementDateTime, LOOKBACK, "gender", "m", "country",
-                  "usa", "pageViews", 2, "timeSpent", 3, "totalPageViews", 6.0, "totalTimeSpent",
-                  8.0, "meanPageViews", 2, "lookback_P-1D_pageViews", 4,
-                  "lookback_P-1D_timeSpent", 5, "lookback_P-1D_meanPageViews", 4
-        ),
-        getResult(measurementDateTime, LOOKBACK, "gender", "f", "country",
-                  "france", "pageViews", 2, "timeSpent", 3, "totalPageViews", 6.0,
-                  "totalTimeSpent", 8.0, "meanPageViews", 2, "lookback_P-1D_pageViews", 4,
-                  "lookback_P-1D_timeSpent", 5, "lookback_P-1D_meanPageViews", 4
-        ),
-        getResult(measurementDateTime, LOOKBACK, "gender", "m", "country",
-                  "france", "pageViews", 2, "timeSpent", 3, "totalPageViews", 6.0,
-                  "totalTimeSpent", 8.0, "meanPageViews", 2, "lookback_P-1D_pageViews", 4,
-                  "lookback_P-1D_timeSpent", 5, "lookback_P-1D_meanPageViews", 4
-        )
-    );
-
-    Assert.assertEquals(expectedResultList, actualResultList);
-  }
-
 
   //@Test
   public void testLookbackQueryHaving()
@@ -1280,7 +1183,7 @@ public class LookbackQueryRunnerTest
 
     replay(mockQueryRunner, mockWalker);
 
-    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse, mockLogger);
+    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse);
     Sequence<Result<LookbackResultValue>> actualResult = runner.run(QueryPlus.wrap(query), new HashMap<>());
 
     List<Result<LookbackResultValue>> results = new ArrayList<>();
@@ -1350,7 +1253,7 @@ public class LookbackQueryRunnerTest
     )).andReturn(measurementResultSeq);
     replay(mockQueryRunner, mockWalker);
 
-    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse, mockLogger);
+    QueryRunner<Result<LookbackResultValue>> runner = new LookbackQueryRunner(mockWalker, warehouse);
     Sequence<Result<LookbackResultValue>> actualResult = runner.run(QueryPlus.wrap(query), new HashMap<>());
 
     List<Result<LookbackResultValue>> results = new ArrayList<>();
