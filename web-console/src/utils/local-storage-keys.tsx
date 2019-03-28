@@ -24,7 +24,6 @@ export const LocalStorageKeys = {
   SERVER_TABLE_COLUMN_SELECTION: "historical-table-column-selection" as "historical-table-column-selection",
   MIDDLEMANAGER_TABLE_COLUMN_SELECTION: "middleManager-table-column-selection" as "middleManager-table-column-selection",
   LOOKUP_TABLE_COLUMN_SELECTION: "lookup-table-column-selection" as "lookup-table-column-selection",
-  DRUID_EDITING_AUTHOR: "druid-editing-author" as "druid-editing-author",
   QUERY_KEY: 'druid-console-query' as 'druid-console-query'
 
 };
