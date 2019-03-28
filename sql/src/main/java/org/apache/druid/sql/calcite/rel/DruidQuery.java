@@ -86,6 +86,7 @@ import org.apache.druid.sql.calcite.table.RowSignature;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -145,7 +146,13 @@ public class DruidQuery
     // Now the fun begins.
     this.filter = computeWhereFilter(partialQuery, plannerContext, sourceQuerySignature);
     this.selectProjection = computeSelectProjection(partialQuery, plannerContext, sourceQuerySignature);
-    this.grouping = computeGrouping(partialQuery, plannerContext, sourceQuerySignature, rexBuilder, finalizeAggregations);
+    this.grouping = computeGrouping(
+        partialQuery,
+        plannerContext,
+        sourceQuerySignature,
+        rexBuilder,
+        finalizeAggregations
+    );
 
     final RowSignature sortingInputRowSignature;
     if (this.selectProjection != null) {
@@ -436,9 +443,9 @@ public class DruidQuery
   /**
    * Returns dimensions corresponding to {@code aggregate.getGroupSet()}, in the same order.
    *
-   * @param partialQuery       partial query
-   * @param plannerContext     planner context
-   * @param querySignature     source row signature and re-usable virtual column references
+   * @param partialQuery   partial query
+   * @param plannerContext planner context
+   * @param querySignature source row signature and re-usable virtual column references
    *
    * @return dimensions
    *
@@ -452,12 +459,20 @@ public class DruidQuery
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<DimensionExpression> dimensions = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findUnusedPrefix("d", new TreeSet<>(querySignature.getRowSignature().getRowOrder()));
+    final String outputNamePrefix = Calcites.findUnusedPrefix(
+        "d",
+        new TreeSet<>(querySignature.getRowSignature()
+                                    .getRowOrder())
+    );
     int outputNameCounter = 0;
 
     for (int i : aggregate.getGroupSet()) {
       // Dimension might need to create virtual columns. Avoid giving it a name that would lead to colliding columns.
-      final RexNode rexNode = Expressions.fromFieldAccess(querySignature.getRowSignature(), partialQuery.getSelectProject(), i);
+      final RexNode rexNode = Expressions.fromFieldAccess(
+          querySignature.getRowSignature(),
+          partialQuery.getSelectProject(),
+          i
+      );
       final DruidExpression druidExpression = Expressions.toDruidExpression(
           plannerContext,
           querySignature.getRowSignature(),
@@ -478,7 +493,11 @@ public class DruidQuery
 
       final String dimOutputName;
       if (!druidExpression.isSimpleExtraction()) {
-        virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(plannerContext, druidExpression, sqlTypeName);
+        virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+            plannerContext,
+            druidExpression,
+            sqlTypeName
+        );
         dimOutputName = virtualColumn.getOutputName();
       } else {
         dimOutputName = outputNamePrefix + outputNameCounter++;
@@ -515,7 +534,11 @@ public class DruidQuery
   {
     final Aggregate aggregate = Preconditions.checkNotNull(partialQuery.getAggregate());
     final List<Aggregation> aggregations = new ArrayList<>();
-    final String outputNamePrefix = Calcites.findUnusedPrefix("a", new TreeSet<>(querySignature.getRowSignature().getRowOrder()));
+    final String outputNamePrefix = Calcites.findUnusedPrefix(
+        "a",
+        new TreeSet<>(querySignature.getRowSignature()
+                                    .getRowOrder())
+    );
 
     for (int i = 0; i < aggregate.getAggCallList().size(); i++) {
       final String aggName = outputNamePrefix + i;
@@ -966,9 +989,13 @@ public class DruidQuery
       // Scan cannot GROUP BY.
       return null;
     }
-
-    if (limitSpec != null && limitSpec.getColumns().size() > 0) {
-      // Scan cannot ORDER BY.
+    if (limitSpec != null &&
+        (limitSpec.getColumns().size() > 1
+         || limitSpec.getColumns().size() == 1 && !limitSpec.getColumns()
+                                                            .get(0)
+                                                            .getDimension()
+                                                            .equals(ColumnHolder.TIME_COLUMN_NAME))) {
+      // Scan cannot ORDER BY non-time columns.
       return null;
     }
 
@@ -983,6 +1010,14 @@ public class DruidQuery
     final long scanLimit = limitSpec == null || limitSpec.getLimit() == Integer.MAX_VALUE
                            ? 0L
                            : (long) limitSpec.getLimit();
+    ScanQuery.Order order;
+    if (limitSpec == null) {
+      order = ScanQuery.Order.NONE;
+    } else if (limitSpec.getColumns().get(0).getDirection() == OrderByColumnSpec.Direction.ASCENDING) {
+      order = ScanQuery.Order.ASCENDING;
+    } else {
+      order = ScanQuery.Order.DESCENDING;
+    }
 
     return new ScanQuery(
         dataSource,
@@ -991,7 +1026,7 @@ public class DruidQuery
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
         0,
         scanLimit,
-        null, // Will default to "none"
+        order, // Will default to "none"
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(outputRowSignature.getRowOrder())),
         false,
