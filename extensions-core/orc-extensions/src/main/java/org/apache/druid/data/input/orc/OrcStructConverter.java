@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
 
 public class OrcStructConverter
 {
-  static Map<Object, Object> convertMap(
+  private static Map<Object, Object> convertMap(
       TypeDescription fieldDescription,
       OrcMap<? extends WritableComparable, ? extends WritableComparable> map,
       boolean binaryAsString
@@ -153,6 +153,10 @@ public class OrcStructConverter
 
     TypeDescription fieldDescription = schema.getChildren().get(fieldIndex);
     WritableComparable fieldValue = struct.getFieldValue(fieldIndex);
+
+    if (fieldValue == null) {
+      return null;
+    }
 
     if (fieldDescription.getCategory().isPrimitive()) {
       return convertPrimitive(fieldDescription, fieldValue, binaryAsString);
