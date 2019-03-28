@@ -768,11 +768,6 @@ public class DruidQuery
       return scanQuery;
     }
 
-    final SelectQuery selectQuery = toSelectQuery();
-    if (selectQuery != null) {
-      return selectQuery;
-    }
-
     throw new CannotBuildQueryException("Cannot convert query parts into an actual query");
   }
 
@@ -991,10 +986,9 @@ public class DruidQuery
     }
     if (limitSpec != null &&
         (limitSpec.getColumns().size() > 1
-         || limitSpec.getColumns().size() == 1 && !limitSpec.getColumns()
-                                                            .get(0)
-                                                            .getDimension()
-                                                            .equals(ColumnHolder.TIME_COLUMN_NAME))) {
+         || (limitSpec.getColumns().size() == 1 && !Iterables.getOnlyElement(limitSpec.getColumns())
+                                                             .getDimension()
+                                                             .equals(ColumnHolder.TIME_COLUMN_NAME)))) {
       // Scan cannot ORDER BY non-time columns.
       return null;
     }
@@ -1011,7 +1005,7 @@ public class DruidQuery
                            ? 0L
                            : (long) limitSpec.getLimit();
     ScanQuery.Order order;
-    if (limitSpec == null) {
+    if (limitSpec == null || limitSpec.getColumns().size() == 0) {
       order = ScanQuery.Order.NONE;
     } else if (limitSpec.getColumns().get(0).getDirection() == OrderByColumnSpec.Direction.ASCENDING) {
       order = ScanQuery.Order.ASCENDING;
@@ -1030,85 +1024,6 @@ public class DruidQuery
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(outputRowSignature.getRowOrder())),
         false,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
-    );
-  }
-
-  /**
-   * Return this query as a Select query, or null if this query is not compatible with Select.
-   *
-   * @return query or null
-   */
-  @Nullable
-  public SelectQuery toSelectQuery()
-  {
-    if (grouping != null) {
-      return null;
-    }
-
-    final Filtration filtration = Filtration.create(filter).optimize(sourceQuerySignature);
-    final boolean descending;
-    final int threshold;
-
-    if (limitSpec != null) {
-      // Safe to assume limitSpec has zero or one entry; DruidSelectSortRule wouldn't push in anything else.
-      if (limitSpec.getColumns().size() == 0) {
-        descending = false;
-      } else if (limitSpec.getColumns().size() == 1) {
-        final OrderByColumnSpec orderBy = Iterables.getOnlyElement(limitSpec.getColumns());
-        if (!orderBy.getDimension().equals(ColumnHolder.TIME_COLUMN_NAME)) {
-          // Select cannot handle sorting on anything other than __time.
-          return null;
-        }
-        descending = orderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING;
-      } else {
-        // Select cannot handle sorting on more than one column.
-        return null;
-      }
-
-      threshold = limitSpec.getLimit();
-    } else {
-      descending = false;
-      threshold = 0;
-    }
-
-    // We need to ask for dummy columns to prevent Select from returning all of them.
-    String dummyColumn = "dummy";
-    while (sourceQuerySignature.getRowSignature().getColumnType(dummyColumn) != null
-           || outputRowSignature.getRowOrder().contains(dummyColumn)) {
-      dummyColumn = dummyColumn + "_";
-    }
-
-    final List<String> metrics = new ArrayList<>();
-
-    if (selectProjection != null) {
-      metrics.addAll(selectProjection.getDirectColumns());
-      metrics.addAll(selectProjection.getVirtualColumns()
-                                     .stream()
-                                     .map(VirtualColumn::getOutputName)
-                                     .collect(Collectors.toList()));
-    } else {
-      // No projection, rowOrder should reference direct columns.
-      metrics.addAll(outputRowSignature.getRowOrder());
-    }
-
-    if (metrics.isEmpty()) {
-      metrics.add(dummyColumn);
-    }
-
-    // Not used for actual queries (will be replaced by QueryMaker) but the threshold is important for the planner.
-    final PagingSpec pagingSpec = new PagingSpec(null, threshold);
-
-    return new SelectQuery(
-        dataSource,
-        filtration.getQuerySegmentSpec(),
-        descending,
-        filtration.getDimFilter(),
-        Granularities.ALL,
-        ImmutableList.of(new DefaultDimensionSpec(dummyColumn, dummyColumn)),
-        metrics.stream().sorted().distinct().collect(Collectors.toList()),
-        getVirtualColumns(true),
-        pagingSpec,
         ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
