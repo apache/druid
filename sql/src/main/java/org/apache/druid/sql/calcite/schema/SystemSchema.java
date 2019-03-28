@@ -179,12 +179,23 @@ public class SystemSchema extends AbstractSchema
     return tableMap;
   }
 
+  /**
+   * This table contains row per segment from metadata store as well as served segments.
+   */
   static class SegmentsTable extends AbstractTable implements ScannableTable
   {
     private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
+
+    /**
+     * Booleans constants used for available segments represented as long type,
+     * where 1 = true and 0 = false to make it easy to count number of segments
+     * which are published, available
+     */
+    private static final long DEFAULT_IS_PUBLISHED = 0;
+    private static final long DEFAULT_IS_AVAILABLE = 1;
 
     public SegmentsTable(
         DruidSchema druidSchemna,
@@ -215,27 +226,27 @@ public class SystemSchema extends AbstractSchema
     public Enumerable<Object[]> scan(DataContext root)
     {
       //get available segments from druidSchema
-      final Map<DataSegment, SegmentMetadataHolder> availableSegmentMetadata = druidSchema.getSegmentMetadata();
-      final Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries =
+      final Map<DataSegment, AvailableSegmentMetadata> availableSegmentMetadata = druidSchema.getSegmentMetadata();
+      final Iterator<Entry<DataSegment, AvailableSegmentMetadata>> availableSegmentEntries =
           availableSegmentMetadata.entrySet().iterator();
 
       // in memory map to store segment data from available segments
       final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
           Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
-      for (SegmentMetadataHolder h : availableSegmentMetadata.values()) {
+      for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
-            new PartialSegmentData(h.isAvailable(), h.isRealtime(), h.getNumReplicas(), h.getNumRows());
+            new PartialSegmentData(DEFAULT_IS_AVAILABLE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
         partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
       }
 
       //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
-      final Iterator<DataSegment> metadataSegments = metadataView.getPublishedSegments();
+      final Iterator<DataSegment> metadataStoreSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(
-              metadataSegments,
+              metadataStoreSegments,
               root
           ))
           .transform(val -> {
@@ -292,8 +303,8 @@ public class SystemSchema extends AbstractSchema
                   Long.valueOf(val.getKey().getShardSpec().getPartitionNum()),
                   numReplicas,
                   val.getValue().getNumRows(),
-                  val.getValue().isPublished(),
-                  val.getValue().isAvailable(),
+                  DEFAULT_IS_PUBLISHED,
+                  DEFAULT_IS_AVAILABLE,
                   val.getValue().isRealtime(),
                   jsonMapper.writeValueAsString(val.getKey())
               };
@@ -331,18 +342,18 @@ public class SystemSchema extends AbstractSchema
       return authorizedSegments.iterator();
     }
 
-    private Iterator<Entry<DataSegment, SegmentMetadataHolder>> getAuthorizedAvailableSegments(
-        Iterator<Entry<DataSegment, SegmentMetadataHolder>> availableSegmentEntries,
+    private Iterator<Entry<DataSegment, AvailableSegmentMetadata>> getAuthorizedAvailableSegments(
+        Iterator<Entry<DataSegment, AvailableSegmentMetadata>> availableSegmentEntries,
         DataContext root
     )
     {
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<Entry<DataSegment, SegmentMetadataHolder>, Iterable<ResourceAction>> raGenerator = segment -> Collections
+      Function<Entry<DataSegment, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment -> Collections
           .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource()));
 
-      final Iterable<Entry<DataSegment, SegmentMetadataHolder>> authorizedSegments =
+      final Iterable<Entry<DataSegment, AvailableSegmentMetadata>> authorizedSegments =
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
               () -> availableSegmentEntries,
@@ -396,6 +407,10 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
+  /**
+   * This table contains row per server. At this time it only contains the
+   * data servers (i.e. historicals and peons)
+   */
   static class ServersTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
@@ -449,6 +464,9 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
+  /**
+   * This table contains row per segment per server.
+   */
   static class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
@@ -490,6 +508,9 @@ public class SystemSchema extends AbstractSchema
     }
   }
 
+  /**
+   * This table contains row per task.
+   */
   static class TasksTable extends AbstractTable implements ScannableTable
   {
     private final DruidLeaderClient druidLeaderClient;
