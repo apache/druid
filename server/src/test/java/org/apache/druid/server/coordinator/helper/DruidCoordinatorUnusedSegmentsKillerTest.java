@@ -37,34 +37,34 @@ import java.util.List;
 public class DruidCoordinatorUnusedSegmentsKillerTest
 {
   @Test
-  public void testFindIntervalForKillTask()
+  public void testFindIntervalForKill()
   {
-    testFindIntervalForKillTask(null, null);
-    testFindIntervalForKillTask(ImmutableList.of(), null);
+    testFindIntervalForKill(null, null);
+    testFindIntervalForKill(ImmutableList.of(), null);
 
-    testFindIntervalForKillTask(ImmutableList.of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
+    testFindIntervalForKill(ImmutableList.of(Intervals.of("2014/2015")), Intervals.of("2014/2015"));
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017")),
         Intervals.of("2014/2017")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2015/2016")),
         Intervals.of("2014/2016")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(Intervals.of("2015/2016"), Intervals.of("2014/2015")),
         Intervals.of("2014/2016")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(Intervals.of("2015/2017"), Intervals.of("2014/2016")),
         Intervals.of("2014/2017")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(
             Intervals.of("2015/2019"),
             Intervals.of("2014/2016"),
@@ -73,7 +73,7 @@ public class DruidCoordinatorUnusedSegmentsKillerTest
         Intervals.of("2014/2020")
     );
 
-    testFindIntervalForKillTask(
+    testFindIntervalForKill(
         ImmutableList.of(
             Intervals.of("2015/2019"),
             Intervals.of("2014/2016"),
@@ -84,7 +84,7 @@ public class DruidCoordinatorUnusedSegmentsKillerTest
     );
   }
 
-  private void testFindIntervalForKillTask(List<Interval> metadataSegmentsResult, Interval expected)
+  private void testFindIntervalForKill(List<Interval> metadataSegmentsResult, Interval expected)
   {
     MetadataSegments metadataSegments = EasyMock.createMock(MetadataSegments.class);
     EasyMock.expect(
@@ -117,7 +117,7 @@ public class DruidCoordinatorUnusedSegmentsKillerTest
 
     Assert.assertEquals(
         expected,
-        coordinatorSegmentKiller.findIntervalForKillTask("test", 10000)
+        coordinatorSegmentKiller.findIntervalForKill("test", 10000)
     );
   }
 }

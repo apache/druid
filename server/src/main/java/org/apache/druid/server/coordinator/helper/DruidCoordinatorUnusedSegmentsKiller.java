@@ -104,7 +104,7 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
       lastKillTime = System.currentTimeMillis();
 
       for (String dataSource : dataSourcesToKill) {
-        final Interval intervalToKill = findIntervalForKillTask(dataSource, maxSegmentsToKill);
+        final Interval intervalToKill = findIntervalForKill(dataSource, maxSegmentsToKill);
         if (intervalToKill != null) {
           try {
             indexingServiceClient.killUnusedSegments(dataSource, intervalToKill);
@@ -124,7 +124,7 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
 
   @VisibleForTesting
   @Nullable
-  Interval findIntervalForKillTask(String dataSource, int limit)
+  Interval findIntervalForKill(String dataSource, int limit)
   {
     List<Interval> unusedSegmentIntervals = metadataSegments.getUnusedSegmentIntervals(
         dataSource,

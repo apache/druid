@@ -97,9 +97,9 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             throw new ISE("WTH? got a null paylord from overlord for task[%s]", status.getId());
           }
           if (COMPACT_TASK_TYPE.equals(response.getPayload().getType())) {
-            final ClientCompactionTaskQuery compactQuery = (ClientCompactionTaskQuery) response.getPayload();
+            final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
             final Interval interval = JodaUtils.umbrellaInterval(
-                compactQuery.getSegments()
+                compactionTaskQuery.getSegments()
                             .stream()
                             .map(DataSegment::getInterval)
                             .sorted(Comparators.intervalsByStartThenEnd())
