@@ -77,6 +77,27 @@
                     <failIfNoFiles>false</failIfNoFiles>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <target>
+                                <concat destfile="${project.build.directory}/../../README.BINARY">
+                                    <fileset file="${project.build.directory}/../../README.md" />
+                                    <fileset file="${project.build.directory}/../../LABELS.md" />
+                                </concat>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -158,6 +179,10 @@
                                         <argument>org.apache.druid.extensions:druid-kerberos</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-s3-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-ec2-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-google-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-stats</argument>
                                         <argument>-c</argument>
@@ -280,8 +305,6 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-distinctcount</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-rocketmq</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-google-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>

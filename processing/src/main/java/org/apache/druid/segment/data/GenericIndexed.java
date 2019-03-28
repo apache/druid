@@ -468,7 +468,7 @@ public class GenericIndexed<T> implements CloseableIndexed<T>, Serializer
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // nothing to close
   }

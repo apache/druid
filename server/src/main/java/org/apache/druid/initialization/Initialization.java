@@ -21,7 +21,6 @@ package org.apache.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -30,7 +29,6 @@ import com.google.inject.util.Modules;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
-import org.apache.druid.guice.AWSModule;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidProcessingConfigModule;
@@ -184,7 +182,7 @@ public class Initialization
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     }
@@ -359,7 +357,7 @@ public class Initialization
       return urls;
     }
     catch (IOException ex) {
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
   }
 
@@ -379,7 +377,6 @@ public class Initialization
         new HttpClientModule("druid.broker.http", EscalatedClient.class),
         new CuratorModule(),
         new AnnouncerModule(),
-        new AWSModule(),
         new MetricsModule(),
         new SegmentWriteOutMediumModule(),
         new ServerModule(),

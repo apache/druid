@@ -20,7 +20,6 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
@@ -82,7 +81,7 @@ public abstract class AbstractTextFilesFirehoseFactory<T>
                   "Exception reading object[%s]",
                   object
               );
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         },

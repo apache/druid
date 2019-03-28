@@ -27,7 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-import org.apache.druid.guice.ManageLifecycleLast;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.java.util.common.DateTimes;
@@ -65,7 +65,7 @@ import java.util.stream.Collectors;
  * Read and store derivatives information from dataSource table frequently.
  * When optimize query, DerivativesManager offers the information about derivatives.
  */
-@ManageLifecycleLast
+@ManageLifecycle
 public class DerivativeDataSourceManager 
 {
   private static final EmittingLogger log = new EmittingLogger(DerivativeDataSourceManager.class);

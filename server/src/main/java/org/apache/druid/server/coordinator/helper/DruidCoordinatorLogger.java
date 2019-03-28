@@ -227,17 +227,17 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
         }
     );
 
-    coordinator.getReplicationStatus().forEach(
-        (final String tier, final Object2LongMap<String> status) -> {
-          for (final Object2LongMap.Entry<String> entry : status.object2LongEntrySet()) {
+    coordinator.computeUnderReplicationCountsPerDataSourcePerTier().forEach(
+        (final String tier, final Object2LongMap<String> underReplicationCountsPerDataSource) -> {
+          for (final Object2LongMap.Entry<String> entry : underReplicationCountsPerDataSource.object2LongEntrySet()) {
             final String dataSource = entry.getKey();
-            final long count = entry.getLongValue();
+            final long underReplicationCount = entry.getLongValue();
 
             emitter.emit(
                 new ServiceMetricEvent.Builder()
                     .setDimension(DruidMetrics.TIER, tier)
                     .setDimension(DruidMetrics.DATASOURCE, dataSource).build(
-                    "segment/underReplicated/count", count
+                    "segment/underReplicated/count", underReplicationCount
                 )
             );
           }

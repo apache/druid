@@ -20,7 +20,6 @@
 package org.apache.druid.collections;
 
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -116,7 +115,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
                 retVal.close();
               }
               catch (IOException e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
               return null;
             } else {
@@ -165,7 +164,7 @@ public class OrderedMergeSequence<T> implements Sequence<T>
           yielder.close();
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       } else {
         pQueue.add(yielder);

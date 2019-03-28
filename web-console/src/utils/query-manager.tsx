@@ -74,7 +74,7 @@ export class QueryManager<Q, R> {
   private run() {
     this.lastQuery = this.nextQuery;
     this.currentQueryId++;
-    let myQueryId = this.currentQueryId;
+    const myQueryId = this.currentQueryId;
 
     this.actuallyLoading = true;
     this.processQuery(this.lastQuery)
@@ -95,9 +95,9 @@ export class QueryManager<Q, R> {
             result: null,
             loading: false,
             error: e.message
-          })
+          });
         }
-      )
+      );
   }
 
   private trigger() {

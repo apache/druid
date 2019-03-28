@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
@@ -541,7 +540,7 @@ public class RealtimePlumber implements Plumber
         }
       }
       catch (InterruptedException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -978,7 +977,7 @@ public class RealtimePlumber implements Plumber
            .addData("count", indexToPersist.getCount())
            .emit();
 
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
   }

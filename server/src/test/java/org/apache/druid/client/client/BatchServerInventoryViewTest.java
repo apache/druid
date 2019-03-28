@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
@@ -238,7 +237,7 @@ public class BatchServerInventoryViewTest
     waitForSync(batchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(batchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
+    Set<DataSegment> segments = Sets.newHashSet(server.iterateAllSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -252,7 +251,7 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.iterateAllSegments()));
 
     segmentAnnouncer.unannounceSegment(segment1);
     segmentAnnouncer.unannounceSegment(segment2);
@@ -261,7 +260,7 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.iterateAllSegments()));
   }
 
   @Test
@@ -272,7 +271,7 @@ public class BatchServerInventoryViewTest
     waitForSync(filteredBatchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(filteredBatchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
+    Set<DataSegment> segments = Sets.newHashSet(server.iterateAllSegments());
 
     Assert.assertEquals(testSegments, segments);
     int prevUpdateCount = inventoryUpdateCounter.get();
@@ -298,7 +297,7 @@ public class BatchServerInventoryViewTest
     waitForSync(filteredBatchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(filteredBatchServerInventoryView.getInventory(), 0);
-    Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
+    Set<DataSegment> segments = Sets.newHashSet(server.iterateAllSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -394,7 +393,7 @@ public class BatchServerInventoryViewTest
     final Timing forWaitingTiming = timing.forWaiting();
     Stopwatch stopwatch = Stopwatch.createStarted();
     while (Iterables.isEmpty(batchServerInventoryView.getInventory())
-           || Iterables.size(Iterables.get(batchServerInventoryView.getInventory(), 0).getSegments()) !=
+           || Iterables.size(Iterables.get(batchServerInventoryView.getInventory(), 0).iterateAllSegments()) !=
               testSegments.size()) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > forWaitingTiming.milliseconds()) {
@@ -431,7 +430,7 @@ public class BatchServerInventoryViewTest
     waitForSync(batchServerInventoryView, testSegments);
 
     DruidServer server = Iterables.get(batchServerInventoryView.getInventory(), 0);
-    final Set<DataSegment> segments = Sets.newHashSet(server.getSegments());
+    final Set<DataSegment> segments = Sets.newHashSet(server.iterateAllSegments());
 
     Assert.assertEquals(testSegments, segments);
 
@@ -487,7 +486,7 @@ public class BatchServerInventoryViewTest
                     testSegments.addAll(segments);
                   }
                   catch (Exception e) {
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   return segmentAnnouncer;
                 }
@@ -499,7 +498,7 @@ public class BatchServerInventoryViewTest
     Assert.assertEquals(INITIAL_SEGMENTS * 2, testSegments.size());
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.iterateAllSegments()));
 
     for (int i = 0; i < INITIAL_SEGMENTS; ++i) {
       final DataSegment segment = makeSegment(100 + i);
@@ -509,6 +508,6 @@ public class BatchServerInventoryViewTest
 
     waitForSync(batchServerInventoryView, testSegments);
 
-    Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments()));
+    Assert.assertEquals(testSegments, Sets.newHashSet(server.iterateAllSegments()));
   }
 }
