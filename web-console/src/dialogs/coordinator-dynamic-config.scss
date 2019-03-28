@@ -17,7 +17,10 @@
  */
 
 .coordinator-dynamic-config {
-  margin-top: 5vh;
+  &.pt-dialog {
+    margin-top: 5vh;
+    top: 5%;
+  }
 
   .pt-dialog-body {
     max-height: 70vh;

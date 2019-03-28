@@ -249,11 +249,11 @@ GROUP BY 1`);
     </AsyncActionDialog>;
   }
 
-  private saveRules = async (datasource: string, rules: any[], author: string, comment: string) => {
+  private saveRules = async (datasource: string, rules: any[], comment: string) => {
     try {
       await axios.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
         headers: {
-          "X-Druid-Author": author,
+          "X-Druid-Author": "console",
           "X-Druid-Comment": comment
         }
       });
