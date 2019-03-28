@@ -22,132 +22,39 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-
-public class KafkaDataSourceMetadata implements DataSourceMetadata
+public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Integer, Long>
 {
-  private final KafkaPartitions kafkaPartitions;
 
   @JsonCreator
   public KafkaDataSourceMetadata(
-      @JsonProperty("partitions") KafkaPartitions kafkaPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<Integer, Long> kafkaPartitions
   )
   {
-    this.kafkaPartitions = kafkaPartitions;
-  }
-
-  @JsonProperty("partitions")
-  public KafkaPartitions getKafkaPartitions()
-  {
-    return kafkaPartitions;
+    super(kafkaPartitions);
   }
 
   @Override
-  public boolean isValidStart()
+  public DataSourceMetadata asStartMetadata()
   {
-    return true;
-  }
-
-  @Override
-  public boolean matches(DataSourceMetadata other)
-  {
-    if (getClass() != other.getClass()) {
-      return false;
-    }
-
-    return plus(other).equals(other.plus(this));
-  }
-
-  @Override
-  public DataSourceMetadata plus(DataSourceMetadata other)
-  {
-    if (!(other instanceof KafkaDataSourceMetadata)) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          KafkaDataSourceMetadata.class.getCanonicalName(),
-          other.getClass().getCanonicalName()
+    final SeekableStreamSequenceNumbers<Integer, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
+    if (sequenceNumbers instanceof SeekableStreamEndSequenceNumbers) {
+      return createConcreteDataSourceMetaData(
+          ((SeekableStreamEndSequenceNumbers<Integer, Long>) sequenceNumbers).asStartPartitions(true)
       );
-    }
-
-    final KafkaDataSourceMetadata that = (KafkaDataSourceMetadata) other;
-
-    if (that.getKafkaPartitions().getTopic().equals(kafkaPartitions.getTopic())) {
-      // Same topic, merge offsets.
-      final Map<Integer, Long> newMap = new HashMap<>();
-
-      for (Map.Entry<Integer, Long> entry : kafkaPartitions.getPartitionOffsetMap().entrySet()) {
-        newMap.put(entry.getKey(), entry.getValue());
-      }
-
-      for (Map.Entry<Integer, Long> entry : that.getKafkaPartitions().getPartitionOffsetMap().entrySet()) {
-        newMap.put(entry.getKey(), entry.getValue());
-      }
-
-      return new KafkaDataSourceMetadata(new KafkaPartitions(kafkaPartitions.getTopic(), newMap));
     } else {
-      // Different topic, prefer "other".
-      return other;
-    }
-  }
-
-  @Override
-  public DataSourceMetadata minus(DataSourceMetadata other)
-  {
-    if (!(other instanceof KafkaDataSourceMetadata)) {
-      throw new IAE(
-          "Expected instance of %s, got %s",
-          KafkaDataSourceMetadata.class.getCanonicalName(),
-          other.getClass().getCanonicalName()
-      );
-    }
-
-    final KafkaDataSourceMetadata that = (KafkaDataSourceMetadata) other;
-
-    if (that.getKafkaPartitions().getTopic().equals(kafkaPartitions.getTopic())) {
-      // Same topic, remove partitions present in "that" from "this"
-      final Map<Integer, Long> newMap = new HashMap<>();
-
-      for (Map.Entry<Integer, Long> entry : kafkaPartitions.getPartitionOffsetMap().entrySet()) {
-        if (!that.getKafkaPartitions().getPartitionOffsetMap().containsKey(entry.getKey())) {
-          newMap.put(entry.getKey(), entry.getValue());
-        }
-      }
-
-      return new KafkaDataSourceMetadata(new KafkaPartitions(kafkaPartitions.getTopic(), newMap));
-    } else {
-      // Different topic, prefer "this".
       return this;
     }
   }
 
   @Override
-  public boolean equals(Object o)
+  protected SeekableStreamDataSourceMetadata<Integer, Long> createConcreteDataSourceMetaData(
+      SeekableStreamSequenceNumbers<Integer, Long> seekableStreamSequenceNumbers
+  )
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    KafkaDataSourceMetadata that = (KafkaDataSourceMetadata) o;
-    return Objects.equals(kafkaPartitions, that.kafkaPartitions);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(kafkaPartitions);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "KafkaDataSourceMetadata{" +
-           "kafkaPartitions=" + kafkaPartitions +
-           '}';
+    return new KafkaDataSourceMetadata(seekableStreamSequenceNumbers);
   }
 }

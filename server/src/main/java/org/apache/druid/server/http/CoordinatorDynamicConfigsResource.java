@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
+import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
@@ -67,39 +67,39 @@ public class CoordinatorDynamicConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDynamicConfigs()
   {
-    return Response.ok(
-        manager.watch(
-            CoordinatorDynamicConfig.CONFIG_KEY,
-            CoordinatorDynamicConfig.class
-        ).get()
-    ).build();
+    return Response.ok(CoordinatorDynamicConfig.current(manager)).build();
   }
 
   // default value is used for backwards compatibility
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response setDynamicConfigs(final CoordinatorDynamicConfig.Builder dynamicConfigBuilder,
-                                    @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-                                    @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
-                                    @Context HttpServletRequest req
+  public Response setDynamicConfigs(
+      final CoordinatorDynamicConfig.Builder dynamicConfigBuilder,
+      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
+      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
+      @Context HttpServletRequest req
   )
   {
-    CoordinatorDynamicConfig current = manager.watch(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        CoordinatorDynamicConfig.class
-    ).get();
+    try {
+      CoordinatorDynamicConfig current = CoordinatorDynamicConfig.current(manager);
 
-    final SetResult setResult = manager.set(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        current == null ? dynamicConfigBuilder.build() : dynamicConfigBuilder.build(current),
-        new AuditInfo(author, comment, req.getRemoteAddr())
-    );
+      final SetResult setResult = manager.set(
+          CoordinatorDynamicConfig.CONFIG_KEY,
+          dynamicConfigBuilder.build(current),
+          new AuditInfo(author, comment, req.getRemoteAddr())
+      );
 
-    if (setResult.isOk()) {
-      return Response.ok().build();
-    } else {
+      if (setResult.isOk()) {
+        return Response.ok().build();
+      } else {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ServletResourceUtils.sanitizeException(setResult.getException()))
+                       .build();
+      }
+    }
+    catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", setResult.getException()))
+                     .entity(ServletResourceUtils.sanitizeException(e))
                      .build();
     }
   }
@@ -126,7 +126,7 @@ public class CoordinatorDynamicConfigsResource
       }
       catch (IllegalArgumentException e) {
         return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .entity(ServletResourceUtils.sanitizeException(e))
                        .build();
       }
     }

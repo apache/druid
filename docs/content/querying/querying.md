@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Querying"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,17 +22,13 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
 # Querying
 
-Queries are made using an HTTP REST style request to queryable nodes ([Broker](../design/broker.html),
+Queries are made using an HTTP REST style request to queryable processes ([Broker](../design/broker.html),
 [Historical](../design/historical.html). [Peons](../design/peons.html)) that are running stream ingestion tasks can also accept queries. The
-query is expressed in JSON and each of these node types expose the same
-REST query interface. For normal Druid operations, queries should be issued to the broker nodes. Queries can be posted
-to the queryable nodes like this -
+query is expressed in JSON and each of these process types expose the same
+REST query interface. For normal Druid operations, queries should be issued to the Broker processes. Queries can be posted
+to the queryable processes like this -
 
  ```bash
  curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -H 'Accept:application/json' -d @<query_json_file>
@@ -78,7 +79,7 @@ Where possible, we recommend using [Timeseries]() and [TopN]() queries instead o
 
 Queries can be cancelled explicitly using their unique identifier.  If the
 query identifier is set at the time of query, or is otherwise known, the following
-endpoint can be used on the broker or router to cancel the query.
+endpoint can be used on the Broker or Router to cancel the query.
 
 ```sh
 DELETE /druid/v2/{queryId}
@@ -121,4 +122,5 @@ Possible codes for the *error* field include:
 |`Query cancelled`|The query was cancelled through the query cancellation API.|
 |`Resource limit exceeded`|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
 |`Unauthorized request.`|The query was denied due to security policy. Either the user was not recognized, or the user was recognized but does not have access to the requested resource.|
+|`Unsupported operation`|The query attempted to perform an unsupported operation. This may occur when using undocumented features or when using an incompletely implemented extension.|
 |`Unknown exception`|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|

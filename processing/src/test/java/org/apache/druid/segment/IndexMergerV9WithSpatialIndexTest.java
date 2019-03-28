@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
@@ -94,8 +93,8 @@ public class IndexMergerV9WithSpatialIndexTest
       final QueryableIndex mMappedTestIndex = makeQueryableIndex(indexSpec, indexMergerV9, indexIO);
       final QueryableIndex mergedRealtimeIndex = makeMergedQueryableIndex(indexSpec, indexMergerV9, indexIO);
       argumentArrays.add(new Object[] {new IncrementalIndexSegment(rtIndex, null)});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mMappedTestIndex)});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedRealtimeIndex)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(mMappedTestIndex, null)});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(mergedRealtimeIndex, null)});
     }
     return argumentArrays;
   }
@@ -528,7 +527,7 @@ public class IndexMergerV9WithSpatialIndexTest
 
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -574,7 +573,7 @@ public class IndexMergerV9WithSpatialIndexTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
           ),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -588,7 +587,7 @@ public class IndexMergerV9WithSpatialIndexTest
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -628,7 +627,7 @@ public class IndexMergerV9WithSpatialIndexTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
           ),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -642,7 +641,7 @@ public class IndexMergerV9WithSpatialIndexTest
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -717,7 +716,7 @@ public class IndexMergerV9WithSpatialIndexTest
     try {
       TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
           new TimeseriesQueryQueryToolChest(
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
           ),
           new TimeseriesQueryEngine(),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -731,7 +730,7 @@ public class IndexMergerV9WithSpatialIndexTest
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query), new HashMap<>()));
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

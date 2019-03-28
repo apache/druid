@@ -20,23 +20,15 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.guice.ServerModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.timeline.DataSegment;
-
-import java.util.List;
 
 public class ServerTestHelper
 {
   public static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   static {
-    final List<? extends Module> list = new ServerModule().getJacksonModules();
-    for (Module module : list) {
-      MAPPER.registerModule(module);
-    }
     MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ObjectMapper.class.getName(), MAPPER)

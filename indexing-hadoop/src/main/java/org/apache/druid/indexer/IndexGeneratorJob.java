@@ -21,7 +21,6 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -97,6 +96,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
+ *
  */
 public class IndexGeneratorJob implements Jobby
 {
@@ -119,7 +119,7 @@ public class IndexGeneratorJob implements Jobby
       for (FileStatus status : fs.listStatus(descriptorInfoDir)) {
         final DataSegment segment = jsonMapper.readValue(fs.open(status.getPath()), DataSegment.class);
         publishedSegmentsBuilder.add(segment);
-        log.info("Adding segment %s to the list of published segments", segment.getIdentifier());
+        log.info("Adding segment %s to the list of published segments", segment.getId());
       }
     }
     catch (FileNotFoundException e) {
@@ -128,10 +128,10 @@ public class IndexGeneratorJob implements Jobby
           + " either there was no input data to process or all the input events were discarded due to some error",
           e.getMessage()
       );
-      Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
 
@@ -207,6 +207,11 @@ public class IndexGeneratorJob implements Jobby
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
 
+      // Store the jobId in the file
+      if (job.getJobID() != null) {
+        JobHelper.writeJobIdToFile(config.getHadoopJobIdFileName(), job.getJobID().toString());
+      }
+
       boolean success = job.waitForCompletion(true);
 
       Counters counters = job.getCounters();
@@ -240,7 +245,8 @@ public class IndexGeneratorJob implements Jobby
 
       Map<String, Object> metrics = TaskMetricsUtils.makeIngestionRowMetrics(
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_COUNTER).getValue(),
-          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER).getValue(),
+          jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_PROCESSED_WITH_ERRORS_COUNTER)
+                     .getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_UNPARSEABLE_COUNTER).getValue(),
           jobCounters.findCounter(HadoopDruidIndexerConfig.IndexJobCounters.ROWS_THROWN_AWAY_COUNTER).getValue()
       );
@@ -345,7 +351,9 @@ public class IndexGeneratorJob implements Jobby
         throw new ISE("WTF?! No bucket found for row: %s", inputRow);
       }
 
-      final long truncatedTimestamp = granularitySpec.getQueryGranularity().bucketStart(inputRow.getTimestamp()).getMillis();
+      final long truncatedTimestamp = granularitySpec.getQueryGranularity()
+                                                     .bucketStart(inputRow.getTimestamp())
+                                                     .getMillis();
       final byte[] hashedDimensions = hashFunction.hashBytes(
           HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
               Rows.toGroupKey(
@@ -359,17 +367,17 @@ public class IndexGeneratorJob implements Jobby
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
       InputRowSerde.SerializeResult serializeResult = inputRow instanceof SegmentInputRow ?
-                                                 InputRowSerde.toBytes(
-                                                     typeHelperMap,
-                                                     inputRow,
-                                                     aggsForSerializingSegmentInputRow
-                                                 )
-                                                                                     :
-                                                 InputRowSerde.toBytes(
-                                                     typeHelperMap,
-                                                     inputRow,
-                                                     aggregators
-                                                 );
+                                                      InputRowSerde.toBytes(
+                                                          typeHelperMap,
+                                                          inputRow,
+                                                          aggsForSerializingSegmentInputRow
+                                                      )
+                                                                                          :
+                                                      InputRowSerde.toBytes(
+                                                          typeHelperMap,
+                                                          inputRow,
+                                                          aggregators
+                                                      );
 
       context.write(
           new SortableBytes(
@@ -678,7 +686,7 @@ public class IndexGeneratorJob implements Jobby
           );
           persistExecutor = MoreExecutors.listeningDecorator(executorService);
         } else {
-          persistExecutor = MoreExecutors.sameThreadExecutor();
+          persistExecutor = Execs.directExecutor();
         }
 
         for (final BytesWritable bw : values) {
@@ -718,7 +726,7 @@ public class IndexGeneratorJob implements Jobby
                         }
                         catch (Exception e) {
                           log.error(e, "persist index error");
-                          throw Throwables.propagate(e);
+                          throw new RuntimeException(e);
                         }
                         finally {
                           // close this index
@@ -786,7 +794,10 @@ public class IndexGeneratorJob implements Jobby
         // ShardSpec to be published.
         final ShardSpec shardSpecForPublishing;
         if (config.isForceExtendableShardSpecs()) {
-          shardSpecForPublishing = new NumberedShardSpec(shardSpecForPartitioning.getPartitionNum(), config.getShardSpecCount(bucket));
+          shardSpecForPublishing = new NumberedShardSpec(
+              shardSpecForPartitioning.getPartitionNum(),
+              config.getShardSpecCount(bucket)
+          );
         } else {
           shardSpecForPublishing = shardSpecForPartitioning;
         }
@@ -812,13 +823,6 @@ public class IndexGeneratorJob implements Jobby
                 outputFS,
                 segmentTemplate,
                 JobHelper.INDEX_ZIP,
-                config.DATA_SEGMENT_PUSHER
-            ),
-            JobHelper.makeFileNamePath(
-                new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
-                outputFS,
-                segmentTemplate,
-                JobHelper.DESCRIPTOR_JSON,
                 config.DATA_SEGMENT_PUSHER
             ),
             JobHelper.makeTmpPath(
@@ -851,7 +855,7 @@ public class IndexGeneratorJob implements Jobby
         }
       }
       catch (ExecutionException | TimeoutException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         index.close();

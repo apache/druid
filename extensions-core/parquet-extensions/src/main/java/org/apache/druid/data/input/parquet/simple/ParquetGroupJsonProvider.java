@@ -26,6 +26,7 @@ import org.apache.parquet.example.data.Group;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +65,7 @@ public class ParquetGroupJsonProvider implements JsonProvider
   @Override
   public boolean isMap(final Object o)
   {
-    return o instanceof Map || o instanceof Group;
+    return o == null || o instanceof Map || o instanceof Group;
   }
 
   @Override
@@ -93,7 +94,9 @@ public class ParquetGroupJsonProvider implements JsonProvider
   @Override
   public Collection<String> getPropertyKeys(final Object o)
   {
-    if (o instanceof Map) {
+    if (o == null) {
+      return Collections.emptySet();
+    } else if (o instanceof Map) {
       return ((Map<Object, Object>) o).keySet().stream().map(String::valueOf).collect(Collectors.toSet());
     } else if (o instanceof Group) {
       return ((Group) o).getType().getFields().stream().map(f -> f.getName()).collect(Collectors.toSet());
@@ -105,7 +108,9 @@ public class ParquetGroupJsonProvider implements JsonProvider
   @Override
   public Object getMapValue(final Object o, final String s)
   {
-    if (o instanceof Map) {
+    if (o == null) {
+      return null;
+    } else if (o instanceof Map) {
       return ((Map) o).get(s);
     } else if (o instanceof Group) {
       Group g = (Group) o;

@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Developing on Druid"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Developing on Druid
 
@@ -47,7 +48,7 @@ the query logic is to start from `QueryResource.java`.
 
 ## Coordination
 
-Most of the coordination logic for historical nodes is on the Druid coordinator. The starting point here is `DruidCoordinator.java`.  
+Most of the coordination logic for Historical processes is on the Druid Coordinator. The starting point here is `DruidCoordinator.java`.  
 Most of the coordination logic for (real-time) ingestion is in the Druid indexing service. The starting point here is `OverlordResource.java`.
 
 ## Real-time Ingestion

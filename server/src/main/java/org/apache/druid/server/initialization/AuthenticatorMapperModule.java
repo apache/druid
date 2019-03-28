@@ -103,7 +103,7 @@ public class AuthenticatorMapperModule implements DruidModule
 
       for (String authenticatorName : authenticators) {
         final String authenticatorPropertyBase = StringUtils.format(AUTHENTICATOR_PROPERTIES_FORMAT_STRING, authenticatorName);
-        final JsonConfigProvider<Authenticator> authenticatorProvider = new JsonConfigProvider<>(
+        final JsonConfigProvider<Authenticator> authenticatorProvider = JsonConfigProvider.of(
             authenticatorPropertyBase,
             Authenticator.class
         );

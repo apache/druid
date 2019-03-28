@@ -21,11 +21,15 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.JacksonConfigManager;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class CoordinatorCompactionConfig
 {
@@ -71,6 +75,21 @@ public class CoordinatorCompactionConfig
   public static CoordinatorCompactionConfig empty()
   {
     return new CoordinatorCompactionConfig(ImmutableList.of(), null, null);
+  }
+
+  public static AtomicReference<CoordinatorCompactionConfig> watch(final JacksonConfigManager configManager)
+  {
+    return configManager.watch(
+        CoordinatorCompactionConfig.CONFIG_KEY,
+        CoordinatorCompactionConfig.class,
+        CoordinatorCompactionConfig.empty()
+    );
+  }
+
+  @Nonnull
+  public static CoordinatorCompactionConfig current(final JacksonConfigManager configManager)
+  {
+    return Preconditions.checkNotNull(watch(configManager).get(), "Got null config from watcher?!");
   }
 
   @JsonCreator

@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
@@ -41,14 +40,16 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.metrics.TaskCountStatsProvider;
 
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Encapsulates the indexer leadership lifecycle.
  */
-public class TaskMaster
+public class TaskMaster implements TaskCountStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -118,7 +119,7 @@ public class TaskMaster
           );
 
           // Sensible order to start stuff:
-          final Lifecycle leaderLifecycle = new Lifecycle();
+          final Lifecycle leaderLifecycle = new Lifecycle("task-master");
           if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
             log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
                .emit();
@@ -150,7 +151,7 @@ public class TaskMaster
           leaderLifecycle.start();
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
         finally {
           giant.unlock();
@@ -164,6 +165,7 @@ public class TaskMaster
         try {
           initialized = false;
           final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
+
           if (leaderLifecycle != null) {
             leaderLifecycle.stop();
           }
@@ -201,6 +203,7 @@ public class TaskMaster
     giant.lock();
 
     try {
+      gracefulStopLeaderLifecycle();
       overlordLeaderSelector.unregisterListener();
     }
     finally {
@@ -263,6 +266,73 @@ public class TaskMaster
       return Optional.of(supervisorManager);
     } else {
       return Optional.absent();
+    }
+  }
+
+  @Override
+  public Map<String, Long> getSuccessfulTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getSuccessfulTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getFailedTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getFailedTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getRunningTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getRunningTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getPendingTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getPendingTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getWaitingTaskCount()
+  {
+    Optional<TaskQueue> taskQueue = getTaskQueue();
+    if (taskQueue.isPresent()) {
+      return taskQueue.get().getWaitingTaskCount();
+    } else {
+      return null;
+    }
+  }
+
+  private void gracefulStopLeaderLifecycle()
+  {
+    try {
+      if (isLeader()) {
+        leadershipListener.stopBeingLeader();
+      }
+    }
+    catch (Exception ex) {
+      // fail silently since we are stopping anyway
     }
   }
 }

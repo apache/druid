@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
@@ -46,6 +45,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.StupidResourceHolder;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -376,7 +376,7 @@ public class MemcachedCache implements Cache
                 }
                 catch (IOException e) {
                   log.error(e, "Unable to create memcached client");
-                  throw Throwables.propagate(e);
+                  throw new RuntimeException(e);
                 }
               }
             }
@@ -390,7 +390,7 @@ public class MemcachedCache implements Cache
       return new MemcachedCache(clientSupplier, config, monitor);
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -470,7 +470,7 @@ public class MemcachedCache implements Cache
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       catch (ExecutionException e) {
         errorCount.incrementAndGet();
@@ -580,7 +580,7 @@ public class MemcachedCache implements Cache
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       catch (ExecutionException e) {
         errorCount.incrementAndGet();
@@ -594,6 +594,13 @@ public class MemcachedCache implements Cache
   public void close(String namespace)
   {
     // no resources to cleanup
+  }
+
+  @Override
+  @LifecycleStop
+  public void close()
+  {
+    monitor.stop();
   }
 
   public static final int MAX_PREFIX_LENGTH =

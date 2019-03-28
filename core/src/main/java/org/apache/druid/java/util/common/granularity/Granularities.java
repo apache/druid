@@ -20,7 +20,7 @@
 package org.apache.druid.java.util.common.granularity;
 
 /**
- * This class was created b/c sometimes  static initializers of a class that use a subclass can deadlock.
+ * This class was created b/c sometimes static initializers of a class that use a subclass can deadlock.
  * See: #2979, #3979
  */
 public class Granularities

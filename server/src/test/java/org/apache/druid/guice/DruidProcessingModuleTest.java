@@ -46,4 +46,20 @@ public class DruidProcessingModuleTest
     });
   }
 
+  @Test
+  public void testMemoryCheckIsChillByDefaultIfNothingSet()
+  {
+    DruidProcessingConfig config = new DruidProcessingConfig()
+    {
+      @Override
+      public String getFormatString()
+      {
+        return "processing-test-%s";
+      }
+    };
+
+    DruidProcessingModule module = new DruidProcessingModule();
+    module.getIntermediateResultsPool(config);
+  }
 }
+

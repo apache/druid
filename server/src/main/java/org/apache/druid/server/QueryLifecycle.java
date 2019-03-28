@@ -51,6 +51,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -248,7 +249,7 @@ public class QueryLifecycle
   {
     transition(State.AUTHORIZED, State.EXECUTING);
 
-    final Map<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery();
+    final ConcurrentMap<String, Object> responseContext = DirectDruidClient.makeResponseContextForQuery();
 
     final Sequence res = QueryPlus.wrap(baseQuery)
                                   .withIdentity(authenticationResult.getIdentity())
@@ -325,11 +326,11 @@ public class QueryLifecycle
           statsMap.put("reason", e.toString());
         }
       }
-      requestLogger.log(
-          new RequestLogLine(
+      requestLogger.logNativeQuery(
+          RequestLogLine.forNative(
+              baseQuery,
               DateTimes.utc(startMs),
               StringUtils.nullToEmptyNonDruidDataString(remoteAddress),
-              baseQuery,
               new QueryStats(statsMap)
           )
       );

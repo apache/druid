@@ -12,11 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Organize Import Order
-# Sun Apr 24 10:15:51 PDT 2016
-4=javax
-3=java
-2=org
-1=io
-0=com
+3=\#
+2=java
+1=javax
+0=

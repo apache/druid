@@ -75,6 +75,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -116,6 +117,7 @@ public class TimeCompareBenchmark
   private int threshold;
 
   protected static final Map<String, String> scriptDoubleSum = new HashMap<>();
+
   static {
     scriptDoubleSum.put("fnAggregate", "function aggregate(current, a) { return current + a }");
     scriptDoubleSum.put("fnReset", "function reset() { return 0 }");
@@ -227,7 +229,10 @@ public class TimeCompareBenchmark
               0,
               Integer.MAX_VALUE
           ),
-          new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
+          new TopNQueryQueryToolChest(
+              new TopNQueryConfig(),
+              QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
+          ),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
     }
@@ -268,7 +273,7 @@ public class TimeCompareBenchmark
 
       timeseriesQuery = timeseriesQueryBuilder.build();
       timeseriesFactory = new TimeseriesQueryRunnerFactory(
-          new TimeseriesQueryQueryToolChest(QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryQueryToolChest(QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()),
           new TimeseriesQueryEngine(),
           QueryBenchmarkUtil.NOOP_QUERYWATCHER
       );
@@ -345,11 +350,11 @@ public class TimeCompareBenchmark
     List<QueryRunner<Result<TopNResultValue>>> singleSegmentRunners = new ArrayList<>();
     QueryToolChest toolChest = topNFactory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
       QueryRunner<Result<TopNResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           topNFactory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          segmentId,
+          new QueryableIndexSegment(qIndexes.get(i), segmentId)
       );
       singleSegmentRunners.add(
           new PerSegmentOptimizingQueryRunner<>(
@@ -371,11 +376,11 @@ public class TimeCompareBenchmark
     List<QueryRunner<Result<TimeseriesResultValue>>> singleSegmentRunnersT = new ArrayList<>();
     QueryToolChest toolChestT = timeseriesFactory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      SegmentId segmentId = SegmentId.dummy("qIndex" + i);
       QueryRunner<Result<TimeseriesResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           timeseriesFactory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          segmentId,
+          new QueryableIndexSegment(qIndexes.get(i), segmentId)
       );
       singleSegmentRunnersT.add(
           new PerSegmentOptimizingQueryRunner<>(
@@ -417,10 +422,7 @@ public class TimeCompareBenchmark
   {
     Sequence<Result<TopNResultValue>> queryResult = topNRunner.run(QueryPlus.wrap(topNQuery), new HashMap<>());
     List<Result<TopNResultValue>> results = queryResult.toList();
-
-    for (Result<TopNResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 
 
@@ -434,9 +436,6 @@ public class TimeCompareBenchmark
         new HashMap<>()
     );
     List<Result<TimeseriesResultValue>> results = queryResult.toList();
-
-    for (Result<TimeseriesResultValue> result : results) {
-      blackhole.consume(result);
-    }
+    blackhole.consume(results);
   }
 }

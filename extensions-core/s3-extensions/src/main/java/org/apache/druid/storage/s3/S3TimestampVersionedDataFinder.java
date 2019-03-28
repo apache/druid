@@ -20,7 +20,6 @@
 package org.apache.druid.storage.s3;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -31,10 +30,6 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
-/**
- * This is implemented explicitly for URIExtractionNamespaceFunctionFactory
- * If you have a use case for this interface beyond URIExtractionNamespaceFunctionFactory please bring it up in the dev list.
- */
 public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
   private static final int MAX_LISTING_KEYS = 1000;
@@ -97,7 +92,7 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

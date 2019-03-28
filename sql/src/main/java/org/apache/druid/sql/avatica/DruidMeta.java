@@ -22,7 +22,6 @@ package org.apache.druid.sql.avatica;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -44,8 +43,8 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
@@ -54,6 +53,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -63,27 +63,29 @@ public class DruidMeta extends MetaImpl
 {
   private static final Logger log = new Logger(DruidMeta.class);
 
-  private final PlannerFactory plannerFactory;
+  private final SqlLifecycleFactory sqlLifecycleFactory;
   private final ScheduledExecutorService exec;
   private final AvaticaServerConfig config;
   private final List<Authenticator> authenticators;
 
-  // Used to track logical connections.
-  private final Map<String, DruidConnection> connections = new ConcurrentHashMap<>();
+  /** Used to track logical connections. */
+  private final ConcurrentMap<String, DruidConnection> connections = new ConcurrentHashMap<>();
 
-  // Number of connections reserved in "connections". May be higher than the actual number of connections at times,
-  // such as when we're reserving space to open a new one.
+  /**
+   * Number of connections reserved in "connections". May be higher than the actual number of connections at times,
+   * such as when we're reserving space to open a new one.
+   */
   private final AtomicInteger connectionCount = new AtomicInteger();
 
   @Inject
   public DruidMeta(
-      final PlannerFactory plannerFactory,
+      final SqlLifecycleFactory sqlLifecycleFactory,
       final AvaticaServerConfig config,
       final Injector injector
   )
   {
     super(null);
-    this.plannerFactory = Preconditions.checkNotNull(plannerFactory, "plannerFactory");
+    this.sqlLifecycleFactory = Preconditions.checkNotNull(sqlLifecycleFactory, "sqlLifecycleFactory");
     this.config = config;
     this.exec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
@@ -128,7 +130,7 @@ public class DruidMeta extends MetaImpl
   @Override
   public StatementHandle createStatement(final ConnectionHandle ch)
   {
-    final DruidStatement druidStatement = getDruidConnection(ch.id).createStatement();
+    final DruidStatement druidStatement = getDruidConnection(ch.id).createStatement(sqlLifecycleFactory);
     return new StatementHandle(ch.id, druidStatement.getStatementId(), null);
   }
 
@@ -152,7 +154,7 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult == null) {
       throw new ForbiddenException("Authentication failed.");
     }
-    statement.signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult).getSignature();
+    statement.signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
     return statement;
   }
 
@@ -185,8 +187,7 @@ public class DruidMeta extends MetaImpl
     if (authenticationResult == null) {
       throw new ForbiddenException("Authentication failed.");
     }
-    final Signature signature = druidStatement.prepare(plannerFactory, sql, maxRowCount, authenticationResult)
-                                              .getSignature();
+    final Signature signature = druidStatement.prepare(sql, maxRowCount, authenticationResult).getSignature();
     final Frame firstFrame = druidStatement.execute()
                                            .nextFrame(
                                                DruidStatement.START_OFFSET,
@@ -619,7 +620,7 @@ public class DruidMeta extends MetaImpl
       return metaResultSet;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       closeStatement(statement);

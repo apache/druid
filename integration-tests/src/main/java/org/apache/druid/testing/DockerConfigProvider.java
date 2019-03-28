@@ -37,6 +37,9 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
   @NotNull
   private String hadoopDir;
 
+  @JsonProperty
+  private String extraDatasourceNameSuffix = "";
+
   @Override
   public IntegrationTestingConfig get()
   {
@@ -201,6 +204,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public boolean manageKafkaTopic()
       {
         return true;
+      }
+
+      @Override
+      public String getExtraDatasourceNameSuffix()
+      {
+        return extraDatasourceNameSuffix;
       }
     };
   }

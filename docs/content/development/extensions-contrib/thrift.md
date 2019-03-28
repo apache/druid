@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Thrift"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
 # Thrift
 
 To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-thrift-extensions`.
@@ -28,6 +29,10 @@ To use this extension, make sure to [include](../../operations/including-extensi
 This extension enables Druid to ingest thrift compact data online (`ByteBuffer`) and offline (SequenceFile of type `<Writable, BytesWritable>` or LzoThriftBlock File).
 
 You may want to use another version of thrift, change the dependency in pom and compile yourself.
+
+## LZO Support
+
+If you plan to read LZO-compressed Thrift files, you will need to download version 0.4.19 of the [hadoop-lzo JAR](https://mvnrepository.com/artifact/com.hadoop.gplcompression/hadoop-lzo/0.4.19) and place it in your `extensions/druid-thrift-extensions` directory.
 
 ## Thrift Parser
 

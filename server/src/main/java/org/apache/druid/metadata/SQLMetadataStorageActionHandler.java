@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.java.util.common.DateTimes;
@@ -113,6 +114,16 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     return entryTable;
   }
 
+  protected String getLogTable()
+  {
+    return logTable;
+  }
+
+  protected String getEntryTypeName()
+  {
+    return entryTypeName;
+  }
+
   public TypeReference getEntryType()
   {
     return entryType;
@@ -153,6 +164,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       if (isStatementException(e) && getEntry(id).isPresent()) {
         throw new EntryExistsException(id, e);
       } else {
+        Throwables.propagateIfPossible(e);
         throw new RuntimeException(e);
       }
     }
@@ -345,7 +357,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
         task = objectMapper.readValue(resultSet.getBytes("payload"), entryType);
       }
       catch (IOException e) {
-        log.error(e, "Encountered exception while deserializing task payload, setting task to null");
+        log.warn("Encountered exception[%s] while deserializing task payload, setting payload to null", e.getMessage());
         task = null;
       }
       try {
@@ -439,6 +451,29 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     );
   }
 
+  @Override
+  public void removeTasksOlderThan(final long timestamp)
+  {
+    DateTime dateTime = DateTimes.utc(timestamp);
+    connector.retryWithHandle(
+        (HandleCallback<Void>) handle -> {
+          handle.createStatement(getSqlRemoveLogsOlderThan())
+                .bind("date_time", dateTime.toString())
+                .execute();
+          handle.createStatement(
+              StringUtils.format(
+                  "DELETE FROM %s WHERE created_date < :date_time AND active = false",
+                  entryTable
+              )
+          )
+                .bind("date_time", dateTime.toString())
+                .execute();
+
+          return null;
+        }
+    );
+  }
+
   private int removeLock(Handle handle, long lockId)
   {
     return handle.createStatement(StringUtils.format("DELETE FROM %s WHERE id = :id", lockTable))
@@ -505,6 +540,15 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
                 );
           }
         }
+    );
+  }
+
+  @Deprecated
+  public String getSqlRemoveLogsOlderThan()
+  {
+    return StringUtils.format("DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
+                              + "WHERE b.created_date < :date_time and b.active = false",
+                              logTable, entryTable, entryTypeName
     );
   }
 

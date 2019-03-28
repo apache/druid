@@ -20,9 +20,7 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -32,6 +30,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.MutableDateTime;
 import org.joda.time.chrono.ISOChronology;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -49,22 +49,24 @@ public class FileRequestLogger implements RequestLogger
   private final ObjectMapper objectMapper;
   private final ScheduledExecutorService exec;
   private final File baseDir;
+  private final DateTimeFormatter filePattern;
 
   private final Object lock = new Object();
 
   private DateTime currentDay;
   private OutputStreamWriter fileWriter;
 
-  public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir)
+  public FileRequestLogger(ObjectMapper objectMapper, ScheduledExecutorService exec, File baseDir, String filePattern)
   {
     this.exec = exec;
     this.objectMapper = objectMapper;
     this.baseDir = baseDir;
+    this.filePattern = DateTimeFormat.forPattern(filePattern);
   }
 
   @LifecycleStart
   @Override
-  public void start() throws Exception
+  public void start()
   {
     try {
       baseDir.mkdirs();
@@ -96,7 +98,7 @@ public class FileRequestLogger implements RequestLogger
                 }
               }
               catch (Exception e) {
-                Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
 
               return ScheduledExecutors.Signal.REPEAT;
@@ -105,14 +107,14 @@ public class FileRequestLogger implements RequestLogger
       );
     }
     catch (IOException e) {
-      Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
   private OutputStreamWriter getFileWriter() throws FileNotFoundException
   {
     return new OutputStreamWriter(
-        new FileOutputStream(new File(baseDir, currentDay.toString("yyyy-MM-dd'.log'")), true),
+        new FileOutputStream(new File(baseDir, filePattern.print(currentDay)), true),
         StandardCharsets.UTF_8
     );
   }
@@ -127,12 +129,22 @@ public class FileRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(RequestLogLine requestLogLine) throws IOException
+  public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
+  {
+    logToFile(requestLogLine.getNativeQueryLine(objectMapper));
+  }
+
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+  {
+    logToFile(requestLogLine.getSqlQueryLine(objectMapper));
+  }
+
+  private void logToFile(final String message) throws IOException
   {
     synchronized (lock) {
-      fileWriter.write(
-          StringUtils.format("%s%n", requestLogLine.getLine(objectMapper))
-      );
+      fileWriter.write(message);
+      fileWriter.write("\n");
       fileWriter.flush();
     }
   }

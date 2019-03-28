@@ -21,6 +21,8 @@ package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.RequestLogLine;
 
@@ -41,32 +43,73 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
   @JsonProperty
   private long queryTimeThresholdMs = 0;
 
+  @JsonProperty
+  private long sqlQueryTimeThresholdMs = 0;
+
   @Override
   public RequestLogger get()
   {
-    FilteredRequestLogger logger = new FilteredRequestLogger(delegate.get(), queryTimeThresholdMs);
+    FilteredRequestLogger logger = new FilteredRequestLogger(
+        delegate.get(),
+        queryTimeThresholdMs,
+        sqlQueryTimeThresholdMs
+    );
     log.debug(new Exception("Stack trace"), "Creating %s at", logger);
     return logger;
   }
 
   public static class FilteredRequestLogger implements RequestLogger
   {
-
-    private final long queryTimeThresholdMs;
     private final RequestLogger logger;
+    private final long queryTimeThresholdMs;
+    private final long sqlQueryTimeThresholdMs;
 
-    public FilteredRequestLogger(RequestLogger logger, long queryTimeThresholdMs)
+    public FilteredRequestLogger(RequestLogger logger, long queryTimeThresholdMs, long sqlQueryTimeThresholdMs)
     {
       this.logger = logger;
       this.queryTimeThresholdMs = queryTimeThresholdMs;
+      this.sqlQueryTimeThresholdMs = sqlQueryTimeThresholdMs;
+    }
+
+    public long getQueryTimeThresholdMs()
+    {
+      return queryTimeThresholdMs;
+    }
+
+    public RequestLogger getDelegate()
+    {
+      return logger;
+    }
+
+    @LifecycleStart
+    @Override
+    public void start() throws Exception
+    {
+      logger.start();
+    }
+
+    @LifecycleStop
+    @Override
+    public void stop()
+    {
+      logger.stop();
     }
 
     @Override
-    public void log(RequestLogLine requestLogLine) throws IOException
+    public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
     {
       Object queryTime = requestLogLine.getQueryStats().getStats().get("query/time");
       if (queryTime != null && ((Number) queryTime).longValue() >= queryTimeThresholdMs) {
-        logger.log(requestLogLine);
+        logger.logNativeQuery(requestLogLine);
+      }
+    }
+
+    @Override
+    public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+    {
+      Object sqlQueryTime = requestLogLine.getQueryStats().getStats().get("sqlQuery/time");
+      if (sqlQueryTime != null && ((Number) sqlQueryTime).longValue() >= sqlQueryTimeThresholdMs) {
+        logger.logSqlQuery(requestLogLine);
       }
     }
 
@@ -74,8 +117,9 @@ public class FilteredRequestLoggerProvider implements RequestLoggerProvider
     public String toString()
     {
       return "FilteredRequestLogger{" +
-             "queryTimeThresholdMs=" + queryTimeThresholdMs +
-             ", logger=" + logger +
+             "logger=" + logger +
+             ", queryTimeThresholdMs=" + queryTimeThresholdMs +
+             ", sqlQueryTimeThresholdMs=" + sqlQueryTimeThresholdMs +
              '}';
     }
   }

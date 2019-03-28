@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -33,6 +32,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
@@ -53,12 +53,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 /**
  * Interface between task producers and the task runner.
@@ -99,6 +102,11 @@ public class TaskQueue
   private volatile boolean active = false;
 
   private static final EmittingLogger log = new EmittingLogger(TaskQueue.class);
+
+  private final ConcurrentHashMap<String, AtomicLong> totalSuccessfulTaskCount = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicLong> totalFailedTaskCount = new ConcurrentHashMap<>();
+  private Map<String, Long> prevTotalSuccessfulTaskCount = new HashMap<>();
+  private Map<String, Long> prevTotalFailedTaskCount = new HashMap<>();
 
   @Inject
   public TaskQueue(
@@ -510,6 +518,12 @@ public class TaskQueue
                     task,
                     status.getDuration()
                 );
+
+                if (status.isSuccess()) {
+                  Counters.incrementAndGetLong(totalSuccessfulTaskCount, task.getDataSource());
+                } else {
+                  Counters.incrementAndGetLong(totalFailedTaskCount, task.getDataSource());
+                }
               }
             }
             catch (Exception e) {
@@ -570,7 +584,7 @@ public class TaskQueue
     }
     catch (Exception e) {
       log.warn(e, "Failed to sync tasks from storage!");
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       giant.unlock();
@@ -586,4 +600,70 @@ public class TaskQueue
     return rv;
   }
 
+  private Map<String, Long> getDeltaValues(Map<String, Long> total, Map<String, Long> prev)
+  {
+    return total.entrySet()
+                .stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue() - prev.getOrDefault(e.getKey(), 0L)));
+  }
+
+  public Map<String, Long> getSuccessfulTaskCount()
+  {
+    Map<String, Long> total = totalSuccessfulTaskCount.entrySet()
+                                                      .stream()
+                                                      .collect(Collectors.toMap(
+                                                          Map.Entry::getKey,
+                                                          e -> e.getValue().get()
+                                                      ));
+    Map<String, Long> delta = getDeltaValues(total, prevTotalSuccessfulTaskCount);
+    prevTotalSuccessfulTaskCount = total;
+    return delta;
+  }
+
+  public Map<String, Long> getFailedTaskCount()
+  {
+    Map<String, Long> total = totalFailedTaskCount.entrySet()
+                                                  .stream()
+                                                  .collect(Collectors.toMap(
+                                                      Map.Entry::getKey,
+                                                      e -> e.getValue().get()
+                                                  ));
+    Map<String, Long> delta = getDeltaValues(total, prevTotalFailedTaskCount);
+    prevTotalFailedTaskCount = total;
+    return delta;
+  }
+
+  public Map<String, Long> getRunningTaskCount()
+  {
+    Map<String, String> taskDatasources = tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
+    return taskRunner.getRunningTasks()
+                     .stream()
+                     .collect(Collectors.toMap(
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> 1L,
+                         Long::sum
+                     ));
+  }
+
+  public Map<String, Long> getPendingTaskCount()
+  {
+    Map<String, String> taskDatasources = tasks.stream().collect(Collectors.toMap(Task::getId, Task::getDataSource));
+    return taskRunner.getPendingTasks()
+                     .stream()
+                     .collect(Collectors.toMap(
+                         e -> taskDatasources.getOrDefault(e.getTaskId(), ""),
+                         e -> 1L,
+                         Long::sum
+                     ));
+  }
+
+  public Map<String, Long> getWaitingTaskCount()
+  {
+    Set<String> runnerKnownTaskIds = taskRunner.getKnownTasks()
+                                               .stream()
+                                               .map(TaskRunnerWorkItem::getTaskId)
+                                               .collect(Collectors.toSet());
+    return tasks.stream().filter(task -> !runnerKnownTaskIds.contains(task.getId()))
+                .collect(Collectors.toMap(Task::getDataSource, task -> 1L, Long::sum));
+  }
 }

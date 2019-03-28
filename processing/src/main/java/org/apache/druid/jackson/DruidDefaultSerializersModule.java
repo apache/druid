@@ -21,14 +21,12 @@ package org.apache.druid.jackson;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -57,7 +55,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
               throws IOException
           {
             String tzId = jp.getText();
-            return DateTimes.inferTzfromString(tzId);
+            return DateTimes.inferTzFromString(tzId);
           }
         }
     );
@@ -70,8 +68,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
               DateTimeZone dateTimeZone,
               JsonGenerator jsonGenerator,
               SerializerProvider serializerProvider
-          )
-              throws IOException, JsonProcessingException
+          ) throws IOException
           {
             jsonGenerator.writeString(dateTimeZone.getID());
           }
@@ -83,7 +80,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         {
           @Override
           public void serialize(Sequence value, final JsonGenerator jgen, SerializerProvider provider)
-              throws IOException, JsonProcessingException
+              throws IOException
           {
             jgen.writeStartArray();
             value.accumulate(
@@ -97,7 +94,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
                       jgen.writeObject(o1);
                     }
                     catch (IOException e) {
-                      throw Throwables.propagate(e);
+                      throw new RuntimeException(e);
                     }
                     return null;
                   }
@@ -113,7 +110,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
         {
           @Override
           public void serialize(Yielder yielder, final JsonGenerator jgen, SerializerProvider provider)
-              throws IOException, JsonProcessingException
+              throws IOException
           {
             try {
               jgen.writeStartArray();

@@ -68,7 +68,7 @@ public enum ResultFormat
     }
 
     @Override
-    public Writer createFormatter(final OutputStream outputStream, final ObjectMapper jsonMapper) throws IOException
+    public Writer createFormatter(final OutputStream outputStream, final ObjectMapper jsonMapper)
     {
       return new CsvWriter(outputStream);
     }

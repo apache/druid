@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
@@ -72,9 +70,9 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,7 +81,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -95,12 +92,29 @@ import java.util.stream.Collectors;
 @ManageLifecycle
 public class DruidCoordinator
 {
-  public static Comparator<DataSegment> SEGMENT_COMPARATOR = Ordering.from(Comparators.intervalsByEndThenStart())
-                                                                     .onResultOf(
-                                                                         (Function<DataSegment, Interval>) segment -> segment
-                                                                             .getInterval())
-                                                                     .compound(Ordering.<DataSegment>natural())
-                                                                     .reverse();
+  /**
+   * This comparator orders "freshest" segments first, i. e. segments with most recent intervals.
+   *
+   * It is used in historical nodes' {@link LoadQueuePeon}s to make historicals load more recent segment first.
+   *
+   * It is also used in {@link DruidCoordinatorRuntimeParams} for {@link
+   * DruidCoordinatorRuntimeParams#getAvailableSegments()} - a collection of segments to be considered during some
+   * coordinator run for different {@link DruidCoordinatorHelper}s. The order matters only for {@link
+   * DruidCoordinatorRuleRunner}, which tries to apply the rules while iterating the segments in the order imposed by
+   * this comparator. In {@link LoadRule} the throttling limit may be hit (via {@link ReplicationThrottler}; see
+   * {@link CoordinatorDynamicConfig#getReplicationThrottleLimit()}). So before we potentially hit this limit, we want
+   * to schedule loading the more recent segments (among all of those that need to be loaded).
+   *
+   * In both {@link LoadQueuePeon}s and {@link DruidCoordinatorRuleRunner}, we want to load more recent segments first
+   * because presumably they are queried more often and contain are more important data for users, so if the Druid
+   * cluster has availability problems and struggling to make all segments available immediately, at least we try to
+   * make more "important" (more recent) segments available as soon as possible.
+   */
+  static final Comparator<DataSegment> SEGMENT_COMPARATOR_RECENT_FIRST = Ordering
+      .from(Comparators.intervalsByEndThenStart())
+      .onResultOf(DataSegment::getInterval)
+      .compound(Ordering.<DataSegment>natural())
+      .reverse();
 
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
 
@@ -228,17 +242,18 @@ public class DruidCoordinator
     return loadManagementPeons;
   }
 
-  public Map<String, ? extends Object2LongMap<String>> getReplicationStatus()
+  /** @return tier -> { dataSource -> underReplicationCount } map */
+  public Map<String, Object2LongMap<String>> computeUnderReplicationCountsPerDataSourcePerTier()
   {
-    final Map<String, Object2LongOpenHashMap<String>> retVal = new HashMap<>();
+    final Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier = new HashMap<>();
 
     if (segmentReplicantLookup == null) {
-      return retVal;
+      return underReplicationCountsPerDataSourcePerTier;
     }
 
     final DateTime now = DateTimes.nowUtc();
 
-    for (final DataSegment segment : getAvailableDataSegments()) {
+    for (final DataSegment segment : iterateAvailableDataSegments()) {
       final List<Rule> rules = metadataRuleManager.getRulesWithDefault(segment.getDataSource());
 
       for (final Rule rule : rules) {
@@ -249,16 +264,17 @@ public class DruidCoordinator
         ((LoadRule) rule)
             .getTieredReplicants()
             .forEach((final String tier, final Integer ruleReplicants) -> {
-              int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getIdentifier(), tier);
-              retVal
-                  .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>())
+              int currentReplicants = segmentReplicantLookup.getLoadedReplicants(segment.getId(), tier);
+              Object2LongMap<String> underReplicationPerDataSource = underReplicationCountsPerDataSourcePerTier
+                  .computeIfAbsent(tier, ignored -> new Object2LongOpenHashMap<>());
+              ((Object2LongOpenHashMap<String>) underReplicationPerDataSource)
                   .addTo(segment.getDataSource(), Math.max(ruleReplicants - currentReplicants, 0));
             });
         break; // only the first matching rule applies
       }
     }
 
-    return retVal;
+    return underReplicationCountsPerDataSourcePerTier;
   }
 
   public Object2LongMap<String> getSegmentAvailability()
@@ -269,8 +285,8 @@ public class DruidCoordinator
       return retVal;
     }
 
-    for (DataSegment segment : getAvailableDataSegments()) {
-      if (segmentReplicantLookup.getLoadedReplicants(segment.getIdentifier()) == 0) {
+    for (DataSegment segment : iterateAvailableDataSegments()) {
+      if (segmentReplicantLookup.getLoadedReplicants(segment.getId()) == 0) {
         retVal.addTo(segment.getDataSource(), 1);
       } else {
         retVal.addTo(segment.getDataSource(), 0);
@@ -280,19 +296,10 @@ public class DruidCoordinator
     return retVal;
   }
 
-  boolean hasLoadPending(final String dataSource)
-  {
-    return loadManagementPeons
-        .values()
-        .stream()
-        .flatMap((final LoadQueuePeon peon) -> peon.getSegmentsToLoad().stream())
-        .anyMatch((final DataSegment segment) -> segment.getDataSource().equals(dataSource));
-  }
-
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Double> loadStatus = new HashMap<>();
-    for (ImmutableDruidDataSource dataSource : metadataSegmentManager.getInventory()) {
+    for (ImmutableDruidDataSource dataSource : metadataSegmentManager.getDataSources()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int availableSegmentSize = segments.size();
 
@@ -324,26 +331,18 @@ public class DruidCoordinator
 
   public CoordinatorDynamicConfig getDynamicConfigs()
   {
-    return configManager.watch(
-        CoordinatorDynamicConfig.CONFIG_KEY,
-        CoordinatorDynamicConfig.class,
-        CoordinatorDynamicConfig.builder().build()
-    ).get();
+    return CoordinatorDynamicConfig.current(configManager);
   }
 
   public CoordinatorCompactionConfig getCompactionConfig()
   {
-    return configManager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class,
-        CoordinatorCompactionConfig.empty()
-    ).get();
+    return CoordinatorCompactionConfig.current(configManager);
   }
 
   public void removeSegment(DataSegment segment)
   {
-    log.info("Removing Segment[%s]", segment);
-    metadataSegmentManager.removeSegment(segment.getDataSource(), segment.getIdentifier());
+    log.info("Removing Segment[%s]", segment.getId());
+    metadataSegmentManager.removeSegment(segment.getId());
   }
 
   public String getCurrentLeader()
@@ -365,23 +364,23 @@ public class DruidCoordinator
       }
       throw new ISE("Cannot move null DataSegment");
     }
-    String segmentName = segment.getIdentifier();
+    SegmentId segmentId = segment.getId();
     try {
       if (fromServer.getMetadata().equals(toServer.getMetadata())) {
-        throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentName, fromServer.getName());
+        throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentId, fromServer.getName());
       }
 
-      ImmutableDruidDataSource dataSource = metadataSegmentManager.getInventoryValue(segment.getDataSource());
+      ImmutableDruidDataSource dataSource = metadataSegmentManager.getDataSource(segment.getDataSource());
       if (dataSource == null) {
-        throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentName);
+        throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentId);
       }
 
       // get segment information from MetadataSegmentManager instead of getting it from fromServer's.
       // This is useful when MetadataSegmentManager and fromServer DataSegment's are different for same
       // identifier (say loadSpec differs because of deep storage migration).
-      final DataSegment segmentToLoad = dataSource.getSegment(segment.getIdentifier());
+      final DataSegment segmentToLoad = dataSource.getSegment(segment.getId());
       if (segmentToLoad == null) {
-        throw new IAE("No segment metadata found for segment Id [%s]", segment.getIdentifier());
+        throw new IAE("No segment metadata found for segment Id [%s]", segment.getId());
       }
       final LoadQueuePeon loadPeon = loadManagementPeons.get(toServer.getName());
       if (loadPeon == null) {
@@ -404,12 +403,8 @@ public class DruidCoordinator
         );
       }
 
-      final String toLoadQueueSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(
-              zkPaths.getLoadQueuePath(),
-              toServer.getName()
-          ), segmentName
-      );
+      final String toLoadQueueSegPath =
+          ZKPaths.makePath(zkPaths.getLoadQueuePath(), toServer.getName(), segmentId.toString());
 
       final LoadPeonCallback loadPeonCallback = () -> {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
@@ -435,48 +430,33 @@ public class DruidCoordinator
                 }
               }
               catch (Exception e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
         );
       }
       catch (Exception e) {
         dropPeon.unmarkSegmentToDrop(segmentToLoad);
-        Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
     catch (Exception e) {
-      log.makeAlert(e, "Exception moving segment %s", segmentName).emit();
+      log.makeAlert(e, "Exception moving segment %s", segmentId).emit();
       if (callback != null) {
         callback.execute();
       }
     }
   }
 
-  public Set<DataSegment> getOrderedAvailableDataSegments()
+  /**
+   * Returns an iterable to go over all available segments in all data sources. The order in which segments are iterated
+   * is unspecified. Note: the iteration may not be as trivially cheap as, for example, iteration over an ArrayList. Try
+   * (to some reasonable extent) to organize the code so that it iterates the returned iterable only once rather than
+   * several times.
+   */
+  public Iterable<DataSegment> iterateAvailableDataSegments()
   {
-    Set<DataSegment> availableSegments = new TreeSet<>(SEGMENT_COMPARATOR);
-
-    Iterable<DataSegment> dataSegments = getAvailableDataSegments();
-
-    for (DataSegment dataSegment : dataSegments) {
-      if (dataSegment.getSize() < 0) {
-        log.makeAlert("No size on Segment, wtf?")
-           .addData("segment", dataSegment)
-           .emit();
-      }
-      availableSegments.add(dataSegment);
-    }
-
-    return availableSegments;
-  }
-
-  private List<DataSegment> getAvailableDataSegments()
-  {
-    return metadataSegmentManager.getInventory()
-                                 .stream()
-                                 .flatMap(source -> source.getSegments().stream())
-                                 .collect(Collectors.toList());
+    return metadataSegmentManager.iterateAllSegments();
   }
 
   @LifecycleStart
@@ -666,7 +646,7 @@ public class DruidCoordinator
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams.newBuilder()
                                          .withStartTime(startTime)
-                                         .withDataSources(metadataSegmentManager.getInventory())
+                                         .withDataSources(metadataSegmentManager.getDataSources())
                                          .withDynamicConfigs(getDynamicConfigs())
                                          .withCompactionConfig(getCompactionConfig())
                                          .withEmitter(emitter)
@@ -718,6 +698,7 @@ public class DruidCoordinator
                 }
 
                 // Find all historical servers, group them by subType and sort by ascending usage
+                Set<String> decommissioningServers = params.getCoordinatorDynamicConfig().getDecommissioningNodes();
                 final DruidCluster cluster = new DruidCluster();
                 for (ImmutableDruidServer server : servers) {
                   if (!loadManagementPeons.containsKey(server.getName())) {
@@ -728,7 +709,13 @@ public class DruidCoordinator
                     loadManagementPeons.put(server.getName(), loadQueuePeon);
                   }
 
-                  cluster.add(new ServerHolder(server, loadManagementPeons.get(server.getName())));
+                  cluster.add(
+                      new ServerHolder(
+                          server,
+                          loadManagementPeons.get(server.getName()),
+                          decommissioningServers.contains(server.getHost())
+                      )
+                  );
                 }
 
                 segmentReplicantLookup = SegmentReplicantLookup.make(cluster);
@@ -753,7 +740,7 @@ public class DruidCoordinator
                              .build();
               },
               new DruidCoordinatorRuleRunner(DruidCoordinator.this),
-              new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
+              new DruidCoordinatorCleanupUnneeded(),
               new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
               new DruidCoordinatorLogger(DruidCoordinator.this)

@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment.realtime.plumber;
 
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.Pair;
@@ -95,13 +93,19 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry = itr.next();
         SegmentDescriptor descriptor = entry.getKey();
         try {
-          List<ImmutableSegmentLoadInfo> loadedSegments = coordinatorClient.fetchServerView(
-              dataSource,
-              descriptor.getInterval(),
-              true
-          );
-
-          if (isHandOffComplete(loadedSegments, entry.getKey())) {
+          Boolean handOffComplete = coordinatorClient.isHandOffComplete(dataSource, descriptor);
+          if (handOffComplete == null) {
+            log.warn(
+                "Failed to call the new coordinator API for checking segment handoff. Falling back to the old API"
+            );
+            final List<ImmutableSegmentLoadInfo> loadedSegments = coordinatorClient.fetchServerView(
+                dataSource,
+                descriptor.getInterval(),
+                true
+            );
+            handOffComplete = isHandOffComplete(loadedSegments, descriptor);
+          }
+          if (handOffComplete) {
             log.info("Segment Handoff complete for dataSource[%s] Segment[%s]", dataSource, descriptor);
             entry.getValue().lhs.execute(entry.getValue().rhs);
             itr.remove();
@@ -131,7 +135,6 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
     }
   }
 
-
   static boolean isHandOffComplete(List<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
   {
     for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
@@ -139,16 +142,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
           && segmentLoadInfo.getSegment().getShardSpec().getPartitionNum()
              == descriptor.getPartitionNumber()
           && segmentLoadInfo.getSegment().getVersion().compareTo(descriptor.getVersion()) >= 0
-          && Iterables.any(
-          segmentLoadInfo.getServers(), new Predicate<DruidServerMetadata>()
-          {
-            @Override
-            public boolean apply(DruidServerMetadata input)
-            {
-              return input.segmentReplicatable();
-            }
-          }
-      )) {
+          && segmentLoadInfo.getServers().stream().anyMatch(DruidServerMetadata::segmentReplicatable)) {
         return true;
       }
     }

@@ -49,6 +49,7 @@ public class BitmapOffset extends Offset
   private static final String DEFAULT_FULLNESS_FACTORIZATION_STOPS = "0.01,0.1,0.3,0.5,0.7,0.9,0.99";
   private static final double[] BITMAP_FULLNESS_FACTORIZATION_STOPS;
   private static final String[] FACTORIZED_FULLNESS;
+
   static {
     String stopString = System.getProperty("bitmapFullnessFactorizationStops", DEFAULT_FULLNESS_FACTORIZATION_STOPS);
     String[] stopsArray = stopString.split(",");
@@ -66,7 +67,6 @@ public class BitmapOffset extends Offset
 
     }
     Arrays.sort(BITMAP_FULLNESS_FACTORIZATION_STOPS);
-
 
     double firstStop = BITMAP_FULLNESS_FACTORIZATION_STOPS[0];
     if (Double.isNaN(firstStop) || firstStop <= 0.0) {

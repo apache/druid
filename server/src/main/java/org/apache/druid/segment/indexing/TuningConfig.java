@@ -21,6 +21,7 @@ package org.apache.druid.segment.indexing;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.utils.JvmUtils;
 
 /**
  */
@@ -37,5 +38,5 @@ public interface TuningConfig
   // We initially estimated this to be 1/3(max jvm memory), but bytesCurrentlyInMemory only
   // tracks active index and not the index being flushed to disk, to account for that
   // we halved default to 1/6(max jvm memory)
-  long DEFAULT_MAX_BYTES_IN_MEMORY = Runtime.getRuntime().maxMemory() / 6;
+  long DEFAULT_MAX_BYTES_IN_MEMORY = JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() / 6;
 }

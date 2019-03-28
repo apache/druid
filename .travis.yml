@@ -22,6 +22,10 @@ sudo: false
 dist: trusty
 group: deprecated-2017Q4
 
+language: node_js
+node_js:
+  - "10"
+
 jdk:
   - oraclejdk8
 
@@ -35,7 +39,7 @@ matrix:
     - env:
        - NAME="license checks"
       install: true
-      script: MAVEN_OPTS='-Xmx3000m' mvn clean verify -Prat -DskipTests -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+      script: MAVEN_OPTS='-Xmx3000m' mvn clean verify -Prat -DskipTests -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn -Drat.consoleOutput=true
 
       # strict compilation
     - env:

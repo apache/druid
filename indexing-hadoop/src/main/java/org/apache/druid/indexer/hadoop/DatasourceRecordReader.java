@@ -20,7 +20,6 @@
 package org.apache.druid.indexer.hadoop;
 
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
@@ -82,7 +81,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
           public WindowedStorageAdapter apply(WindowedDataSegment segment)
           {
             try {
-              logger.info("Getting storage path for segment [%s]", segment.getSegment().getIdentifier());
+              logger.info("Getting storage path for segment [%s]", segment.getSegment().getId());
               Path path = new Path(JobHelper.getURIFromSegment(segment.getSegment()));
 
               logger.info("Fetch segment files from [%s]", path);
@@ -104,7 +103,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
               );
             }
             catch (IOException ex) {
-              throw Throwables.propagate(ex);
+              throw new RuntimeException(ex);
             }
           }
         }

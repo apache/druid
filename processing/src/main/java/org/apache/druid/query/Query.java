@@ -39,6 +39,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -107,6 +108,17 @@ public interface Query<T>
   Query<T> withId(String id);
 
   String getId();
+
+  default Query<T> withSqlQueryId(String sqlQueryId)
+  {
+    return this;
+  }
+
+  @Nullable
+  default String getSqlQueryId()
+  {
+    return null;
+  }
 
   Query<T> withDataSource(DataSource dataSource);
 

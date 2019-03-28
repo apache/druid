@@ -54,7 +54,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
@@ -68,7 +67,7 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(TestTaskRunner.class);
 
-  private final ConcurrentMap<Integer, ListeningExecutorService> exec = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Integer, ListeningExecutorService> exec = new ConcurrentHashMap<>();
   private final Set<TestTaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<>();
   private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
@@ -161,7 +160,7 @@ public class TestTaskRunner implements TaskRunner, QuerySegmentWalker
         log.info("Starting graceful shutdown of task[%s].", task.getId());
 
         try {
-          task.stopGracefully();
+          task.stopGracefully(taskConfig);
           final TaskStatus taskStatus = item.getResult().get(
               new Interval(DateTimes.utc(start), taskConfig.getGracefulShutdownTimeout()).toDurationMillis(),
               TimeUnit.MILLISECONDS

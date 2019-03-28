@@ -34,7 +34,7 @@ public class DerivativeDataSourceMetadataTest
   public ExpectedException expectedException = ExpectedException.none();
 
   @Test
-  public void testEmptyBaseDataSource() throws Exception
+  public void testEmptyBaseDataSource()
   {
     expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectMessage(
@@ -47,7 +47,7 @@ public class DerivativeDataSourceMetadataTest
   }
 
   @Test
-  public void testNullBaseDataSource() throws Exception
+  public void testNullBaseDataSource()
   {
     expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectMessage(

@@ -97,7 +97,7 @@ public class StringFirstTimeseriesQueryTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.allGran)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       Collections.singletonList(
                                           new StringFirstAggregatorFactory(

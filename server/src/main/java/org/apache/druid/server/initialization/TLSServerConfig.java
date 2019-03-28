@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -57,6 +58,9 @@ public class TLSServerConfig
 
   @JsonProperty
   private boolean requireClientCertificate = false;
+
+  @JsonProperty
+  private boolean requestClientCertificate = false;
 
   @JsonProperty
   private String trustStoreType;
@@ -131,6 +135,11 @@ public class TLSServerConfig
     return requireClientCertificate;
   }
 
+  public boolean isRequestClientCertificate()
+  {
+    return requestClientCertificate;
+  }
+
   public String getTrustStoreType()
   {
     return trustStoreType;
@@ -174,6 +183,7 @@ public class TLSServerConfig
            ", includeProtocols=" + includeProtocols +
            ", excludeProtocols=" + excludeProtocols +
            ", requireClientCertificate=" + requireClientCertificate +
+           ", requestClientCertificate=" + requestClientCertificate +
            ", trustStoreType='" + trustStoreType + '\'' +
            ", trustStorePath='" + trustStorePath + '\'' +
            ", trustStoreAlgorithm='" + trustStoreAlgorithm + '\'' +

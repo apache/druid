@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.indexing.kafka.KafkaIndexTask;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
+import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
@@ -71,13 +71,13 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(1, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assert.assertEquals(100, config.getPollTimeout());
     Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
     Assert.assertEquals(false, config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
     Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
     Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
-    Assert.assertFalse("skipOffsetGaps", config.isSkipOffsetGaps());
   }
 
   @Test
@@ -90,13 +90,13 @@ public class KafkaSupervisorIOConfigTest
                      + "  \"taskCount\": 9,\n"
                      + "  \"taskDuration\": \"PT30M\",\n"
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+                     + "  \"pollTimeout\": 1000,\n"
                      + "  \"startDelay\": \"PT1M\",\n"
                      + "  \"period\": \"PT10S\",\n"
                      + "  \"useEarliestOffset\": true,\n"
                      + "  \"completionTimeout\": \"PT45M\",\n"
                      + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
-                     + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
-                     + "  \"skipOffsetGaps\": true\n"
+                     + "  \"earlyMessageRejectionPeriod\": \"PT1H\"\n"
                      + "}";
 
     KafkaSupervisorIOConfig config = mapper.readValue(
@@ -113,13 +113,13 @@ public class KafkaSupervisorIOConfigTest
     Assert.assertEquals(9, (int) config.getTaskCount());
     Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
     Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assert.assertEquals(1000, config.getPollTimeout());
     Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
     Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
     Assert.assertEquals(true, config.isUseEarliestOffset());
     Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
     Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
     Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
-    Assert.assertTrue("skipOffsetGaps", config.isSkipOffsetGaps());
   }
 
   @Test
@@ -136,7 +136,7 @@ public class KafkaSupervisorIOConfigTest
 
     KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
     Properties props = new Properties();
-    KafkaIndexTask.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
+    KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
 
     Assert.assertEquals("my-topic", config.getTopic());
     Assert.assertEquals("localhost:9092", props.getProperty("bootstrap.servers"));

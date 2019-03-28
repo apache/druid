@@ -21,6 +21,6 @@ set -e
 
 pushd $TRAVIS_BUILD_DIR/integration-tests
 
-mvn verify -P integration-tests -Dit.test=ITUnionQueryTest,ITTwitterQueryTest,ITWikipediaQueryTest,ITBasicAuthConfigurationTest,ITTLSTest
+mvn verify -P integration-tests -Dit.test=ITUnionQueryTest,ITNestedQueryPushDownTest,ITTwitterQueryTest,ITWikipediaQueryTest,ITBasicAuthConfigurationTest,ITTLSTest,ITSystemTableQueryTest,ITSystemTableBatchIndexTaskTest
 
 popd

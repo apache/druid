@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditEntry;
@@ -125,7 +124,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -200,7 +199,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
             public void run()
             {
               try {
-                // poll() is synchronized together with start() and stop() to ensure that when stop() exists, poll()
+                // poll() is synchronized together with start() and stop() to ensure that when stop() exits, poll()
                 // won't actually run anymore after that (it could only enter the syncrhonized section and exit
                 // immediately because the localStartedOrder doesn't match the new currentStartOrder). It's needed
                 // to avoid flakiness in SQLMetadataRuleManagerTest.
@@ -278,7 +277,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                             );
                           }
                           catch (IOException e) {
-                            throw Throwables.propagate(e);
+                            throw new RuntimeException(e);
                           }
                         }
                       }
@@ -301,7 +300,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                                          return retVal;
                                        }
                                        catch (Exception e) {
-                                         throw Throwables.propagate(e);
+                                         throw new RuntimeException(e);
                                        }
                                      }
                                    }
@@ -311,7 +310,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
           )
       );
 
-      log.info("Polled and found rules for %,d datasource(s)", newRules.size());
+      final int newRuleCount = newRules.values().stream().mapToInt(List::size).sum();
+      log.info("Polled and found %,d rule(s) for %,d datasource(s)", newRuleCount, newRules.size());
 
       rules.set(newRules);
       failStartTimeMs = 0;

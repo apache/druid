@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Quickstart"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -16,10 +21,6 @@
   ~ specific language governing permissions and limitations
   ~ under the License.
   -->
-
----
-layout: doc_page
----
 
 # Druid Quickstart
 
@@ -95,18 +96,18 @@ This will bring up instances of Zookeeper and the Druid services, all running on
 
 ```bash
 bin/supervise -c quickstart/tutorial/conf/tutorial-cluster.conf
-[Thu Jul 26 12:16:23 2018] Running command[zk], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[coordinator], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/coordinator.log]: bin/run-druid coordinator quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[broker], logging to[//stage/apache-druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[historical], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[overlord], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/overlord.log]: bin/run-druid overlord quickstart/tutorial/conf
-[Thu Jul 26 12:16:23 2018] Running command[middleManager], logging to[/stage/apache-druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager quickstart/tutorial/conf
-
+[Wed Feb 27 12:46:13 2019] Running command[zk], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/zk.log]: bin/run-zk quickstart/tutorial/conf
+[Wed Feb 27 12:46:13 2019] Running command[coordinator], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/coordinator.log]: bin/run-druid coordinator quickstart/tutorial/conf
+[Wed Feb 27 12:46:13 2019] Running command[broker], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/broker.log]: bin/run-druid broker quickstart/tutorial/conf
+[Wed Feb 27 12:46:13 2019] Running command[router], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/router.log]: bin/run-druid router quickstart/tutorial/conf
+[Wed Feb 27 12:46:13 2019] Running command[historical], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/historical.log]: bin/run-druid historical quickstart/tutorial/conf
+[Wed Feb 27 12:46:13 2019] Running command[overlord], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/overlord.log]: bin/run-druid overlord quickstart/tutorial/conf
+[Wed Feb 27 12:46:13 2019] Running command[middleManager], logging to[/apache-druid-#{DRUIDVERSION}/var/sv/middleManager.log]: bin/run-druid middleManager quickstart/tutorial/conf
 ```
 
 All persistent state such as the cluster metadata store and segments for the services will be kept in the `var` directory under the apache-druid-#{DRUIDVERSION} package root. Logs for the services are located at `var/sv`.
 
-Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the Druid processes. 
+Later on, if you'd like to stop the services, CTRL-C to exit the `bin/supervise` script, which will terminate the Druid processes.
 
 ### Resetting cluster state
 
@@ -153,7 +154,7 @@ The sample data has the following columns, and an example event is shown below:
   * regionIsoCode
   * regionName
   * user
- 
+
 ```json
 {
   "timestamp":"2015-09-12T20:03:45.018Z",

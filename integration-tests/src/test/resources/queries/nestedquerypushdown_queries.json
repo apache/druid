@@ -7,7 +7,7 @@
         "type": "query",
         "query": {
           "queryType": "groupBy",
-          "dataSource": "wikiticker",
+          "dataSource": "%%DATASOURCE%%",
           "intervals": [
             "2015-09-12/2015-09-13"
           ],
@@ -60,7 +60,7 @@
         "type": "query",
         "query": {
           "queryType": "groupBy",
-          "dataSource": "wikiticker",
+          "dataSource": "%%DATASOURCE%%",
           "intervals": [
             "2015-09-12/2015-09-13"
           ],
@@ -113,7 +113,7 @@
         "type": "query",
         "query": {
           "queryType": "groupBy",
-          "dataSource": "wikiticker",
+          "dataSource": "%%DATASOURCE%%",
           "intervals": [
             "2015-09-12/2015-09-13"
           ],
@@ -191,7 +191,7 @@
         "type": "query",
         "query": {
           "queryType": "groupBy",
-          "dataSource": "wikiticker",
+          "dataSource": "%%DATASOURCE%%",
           "intervals": [
             "2015-09-12/2015-09-13"
           ],
@@ -253,7 +253,7 @@
         "type": "query",
         "query": {
           "queryType": "groupBy",
-          "dataSource": "wikiticker",
+          "dataSource": "%%DATASOURCE%%",
           "intervals": [
             "2015-09-12/2015-09-13"
           ],

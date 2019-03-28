@@ -16,10 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.data.input.thrift;
 
 import com.google.common.base.Preconditions;
-import org.apache.commons.codec.binary.Base64;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TDeserializer;
 import org.apache.thrift.TException;
@@ -84,7 +85,7 @@ public class ThriftDeserialization
       return EMPTY_BYTES;
     }
     final byte last = src[src.length - 1];
-    return (0 == last || '}' == last) ? src : Base64.decodeBase64(src);
+    return (0 == last || '}' == last) ? src : StringUtils.decodeBase64(src);
   }
 
   /**

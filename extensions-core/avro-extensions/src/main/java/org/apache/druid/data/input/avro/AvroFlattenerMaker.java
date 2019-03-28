@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -139,6 +140,9 @@ public class AvroFlattenerMaker implements ObjectFlatteners.FlattenerMaker<Gener
     }
     if (field instanceof Utf8) {
       return field.toString();
+    }
+    if (field instanceof List) {
+      return ((List) field).stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
     return field;
   }

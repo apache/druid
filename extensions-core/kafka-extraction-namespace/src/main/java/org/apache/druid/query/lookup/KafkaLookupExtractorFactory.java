@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -184,7 +185,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
       cacheHandler = cacheManager.createCache();
-      final Map<String, String> map = cacheHandler.getCache();
+      final ConcurrentMap<String, String> map = cacheHandler.getCache();
       mapRef.set(map);
       // Enable publish-subscribe
       kafkaProperties.setProperty("auto.offset.reset", "smallest");
@@ -261,7 +262,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               }
             }
           },
-          MoreExecutors.sameThreadExecutor()
+          Execs.directExecutor()
       );
       this.future = future;
       final Stopwatch stopwatch = Stopwatch.createStarted();

@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.firehose.rocketmq;
 
 import com.alibaba.rocketmq.client.Validators;
@@ -403,6 +404,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<InputRowParser<B
         this.requestsWrite.add(request);
         if (!hasNotified) {
           hasNotified = true;
+          // No need to use notifyAll here since extended class com.alibaba.rocketmq.common.ServiceThread handles it
           notify();
         }
       }

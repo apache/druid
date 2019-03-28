@@ -19,7 +19,6 @@
 
 package org.apache.druid.cli;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -29,6 +28,7 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.utils.JvmUtils;
 
 import java.util.List;
 import java.util.Properties;
@@ -68,7 +68,7 @@ public abstract class GuiceRunnable implements Runnable
       return Initialization.makeInjectorWithModules(baseInjector, getModules());
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -79,10 +79,11 @@ public abstract class GuiceRunnable implements Runnable
       final StartupLoggingConfig startupLoggingConfig = injector.getInstance(StartupLoggingConfig.class);
 
       log.info(
-          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d].",
-          Runtime.getRuntime().availableProcessors(),
-          Runtime.getRuntime().totalMemory(),
-          Runtime.getRuntime().maxMemory()
+          "Starting up with processors[%,d], memory[%,d], maxMemory[%,d], directMemory[%,d].",
+          JvmUtils.getRuntimeInfo().getAvailableProcessors(),
+          JvmUtils.getRuntimeInfo().getTotalHeapSizeBytes(),
+          JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
+          JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes()
       );
 
       if (startupLoggingConfig.isLogProperties()) {
@@ -112,7 +113,7 @@ public abstract class GuiceRunnable implements Runnable
       return lifecycle;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 }

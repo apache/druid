@@ -22,7 +22,6 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -45,9 +44,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -67,7 +66,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final AtomicLong counter = new AtomicLong(0);
 
   private final Set<SegmentZNode> availableZNodes = new ConcurrentSkipListSet<SegmentZNode>();
-  private final Map<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
+  private final ConcurrentMap<DataSegment, SegmentZNode> segmentLookup = new ConcurrentHashMap<>();
   private final Function<DataSegment, DataSegment> segmentTransformer;
 
   private final ChangeRequestHistory<DataSegmentChangeRequest> changes = new ChangeRequestHistory();
@@ -115,13 +114,18 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   public void announceSegment(DataSegment segment) throws IOException
   {
     if (segmentLookup.containsKey(segment)) {
-      log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getIdentifier());
+      log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
       return;
     }
 
-    DataSegment toAnnounce = segmentTransformer.apply(segment);
-
     synchronized (lock) {
+      if (segmentLookup.containsKey(segment)) {
+        log.info("Skipping announcement of segment [%s]. Announcement exists already.", segment.getId());
+        return;
+      }
+
+      DataSegment toAnnounce = segmentTransformer.apply(segment);
+
       changes.addChangeRequest(new SegmentChangeRequestLoad(toAnnounce));
 
       if (config.isSkipSegmentAnnouncementOnZk()) {
@@ -145,7 +149,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
             log.info(
                 "Announcing segment[%s] at existing path[%s]",
-                toAnnounce.getIdentifier(),
+                toAnnounce.getId(),
                 availableZNode.getPath()
             );
             announcer.update(availableZNode.getPath(), availableZNode.getBytes());
@@ -171,7 +175,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
         availableZNode.addSegment(toAnnounce);
 
-        log.info("Announcing segment[%s] at new path[%s]", toAnnounce.getIdentifier(), availableZNode.getPath());
+        log.info("Announcing segment[%s] at new path[%s]", toAnnounce.getId(), availableZNode.getPath());
         announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
         segmentLookup.put(toAnnounce, availableZNode);
         availableZNodes.add(availableZNode);
@@ -186,7 +190,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       final SegmentZNode segmentZNode = segmentLookup.remove(segment);
 
       if (segmentZNode == null) {
-        log.warn("No path to unannounce segment[%s]", segment.getIdentifier());
+        log.warn("No path to unannounce segment[%s]", segment.getId());
         return;
       }
 
@@ -198,7 +202,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
 
       segmentZNode.removeSegment(segment);
 
-      log.info("Unannouncing segment[%s] at path[%s]", segment.getIdentifier(), segmentZNode.getPath());
+      log.info("Unannouncing segment[%s] at path[%s]", segment.getId(), segmentZNode.getPath());
       if (segmentZNode.getCount() == 0) {
         availableZNodes.remove(segmentZNode);
         announcer.unannounce(segmentZNode.getPath());
@@ -223,7 +227,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       for (DataSegment ds : segments) {
 
         if (segmentLookup.containsKey(ds)) {
-          log.info("Skipping announcement of segment [%s]. Announcement exists already.", ds.getIdentifier());
+          log.info("Skipping announcement of segment [%s]. Announcement exists already.", ds.getId());
           return;
         }
 
@@ -252,7 +256,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
           byteSize = 0;
         }
 
-        log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), segmentZNode.getPath());
+        log.info("Announcing segment[%s] at path[%s]", segment.getId(), segmentZNode.getPath());
         segmentLookup.put(segment, segmentZNode);
         batch.add(segment);
         count++;
@@ -364,7 +368,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         );
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -378,7 +382,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.remove(segment);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count++;
@@ -394,7 +398,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.removeAll(segments);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count += segments.size();
@@ -410,7 +414,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       }
       catch (Exception e) {
         zkSegments.add(segment);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
 
       count--;

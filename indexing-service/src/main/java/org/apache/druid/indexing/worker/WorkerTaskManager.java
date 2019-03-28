@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.IndexingService;
@@ -69,7 +68,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * This class manages the list of tasks assigned to this worker.
- *
+ * <p>
  * It persists the list of assigned and completed tasks on disk. assigned task from disk is deleted as soon as it
  * starts running and completed task on disk is deleted based on a periodic schedule where overlord is asked for
  * active tasks to see which completed tasks are safe to delete.
@@ -88,8 +87,8 @@ public abstract class WorkerTaskManager
 
   // ZK_CLEANUP_TODO : these are marked protected to be used in subclass WorkerTaskMonitor that updates ZK.
   // should be marked private alongwith WorkerTaskMonitor removal.
-  protected final Map<String, TaskDetails> runningTasks = new ConcurrentHashMap<>();
-  protected final Map<String, TaskAnnouncement> completedTasks = new ConcurrentHashMap<>();
+  protected final ConcurrentMap<String, TaskDetails> runningTasks = new ConcurrentHashMap<>();
+  protected final ConcurrentMap<String, TaskAnnouncement> completedTasks = new ConcurrentHashMap<>();
 
   private final ChangeRequestHistory<WorkerHistoryItem> changeHistory = new ChangeRequestHistory<>();
 
@@ -226,7 +225,7 @@ public abstract class WorkerTaskManager
             // do nothing
           }
         },
-        MoreExecutors.sameThreadExecutor()
+        Execs.directExecutor()
     );
   }
 
@@ -456,9 +455,12 @@ public abstract class WorkerTaskManager
               );
               if (fullResponseHolder.getStatus().getCode() == 200) {
                 String responseContent = fullResponseHolder.getContent();
-                taskStatusesFromOverlord = jsonMapper.readValue(responseContent, new TypeReference<Map<String, TaskStatus>>()
-                {
-                });
+                taskStatusesFromOverlord = jsonMapper.readValue(
+                    responseContent,
+                    new TypeReference<Map<String, TaskStatus>>()
+                    {
+                    }
+                );
                 log.debug("Received completed task status response [%s].", responseContent);
               } else if (fullResponseHolder.getStatus().getCode() == 404) {
                 // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
@@ -516,7 +518,7 @@ public abstract class WorkerTaskManager
         TimeUnit.MINUTES
     );
   }
-  
+
   public void workerEnabled()
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.SECONDS), "not started");
@@ -717,5 +719,6 @@ public abstract class WorkerTaskManager
   //in Overlord as well as MiddleManagers then WorkerTaskMonitor should be deleted, this class should no longer be abstract
   //and the methods below should be removed.
   protected abstract void taskStarted(String taskId);
+
   protected abstract void taskAnnouncementChanged(TaskAnnouncement announcement);
 }

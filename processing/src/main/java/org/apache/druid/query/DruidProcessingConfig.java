@@ -20,17 +20,57 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.utils.JvmUtils;
 import org.skife.config.Config;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class DruidProcessingConfig extends ExecutorServiceConfig implements ColumnConfig
 {
+  private static final Logger log = new Logger(DruidProcessingConfig.class);
+
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
+  public static final int DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = -1;
+  public static final int MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES = 1024 * 1024 * 1024;
+
+  private AtomicReference<Integer> computedBufferSizeBytes = new AtomicReference<>();
 
   @Config({"druid.computation.buffer.size", "${base_path}.buffer.sizeBytes"})
+  public int intermediateComputeSizeBytesConfigured()
+  {
+    return DEFAULT_PROCESSING_BUFFER_SIZE_BYTES;
+  }
+
   public int intermediateComputeSizeBytes()
   {
-    return 1024 * 1024 * 1024;
+    int sizeBytesConfigured = intermediateComputeSizeBytesConfigured();
+    if (sizeBytesConfigured != DEFAULT_PROCESSING_BUFFER_SIZE_BYTES) {
+      return sizeBytesConfigured;
+    } else if (computedBufferSizeBytes.get() != null) {
+      return computedBufferSizeBytes.get();
+    }
+
+    long directSizeBytes = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+
+    int numProcessingThreads = getNumThreads();
+    int numMergeBuffers = getNumMergeBuffers();
+    int totalNumBuffers = numMergeBuffers + numProcessingThreads;
+    int sizePerBuffer = (int) ((double) directSizeBytes / (double) (totalNumBuffers + 1));
+
+    final int computedSizePerBuffer = Math.min(sizePerBuffer, MAX_DEFAULT_PROCESSING_BUFFER_SIZE_BYTES);
+    if (computedBufferSizeBytes.compareAndSet(null, computedSizePerBuffer)) {
+      log.info(
+          "Auto sizing buffers to [%,d] bytes each for [%,d] processing and [%,d] merge buffers " +
+          "out of [%,d] max direct memory",
+          computedSizePerBuffer,
+          numProcessingThreads,
+          numMergeBuffers,
+          directSizeBytes
+      );
+    }
+    return computedSizePerBuffer;
   }
 
   @Config({"druid.computation.buffer.poolCacheMaxCount", "${base_path}.buffer.poolCacheMaxCount"})

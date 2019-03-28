@@ -23,7 +23,6 @@ import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.carrotsearch.junitbenchmarks.Clock;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
@@ -171,12 +170,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
     @Override
     protected AddToFactsResult addToFacts(
-        AggregatorFactory[] metrics,
-        boolean deserializeComplexMetrics,
-        boolean reportParseExceptions,
         InputRow row,
-        AtomicInteger numEntries,
-        AtomicLong sizeInBytes,
         IncrementalIndexRow key,
         ThreadLocal<InputRow> rowContainer,
         Supplier<InputRow> rowSupplier,
@@ -187,7 +181,9 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
       final Integer priorIdex = getFacts().getPriorIndex(key);
 
       Aggregator[] aggs;
-
+      final AggregatorFactory[] metrics = getMetrics();
+      final AtomicInteger numEntries = getNumEntries();
+      final AtomicLong sizeInBytes = getBytesInMemory();
       if (null != priorIdex) {
         aggs = indexedMap.get(priorIdex);
       } else {
@@ -196,7 +192,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         for (int i = 0; i < metrics.length; i++) {
           final AggregatorFactory agg = metrics[i];
           aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+              makeColumnSelectorFactory(agg, rowSupplier, getDeserializeComplexMetrics())
           );
         }
         Integer rowIndex;
@@ -233,7 +229,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
           }
           catch (ParseException e) {
             // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            if (reportParseExceptions) {
+            if (getReportParseExceptions()) {
               throw e;
             }
           }
@@ -350,7 +346,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     final List<ListenableFuture<?>> queryFutures = new ArrayList<>();
     final Segment incrementalIndexSegment = new IncrementalIndexSegment(incrementalIndex, null);
     final QueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
-        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()),
         new TimeseriesQueryEngine(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
@@ -372,7 +368,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                     }
                   }
                   catch (IndexSizeExceededException e) {
-                    throw Throwables.propagate(e);
+                    throw new RuntimeException(e);
                   }
                   currentlyRunning.decrementAndGet();
                   someoneRan.set(true);

@@ -25,15 +25,18 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.client.BatchServerInventoryView;
+import org.apache.druid.client.CoordinatorSegmentWatcherConfig;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.curator.CuratorTestBase;
+import org.apache.druid.curator.CuratorUtils;
 import org.apache.druid.curator.discovery.NoopServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -52,6 +55,7 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.DeadlockDetectingTimeout;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
@@ -71,7 +75,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * This tests zookeeper specific coordinator/load queue/historical interactions, such as moving segments by the balancer
@@ -323,10 +326,10 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     // for the destination and unannouncing from source server when noticing a drop request
 
     sourceLoadQueueChildrenCache.getListenable().addListener(
-        (curatorFramework, pathChildrenCacheEvent) -> {
-          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.INITIALIZED)) {
+        (CuratorFramework curatorFramework, PathChildrenCacheEvent event) -> {
+          if (event.getType().equals(PathChildrenCacheEvent.Type.INITIALIZED)) {
             srcCountdown.countDown();
-          } else if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+          } else if (CuratorUtils.isChildAdded(event)) {
             //Simulate source server dropping segment
             unannounceSegmentFromBatchForServer(source, segmentToMove, sourceSegKeys.get(2), zkPathsConfig);
           }
@@ -334,10 +337,10 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     );
 
     destinationLoadQueueChildrenCache.getListenable().addListener(
-        (curatorFramework, pathChildrenCacheEvent) -> {
-          if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.INITIALIZED)) {
+        (CuratorFramework curatorFramework, PathChildrenCacheEvent event) -> {
+          if (event.getType().equals(PathChildrenCacheEvent.Type.INITIALIZED)) {
             destCountdown.countDown();
-          } else if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+          } else if (CuratorUtils.isChildAdded(event)) {
             //Simulate destination server loading segment
             announceBatchSegmentsForServer(dest, ImmutableSet.of(segmentToMove), zkPathsConfig, jsonMapper);
           }
@@ -359,9 +362,9 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     segmentAddedLatch = new CountDownLatch(1);
 
     ImmutableDruidDataSource druidDataSource = EasyMock.createNiceMock(ImmutableDruidDataSource.class);
-    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyString())).andReturn(sourceSegments.get(2));
+    EasyMock.expect(druidDataSource.getSegment(EasyMock.anyObject(SegmentId.class))).andReturn(sourceSegments.get(2));
     EasyMock.replay(druidDataSource);
-    EasyMock.expect(databaseSegmentManager.getInventoryValue(EasyMock.anyString())).andReturn(druidDataSource);
+    EasyMock.expect(databaseSegmentManager.getDataSource(EasyMock.anyString())).andReturn(druidDataSource);
     EasyMock.replay(databaseSegmentManager);
 
     coordinator.moveSegment(
@@ -375,18 +378,18 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     // remove load queue key from destination server to trigger adding drop to load queue
-    curator.delete().guaranteed().forPath(ZKPaths.makePath(DESTINATION_LOAD_PATH, segmentToMove.getIdentifier()));
+    curator.delete().guaranteed().forPath(ZKPaths.makePath(DESTINATION_LOAD_PATH, segmentToMove.getId().toString()));
 
     // wait for drop
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
     // clean up drop from load queue
-    curator.delete().guaranteed().forPath(ZKPaths.makePath(SOURCE_LOAD_PATH, segmentToMove.getIdentifier()));
+    curator.delete().guaranteed().forPath(ZKPaths.makePath(SOURCE_LOAD_PATH, segmentToMove.getId().toString()));
 
-    List<DruidServer> servers = serverView.getInventory().stream().collect(Collectors.toList());
+    List<DruidServer> servers = new ArrayList<>(serverView.getInventory());
 
-    Assert.assertEquals(2, servers.get(0).getSegments().size());
-    Assert.assertEquals(2, servers.get(1).getSegments().size());
+    Assert.assertEquals(2, servers.get(0).getTotalSegments());
+    Assert.assertEquals(2, servers.get(1).getTotalSegments());
   }
 
   private static class TestDruidLeaderSelector implements DruidLeaderSelector
@@ -472,7 +475,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
       }
     };
 
-    serverView = new CoordinatorServerView(baseView);
+    serverView = new CoordinatorServerView(baseView, new CoordinatorSegmentWatcherConfig());
 
     baseView.start();
 

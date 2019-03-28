@@ -30,7 +30,7 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>0.13.0-incubating-SNAPSHOT</version>
+    <version>0.15.0-incubating-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -79,6 +79,10 @@
         <exclusion>
           <groupId>org.apache.thrift</groupId>
           <artifactId>libthrift</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>hadoop-lzo</artifactId>
+          <groupId>com.hadoop.gplcompression</groupId>
         </exclusion>
       </exclusions>
     </dependency>

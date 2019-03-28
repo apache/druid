@@ -21,8 +21,12 @@ package org.apache.druid.sql.calcite.expression;
 
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlOperator;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 import org.apache.druid.sql.calcite.table.RowSignature;
+
+import javax.annotation.Nullable;
 
 public interface SqlOperatorConversion
 {
@@ -44,9 +48,25 @@ public interface SqlOperatorConversion
    *
    * @see Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)
    */
-  DruidExpression toDruidExpression(
+  @Nullable
+  DruidExpression toDruidExpression(PlannerContext plannerContext, RowSignature rowSignature, RexNode rexNode);
+
+  /**
+   * Returns a Druid Aggregation corresponding to a SQL {@link SqlOperator} used to filter rows
+   *
+   * @param plannerContext   SQL planner context
+   * @param querySignature   signature of the rows being aggregated and expression column references
+   * @param rexNode          filter expression rex node
+   *
+   * @return filter, or null if the call cannot be translated
+   */
+  @Nullable
+  default DimFilter toDruidFilter(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
+      DruidQuerySignature querySignature,
       RexNode rexNode
-  );
+  )
+  {
+    return null;
+  }
 }

@@ -21,7 +21,6 @@ package org.apache.druid.data.input.thrift;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
@@ -29,6 +28,7 @@ import org.apache.druid.data.input.impl.JavaScriptParseSpec;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -109,7 +109,7 @@ public class ThriftInputRowParserTest
 
     // 2. binary + base64
     serializer = new TSerializer(new TBinaryProtocol.Factory());
-    serializationAndTest(parser, Base64.encodeBase64(serializer.serialize(book)));
+    serializationAndTest(parser, StringUtils.encodeBase64(serializer.serialize(book)));
 
     // 3. json
     serializer = new TSerializer(new TJSONProtocol.Factory());

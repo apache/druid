@@ -58,7 +58,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -91,7 +93,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -100,7 +101,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -120,7 +120,6 @@ public class OverlordResource
 
   private AtomicReference<WorkerBehaviorConfig> workerConfigRef = null;
   private static final List API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
-
 
   @Inject
   public OverlordResource(
@@ -338,8 +337,9 @@ public class OverlordResource
   }
 
   @POST
-  @Path("/task/{dataSource}/shutdownAllTasks")
+  @Path("/datasources/{dataSource}/shutdownAllTasks")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response shutdownTasksForDataSource(@PathParam("dataSource") final String dataSource)
   {
     return asLeaderWith(
@@ -350,10 +350,14 @@ public class OverlordResource
           public Response apply(TaskQueue taskQueue)
           {
             final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
-            for (final TaskInfo<Task, TaskStatus> task : tasks) {
-              taskQueue.shutdown(task.getId(), "Shutdown request from user");
+            if (tasks.isEmpty()) {
+              return Response.status(Status.NOT_FOUND).build();
+            } else {
+              for (final TaskInfo<Task, TaskStatus> task : tasks) {
+                taskQueue.shutdown(task.getId(), "Shutdown request from user");
+              }
+              return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
             }
-            return Response.ok(ImmutableMap.of("dataSource", dataSource)).build();
           }
         }
     );
@@ -478,9 +482,9 @@ public class OverlordResource
               retMap = new HashMap<>();
               retMap.put("result", ret);
             }
-            catch (IOException e) {
+            catch (Exception e) {
               log.warn(e, "Failed to perform task action");
-              return Response.serverError().build();
+              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
             }
 
             return Response.ok().entity(retMap).build();
@@ -495,100 +499,6 @@ public class OverlordResource
   public Response getWaitingTasks(@Context final HttpServletRequest req)
   {
     return getTasks("waiting", null, null, null, null, req);
-  }
-
-  private static class AnyTask extends TaskRunnerWorkItem
-  {
-    private final String taskType;
-    private final String dataSource;
-    private final TaskState taskState;
-    private final RunnerTaskState runnerTaskState;
-    private final DateTime createdTime;
-    private final DateTime queueInsertionTime;
-    private final TaskLocation taskLocation;
-
-    AnyTask(
-        String taskId,
-        String taskType,
-        ListenableFuture<TaskStatus> result,
-        String dataSource,
-        TaskState state,
-        RunnerTaskState runnerState,
-        DateTime createdTime,
-        DateTime queueInsertionTime,
-        TaskLocation taskLocation
-    )
-    {
-      super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
-      this.taskType = taskType;
-      this.dataSource = dataSource;
-      this.taskState = state;
-      this.runnerTaskState = runnerState;
-      this.createdTime = createdTime;
-      this.queueInsertionTime = queueInsertionTime;
-      this.taskLocation = taskLocation;
-    }
-
-    @Override
-    public TaskLocation getLocation()
-    {
-      return taskLocation;
-    }
-
-    @Override
-    public String getTaskType()
-    {
-      return taskType;
-    }
-
-    @Override
-    public String getDataSource()
-    {
-      return dataSource;
-    }
-
-    public TaskState getTaskState()
-    {
-      return taskState;
-    }
-
-    public RunnerTaskState getRunnerTaskState()
-    {
-      return runnerTaskState;
-    }
-
-    @Override
-    public DateTime getCreatedTime()
-    {
-      return createdTime;
-    }
-
-    @Override
-    public DateTime getQueueInsertionTime()
-    {
-      return queueInsertionTime;
-    }
-
-    public AnyTask withTaskState(
-        TaskState newTaskState,
-        RunnerTaskState runnerState,
-        DateTime createdTime,
-        DateTime queueInsertionTime,
-        TaskLocation taskLocation
-    )
-    {
-      return new AnyTask(
-          getTaskId(),
-          getTaskType(),
-          getResult(),
-          getDataSource(),
-          newTaskState,
-          runnerState,
-          createdTime,
-          queueInsertionTime,
-          taskLocation
-      );
-    }
   }
 
   @GET
@@ -627,7 +537,7 @@ public class OverlordResource
   public Response getTasks(
       @QueryParam("state") final String state,
       @QueryParam("datasource") final String dataSource,
-      @QueryParam("interval") final String interval,
+      @QueryParam("createdTimeInterval") final String createdTimeInterval,
       @QueryParam("max") final Integer maxCompletedTasks,
       @QueryParam("type") final String type,
       @Context final HttpServletRequest req
@@ -692,13 +602,13 @@ public class OverlordResource
 
     //checking for complete tasks first to avoid querying active tasks if user only wants complete tasks
     if (state == null || "complete".equals(StringUtils.toLowerCase(state))) {
-      Duration duration = null;
-      if (interval != null) {
-        final Interval theInterval = Intervals.of(interval.replace('_', '/'));
-        duration = theInterval.toDuration();
+      Duration createdTimeDuration = null;
+      if (createdTimeInterval != null) {
+        final Interval theInterval = Intervals.of(StringUtils.replace(createdTimeInterval, "_", "/"));
+        createdTimeDuration = theInterval.toDuration();
       }
       final List<TaskInfo<Task, TaskStatus>> taskInfoList =
-          taskStorageQueryAdapter.getRecentlyCompletedTaskInfo(maxCompletedTasks, duration, dataSource);
+          taskStorageQueryAdapter.getCompletedTaskInfoByCreatedTimeDuration(maxCompletedTasks, createdTimeDuration, dataSource);
       final List<TaskStatusPlus> completedTasks = taskInfoList.stream()
                                                               .map(completeTaskTransformFunc::apply)
                                                               .collect(Collectors.toList());
@@ -754,22 +664,146 @@ public class OverlordResource
     return Response.ok(authorizedList).build();
   }
 
-  private static BiFunction<TaskInfo<Task, TaskStatus>, RunnerTaskState, TaskStatusPlus> newTaskInfo2TaskStatusPlusFn()
+  @DELETE
+  @Path("/pendingSegments/{dataSource}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response killPendingSegments(
+      @PathParam("dataSource") String dataSource,
+      @QueryParam("interval") String deleteIntervalString,
+      @Context HttpServletRequest request
+  )
   {
-    return (taskInfo, runnerTaskState) -> new TaskStatusPlus(
-        taskInfo.getId(),
-        taskInfo.getTask() == null ? null : taskInfo.getTask().getType(),
-        taskInfo.getCreatedTime(),
-        // Would be nice to include the real queue insertion time, but the
-        // TaskStorage API doesn't yet allow it.
-        DateTimes.EPOCH,
-        taskInfo.getStatus().getStatusCode(),
-        runnerTaskState,
-        taskInfo.getStatus().getDuration(),
-        TaskLocation.unknown(),
-        taskInfo.getDataSource(),
-        taskInfo.getStatus().getErrorMsg()
+    final Interval deleteInterval = Intervals.of(deleteIntervalString);
+    // check auth for dataSource
+    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+        request,
+        ImmutableList.of(
+            new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE)
+        ),
+        authorizerMapper
     );
+
+    if (!authResult.isAllowed()) {
+      throw new ForbiddenException(authResult.getMessage());
+    }
+
+    if (taskMaster.isLeader()) {
+      final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
+      return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
+    } else {
+      return Response.status(Status.SERVICE_UNAVAILABLE).build();
+    }
+  }
+
+  @GET
+  @Path("/workers")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getWorkers()
+  {
+    return asLeaderWith(
+        taskMaster.getTaskRunner(),
+        new Function<TaskRunner, Response>()
+        {
+          @Override
+          public Response apply(TaskRunner taskRunner)
+          {
+            if (taskRunner instanceof WorkerTaskRunner) {
+              return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
+            } else {
+              log.debug(
+                  "Task runner [%s] of type [%s] does not support listing workers",
+                  taskRunner,
+                  taskRunner.getClass().getCanonicalName()
+              );
+              return Response.serverError()
+                             .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
+                             .build();
+            }
+          }
+        }
+    );
+  }
+
+  @GET
+  @Path("/scaling")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getScalingState()
+  {
+    // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.
+    final Optional<ScalingStats> rms = taskMaster.getScalingStats();
+    if (rms.isPresent()) {
+      return Response.ok(rms.get()).build();
+    } else {
+      return Response.ok().build();
+    }
+  }
+
+  @GET
+  @Path("/task/{taskid}/log")
+  @Produces(HttpMediaType.TEXT_PLAIN_UTF8)
+  @ResourceFilters(TaskResourceFilter.class)
+  public Response doGetLog(
+      @PathParam("taskid") final String taskid,
+      @QueryParam("offset") @DefaultValue("0") final long offset
+  )
+  {
+    try {
+      final Optional<ByteSource> stream = taskLogStreamer.streamTaskLog(taskid, offset);
+      if (stream.isPresent()) {
+        return Response.ok(stream.get().openStream()).build();
+      } else {
+        return Response.status(Response.Status.NOT_FOUND)
+                       .entity(
+                           "No log was found for this task. "
+                           + "The task may not exist, or it may not have begun running yet."
+                       )
+                       .build();
+      }
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to stream log for task %s", taskid);
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  @GET
+  @Path("/task/{taskid}/reports")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(TaskResourceFilter.class)
+  public Response doGetReports(
+      @PathParam("taskid") final String taskid
+  )
+  {
+    try {
+      final Optional<ByteSource> stream = taskLogStreamer.streamTaskReports(taskid);
+      if (stream.isPresent()) {
+        return Response.ok(stream.get().openStream()).build();
+      } else {
+        return Response.status(Response.Status.NOT_FOUND)
+                       .entity(
+                           "No task reports were found for this task. "
+                           + "The task may not exist, or it may not have completed yet."
+                       )
+                       .build();
+      }
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to stream task reports for task %s", taskid);
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  private <T> Response asLeaderWith(Optional<T> x, Function<T, Response> f)
+  {
+    if (x.isPresent()) {
+      return f.apply(x.get());
+    } else {
+      // Encourage client to try again soon, when we'll likely have a redirect set up
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+    }
   }
 
   private List<AnyTask> filterActiveTasks(
@@ -868,168 +902,6 @@ public class OverlordResource
     return allTasks;
   }
 
-  @DELETE
-  @Path("/pendingSegments/{dataSource}")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response killPendingSegments(
-      @PathParam("dataSource") String dataSource,
-      @QueryParam("interval") String deleteIntervalString,
-      @Context HttpServletRequest request
-  )
-  {
-    final Interval deleteInterval = Intervals.of(deleteIntervalString);
-    // check auth for dataSource
-    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-        request,
-        ImmutableList.of(
-            new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.READ),
-            new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE)
-        ),
-        authorizerMapper
-    );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.getMessage());
-    }
-
-    if (taskMaster.isLeader()) {
-      final int numDeleted = indexerMetadataStorageAdapter.deletePendingSegments(dataSource, deleteInterval);
-      return Response.ok().entity(ImmutableMap.of("numDeleted", numDeleted)).build();
-    } else {
-      return Response.status(Status.SERVICE_UNAVAILABLE).build();
-    }
-  }
-
-  @GET
-  @Path("/workers")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
-  public Response getWorkers()
-  {
-    return asLeaderWith(
-        taskMaster.getTaskRunner(),
-        new Function<TaskRunner, Response>()
-        {
-          @Override
-          public Response apply(TaskRunner taskRunner)
-          {
-            if (taskRunner instanceof WorkerTaskRunner) {
-              return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
-            } else {
-              log.debug(
-                  "Task runner [%s] of type [%s] does not support listing workers",
-                  taskRunner,
-                  taskRunner.getClass().getCanonicalName()
-              );
-              return Response.serverError()
-                             .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
-                             .build();
-            }
-          }
-        }
-    );
-  }
-
-  @GET
-  @Path("/scaling")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
-  public Response getScalingState()
-  {
-    // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.
-    final Optional<ScalingStats> rms = taskMaster.getScalingStats();
-    if (rms.isPresent()) {
-      return Response.ok(rms.get()).build();
-    } else {
-      return Response.ok().build();
-    }
-  }
-
-  @GET
-  @Path("/task/{taskid}/log")
-  @Produces("text/plain")
-  @ResourceFilters(TaskResourceFilter.class)
-  public Response doGetLog(
-      @PathParam("taskid") final String taskid,
-      @QueryParam("offset") @DefaultValue("0") final long offset
-  )
-  {
-    try {
-      final Optional<ByteSource> stream = taskLogStreamer.streamTaskLog(taskid, offset);
-      if (stream.isPresent()) {
-        return Response.ok(stream.get().openStream()).build();
-      } else {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(
-                           "No log was found for this task. "
-                           + "The task may not exist, or it may not have begun running yet."
-                       )
-                       .build();
-      }
-    }
-    catch (Exception e) {
-      log.warn(e, "Failed to stream log for task %s", taskid);
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-    }
-  }
-
-  @GET
-  @Path("/task/{taskid}/reports")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(TaskResourceFilter.class)
-  public Response doGetReports(
-      @PathParam("taskid") final String taskid
-  )
-  {
-    try {
-      final Optional<ByteSource> stream = taskLogStreamer.streamTaskReports(taskid);
-      if (stream.isPresent()) {
-        return Response.ok(stream.get().openStream()).build();
-      } else {
-        return Response.status(Response.Status.NOT_FOUND)
-                       .entity(
-                           "No task reports were found for this task. "
-                           + "The task may not exist, or it may not have completed yet."
-                       )
-                       .build();
-      }
-    }
-    catch (Exception e) {
-      log.warn(e, "Failed to stream task reports for task %s", taskid);
-      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
-    }
-  }
-
-  @GET
-  @Path("/dataSources/{dataSource}")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response getRunningTasksByDataSource(@PathParam("dataSource") String dataSource,
-      @Context HttpServletRequest request)
-  {
-    Optional<TaskRunner> ts = taskMaster.getTaskRunner();
-    if (!ts.isPresent()) {
-      return Response.status(Response.Status.NOT_FOUND).entity("No tasks are running").build();
-    }
-    Collection<? extends TaskRunnerWorkItem> runningTasks = ts.get().getRunningTasks();
-    if (runningTasks == null || runningTasks.isEmpty()) {
-      return Response.status(Response.Status.NOT_FOUND)
-          .entity("No running tasks found for the datasource : " + dataSource).build();
-    }
-    List<TaskRunnerWorkItem> taskRunnerWorkItemList = runningTasks.stream()
-        .filter(task -> dataSource.equals(task.getDataSource())).collect(Collectors.toList());
-    return Response.ok(taskRunnerWorkItemList).build();
-  }
-
-  private <T> Response asLeaderWith(Optional<T> x, Function<T, Response> f)
-  {
-    if (x.isPresent()) {
-      return f.apply(x.get());
-    } else {
-      // Encourage client to try again soon, when we'll likely have a redirect set up
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
-    }
-  }
-
   private List<TaskStatusPlus> securedTaskStatusPlus(
       List<TaskStatusPlus> collectionToFilter,
       @Nullable String dataSource,
@@ -1070,5 +942,99 @@ public class OverlordResource
             authorizerMapper
         )
     );
+  }
+
+  private static class AnyTask extends TaskRunnerWorkItem
+  {
+    private final String taskType;
+    private final String dataSource;
+    private final TaskState taskState;
+    private final RunnerTaskState runnerTaskState;
+    private final DateTime createdTime;
+    private final DateTime queueInsertionTime;
+    private final TaskLocation taskLocation;
+
+    AnyTask(
+        String taskId,
+        String taskType,
+        ListenableFuture<TaskStatus> result,
+        String dataSource,
+        TaskState state,
+        RunnerTaskState runnerState,
+        DateTime createdTime,
+        DateTime queueInsertionTime,
+        TaskLocation taskLocation
+    )
+    {
+      super(taskId, result, DateTimes.EPOCH, DateTimes.EPOCH);
+      this.taskType = taskType;
+      this.dataSource = dataSource;
+      this.taskState = state;
+      this.runnerTaskState = runnerState;
+      this.createdTime = createdTime;
+      this.queueInsertionTime = queueInsertionTime;
+      this.taskLocation = taskLocation;
+    }
+
+    @Override
+    public TaskLocation getLocation()
+    {
+      return taskLocation;
+    }
+
+    @Override
+    public String getTaskType()
+    {
+      return taskType;
+    }
+
+    @Override
+    public String getDataSource()
+    {
+      return dataSource;
+    }
+
+    public TaskState getTaskState()
+    {
+      return taskState;
+    }
+
+    public RunnerTaskState getRunnerTaskState()
+    {
+      return runnerTaskState;
+    }
+
+    @Override
+    public DateTime getCreatedTime()
+    {
+      return createdTime;
+    }
+
+    @Override
+    public DateTime getQueueInsertionTime()
+    {
+      return queueInsertionTime;
+    }
+
+    public AnyTask withTaskState(
+        TaskState newTaskState,
+        RunnerTaskState runnerState,
+        DateTime createdTime,
+        DateTime queueInsertionTime,
+        TaskLocation taskLocation
+    )
+    {
+      return new AnyTask(
+          getTaskId(),
+          getTaskType(),
+          getResult(),
+          getDataSource(),
+          newTaskState,
+          runnerState,
+          createdTime,
+          queueInsertionTime,
+          taskLocation
+      );
+    }
   }
 }

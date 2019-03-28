@@ -19,7 +19,8 @@
 
 package org.apache.druid.benchmark;
 
-import com.google.common.io.Files;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.data.VSizeLongSerde;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -41,6 +42,7 @@ import java.io.Writer;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -78,26 +80,29 @@ public class VSizeSerdeBenchmark
     // to construct a heapByteBuffer since they have different performance
     File base = new File(this.getClass().getClassLoader().getResource("").toURI());
     dummy = new File(base, "dummy");
-    try (Writer writer = java.nio.file.Files.newBufferedWriter(dummy.toPath(), StandardCharsets.UTF_8)) {
+    try (Writer writer = Files.newBufferedWriter(dummy.toPath(), StandardCharsets.UTF_8)) {
       String EMPTY_STRING = "        ";
       for (int i = 0; i < values + 10; i++) {
         writer.write(EMPTY_STRING);
       }
     }
-    ByteBuffer buffer = Files.map(dummy);
-    d1 = VSizeLongSerde.getDeserializer(1, buffer, 10);
-    d2 = VSizeLongSerde.getDeserializer(2, buffer, 10);
-    d4 = VSizeLongSerde.getDeserializer(4, buffer, 10);
-    d8 = VSizeLongSerde.getDeserializer(8, buffer, 10);
-    d12 = VSizeLongSerde.getDeserializer(12, buffer, 10);
-    d16 = VSizeLongSerde.getDeserializer(16, buffer, 10);
-    d20 = VSizeLongSerde.getDeserializer(20, buffer, 10);
-    d24 = VSizeLongSerde.getDeserializer(24, buffer, 10);
-    d32 = VSizeLongSerde.getDeserializer(32, buffer, 10);
-    d40 = VSizeLongSerde.getDeserializer(40, buffer, 10);
-    d48 = VSizeLongSerde.getDeserializer(48, buffer, 10);
-    d56 = VSizeLongSerde.getDeserializer(56, buffer, 10);
-    d64 = VSizeLongSerde.getDeserializer(64, buffer, 10);
+
+    try (MappedByteBufferHandler bufferHandler = FileUtils.map(dummy)) {
+      ByteBuffer buffer = bufferHandler.get();
+      d1 = VSizeLongSerde.getDeserializer(1, buffer, 10);
+      d2 = VSizeLongSerde.getDeserializer(2, buffer, 10);
+      d4 = VSizeLongSerde.getDeserializer(4, buffer, 10);
+      d8 = VSizeLongSerde.getDeserializer(8, buffer, 10);
+      d12 = VSizeLongSerde.getDeserializer(12, buffer, 10);
+      d16 = VSizeLongSerde.getDeserializer(16, buffer, 10);
+      d20 = VSizeLongSerde.getDeserializer(20, buffer, 10);
+      d24 = VSizeLongSerde.getDeserializer(24, buffer, 10);
+      d32 = VSizeLongSerde.getDeserializer(32, buffer, 10);
+      d40 = VSizeLongSerde.getDeserializer(40, buffer, 10);
+      d48 = VSizeLongSerde.getDeserializer(48, buffer, 10);
+      d56 = VSizeLongSerde.getDeserializer(56, buffer, 10);
+      d64 = VSizeLongSerde.getDeserializer(64, buffer, 10);
+    }
   }
 
   @TearDown

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.commons.io.FileUtils;
@@ -113,7 +112,7 @@ public class YeOldePlumberSchool implements PlumberSchool
     );
 
     // Temporary directory to hold spilled segments.
-    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getIdentifier());
+    final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getId().toString());
 
     // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = new HashSet<>();
@@ -205,15 +204,11 @@ public class YeOldePlumberSchool implements PlumberSchool
 
           dataSegmentPusher.push(fileToUpload, segmentToUpload, false);
 
-          log.info(
-              "Uploaded segment[%s]",
-              segmentToUpload.getIdentifier()
-          );
-
+          log.info("Uploaded segment[%s]", segmentToUpload.getId());
         }
         catch (Exception e) {
           log.warn(e, "Failed to merge and upload");
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
         finally {
           try {
@@ -254,7 +249,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           }
           catch (Exception e) {
             log.warn(e, "Failed to spill index[%d]", indexToPersist.getCount());
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
         }
       }

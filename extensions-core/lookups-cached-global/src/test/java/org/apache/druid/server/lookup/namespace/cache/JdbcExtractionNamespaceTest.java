@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -189,7 +188,7 @@ public class JdbcExtractionNamespaceTest
               }
               catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
 
@@ -237,7 +236,7 @@ public class JdbcExtractionNamespaceTest
               lifecycle.start();
             }
             catch (Exception e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
             closer.register(
                 new Closeable()
@@ -276,12 +275,7 @@ public class JdbcExtractionNamespaceTest
         }
     );
 
-    Closeable closeable = () -> {
-      if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
-        throw new IOException("Unable to stop future");
-      }
-    };
-    try (final Closeable c = closeable) {
+    try (final Closeable ignore = () -> setupFuture.cancel(true)) {
       handleRef = setupFuture.get(10, TimeUnit.SECONDS);
     }
     Assert.assertNotNull(handleRef);
@@ -300,7 +294,7 @@ public class JdbcExtractionNamespaceTest
               closer.close();
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         }

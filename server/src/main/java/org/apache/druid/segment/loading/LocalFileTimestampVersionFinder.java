@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.base.Throwables;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.java.util.common.RetryUtils;
 
@@ -31,14 +30,11 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
 
-/**
- * This is implemented explicitly for URIExtractionNamespaceFunctionFactory
- * If you have a use case for this interface beyond URIExtractionNamespaceFunctionFactory please bring it up in the dev list.
- */
 public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
     implements SearchableVersionedDataFinder<URI>
 {
   public static final String URI_SCHEME = "file";
+
   private URI mostRecentInDir(final Path dir, final Pattern pattern)
   {
     long latestModified = Long.MIN_VALUE;
@@ -68,7 +64,8 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
    * Matches based on a pattern in the file name. Returns the file with the latest timestamp.
    *
    * @param uri     If it is a file, then the parent is searched. If it is a directory, then the directory is searched.
-   * @param pattern The matching filter to down-select the file names in the directory of interest. Passing `null` results in matching any file
+   * @param pattern The matching filter to down-select the file names in the directory of interest. Passing `null`
+   *                results in matching any file
    *
    * @return The URI of the most recently modified file which matches the pattern, or `null` if it cannot be found
    */
@@ -90,7 +87,7 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
       if (e instanceof FileNotFoundException) {
         return null;
       }
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

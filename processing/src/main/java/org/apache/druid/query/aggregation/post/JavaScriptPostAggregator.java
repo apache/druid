@@ -28,6 +28,8 @@ import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
@@ -87,8 +89,16 @@ public class JavaScriptPostAggregator implements PostAggregator
   private final String function;
   private final JavaScriptConfig config;
 
-  // This variable is lazily initialized to avoid unnecessary JavaScript compilation during JSON serde
-  private Function fn;
+  /**
+   * The field is declared volatile in order to ensure safe publication of the object
+   * in {@link #compile(String)} without worrying about final modifiers
+   * on the fields of the created object
+   *
+   * @see <a href="https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157">
+   *     https://github.com/apache/incubator-druid/pull/6662#discussion_r237013157</a>
+   */
+  @MonotonicNonNull
+  private volatile Function fn;
 
   @JsonCreator
   public JavaScriptPostAggregator(
@@ -123,7 +133,7 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    checkAndCompileScript();
+    Function fn = getCompiledScript();
     final Object[] args = new Object[fieldNames.size()];
     int i = 0;
     for (String field : fieldNames) {
@@ -136,22 +146,24 @@ public class JavaScriptPostAggregator implements PostAggregator
    * {@link #compute} can be called by multiple threads, so this function should be thread-safe to avoid extra
    * script compilation.
    */
-  private void checkAndCompileScript()
+  @EnsuresNonNull("fn")
+  private Function getCompiledScript()
   {
-    if (fn == null) {
-      // JavaScript configuration should be checked when it's actually used because someone might still want Druid
-      // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
-      Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
+    // JavaScript configuration should be checked when it's actually used because someone might still want Druid
+    // nodes to be able to deserialize JavaScript-based objects even though JavaScript is disabled.
+    Preconditions.checkState(config.isEnabled(), "JavaScript is disabled");
 
-      // Synchronizing here can degrade the performance significantly because this method is called per input row.
-      // However, early compilation of JavaScript functions can occur some memory issues due to unnecessary compilation
-      // involving Java class generation each time, and thus this will be better.
+    Function syncedFn = fn;
+    if (syncedFn == null) {
       synchronized (config) {
-        if (fn == null) {
-          fn = compile(function);
+        syncedFn = fn;
+        if (syncedFn == null) {
+          syncedFn = compile(function);
+          fn = syncedFn;
         }
       }
     }
+    return syncedFn;
   }
 
   @Override

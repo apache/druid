@@ -19,10 +19,9 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
-import com.yahoo.sketches.hll.Union;
 import com.yahoo.sketches.hll.HllSketch;
 import com.yahoo.sketches.hll.TgtHllType;
-
+import com.yahoo.sketches.hll.Union;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -49,7 +48,7 @@ public class HllSketchMergeAggregator implements Aggregator
     this.union = new Union(lgK);
   }
 
-  /*
+  /**
    * This method is synchronized because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently.
    * See https://github.com/druid-io/druid/pull/3956
@@ -66,7 +65,7 @@ public class HllSketchMergeAggregator implements Aggregator
     }
   }
 
-  /*
+  /**
    * This method is synchronized because it can be used during indexing,
    * and Druid can call aggregate() and get() concurrently.
    * See https://github.com/druid-io/druid/pull/3956

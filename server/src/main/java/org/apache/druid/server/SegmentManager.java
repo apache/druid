@@ -171,7 +171,7 @@ public class SegmentManager
           );
 
           if ((entry != null) && (entry.getChunk(segment.getShardSpec().getPartitionNum()) != null)) {
-            log.warn("Told to load a adapter for a segment[%s] that already exists", segment.getIdentifier());
+            log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
             resultSupplier.set(false);
           } else {
             loadedIntervals.add(
@@ -223,6 +223,8 @@ public class SegmentManager
             final PartitionChunk<ReferenceCountingSegment> removed = loadedIntervals.remove(
                 segment.getInterval(),
                 segment.getVersion(),
+                // remove() internally searches for a partitionChunk to remove which is *equal* to the given
+                // partitionChunk. Note that partitionChunk.equals() checks only the partitionNum, but not the object.
                 segment.getShardSpec().createChunk(null)
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
@@ -230,11 +232,11 @@ public class SegmentManager
             if (oldQueryable != null) {
               dataSourceState.removeSegment(segment);
 
-              log.info("Attempting to close segment %s", segment.getIdentifier());
+              log.info("Attempting to close segment %s", segment.getId());
               oldQueryable.close();
             } else {
               log.info(
-                  "Told to delete a queryable on dataSource[%s] for interval[%s] and version [%s] that I don't have.",
+                  "Told to delete a queryable on dataSource[%s] for interval[%s] and version[%s] that I don't have.",
                   dataSourceName,
                   segment.getInterval(),
                   segment.getVersion()

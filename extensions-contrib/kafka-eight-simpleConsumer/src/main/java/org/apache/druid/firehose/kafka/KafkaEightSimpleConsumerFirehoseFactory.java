@@ -46,6 +46,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Deprecated
 public class KafkaEightSimpleConsumerFirehoseFactory implements
     FirehoseFactoryV2<ByteBufferInputRowParser>
 {
@@ -96,7 +97,6 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
         partitionIdList != null && partitionIdList.size() > 0,
         "partitionIdList is null/empty"
     );
-
 
     this.clientId = clientId;
     Preconditions.checkArgument(

@@ -317,7 +317,7 @@ public class QueryGranularityTest
   @Test
   public void testPeriodDaylightSaving()
   {
-    final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
+    final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-04T00:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
@@ -363,7 +363,7 @@ public class QueryGranularityTest
   @Test
   public void testIterableMonth()
   {
-    final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
+    final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-03T10:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
@@ -380,7 +380,7 @@ public class QueryGranularityTest
   @Test
   public void testIterableWeek()
   {
-    final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
+    final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
     final DateTime baseTime = new DateTime("2012-11-03T10:00:00", tz);
     assertSameInterval(
         Lists.newArrayList(
@@ -407,7 +407,7 @@ public class QueryGranularityTest
   @Test
   public void testPeriodTruncateDays()
   {
-    final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
+    final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
     final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
     PeriodGranularity periodOrigin = new PeriodGranularity(
         new Period("P2D"),
@@ -487,7 +487,7 @@ public class QueryGranularityTest
   public void testCompoundPeriodTruncate()
   {
     {
-      final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
+      final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
       final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
       PeriodGranularity periodOrigin = new PeriodGranularity(
           new Period("P1M2D"),
@@ -532,7 +532,7 @@ public class QueryGranularityTest
     }
 
     {
-      final DateTimeZone tz = DateTimes.inferTzfromString("America/Los_Angeles");
+      final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
       final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
       PeriodGranularity periodOrigin = new PeriodGranularity(
           new Period("PT12H5M"),
@@ -668,13 +668,13 @@ public class QueryGranularityTest
     Assert.assertEquals(new PeriodGranularity(
         new Period("P1D"),
         DateTimes.EPOCH,
-        DateTimes.inferTzfromString("America/Los_Angeles")
+        DateTimes.inferTzFromString("America/Los_Angeles")
     ), gran);
 
     PeriodGranularity expected = new PeriodGranularity(
         new Period("P1D"),
         DateTimes.of("2012-01-01"),
-        DateTimes.inferTzfromString("America/Los_Angeles")
+        DateTimes.inferTzFromString("America/Los_Angeles")
     );
 
     String jsonOut = mapper.writeValueAsString(expected);

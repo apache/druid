@@ -21,7 +21,6 @@ package org.apache.druid.curator.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
@@ -43,12 +42,13 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -66,7 +66,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
   private ExecutorService listenerExecutor;
 
-  private final Map<NodeType, NodeTypeWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<NodeType, NodeTypeWatcher> nodeTypeWatchers = new ConcurrentHashMap<>();
 
   private final LifecycleLock lifecycleLock = new LifecycleLock();
 
@@ -154,8 +154,9 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     private final NodeType nodeType;
     private final ObjectMapper jsonMapper;
 
-    // hostAndPort -> DiscoveryDruidNode
-    private final Map<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
+    /** hostAndPort -> DiscoveryDruidNode */
+    private final ConcurrentMap<String, DiscoveryDruidNode> nodes = new ConcurrentHashMap<>();
+    private final Collection<DiscoveryDruidNode> unmodifiableNodes = Collections.unmodifiableCollection(nodes.values());
 
     private final PathChildrenCache cache;
     private final ExecutorService cacheExecutor;
@@ -166,7 +167,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
 
     private final Object lock = new Object();
 
-    private CountDownLatch cacheInitialized = new CountDownLatch(1);
+    private final CountDownLatch cacheInitialized = new CountDownLatch(1);
 
     NodeTypeWatcher(
         ExecutorService listenerExecutor,
@@ -195,30 +196,39 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     @Override
     public Collection<DiscoveryDruidNode> getAllNodes()
     {
-      if (!isCacheInitialized(30, TimeUnit.SECONDS)) {
+      boolean nodeViewInitialized;
+      try {
+        nodeViewInitialized = cacheInitialized.await((long) 30, TimeUnit.SECONDS);
+      }
+      catch (InterruptedException ex) {
+        Thread.currentThread().interrupt();
+        nodeViewInitialized = false;
+      }
+      if (!nodeViewInitialized) {
         log.info("cache is not initialized yet. getAllNodes() might not return full information.");
       }
-      return Collections.unmodifiableCollection(nodes.values());
+      return unmodifiableNodes;
     }
 
     @Override
     public void registerListener(DruidNodeDiscovery.Listener listener)
     {
       synchronized (lock) {
-        if (isCacheInitialized(1, TimeUnit.MICROSECONDS)) {
-          ImmutableList<DiscoveryDruidNode> currNodes = ImmutableList.copyOf(nodes.values());
+        // No need to wait on CountDownLatch, because we are holding the lock under which it could only be counted down.
+        if (cacheInitialized.getCount() == 0) {
           safeSchedule(
               () -> {
-                listener.nodesAdded(currNodes);
+                listener.nodesAdded(unmodifiableNodes);
+                listener.nodeViewInitialized();
               },
-              "Exception occured in nodesAdded([%s]) in listener [%s].", currNodes, listener
+              "Exception occured in nodesAdded([%s]) in listener [%s].", unmodifiableNodes, listener
           );
         }
         nodeListeners.add(listener);
       }
     }
 
-    public void handleChildEvent(CuratorFramework client, PathChildrenCacheEvent event)
+    void handleChildEvent(PathChildrenCacheEvent event)
     {
       synchronized (lock) {
         try {
@@ -278,20 +288,24 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
               break;
             }
             case INITIALIZED: {
-              if (isCacheInitialized(1, TimeUnit.MICROSECONDS)) {
+              // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
+              // counted down.
+              if (cacheInitialized.getCount() == 0) {
                 log.warn("cache is already initialized. ignoring [%s] event.", event.getType());
                 return;
               }
 
               log.info("Received INITIALIZED in node watcher.");
 
-              ImmutableList<DiscoveryDruidNode> currNodes = ImmutableList.copyOf(nodes.values());
-              for (Listener l : nodeListeners) {
+              for (Listener listener : nodeListeners) {
                 safeSchedule(
                     () -> {
-                      l.nodesAdded(currNodes);
+                      listener.nodesAdded(unmodifiableNodes);
+                      listener.nodeViewInitialized();
                     },
-                    "Exception occured in nodesAdded([%s]) in listener [%s].", currNodes, l
+                    "Exception occured in nodesAdded([%s]) in listener [%s].",
+                    unmodifiableNodes,
+                    listener
                 );
               }
 
@@ -309,17 +323,6 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       }
     }
 
-    private boolean isCacheInitialized(long waitFor, TimeUnit timeUnit)
-    {
-      try {
-        return cacheInitialized.await(waitFor, timeUnit);
-      }
-      catch (InterruptedException ex) {
-        Thread.currentThread().interrupt();
-        return false;
-      }
-    }
-
     private void safeSchedule(Runnable runnable, String errMsgFormat, Object... args)
     {
       listenerExecutor.submit(() -> {
@@ -332,20 +335,20 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       });
     }
 
+    @GuardedBy("lock")
     private void addNode(DiscoveryDruidNode druidNode)
     {
       DiscoveryDruidNode prev = nodes.putIfAbsent(druidNode.getDruidNode().getHostAndPortToUse(), druidNode);
       if (prev == null) {
-        if (isCacheInitialized(1, TimeUnit.MICROSECONDS)) {
+        // No need to wait on CountDownLatch, because we are holding the lock under which it could only be counted down.
+        if (cacheInitialized.getCount() == 0) {
           List<DiscoveryDruidNode> newNode = ImmutableList.of(druidNode);
-          for (Listener l : nodeListeners) {
+          for (Listener listener : nodeListeners) {
             safeSchedule(
-                () -> {
-                  l.nodesAdded(newNode);
-                },
+                () -> listener.nodesAdded(newNode),
                 "Exception occured in nodeAdded(node=[%s]) in listener [%s].",
                 druidNode.getDruidNode().getHostAndPortToUse(),
-                l
+                listener
             );
           }
         }
@@ -359,6 +362,7 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
       }
     }
 
+    @GuardedBy("lock")
     private void removeNode(DiscoveryDruidNode druidNode)
     {
       DiscoveryDruidNode prev = nodes.remove(druidNode.getDruidNode().getHostAndPortToUse());
@@ -372,14 +376,15 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
         return;
       }
 
-      if (isCacheInitialized(1, TimeUnit.MICROSECONDS)) {
+      // No need to wait on CountDownLatch, because we are holding the lock under which it could only be counted down.
+      if (cacheInitialized.getCount() == 0) {
         List<DiscoveryDruidNode> nodeRemoved = ImmutableList.of(druidNode);
-        for (Listener l : nodeListeners) {
+        for (Listener listener : nodeListeners) {
           safeSchedule(
-              () -> {
-                l.nodesRemoved(nodeRemoved);
-              },
-              "Exception occured in nodeRemoved(node=[%s]) in listener [%s].", druidNode.getDruidNode().getHostAndPortToUse(), l
+              () -> listener.nodesRemoved(nodeRemoved),
+              "Exception occured in nodeRemoved(node=[%s]) in listener [%s].",
+              druidNode.getDruidNode().getHostAndPortToUse(),
+              listener
           );
         }
       }
@@ -388,13 +393,11 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     public void start()
     {
       try {
-        cache.getListenable().addListener(
-            (client, event) -> handleChildEvent(client, event)
-        );
+        cache.getListenable().addListener((client, event) -> handleChildEvent(event));
         cache.start(PathChildrenCache.StartMode.POST_INITIALIZED_EVENT);
       }
       catch (Exception ex) {
-        throw Throwables.propagate(ex);
+        throw new RuntimeException(ex);
       }
     }
 

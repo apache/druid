@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.segment.realtime.appenderator;
 
 import org.apache.druid.data.input.InputRow;
@@ -99,8 +100,8 @@ public class AppenderatorPlumberTest
     // getDataSource
     Assert.assertEquals(AppenderatorTester.DATASOURCE, appenderator.getDataSource());
 
-    InputRow[] rows = new InputRow[] {AppenderatorTest.IR("2000", "foo", 1), 
-        AppenderatorTest.IR("2000", "bar", 2), AppenderatorTest.IR("2000", "qux", 4)};
+    InputRow[] rows = new InputRow[] {AppenderatorTest.ir("2000", "foo", 1), 
+        AppenderatorTest.ir("2000", "bar", 2), AppenderatorTest.ir("2000", "qux", 4)};
     // add
     Assert.assertEquals(1, plumber.add(rows[0], null).getRowCount());
 
@@ -111,7 +112,7 @@ public class AppenderatorPlumberTest
     
     Assert.assertEquals(1, plumber.getSegmentsView().size());
     
-    SegmentIdentifier si = plumber.getSegmentsView().values().toArray(new SegmentIdentifier[0])[0];
+    SegmentIdWithShardSpec si = plumber.getSegmentsView().values().toArray(new SegmentIdWithShardSpec[0])[0];
     
     Assert.assertEquals(3, appenderator.getRowCount(si));
 

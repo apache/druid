@@ -21,15 +21,12 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -45,7 +42,6 @@ import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
@@ -54,7 +50,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
-import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -74,6 +69,7 @@ import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -91,8 +87,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public static final String QUERY_TOTAL_BYTES_GATHERED = "queryTotalBytesGathered";
 
   private static final Logger log = new Logger(DirectDruidClient.class);
-
-  private static final Map<Class<? extends Query>, Pair<JavaType, JavaType>> typesMap = new ConcurrentHashMap<>();
 
   private final QueryToolChestWarehouse warehouse;
   private final QueryWatcher queryWatcher;
@@ -113,13 +107,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     responseContext.remove(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED);
   }
 
-  public static Map<String, Object> makeResponseContextForQuery()
+  public static ConcurrentMap<String, Object> makeResponseContextForQuery()
   {
-    final Map<String, Object> responseContext = new ConcurrentHashMap<>();
-    responseContext.put(
-        DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED,
-        new AtomicLong()
-    );
+    final ConcurrentMap<String, Object> responseContext = new ConcurrentHashMap<>();
+    responseContext.put(DirectDruidClient.QUERY_TOTAL_BYTES_GATHERED, new AtomicLong());
     return responseContext;
   }
 
@@ -156,25 +147,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final Query<T> query = queryPlus.getQuery();
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
     boolean isBySegment = QueryContexts.isBySegment(query);
-
-    Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
-    if (types == null) {
-      final TypeFactory typeFactory = objectMapper.getTypeFactory();
-      JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
-      JavaType bySegmentType = typeFactory.constructParametricType(
-          Result.class,
-          typeFactory.constructParametricType(BySegmentResultValueClass.class, baseType)
-      );
-      types = Pair.of(baseType, bySegmentType);
-      typesMap.put(query.getClass(), types);
-    }
-
-    final JavaType typeRef;
-    if (isBySegment) {
-      typeRef = types.rhs;
-    } else {
-      typeRef = types.lhs;
-    }
+    final JavaType queryResultType = isBySegment ? toolChest.getBySegmentResultType() : toolChest.getBaseResultType();
 
     final ListenableFuture<InputStream> future;
     final String url = StringUtils.format("%s://%s/druid/v2/", scheme, host);
@@ -285,7 +258,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           catch (InterruptedException e) {
             log.error(e, "Queue appending interrupted");
             Thread.currentThread().interrupt();
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
           totalByteCount.addAndGet(response.getContent().readableBytes());
           return ClientResponse.finished(
@@ -319,7 +292,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       }
                       catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        throw Throwables.propagate(e);
+                        throw new RuntimeException(e);
                       }
                     }
                   }
@@ -350,7 +323,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             catch (InterruptedException e) {
               log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
               Thread.currentThread().interrupt();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
             totalByteCount.addAndGet(bytes);
           }
@@ -391,7 +364,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             catch (InterruptedException e) {
               log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
               Thread.currentThread().interrupt();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
             finally {
               done.set(true);
@@ -526,7 +499,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   }
                 }
                 catch (IOException | ExecutionException | InterruptedException | TimeoutException e) {
-                  Throwables.propagate(e);
+                  throw new RuntimeException(e);
                 }
               }
             }
@@ -534,7 +507,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       );
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     Sequence<T> retVal = new BaseSequence<>(
@@ -543,7 +516,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public JsonParserIterator<T> make()
           {
-            return new JsonParserIterator<T>(typeRef, future, url, query, host, objectMapper, null);
+            return new JsonParserIterator<T>(queryResultType, future, url, query, host, objectMapper, null);
           }
 
           @Override

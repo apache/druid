@@ -77,6 +77,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -282,7 +283,9 @@ public class SearchBenchmark
 
   private static SearchQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
   {
-    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Collections.singletonList(basicSchema.getDataInterval()));
+    final QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(
+        Collections.singletonList(basicSchema.getDataInterval())
+    );
 
     final List<String> dimUniformFilterVals = new ArrayList<>();
     final int resultNum = (int) (100000 * 0.1);
@@ -296,9 +299,6 @@ public class SearchBenchmark
     dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
     dimFilters.add(new SelectorDimFilter(dimName, "3", null));
     dimFilters.add(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
-    dimFilters.add(new InDimFilter(dimName, dimUniformFilterVals, null));
 
     return Druids.newSearchQueryBuilder()
                  .dataSource("blah")
@@ -373,7 +373,7 @@ public class SearchBenchmark
         new SearchStrategySelector(Suppliers.ofInstance(config)),
         new SearchQueryQueryToolChest(
             config,
-            QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
+            QueryBenchmarkUtil.noopIntervalChunkingQueryRunnerDecorator()
         ),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );
@@ -413,15 +413,12 @@ public class SearchBenchmark
   {
     QueryRunner<SearchHit> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "incIndex",
-        new IncrementalIndexSegment(incIndexes.get(0), "incIndex")
+        SegmentId.dummy("incIndex"),
+        new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
-    List<SearchHit> hits = results.get(0).getValue().getValue();
-    for (SearchHit hit : hits) {
-      blackhole.consume(hit);
-    }
+    blackhole.consume(results);
   }
 
   @Benchmark
@@ -431,15 +428,12 @@ public class SearchBenchmark
   {
     final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
         factory,
-        "qIndex",
-        new QueryableIndexSegment("qIndex", qIndexes.get(0))
+        SegmentId.dummy("qIndex"),
+        new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
     List<Result<SearchResultValue>> results = SearchBenchmark.runQuery(factory, runner, query);
-    List<SearchHit> hits = results.get(0).getValue().getValue();
-    for (SearchHit hit : hits) {
-      blackhole.consume(hit);
-    }
+    blackhole.consume(results);
   }
 
 
@@ -454,8 +448,8 @@ public class SearchBenchmark
       String segmentName = "qIndex" + i;
       final QueryRunner<Result<SearchResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
-          segmentName,
-          new QueryableIndexSegment(segmentName, qIndexes.get(i))
+          SegmentId.dummy(segmentName),
+          new QueryableIndexSegment(qIndexes.get(i), SegmentId.dummy(segmentName))
       );
       singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -472,12 +466,6 @@ public class SearchBenchmark
         new HashMap<>()
     );
     List<Result<SearchResultValue>> results = queryResult.toList();
-
-    for (Result<SearchResultValue> result : results) {
-      List<SearchHit> hits = result.getValue().getValue();
-      for (SearchHit hit : hits) {
-        blackhole.consume(hit);
-      }
-    }
+    blackhole.consume(results);
   }
 }

@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.common.index;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -27,7 +28,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Period;
 
@@ -41,7 +42,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   private static final int defaultMaxRowsPerSegment = 5_000_000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final int defaultMaxPendingPersists = 0;
-  private static final ShardSpec defaultShardSpec = NoneShardSpec.instance();
+  private static final ShardSpec defaultShardSpec = new NumberedShardSpec(0, 1);
   private static final IndexSpec defaultIndexSpec = new IndexSpec();
   private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
   private static final long defaultPublishAndHandoffTimeout = 0;
@@ -148,7 +149,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
 
   @Override
   @JsonProperty
-  public int getMaxRowsPerSegment()
+  public Integer getMaxRowsPerSegment()
   {
     return maxRowsPerSegment;
   }

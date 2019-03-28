@@ -106,11 +106,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentManager segmentManager
   )
   {
-    this(jsonMapper, config, announcer, serverAnnouncer, segmentManager,
-         Executors.newScheduledThreadPool(
-             config.getNumLoadingThreads(),
-             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
-         )
+    this(
+        jsonMapper,
+        config,
+        announcer,
+        serverAnnouncer,
+        segmentManager,
+        Executors.newScheduledThreadPool(
+            config.getNumLoadingThreads(),
+            Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
+        )
     );
   }
 
@@ -151,7 +156,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       }
       catch (Exception e) {
         Throwables.propagateIfPossible(e, IOException.class);
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       started = true;
       log.info("Started.");
@@ -171,7 +176,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         serverAnnouncer.unannounce();
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
       finally {
         started = false;
@@ -206,15 +211,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       try {
         final DataSegment segment = jsonMapper.readValue(file, DataSegment.class);
 
-        if (!segment.getIdentifier().equals(file.getName())) {
-          log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getIdentifier());
+        if (!segment.getId().toString().equals(file.getName())) {
+          log.warn("Ignoring cache file[%s] for segment[%s].", file.getPath(), segment.getId());
           ignored++;
         } else if (segmentManager.isSegmentCached(segment)) {
           cachedSegments.add(segment);
         } else {
-          log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getIdentifier());
+          log.warn("Unable to find cache file for %s. Deleting lookup entry", segment.getId());
 
-          File segmentInfoCacheFile = new File(baseDir, segment.getIdentifier());
+          File segmentInfoCacheFile = new File(baseDir, segment.getId().toString());
           if (!segmentInfoCacheFile.delete()) {
             log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
           }
@@ -250,7 +255,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
    * Load a single segment. If the segment is loaded successfully, this function simply returns. Otherwise it will
    * throw a SegmentLoadingException
    *
-   * @throws SegmentLoadingException
+   * @throws SegmentLoadingException if it fails to load the given segment
    */
   private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback) throws SegmentLoadingException
   {
@@ -260,11 +265,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
     catch (Exception e) {
       removeSegment(segment, callback, false);
-      throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getIdentifier());
+      throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
     }
 
     if (loaded) {
-      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+      File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getId().toString());
       if (!segmentInfoCacheFile.exists()) {
         try {
           jsonMapper.writeValue(segmentInfoCacheFile, segment);
@@ -286,7 +291,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   {
     Status result = null;
     try {
-      log.info("Loading segment %s", segment.getIdentifier());
+      log.info("Loading segment %s", segment.getId());
       /*
          The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
          and if (segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
@@ -305,11 +310,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         }
       }
       loadSegment(segment, DataSegmentChangeCallback.NOOP);
+      // announce segment even if the segment file already exists.
       try {
         announcer.announceSegment(segment);
       }
       catch (IOException e) {
-        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getIdentifier());
+        throw new SegmentLoadingException(e, "Failed to announce segment[%s]", segment.getId());
       }
 
       result = Status.SUCCESS;
@@ -352,7 +358,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
                       "Loading segment[%d/%d][%s]",
                       counter.incrementAndGet(),
                       numSegments,
-                      segment.getIdentifier()
+                      segment.getId()
                   );
                   loadSegment(segment, callback);
                   try {
@@ -364,7 +370,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
                   }
                 }
                 catch (SegmentLoadingException e) {
-                  log.error(e, "[%s] failed to load", segment.getIdentifier());
+                  log.error(e, "[%s] failed to load", segment.getId());
                   failedSegments.add(segment);
                 }
                 finally {
@@ -431,7 +437,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               if (segmentsToDelete.remove(segment)) {
                 segmentManager.dropSegment(segment);
 
-                File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+                File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getId().toString());
                 if (!segmentInfoCacheFile.delete()) {
                   log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
                 }
@@ -449,7 +455,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       if (scheduleDrop) {
         log.info(
             "Completely removing [%s] in [%,d] millis",
-            segment.getIdentifier(),
+            segment.getId(),
             config.getDropSegmentDelayMillis()
         );
         exec.schedule(
@@ -727,14 +733,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             (request, statusRef) -> result.add(new DataSegmentChangeRequestAndStatus(request, statusRef.get()))
         );
 
-        super.set(result);
+        set(result);
       }
-    }
-
-    @Override
-    public boolean setException(Throwable throwable)
-    {
-      return super.setException(throwable);
     }
 
     @Override

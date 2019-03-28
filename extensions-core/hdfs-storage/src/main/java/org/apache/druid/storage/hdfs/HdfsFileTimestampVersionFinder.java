@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.hdfs;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -34,10 +33,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.regex.Pattern;
 
-/**
- * This is implemented explicitly for URIExtractionNamespaceFunctionFactory
- * If you have a use case for this interface beyond URIExtractionNamespaceFunctionFactory please bring it up in the dev list.
- */
 public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implements SearchableVersionedDataFinder<URI>
 {
   @Inject
@@ -98,7 +93,7 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

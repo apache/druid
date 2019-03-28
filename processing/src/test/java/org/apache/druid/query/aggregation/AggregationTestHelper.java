@@ -29,10 +29,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.druid.collections.CloseableStupidPool;
@@ -42,6 +40,7 @@ import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -82,6 +81,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.Closeable;
@@ -194,14 +194,14 @@ public class AggregationTestHelper implements Closeable
 
     SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
         TestHelper.makeJsonMapper(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
         configSupplier
     );
 
     SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
         new SelectQueryQueryToolChest(
             TestHelper.makeJsonMapper(),
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator(),
+            QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator(),
             configSupplier
         ),
         new SelectQueryEngine(
@@ -241,7 +241,7 @@ public class AggregationTestHelper implements Closeable
     ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     TimeseriesQueryQueryToolChest toolchest = new TimeseriesQueryQueryToolChest(
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
@@ -283,7 +283,7 @@ public class AggregationTestHelper implements Closeable
 
     TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
     );
 
     final CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
@@ -581,10 +581,10 @@ public class AggregationTestHelper implements Closeable
           public Segment apply(File segmentDir)
           {
             try {
-              return new QueryableIndexSegment("", indexIO.loadIndex(segmentDir));
+              return new QueryableIndexSegment(indexIO.loadIndex(segmentDir), SegmentId.dummy(""));
             }
             catch (IOException ex) {
-              throw Throwables.propagate(ex);
+              throw new RuntimeException(ex);
             }
           }
         }
@@ -607,7 +607,7 @@ public class AggregationTestHelper implements Closeable
             toolChest.mergeResults(
                 toolChest.preMergeQueryDecoration(
                     factory.mergeRunners(
-                        MoreExecutors.sameThreadExecutor(),
+                        Execs.directExecutor(),
                         Lists.transform(
                             segments,
                             new Function<Segment, QueryRunner>()
@@ -623,7 +623,7 @@ public class AggregationTestHelper implements Closeable
                                   );
                                 }
                                 catch (Exception ex) {
-                                  throw Throwables.propagate(ex);
+                                  throw new RuntimeException(ex);
                                 }
                               }
                             }
@@ -675,7 +675,7 @@ public class AggregationTestHelper implements Closeable
           return Sequences.simple(resultRows);
         }
         catch (Exception ex) {
-          throw Throwables.propagate(ex);
+          throw new RuntimeException(ex);
         }
       }
     };

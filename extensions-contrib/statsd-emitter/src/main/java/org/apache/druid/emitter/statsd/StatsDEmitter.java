@@ -32,9 +32,9 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.List;
 
 /**
  */
@@ -47,13 +47,13 @@ public class StatsDEmitter implements Emitter
   private static final Pattern BLANK = Pattern.compile("\\s+");
   private static final String[] EMPTY_ARRAY = new String[0];
 
-  static final StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
+  static StatsDEmitter of(StatsDEmitterConfig config, ObjectMapper mapper)
   {
     NonBlockingStatsDClient client = new NonBlockingStatsDClient(
         config.getPrefix(),
         config.getHostname(),
         config.getPort(),
-        EMPTY_ARRAY,
+        config.isDogstatsd() ? config.getDogstatsdConstantTags().toArray(new String[0]) : EMPTY_ARRAY,
         new StatsDClientErrorHandler()
         {
           private int exceptionCount = 0;
@@ -106,7 +106,7 @@ public class StatsDEmitter implements Emitter
       if (statsDMetric != null) {
         List<String> fullNameList;
         String[] tags;
-        if (config.getDogstatsd()) {
+        if (config.isDogstatsd()) {
           if (config.getIncludeHost()) {
             dimsBuilder.put("hostname", host);
           }
@@ -133,7 +133,7 @@ public class StatsDEmitter implements Emitter
         fullName = STATSD_SEPARATOR.matcher(fullName).replaceAll(config.getSeparator());
         fullName = BLANK.matcher(fullName).replaceAll(config.getBlankHolder());
 
-        if (config.getDogstatsd() && (value instanceof Float || value instanceof Double)) {
+        if (config.isDogstatsd() && (value instanceof Float || value instanceof Double)) {
           switch (statsDMetric.type) {
             case count:
               statsd.count(fullName, value.doubleValue(), tags);
@@ -146,7 +146,7 @@ public class StatsDEmitter implements Emitter
               break;
           }
         } else {
-          long val = statsDMetric.convertRange && !config.getDogstatsd() ?
+          long val = statsDMetric.convertRange && !config.isDogstatsd() ?
               Math.round(value.doubleValue() * 100) :
               value.longValue();
 
@@ -163,7 +163,7 @@ public class StatsDEmitter implements Emitter
           }
         }
       } else {
-        log.debug("Metric=[%s] has no StatsD type mapping", statsDMetric);
+        log.debug("Service=[%s], Metric=[%s] has no StatsD type mapping", service, metric);
       }
     }
   }

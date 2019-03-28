@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -136,12 +137,12 @@ public class ScanQueryRunnerTest
     this.legacy = legacy;
   }
 
-  private ScanQuery.ScanQueryBuilder newTestQuery()
+  private Druids.ScanQueryBuilder newTestQuery()
   {
-    return ScanQuery.newScanQueryBuilder()
+    return Druids.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
                     .columns(Collections.emptyList())
-                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                    .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                     .limit(3)
                     .legacy(legacy);
   }
@@ -647,13 +648,7 @@ public class ScanQueryRunnerTest
         end = group.size();
       }
       events.addAll(group.subList(offset, end));
-      expected.add(
-          new ScanResultValue(
-              QueryRunnerTestHelper.segmentId,
-              columns,
-              events
-          )
-      );
+      expected.add(new ScanResultValue(QueryRunnerTestHelper.segmentId.toString(), columns, events));
     }
     return expected;
   }

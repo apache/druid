@@ -21,7 +21,6 @@ package org.apache.druid.server.audit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.annotations.Json;
@@ -38,6 +37,7 @@ public class SQLAuditManagerProvider implements AuditManagerProvider
   private final ServiceEmitter emitter;
   private final ObjectMapper mapper;
   private final SQLAuditManagerConfig config;
+
   @Inject
   public SQLAuditManagerProvider(
       Supplier<MetadataStorageTablesConfig> dbTables,
@@ -78,7 +78,7 @@ public class SQLAuditManagerProvider implements AuditManagerProvider
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     return new SQLAuditManager(connector, dbTables, emitter, mapper, config);

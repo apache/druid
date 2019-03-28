@@ -19,7 +19,6 @@
 
 package org.apache.druid.collections.bitmap;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 import org.roaringbitmap.RoaringBitmap;
@@ -52,9 +51,10 @@ public class RoaringBitmapFactory implements BitmapFactory
       EMPTY_IMMUTABLE_BITMAP = new ImmutableRoaringBitmap(buf);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
+
   private static final WrappedImmutableRoaringBitmap WRAPPED_IMMUTABLE_ROARING_BITMAP =
       new WrappedImmutableRoaringBitmap(EMPTY_IMMUTABLE_BITMAP);
 
@@ -132,7 +132,7 @@ public class RoaringBitmapFactory implements BitmapFactory
       return ((WrappedRoaringBitmap) mutableBitmap).toImmutableBitmap();
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

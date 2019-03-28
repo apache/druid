@@ -23,10 +23,12 @@ import com.jayway.jsonpath.InvalidJsonException;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.util.Utf8;
 
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,7 +100,9 @@ public class GenericAvroJsonProvider implements JsonProvider
   @Override
   public Collection<String> getPropertyKeys(final Object o)
   {
-    if (o instanceof Map) {
+    if (o == null) {
+      return Collections.emptySet();
+    } else if (o instanceof Map) {
       return ((Map<Object, Object>) o).keySet().stream().map(String::valueOf).collect(Collectors.toSet());
     } else if (o instanceof GenericRecord) {
       return ((GenericRecord) o).getSchema().getFields().stream().map(Schema.Field::name).collect(Collectors.toSet());
@@ -138,10 +142,18 @@ public class GenericAvroJsonProvider implements JsonProvider
   @Override
   public Object getMapValue(final Object o, final String s)
   {
-    if (o instanceof GenericRecord) {
+    if (o == null) {
+      return null;
+    } else if (o instanceof GenericRecord) {
       return ((GenericRecord) o).get(s);
     } else if (o instanceof Map) {
-      return ((Map) o).get(s);
+      final Map theMap = (Map) o;
+      if (theMap.containsKey(s)) {
+        return theMap.get(s);
+      } else {
+        final Utf8 utf8Key = new Utf8(s);
+        return theMap.get(utf8Key);
+      }
     } else {
       throw new UnsupportedOperationException(o.getClass().getName());
     }
@@ -172,7 +184,7 @@ public class GenericAvroJsonProvider implements JsonProvider
   @Override
   public boolean isMap(final Object o)
   {
-    return o instanceof Map || o instanceof GenericRecord;
+    return o == null || o instanceof Map || o instanceof GenericRecord;
   }
 
   @Override
