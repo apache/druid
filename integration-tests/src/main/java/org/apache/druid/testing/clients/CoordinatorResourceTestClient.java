@@ -218,52 +218,13 @@ public class CoordinatorResourceTestClient
     }
   }
 
-  public void registerAutoCompaction(String compactionConfig)
-  {
-    makePostRequest(
-        StringUtils.format("%s/druid/coordinator/v1/config/compaction", coordinator),
-        compactionConfig
-    );
-  }
-
-  public void unregisterAutoCompaction(String dataSourceName)
-  {
-    try {
-      makeRequest(
-          HttpMethod.DELETE,
-          StringUtils.format("%sconfig/compaction/%s", getCoordinatorURL(), StringUtils.urlEncode(dataSourceName))
-      );
-    }
-    catch (Exception e) {
-      throw new RE(e, "Failed to unregister auto compaction for dataSource[%s]", dataSourceName);
-    }
-  }
-
-  private void makePostRequest(final String url, final String jsonSpec)
-  {
-    try {
-      StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(url)).setContent("application/json", StringUtils.toUtf8(jsonSpec)),
-          responseHandler
-      ).get();
-      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE(
-            "Error while making request to url[%s] status[%s] content[%s]",
-            url,
-            response.getStatus(),
-            response.getContent()
-        );
-      }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   private StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
-      StatusResponseHolder response = httpClient.go(new Request(method, new URL(url)), responseHandler).get();
+      StatusResponseHolder response = httpClient.go(
+          new Request(method, new URL(url)),
+          responseHandler
+      ).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE(
             "Error while making request to url[%s] status[%s] content[%s]",

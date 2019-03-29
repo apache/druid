@@ -1,9 +1,0 @@
-{
-  "dataSource": "%%DATASOURCE%%",
-  "skipOffsetFromLatest": "P0D",
-  "maxRowsPerSegment": 1000000,
-  "tuningConfig": {
-    "type": "index",
-    "maxTotalRows": 10000000
-  }
-}
