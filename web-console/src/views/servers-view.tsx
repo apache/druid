@@ -29,15 +29,13 @@ import { TableColumnSelection } from "../components/table-column-selection";
 import {
   addFilter,
   formatBytes,
-  formatBytesCompact,
+  formatBytesCompact, LocalStorageKeys,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from "../utils";
 
 import "./servers-view.scss";
 
-const serverTableColumnSelection = "historical-table-column-selection";
-const middleManagerTableColumnSelection = "middleManager-table-column-selection";
 const serverTableColumns: string[] = ["Server", "Tier", "Curr size", "Max size", "Usage", "Load/drop queues", "Host", "Port"];
 const middleManagerTableColumns: string[] = ["Host", "Usage", "Availability groups", "Last completed task time", "Blacklisted until"];
 
@@ -93,11 +91,11 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
     };
 
     this.serverTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      serverTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
 
     this.middleManagerTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      middleManagerTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.MIDDLEMANAGER_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
 

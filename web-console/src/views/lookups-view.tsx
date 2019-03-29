@@ -27,14 +27,13 @@ import { TableColumnSelection } from "../components/table-column-selection";
 import { LookupEditDialog } from "../dialogs/lookup-edit-dialog";
 import { AppToaster } from "../singletons/toaster";
 import {
-  getDruidErrorMessage,
+  getDruidErrorMessage, LocalStorageKeys,
   QueryManager,
   TableColumnSelectionHandler
 } from "../utils";
 
 import "./lookups-view.scss";
 
-const lookupTableColumnSelection = "lookup-table-column-selection";
 const tableColumns: string[] = ["Lookup Name", "Tier", "Type", "Version", "Config"];
 
 export interface LookupsViewProps extends React.Props<any> {
@@ -74,7 +73,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       allLookupTiers: []
     };
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      lookupTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
 

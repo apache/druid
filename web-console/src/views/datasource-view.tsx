@@ -33,7 +33,7 @@ import {
   countBy,
   formatBytes,
   formatNumber,
-  getDruidErrorMessage,
+  getDruidErrorMessage, LocalStorageKeys,
   lookupBy,
   pluralIfNeeded,
   queryDruidSql,
@@ -42,7 +42,6 @@ import {
 
 import "./datasource-view.scss";
 
-const datasourceTableColumnSelection = "datasource-table-column-selection";
 const tableColumns: string[] = ["Datasource", "Availability", "Retention", "Compaction", "Size", "Num rows", "Actions"];
 
 export interface DatasourcesViewProps extends React.Props<any> {
@@ -111,7 +110,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
     };
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      datasourceTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
 

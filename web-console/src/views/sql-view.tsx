@@ -26,7 +26,7 @@ import { SqlControl } from '../components/sql-control';
 import {
   decodeRune,
   HeaderRows,
-  localStorageGet,
+  localStorageGet, LocalStorageKeys,
   localStorageSet,
   queryDruidRune,
   queryDruidSql, QueryManager
@@ -45,7 +45,6 @@ export interface SqlViewState {
 }
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
-  static QUERY_KEY = 'druid-console-query';
 
   private sqlQueryManager: QueryManager<string, HeaderRows>;
 
@@ -112,9 +111,9 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
     return <div className="sql-view app-view">
       <SqlControl
-        initSql={initSql || localStorageGet(SqlView.QUERY_KEY)}
+        initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
         onRun={q => {
-          localStorageSet(SqlView.QUERY_KEY, q);
+          localStorageSet(LocalStorageKeys.QUERY_KEY, q);
           this.sqlQueryManager.runQuery(q);
         }}
       />
