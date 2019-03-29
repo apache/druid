@@ -29,7 +29,7 @@ import { AppToaster } from "../singletons/toaster";
 import {
   addFilter,
   formatBytes,
-  formatNumber,
+  formatNumber, LocalStorageKeys,
   makeBooleanFilter,
   parseList,
   queryDruidSql,
@@ -38,7 +38,6 @@ import {
 
 import "./segments-view.scss";
 
-const segmentTableColumnSelection = "segment-table-column-selection";
 const tableColumns: string[] = ["Segment ID", "Datasource", "Start", "End", "Version", "Partition",
   "Size", "Num rows", "Replicas", "Is published", "Is realtime", "Is available"];
 
@@ -100,7 +99,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     });
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      segmentTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
 
