@@ -6,7 +6,9 @@ PROJECT_BIN = $(PROJECT_NAME)
 PROJECT_REV = $(shell git rev-parse HEAD)
 PROJECT_IMAGE = registry.build.lqm.io/$(PROJECT_NAME):$(PROJECT_REV)
 
-.PHONY: all build setup publish-artifact
+PROJECT_ARTIFACT = /tmp/$(PROJECT_NAME)_$(PROJECT_REV)
+
+.PHONY: all build image artifact publish-image publish-artifact
 
 default: build
 
@@ -19,11 +21,13 @@ image:
 	docker build -t $(PROJECT_IMAGE) .
 
 artifact: image
-	docker run --rm -v /tmp/$(PROJECT_NAME):/mount --entrypoint cp $(PROJECT_IMAGE) -r /opt/druid/distribution/ /mount
-	mv /tmp/$(PROJECT_NAME)/distribution/*.tar.gz /tmp/$(PROJECT_NAME)/$(PROJECT_NAME)_$(PROJECT_REV).tar.gz
+	$(eval CID := $(shell docker create $(PROJECT_IMAGE)))
+	docker cp $(CID):/opt/druid/distribution $(PROJECT_ARTIFACT)
+	docker rm $(CID)
+	tar -czvf $(PROJECT_ARTIFACT).tar.gz -C $(PROJECT_ARTIFACT) .
 
 publish-image: image
 	docker push $(PROJECT_IMAGE)
 
 publish-artifact: artifact
-	gsutil cp /tmp/$(PROJECT_NAME)_$(PROJECT_REV).tar.gz gs://lqm-artifact-storage/$(PROJECT_NAME)/$(PROJECT_REV)
+	gsutil cp $(PROJECT_ARTIFACT).tar.gz gs://lqm-artifact-storage/$(PROJECT_NAME)/$(PROJECT_REV)
