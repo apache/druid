@@ -4,7 +4,7 @@ PROJECT_ROOT = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROJECT_BIN = $(PROJECT_NAME)
 
 PROJECT_REV = $(shell git rev-parse HEAD)
-PROJECT_IMAGE = liquidm/$(PROJECT_NAME):$(PROJECT_REV)
+PROJECT_IMAGE = registry.build.lqm.io/$(PROJECT_NAME):$(PROJECT_REV)
 
 .PHONY: all build setup publish-artifact
 
@@ -17,15 +17,13 @@ build:
 
 image:
 	docker build -t $(PROJECT_IMAGE) .
-	docker tag $(PROJECT_IMAGE) registry.build.lqm.io/$(PROJECT_NAME):$(PROJECT_REV)
 
 artifact: image
-	$(eval CID := $(shell docker create $(PROJECT_IMAGE)))
-	docker cp $(CID):/opt/druid/distribution/*.tar.gz /tmp/$(PROJECT_NAME)/$(PROJECT_NAME)_$(PROJECT_REV).tar.gz
-	docker rm $(CID)
+	docker run --rm -v /tmp/$(PROJECT_NAME):/mount --entrypoint cp $(PROJECT_IMAGE) -r /opt/druid/distribution/ /mount
+	mv /tmp/$(PROJECT_NAME)/distribution/*.tar.gz /tmp/$(PROJECT_NAME)/$(PROJECT_NAME)_$(PROJECT_REV).tar.gz
 
 publish-image: image
-	docker push registry.build.lqm.io/$(PROJECT_NAME):$(PROJECT_REV)
+	docker push $(PROJECT_IMAGE)
 
 publish-artifact: artifact
 	gsutil cp /tmp/$(PROJECT_NAME)_$(PROJECT_REV).tar.gz gs://lqm-artifact-storage/$(PROJECT_NAME)/$(PROJECT_REV)
