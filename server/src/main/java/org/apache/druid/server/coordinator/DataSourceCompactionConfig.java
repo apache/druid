@@ -101,8 +101,11 @@ public class DataSourceCompactionConfig
   }
 
   /**
-   * Copied from CompactionTask#getValidTargetCompactionSizeBytes.
-   * Must be synced.
+   * This method is copied from {@code CompactionTask#getValidTargetCompactionSizeBytes}. The only difference is this
+   * method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}.
+   *
+   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
+   * the same method, this method must be synced with {@code CompactionTask#getValidTargetCompactionSizeBytes}.
    */
   @Nullable
   private static Long getValidTargetCompactionSizeBytes(
@@ -126,8 +129,13 @@ public class DataSourceCompactionConfig
   }
 
   /**
-   * Copied from CompactionTask#hasPartitionConfig.
-   * Must be synced.
+   * his method is copied from {@code CompactionTask#hasPartitionConfig}. The two differences are
+   * 1) this method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}, and
+   * 2) this method accepts an additional 'maxRowsPerSegment' parameter since it's not supported by
+   * {@link UserCompactTuningConfig}.
+   *
+   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
+   * the same method, this method must be synced with {@code CompactionTask#hasPartitionConfig}.
    */
   private static boolean hasPartitionConfig(
       @Nullable Integer maxRowsPerSegment,
