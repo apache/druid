@@ -56,7 +56,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
     final String taskSpec = StringUtils.replace(
-        getTaskAsString(indexTaskFilePath),
+        getResourceAsString(indexTaskFilePath),
         "%%DATASOURCE%%",
         fullDatasourceName
     );
@@ -98,7 +98,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
     final String fullReindexDatasourceName = reindexDataSource + config.getExtraDatasourceNameSuffix();
 
     String taskSpec = StringUtils.replace(
-        getTaskAsString(reindexTaskFilePath),
+        getResourceAsString(reindexTaskFilePath),
         "%%DATASOURCE%%",
         fullBaseDatasourceName
     );
@@ -148,7 +148,7 @@ public class AbstractITBatchIndexTest extends AbstractIndexerTest
   {
     final String fullDatasourceName = dataSource + config.getExtraDatasourceNameSuffix();
     final String taskSpec = StringUtils.replace(
-        getTaskAsString(indexTaskFilePath),
+        getResourceAsString(indexTaskFilePath),
         "%%DATASOURCE%%",
         fullDatasourceName
     );

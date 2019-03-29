@@ -144,7 +144,6 @@ public class ITKafkaTest extends AbstractIndexerTest
     catch (Exception e) {
       throw new ISE(e, "could not create kafka topic");
     }
-
     // set up kafka producer
     Properties properties = new Properties();
     addFilteredProperties(properties);
@@ -211,7 +210,7 @@ public class ITKafkaTest extends AbstractIndexerTest
 
       addFilteredProperties(consumerProperties);
 
-      indexerSpec = getTaskAsString(INDEXER_FILE);
+      indexerSpec = getResourceAsString(INDEXER_FILE);
       indexerSpec = StringUtils.replace(indexerSpec, "%%DATASOURCE%%", fullDatasourceName);
       indexerSpec = StringUtils.replace(indexerSpec, "%%TOPIC%%", TOPIC_NAME);
       indexerSpec = StringUtils.replace(indexerSpec, "%%COUNT%%", Integer.toString(num_events));
