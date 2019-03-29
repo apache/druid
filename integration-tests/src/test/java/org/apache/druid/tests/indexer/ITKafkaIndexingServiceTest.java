@@ -152,7 +152,7 @@ public class ITKafkaIndexingServiceTest extends AbstractIndexerTest
       consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
       addFilteredProperties(consumerProperties);
 
-      spec = getTaskAsString(INDEXER_FILE);
+      spec = getResourceAsString(INDEXER_FILE);
       spec = StringUtils.replace(spec, "%%DATASOURCE%%", fullDatasourceName);
       spec = StringUtils.replace(spec, "%%TOPIC%%", TOPIC_NAME);
       spec = StringUtils.replace(spec, "%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));

@@ -131,7 +131,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
   private void loadData() throws Exception
   {
-    String taskSpec = getTaskAsString(INDEX_TASK);
+    String taskSpec = getResourceAsString(INDEX_TASK);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
@@ -145,7 +145,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
 
   private void compactData(boolean keepSegmentGranularity) throws Exception
   {
-    final String template = getTaskAsString(COMPACTION_TASK);
+    final String template = getResourceAsString(COMPACTION_TASK);
     String taskSpec =
         StringUtils.replace(template, "${KEEP_SEGMENT_GRANULARITY}", Boolean.toString(keepSegmentGranularity));
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);

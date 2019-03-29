@@ -22,6 +22,7 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -93,7 +94,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       boolean keepSegmentGranularity,
       @Nullable Long targetCompactionSizeBytes,
       int compactionTaskPriority,
-      @Nullable ClientCompactQueryTuningConfig tuningConfig,
+      ClientCompactQueryTuningConfig tuningConfig,
       @Nullable Map<String, Object> context
   )
   {
@@ -125,14 +126,20 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   {
     try {
       final FullResponseHolder response = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(
-              HttpMethod.POST,
-              "/druid/indexer/v1/task"
-          ).setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskObject))
+          druidLeaderClient.makeRequest(HttpMethod.POST, "/druid/indexer/v1/task")
+                           .setContent(MediaType.APPLICATION_JSON, jsonMapper.writeValueAsBytes(taskObject))
       );
 
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
-        throw new ISE("Failed to post task[%s]", taskObject);
+        if (!Strings.isNullOrEmpty(response.getContent())) {
+          throw new ISE(
+              "Failed to post task[%s] with error[%s].",
+              taskObject,
+              response.getContent()
+          );
+        } else {
+          throw new ISE("Failed to post task[%s]. Please check overlord log", taskObject);
+        }
       }
 
       final Map<String, Object> resultMap = jsonMapper.readValue(
@@ -154,10 +161,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       final FullResponseHolder response = druidLeaderClient.go(
           druidLeaderClient.makeRequest(
               HttpMethod.POST,
-              StringUtils.format(
-                  "/druid/indexer/v1/task/%s/shutdown",
-                  StringUtils.urlEncode(taskId)
-              )
+              StringUtils.format("/druid/indexer/v1/task/%s/shutdown", StringUtils.urlEncode(taskId))
           )
       );
 
@@ -289,7 +293,10 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   {
     try {
       final FullResponseHolder responseHolder = druidLeaderClient.go(
-          druidLeaderClient.makeRequest(HttpMethod.GET, StringUtils.format("/druid/indexer/v1/task/%s", taskId))
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format("/druid/indexer/v1/task/%s", StringUtils.urlEncode(taskId))
+          )
       );
 
       return jsonMapper.readValue(
