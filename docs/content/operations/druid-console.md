@@ -88,6 +88,6 @@ The SQL view lets you issue direct DruidSQL queries and display the results as a
 
 ![sql](./img/09-sql-1.png)
 
-The SQL view allows you to issue Druid's native query which is JSON over HTTP. To send Druid native query, you must start your query with { and in the format of JSON.
+The SQL view issues queries in Druid's native query format, which is JSON over HTTP. To send Druid's native query, you must start your query with { and in the format of JSON.
 
 ![sql](./img/10-sql-2.png)
