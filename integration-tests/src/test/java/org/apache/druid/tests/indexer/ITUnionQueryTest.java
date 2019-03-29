@@ -93,7 +93,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
     try {
       // Load 4 datasources with same dimensions
       String task = setShutOffTime(
-          getTaskAsString(UNION_TASK_RESOURCE),
+          getResourceAsString(UNION_TASK_RESOURCE),
           DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
       List<String> taskIDs = new ArrayList<>();
