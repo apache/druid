@@ -115,7 +115,7 @@ public class SeekableStreamSupervisorStateManager
     }
 
     List<ThrowableEvent> throwableEventsForClassT = throwableEvents.getOrDefault(
-        t.getClass().getCanonicalName(),
+        t.getClass(),
         new ArrayList<>()
     );
     throwableEventsForClassT.add(

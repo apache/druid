@@ -20,6 +20,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,6 +68,8 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTransientStreamFailure()
   {
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.storeThrowableEvent(new TransientStreamException(new Exception("some exception")));
 
   }
 }
