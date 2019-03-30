@@ -23,7 +23,7 @@ import * as React from 'react';
 import { AutoForm } from '../components/auto-form';
 import { IconNames } from '../components/filler';
 import { AppToaster } from '../singletons/toaster';
-import { getDruidErrorMessage } from '../utils';
+import { getDruidErrorMessage, QueryManager } from '../utils';
 
 import { SnitchDialog } from './snitch-dialog';
 
@@ -35,18 +35,36 @@ export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
 
 export interface CoordinatorDynamicConfigDialogState {
   dynamicConfig: Record<string, any> | null;
+  historyRecords: any[];
 }
 
 export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
+  private historyQueryManager: QueryManager<string, any>;
+
   constructor(props: CoordinatorDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      dynamicConfig: null
+      dynamicConfig: null,
+      historyRecords: []
     };
   }
 
-  componentDidMount(): void {
+  componentDidMount() {
     this.getClusterConfig();
+
+    this.historyQueryManager = new QueryManager({
+      processQuery: async (query) => {
+        const historyResp = await axios(`/druid/coordinator/v1/config/history?count=100`);
+        return historyResp.data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          historyRecords: result
+        });
+      }
+    });
+
+    this.historyQueryManager.runQuery(`dummy`);
   }
 
   async getClusterConfig() {
@@ -67,13 +85,13 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     });
   }
 
-  private saveClusterConfig = async (author: string, comment: string) => {
+  private saveClusterConfig = async (comment: string) => {
     const { onClose } = this.props;
     const newState: any = this.state.dynamicConfig;
     try {
       await axios.post("/druid/coordinator/v1/config", newState, {
         headers: {
-          "X-Druid-Author": author,
+          "X-Druid-Author": "console",
           "X-Druid-Comment": comment
         }
       });
@@ -94,7 +112,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
 
   render() {
     const { onClose } = this.props;
-    const { dynamicConfig } = this.state;
+    const { dynamicConfig, historyRecords } = this.state;
 
     return <SnitchDialog
       className="coordinator-dynamic-config"
@@ -102,6 +120,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
       onSave={this.saveClusterConfig}
       onClose={onClose}
       title="Coordinator dynamic config"
+      historyRecords={historyRecords}
     >
       <p>
         Edit the coordinator dynamic configuration on the fly.

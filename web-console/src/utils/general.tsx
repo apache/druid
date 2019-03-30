@@ -128,18 +128,6 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 
 // ----------------------------
 
-export function localStorageSet(key: string, value: string): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(key, value);
-}
-
-export function localStorageGet(key: string): string | null {
-  if (typeof localStorage === 'undefined') return null;
-  return localStorage.getItem(key);
-}
-
-// ----------------------------
-
 export function validJson(json: string): boolean {
   try {
     JSON.parse(json);

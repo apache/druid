@@ -23,7 +23,7 @@ import * as React from "react";
 import { AutoForm } from "../components/auto-form";
 import { IconNames } from "../components/filler";
 import { AppToaster } from "../singletons/toaster";
-import { getDruidErrorMessage } from "../utils";
+import { getDruidErrorMessage, QueryManager } from "../utils";
 
 import { SnitchDialog } from "./snitch-dialog";
 
@@ -36,19 +36,37 @@ export interface OverlordDynamicConfigDialogProps extends React.Props<any> {
 export interface OverlordDynamicConfigDialogState {
   dynamicConfig: Record<string, any> | null;
   allJSONValid: boolean;
+  historyRecords: any[];
 }
 
 export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamicConfigDialogProps, OverlordDynamicConfigDialogState> {
+  private historyQueryManager: QueryManager<string, any>;
+
   constructor(props: OverlordDynamicConfigDialogProps) {
     super(props);
     this.state = {
       dynamicConfig: null,
-      allJSONValid: true
+      allJSONValid: true,
+      historyRecords: []
     };
   }
 
-  componentDidMount(): void {
+  componentDidMount() {
     this.getConfig();
+
+    this.historyQueryManager = new QueryManager({
+      processQuery: async (query) => {
+        const historyResp = await axios(`/druid/indexer/v1/worker/history?count=100`);
+        return historyResp.data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          historyRecords: result
+        });
+      }
+    });
+
+    this.historyQueryManager.runQuery(`dummy`);
   }
 
   async getConfig() {
@@ -69,13 +87,13 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
     });
   }
 
-  private saveConfig = async (author: string, comment: string) => {
+  private saveConfig = async (comment: string) => {
     const { onClose } = this.props;
     const newState: any = this.state.dynamicConfig;
     try {
       await axios.post("/druid/indexer/v1/worker", newState, {
         headers: {
-          "X-Druid-Author": author,
+          "X-Druid-Author": "console",
           "X-Druid-Comment": comment
         }
       });
@@ -96,7 +114,7 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
 
   render() {
     const { onClose } = this.props;
-    const { dynamicConfig, allJSONValid } = this.state;
+    const { dynamicConfig, allJSONValid, historyRecords } = this.state;
 
     return <SnitchDialog
       className="overlord-dynamic-config"
@@ -105,6 +123,7 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
       onClose={onClose}
       title="Overlord dynamic config"
       saveDisabled={!allJSONValid}
+      historyRecords={historyRecords}
     >
       <p>
         Edit the overlord dynamic configuration on the fly.

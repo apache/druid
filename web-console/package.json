@@ -16,7 +16,8 @@
     "test": "jest --silent 2>&1",
     "generate-licenses-file": "license-checker --production --json --out licenses.json",
     "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;MIT;CC0-1.0' --summary",
-    "start": "webpack-dev-server --hot --open"
+    "start": "webpack-dev-server --hot --open",
+    "stylelint": "stylelint 'src/**/*.scss'"
   },
   "dependencies": {
     "@blueprintjs/core": "1.0.1",
@@ -66,6 +67,9 @@
     "postcss-preset-env": "^6.5.0",
     "sass-loader": "^7.1.0",
     "style-loader": "^0.23.1",
+    "stylelint": "^9.10.1",
+    "stylelint-config-recommended-scss": "^3.2.0",
+    "stylelint-scss": "^3.5.4",
     "stylus": "^0.54.5",
     "ts-jest": "^23.10.5",
     "ts-loader": "^5.3.3",

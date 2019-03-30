@@ -22,6 +22,7 @@ import * as React from 'react';
 
 import { FormGroup, IconNames } from '../components/filler';
 import { Rule, RuleEditor } from '../components/rule-editor';
+import { QueryManager } from "../utils";
 
 import { SnitchDialog } from './snitch-dialog';
 
@@ -43,28 +44,48 @@ export interface RetentionDialogProps extends React.Props<any> {
   tiers: string[];
   onEditDefaults: () => void;
   onCancel: () => void;
-  onSave: (datasource: string, newRules: any[], author: string, comment: string) => void;
+  onSave: (datasource: string, newRules: any[], comment: string) => void;
 }
 
 export interface RetentionDialogState {
   currentRules: any[];
+  historyRecords: any[];
 }
 
 export class RetentionDialog extends React.Component<RetentionDialogProps, RetentionDialogState> {
+  private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: RetentionDialogProps) {
     super(props);
 
     this.state = {
-      currentRules: props.rules
+      currentRules: props.rules,
+      historyRecords: []
     };
   }
 
-  private save = (author: string, comment: string) => {
+  componentDidMount() {
+    const { datasource } = this.props;
+    this.historyQueryManager = new QueryManager({
+      processQuery: async (query) => {
+        const historyResp = await axios(`/druid/coordinator/v1/rules/${datasource}/history`);
+        return historyResp.data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          historyRecords: result
+        });
+      }
+    });
+
+    this.historyQueryManager.runQuery(`dummy`);
+  }
+
+  private save = (comment: string) => {
     const { datasource, onSave } = this.props;
     const { currentRules } = this.state;
 
-    onSave(datasource, currentRules, author, comment);
+    onSave(datasource, currentRules, comment);
   }
 
   private changeRule = (newRule: any, index: number) => {
@@ -140,7 +161,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
 
   render() {
     const { datasource, onCancel, onEditDefaults } = this.props;
-    const { currentRules } = this.state;
+    const { currentRules, historyRecords } = this.state;
 
     return <SnitchDialog
       className="retention-dialog"
@@ -152,6 +173,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
       title={`Edit retention rules: ${datasource}${datasource === '_default' ? ' (cluster defaults)' : ''}`}
       onReset={this.reset}
       onSave={this.save}
+      historyRecords={historyRecords}
     >
       <p>
         Druid uses rules to determine what data should be retained in the cluster.

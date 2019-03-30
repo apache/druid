@@ -107,11 +107,14 @@ public class ScanBenchmark
   @Param({"200000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.B", "basic.C", "basic.D"})
   private String schemaAndQuery;
 
   @Param({"1000", "99999"})
   private int limit;
+
+  @Param({"NONE", "DESCENDING", "ASCENDING"})
+  private static ScanQuery.Order ordering;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final ObjectMapper JSON_MAPPER;
@@ -178,7 +181,8 @@ public class ScanBenchmark
 
     return Druids.newScanQueryBuilder()
                  .dataSource("blah")
-                 .intervals(intervalSpec);
+                 .intervals(intervalSpec)
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
@@ -197,7 +201,9 @@ public class ScanBenchmark
 
     return Druids.newScanQueryBuilder()
                  .filters(filter)
-                 .intervals(intervalSpec);
+                 .dataSource("blah")
+                 .intervals(intervalSpec)
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
@@ -207,8 +213,10 @@ public class ScanBenchmark
 
     final String dimName = "dimUniform";
     return Druids.newScanQueryBuilder()
-        .filters(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()))
-        .intervals(intervalSpec);
+                 .filters(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()))
+                 .intervals(intervalSpec)
+                 .dataSource("blah")
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
@@ -220,8 +228,10 @@ public class ScanBenchmark
     final String dimName = "dimUniform";
 
     return Druids.newScanQueryBuilder()
-        .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))
-        .intervals(intervalSpec);
+                 .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))
+                 .intervals(intervalSpec)
+                 .dataSource("blah")
+                 .order(ordering);
   }
 
   @Setup
@@ -289,7 +299,8 @@ public class ScanBenchmark
             config,
             DefaultGenericQueryMetricsFactory.instance()
         ),
-        new ScanQueryEngine()
+        new ScanQueryEngine(),
+        new ScanQueryConfig()
     );
   }
 
