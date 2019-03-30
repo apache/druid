@@ -158,6 +158,10 @@ public class MetadataResource
     if (datasources != null && !datasources.isEmpty()) {
       druidDataSources = druidDataSources.stream()
                                          .filter(src -> datasources.contains(src.getName()))
+                                         // collecting to List here instead of Set because
+                                         // ImmutableDruidDataSource.hashCode() is currently expensive
+                                         // and metadataSegmentManager.getDataSources() already
+                                         // returns unique data sources
                                          .collect(Collectors.toList());
     }
     final Stream<DataSegment> metadataSegments = druidDataSources
