@@ -46,12 +46,13 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
 @Warmup(iterations = 10)
 @Measurement(iterations = 25)
-public class IndexIngestionBenchmark
+public class IndexIngestionMultithreadedBenchmark
 {
   @Param({"75000"})
   private int rowsPerSegment;
@@ -71,6 +72,7 @@ public class IndexIngestionBenchmark
   private IncrementalIndex incIndex;
   private ArrayList<InputRow> rows;
   private BenchmarkSchemaInfo schemaInfo;
+  AtomicInteger threadIdAllocator = new AtomicInteger(0);
 
   @Setup
   public void setup()
@@ -81,10 +83,10 @@ public class IndexIngestionBenchmark
     schemaInfo = BenchmarkSchemas.SCHEMA_MAP.get(schema);
 
     BenchmarkDataGenerator gen = new BenchmarkDataGenerator(
-        schemaInfo.getColumnSchemas(),
-        RNG_SEED,
-        schemaInfo.getDataInterval(),
-        rowsPerSegment
+            schemaInfo.getColumnSchemas(),
+            RNG_SEED,
+            schemaInfo.getDataInterval(),
+            rowsPerSegment
     );
 
     for (int i = 0; i < rowsPerSegment; i++) {
@@ -92,7 +94,20 @@ public class IndexIngestionBenchmark
       if (i % 10000 == 0) {
         log.info(i + " rows generated.");
       }
+
       rows.add(row);
+    }
+  }
+
+  @State(Scope.Thread)
+  public static class ThreadState
+  {
+    int id = 0;
+
+    @Setup
+    public void setup(IndexIngestionMultithreadedBenchmark globalState)
+    {
+      id = globalState.threadIdAllocator.getAndIncrement();
     }
   }
 
@@ -102,7 +117,7 @@ public class IndexIngestionBenchmark
     incIndex = makeIncIndex();
   }
 
-  @TearDown(Level.Invocation)
+  @TearDown(Level.Iteration)
   public void tearDown()
   {
     incIndex.close();
@@ -111,14 +126,14 @@ public class IndexIngestionBenchmark
   private IncrementalIndex makeIncIndex()
   {
     IncrementalIndex.Builder builder = new IncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withMetrics(schemaInfo.getAggsArray())
-                .withRollup(rollup)
-                .build()
-        )
-        .setReportParseExceptions(false)
-        .setMaxRowCount(rowsPerSegment * 2);
+            .setIndexSchema(
+                    new IncrementalIndexSchema.Builder()
+                           .withMetrics(schemaInfo.getAggsArray())
+                           .withRollup(rollup)
+                           .build()
+            )
+            .setReportParseExceptions(false)
+            .setMaxRowCount(rowsPerSegment * 2);
     switch (indexType) {
       case "onheap":
         return builder.buildOnheap();
@@ -129,15 +144,15 @@ public class IndexIngestionBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
+  @BenchmarkMode(Mode.SingleShotTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public void addRows(Blackhole blackhole) throws Exception
+  public void addRows(Blackhole blackhole, ThreadState threadState) throws Exception
   {
-    for (int i = 0; i < rowsPerSegment; i++) {
+    int threads = threadIdAllocator.get();
+    for (int i = threadState.id; i < rowsPerSegment; i += threads) {
       InputRow row = rows.get(i);
       int rv = incIndex.add(row).getRowCount();
       blackhole.consume(rv);
     }
   }
-
 }

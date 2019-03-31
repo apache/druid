@@ -293,7 +293,7 @@ public class TopNBenchmark
   public void tearDown() throws IOException
   {
     FileUtils.deleteDirectory(tmpDir);
-    incIndexes.forEach(index->index.close());
+    incIndexes.forEach(index -> index.close());
   }
 
   private IncrementalIndex makeIncIndex()
