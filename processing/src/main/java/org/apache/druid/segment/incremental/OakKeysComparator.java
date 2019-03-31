@@ -93,31 +93,31 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
   @Override
   public int compareSerializedKeys(ByteBuffer lhs, ByteBuffer rhs)
   {
-    int retVal = Longs.compare(OakIncrementalIndex.getTimestamp(lhs), OakIncrementalIndex.getTimestamp(rhs));
-    int lhsDimsLength = OakIncrementalIndex.getDimsLength(lhs);
-    int rhsDimsLength = OakIncrementalIndex.getDimsLength(rhs);
+    int retVal = Longs.compare(OakUtils.getTimestamp(lhs), OakUtils.getTimestamp(rhs));
+    int lhsDimsLength = OakUtils.getDimsLength(lhs);
+    int rhsDimsLength = OakUtils.getDimsLength(rhs);
     int numComparisons = Math.min(lhsDimsLength, rhsDimsLength);
 
     int dimIndex = 0;
     while (retVal == 0 && dimIndex < numComparisons) {
-      int lhsType = lhs.getInt(OakIncrementalIndex.getDimIndexInBuffer(lhs, lhsDimsLength, dimIndex));
-      int rhsType = rhs.getInt(OakIncrementalIndex.getDimIndexInBuffer(rhs, rhsDimsLength, dimIndex));
+      int lhsType = lhs.getInt(OakUtils.getDimIndexInBuffer(lhs, lhsDimsLength, dimIndex));
+      int rhsType = rhs.getInt(OakUtils.getDimIndexInBuffer(rhs, rhsDimsLength, dimIndex));
 
-      if (lhsType == OakIncrementalIndex.NO_DIM) {
-        if (rhsType == OakIncrementalIndex.NO_DIM) {
+      if (lhsType == OakUtils.NO_DIM) {
+        if (rhsType == OakUtils.NO_DIM) {
           ++dimIndex;
           continue;
         }
         return -1;
       }
 
-      if (rhsType == OakIncrementalIndex.NO_DIM) {
+      if (rhsType == OakUtils.NO_DIM) {
         return 1;
       }
 
       final DimensionIndexer indexer = dimensionDescsList.get(dimIndex).getIndexer();
-      Object lhsObject = OakIncrementalIndex.getDimValue(lhs, dimIndex);
-      Object rhsObject = OakIncrementalIndex.getDimValue(rhs, dimIndex);
+      Object lhsObject = OakUtils.getDimValue(lhs, dimIndex);
+      Object rhsObject = OakUtils.getDimValue(rhs, dimIndex);
       retVal = indexer.compareUnsortedEncodedKeyComponents(lhsObject, rhsObject);
       ++dimIndex;
     }
@@ -125,17 +125,17 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
     if (retVal == 0) {
       int lengthDiff = Ints.compare(lhsDimsLength, rhsDimsLength);
       if (lengthDiff == 0) {
-        return lastCompare(OakIncrementalIndex.getRowIndex(lhs), OakIncrementalIndex.getRowIndex(rhs));
+        return lastCompare(OakUtils.getRowIndex(lhs), OakUtils.getRowIndex(rhs));
       }
       if (lengthDiff > 0) {
         // lhs has bigger dims
-        if (OakIncrementalIndex.checkDimsAllNull(lhs, numComparisons)) {
-          return lastCompare(OakIncrementalIndex.getRowIndex(lhs), OakIncrementalIndex.getRowIndex(rhs));
+        if (OakUtils.checkDimsAllNull(lhs, numComparisons)) {
+          return lastCompare(OakUtils.getRowIndex(lhs), OakUtils.getRowIndex(rhs));
         }
       } else {
         // rhs has bigger dims
-        if (OakIncrementalIndex.checkDimsAllNull(rhs, numComparisons)) {
-          return lastCompare(OakIncrementalIndex.getRowIndex(lhs), OakIncrementalIndex.getRowIndex(rhs));
+        if (OakUtils.checkDimsAllNull(rhs, numComparisons)) {
+          return lastCompare(OakUtils.getRowIndex(lhs), OakUtils.getRowIndex(rhs));
         }
       }
       return lengthDiff;
@@ -148,7 +148,7 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
   {
     if (!rollup || lsIndex == IncrementalIndexRow.EMPTY_ROW_INDEX || rsIndex == IncrementalIndexRow.EMPTY_ROW_INDEX) {
       // If we are not rollup then keys shouldnt collide.
-      // If on of the keys is EMPTY_ROW_INDEX this is a lower or upper bound key and must be compared.
+      // If one of the keys is EMPTY_ROW_INDEX this is a lower or upper bound key and must be compared.
       return lsIndex - rsIndex;
     } else {
       return 0;
@@ -159,14 +159,14 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
   @Override
   public int compareSerializedKeyAndKey(ByteBuffer lhs, IncrementalIndexRow rhs)
   {
-    int retVal = Longs.compare(OakIncrementalIndex.getTimestamp(lhs), rhs.getTimestamp());
-    int lhsDimsLength = OakIncrementalIndex.getDimsLength(lhs);
+    int retVal = Longs.compare(OakUtils.getTimestamp(lhs), rhs.getTimestamp());
+    int lhsDimsLength = OakUtils.getDimsLength(lhs);
     int rhsDimsLength = rhs.getDimsLength();
     int numComparisons = Math.min(lhsDimsLength, rhsDimsLength);
 
     int index = 0;
     while (retVal == 0 && index < numComparisons) {
-      final Object lhsIdxs = OakIncrementalIndex.getDimValue(lhs, index);
+      final Object lhsIdxs = OakUtils.getDimValue(lhs, index);
       final Object rhsIdxs = rhs.getDim(index);
 
       if (lhsIdxs == null) {
@@ -189,17 +189,17 @@ public class OakKeysComparator implements OakComparator<IncrementalIndexRow>
     if (retVal == 0) {
       int lengthDiff = Ints.compare(lhsDimsLength, rhsDimsLength);
       if (lengthDiff == 0) {
-        return lastCompare(OakIncrementalIndex.getRowIndex(lhs), rhs.getRowIndex());
+        return lastCompare(OakUtils.getRowIndex(lhs), rhs.getRowIndex());
       }
       if (lengthDiff > 0) {
         // lhs has bigger dims
-        if (OakIncrementalIndex.checkDimsAllNull(lhs, numComparisons)) {
-          return lastCompare(OakIncrementalIndex.getRowIndex(lhs), rhs.getRowIndex());
+        if (OakUtils.checkDimsAllNull(lhs, numComparisons)) {
+          return lastCompare(OakUtils.getRowIndex(lhs), rhs.getRowIndex());
         }
       } else {
         // rhs has bigger dims
         if (allNull(rhs, numComparisons)) {
-          return lastCompare(OakIncrementalIndex.getRowIndex(lhs), rhs.getRowIndex());
+          return lastCompare(OakUtils.getRowIndex(lhs), rhs.getRowIndex());
         }
       }
       return lengthDiff;

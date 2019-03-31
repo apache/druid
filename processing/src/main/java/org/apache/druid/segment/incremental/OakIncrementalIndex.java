@@ -38,8 +38,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ValueType;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -58,17 +56,7 @@ import java.util.function.Function;
 public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
 
-  static final Integer ALLOC_PER_DIM = 12;
-  static final Integer NO_DIM = -1;
-  static final Integer TIME_STAMP_INDEX = 0;
-  static final Integer DIMS_LENGTH_INDEX = TIME_STAMP_INDEX + Long.BYTES;
-  static final Integer ROW_INDEX_INDEX = DIMS_LENGTH_INDEX + Integer.BYTES;
-  static final Integer DIMS_INDEX = ROW_INDEX_INDEX + Integer.BYTES;
-  // Serialization and deserialization offsets
-  static final Integer VALUE_TYPE_OFFSET = 0;
-  static final Integer DATA_OFFSET = VALUE_TYPE_OFFSET + Integer.BYTES;
-  static final Integer ARRAY_INDEX_OFFSET = VALUE_TYPE_OFFSET + Integer.BYTES;
-  static final Integer ARRAY_LENGTH_OFFSET = ARRAY_INDEX_OFFSET + Integer.BYTES;
+
 
 
   private final OakFactsHolder facts;
@@ -232,11 +220,11 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     Function<Map.Entry<ByteBuffer, OakRBuffer>, Row> transformer = entry -> {
       ByteBuffer serializedKey = entry.getKey();
       OakRBuffer serializedValue = entry.getValue();
-      long timeStamp = OakIncrementalIndex.getTimestamp(serializedKey);
-      int dimsLength = OakIncrementalIndex.getDimsLength(serializedKey);
+      long timeStamp = OakUtils.getTimestamp(serializedKey);
+      int dimsLength = OakUtils.getDimsLength(serializedKey);
       Map<String, Object> theVals = Maps.newLinkedHashMap();
       for (int i = 0; i < dimsLength; ++i) {
-        Object dim = OakIncrementalIndex.getDimValue(serializedKey, i);
+        Object dim = OakUtils.getDimValue(serializedKey, i);
         DimensionDesc dimensionDesc = dimensionDescsList.get(i);
         if (dimensionDesc == null) {
           continue;
@@ -266,91 +254,6 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     return () -> facts.transformIterator(descending, transformer);
   }
 
-//static methods
-
-  static boolean checkDimsAllNull(ByteBuffer buff, int numComparisons)
-  {
-    int dimsLength = getDimsLength(buff);
-    for (int index = 0; index < Math.min(dimsLength, numComparisons); index++) {
-      if (buff.getInt(getDimIndexInBuffer(buff, dimsLength, index)) != OakIncrementalIndex.NO_DIM) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  static long getTimestamp(ByteBuffer buff)
-  {
-    return buff.getLong(buff.position() + TIME_STAMP_INDEX);
-  }
-
-  static int getRowIndex(ByteBuffer buff)
-  {
-    return buff.getInt(buff.position() + ROW_INDEX_INDEX);
-  }
-
-  static ValueType getDimValueType(int dimIndex, List<DimensionDesc> dimensionDescsList)
-  {
-    DimensionDesc dimensionDesc = dimensionDescsList.get(dimIndex);
-    if (dimensionDesc == null) {
-      return null;
-    }
-    ColumnCapabilitiesImpl capabilities = dimensionDesc.getCapabilities();
-    if (capabilities == null) {
-      return null;
-    }
-    return capabilities.getType();
-  }
-
-  static Object getDimValue(ByteBuffer buff, int dimIndex)
-  {
-    int dimsLength = getDimsLength(buff);
-    return getDimValue(buff, dimIndex, dimsLength);
-  }
-
-  static int getDimsLength(ByteBuffer buff)
-  {
-    return buff.getInt(buff.position() + DIMS_LENGTH_INDEX);
-  }
-
-  static int getDimIndexInBuffer(ByteBuffer buff, int dimsLength, int dimIndex)
-  {
-    if (dimIndex >= dimsLength) {
-      return NO_DIM;
-    }
-    return buff.position() + DIMS_INDEX + dimIndex * ALLOC_PER_DIM;
-  }
-
-  static Object getDimValue(ByteBuffer buff, int dimIndex, int dimsLength)
-  {
-    Object dimObject = null;
-    if (dimIndex >= dimsLength) {
-      return null;
-    }
-    int dimIndexInBuffer = getDimIndexInBuffer(buff, dimsLength, dimIndex);
-    int dimType = buff.getInt(dimIndexInBuffer);
-    if (dimType == OakIncrementalIndex.NO_DIM) {
-      return null;
-    } else if (dimType == ValueType.DOUBLE.ordinal()) {
-      dimObject = buff.getDouble(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
-    } else if (dimType == ValueType.FLOAT.ordinal()) {
-      dimObject = buff.getFloat(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
-    } else if (dimType == ValueType.LONG.ordinal()) {
-      dimObject = buff.getLong(dimIndexInBuffer + OakIncrementalIndex.DATA_OFFSET);
-    } else if (dimType == ValueType.STRING.ordinal()) {
-      int arrayIndexOffset = buff.getInt(dimIndexInBuffer + OakIncrementalIndex.ARRAY_INDEX_OFFSET);
-      int arrayIndex = buff.position() + arrayIndexOffset;
-      int arraySize = buff.getInt(dimIndexInBuffer + OakIncrementalIndex.ARRAY_LENGTH_OFFSET);
-      int[] array = new int[arraySize];
-      for (int i = 0; i < arraySize; i++) {
-        array[i] = buff.getInt(arrayIndex);
-        arrayIndex += Integer.BYTES;
-      }
-      dimObject = array;
-    }
-
-    return dimObject;
-  }
 
 
   static class AggsManager

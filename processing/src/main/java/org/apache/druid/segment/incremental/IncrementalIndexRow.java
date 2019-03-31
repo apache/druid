@@ -36,7 +36,7 @@ public class IncrementalIndexRow
 
   final long timestamp;
   final Object[] dims;
-  protected final List<IncrementalIndex.DimensionDesc> dimensionDescsList;
+  private final List<IncrementalIndex.DimensionDesc> dimensionDescsList;
 
   /**
    * rowIndex is not checked in {@link #equals} and {@link #hashCode} on purpose. IncrementalIndexRow acts as a Map key
