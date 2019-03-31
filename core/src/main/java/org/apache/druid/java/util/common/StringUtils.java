@@ -411,4 +411,93 @@ public class StringUtils
     System.arraycopy(multiple, 0, multiple, copied, limit - copied);
     return new String(multiple, StandardCharsets.UTF_8);
   }
+   
+  /**
+   * Returns the string left-padded with the string pad to a length of len characters.
+   * If str is longer than len, the return value is shortened to len characters. 
+   *
+   * @param base The base string to be padded
+   * @param len The length of padded string
+   * @param pad The pad string
+   * @return the string left-padded with pad to a lenght of len
+   */
+  public static String lpad(String base, Integer len, String pad)
+  {
+    if (len < 0) {
+      return null;
+    } else if (len == 0) {
+      return "";
+    }
+
+    char[] data = new char[len];
+    char[] baseChars = base.toCharArray();
+    char[] padChars = pad.toCharArray();
+
+    // The length of the padding needed
+    int pos = Math.max(len - base.length(), 0);
+
+    // Copy the padding
+    int i = 0;
+    while (i < pos) {
+      int j = 0;
+      while (j < pad.length() && j < pos - i) {
+        data[i + j] = padChars[j];
+        j += 1;
+      }
+      i += pad.length();
+    }
+
+    // Copy the base
+    i = 0;
+    while (pos + i < len && i < base.length()) {
+      data[pos + i] = baseChars[i];
+      i += 1;
+    }
+
+    return new String(data);
+
+  }
+
+  /**
+   * Returns the string right-padded with the string pad to a length of len characters.
+   * If str is longer than len, the return value is shortened to len characters. 
+   *
+   * @param base The base string to be padded
+   * @param len The length of padded string
+   * @param pad The pad string
+   * @return the string right-padded with pad to a lenght of len
+   */
+  public static String rpad(String base, Integer len, String pad)
+  {
+    if (len < 0) {
+      return null;
+    } else if (len == 0) {
+      return "";
+    }
+
+    char[] data = new char[len];
+    char[] baseChars = base.toCharArray();
+    char[] padChars = pad.toCharArray();
+
+    int pos = 0;
+
+    // Copy the base
+    while (pos < base.length() && pos < len) {
+      data[pos] = baseChars[pos];
+      pos += 1;
+    }
+
+    // Copy the padding
+    while (pos < len) {
+      int i = 0;
+      while (i < pad.length() && i < len - pos) {
+        data[pos + i] = padChars[i];
+        i += 1;
+      }
+      pos += pad.length();
+    }
+
+    return new String(data);
+  }
+
 }
