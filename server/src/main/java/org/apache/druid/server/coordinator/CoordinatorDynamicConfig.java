@@ -58,11 +58,22 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
   private final boolean killUnusedSegmentsInAllDataSources;
+
+  /**
+   * List of specific data sources for which kill tasks are sent in
+   * {@link DruidCoordinatorUnusedSegmentsKiller}.
+   */
   private final Set<String> specificDataSourcesToKillUnusedSegmentsIn;
   private final Set<String> decommissioningNodes;
   private final int decommissioningMaxPercentOfMaxSegmentsToMove;
 
-  /** Stale pending segments belonging to the data sources in this list are not killed (they are "protected"). */
+  /**
+   * Stale pending segments belonging to the data sources in this list are not killed by {@link
+   * DruidCoordinatorKillStalePendingSegments}. In other words, segments in these data sources are "protected".
+   *
+   * Pending segments are considered "stale" when their created_time is older than {@link
+   * DruidCoordinatorKillStalePendingSegments#KEEP_PENDING_SEGMENTS_OFFSET} from now.
+   */
   private final Set<String> dataSourcesToNotKillStalePendingSegmentsIn;
 
   /**
@@ -214,10 +225,6 @@ public class CoordinatorDynamicConfig
     return balancerComputeThreads;
   }
 
-  /**
-   * List of specific data sources for which kill tasks are sent in
-   * {@link DruidCoordinatorUnusedSegmentsKiller}.
-   */
   @JsonProperty("killDataSourceWhitelist")
   public Set<String> getSpecificDataSourcesToKillUnusedSegmentsIn()
   {
@@ -230,10 +237,6 @@ public class CoordinatorDynamicConfig
     return killUnusedSegmentsInAllDataSources;
   }
 
-  /**
-   * List of dataSources for which pendingSegments are NOT cleaned up
-   * in {@link DruidCoordinatorKillStalePendingSegments}.
-   */
   @JsonProperty("killPendingSegmentsSkipList")
   public Set<String> getDataSourcesToNotKillStalePendingSegmentsIn()
   {
