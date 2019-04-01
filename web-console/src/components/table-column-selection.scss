@@ -17,10 +17,9 @@
  */
 
 .table-column-selection {
-  &.pt-popover-target{
-    position: absolute;
-    right: 0;
-  }
+  position: absolute;
+  right: 0;
+  margin: 0;
 }
 
 // This will be mounted in a portal
@@ -28,7 +27,7 @@
   .form-group {
     margin-bottom: 0;
 
-    .pt-checkbox:last-child {
+    .bp3-checkbox:last-child {
       margin-bottom: 0;
     }
   }

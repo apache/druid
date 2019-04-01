@@ -17,11 +17,11 @@
  */
 
 import { Intent } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from "axios";
 import * as React from "react";
 
 import { AutoForm } from "../components/auto-form";
-import { IconNames } from "../components/filler";
 import { AppToaster } from "../singletons/toaster";
 import { getDruidErrorMessage, QueryManager } from "../utils";
 
@@ -76,7 +76,7 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
       config = configResp.data || {};
     } catch (e) {
       AppToaster.show({
-        iconName: IconNames.ERROR,
+        icon: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not load overlord dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -99,7 +99,7 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
       });
     } catch (e) {
       AppToaster.show({
-        iconName: IconNames.ERROR,
+        icon: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not save overlord dynamic config: ${getDruidErrorMessage(e)}`
       });
