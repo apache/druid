@@ -50,7 +50,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   @Override
   public long getTimestamp()
   {
-    return dimensions.getLong(dimensions.position() + OakUtils.TIME_STAMP_INDEX);
+    return OakUtils.getTimestamp(dimensions);
   }
 
   @Override
@@ -58,7 +58,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   {
     // Read length only once
     if (dimsLength == null) {
-      dimsLength = dimensions.getInt(dimensions.position() + OakUtils.DIMS_LENGTH_INDEX);
+      dimsLength = OakUtils.getDimsLength(dimensions);
     }
     return dimsLength;
   }
@@ -75,7 +75,7 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   @Override
   public int getRowIndex()
   {
-    return dimensions.getInt(dimensions.position() + OakUtils.ROW_INDEX_INDEX);
+    return OakUtils.getRowIndex(dimensions);
   }
 
   @Override
@@ -113,47 +113,16 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
   }
 
 
-
-
   /* ---------------- OakRBuffer utils -------------- */
 
   private int getDimIndexInBuffer(int dimIndex)
   {
-    if (dimIndex >= getDimsLength()) {
-      return OakUtils.NO_DIM;
-    }
-    return dimensions.position() + OakUtils.DIMS_INDEX + dimIndex * OakUtils.ALLOC_PER_DIM;
+    return OakUtils.getDimIndexInBuffer(dimensions, getDimsLength(), dimIndex);
   }
 
   private Object getDimValue(int dimIndex)
   {
-    Object dimObject = null;
-    if (dimIndex >= getDimsLength()) {
-      return null;
-    }
-    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
-    int dimType = dimensions.getInt(dimIndexInBuffer);
-    if (dimType == OakUtils.NO_DIM) {
-      return null;
-    } else if (dimType == ValueType.DOUBLE.ordinal()) {
-      dimObject = dimensions.getDouble(dimIndexInBuffer + OakUtils.DATA_OFFSET);
-    } else if (dimType == ValueType.FLOAT.ordinal()) {
-      dimObject = dimensions.getFloat(dimIndexInBuffer + OakUtils.DATA_OFFSET);
-    } else if (dimType == ValueType.LONG.ordinal()) {
-      dimObject = dimensions.getLong(dimIndexInBuffer + OakUtils.DATA_OFFSET);
-    } else if (dimType == ValueType.STRING.ordinal()) {
-      int arrayIndexOffset = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_INDEX_OFFSET);
-      int arrayIndex = dimensions.position() + arrayIndexOffset;
-      int arraySize = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_LENGTH_OFFSET);
-      int[] array = new int[arraySize];
-      for (int i = 0; i < arraySize; i++) {
-        array[i] = dimensions.getInt(arrayIndex);
-        arrayIndex += Integer.BYTES;
-      }
-      dimObject = array;
-    }
-
-    return dimObject;
+    return OakUtils.getDimValue(dimensions, dimIndex);
   }
 
   private int getDimType(int dimIndex)
@@ -162,6 +131,13 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
       return OakUtils.NO_DIM;
     }
     int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
-    return dimensions.getInt(dimIndexInBuffer);
+    return dimensions.getInt(dimIndexInBuffer + OakUtils.VALUE_TYPE_OFFSET);
+  }
+
+  //Faster to check this way if dim is null instead of deserializing
+  @Override
+  boolean isDimNull(int index)
+  {
+    return dimensions.getInt(getDimIndexInBuffer(index)) == OakUtils.NO_DIM;
   }
 }

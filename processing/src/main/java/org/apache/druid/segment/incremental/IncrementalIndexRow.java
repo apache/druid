@@ -206,4 +206,13 @@ public class IncrementalIndexRow
     }
     return hash;
   }
+
+  boolean isDimNull(int index)
+  {
+    if (dims == null || index >= dims.length || dims[index] == null) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 }

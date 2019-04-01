@@ -19,10 +19,8 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import java.nio.ByteBuffer;
-import java.util.List;
 
 public final class OakUtils
 {
@@ -42,17 +40,6 @@ public final class OakUtils
   {
   }
 
-  static boolean checkDimsAllNull(ByteBuffer buff, int numComparisons)
-  {
-    int dimsLength = getDimsLength(buff);
-    for (int index = 0; index < Math.min(dimsLength, numComparisons); index++) {
-      if (buff.getInt(getDimIndexInBuffer(buff, dimsLength, index)) != NO_DIM) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   static long getTimestamp(ByteBuffer buff)
   {
     return buff.getLong(buff.position() + TIME_STAMP_INDEX);
@@ -61,19 +48,6 @@ public final class OakUtils
   static int getRowIndex(ByteBuffer buff)
   {
     return buff.getInt(buff.position() + ROW_INDEX_INDEX);
-  }
-
-  static ValueType getDimValueType(int dimIndex, List<IncrementalIndex.DimensionDesc> dimensionDescsList)
-  {
-    IncrementalIndex.DimensionDesc dimensionDesc = dimensionDescsList.get(dimIndex);
-    if (dimensionDesc == null) {
-      return null;
-    }
-    ColumnCapabilitiesImpl capabilities = dimensionDesc.getCapabilities();
-    if (capabilities == null) {
-      return null;
-    }
-    return capabilities.getType();
   }
 
   static Object getDimValue(ByteBuffer buff, int dimIndex)

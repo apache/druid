@@ -20,6 +20,7 @@
 package org.apache.druid.segment.incremental;
 
 import com.oath.oak.OakSerializer;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ValueType;
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -34,6 +35,22 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
   {
     this.dimensionDescsList = dimensionDescsList;
   }
+
+
+  private ValueType getDimValueType(int dimIndex, List<IncrementalIndex.DimensionDesc> dimensionDescsList)
+  {
+    IncrementalIndex.DimensionDesc dimensionDesc = dimensionDescsList.get(dimIndex);
+    if (dimensionDesc == null) {
+      return null;
+    }
+    ColumnCapabilitiesImpl capabilities = dimensionDesc.getCapabilities();
+    if (capabilities == null) {
+      return null;
+    }
+    return capabilities.getType();
+  }
+
+
 
   @Override
   public void serialize(IncrementalIndexRow incrementalIndexRow, ByteBuffer byteBuffer)
@@ -50,8 +67,6 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
     int rowIndexIndex = buffIndex + OakUtils.ROW_INDEX_INDEX;      // the rowIndex index
     int dimsIndex = buffIndex + OakUtils.DIMS_INDEX;               // the dims array index
     int dimCapacity = OakUtils.ALLOC_PER_DIM;                      // the number of bytes required
-    // per dim
-    int noDim = OakUtils.NO_DIM;                                   // for mentioning that
     // a certain dim is null
     int dimsArraysIndex = dimsIndex + dimCapacity * dimsLength;               // the index for
     // writing the int arrays
@@ -67,9 +82,9 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
     byteBuffer.putInt(dimsLengthIndex, dimsLength);
     byteBuffer.putInt(rowIndexIndex, rowIndex);
     for (int i = 0; i < dimsLength; i++) {
-      ValueType valueType = OakUtils.getDimValueType(i, dimensionDescsList);
+      ValueType valueType = getDimValueType(i, dimensionDescsList);
       if (valueType == null || incrementalIndexRow.getDim(i) == null) {
-        byteBuffer.putInt(dimsIndex, noDim);
+        byteBuffer.putInt(dimsIndex, OakUtils.NO_DIM);
       } else {
         byteBuffer.putInt(dimsIndex + valueTypeOffset, valueType.ordinal());
         switch (valueType) {
@@ -93,7 +108,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
             dimsArrayOffset += (arr.length * Integer.BYTES);
             break;
           default:
-            byteBuffer.putInt(dimsIndex, noDim);
+            byteBuffer.putInt(dimsIndex, OakUtils.NO_DIM);
         }
       }
 
@@ -119,7 +134,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
   @Override
   public int calculateSize(IncrementalIndexRow incrementalIndexRow)
   {
-    //TODO - YONIGO befrore this what == null is it correct now?
+    //TODO - YONIGO befrore this was == null is it correct now?
     if (incrementalIndexRow.getDimsLength() == 0) {
       return Long.BYTES + 2 * Integer.BYTES;
     }
@@ -133,7 +148,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
       if (dim == null) {
         continue;
       }
-      if (OakUtils.getDimValueType(i, dimensionDescsList) == ValueType.STRING) {
+      if (getDimValueType(i, dimensionDescsList) == ValueType.STRING) {
         sumOfArrayLengths += ((int[]) dim).length;
       }
     }
