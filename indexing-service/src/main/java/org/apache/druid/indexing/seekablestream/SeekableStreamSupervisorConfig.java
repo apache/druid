@@ -28,8 +28,6 @@ public class SeekableStreamSupervisorConfig
   @JsonProperty
   private boolean storingStackTraces = false;
 
-  // TODO improve the name of these configs
-
   // The number of runs failed before the supervisor flips from a RUNNING to an UNHEALTHY state
   @JsonProperty
   @Min(1)

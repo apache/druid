@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
 import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
 import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
@@ -88,24 +89,23 @@ public class SeekableStreamSupervisorStateManager
 
   private boolean atLeastOneSuccessfulRun = false;
   private boolean currentRunSuccessful = true;
+  private final boolean storingStackTraces;
   private final CircularBuffer<TaskState> completedTaskHistory;
   private final CircularBuffer<State> stateHistory; // From previous runs
 
   public SeekableStreamSupervisorStateManager(
       State initialState,
-      int healthinessThreshold,
-      int unhealthinessThreshold,
-      int healthinessTaskThreshold,
-      int unhealthinessTaskThreshold
+      SeekableStreamSupervisorConfig config
   )
   {
     this.supervisorState = initialState;
     this.throwableEvents = new ConcurrentHashMap<>();
     this.errorsEncounteredOnRun = new HashSet<>();
-    this.healthinessThreshold = healthinessThreshold;
-    this.unhealthinessThreshold = unhealthinessThreshold;
-    this.healthinessTaskThreshold = healthinessTaskThreshold;
-    this.unhealthinessTaskThreshold = unhealthinessTaskThreshold;
+    this.healthinessThreshold = config.getSupervisorHealthinessThreshold();
+    this.unhealthinessThreshold = config.getSupervisorUnhealthinessThreshold();
+    this.healthinessTaskThreshold = config.getSupervisorTaskHealthinessThreshold();
+    this.unhealthinessTaskThreshold = config.getSupervisorTaskUnhealthinessThreshold();
+    this.storingStackTraces = config.isStoringStackTraces();
     this.completedTaskHistory = new CircularBuffer<>(Math.max(healthinessTaskThreshold, unhealthinessTaskThreshold));
     this.stateHistory = new CircularBuffer<>(Math.max(healthinessThreshold, unhealthinessThreshold));
   }
@@ -142,7 +142,7 @@ public class SeekableStreamSupervisorStateManager
     throwableEventsForClassT.add(
         new ThrowableEvent(
             t.getMessage(),
-            ExceptionUtils.getStackTrace(t),
+            storingStackTraces ? ExceptionUtils.getStackTrace(t) : null,
             DateTimes.nowUtc()
         ));
     throwableEvents.put(t.getClass(), throwableEventsForClassT);

@@ -20,7 +20,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
-import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,10 +34,7 @@ public class SeekableStreamSupervisorStateManagerTest
   {
     stateManager = new SeekableStreamSupervisorStateManager(
         SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
-        1,
-        1,
-        1,
-        1
+        new SeekableStreamSupervisorConfig()
     );
   }
 
@@ -68,8 +65,42 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTransientStreamFailure()
   {
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
-    stateManager.storeThrowableEvent(new TransientStreamException(new Exception("some exception")));
+
+  }
+
+  @Test
+  public void testNonTransientUnhealthiness()
+  {
+
+  }
+
+  @Test
+  public void testTransientUnhealthiness()
+  {
+
+  }
+
+  @Test
+  public void testNonTransientTaskUnhealthiness()
+  {
+
+  }
+
+  @Test
+  public void testTransientTaskUnhealthiness()
+  {
+
+  }
+
+  @Test
+  public void testFailureOnFirstRun()
+  {
+
+  }
+
+  @Test
+  public void testTwoUnhealthyStates()
+  {
 
   }
 }
