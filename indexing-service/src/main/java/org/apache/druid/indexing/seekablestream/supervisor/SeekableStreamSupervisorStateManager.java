@@ -149,18 +149,25 @@ public class SeekableStreamSupervisorStateManager
     currentRunSuccessful = false;
   }
 
+  public void storeCompletedTaskState(TaskState state)
+  {
+    completedTaskHistory.add(state);
+  }
+
   public void markRunFinishedAndEvaluateHealth()
   {
     if (currentRunSuccessful) {
       atLeastOneSuccessfulRun = true;
     }
+    currentRunSuccessful = true;
 
+    // Remove transient errors from throwableEvents
     for (Class throwableClass : errorsEncounteredOnRun) {
       if (!throwableEvents.keySet().contains(throwableClass)) {
         throwableEvents.remove(throwableClass);
       }
     }
-    // At this point, all the events in throwableEvents should be non-transient
+
     errorsEncounteredOnRun.clear();
 
     State currentRunState = State.RUNNING;
@@ -180,7 +187,7 @@ public class SeekableStreamSupervisorStateManager
     // Evaluate task health
     if (supervisorState == State.UNHEALTHY_TASKS) {
       boolean tasksHealthy = true;
-      for (int i = 0; i < healthinessTaskThreshold; i++) {
+      for (int i = 0; i < Math.min(unhealthinessTaskThreshold, completedTaskHistory.size()); i++) {
         // Last healthinessTaskThreshold tasks must be healthy for state to change from
         // UNHEALTHY_TASKS to RUNNING
         if (completedTaskHistory.getLatest(i) != TaskState.SUCCESS) {
@@ -192,7 +199,7 @@ public class SeekableStreamSupervisorStateManager
       }
     } else {
       boolean tasksUnhealthy = true;
-      for (int i = 0; i < unhealthinessTaskThreshold; i++) {
+      for (int i = 0; i < Math.min(unhealthinessTaskThreshold, completedTaskHistory.size()); i++) {
         // Last unhealthinessTaskThreshold tasks must be unhealthy for state to change to
         // UNHEALTHY_TASKS
         if (completedTaskHistory.getLatest(i) != TaskState.FAILED) {
@@ -209,20 +216,12 @@ public class SeekableStreamSupervisorStateManager
     // Evaluate state history to determine what current supervisor state should be
     if (currentRunState.isHealthy() && supervisorState.isHealthy()) {
       setState(currentRunState);
-    } else if (!currentRunState.isHealthy()) { // healthy -> unhealthy or unhealthy -> another unhealthy state
-      // Last n need to match the new state
+    } else {
       boolean stateChange = true;
-      for (int i = 0; i < unhealthinessThreshold; i++) {
-        if (stateHistory.getLatest(i) != currentRunState) {
-          stateChange = false;
-        }
-      }
-      if (stateChange) {
-        setState(currentRunState);
-      }
-    } else { // unhealthy -> healthy
-      boolean stateChange = true;
-      for (int i = 0; i < healthinessThreshold; i++) {
+      int numElementsToCheck = currentRunState.isHealthy() ?
+                               Math.min(healthinessThreshold, stateHistory.size()) :
+                               Math.min(unhealthinessThreshold, stateHistory.size());
+      for (int i = 0; i < numElementsToCheck; i++) {
         if (stateHistory.getLatest(i) != currentRunState) {
           stateChange = false;
         }

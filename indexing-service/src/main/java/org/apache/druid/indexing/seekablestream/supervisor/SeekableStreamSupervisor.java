@@ -514,10 +514,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.reportingExec = Execs.scheduledSingleThreaded(supervisorId + "-Reporting-%d");
     this.stateManager = new SeekableStreamSupervisorStateManager(
         SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
-        streamSupervisorConfig.getSupervisorUnhealthinessThreshold(),
+        streamSupervisorConfig.getSupervisorHealthinessThreshold(),
         streamSupervisorConfig.getSupervisorUnhealthinessThreshold(),
         streamSupervisorConfig.getSupervisorTaskHealthinessThreshold(),
-        streamSupervisorConfig.getSupervisorTaskHealthinessThreshold()
+        streamSupervisorConfig.getSupervisorTaskUnhealthinessThreshold()
     );
 
     int workerThreads = (this.tuningConfig.getWorkerThreads() != null
