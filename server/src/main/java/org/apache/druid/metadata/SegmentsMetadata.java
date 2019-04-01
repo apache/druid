@@ -31,8 +31,11 @@ import java.util.Collection;
 import java.util.List;
 
 /**
+ * The difference between this class and {@link org.apache.druid.sql.calcite.schema.MetadataSegmentView} is that this
+ * class resides in Coordinator's memory, while {@link org.apache.druid.sql.calcite.schema.MetadataSegmentView} resides
+ * in Broker's memory.
  */
-public interface MetadataSegments
+public interface SegmentsMetadata
 {
   void start();
 

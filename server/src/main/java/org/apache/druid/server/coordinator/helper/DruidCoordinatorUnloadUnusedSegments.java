@@ -56,7 +56,7 @@ public class DruidCoordinatorUnloadUnusedSegments implements DruidCoordinatorHel
 
     // Unload segments that are no longer marked as used from historical servers, *if* the usedSegments collection has
     // been populated. Used segments might not have been loaded yet since it's done asynchronously (in
-    // SqlMetadataSegments). But it's also done atomically (see SqlMetadataSegments code), so if there are any segments
+    // SqlSegmentsMetadata). But it's also done atomically (see SqlSegmentsMetadata code), so if there are any segments
     // at all, we should have all of them.
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {

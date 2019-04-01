@@ -31,7 +31,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SqlMetadataSegments;
+import org.apache.druid.metadata.SqlSegmentsMetadata;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -69,7 +69,7 @@ public class MaterializedViewSupervisorSpecTest
             .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class, objectMapper)
             .addValue(MetadataSupervisorManager.class, null)
-            .addValue(SqlMetadataSegments.class, null)
+            .addValue(SqlSegmentsMetadata.class, null)
             .addValue(IndexerMetadataStorageCoordinator.class, null)
             .addValue(MaterializedViewTaskConfig.class, new MaterializedViewTaskConfig())
             .addValue(AuthorizerMapper.class, createMock(AuthorizerMapper.class))

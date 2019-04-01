@@ -26,7 +26,7 @@ import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.MetadataSegments;
+import org.apache.druid.metadata.SegmentsMetadata;
 import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.joda.time.Interval;
@@ -47,12 +47,12 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
   private long lastKillTime = 0;
 
 
-  private final MetadataSegments metadataSegments;
+  private final SegmentsMetadata segmentsMetadata;
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
   public DruidCoordinatorUnusedSegmentsKiller(
-      MetadataSegments metadataSegments,
+      SegmentsMetadata segmentsMetadata,
       IndexingServiceClient indexingServiceClient,
       DruidCoordinatorConfig config
   )
@@ -76,7 +76,7 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
         this.maxSegmentsToKill
     );
 
-    this.metadataSegments = metadataSegments;
+    this.segmentsMetadata = segmentsMetadata;
     this.indexingServiceClient = indexingServiceClient;
   }
 
@@ -95,7 +95,7 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
 
     Collection<String> dataSourcesToKill = specificDataSourcesToKill;
     if (killAllDataSources) {
-      dataSourcesToKill = metadataSegments.retrieveAllDataSourceNames();
+      dataSourcesToKill = segmentsMetadata.retrieveAllDataSourceNames();
     }
 
     if (dataSourcesToKill != null &&
@@ -126,7 +126,7 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
   @Nullable
   Interval findIntervalForKill(String dataSource, int limit)
   {
-    List<Interval> unusedSegmentIntervals = metadataSegments.getUnusedSegmentIntervals(
+    List<Interval> unusedSegmentIntervals = segmentsMetadata.getUnusedSegmentIntervals(
         dataSource,
         new Interval(DateTimes.EPOCH, DateTimes.nowUtc().minus(retainDuration)),
         limit

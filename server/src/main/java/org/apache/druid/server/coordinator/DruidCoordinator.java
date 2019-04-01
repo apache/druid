@@ -58,7 +58,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.MetadataSegments;
+import org.apache.druid.metadata.SegmentsMetadata;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorMarkAsUnusedOvershadowedSegments;
@@ -125,7 +125,7 @@ public class DruidCoordinator
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
   private final JacksonConfigManager configManager;
-  private final MetadataSegments metadataSegments;
+  private final SegmentsMetadata segmentsMetadata;
   private final ServerInventoryView serverInventoryView;
   private final MetadataRuleManager metadataRuleManager;
   private final CuratorFramework curator;
@@ -151,7 +151,7 @@ public class DruidCoordinator
       DruidCoordinatorConfig config,
       ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
-      MetadataSegments metadataSegments,
+      SegmentsMetadata segmentsMetadata,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
       CuratorFramework curator,
@@ -171,7 +171,7 @@ public class DruidCoordinator
         config,
         zkPaths,
         configManager,
-        metadataSegments,
+        segmentsMetadata,
         serverInventoryView,
         metadataRuleManager,
         curator,
@@ -193,7 +193,7 @@ public class DruidCoordinator
       DruidCoordinatorConfig config,
       ZkPathsConfig zkPaths,
       JacksonConfigManager configManager,
-      MetadataSegments metadataSegments,
+      SegmentsMetadata segmentsMetadata,
       ServerInventoryView serverInventoryView,
       MetadataRuleManager metadataRuleManager,
       CuratorFramework curator,
@@ -214,7 +214,7 @@ public class DruidCoordinator
     this.zkPaths = zkPaths;
     this.configManager = configManager;
 
-    this.metadataSegments = metadataSegments;
+    this.segmentsMetadata = segmentsMetadata;
     this.serverInventoryView = serverInventoryView;
     this.metadataRuleManager = metadataRuleManager;
     this.curator = curator;
@@ -302,7 +302,7 @@ public class DruidCoordinator
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Double> loadStatus = new HashMap<>();
-    for (ImmutableDruidDataSource dataSource : metadataSegments.prepareImmutableDataSourcesWithAllUsedSegments()) {
+    for (ImmutableDruidDataSource dataSource : segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments()) {
       final Set<DataSegment> segments = Sets.newHashSet(dataSource.getSegments());
       final int numUsedSegments = segments.size();
 
@@ -345,7 +345,7 @@ public class DruidCoordinator
   public void tryMarkSegmentAsUnused(DataSegment segment)
   {
     log.info("Removing Segment[%s]", segment.getId());
-    metadataSegments.tryMarkSegmentAsUnused(segment.getId());
+    segmentsMetadata.tryMarkSegmentAsUnused(segment.getId());
   }
 
   public String getCurrentLeader()
@@ -373,13 +373,13 @@ public class DruidCoordinator
         throw new IAE("Cannot move [%s] to and from the same server [%s]", segmentId, fromServer.getName());
       }
 
-      ImmutableDruidDataSource dataSource = metadataSegments.prepareImmutableDataSourceWithUsedSegments(segment.getDataSource());
+      ImmutableDruidDataSource dataSource = segmentsMetadata.prepareImmutableDataSourceWithUsedSegments(segment.getDataSource());
       if (dataSource == null) {
         throw new IAE("Unable to find dataSource for segment [%s] in metadata", segmentId);
       }
 
-      // get segment information from MetadataSegments instead of getting it from fromServer's.
-      // This is useful when MetadataSegments and fromServer DataSegment's are different for same
+      // get segment information from SegmentsMetadata instead of getting it from fromServer's.
+      // This is useful when SegmentsMetadata and fromServer DataSegment's are different for same
       // identifier (say loadSpec differs because of deep storage migration).
       final DataSegment segmentToLoad = dataSource.getSegment(segment.getId());
       if (segmentToLoad == null) {
@@ -461,7 +461,7 @@ public class DruidCoordinator
    */
   public Iterable<DataSegment> iterateAllUsedSegments()
   {
-    return metadataSegments.iterateAllUsedSegments();
+    return segmentsMetadata.iterateAllUsedSegments();
   }
 
   @LifecycleStart
@@ -518,7 +518,7 @@ public class DruidCoordinator
       log.info("I am the leader of the coordinators, all must bow!");
       log.info("Starting coordination in [%s]", config.getCoordinatorStartDelay());
 
-      metadataSegments.start();
+      segmentsMetadata.start();
       metadataRuleManager.start();
       lookupCoordinatorManager.start();
       serviceAnnouncer.announce(self);
@@ -586,7 +586,7 @@ public class DruidCoordinator
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataRuleManager.stop();
-      metadataSegments.stop();
+      segmentsMetadata.stop();
     }
   }
 
@@ -630,7 +630,7 @@ public class DruidCoordinator
         }
 
         List<Boolean> allStarted = Arrays.asList(
-            metadataSegments.isStarted(),
+            segmentsMetadata.isStarted(),
             serverInventoryView.isStarted()
         );
         for (Boolean aBoolean : allStarted) {
@@ -652,7 +652,7 @@ public class DruidCoordinator
             DruidCoordinatorRuntimeParams
                 .newBuilder()
                 .withStartTimeNanos(startTimeNanos)
-                .withDataSourcesWithUsedSegments(metadataSegments.prepareImmutableDataSourcesWithAllUsedSegments())
+                .withDataSourcesWithUsedSegments(segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments())
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)

@@ -39,7 +39,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.MetadataSegments;
+import org.apache.druid.metadata.SegmentsMetadata;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -92,7 +92,7 @@ public class DataSourcesResource
   private static final Logger log = new Logger(DataSourcesResource.class);
 
   private final CoordinatorServerView serverInventoryView;
-  private final MetadataSegments metadataSegments;
+  private final SegmentsMetadata segmentsMetadata;
   private final MetadataRuleManager metadataRuleManager;
   private final IndexingServiceClient indexingServiceClient;
   private final AuthorizerMapper authorizerMapper;
@@ -100,14 +100,14 @@ public class DataSourcesResource
   @Inject
   public DataSourcesResource(
       CoordinatorServerView serverInventoryView,
-      MetadataSegments metadataSegments,
+      SegmentsMetadata segmentsMetadata,
       MetadataRuleManager metadataRuleManager,
       @Nullable IndexingServiceClient indexingServiceClient,
       AuthorizerMapper authorizerMapper
   )
   {
     this.serverInventoryView = serverInventoryView;
-    this.metadataSegments = metadataSegments;
+    this.segmentsMetadata = segmentsMetadata;
     this.metadataRuleManager = metadataRuleManager;
     this.indexingServiceClient = indexingServiceClient;
     this.authorizerMapper = authorizerMapper;
@@ -173,7 +173,7 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    if (!metadataSegments.tryMarkAsUsedAllSegmentsInDataSource(dataSourceName)) {
+    if (!segmentsMetadata.tryMarkAsUsedAllSegmentsInDataSource(dataSourceName)) {
       return Response.serverError().build();
     }
 
@@ -231,7 +231,7 @@ public class DataSourcesResource
                        .build();
       }
     } else {
-      if (!metadataSegments.tryMarkAsUnusedAllSegmentsInDataSource(dataSourceName)) {
+      if (!segmentsMetadata.tryMarkAsUnusedAllSegmentsInDataSource(dataSourceName)) {
         return Response.serverError().build();
       }
     }
@@ -426,7 +426,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (metadataSegments.tryMarkSegmentAsUnused(dataSourceName, segmentId)) {
+    if (segmentsMetadata.tryMarkSegmentAsUnused(dataSourceName, segmentId)) {
       return Response.ok().build();
     }
     return Response.noContent().build();
@@ -441,7 +441,7 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!metadataSegments.tryMarkSegmentAsUsed(segmentId)) {
+    if (!segmentsMetadata.tryMarkSegmentAsUsed(segmentId)) {
       return Response.serverError().build();
     }
 

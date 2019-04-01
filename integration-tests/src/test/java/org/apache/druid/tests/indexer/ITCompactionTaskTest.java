@@ -164,7 +164,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   {
     RetryUtil.retryUntilTrue(
         () -> {
-          int metadataSegmentCount = coordinator.getMetadataSegments(fullDatasourceName).size();
+          int metadataSegmentCount = coordinator.getSegments(fullDatasourceName).size();
           LOG.info("Current metadata segment count: %d, expected: %d", metadataSegmentCount, numExpectedSegments);
           return metadataSegmentCount == numExpectedSegments;
         },

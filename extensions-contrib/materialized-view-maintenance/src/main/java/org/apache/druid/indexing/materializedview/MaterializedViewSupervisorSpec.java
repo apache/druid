@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.metadata.SqlMetadataSegments;
+import org.apache.druid.metadata.SqlSegmentsMetadata;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
@@ -75,7 +75,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
   private final ObjectMapper objectMapper;
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final SqlMetadataSegments metadataSegments;
+  private final SqlSegmentsMetadata sqlSegmentsMetadata;
   private final TaskMaster taskMaster;
   private final TaskStorage taskStorage;
   private final MaterializedViewTaskConfig config;
@@ -98,7 +98,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject MetadataSupervisorManager metadataSupervisorManager,
-      @JacksonInject SqlMetadataSegments metadataSegments,
+      @JacksonInject SqlSegmentsMetadata sqlSegmentsMetadata,
       @JacksonInject IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       @JacksonInject MaterializedViewTaskConfig config,
       @JacksonInject AuthorizerMapper authorizerMapper,
@@ -136,7 +136,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     this.taskMaster = taskMaster;
     this.taskStorage = taskStorage;
     this.metadataSupervisorManager = metadataSupervisorManager;
-    this.metadataSegments = metadataSegments;
+    this.sqlSegmentsMetadata = sqlSegmentsMetadata;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
     this.chatHandlerProvider = chatHandlerProvider;
@@ -329,7 +329,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        metadataSegments,
+        sqlSegmentsMetadata,
         metadataStorageCoordinator,
         config,
         this
@@ -360,7 +360,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        metadataSegments,
+        sqlSegmentsMetadata,
         metadataStorageCoordinator,
         config,
         authorizerMapper,
@@ -386,7 +386,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         taskMaster,
         taskStorage,
         metadataSupervisorManager,
-        metadataSegments,
+        sqlSegmentsMetadata,
         metadataStorageCoordinator,
         config,
         authorizerMapper,

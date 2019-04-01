@@ -195,7 +195,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         log.info("All servers to move segments from are empty, ending run.");
         break;
       }
-      // DruidCoordinatorRuntimeParams.getUsedSegments originate from MetadataSegments, i. e. that's a set of segments
+      // DruidCoordinatorRuntimeParams.getUsedSegments originate from SegmentsMetadata, i. e. that's a set of segments
       // that *should* be loaded. segmentToMoveHolder.getSegment originates from ServerInventoryView,  i. e. that may be
       // any segment that happens to be loaded on some server, even if it is not used. (Coordinator closes such
       // discrepancies eventually via DruidCoordinatorUnloadUnusedSegments). Therefore the picked segmentToMoveHolder's

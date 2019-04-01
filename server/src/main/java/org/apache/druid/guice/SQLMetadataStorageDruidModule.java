@@ -31,8 +31,8 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataRuleManagerProvider;
 import org.apache.druid.metadata.MetadataSegmentPublisher;
 import org.apache.druid.metadata.MetadataSegmentPublisherProvider;
-import org.apache.druid.metadata.MetadataSegments;
-import org.apache.druid.metadata.MetadataSegmentsProvider;
+import org.apache.druid.metadata.SegmentsMetadata;
+import org.apache.druid.metadata.SegmentsMetadataProvider;
 import org.apache.druid.metadata.MetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageProvider;
@@ -43,8 +43,8 @@ import org.apache.druid.metadata.SQLMetadataRuleManagerProvider;
 import org.apache.druid.metadata.SQLMetadataSegmentPublisher;
 import org.apache.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import org.apache.druid.metadata.SQLMetadataSupervisorManager;
-import org.apache.druid.metadata.SqlMetadataSegments;
-import org.apache.druid.metadata.SqlMetadataSegmentsProvider;
+import org.apache.druid.metadata.SqlSegmentsMetadata;
+import org.apache.druid.metadata.SqlSegmentsMetadataProvider;
 import org.apache.druid.server.audit.AuditManagerProvider;
 import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.audit.SQLAuditManagerConfig;
@@ -73,8 +73,8 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(SQLMetadataConnector.class), defaultValue);
 
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSegments.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSegmentsProvider.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadata.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadataProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManager.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManagerProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSegmentPublisher.class), defaultValue);
@@ -90,14 +90,14 @@ public class SQLMetadataStorageDruidModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    PolyBind.optionBinder(binder, Key.get(MetadataSegments.class))
+    PolyBind.optionBinder(binder, Key.get(SegmentsMetadata.class))
             .addBinding(type)
-            .to(SqlMetadataSegments.class)
+            .to(SqlSegmentsMetadata.class)
             .in(LazySingleton.class);
 
-    PolyBind.optionBinder(binder, Key.get(MetadataSegmentsProvider.class))
+    PolyBind.optionBinder(binder, Key.get(SegmentsMetadataProvider.class))
             .addBinding(type)
-            .to(SqlMetadataSegmentsProvider.class)
+            .to(SqlSegmentsMetadataProvider.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataRuleManager.class))

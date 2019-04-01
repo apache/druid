@@ -41,12 +41,12 @@ import org.junit.Test;
 import java.io.IOException;
 
 
-public class SqlMetadataSegmentsTest
+public class SqlSegmentsMetadataTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private SqlMetadataSegments manager;
+  private SqlSegmentsMetadata manager;
   private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
@@ -86,9 +86,9 @@ public class SqlMetadataSegmentsTest
   public void setUp() throws Exception
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    manager = new SqlMetadataSegments(
+    manager = new SqlSegmentsMetadata(
         jsonMapper,
-        Suppliers.ofInstance(new MetadataSegmentsConfig()),
+        Suppliers.ofInstance(new SegmentsMetadataConfig()),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector
     );

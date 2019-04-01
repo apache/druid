@@ -229,15 +229,12 @@ public class SystemSchema extends AbstractSchema
       }
 
       //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
-      final Iterator<DataSegment> metadataSegments = metadataView.getPublishedSegments();
+      final Iterator<DataSegment> segments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(
-              metadataSegments,
-              root
-          ))
+          .from(() -> getAuthorizedPublishedSegments(segments, root))
           .transform(val -> {
             try {
               segmentsAlreadySeen.add(val.getId());

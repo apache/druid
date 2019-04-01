@@ -76,9 +76,9 @@ import java.util.stream.Collectors;
 /**
  */
 @ManageLifecycle
-public class SqlMetadataSegments implements MetadataSegments
+public class SqlSegmentsMetadata implements SegmentsMetadata
 {
-  private static final EmittingLogger log = new EmittingLogger(SqlMetadataSegments.class);
+  private static final EmittingLogger log = new EmittingLogger(SqlSegmentsMetadata.class);
 
   /**
    * Use to synchronize {@link #start()}, {@link #stop()}, {@link #poll()}, and {@link #isStarted()}. These methods
@@ -99,16 +99,16 @@ public class SqlMetadataSegments implements MetadataSegments
   private final Object pollLock = new Object();
 
   private final ObjectMapper jsonMapper;
-  private final Supplier<MetadataSegmentsConfig> config;
+  private final Supplier<SegmentsMetadataConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
 
   private ConcurrentHashMap<String, DruidDataSource> dataSources = new ConcurrentHashMap<>();
 
-  /** The number of times this SqlMetadataSegments was started. */
+  /** The number of times this SqlSegmentsMetadata was started. */
   private long startCount = 0;
   /**
-   * Equal to the current {@link #startCount} value, if the SqlMetadataSegments is currently started; -1 if
+   * Equal to the current {@link #startCount} value, if the SqlSegmentsMetadata is currently started; -1 if
    * currently stopped.
    *
    * This field is used to implement a simple stamp mechanism instead of just a boolean "started" flag to prevent
@@ -122,9 +122,9 @@ public class SqlMetadataSegments implements MetadataSegments
   private ScheduledExecutorService exec = null;
 
   @Inject
-  public SqlMetadataSegments(
+  public SqlSegmentsMetadata(
       ObjectMapper jsonMapper,
-      Supplier<MetadataSegmentsConfig> config,
+      Supplier<SegmentsMetadataConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       SQLMetadataConnector connector
   )
@@ -171,7 +171,7 @@ public class SqlMetadataSegments implements MetadataSegments
       // poll() is synchronized together with start(), stop() and isStarted() to ensure that when stop() exits, poll()
       // won't actually run anymore after that (it could only enter the syncrhonized section and exit immediately
       // because the localStartedOrder doesn't match the new currentStartOrder). It's needed to avoid flakiness in
-      // SqlMetadataSegmentsTest. See https://github.com/apache/incubator-druid/issues/6028
+      // SqlSegmentsMetadataTest. See https://github.com/apache/incubator-druid/issues/6028
       ReentrantReadWriteLock.ReadLock lock = startStopLock.readLock();
       lock.lock();
       try {

@@ -31,7 +31,7 @@ import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.metadata.MetadataSegments;
+import org.apache.druid.metadata.SegmentsMetadata;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -67,20 +67,20 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
-  private final MetadataSegments metadataSegments;
+  private final SegmentsMetadata segmentsMetadata;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper jsonMapper;
 
   @Inject
   public MetadataResource(
-      MetadataSegments metadataSegments,
+      SegmentsMetadata segmentsMetadata,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
       @Json ObjectMapper jsonMapper
   )
   {
-    this.metadataSegments = metadataSegments;
+    this.segmentsMetadata = segmentsMetadata;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
     this.jsonMapper = jsonMapper;
@@ -99,9 +99,9 @@ public class MetadataResource
     Collection<ImmutableDruidDataSource> druidDataSources = null;
     final Set<String> dataSourceNamesPreAuth;
     if (includeUnused != null) {
-      dataSourceNamesPreAuth = new TreeSet<>(metadataSegments.retrieveAllDataSourceNames());
+      dataSourceNamesPreAuth = new TreeSet<>(segmentsMetadata.retrieveAllDataSourceNames());
     } else {
-      druidDataSources = metadataSegments.prepareImmutableDataSourcesWithAllUsedSegments();
+      druidDataSources = segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
       dataSourceNamesPreAuth = druidDataSources
           .stream()
           .map(ImmutableDruidDataSource::getName)
@@ -142,7 +142,7 @@ public class MetadataResource
   )
   {
     Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
-        metadataSegments.prepareImmutableDataSourcesWithAllUsedSegments();
+        segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
     if (dataSources != null && !dataSources.isEmpty()) {
       dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
           .stream()
@@ -186,7 +186,7 @@ public class MetadataResource
   public Response getDataSourceWithUsedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
     ImmutableDruidDataSource dataSource =
-        metadataSegments.prepareImmutableDataSourceWithUsedSegments(dataSourceName);
+        segmentsMetadata.prepareImmutableDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -204,7 +204,7 @@ public class MetadataResource
   )
   {
     ImmutableDruidDataSource dataSource =
-        metadataSegments.prepareImmutableDataSourceWithUsedSegments(dataSourceName);
+        segmentsMetadata.prepareImmutableDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
@@ -250,7 +250,7 @@ public class MetadataResource
       @PathParam("segmentId") String segmentId
   )
   {
-    DruidDataSource dataSource = metadataSegments.getDataSourceWithUsedSegments(dataSourceName);
+    DruidDataSource dataSource = segmentsMetadata.getDataSourceWithUsedSegments(dataSourceName);
     if (dataSource == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }

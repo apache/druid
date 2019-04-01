@@ -58,8 +58,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * This class polls the coordinator in background to keep the latest published segments.
+ * This class polls the Coordinator in background to keep the latest published segments.
  * Provides {@link #getPublishedSegments()} for others to get segments in metadata store.
+ *
+ * The difference between this class and {@link org.apache.druid.metadata.SegmentsMetadata} is that this class resides
+ * in Broker's memory, while {@link org.apache.druid.metadata.SegmentsMetadata} resides in Coordinator's memory. In
+ * fact, this class polls the data from {@link org.apache.druid.metadata.SegmentsMetadata} object in the memory of the
+ * currently leading Coordinator via HTTP queries.
  */
 @ManageLifecycle
 public class MetadataSegmentView
@@ -134,7 +139,7 @@ public class MetadataSegmentView
   private void poll()
   {
     log.info("polling published segments from coordinator");
-    final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
+    final JsonParserIterator<DataSegment> segments = getSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
         responseHandler,
@@ -142,8 +147,8 @@ public class MetadataSegmentView
     );
 
     final DateTime timestamp = DateTimes.nowUtc();
-    while (metadataSegments.hasNext()) {
-      final DataSegment interned = DataSegmentInterner.intern(metadataSegments.next());
+    while (segments.hasNext()) {
+      final DataSegment interned = DataSegmentInterner.intern(segments.next());
       // timestamp is used to filter deleted segments
       publishedSegments.put(interned, timestamp);
     }
@@ -169,7 +174,7 @@ public class MetadataSegmentView
       );
       return publishedSegments.keySet().iterator();
     } else {
-      return getMetadataSegments(
+      return getSegments(
           coordinatorDruidLeaderClient,
           jsonMapper,
           responseHandler,
@@ -179,7 +184,7 @@ public class MetadataSegmentView
   }
 
   // Note that coordinator must be up to get segments
-  private JsonParserIterator<DataSegment> getMetadataSegments(
+  private JsonParserIterator<DataSegment> getSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       BytesAccumulatingResponseHandler responseHandler,
