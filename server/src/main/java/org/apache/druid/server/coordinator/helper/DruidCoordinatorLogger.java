@@ -243,7 +243,7 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
     emitter.emit(
         new ServiceMetricEvent.Builder().build(
             "compact/task/count",
-            stats.getGlobalStat("compactTaskCount")
+            stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACTION_TASK_COUNT)
         )
     );
 

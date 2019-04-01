@@ -103,4 +103,17 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   {
     return context;
   }
+
+  @Override
+  public String toString()
+  {
+    return getClass().getSimpleName() + "{" +
+           "dataSource='" + dataSource + '\'' +
+           ", segments=" + segments +
+           ", keepSegmentGranularity=" + keepSegmentGranularity +
+           ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
+           ", tuningConfig=" + tuningConfig +
+           ", context=" + context +
+           '}';
+  }
 }

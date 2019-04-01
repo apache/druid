@@ -20,11 +20,8 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
-import org.apache.druid.segment.IndexSpec;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -71,10 +68,6 @@ public class DataSourceCompactionConfig
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
-    Preconditions.checkArgument(
-        targetCompactionSizeBytes == null || maxRowsPerSegment == null,
-        "targetCompactionSizeBytes and maxRowsPerSegment in tuningConfig can't be used together"
-    );
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.keepSegmentGranularity = keepSegmentGranularity == null
                                   ? DEFAULT_KEEP_SEGMENT_GRANULARITY
@@ -85,11 +78,11 @@ public class DataSourceCompactionConfig
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
-    if (targetCompactionSizeBytes == null && maxRowsPerSegment == null) {
-      this.targetCompactionSizeBytes = DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
-    } else {
-      this.targetCompactionSizeBytes = targetCompactionSizeBytes;
-    }
+    this.targetCompactionSizeBytes = getValidTargetCompactionSizeBytes(
+        targetCompactionSizeBytes,
+        maxRowsPerSegment,
+        tuningConfig
+    );
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxNumSegmentsToCompact = maxNumSegmentsToCompact == null
                                    ? DEFAULT_NUM_INPUT_SEGMENTS
@@ -102,6 +95,53 @@ public class DataSourceCompactionConfig
         this.maxNumSegmentsToCompact > 1,
         "numTargetCompactionSegments should be larger than 1"
     );
+  }
+
+  /**
+   * This method is copied from {@link
+   * org.apache.druid.indexing.common.task.CompactionTask#getValidTargetCompactionSizeBytes}. The only difference is
+   * this method doesn't check 'numShards' which is not supported by {@link UserCompactionTaskQueryTuningConfig}.
+   *
+   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
+   * the same method, this method must be synced with {@code CompactionTask#getValidTargetCompactionSizeBytes}.
+   */
+  @Nullable
+  private static Long getValidTargetCompactionSizeBytes(
+      @Nullable Long targetCompactionSizeBytes,
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable UserCompactionTaskQueryTuningConfig tuningConfig
+  )
+  {
+    if (targetCompactionSizeBytes != null) {
+      Preconditions.checkArgument(
+          !hasPartitionConfig(maxRowsPerSegment, tuningConfig),
+          "targetCompactionSizeBytes[%s] cannot be used with maxRowsPerSegment[%s] and maxTotalRows[%s]",
+          targetCompactionSizeBytes,
+          maxRowsPerSegment,
+          tuningConfig == null ? null : tuningConfig.getMaxTotalRows()
+      );
+      return targetCompactionSizeBytes;
+    } else {
+      return hasPartitionConfig(maxRowsPerSegment, tuningConfig) ? null : DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
+    }
+  }
+
+  /**
+   * his method is copied from {@code CompactionTask#hasPartitionConfig}. The two differences are
+   * 1) this method doesn't check 'numShards' which is not supported by {@link UserCompactionTaskQueryTuningConfig}, and
+   * 2) this method accepts an additional 'maxRowsPerSegment' parameter since it's not supported by
+   * {@link UserCompactionTaskQueryTuningConfig}.
+   *
+   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
+   * the same method, this method must be synced with {@link
+   * org.apache.druid.indexing.common.task.CompactionTask#hasPartitionConfig}.
+   */
+  private static boolean hasPartitionConfig(
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable UserCompactionTaskQueryTuningConfig tuningConfig
+  )
+  {
+    return maxRowsPerSegment != null || (tuningConfig != null && tuningConfig.getMaxTotalRows() != null);
   }
 
   @JsonProperty
@@ -205,26 +245,4 @@ public class DataSourceCompactionConfig
     );
   }
 
-  public static class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQueryTuningConfig
-  {
-    @JsonCreator
-    public UserCompactionTaskQueryTuningConfig(
-        @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
-        @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
-        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
-        @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-        @JsonProperty("pushTimeout") @Nullable Long pushTimeout
-    )
-    {
-      super(null, maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
-    }
-
-    @Override
-    @Nullable
-    @JsonIgnore
-    public Integer getMaxRowsPerSegment()
-    {
-      throw new UnsupportedOperationException();
-    }
-  }
 }

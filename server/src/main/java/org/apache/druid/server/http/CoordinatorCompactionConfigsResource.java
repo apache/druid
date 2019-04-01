@@ -63,7 +63,7 @@ public class CoordinatorCompactionConfigsResource
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactConfig()
+  public Response getCompactionConfig()
   {
     return Response.ok(CoordinatorCompactionConfig.current(manager)).build();
   }

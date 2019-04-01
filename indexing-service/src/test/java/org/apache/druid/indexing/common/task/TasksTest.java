@@ -59,7 +59,7 @@ public class TasksTest
 
     inputIntervals.add(Intervals.of("2017-12-31/2018-01-01"));
 
-    final SortedSet<Interval> compactIntervals = Tasks.computeCompactIntervals(inputIntervals);
+    final SortedSet<Interval> compactIntervals = Tasks.computeCondensedIntervals(inputIntervals);
     final Iterator<Interval> compactIntervalIterator = compactIntervals.iterator();
     Assert.assertTrue(compactIntervalIterator.hasNext());
 

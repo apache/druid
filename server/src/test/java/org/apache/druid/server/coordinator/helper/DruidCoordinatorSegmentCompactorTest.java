@@ -357,7 +357,7 @@ public class DruidCoordinatorSegmentCompactorTest
       final CoordinatorStats stats = runCompactor(compactor, keepSegmentGranularity);
       Assert.assertEquals(
           expectedCompactTaskCount,
-          stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
+          stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACTION_TASK_COUNT)
       );
 
       // One of dataSource is compacted
@@ -421,7 +421,7 @@ public class DruidCoordinatorSegmentCompactorTest
     CoordinatorStats stats = runCompactor(compactor, keepSegmentGranularity);
     Assert.assertEquals(
         1,
-        stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
+        stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACTION_TASK_COUNT)
     );
 
     addMoreData(dataSource, 10);
@@ -429,7 +429,7 @@ public class DruidCoordinatorSegmentCompactorTest
     stats = runCompactor(compactor, keepSegmentGranularity);
     Assert.assertEquals(
         1,
-        stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACT_TASK_COUNT)
+        stats.getGlobalStat(DruidCoordinatorSegmentCompactor.COMPACTION_TASK_COUNT)
     );
   }
 

@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 
 public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 {
-  static final String COMPACT_TASK_COUNT = "compactTaskCount";
+  static final String COMPACTION_TASK_COUNT = "compactTaskCount";
   static final String SEGMENT_SIZE_WAIT_COMPACT = "segmentSizeWaitCompact";
 
   // Should be synced with CompactionTask.TYPE
@@ -84,14 +84,14 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
             .stream()
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-        final List<TaskStatusPlus> compactTasks = filterNonCompactTasks(
+        final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(
             indexingServiceClient.getRunningTasks(),
             indexingServiceClient.getPendingTasks(),
             indexingServiceClient.getWaitingTasks()
         );
         // dataSource -> list of intervals of compact tasks
-        final Map<String, List<Interval>> compactTaskIntervals = new HashMap<>(compactionConfigList.size());
-        for (TaskStatusPlus status : compactTasks) {
+        final Map<String, List<Interval>> compactionTaskIntervals = new HashMap<>(compactionConfigList.size());
+        for (TaskStatusPlus status : compactionTasks) {
           final TaskPayloadResponse response = indexingServiceClient.getTaskPayload(status.getId());
           if (response == null) {
             throw new ISE("WTH? got a null paylord from overlord for task[%s]", status.getId());
@@ -105,25 +105,28 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                             .sorted(Comparators.intervalsByStartThenEnd())
                             .collect(Collectors.toList())
             );
-            compactTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
+            compactionTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
           } else {
-            throw new ISE("WTH? task[%s] is not a compactTask?", status.getId());
+            throw new ISE("WTH? task[%s] is not a compactionTask?", status.getId());
           }
         }
 
-        final CompactionSegmentIterator iterator = policy.reset(compactionConfigs, dataSources, compactTaskIntervals);
+        final CompactionSegmentIterator iterator =
+            policy.reset(compactionConfigs, dataSources, compactionTaskIntervals);
 
         final int compactionTaskCapacity = (int) Math.min(
             indexingServiceClient.getTotalWorkerCapacity() * dynamicConfig.getCompactionTaskSlotRatio(),
             dynamicConfig.getMaxCompactionTaskSlots()
         );
-        final int numNonCompleteCompactionTasks = compactTasks.size();
-        final int numAvailableCompactionTaskSlots = numNonCompleteCompactionTasks > 0
-                                                    ? Math.max(0, compactionTaskCapacity - numNonCompleteCompactionTasks)
-                                                    // compactionTaskCapacity might be 0 if totalWorkerCapacity is low.
-                                                    // This guarantees that at least one slot is available if
-                                                    // compaction is enabled and numRunningCompactTasks is 0.
-                                                    : Math.max(1, compactionTaskCapacity);
+        final int numNonCompleteCompactionTasks = compactionTasks.size();
+        final int numAvailableCompactionTaskSlots;
+        // compactionTaskCapacity might be 0 if totalWorkerCapacity is low. This guarantees that at least one slot is
+        // available if compaction is enabled and numNonCompleteCompactionTasks is 0.
+        if (numNonCompleteCompactionTasks > 0) {
+          numAvailableCompactionTaskSlots = Math.max(0, compactionTaskCapacity - numNonCompleteCompactionTasks);
+        } else {
+          numAvailableCompactionTaskSlots = Math.max(1, compactionTaskCapacity);
+        }
         LOG.info(
             "Found [%d] available task slots for compaction out of [%d] max compaction task capacity",
             numAvailableCompactionTaskSlots,
@@ -147,7 +150,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   }
 
   @SafeVarargs
-  private static List<TaskStatusPlus> filterNonCompactTasks(List<TaskStatusPlus>...taskStatusStreams)
+  private static List<TaskStatusPlus> filterNonCompactionTasks(List<TaskStatusPlus>...taskStatusStreams)
   {
     final List<TaskStatusPlus> allTaskStatusPlus = new ArrayList<>();
     Arrays.stream(taskStatusStreams).forEach(allTaskStatusPlus::addAll);
@@ -175,7 +178,6 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
 
     for (; iterator.hasNext() && numSubmittedTasks < numAvailableCompactionTaskSlots; numSubmittedTasks++) {
       final List<DataSegment> segmentsToCompact = iterator.next();
-
       final String dataSourceName = segmentsToCompact.get(0).getDataSource();
 
       if (segmentsToCompact.size() > 1) {
@@ -190,7 +192,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
             config.getTaskContext()
         );
         LOG.info(
-            "Submitted a compactTask[%s] for segments %s",
+            "Submitted a compactionTask[%s] for segments %s",
             taskId,
             Iterables.transform(segmentsToCompact, DataSegment::getId)
         );
@@ -207,7 +209,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   private CoordinatorStats makeStats(int numCompactionTasks, CompactionSegmentIterator iterator)
   {
     final CoordinatorStats stats = new CoordinatorStats();
-    stats.addToGlobalStat(COMPACT_TASK_COUNT, numCompactionTasks);
+    stats.addToGlobalStat(COMPACTION_TASK_COUNT, numCompactionTasks);
     remainingSegmentSizeBytes = iterator.remainingSegmentSizeBytes();
     iterator.remainingSegmentSizeBytes().object2LongEntrySet().fastForEach(
         entry -> {

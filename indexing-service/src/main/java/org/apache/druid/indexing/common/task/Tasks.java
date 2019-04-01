@@ -52,7 +52,7 @@ public class Tasks
       throws IOException
   {
     final Map<Interval, TaskLock> lockMap = new HashMap<>();
-    for (Interval interval : computeCompactIntervals(intervals)) {
+    for (Interval interval : computeCondensedIntervals(intervals)) {
       final TaskLock lock = Preconditions.checkNotNull(
           client.submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)),
           "Cannot acquire a lock for interval[%s]", interval
@@ -62,9 +62,9 @@ public class Tasks
     return lockMap;
   }
 
-  public static SortedSet<Interval> computeCompactIntervals(SortedSet<Interval> intervals)
+  public static SortedSet<Interval> computeCondensedIntervals(SortedSet<Interval> intervals)
   {
-    final SortedSet<Interval> compactIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+    final SortedSet<Interval> condensedIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
     List<Interval> toBeAccumulated = new ArrayList<>();
     for (Interval interval : intervals) {
       if (toBeAccumulated.size() == 0) {
@@ -73,15 +73,15 @@ public class Tasks
         if (toBeAccumulated.get(toBeAccumulated.size() - 1).abuts(interval)) {
           toBeAccumulated.add(interval);
         } else {
-          compactIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
+          condensedIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
           toBeAccumulated.clear();
           toBeAccumulated.add(interval);
         }
       }
     }
     if (toBeAccumulated.size() > 0) {
-      compactIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
+      condensedIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
     }
-    return compactIntervals;
+    return condensedIntervals;
   }
 }

@@ -212,7 +212,7 @@ public class ParallelIndexSubTask extends AbstractTask
   )
       throws IOException
   {
-    for (Interval interval : Tasks.computeCompactIntervals(intervals)) {
+    for (Interval interval : Tasks.computeCondensedIntervals(intervals)) {
       Preconditions.checkNotNull(
           client.submit(
               new SurrogateAction<>(supervisorTaskId, new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval))
