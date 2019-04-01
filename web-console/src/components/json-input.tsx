@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import { Button, Collapse, TextArea } from '@blueprintjs/core';
-import classNames from 'classnames';
 import * as React from 'react';
 import AceEditor from "react-ace";
 
@@ -90,45 +88,5 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
         tabSize: 2
       }}
     />;
-  }
-}
-
-interface JSONCollapseProps extends React.Props<any> {
-  stringValue: string;
-  buttonText: string;
-}
-
-interface JSONCollapseState {
-  isOpen: boolean;
-}
-
-export class JSONCollapse extends React.Component<JSONCollapseProps, JSONCollapseState> {
-  constructor(props: any) {
-    super(props);
-    this.state = {
-      isOpen: false
-    };
-  }
-
-  render() {
-    const { stringValue, buttonText} = this.props;
-    const { isOpen } = this.state;
-    const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);
-    return <div className={"json-collapse"}>
-      <Button
-        minimal
-        active={isOpen}
-        onClick={() => this.setState({isOpen: !isOpen})}
-        text={buttonText}
-      />
-      <div>
-        <Collapse isOpen={isOpen}>
-          <TextArea
-            readOnly
-            value={prettyValue}
-          />
-        </Collapse>
-      </div>
-    </div>;
   }
 }

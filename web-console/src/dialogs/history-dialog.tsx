@@ -19,7 +19,7 @@
 import { Card, Dialog } from "@blueprintjs/core";
 import * as React from "react";
 
-import { JSONCollapse } from '../components/filler';
+import { JSONCollapse } from '../components/json-collapse';
 
 import "./history-dialog.scss";
 

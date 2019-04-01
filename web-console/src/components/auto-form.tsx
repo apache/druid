@@ -20,7 +20,7 @@ import { InputGroup } from "@blueprintjs/core";
 import { FormGroup, HTMLSelect, NumericInput, TagInput } from "@blueprintjs/core";
 import * as React from 'react';
 
-import { JSONInput } from './filler';
+import { JSONInput } from './json-input';
 
 import "./auto-form.scss";
 
