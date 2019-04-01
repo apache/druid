@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.oath.oak.OakMap;
 import com.oath.oak.OakMapBuilder;
 import com.oath.oak.OakRBuffer;
+import com.oath.oak.OakWBuffer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
@@ -217,8 +218,8 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
   public Iterable<Row> iterableWithPostAggregations(final List<PostAggregator> postAggs, final boolean descending)
   {
     //TODO YONIGO - rewrite this function. maybe return an unserialized row?
-    Function<Map.Entry<ByteBuffer, OakRBuffer>, Row> transformer = entry -> {
-      ByteBuffer serializedKey = entry.getKey();
+    Function<Map.Entry<OakRBuffer, OakRBuffer>, Row> transformer = entry -> {
+      OakRBuffer serializedKey = entry.getKey();
       OakRBuffer serializedValue = entry.getValue();
       long timeStamp = OakUtils.getTimestamp(serializedKey);
       int dimsLength = OakUtils.getDimsLength(serializedKey);
@@ -381,7 +382,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     }
 
 
-    public Iterator<Row> transformIterator(boolean descending, Function<Map.Entry<ByteBuffer, OakRBuffer>, Row> transformer)
+    public Iterator<Row> transformIterator(boolean descending, Function<Map.Entry<OakRBuffer, OakRBuffer>, Row> transformer)
     {
       OakMap<IncrementalIndexRow, Row> tmpOakMap = descending ? oak.descendingMap() : oak;
       return tmpOakMap.zc().entrySet().stream().map(transformer).iterator();
@@ -429,7 +430,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
         IncrementalIndexRow to = new IncrementalIndexRow(timeEnd, null, dimensionDescsList, IncrementalIndexRow.EMPTY_ROW_INDEX);
 
         try (OakMap<IncrementalIndexRow, Row> subMap = oak.subMap(from, true, to, false, descending)) {
-          Iterator<Map.Entry<ByteBuffer, OakRBuffer>> iterator = subMap
+          Iterator<Map.Entry<OakRBuffer, OakRBuffer>> iterator = subMap
                   .zc()
                   .entrySet()
                   .iterator();
@@ -475,7 +476,7 @@ public class OakIncrementalIndex extends IncrementalIndex<BufferAggregator>
     ) throws IndexSizeExceededException
     {
 
-      Consumer<ByteBuffer> computer = buffer -> aggsManager.aggregate(row, rowContainer, buffer);
+      Consumer<OakWBuffer> computer = buffer -> aggsManager.aggregate(row, rowContainer, buffer.getByteBuffer());
       incrementalIndexRow.setRowIndex(rowIndexGenerator.getAndIncrement());
       boolean added = oak.zc().putIfAbsentComputeIfPresent(incrementalIndexRow, row, computer);
       if (added) {

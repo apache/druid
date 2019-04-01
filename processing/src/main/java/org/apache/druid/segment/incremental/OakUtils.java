@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.oath.oak.OakRBuffer;
 import org.apache.druid.segment.column.ValueType;
 import java.nio.ByteBuffer;
 
@@ -40,9 +41,19 @@ public final class OakUtils
   {
   }
 
+  static long getTimestamp(OakRBuffer buff)
+  {
+    return buff.getLong(TIME_STAMP_INDEX);
+  }
+
   static long getTimestamp(ByteBuffer buff)
   {
     return buff.getLong(buff.position() + TIME_STAMP_INDEX);
+  }
+
+  static int getRowIndex(OakRBuffer buff)
+  {
+    return buff.getInt(ROW_INDEX_INDEX);
   }
 
   static int getRowIndex(ByteBuffer buff)
@@ -50,10 +61,9 @@ public final class OakUtils
     return buff.getInt(buff.position() + ROW_INDEX_INDEX);
   }
 
-  static Object getDimValue(ByteBuffer buff, int dimIndex)
+  static int getDimsLength(OakRBuffer buff)
   {
-    int dimsLength = getDimsLength(buff);
-    return getDimValue(buff, dimIndex, dimsLength);
+    return buff.getInt(DIMS_LENGTH_INDEX);
   }
 
   static int getDimsLength(ByteBuffer buff)
@@ -61,21 +71,42 @@ public final class OakUtils
     return buff.getInt(buff.position() + DIMS_LENGTH_INDEX);
   }
 
-  static int getDimIndexInBuffer(ByteBuffer buff, int dimsLength, int dimIndex)
+  static int getDimIndexInBuffer(int dimIndex)
   {
-    if (dimIndex >= dimsLength) {
-      return NO_DIM;
-    }
-    return buff.position() + DIMS_INDEX + dimIndex * ALLOC_PER_DIM;
+    return DIMS_INDEX + dimIndex * ALLOC_PER_DIM;
   }
 
-  static Object getDimValue(ByteBuffer buff, int dimIndex, int dimsLength)
+  static Object getDimValue(OakRBuffer buff, int dimIndex)
   {
     Object dimObject = null;
-    if (dimIndex >= dimsLength) {
+    int dimIndexInBuffer = getDimIndexInBuffer(dimIndex);
+    int dimType = buff.getInt(dimIndexInBuffer);
+    if (dimType == NO_DIM) {
       return null;
+    } else if (dimType == ValueType.DOUBLE.ordinal()) {
+      dimObject = buff.getDouble(dimIndexInBuffer + DATA_OFFSET);
+    } else if (dimType == ValueType.FLOAT.ordinal()) {
+      dimObject = buff.getFloat(dimIndexInBuffer + DATA_OFFSET);
+    } else if (dimType == ValueType.LONG.ordinal()) {
+      dimObject = buff.getLong(dimIndexInBuffer + DATA_OFFSET);
+    } else if (dimType == ValueType.STRING.ordinal()) {
+      int arrayIndexOffset = buff.getInt(dimIndexInBuffer + ARRAY_INDEX_OFFSET);
+      int arrayIndex = arrayIndexOffset;
+      int arraySize = buff.getInt(dimIndexInBuffer + ARRAY_LENGTH_OFFSET);
+      int[] array = new int[arraySize];
+      for (int i = 0; i < arraySize; i++) {
+        array[i] = buff.getInt(arrayIndex);
+        arrayIndex += Integer.BYTES;
+      }
+      dimObject = array;
     }
-    int dimIndexInBuffer = getDimIndexInBuffer(buff, dimsLength, dimIndex);
+    return dimObject;
+  }
+
+  static Object getDimValue(ByteBuffer buff, int dimIndex)
+  {
+    Object dimObject = null;
+    int dimIndexInBuffer = buff.position() + getDimIndexInBuffer(dimIndex);
     int dimType = buff.getInt(dimIndexInBuffer);
     if (dimType == NO_DIM) {
       return null;

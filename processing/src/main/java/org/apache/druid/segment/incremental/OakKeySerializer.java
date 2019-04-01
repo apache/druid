@@ -125,7 +125,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
     int rowIndex = OakUtils.getRowIndex(byteBuffer);
     Object[] dims = new Object[dimsLength];
     for (int dimIndex = 0; dimIndex < dimsLength; dimIndex++) {
-      Object dim = OakUtils.getDimValue(byteBuffer, dimIndex, dimsLength);
+      Object dim = OakUtils.getDimValue(byteBuffer, dimIndex);
       dims[dimIndex] = dim;
     }
     return new IncrementalIndexRow(timeStamp, dims, dimensionDescsList, rowIndex);
