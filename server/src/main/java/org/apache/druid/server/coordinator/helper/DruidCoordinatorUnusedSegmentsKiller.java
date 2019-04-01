@@ -36,6 +36,10 @@ import java.util.Collection;
 import java.util.List;
 
 /**
+ * Completely removes information about unused segments whose end time is older than {@link #retainDuration} from now
+ * from the metadata store. This action is called "to kill a segment".
+ *
+ * @see org.apache.druid.indexing.common.task.KillUnusedSegmentsTask
  */
 public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHelper
 {
@@ -84,7 +88,8 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillUnusedSegmentsInAllDataSources();
-    Collection<String> specificDataSourcesToKill = params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
+    Collection<String> specificDataSourcesToKill =
+        params.getCoordinatorDynamicConfig().getSpecificDataSourcesToKillUnusedSegmentsIn();
 
     if (killAllDataSources && specificDataSourcesToKill != null && !specificDataSourcesToKill.isEmpty()) {
       log.error(
@@ -126,11 +131,8 @@ public class DruidCoordinatorUnusedSegmentsKiller implements DruidCoordinatorHel
   @Nullable
   Interval findIntervalForKill(String dataSource, int limit)
   {
-    List<Interval> unusedSegmentIntervals = segmentsMetadata.getUnusedSegmentIntervals(
-        dataSource,
-        new Interval(DateTimes.EPOCH, DateTimes.nowUtc().minus(retainDuration)),
-        limit
-    );
+    List<Interval> unusedSegmentIntervals =
+        segmentsMetadata.getUnusedSegmentIntervals(dataSource, DateTimes.nowUtc().minus(retainDuration), limit);
 
     if (unusedSegmentIntervals != null && unusedSegmentIntervals.size() > 0) {
       return JodaUtils.umbrellaInterval(unusedSegmentIntervals);

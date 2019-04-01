@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.SegmentsMetadata;
 import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -90,7 +91,7 @@ public class DruidCoordinatorUnusedSegmentsKillerTest
     EasyMock.expect(
         segmentsMetadata.getUnusedSegmentIntervals(
             EasyMock.anyString(),
-            EasyMock.anyObject(Interval.class),
+            EasyMock.anyObject(DateTime.class),
             EasyMock.anyInt()
         )
     ).andReturn(segmentIntervals);

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -167,12 +168,12 @@ public class SqlSegmentsMetadataTest
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), 1)
+        manager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 1)
     );
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", Intervals.of("1970/3000"), 5)
+        manager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5)
     );
   }
 

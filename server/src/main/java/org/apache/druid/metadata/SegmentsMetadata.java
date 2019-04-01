@@ -24,6 +24,7 @@ import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -115,9 +116,10 @@ public interface SegmentsMetadata
   Collection<String> retrieveAllDataSourceNames();
 
   /**
-   * Returns top N unused segment intervals in given interval when ordered by segment start time, end time.
+   * Returns top N unused segment intervals with the end time no later than the specified maxEndTime when ordered by
+   * segment start time, end time.
    */
-  List<Interval> getUnusedSegmentIntervals(String dataSource, Interval interval, int limit);
+  List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime maxEndTime, int limit);
 
   @VisibleForTesting
   void poll();

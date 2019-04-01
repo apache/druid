@@ -42,6 +42,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
@@ -580,11 +581,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   }
 
   @Override
-  public List<Interval> getUnusedSegmentIntervals(
-      final String dataSource,
-      final Interval interval,
-      final int limit
-  )
+  public List<Interval> getUnusedSegmentIntervals(final String dataSource, final DateTime maxEndTime, final int limit)
   {
     return connector.inReadOnlyTransaction(
         new TransactionCallback<List<Interval>>()
@@ -595,8 +592,8 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
             Iterator<Interval> iter = handle
                 .createQuery(
                     StringUtils.format(
-                        "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND start >= :start "
-                        + "AND %2$send%2$s <= :end AND used = false ORDER BY start, %2$send%2$s",
+                        "SELECT start, %2$send%2$s FROM %1$s WHERE dataSource = :dataSource AND "
+                        + "%2$send%2$s <= :end AND used = false ORDER BY start, %2$send%2$s",
                         getSegmentsTable(),
                         connector.getQuoteString()
                     )
@@ -604,8 +601,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
                 .setFetchSize(connector.getStreamingFetchSize())
                 .setMaxRows(limit)
                 .bind("dataSource", dataSource)
-                .bind("start", interval.getStart().toString())
-                .bind("end", interval.getEnd().toString())
+                .bind("end", maxEndTime.toString())
                 .map(
                     new BaseResultSetMapper<Interval>()
                     {
