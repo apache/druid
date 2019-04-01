@@ -168,7 +168,6 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
       saveDisabled={false}
       canOutsideClickClose={false}
       isOpen
-      inline
       onClose={onCancel}
       title={`Edit retention rules: ${datasource}${datasource === '_default' ? ' (cluster defaults)' : ''}`}
       onReset={this.reset}

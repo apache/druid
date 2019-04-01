@@ -86,7 +86,6 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
 
     return <Dialog
       isOpen
-      inline
       className={classNames(Classes.ALERT, 'async-alert-dialog', className)}
       canEscapeKeyClose={!working}
       onClose={handleClose}

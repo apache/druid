@@ -19,8 +19,9 @@
 @import "./variables";
 
 .console-application {
-  position: relative;
+  position: absolute;
   height: 100%;
+  width: 100%;
 
   .view-container {
     position: absolute;
