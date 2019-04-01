@@ -43,7 +43,7 @@ export function makeTextFilter(placeholder = ''): FilterRender {
       key={key}
       onChange={(e: any) => onChange(e.target.value)}
       value={filterValue}
-      rightElement={filterValue ? <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} /> : undefined}
+      rightElement={filterValue && <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} />}
       placeholder={placeholder}
     />;
   };

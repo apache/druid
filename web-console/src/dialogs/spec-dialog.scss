@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
-.post-spec-dialog {
-  .post-spec-dialog-textarea {
+.spec-dialog {
+  &.pt-dialog {
+    top: 5%;
+    width: 90%;
+  }
+
+  .spec-dialog-textarea {
     background-color: #232C35;
     margin-bottom: 10px;
 

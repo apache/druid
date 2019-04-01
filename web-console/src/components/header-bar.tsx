@@ -114,7 +114,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
       <MenuItem iconName={IconNames.MAP} text="Legacy overlord console" href={LEGACY_OVERLORD_CONSOLE} target="_blank" />
     </Menu>;
 
-    const helpMenu  = <Menu>
+    const helpMenu = <Menu>
       <MenuItem iconName={IconNames.GRAPH} text="About" onClick={() => this.setState({ aboutDialogOpen: true })} />
       <MenuItem iconName={IconNames.TH} text="Docs" href={DRUID_DOCS} target="_blank" />
       <MenuItem iconName={IconNames.USER} text="User group" href={DRUID_USER_GROUP} target="_blank" />
@@ -139,15 +139,15 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
         <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'servers' })} iconName={IconNames.DATABASE} text="Data servers" href="#servers" />
         <NavbarDivider />
         <AnchorButton className={classNames(Classes.MINIMAL, { 'pt-active': active === 'sql' })} iconName={IconNames.APPLICATION} text="SQL" href="#sql" />
-        <Popover className="config-popover" content={configMenu} position={Position.BOTTOM_LEFT} inline>
+        <Popover className="config-popover" content={configMenu} position={Position.BOTTOM_LEFT}>
           <Button className={Classes.MINIMAL} iconName={IconNames.SETTINGS} text="Config"/>
         </Popover>
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
-        <Popover className="legacy-popover" content={legacyMenu} position={Position.BOTTOM_RIGHT} inline>
+        <Popover className="legacy-popover" content={legacyMenu} position={Position.BOTTOM_RIGHT}>
           <Button className={Classes.MINIMAL} iconName={IconNames.SHARE} text="Legacy" />
         </Popover>
-        <Popover className="help-popover" content={helpMenu} position={Position.BOTTOM_RIGHT} inline>
+        <Popover className="help-popover" content={helpMenu} position={Position.BOTTOM_RIGHT}>
           <Button className={Classes.MINIMAL} iconName={IconNames.HELP} text="Help" />
         </Popover>
       </NavbarGroup>

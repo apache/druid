@@ -208,7 +208,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         <Button rightIconName={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
           {isRune ? 'Rune' : 'Run'}
         </Button>
-        <Popover position={Position.BOTTOM_LEFT} content={autoCompletePopover} inline>
+        <Popover position={Position.BOTTOM_LEFT} content={autoCompletePopover}>
           <Button className={`${Classes.MINIMAL} pt-icon-more`}/>
         </Popover>
       </div>
