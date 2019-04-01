@@ -23,8 +23,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.List;
-
 public class CircularBufferTest
 {
   private static CircularBuffer<Integer> buff = new CircularBuffer(4);
@@ -50,16 +48,6 @@ public class CircularBufferTest
   {
     for (int i = 0; i < 4; i++) {
       Assert.assertEquals((Integer) (i + 6), buff.get(i));
-    }
-  }
-
-  @Test
-  public void testCircularBufferToList()
-  {
-    List<Integer> buffToList = buff.toList();
-    Assert.assertEquals(4, buffToList.size());
-    for (int i = 6; i <= 9; i++) {
-      Assert.assertEquals((Integer) i, buffToList.get(i - 6));
     }
   }
 }

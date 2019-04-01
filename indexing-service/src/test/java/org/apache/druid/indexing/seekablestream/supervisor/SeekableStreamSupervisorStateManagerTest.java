@@ -45,23 +45,23 @@ public class SeekableStreamSupervisorStateManagerTest
   public void testHappyPath()
   {
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM, stateManager.getState());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM, stateManager.getSupervisorState());
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS, stateManager.getState());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS, stateManager.getSupervisorState());
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.CREATING_TASKS, stateManager.getState());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.CREATING_TASKS, stateManager.getSupervisorState());
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
     stateManager.markRunFinishedAndEvaluateHealth();
 
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getState());
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
     stateManager.markRunFinishedAndEvaluateHealth();
   }
 

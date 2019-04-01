@@ -43,19 +43,40 @@ public class SeekableStreamSupervisorStateManager
 {
   public enum State
   {
-    WAITING_TO_RUN,
-    CONNECTING_TO_STREAM,
-    DISCOVERING_INITIAL_TASKS,
-    CREATING_TASKS,
-    RUNNING,
-    SUSPENDED,
-    SHUTTING_DOWN,
-    UNABLE_TO_CONNECT_TO_STREAM,
-    LOST_CONTACT_WITH_STREAM,
-    UNHEALTHY
+    // Error states are ordered from high to low priority
+    UNHEALTHY_SUPERVISOR(1),
+    UNHEALTHY_TASKS(2),
+    UNABLE_TO_CONNECT_TO_STREAM(3),
+    LOST_CONTACT_WITH_STREAM(4),
+    // Non-error states are equal priority
+    WAITING_TO_RUN(5),
+    CONNECTING_TO_STREAM(5),
+    DISCOVERING_INITIAL_TASKS(5),
+    CREATING_TASKS(5),
+    RUNNING(5),
+    SUSPENDED(5),
+    SHUTTING_DOWN(5);
+
+    // Lower priority number means higher priority and vice versa
+    private final int priority;
+
+    State(int priority)
+    {
+      this.priority = priority;
+    }
+
+    public boolean isHealthy()
+    {
+      return ImmutableSet.of(
+          UNHEALTHY_SUPERVISOR,
+          UNHEALTHY_TASKS,
+          UNABLE_TO_CONNECT_TO_STREAM,
+          LOST_CONTACT_WITH_STREAM
+      ).contains(this);
+    }
   }
 
-  private State state;
+  private State supervisorState;
   // Group error (throwable) events by the type of Throwable (i.e. class name)
   private final ConcurrentHashMap<Class, List<ThrowableEvent>> throwableEvents;
   // Remove all throwableEvents that aren't in this set at the end of each run (transient)
@@ -67,9 +88,8 @@ public class SeekableStreamSupervisorStateManager
 
   private boolean atLeastOneSuccessfulRun = false;
   private boolean currentRunSuccessful = true;
-  private int numConsecutiveSuccessfulRuns = 0;
-  private int numConsecutiveFailingRuns = 0;
-  private CircularBuffer<TaskState> completedTaskHistory;
+  private final CircularBuffer<TaskState> completedTaskHistory;
+  private final CircularBuffer<State> stateHistory; // From previous runs
 
   public SeekableStreamSupervisorStateManager(
       State initialState,
@@ -79,7 +99,7 @@ public class SeekableStreamSupervisorStateManager
       int unhealthinessTaskThreshold
   )
   {
-    this.state = initialState;
+    this.supervisorState = initialState;
     this.throwableEvents = new ConcurrentHashMap<>();
     this.errorsEncounteredOnRun = new HashSet<>();
     this.healthinessThreshold = healthinessThreshold;
@@ -87,23 +107,24 @@ public class SeekableStreamSupervisorStateManager
     this.healthinessTaskThreshold = healthinessTaskThreshold;
     this.unhealthinessTaskThreshold = unhealthinessTaskThreshold;
     this.completedTaskHistory = new CircularBuffer<>(Math.max(healthinessTaskThreshold, unhealthinessTaskThreshold));
+    this.stateHistory = new CircularBuffer<>(Math.max(healthinessThreshold, unhealthinessThreshold));
   }
 
-  public Optional<State> setStateIfNoSuccessfulRunYet(State state)
+  public Optional<State> setStateIfNoSuccessfulRunYet(State newState)
   {
     if (!atLeastOneSuccessfulRun) {
-      return Optional.of(setState(state));
+      return Optional.of(setState(newState));
     }
     return Optional.absent();
   }
 
-  public State setState(State state)
+  public State setState(State newState)
   {
-    if (state.equals(State.SUSPENDED)) {
-      atLeastOneSuccessfulRun = false; // We want the startup states again
+    if (newState.equals(State.SUSPENDED)) {
+      atLeastOneSuccessfulRun = false; // We want the startup states again after being suspended
     }
-    this.state = state;
-    return state;
+    this.supervisorState = newState;
+    return newState;
   }
 
   public void storeThrowableEvent(Throwable t)
@@ -142,35 +163,73 @@ public class SeekableStreamSupervisorStateManager
     // At this point, all the events in throwableEvents should be non-transient
     errorsEncounteredOnRun.clear();
 
-    boolean noIssues = true;
+    State currentRunState = State.RUNNING;
+
     for (Map.Entry<Class, List<ThrowableEvent>> events : throwableEvents.entrySet()) {
       if (events.getValue().size() > unhealthinessThreshold) {
         if (events.getKey().equals(NonTransientStreamException.class)) {
-          setState(State.UNABLE_TO_CONNECT_TO_STREAM);
+          currentRunState = getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
         } else if (events.getKey().equals(TransientStreamException.class)) {
-          setState(State.LOST_CONTACT_WITH_STREAM);
+          currentRunState = getHigherPriorityState(currentRunState, State.LOST_CONTACT_WITH_STREAM);
         } else {
-          setState(State.UNHEALTHY);
+          currentRunState = getHigherPriorityState(currentRunState, State.UNHEALTHY_SUPERVISOR);
         }
-        noIssues = false;
       }
     }
 
-    // TODO check task health here
-
-    if (noIssues) {
-      numConsecutiveSuccessfulRuns++;
-      numConsecutiveFailingRuns = 0;
+    // Evaluate task health
+    if (supervisorState == State.UNHEALTHY_TASKS) {
+      boolean tasksHealthy = true;
+      for (int i = 0; i < healthinessTaskThreshold; i++) {
+        // Last healthinessTaskThreshold tasks must be healthy for state to change from
+        // UNHEALTHY_TASKS to RUNNING
+        if (completedTaskHistory.getLatest(i) != TaskState.SUCCESS) {
+          tasksHealthy = false;
+        }
+      }
+      if (tasksHealthy && currentRunState == State.UNHEALTHY_TASKS) {
+        currentRunState = State.RUNNING;
+      }
     } else {
-      numConsecutiveFailingRuns++;
-      numConsecutiveSuccessfulRuns = 0;
+      boolean tasksUnhealthy = true;
+      for (int i = 0; i < unhealthinessTaskThreshold; i++) {
+        // Last unhealthinessTaskThreshold tasks must be unhealthy for state to change to
+        // UNHEALTHY_TASKS
+        if (completedTaskHistory.getLatest(i) != TaskState.FAILED) {
+          tasksUnhealthy = false;
+        }
+      }
+      if (tasksUnhealthy) {
+        currentRunState = getHigherPriorityState(currentRunState, State.UNHEALTHY_TASKS);
+      }
     }
 
-    if (ImmutableSet.of(State.UNHEALTHY, State.UNABLE_TO_CONNECT_TO_STREAM, State.LOST_CONTACT_WITH_STREAM)
-                    .contains(state) && numConsecutiveSuccessfulRuns > healthinessThreshold) {
-      setState(State.RUNNING);
-    } else if (state == State.RUNNING && numConsecutiveFailingRuns > unhealthinessThreshold) {
-      setState(State.UNHEALTHY);
+    stateHistory.add(currentRunState);
+
+    // Evaluate state history to determine what current supervisor state should be
+    if (currentRunState.isHealthy() && supervisorState.isHealthy()) {
+      setState(currentRunState);
+    } else if (!currentRunState.isHealthy()) { // healthy -> unhealthy or unhealthy -> another unhealthy state
+      // Last n need to match the new state
+      boolean stateChange = true;
+      for (int i = 0; i < unhealthinessThreshold; i++) {
+        if (stateHistory.getLatest(i) != currentRunState) {
+          stateChange = false;
+        }
+      }
+      if (stateChange) {
+        setState(currentRunState);
+      }
+    } else { // unhealthy -> healthy
+      boolean stateChange = true;
+      for (int i = 0; i < healthinessThreshold; i++) {
+        if (stateHistory.getLatest(i) != currentRunState) {
+          stateChange = false;
+        }
+      }
+      if (stateChange) {
+        setState(currentRunState);
+      }
     }
   }
 
@@ -179,9 +238,14 @@ public class SeekableStreamSupervisorStateManager
     return throwableEvents;
   }
 
-  public State getState()
+  public State getSupervisorState()
   {
-    return state;
+    return supervisorState;
+  }
+
+  private State getHigherPriorityState(State s1, State s2)
+  {
+    return s1.priority < s2.priority ? s1 : s2;
   }
 
   public static class ThrowableEvent

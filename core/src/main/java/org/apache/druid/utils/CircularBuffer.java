@@ -21,9 +21,6 @@ package org.apache.druid.utils;
 
 import com.google.common.base.Preconditions;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * A circular buffer that supports random bidirectional access.
  *
@@ -91,18 +88,5 @@ public class CircularBuffer<E>
   public int size()
   {
     return size;
-  }
-
-  /**
-   * Convert the buffer to a list starting with the earliest entry and ending with the most recently added entry.
-   */
-
-  public List<E> toList()
-  {
-    List<E> ret = new ArrayList<>(size);
-    for (int i = 0; i < size; i++) {
-      ret.add(get(i));
-    }
-    return ret;
   }
 }
