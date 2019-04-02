@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Intent } from '@blueprintjs/core';
+import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import * as numeral from "numeral";
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
-
-import { HTMLSelect, IconNames } from "../components/filler";
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
   const currentFilter = filters.find(f => f.id === id);
@@ -43,7 +42,7 @@ export function makeTextFilter(placeholder = ''): FilterRender {
       key={key}
       onChange={(e: any) => onChange(e.target.value)}
       value={filterValue}
-      rightElement={filterValue && <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} />}
+      rightElement={filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />}
       placeholder={placeholder}
     />;
   };

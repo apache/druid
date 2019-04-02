@@ -22,5 +22,4 @@ rm -rf \
   coordinator-console \
   pages \
   public \
-  assets \
   index.html

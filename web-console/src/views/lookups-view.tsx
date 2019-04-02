@@ -17,6 +17,7 @@
  */
 
 import { Button, Intent } from "@blueprintjs/core";
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
@@ -132,7 +133,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     } catch (e) {
       AppToaster.show(
         {
-          iconName: 'error',
+          icon: IconNames.ERROR,
           intent: Intent.DANGER,
           message: getDruidErrorMessage(e)
         }
@@ -202,7 +203,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     } catch (e) {
       AppToaster.show(
         {
-          iconName: 'error',
+          icon: IconNames.ERROR,
           intent: Intent.DANGER,
           message: getDruidErrorMessage(e)
         }
@@ -222,8 +223,8 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     if (lookupsError) {
       return <div className={"init-div"}>
         <Button
-          iconName="build"
-          text="Initialize Lookup"
+          icon={IconNames.BUILD}
+          text="Initialize lookup"
           onClick={() => this.initializeLookup()}
         />
       </div>;
@@ -309,12 +310,12 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       <div className="control-bar">
         <div className="control-label">Lookups</div>
         <Button
-          iconName="refresh"
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName="plus"
+          icon={IconNames.PLUS}
           text="Add"
           style={{display: this.state.lookupsError !== null ? 'none' : 'inline'}}
           onClick={() => this.openLookupEditDialog("", "")}

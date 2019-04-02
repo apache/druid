@@ -17,6 +17,7 @@
  */
 
 import { Button, Checkbox, Classes, Intent, Popover, Position } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from "axios";
 import * as ace from 'brace';
 import 'brace/ext/language_tools';
@@ -30,8 +31,6 @@ import * as ReactDOMServer from 'react-dom/server';
 
 import { SQLFunctionDoc } from "../../lib/sql-function-doc";
 import { AppToaster } from "../singletons/toaster";
-
-import { IconNames } from './filler';
 
 import './sql-control.scss';
 
@@ -205,11 +204,11 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         }}
       />
       <div className="buttons">
-        <Button rightIconName={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
+        <Button rightIcon={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
           {isRune ? 'Rune' : 'Run'}
         </Button>
         <Popover position={Position.BOTTOM_LEFT} content={autoCompletePopover}>
-          <Button className={`${Classes.MINIMAL} pt-icon-more`}/>
+          <Button minimal icon={IconNames.MORE}/>
         </Popover>
       </div>
     </div>;

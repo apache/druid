@@ -17,6 +17,7 @@
  */
 
 import { Button, Switch } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as classNames from 'classnames';
 import { sum } from "d3-array";
@@ -24,7 +25,6 @@ import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 
-import { IconNames } from '../components/filler';
 import { TableColumnSelection } from "../components/table-column-selection";
 import {
   addFilter,
@@ -373,12 +373,12 @@ WHERE "server_type" = 'historical'`);
       <div className="control-bar">
         <div className="control-label">Historicals</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.serverQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName={IconNames.APPLICATION}
+          icon={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
         />
@@ -400,7 +400,7 @@ WHERE "server_type" = 'historical'`);
       <div className="control-bar">
         <div className="control-label">MiddleManagers</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.middleManagerQueryManager.rerunLastQuery()}
         />
