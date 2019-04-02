@@ -119,6 +119,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   componentWillUnmount(): void {
     this.sqlQueryManager.terminate();
+    this.explainQueryManager.terminate();
   }
 
   getExplain = (q: string) => {
