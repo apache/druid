@@ -16,18 +16,19 @@
  * limitations under the License.
  */
 
+import { Card, H5, Icon } from "@blueprintjs/core";
+import { IconName, IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
 
-import { Card, H5, Icon, IconNames } from "../components/filler";
 import { getHeadProp, pluralIfNeeded, queryDruidSql, QueryManager } from '../utils';
 
 import './home-view.scss';
 
 export interface CardOptions {
   href: string;
-  icon: string;
+  icon: IconName;
   title: string;
   loading?: boolean;
   content: JSX.Element | string;
@@ -256,7 +257,7 @@ GROUP BY 1`);
 
   renderCard(cardOptions: CardOptions): JSX.Element {
     return <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
-      <Card interactive>
+      <Card className="status-card" interactive>
         <H5><Icon color="#bfccd5" icon={cardOptions.icon}/>&nbsp;{cardOptions.title}</H5>
         {cardOptions.loading ? <p>Loading...</p> : (cardOptions.error ? `Error: ${cardOptions.error}` : cardOptions.content)}
       </Card>

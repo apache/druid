@@ -1,6 +1,6 @@
 {
   "name": "web-console",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "A web console for Apache Druid",
   "author": "Imply Data Inc.",
   "license": "Apache-2.0",
@@ -20,7 +20,7 @@
     "stylelint": "stylelint 'src/**/*.scss'"
   },
   "dependencies": {
-    "@blueprintjs/core": "1.0.1",
+    "@blueprintjs/core": "^3.15.0",
     "axios": "^0.18.0",
     "brace": "^0.11.1",
     "classnames": "^2.2.6",
@@ -31,10 +31,8 @@
     "hjson": "^3.1.2",
     "lodash.debounce": "^4.0.8",
     "numeral": "^2.0.6",
-    "prop-types": "^15.7.2",
     "react": "^16.8.3",
     "react-ace": "^6.4.0",
-    "react-addons-css-transition-group": "^15.6.2",
     "react-dom": "^16.8.3",
     "react-router": "^4.3.1",
     "react-router-dom": "^4.3.1",

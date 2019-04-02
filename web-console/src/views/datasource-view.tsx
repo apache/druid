@@ -17,11 +17,11 @@
  */
 
 import { Button, Intent, Switch } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from "react-table";
 
-import { IconNames } from "../components/filler";
 import { RuleEditor } from '../components/rule-editor';
 import { TableColumnSelection } from "../components/table-column-selection";
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
@@ -526,12 +526,12 @@ GROUP BY 1`);
       <div className="control-bar">
         <div className="control-label">Datasources</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.datasourceQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName={IconNames.APPLICATION}
+          icon={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
         />

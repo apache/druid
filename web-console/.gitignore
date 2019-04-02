@@ -2,7 +2,6 @@ node/
 node_modules/
 resources/
 public/
-assets/
 lib/*.css
 
 coordinator-console/

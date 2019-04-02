@@ -17,13 +17,14 @@
  */
 
 import { Button, Intent } from "@blueprintjs/core";
+import { H5 } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 
-import { H5, IconNames } from "../components/filler";
 import { TableColumnSelection } from "../components/table-column-selection";
 import { AppToaster } from "../singletons/toaster";
 import {
@@ -287,12 +288,12 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       <div className="control-bar">
         <div className="control-label">Segments</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.segmentsQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName={IconNames.APPLICATION}
+          icon={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.segmentsQueryManager.getLastQuery().query)}
         />

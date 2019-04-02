@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, Popover, Position } from "@blueprintjs/core";
+import { Button, Checkbox, FormGroup, Menu, Popover, Position } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import * as React from 'react';
-
-import { FormGroup, IconNames } from "./filler";
 
 import "./table-column-selection.scss";
 
@@ -44,25 +43,25 @@ export class TableColumnSelection extends React.Component<TableColumnSelectionPr
 
   render() {
     const { columns, onChange, tableColumnsHidden } = this.props;
-    const checkboxes = <FormGroup>
-      {
-        columns.map(column => {
-          return <Checkbox
+    const checkboxes = <Menu className="table-column-selection-menu">
+      <FormGroup>
+        {columns.map(column => (
+          <Checkbox
             label={column}
             key={column}
             checked={!tableColumnsHidden.includes(column)}
             onChange={() => onChange(column)}
-          />;
-        })
-      }
-    </FormGroup>;
+          />
+        ))}
+      </FormGroup>
+    </Menu>;
+
     return <Popover
-      className={"table-column-selection"}
+      className="table-column-selection"
       content={checkboxes}
       position={Position.BOTTOM_RIGHT}
-      inline
     >
-      <Button rightIconName={IconNames.CARET_DOWN} text={"Columns"} />
+      <Button rightIcon={IconNames.CARET_DOWN} text={"Columns"} />
     </Popover>;
   }
 }
