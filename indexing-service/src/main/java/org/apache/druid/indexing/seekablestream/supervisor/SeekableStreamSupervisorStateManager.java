@@ -199,7 +199,7 @@ public class SeekableStreamSupervisorStateManager
         currentRunState = State.RUNNING;
       }
     } else {
-      boolean tasksUnhealthy = completedTaskHistory.size() != 0;
+      boolean tasksUnhealthy = completedTaskHistory.size() >= unhealthinessTaskThreshold;
       for (int i = 0; i < Math.min(unhealthinessTaskThreshold, completedTaskHistory.size()); i++) {
         // Last unhealthinessTaskThreshold tasks must be unhealthy for state to change to
         // UNHEALTHY_TASKS
@@ -215,24 +215,7 @@ public class SeekableStreamSupervisorStateManager
     stateHistory.add(currentRunState);
 
     // Evaluate state history to determine what current supervisor state should be
-    if (currentRunState.isHealthy() && supervisorState.isHealthy()) {
-      setState(currentRunState);
-    } else if (currentRunState == State.UNHEALTHY_TASKS) {
-      int numElementsToCheck = currentRunState.isHealthy() ?
-                               Math.min(healthinessThreshold, stateHistory.size()) :
-                               Math.min(unhealthinessThreshold, stateHistory.size());
-      boolean stateChange = numElementsToCheck != 0;
-      for (int i = 0; i < numElementsToCheck; i++) {
-        if (stateHistory.getLatest(i) != currentRunState) {
-          stateChange = false;
-        }
-      }
-      if (stateChange) {
-        setState(currentRunState);
-      }
-    } else {
-      setState(currentRunState);
-    }
+    setState(currentRunState);
   }
 
   public Map<Class, List<ThrowableEvent>> getThrowableEvents()

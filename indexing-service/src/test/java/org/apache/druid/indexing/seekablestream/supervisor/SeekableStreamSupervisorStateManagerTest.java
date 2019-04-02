@@ -20,6 +20,7 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,9 +52,15 @@ public class SeekableStreamSupervisorStateManagerTest
   public void testHappyPath()
   {
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM, stateManager.getSupervisorState());
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM,
+        stateManager.getSupervisorState()
+    );
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
-    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS, stateManager.getSupervisorState());
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS,
+        stateManager.getSupervisorState()
+    );
     stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.CREATING_TASKS, stateManager.getSupervisorState());
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
@@ -78,9 +85,24 @@ public class SeekableStreamSupervisorStateManagerTest
   }
 
   @Test
-  public void testNonTransientUnhealthiness()
+  public void testNonTransientStreamFailure()
   {
 
+  }
+
+  @Test
+  public void testNonTransientUnhealthiness()
+  {
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
+      Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
+      stateManager.storeThrowableEvent(new NullPointerException("someone goofed"));
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.UNHEALTHY_SUPERVISOR,
+        stateManager.getSupervisorState()
+    );
   }
 
   @Test
@@ -118,17 +140,18 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testNonTransientTaskUnhealthiness()
   {
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
-    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
-      Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
-      stateManager.storeThrowableEvent(new NullPointerException("someone goofed"));
+    for (int i = 0; i < config.getSupervisorTaskUnhealthinessThreshold(); i++) {
+      Assert.assertNotEquals(
+          stateManager.getSupervisorState(),
+          SeekableStreamSupervisorStateManager.State.UNHEALTHY_TASKS
+      );
+      stateManager.storeCompletedTaskState(TaskState.FAILED);
       stateManager.markRunFinishedAndEvaluateHealth();
     }
     Assert.assertEquals(
-        SeekableStreamSupervisorStateManager.State.UNHEALTHY_SUPERVISOR,
+        SeekableStreamSupervisorStateManager.State.UNHEALTHY_TASKS,
         stateManager.getSupervisorState()
     );
-
   }
 
   @Test
@@ -138,13 +161,7 @@ public class SeekableStreamSupervisorStateManagerTest
   }
 
   @Test
-  public void testFailureOnFirstRun()
-  {
-
-  }
-
-  @Test
-  public void testTwoUnhealthyStates()
+  public void testTwoUnhealthyStates() // priority check
   {
 
   }
