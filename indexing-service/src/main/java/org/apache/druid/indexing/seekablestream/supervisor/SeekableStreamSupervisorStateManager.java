@@ -197,6 +197,8 @@ public class SeekableStreamSupervisorStateManager
       }
       if (tasksHealthy && currentRunState == State.UNHEALTHY_TASKS) {
         currentRunState = State.RUNNING;
+      } else if (!tasksHealthy) {
+        currentRunState = supervisorState;
       }
     } else {
       boolean tasksUnhealthy = completedTaskHistory.size() >= unhealthinessTaskThreshold;
@@ -207,6 +209,7 @@ public class SeekableStreamSupervisorStateManager
           tasksUnhealthy = false;
         }
       }
+
       if (tasksUnhealthy) {
         currentRunState = getHigherPriorityState(currentRunState, State.UNHEALTHY_TASKS);
       }
