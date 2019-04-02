@@ -268,7 +268,9 @@ export class TagInput extends React.Component<TagInputProps, { stringValue: stri
 interface JSONInputProps extends React.Props<any> {
   onChange: (newJSONValue: any) => void;
   value: any;
-  updateInputValidity: (valueValid: boolean) => void;
+  updateInputValidity?: (valueValid: boolean) => void;
+  focus?: boolean;
+  width?: string;
   height?: string;
 }
 
@@ -301,10 +303,9 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
   }
 
   render() {
-    const { onChange, updateInputValidity, height } = this.props;
+    const { onChange, updateInputValidity, focus, width, height } = this.props;
     const { stringValue } = this.state;
     return <AceEditor
-      className={"bp3-fill"}
       key={"hjson"}
       mode={"hjson"}
       theme="solarized_dark"
@@ -312,12 +313,12 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
       onChange={(e: string) => {
         this.setState({stringValue: e});
         if (validJson(e) || e === "") onChange(parseStringToJSON(e));
-        updateInputValidity(validJson(e) || e === '');
+        if (updateInputValidity) updateInputValidity(validJson(e) || e === '');
       }}
-      focus
+      focus={focus}
       fontSize={12}
-      width={'100%'}
-      height={height ? height : "8vh"}
+      width={width || '100%'}
+      height={height || "8vh"}
       showPrintMargin={false}
       showGutter={false}
       value={stringValue}

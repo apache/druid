@@ -17,12 +17,11 @@
  */
 
 .overlord-dynamic-config {
-
   &.pt-dialog {
+    margin-top: 5vh;
+    top: 5%;
     width: 600px;
   }
-
-  margin-top: 5vh;
 
   .pt-dialog-body {
     max-height: 70vh;

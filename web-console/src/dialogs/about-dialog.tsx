@@ -44,7 +44,6 @@ export class AboutDialog extends React.Component<AboutDialogProps, AboutDialogSt
       onClose={onClose}
       title="Apache Druid"
       isOpen
-      inline
       canEscapeKeyClose
     >
       <div className={Classes.DIALOG_BODY}>

@@ -21,13 +21,15 @@
     position: absolute;
     right: 0;
   }
+}
 
-  .pt-popover-content {
-    padding: 10px 10px 1px 10px;
-  }
-
+// This will be mounted in a portal
+.table-column-selection-menu {
   .form-group {
     margin-bottom: 0;
-  }
 
+    .pt-checkbox:last-child {
+      margin-bottom: 0;
+    }
+  }
 }

@@ -161,7 +161,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     if (showFinalStep) return this.renderFinalStep();
     if (showHistory) return this.renderHistoryDialog();
 
-    return <Dialog isOpen inline {...this.props}>
+    return <Dialog isOpen {...this.props}>
       <div className={Classes.DIALOG_BODY}>
         {children}
       </div>

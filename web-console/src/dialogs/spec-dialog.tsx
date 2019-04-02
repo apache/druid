@@ -28,6 +28,7 @@ export interface SpecDialogProps extends React.Props<any> {
   onSubmit: (spec: JSON) => void;
   onClose: () => void;
   title: string;
+  initSpec?: any;
 }
 
 export interface SpecDialogState {
@@ -47,7 +48,7 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
   constructor(props: SpecDialogProps) {
     super(props);
     this.state = {
-      spec: ""
+      spec: props.initSpec ? JSON.stringify(props.initSpec, null, 2) : '{\n\n}'
     };
   }
 
@@ -64,15 +65,16 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
     const { spec } = this.state;
 
     return <Dialog
-      className={"post-spec-dialog"}
+      className={"spec-dialog"}
       isOpen
       onClose={onClose}
       title={title}
+      canOutsideClickClose={false}
     >
       <AceEditor
         mode="json"
         theme="solarized_dark"
-        className={"post-spec-dialog-textarea"}
+        className={"spec-dialog-textarea"}
         onChange={(e) => { this.setState({ spec: e }); }}
         fontSize={12}
         showPrintMargin={false}
