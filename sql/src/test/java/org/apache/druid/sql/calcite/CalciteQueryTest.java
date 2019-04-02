@@ -7684,7 +7684,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .columns("v0")
                 .filters(selector("dim1", "1", null))
-                .resultFormat(ScanQuery.RESULT_FORMAT_COMPACTED_LIST)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
