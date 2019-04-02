@@ -171,7 +171,7 @@ public class SeekableStreamSupervisorStateManager
 
     errorsEncounteredOnRun.clear();
 
-    State currentRunState = State.RUNNING;
+    State currentRunState = State.RUNNING; // next state
 
     for (Map.Entry<Class, List<ThrowableEvent>> events : throwableEvents.entrySet()) {
       if (events.getValue().size() >= unhealthinessThreshold) {
@@ -187,8 +187,8 @@ public class SeekableStreamSupervisorStateManager
 
     // Evaluate task health
     if (supervisorState == State.UNHEALTHY_TASKS) {
-      boolean tasksHealthy = completedTaskHistory.size() != 0;
-      for (int i = 0; i < Math.min(unhealthinessTaskThreshold, completedTaskHistory.size()); i++) {
+      boolean tasksHealthy = completedTaskHistory.size() >= healthinessTaskThreshold;
+      for (int i = 0; i < Math.min(healthinessTaskThreshold, completedTaskHistory.size()); i++) {
         // Last healthinessTaskThreshold tasks must be healthy for state to change from
         // UNHEALTHY_TASKS to RUNNING
         if (completedTaskHistory.getLatest(i) != TaskState.SUCCESS) {

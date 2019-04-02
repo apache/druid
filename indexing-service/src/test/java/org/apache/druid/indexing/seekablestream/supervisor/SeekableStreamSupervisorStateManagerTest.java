@@ -149,8 +149,8 @@ public class SeekableStreamSupervisorStateManagerTest
   {
     for (int i = 0; i < config.getSupervisorTaskUnhealthinessThreshold(); i++) {
       Assert.assertNotEquals(
-          stateManager.getSupervisorState(),
-          SeekableStreamSupervisorStateManager.State.UNHEALTHY_TASKS
+          SeekableStreamSupervisorStateManager.State.UNHEALTHY_TASKS,
+          stateManager.getSupervisorState()
       );
       stateManager.storeCompletedTaskState(TaskState.FAILED);
       stateManager.markRunFinishedAndEvaluateHealth();
@@ -182,10 +182,40 @@ public class SeekableStreamSupervisorStateManagerTest
   }
 
   @Test
-  public void testRecoveryWithHealthinessThreshold()
+  public void testSupervisorRecoveryWithHealthinessThreshold()
   {
-    // Put the state
 
+  }
+
+  @Test
+  public void testStateRecoveryWithHealthinessThreshold()
+  {
+    // Put into an unhealthy state
+    for (int i = 0; i < config.getSupervisorTaskUnhealthinessThreshold(); i++) {
+      Assert.assertNotEquals(
+          SeekableStreamSupervisorStateManager.State.UNHEALTHY_TASKS,
+          stateManager.getSupervisorState()
+      );
+      stateManager.storeCompletedTaskState(TaskState.FAILED);
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.UNHEALTHY_TASKS,
+        stateManager.getSupervisorState()
+    );
+    // Recover after config.healthinessThreshold successful task completions
+    for (int i = 0; i < config.getSupervisorTaskHealthinessThreshold(); i++) {
+      Assert.assertEquals(
+          SeekableStreamSupervisorStateManager.State.UNHEALTHY_TASKS,
+          stateManager.getSupervisorState()
+      );
+      stateManager.storeCompletedTaskState(TaskState.SUCCESS);
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.RUNNING,
+        stateManager.getSupervisorState()
+    );
   }
 
   @Test
