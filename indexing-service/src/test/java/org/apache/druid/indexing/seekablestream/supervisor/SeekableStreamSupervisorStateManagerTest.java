@@ -22,15 +22,15 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.junit.Assert;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class SeekableStreamSupervisorStateManagerTest
 {
-  SeekableStreamSupervisorStateManager stateManager;
+  static SeekableStreamSupervisorStateManager stateManager;
 
-  @Before
-  public void setup()
+  @BeforeClass
+  public static void setup()
   {
     stateManager = new SeekableStreamSupervisorStateManager(
         SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,

@@ -186,7 +186,7 @@ public class SeekableStreamSupervisorStateManager
 
     // Evaluate task health
     if (supervisorState == State.UNHEALTHY_TASKS) {
-      boolean tasksHealthy = true;
+      boolean tasksHealthy = completedTaskHistory.size() != 0;
       for (int i = 0; i < Math.min(unhealthinessTaskThreshold, completedTaskHistory.size()); i++) {
         // Last healthinessTaskThreshold tasks must be healthy for state to change from
         // UNHEALTHY_TASKS to RUNNING
@@ -198,7 +198,7 @@ public class SeekableStreamSupervisorStateManager
         currentRunState = State.RUNNING;
       }
     } else {
-      boolean tasksUnhealthy = true;
+      boolean tasksUnhealthy = completedTaskHistory.size() != 0;
       for (int i = 0; i < Math.min(unhealthinessTaskThreshold, completedTaskHistory.size()); i++) {
         // Last unhealthinessTaskThreshold tasks must be unhealthy for state to change to
         // UNHEALTHY_TASKS
