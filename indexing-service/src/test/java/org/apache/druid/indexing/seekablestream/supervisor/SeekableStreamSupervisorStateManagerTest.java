@@ -22,15 +22,24 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class SeekableStreamSupervisorStateManagerTest
 {
-  static SeekableStreamSupervisorStateManager stateManager;
+  private SeekableStreamSupervisorStateManager stateManager;
+  private static SeekableStreamSupervisorConfig config;
 
   @BeforeClass
-  public static void setup()
+  public static void setupClass()
+  {
+    config = new SeekableStreamSupervisorConfig();
+
+  }
+
+  @Before
+  public void setupTest()
   {
     stateManager = new SeekableStreamSupervisorStateManager(
         SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
@@ -75,14 +84,50 @@ public class SeekableStreamSupervisorStateManagerTest
   }
 
   @Test
-  public void testTransientUnhealthiness()
+  public void testTransientUnhealthinessAndRecovery()
   {
-
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold() - 1; i++) {
+      stateManager.storeThrowableEvent(new NullPointerException("someone goofed"));
+      stateManager.markRunFinishedAndEvaluateHealth();
+      Assert.assertEquals(
+          SeekableStreamSupervisorStateManager.State.RUNNING,
+          stateManager.getSupervisorState()
+      );
+    }
+    stateManager.markRunFinishedAndEvaluateHealth(); // clean run
+    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold() - 1; i++) {
+      stateManager.storeThrowableEvent(new NullPointerException("someone goofed"));
+      stateManager.markRunFinishedAndEvaluateHealth();
+      Assert.assertEquals(
+          SeekableStreamSupervisorStateManager.State.RUNNING,
+          stateManager.getSupervisorState()
+      );
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.RUNNING,
+        stateManager.getSupervisorState()
+    );
+    stateManager.markRunFinishedAndEvaluateHealth(); // clean run
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.RUNNING,
+        stateManager.getSupervisorState()
+    );
   }
 
   @Test
   public void testNonTransientTaskUnhealthiness()
   {
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
+      Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
+      stateManager.storeThrowableEvent(new NullPointerException("someone goofed"));
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.UNHEALTHY_SUPERVISOR,
+        stateManager.getSupervisorState()
+    );
 
   }
 

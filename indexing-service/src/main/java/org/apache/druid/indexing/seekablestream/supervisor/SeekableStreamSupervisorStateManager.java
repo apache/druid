@@ -68,7 +68,7 @@ public class SeekableStreamSupervisorStateManager
 
     public boolean isHealthy()
     {
-      return ImmutableSet.of(
+      return !ImmutableSet.of(
           UNHEALTHY_SUPERVISOR,
           UNHEALTHY_TASKS,
           UNABLE_TO_CONNECT_TO_STREAM,
@@ -145,6 +145,7 @@ public class SeekableStreamSupervisorStateManager
             storingStackTraces ? ExceptionUtils.getStackTrace(t) : null,
             DateTimes.nowUtc()
         ));
+    errorsEncounteredOnRun.add(t.getClass());
     throwableEvents.put(t.getClass(), throwableEventsForClassT);
     currentRunSuccessful = false;
   }
@@ -162,8 +163,8 @@ public class SeekableStreamSupervisorStateManager
     currentRunSuccessful = true;
 
     // Remove transient errors from throwableEvents
-    for (Class throwableClass : errorsEncounteredOnRun) {
-      if (!throwableEvents.keySet().contains(throwableClass)) {
+    for (Class throwableClass : throwableEvents.keySet()) {
+      if (!errorsEncounteredOnRun.contains(throwableClass)) {
         throwableEvents.remove(throwableClass);
       }
     }
@@ -173,7 +174,7 @@ public class SeekableStreamSupervisorStateManager
     State currentRunState = State.RUNNING;
 
     for (Map.Entry<Class, List<ThrowableEvent>> events : throwableEvents.entrySet()) {
-      if (events.getValue().size() > unhealthinessThreshold) {
+      if (events.getValue().size() >= unhealthinessThreshold) {
         if (events.getKey().equals(NonTransientStreamException.class)) {
           currentRunState = getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
         } else if (events.getKey().equals(TransientStreamException.class)) {
@@ -216,11 +217,11 @@ public class SeekableStreamSupervisorStateManager
     // Evaluate state history to determine what current supervisor state should be
     if (currentRunState.isHealthy() && supervisorState.isHealthy()) {
       setState(currentRunState);
-    } else {
-      boolean stateChange = true;
+    } else if (currentRunState == State.UNHEALTHY_TASKS) {
       int numElementsToCheck = currentRunState.isHealthy() ?
                                Math.min(healthinessThreshold, stateHistory.size()) :
                                Math.min(unhealthinessThreshold, stateHistory.size());
+      boolean stateChange = numElementsToCheck != 0;
       for (int i = 0; i < numElementsToCheck; i++) {
         if (stateHistory.getLatest(i) != currentRunState) {
           stateChange = false;
@@ -229,6 +230,8 @@ public class SeekableStreamSupervisorStateManager
       if (stateChange) {
         setState(currentRunState);
       }
+    } else {
+      setState(currentRunState);
     }
   }
 
