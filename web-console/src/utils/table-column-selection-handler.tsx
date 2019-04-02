@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { localStorageGet, localStorageSet } from "./general";
+import { localStorageGet, LocalStorageKeys, localStorageSet } from "../utils";
 
 export class TableColumnSelectionHandler {
-  tableName: string;
+  tableName: LocalStorageKeys;
   hiddenColumns: string[];
   updateComponent: () => void;
 
-  constructor(tableName: string, updateComponent: () => void) {
+  constructor(tableName: LocalStorageKeys, updateComponent: () => void) {
     this.tableName = tableName;
     this.updateComponent = updateComponent;
     this.getHiddenTableColumns();

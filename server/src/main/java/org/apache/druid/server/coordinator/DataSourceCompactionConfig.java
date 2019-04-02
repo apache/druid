@@ -71,10 +71,6 @@ public class DataSourceCompactionConfig
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext
   )
   {
-    Preconditions.checkArgument(
-        targetCompactionSizeBytes == null || maxRowsPerSegment == null,
-        "targetCompactionSizeBytes and maxRowsPerSegment in tuningConfig can't be used together"
-    );
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.keepSegmentGranularity = keepSegmentGranularity == null
                                   ? DEFAULT_KEEP_SEGMENT_GRANULARITY
@@ -85,11 +81,11 @@ public class DataSourceCompactionConfig
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
-    if (targetCompactionSizeBytes == null && maxRowsPerSegment == null) {
-      this.targetCompactionSizeBytes = DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
-    } else {
-      this.targetCompactionSizeBytes = targetCompactionSizeBytes;
-    }
+    this.targetCompactionSizeBytes = getValidTargetCompactionSizeBytes(
+        targetCompactionSizeBytes,
+        maxRowsPerSegment,
+        tuningConfig
+    );
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.maxNumSegmentsToCompact = maxNumSegmentsToCompact == null
                                    ? DEFAULT_NUM_INPUT_SEGMENTS
@@ -102,6 +98,51 @@ public class DataSourceCompactionConfig
         this.maxNumSegmentsToCompact > 1,
         "numTargetCompactionSegments should be larger than 1"
     );
+  }
+
+  /**
+   * This method is copied from {@code CompactionTask#getValidTargetCompactionSizeBytes}. The only difference is this
+   * method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}.
+   *
+   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
+   * the same method, this method must be synced with {@code CompactionTask#getValidTargetCompactionSizeBytes}.
+   */
+  @Nullable
+  private static Long getValidTargetCompactionSizeBytes(
+      @Nullable Long targetCompactionSizeBytes,
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable UserCompactTuningConfig tuningConfig
+  )
+  {
+    if (targetCompactionSizeBytes != null) {
+      Preconditions.checkArgument(
+          !hasPartitionConfig(maxRowsPerSegment, tuningConfig),
+          "targetCompactionSizeBytes[%s] cannot be used with maxRowsPerSegment[%s] and maxTotalRows[%s]",
+          targetCompactionSizeBytes,
+          maxRowsPerSegment,
+          tuningConfig == null ? null : tuningConfig.getMaxTotalRows()
+      );
+      return targetCompactionSizeBytes;
+    } else {
+      return hasPartitionConfig(maxRowsPerSegment, tuningConfig) ? null : DEFAULT_TARGET_COMPACTION_SIZE_BYTES;
+    }
+  }
+
+  /**
+   * his method is copied from {@code CompactionTask#hasPartitionConfig}. The two differences are
+   * 1) this method doesn't check 'numShards' which is not supported by {@link UserCompactTuningConfig}, and
+   * 2) this method accepts an additional 'maxRowsPerSegment' parameter since it's not supported by
+   * {@link UserCompactTuningConfig}.
+   *
+   * Currently, we can't use the same method here because it's in a different module. Until we figure out how to reuse
+   * the same method, this method must be synced with {@code CompactionTask#hasPartitionConfig}.
+   */
+  private static boolean hasPartitionConfig(
+      @Nullable Integer maxRowsPerSegment,
+      @Nullable UserCompactTuningConfig tuningConfig
+  )
+  {
+    return maxRowsPerSegment != null || (tuningConfig != null && tuningConfig.getMaxTotalRows() != null);
   }
 
   @JsonProperty

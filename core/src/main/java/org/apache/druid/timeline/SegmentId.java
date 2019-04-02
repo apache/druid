@@ -247,6 +247,15 @@ public final class SegmentId implements Comparable<SegmentId>
     return of(dataSource, Intervals.ETERNITY, "dummy_version", 0);
   }
 
+  /**
+   * Creates a dummy SegmentId with the given data source and partition number.
+   * This method is useful in benchmark and test code.
+   */
+  public static SegmentId dummy(String dataSource, int partitionNum)
+  {
+    return of(dataSource, Intervals.ETERNITY, "dummy_version", partitionNum);
+  }
+
   private final String dataSource;
   /**
    * {@code intervalStartMillis}, {@link #intervalEndMillis} and {@link #intervalChronology} are the three fields of

@@ -138,7 +138,7 @@ public class AbstractKafkaIndexerTest extends AbstractIndexerTest
       consumerProperties.putAll(consumerConfigs);
       consumerProperties.put("bootstrap.servers", config.getKafkaInternalHost());
 
-      spec = getTaskAsString(INDEXER_FILE);
+      spec = getResourceAsString(INDEXER_FILE);
       spec = StringUtils.replace(spec, "%%DATASOURCE%%", fullDatasourceName);
       spec = StringUtils.replace(spec, "%%TOPIC%%", TOPIC_NAME);
       spec = StringUtils.replace(spec, "%%CONSUMER_PROPERTIES%%", jsonMapper.writeValueAsString(consumerProperties));
