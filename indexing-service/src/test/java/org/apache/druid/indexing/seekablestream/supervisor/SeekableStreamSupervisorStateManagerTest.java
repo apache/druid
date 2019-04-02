@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
+import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -81,13 +82,32 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTransientStreamFailure()
   {
-
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.markRunFinishedAndEvaluateHealth(); // clean run without errors
+    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
+      Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
+      stateManager.storeThrowableEvent(new PossiblyTransientStreamException(new Exception("DOH!")));
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.LOST_CONTACT_WITH_STREAM,
+        stateManager.getSupervisorState()
+    );
   }
 
   @Test
   public void testNonTransientStreamFailure()
   {
-
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
+      Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
+      stateManager.storeThrowableEvent(new PossiblyTransientStreamException(new Exception("DOH!")));
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.UNABLE_TO_CONNECT_TO_STREAM,
+        stateManager.getSupervisorState()
+    );
   }
 
   @Test
@@ -169,8 +189,21 @@ public class SeekableStreamSupervisorStateManagerTest
   }
 
   @Test
-  public void testTwoUnhealthyStates() // priority check
+  public void testTwoUnhealthyStates()
   {
-
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    for (int i = 0; i < Math.max(
+        config.getSupervisorTaskUnhealthinessThreshold(),
+        config.getSupervisorUnhealthinessThreshold()
+    ); i++) {
+      stateManager.storeThrowableEvent(new NullPointerException("somebody goofed"));
+      stateManager.storeCompletedTaskState(TaskState.FAILED);
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    // UNHEALTHY_SUPERVISOR should take priority over UNHEALTHY_TASKS
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.UNHEALTHY_SUPERVISOR,
+        stateManager.getSupervisorState()
+    );
   }
 }
