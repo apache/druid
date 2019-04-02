@@ -208,7 +208,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
           {isRune ? 'Rune' : 'Run'}
         </Button>
         <Popover position={Position.BOTTOM_LEFT} content={autoCompletePopover}>
-          <Button minimal/>
+          <Button minimal icon={IconNames.MORE}/>
         </Popover>
       </div>
     </div>;
