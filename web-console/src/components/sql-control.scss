@@ -40,6 +40,14 @@
 .auto-complete-checkbox {
   margin:10px;
   min-width: 120px;
+
+  .bp3-form-group {
+    margin-bottom: 0;
+  }
+
+  button {
+    width: 100%;
+  }
 }
 
 .ace_tooltip {

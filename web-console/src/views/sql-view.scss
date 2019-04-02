@@ -38,3 +38,26 @@
     flex: 1;
   }
 }
+
+.sql-view-explain-dialog {
+
+  &.bp3-dialog {
+    width: 600px;
+  }
+
+  textarea {
+    width: 100%;
+  }
+
+  .one-query {
+    textarea {
+      height: 50vh !important;
+    }
+  }
+
+  .two-queries {
+    textarea {
+      height: 30vh !important;
+    }
+  }
+}

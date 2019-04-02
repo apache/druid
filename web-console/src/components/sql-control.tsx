@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, Classes, Intent, Popover, Position } from "@blueprintjs/core";
+import { Button, Checkbox, Classes, Dialog, FormGroup, Intent, Popover, Position, TextArea } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import axios from "axios";
 import * as ace from 'brace';
@@ -39,6 +39,7 @@ const langTools = ace.acequire('ace/ext/language_tools');
 export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
   onRun: (query: string) => void;
+  onExplain: (query: string) => void;
 }
 
 export interface SqlControlState {
@@ -165,18 +166,29 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
   }
 
   render() {
-    const { onRun } = this.props;
+    const { onRun, onExplain } = this.props;
     const { query, autoCompleteOn } = this.state;
 
     const isRune = query.trim().startsWith('{');
 
-    const autoCompletePopover = <div className={"auto-complete-checkbox"}>
-      <Checkbox
-        checked={isRune ? false : autoCompleteOn}
-        disabled={isRune}
-        label={"Auto complete"}
-        onChange={() => this.setState({autoCompleteOn: !autoCompleteOn})}
-      />
+    const morePopover = <div className={"auto-complete-checkbox"}>
+      <FormGroup>
+        <Checkbox
+          checked={isRune ? false : autoCompleteOn}
+          disabled={isRune}
+          label={"Auto complete"}
+          onChange={() => this.setState({autoCompleteOn: !autoCompleteOn})}
+        />
+      </FormGroup>
+      <FormGroup>
+        <Button
+          className={Classes.POPOVER_DISMISS}
+          disabled={isRune}
+          text={"Explain"}
+          onClick={() => onExplain(query)}
+          minimal
+        />
+      </FormGroup>
     </div>;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
@@ -207,7 +219,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         <Button rightIcon={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
           {isRune ? 'Rune' : 'Run'}
         </Button>
-        <Popover position={Position.BOTTOM_LEFT} content={autoCompletePopover}>
+        <Popover position={Position.BOTTOM_LEFT} content={morePopover}>
           <Button minimal icon={IconNames.MORE}/>
         </Popover>
       </div>

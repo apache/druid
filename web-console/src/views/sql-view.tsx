@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Button, Classes, Dialog, FormGroup, InputGroup, Label, TextArea } from "@blueprintjs/core";
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as Hjson from "hjson";
@@ -24,10 +25,10 @@ import ReactTable from "react-table";
 
 import { SqlControl } from '../components/sql-control';
 import {
-  decodeRune,
+  decodeRune, getDruidErrorMessage,
   HeaderRows,
   localStorageGet, LocalStorageKeys,
-  localStorageSet,
+  localStorageSet, parseQueryPlan,
   queryDruidRune,
   queryDruidSql, QueryManager
 } from '../utils';
@@ -42,18 +43,27 @@ export interface SqlViewState {
   loading: boolean;
   result: HeaderRows | null;
   error: string | null;
+  explainDialogOpen: boolean;
+  explainResult: any;
+  loadingExplain: boolean;
+  explainError: Error | null;
 }
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   private sqlQueryManager: QueryManager<string, HeaderRows>;
+  private explainQueryManager: QueryManager<string, any>;
 
   constructor(props: SqlViewProps, context: any) {
     super(props, context);
     this.state = {
       loading: false,
       result: null,
-      error: null
+      error: null,
+      explainDialogOpen: false,
+      loadingExplain: false,
+      explainResult: null,
+      explainError: null
     };
   }
 
@@ -86,10 +96,106 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
         });
       }
     });
+
+    this.explainQueryManager = new QueryManager({
+      processQuery: async (query: string) => {
+        const explainQuery = `explain plan for ${query}`;
+        const result = await queryDruidSql({
+          query: explainQuery,
+          resultFormat: "object"
+        });
+        const data = parseQueryPlan(result[0]["PLAN"]);
+        return data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          explainResult: result,
+          loadingExplain: loading,
+          explainError: error !== null ? new Error(error) : null
+        });
+      }
+    });
   }
 
   componentWillUnmount(): void {
     this.sqlQueryManager.terminate();
+  }
+
+  getExplain = (q: string) => {
+    this.setState({
+      explainDialogOpen: true,
+      loadingExplain: true,
+      explainError: null
+    });
+    this.explainQueryManager.runQuery(q);
+  }
+
+  renderExplainDialog() {
+    const { explainDialogOpen, explainResult, loadingExplain, explainError } = this.state;
+    let content: JSX.Element;
+    if (loadingExplain) {
+      content = <div>Loading...</div>;
+    } else if (explainError) {
+      content = <div>{explainError.message}</div>;
+    } else if (explainResult == null) {
+      content = <div/>;
+    } else if (explainResult.query) {
+      content = <div className={"one-query"}>
+        <FormGroup
+          label={"Query"}
+        >
+          <TextArea
+            readOnly
+            value={JSON.stringify(explainResult.query[0], undefined, 2)}
+          />
+        </FormGroup>
+        <FormGroup
+          label={"Signature"}
+        >
+          <InputGroup defaultValue={explainResult.signature} readOnly/>
+        </FormGroup>
+      </div>;
+    } else if (explainResult.mainQuery && explainResult.subQueryRight) {
+      content = <div className={"two-queries"}>
+        <FormGroup
+          label={"Main query"}
+        >
+          <TextArea
+            readOnly
+            value={JSON.stringify(explainResult.mainQuery, undefined, 2)}
+          />
+        </FormGroup>
+        <FormGroup
+          label={"Sub query"}
+        >
+          <TextArea
+            readOnly
+            value={JSON.stringify(explainResult.subQueryRight, undefined, 2)}
+          />
+        </FormGroup>
+      </div>;
+    } else {
+      content = <div>{explainResult}</div>;
+    }
+
+    return <Dialog
+      className={'sql-view-explain-dialog'}
+      isOpen={explainDialogOpen}
+      onClose={() => this.setState({explainDialogOpen: false})}
+      title={"Query plan"}
+    >
+      <div className={Classes.DIALOG_BODY}>
+        {content}
+      </div>
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+          <Button
+            text="Close"
+            onClick={() => this.setState({explainDialogOpen: false})}
+          />
+        </div>
+      </div>
+    </Dialog>;
   }
 
   renderResultTable() {
@@ -116,8 +222,10 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           localStorageSet(LocalStorageKeys.QUERY_KEY, q);
           this.sqlQueryManager.runQuery(q);
         }}
+        onExplain={(q: string) => this.getExplain(q)}
       />
       {this.renderResultTable()}
+      {this.renderExplainDialog()}
     </div>;
   }
 }

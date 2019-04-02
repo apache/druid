@@ -43,3 +43,61 @@ export async function queryDruidSql(sqlQuery: Record<string, any>): Promise<any[
   }
   return sqlResultResp.data;
 }
+
+function parseQueryRel(queryRel: string) {
+  if (!queryRel) {
+    return {
+      query: null,
+      signature: null
+    };
+  }
+
+  const queryAndSignature = queryRel.split(', signature=');
+  const queryValue = new RegExp(/query=(.+)/).exec(queryAndSignature[0]);
+  const signatureValue = queryAndSignature[1];
+
+  let parsedQuery: any;
+
+  if (queryValue && queryValue[1]) {
+    try {
+      parsedQuery = JSON.parse(queryValue[1]);
+    } catch (e) {}
+  }
+
+  return {
+    query: parsedQuery || queryRel,
+    signature: signatureValue || null
+  };
+}
+
+export function parseQueryPlan(raw: string): any {
+  let plan: string = raw;
+
+  plan = plan.replace('\n', '');
+
+  if (plan.includes('DruidOuterQueryRel(')) {
+    return plan; // don't know how to parse this
+  }
+
+  let queryArgs: string;
+  const queryRelFnStart = 'DruidQueryRel(';
+  const semiJoinFnStart = 'DruidSemiJoin(';
+
+  if (plan.startsWith(queryRelFnStart)) {
+    queryArgs = plan.substring(queryRelFnStart.length, plan.length - 1);
+  } else if (plan.startsWith(semiJoinFnStart)) {
+    queryArgs = plan.substring(semiJoinFnStart.length, plan.length - 1);
+    const leftExpressionsArgs = ', leftExpressions=';
+    const keysArgumentIdx = queryArgs.indexOf(leftExpressionsArgs);
+    if (keysArgumentIdx !== -1) {
+      return {
+        mainQuery: parseQueryRel(queryArgs.substring(0, keysArgumentIdx)),
+        subQueryRight: parseQueryPlan(queryArgs.substring(queryArgs.indexOf(queryRelFnStart)))
+      };
+    }
+  } else {
+    return plan;
+  }
+
+  return parseQueryRel(queryArgs);
+}
