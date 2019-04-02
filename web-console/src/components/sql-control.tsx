@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, Classes, Dialog, FormGroup, Intent, Popover, Position, TextArea } from "@blueprintjs/core";
+import { Button, Checkbox, Classes, FormGroup, Intent, Popover, Position } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import axios from "axios";
 import * as ace from 'brace';

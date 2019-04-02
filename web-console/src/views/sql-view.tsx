@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, InputGroup, Label, TextArea } from "@blueprintjs/core";
-import axios from 'axios';
-import * as classNames from 'classnames';
+import { Button, Classes, Dialog, FormGroup, InputGroup, TextArea } from "@blueprintjs/core";
 import * as Hjson from "hjson";
 import * as React from 'react';
 import ReactTable from "react-table";
@@ -141,6 +139,16 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
     } else if (explainResult == null) {
       content = <div/>;
     } else if (explainResult.query) {
+
+      let signature: JSX.Element | null = null;
+      if (explainResult.signature) {
+        signature = <FormGroup
+          label={"Signature"}
+        >
+          <InputGroup defaultValue={explainResult.signature} readOnly/>
+        </FormGroup>;
+      }
+
       content = <div className={"one-query"}>
         <FormGroup
           label={"Query"}
@@ -150,30 +158,46 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
             value={JSON.stringify(explainResult.query[0], undefined, 2)}
           />
         </FormGroup>
-        <FormGroup
-          label={"Signature"}
-        >
-          <InputGroup defaultValue={explainResult.signature} readOnly/>
-        </FormGroup>
+        {signature}
       </div>;
     } else if (explainResult.mainQuery && explainResult.subQueryRight) {
+
+      let mainSignature: JSX.Element | null = null;
+      let subSignature: JSX.Element | null = null;
+      if (explainResult.mainQuery.signature) {
+        mainSignature = <FormGroup
+          label={"Signature"}
+        >
+          <InputGroup defaultValue={explainResult.mainQuery.signature} readOnly/>
+        </FormGroup>;
+      }
+      if (explainResult.subQueryRight.signature) {
+        subSignature = <FormGroup
+          label={"Signature"}
+        >
+          <InputGroup defaultValue={explainResult.subQueryRight.signature} readOnly/>
+        </FormGroup>;
+      }
+
       content = <div className={"two-queries"}>
         <FormGroup
           label={"Main query"}
         >
           <TextArea
             readOnly
-            value={JSON.stringify(explainResult.mainQuery, undefined, 2)}
+            value={JSON.stringify(explainResult.mainQuery.query, undefined, 2)}
           />
         </FormGroup>
+        {mainSignature}
         <FormGroup
           label={"Sub query"}
         >
           <TextArea
             readOnly
-            value={JSON.stringify(explainResult.subQueryRight, undefined, 2)}
+            value={JSON.stringify(explainResult.subQueryRight.query, undefined, 2)}
           />
         </FormGroup>
+        {subSignature}
       </div>;
     } else {
       content = <div>{explainResult}</div>;
