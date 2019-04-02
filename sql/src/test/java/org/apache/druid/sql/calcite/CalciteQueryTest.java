@@ -156,7 +156,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Intervals.of(
-                                   "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
+                                   "2999-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z"))
+                               )
                                .granularity(Granularities.ALL)
                                .aggregators(aggregators(
                                    new CountAggregatorFactory("a0"),

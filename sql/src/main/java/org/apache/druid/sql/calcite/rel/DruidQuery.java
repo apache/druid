@@ -457,8 +457,7 @@ public class DruidQuery
     final List<DimensionExpression> dimensions = new ArrayList<>();
     final String outputNamePrefix = Calcites.findUnusedPrefix(
         "d",
-        new TreeSet<>(querySignature.getRowSignature()
-                                    .getRowOrder())
+        new TreeSet<>(querySignature.getRowSignature().getRowOrder())
     );
     int outputNameCounter = 0;
 
@@ -532,8 +531,7 @@ public class DruidQuery
     final List<Aggregation> aggregations = new ArrayList<>();
     final String outputNamePrefix = Calcites.findUnusedPrefix(
         "a",
-        new TreeSet<>(querySignature.getRowSignature()
-                                    .getRowOrder())
+        new TreeSet<>(querySignature.getRowSignature().getRowOrder())
     );
 
     for (int i = 0; i < aggregate.getAggCallList().size(); i++) {

@@ -125,7 +125,10 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                         newQuery1 = (Query<T>) Druids.ScanQueryBuilder.copy((ScanQuery) query)
                                                                       .intervals(new MultipleSpecificSegmentSpec(
                                                                           ImmutableList.of(new SegmentDescriptor(
-                                                                              Intervals.of("2015-04-12/2015-04-13"), "4", 0))))
+                                                                              Intervals.of("2015-04-12/2015-04-13"),
+                                                                              "4",
+                                                                              0
+                                                                          ))))
                                                                       .context(ImmutableMap.of(
                                                                           ScanQuery.CTX_KEY_OUTERMOST,
                                                                           false
