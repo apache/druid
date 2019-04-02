@@ -506,10 +506,12 @@ public class CompactionTask extends AbstractTask
         new IngestSegmentFirehoseFactory(
             dataSchema.getDataSource(),
             interval,
+            null,
             null, // no filter
             // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
             dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
             Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
+            null,
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,
