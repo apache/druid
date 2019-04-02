@@ -26,18 +26,18 @@ import java.nio.ByteBuffer;
 
 /**
  * The difference from {@link org.apache.druid.query.aggregation.NoopBufferAggregator} is that
- * EmptyDistinctCountBufferAggregator returns 0 instead of null from {@link #get(ByteBuffer, int)}.
+ * NoopDistinctCountBufferAggregator returns 0 instead of null from {@link #get(ByteBuffer, int)}.
  */
-public final class EmptyDistinctCountBufferAggregator implements BufferAggregator
+public final class NoopDistinctCountBufferAggregator implements BufferAggregator
 {
-  private static final EmptyDistinctCountBufferAggregator INSTANCE = new EmptyDistinctCountBufferAggregator();
+  private static final NoopDistinctCountBufferAggregator INSTANCE = new NoopDistinctCountBufferAggregator();
 
-  static EmptyDistinctCountBufferAggregator instance()
+  static NoopDistinctCountBufferAggregator instance()
   {
     return INSTANCE;
   }
 
-  private EmptyDistinctCountBufferAggregator()
+  private NoopDistinctCountBufferAggregator()
   {
   }
 

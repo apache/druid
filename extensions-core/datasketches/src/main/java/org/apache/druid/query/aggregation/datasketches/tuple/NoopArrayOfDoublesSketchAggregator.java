@@ -17,51 +17,47 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.quantiles;
+package org.apache.druid.query.aggregation.datasketches.tuple;
 
-import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
+import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
+import org.apache.druid.query.aggregation.Aggregator;
 
-import java.nio.ByteBuffer;
-
-public class DoublesSketchNoOpBufferAggregator implements BufferAggregator
+public class NoopArrayOfDoublesSketchAggregator implements Aggregator
 {
 
+  private final ArrayOfDoublesSketch emptySketch;
+
+  public NoopArrayOfDoublesSketchAggregator(final int numberOfValues)
+  {
+    emptySketch = new ArrayOfDoublesUpdatableSketchBuilder().setNumberOfValues(numberOfValues).build().compact();
+  }
+
   @Override
-  public void init(final ByteBuffer buf, final int position)
+  public void aggregate()
   {
   }
 
   @Override
-  public void aggregate(final ByteBuffer buf, final int position)
+  public Object get()
   {
+    return emptySketch;
   }
 
   @Override
-  public Object get(final ByteBuffer buf, final int position)
-  {
-    return DoublesSketchOperations.EMPTY_SKETCH;
-  }
-
-  @Override
-  public float getFloat(final ByteBuffer buf, final int position)
+  public float getFloat()
   {
     throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
-  public long getLong(final ByteBuffer buf, final int position)
+  public long getLong()
   {
     throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
   public void close()
-  {
-  }
-
-  @Override
-  public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
   {
   }
 

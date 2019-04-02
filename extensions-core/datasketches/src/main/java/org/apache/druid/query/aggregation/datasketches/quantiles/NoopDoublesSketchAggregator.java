@@ -17,20 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.tuple;
+package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import com.yahoo.sketches.tuple.ArrayOfDoublesSketch;
-import com.yahoo.sketches.tuple.ArrayOfDoublesUpdatableSketchBuilder;
 import org.apache.druid.query.aggregation.Aggregator;
 
-public class ArrayOfDoublesSketchNoOpAggregator implements Aggregator
+public class NoopDoublesSketchAggregator implements Aggregator
 {
-
-  private final ArrayOfDoublesSketch emptySketch;
-
-  public ArrayOfDoublesSketchNoOpAggregator(final int numberOfValues)
+  @Override
+  public Object get()
   {
-    emptySketch = new ArrayOfDoublesUpdatableSketchBuilder().setNumberOfValues(numberOfValues).build().compact();
+    return DoublesSketchOperations.EMPTY_SKETCH;
   }
 
   @Override
@@ -39,9 +35,8 @@ public class ArrayOfDoublesSketchNoOpAggregator implements Aggregator
   }
 
   @Override
-  public Object get()
+  public void close()
   {
-    return emptySketch;
   }
 
   @Override
@@ -55,10 +50,4 @@ public class ArrayOfDoublesSketchNoOpAggregator implements Aggregator
   {
     throw new UnsupportedOperationException("Not implemented");
   }
-
-  @Override
-  public void close()
-  {
-  }
-
 }
