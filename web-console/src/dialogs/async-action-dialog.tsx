@@ -18,15 +18,16 @@
 
 import {
   Button,
+  ButtonGroup,
   Classes,
   Dialog,
-  Intent,
-  ProgressBar
+  FormGroup,
+  Icon, Intent, NumericInput, ProgressBar, TagInput
 } from "@blueprintjs/core";
+import { IconName } from "@blueprintjs/icons";
 import classNames from 'classnames';
 import * as React from 'react';
 
-import { ButtonGroup, FormGroup, Icon, NumericInput, TagInput } from '../components/filler';
 import { AppToaster } from '../singletons/toaster';
 
 export interface AsyncAlertDialogProps extends React.Props<any> {
@@ -35,7 +36,7 @@ export interface AsyncAlertDialogProps extends React.Props<any> {
   confirmButtonText: string;
   cancelButtonText?: string;
   className?: string;
-  icon?: string;
+  icon?: IconName;
   intent?: Intent;
   successText: string;
   failText: string;
@@ -86,7 +87,6 @@ export class AsyncActionDialog extends React.Component<AsyncAlertDialogProps, As
 
     return <Dialog
       isOpen
-      inline
       className={classNames(Classes.ALERT, 'async-alert-dialog', className)}
       canEscapeKeyClose={!working}
       onClose={handleClose}

@@ -17,15 +17,18 @@
  */
 
 .table-column-selection {
+  position: absolute;
+  right: 0;
+  margin: 0;
+}
 
-  float: right;
-
-  .pt-popover-content {
-    padding: 10px 10px 1px 10px;
-  }
-
+// This will be mounted in a portal
+.table-column-selection-menu {
   .form-group {
     margin-bottom: 0;
-  }
 
+    .bp3-checkbox:last-child {
+      margin-bottom: 0;
+    }
+  }
 }

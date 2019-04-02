@@ -26,8 +26,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -72,6 +74,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class IngestSegmentFirehoseFactoryTimelineTest
@@ -101,6 +104,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private final File tmpDir;
   private final int expectedCount;
   private final long expectedSum;
+  private final int segmentCount;
 
   private static final ObjectMapper MAPPER;
   private static final IndexIO INDEX_IO;
@@ -118,17 +122,28 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       IngestSegmentFirehoseFactory factory,
       File tmpDir,
       int expectedCount,
-      long expectedSum
+      long expectedSum,
+      int segmentCount
   )
   {
     this.factory = factory;
     this.tmpDir = tmpDir;
     this.expectedCount = expectedCount;
     this.expectedSum = expectedSum;
+    this.segmentCount = segmentCount;
   }
 
   @Test
-  public void testSimple() throws Exception
+  public void test() throws Exception
+  {
+    // Junit 4.12 doesn't have a good way to run tearDown after multiple tests in a Parameterized
+    // class run. (Junit 4.13 adds @AfterParam but isn't released yet.) Fake it by just running
+    // "tests" in series inside one @Test.
+    testSimple();
+    testSplit();
+  }
+
+  private void testSimple() throws Exception
   {
     int count = 0;
     long sum = 0;
@@ -143,6 +158,36 @@ public class IngestSegmentFirehoseFactoryTimelineTest
 
     Assert.assertEquals("count", expectedCount, count);
     Assert.assertEquals("sum", expectedSum, sum);
+  }
+
+  private void testSplit() throws Exception
+  {
+    Assert.assertTrue(factory.isSplittable());
+    final int numSplits = factory.getNumSplits();
+    // We set maxInputSegmentBytesPerSplit to 2 so each segment should become a byte.
+    Assert.assertEquals(segmentCount, numSplits);
+    final List<InputSplit<List<WindowedSegmentId>>> splits =
+        factory.getSplits().collect(Collectors.toList());
+    Assert.assertEquals(numSplits, splits.size());
+
+    int count = 0;
+    long sum = 0;
+
+    for (InputSplit<List<WindowedSegmentId>> split : splits) {
+      final FiniteFirehoseFactory<InputRowParser, List<WindowedSegmentId>> splitFactory =
+          factory.withSplit(split);
+      try (final Firehose firehose = splitFactory.connect(ROW_PARSER, null)) {
+        while (firehose.hasMore()) {
+          final InputRow row = firehose.nextRow();
+          count++;
+          sum += row.getMetric(METRICS[0]).longValue();
+        }
+      }
+    }
+
+    Assert.assertEquals("count", expectedCount, count);
+    Assert.assertEquals("sum", expectedSum, sum);
+
   }
 
   @After
@@ -285,13 +330,26 @@ public class IngestSegmentFirehoseFactoryTimelineTest
             throw new IllegalArgumentException("WTF");
           }
         }
+
+        @Override
+        public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
+        {
+          return testCase.segments
+              .stream()
+              .filter(s -> s.getId().toString().equals(segmentId))
+              .findAny()
+              .get();  // throwing if not found is exactly what the real code does
+        }
       };
       final IngestSegmentFirehoseFactory factory = new IngestSegmentFirehoseFactory(
           DATA_SOURCE,
           testCase.interval,
+          null,
           new TrueDimFilter(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
+          // Split as much as possible
+          1L,
           INDEX_IO,
           cc,
           slf,
@@ -304,7 +362,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
               factory,
               testCase.tmpDir,
               testCase.expectedCount,
-              testCase.expectedSum
+              testCase.expectedSum,
+              testCase.segments.size()
           }
       );
     }
@@ -384,7 +443,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           Arrays.asList(METRICS),
           new LinearShardSpec(partitionNum),
           -1,
-          0L
+          2L
       );
     }
   }

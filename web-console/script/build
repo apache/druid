@@ -23,10 +23,6 @@ cp -r ./node_modules/druid-console/coordinator-console .
 cp -r ./node_modules/druid-console/pages .
 cp ./node_modules/druid-console/index.html .
 
-echo "Copying blueprint assets in..."
-sed 's|url("assets|url("/assets|g' "./node_modules/@blueprintjs/core/dist/blueprint.css" > lib/blueprint.css
-cp -r "./node_modules/@blueprintjs/core/dist/assets" .
-
 echo "Adding SQL function doc..."
 PATH="./target/node:$PATH" ./script/create-sql-function-doc
 

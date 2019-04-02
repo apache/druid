@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, InputGroup, Intent } from "@blueprintjs/core";
+import { Button, Classes, Dialog, FormGroup, HTMLSelect, InputGroup, Intent } from "@blueprintjs/core";
 import * as React from "react";
 import AceEditor from "react-ace";
 
-import { FormGroup } from "../components/filler";
 import { validJson } from "../utils";
 
 import "./lookup-edit-dialog.scss";
@@ -69,15 +68,11 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
       </FormGroup>;
     } else {
       return <FormGroup className={"lookup-label"} label={"Tier:"}>
-        <div className="pt-select">
-          <select disabled={isEdit} value={lookupTier} onChange={(e: any) => onChange("lookupEditTier", e.target.value)}>
-            {
-              allLookupTiers.map(tier => {
-                return <option key={tier} value={tier}>{tier}</option>;
-              })
-            }
-          </select>
-        </div>
+        <HTMLSelect disabled={isEdit} value={lookupTier} onChange={(e: any) => onChange("lookupEditTier", e.target.value)}>
+          {allLookupTiers.map(tier => (
+            <option key={tier} value={tier}>{tier}</option>
+          ))}
+        </HTMLSelect>
       </FormGroup>;
     }
   }
@@ -110,7 +105,7 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
           value={lookupVersion}
           onChange={(e: any) => onChange("lookupEditVersion", e.target.value)}
           placeholder={"Enter the lookup version"}
-          rightElement={<Button className={"pt-minimal"} text={"Use ISO as version"} onClick={() => this.addISOVersion()} />}
+          rightElement={<Button minimal text={"Use ISO as version"} onClick={() => this.addISOVersion()} />}
         />
       </FormGroup>
 

@@ -25,7 +25,7 @@ import { countBy, makeTextFilter } from '../utils';
 
 class FullButton extends React.Component {
   render() {
-    return <Button className="pt-fill" {...this.props}/>;
+    return <Button fill {...this.props}/>;
   }
 }
 
