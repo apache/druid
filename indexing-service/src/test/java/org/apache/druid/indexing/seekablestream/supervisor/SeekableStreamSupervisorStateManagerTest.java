@@ -106,7 +106,7 @@ public class SeekableStreamSupervisorStateManagerTest
   }
 
   @Test
-  public void testTransientUnhealthinessAndRecovery()
+  public void testTransientUnhealthiness()
   {
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getSupervisorUnhealthinessThreshold() - 1; i++) {
@@ -117,19 +117,6 @@ public class SeekableStreamSupervisorStateManagerTest
           stateManager.getSupervisorState()
       );
     }
-    stateManager.markRunFinishedAndEvaluateHealth(); // clean run
-    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold() - 1; i++) {
-      stateManager.storeThrowableEvent(new NullPointerException("someone goofed"));
-      stateManager.markRunFinishedAndEvaluateHealth();
-      Assert.assertEquals(
-          SeekableStreamSupervisorStateManager.State.RUNNING,
-          stateManager.getSupervisorState()
-      );
-    }
-    Assert.assertEquals(
-        SeekableStreamSupervisorStateManager.State.RUNNING,
-        stateManager.getSupervisorState()
-    );
     stateManager.markRunFinishedAndEvaluateHealth(); // clean run
     Assert.assertEquals(
         SeekableStreamSupervisorStateManager.State.RUNNING,
@@ -157,6 +144,27 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTransientTaskUnhealthiness()
   {
+    // Only half are failing
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    for (int i = 0; i < config.getSupervisorTaskUnhealthinessThreshold() + 3; i++) {
+      Assert.assertNotEquals(
+          stateManager.getSupervisorState(),
+          SeekableStreamSupervisorStateManager.State.UNHEALTHY_TASKS
+      );
+      stateManager.storeCompletedTaskState(TaskState.FAILED);
+      stateManager.storeCompletedTaskState(TaskState.SUCCESS);
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.RUNNING,
+        stateManager.getSupervisorState()
+    );
+  }
+
+  @Test
+  public void testRecoveryWithHealthinessThreshold()
+  {
+    // Put the state
 
   }
 
