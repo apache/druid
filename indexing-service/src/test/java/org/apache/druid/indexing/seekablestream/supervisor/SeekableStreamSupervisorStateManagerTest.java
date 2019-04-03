@@ -17,7 +17,6 @@
  * under the License.
  */
 
-
 package org.apache.druid.indexing.seekablestream.supervisor;
 
 import org.apache.druid.indexer.TaskState;
@@ -37,7 +36,6 @@ public class SeekableStreamSupervisorStateManagerTest
   public static void setupClass()
   {
     config = new SeekableStreamSupervisorConfig();
-
   }
 
   @Before
@@ -77,6 +75,7 @@ public class SeekableStreamSupervisorStateManagerTest
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
     stateManager.markRunFinishedAndEvaluateHealth();
+    Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
   }
 
   @Test
@@ -116,7 +115,7 @@ public class SeekableStreamSupervisorStateManagerTest
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
       Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
-      stateManager.storeThrowableEvent(new NullPointerException("someone goofed"));
+      stateManager.storeThrowableEvent(new NullPointerException("oof"));
       stateManager.markRunFinishedAndEvaluateHealth();
     }
     Assert.assertEquals(
@@ -130,7 +129,7 @@ public class SeekableStreamSupervisorStateManagerTest
   {
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getSupervisorUnhealthinessThreshold() - 1; i++) {
-      stateManager.storeThrowableEvent(new NullPointerException("someone goofed"));
+      stateManager.storeThrowableEvent(new NullPointerException("oof"));
       stateManager.markRunFinishedAndEvaluateHealth();
       Assert.assertEquals(
           SeekableStreamSupervisorStateManager.State.RUNNING,
