@@ -184,11 +184,35 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testSupervisorRecoveryWithHealthinessThreshold()
   {
-
+    // Put into an unhealthy state
+    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
+      Assert.assertNotEquals(
+          SeekableStreamSupervisorStateManager.State.UNHEALTHY_SUPERVISOR,
+          stateManager.getSupervisorState()
+      );
+      stateManager.storeThrowableEvent(new Exception("Except the inevitable"));
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.UNHEALTHY_SUPERVISOR,
+        stateManager.getSupervisorState()
+    );
+    // Recover after config.healthinessThreshold successful task completions
+    for (int i = 0; i < config.getSupervisorHealthinessThreshold(); i++) {
+      Assert.assertEquals(
+          SeekableStreamSupervisorStateManager.State.UNHEALTHY_SUPERVISOR,
+          stateManager.getSupervisorState()
+      );
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.RUNNING,
+        stateManager.getSupervisorState()
+    );
   }
 
   @Test
-  public void testStateRecoveryWithHealthinessThreshold()
+  public void testTaskRecoveryWithHealthinessThreshold()
   {
     // Put into an unhealthy state
     for (int i = 0; i < config.getSupervisorTaskUnhealthinessThreshold(); i++) {

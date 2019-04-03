@@ -171,7 +171,7 @@ public class SeekableStreamSupervisorStateManager
 
     errorsEncounteredOnRun.clear();
 
-    State currentRunState = State.RUNNING; // next state
+    State currentRunState = State.RUNNING;
 
     for (Map.Entry<Class, List<ThrowableEvent>> events : throwableEvents.entrySet()) {
       if (events.getValue().size() >= unhealthinessThreshold) {
@@ -198,7 +198,7 @@ public class SeekableStreamSupervisorStateManager
       if (tasksHealthy && currentRunState == State.UNHEALTHY_TASKS) {
         currentRunState = State.RUNNING;
       } else if (!tasksHealthy) {
-        currentRunState = supervisorState;
+        currentRunState = State.UNHEALTHY_TASKS;
       }
     } else {
       boolean tasksUnhealthy = completedTaskHistory.size() >= unhealthinessTaskThreshold;
@@ -217,7 +217,19 @@ public class SeekableStreamSupervisorStateManager
 
     stateHistory.add(currentRunState);
 
-    // Evaluate state history to determine what current supervisor state should be
+    if (currentRunState.isHealthy() && supervisorState == State.UNHEALTHY_SUPERVISOR) {
+      currentRunState = State.UNHEALTHY_SUPERVISOR;
+      boolean supervisorHealthy = stateHistory.size() >= healthinessThreshold;
+      for (int i = 0; i < Math.min(healthinessThreshold, stateHistory.size()); i++) {
+        if (!stateHistory.getLatest(i).isHealthy()) {
+          supervisorHealthy = false;
+        }
+      }
+      if (supervisorHealthy) {
+        currentRunState = State.RUNNING;
+      }
+    }
+
     setState(currentRunState);
   }
 
