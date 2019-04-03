@@ -3,6 +3,11 @@
     "tslint:recommended",
     "tslint-react"
   ],
+  "linterOptions": {
+    "exclude": [
+      "lib/sql-function-doc.ts"
+    ]
+  },
   "rules": {
     "align": true,
     "array-type": [true, "array"],
