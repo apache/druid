@@ -47,12 +47,14 @@ const interfaceStr = 'export interface FunctionDescription {\n' +
   '  description: string;\n' +
   '}\n\n';
 
-let content = license + comment + interfaceStr + "export const SQLFunctionDoc: FunctionDescription[] = [\n";
-
 const readDoc = async () => {
   try {
+
+    let content = license + comment + interfaceStr + "export const SQLFunctionDoc: FunctionDescription[] = [\n";
+
     const data = await fs.readFile(readfile, 'utf-8');
     const sections = data.toString().split("##");
+
     sections.forEach((section) => {
 
       if (/^#.*functions/.test(section)) {
@@ -85,11 +87,13 @@ const readDoc = async () => {
 
     content = content.slice(0, -2);
     content += '\n]\n';
+
     try {
       fs.writeFile(writefile, content, 'utf-8');
     } catch (e) {
       console.log(`Error when writing to ${writefile}: `, e);
     }
+
   } catch (e) {
     console.log(`Error when reading ${readfile}: `, e);
   }
