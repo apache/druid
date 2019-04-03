@@ -174,6 +174,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`x \|\| y`|Concat strings x and y.|
 |`CONCAT(expr, expr...)`|Concats a list of expressions.|
 |`TEXTCAT(expr, expr)`|Two argument version of CONCAT.|
+|`FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |`LENGTH(expr)`|Length of expr in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|

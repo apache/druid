@@ -1023,6 +1023,36 @@ interface Function
     }
   }
 
+  class StringFormatFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "format";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() < 1) {
+        throw new IAE("Function[%s] needs 1 or more arguments", name());
+      }
+
+      final String formatString = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+
+      if (formatString == null) {
+        return ExprEval.of(null);
+      }
+
+      final Object[] formatArgs = new Object[args.size() - 1];
+      for (int i = 1; i < args.size(); i++) {
+        formatArgs[i - 1] = args.get(i).eval(bindings).value();
+      }
+
+      return ExprEval.of(StringUtils.nonStrictFormat(formatString, formatArgs));
+    }
+  }
+
   class StrposFunc implements Function
   {
     @Override
