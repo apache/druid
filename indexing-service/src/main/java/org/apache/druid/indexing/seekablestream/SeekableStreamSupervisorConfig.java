@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 
 import javax.validation.constraints.Min;
+import java.util.Collections;
 
 public class SeekableStreamSupervisorConfig
 {
@@ -38,13 +40,25 @@ public class SeekableStreamSupervisorConfig
   @Min(1)
   private int supervisorHealthinessThreshold = 3;
 
+  // The number of consecutive task failures before the supervisor flips from a RUNNING to an UNHEALTHY_TASKS state
   @JsonProperty
   @Min(1)
   private int supervisorTaskUnhealthinessThreshold = 2;
 
+  // The number of consecutive task successes before the supervisor flips from an UNHEALTHY_TASKS to a RUNNING state
   @JsonProperty
   @Min(1)
   private int supervisorTaskHealthinessThreshold = 3;
+
+  @JsonProperty
+  private int numExceptionEventsToStore = Collections.max(
+      ImmutableList.of(
+          supervisorHealthinessThreshold,
+          supervisorUnhealthinessThreshold,
+          supervisorTaskHealthinessThreshold,
+          supervisorTaskUnhealthinessThreshold
+      )
+  );
 
   public boolean isStoringStackTraces()
   {
@@ -69,5 +83,10 @@ public class SeekableStreamSupervisorConfig
   public int getSupervisorTaskHealthinessThreshold()
   {
     return supervisorTaskHealthinessThreshold;
+  }
+
+  public int getNumExceptionEventsToStore()
+  {
+    return numExceptionEventsToStore;
   }
 }

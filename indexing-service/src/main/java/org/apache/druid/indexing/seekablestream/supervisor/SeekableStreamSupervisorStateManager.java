@@ -33,12 +33,12 @@ import org.codehaus.plexus.util.ExceptionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SeekableStreamSupervisorStateManager
 {
@@ -68,20 +68,18 @@ public class SeekableStreamSupervisorStateManager
 
     public boolean isHealthy()
     {
-      return !ImmutableSet.of(
+      Set<State> unhealthyStates = ImmutableSet.of(
           UNHEALTHY_SUPERVISOR,
           UNHEALTHY_TASKS,
           UNABLE_TO_CONNECT_TO_STREAM,
           LOST_CONTACT_WITH_STREAM
-      ).contains(this);
+      );
+      return !unhealthyStates.contains(this);
     }
   }
 
   private State supervisorState;
-  // Group error (throwable) events by the type of Throwable (i.e. class name)
-  private final ConcurrentHashMap<Class, List<ThrowableEvent>> throwableEvents;
   // Remove all throwableEvents that aren't in this set at the end of each run (transient)
-  private final Set<Class> errorsEncounteredOnRun;
   private final int healthinessThreshold;
   private final int unhealthinessThreshold;
   private final int healthinessTaskThreshold;
@@ -89,23 +87,24 @@ public class SeekableStreamSupervisorStateManager
 
   private boolean atLeastOneSuccessfulRun = false;
   private boolean currentRunSuccessful = true;
-  private final boolean storingStackTraces;
   private final CircularBuffer<TaskState> completedTaskHistory;
   private final CircularBuffer<State> stateHistory; // From previous runs
+  private final ExceptionEventStorage eventStorage;
 
   public SeekableStreamSupervisorStateManager(
       State initialState,
-      SeekableStreamSupervisorConfig config
+      SeekableStreamSupervisorConfig supervisorConfig
   )
   {
     this.supervisorState = initialState;
-    this.throwableEvents = new ConcurrentHashMap<>();
-    this.errorsEncounteredOnRun = new HashSet<>();
-    this.healthinessThreshold = config.getSupervisorHealthinessThreshold();
-    this.unhealthinessThreshold = config.getSupervisorUnhealthinessThreshold();
-    this.healthinessTaskThreshold = config.getSupervisorTaskHealthinessThreshold();
-    this.unhealthinessTaskThreshold = config.getSupervisorTaskUnhealthinessThreshold();
-    this.storingStackTraces = config.isStoringStackTraces();
+    this.eventStorage = new ExceptionEventStorage(
+        supervisorConfig.getNumExceptionEventsToStore(),
+        supervisorConfig.isStoringStackTraces()
+    );
+    this.healthinessThreshold = supervisorConfig.getSupervisorHealthinessThreshold();
+    this.unhealthinessThreshold = supervisorConfig.getSupervisorUnhealthinessThreshold();
+    this.healthinessTaskThreshold = supervisorConfig.getSupervisorTaskHealthinessThreshold();
+    this.unhealthinessTaskThreshold = supervisorConfig.getSupervisorTaskUnhealthinessThreshold();
     this.completedTaskHistory = new CircularBuffer<>(Math.max(healthinessTaskThreshold, unhealthinessTaskThreshold));
     this.stateHistory = new CircularBuffer<>(Math.max(healthinessThreshold, unhealthinessThreshold));
   }
@@ -135,18 +134,8 @@ public class SeekableStreamSupervisorStateManager
       t = new TransientStreamException(t);
     }
 
-    List<ThrowableEvent> throwableEventsForClassT = throwableEvents.getOrDefault(
-        t.getClass(),
-        new ArrayList<>()
-    );
-    throwableEventsForClassT.add(
-        new ThrowableEvent(
-            t.getMessage(),
-            storingStackTraces ? ExceptionUtils.getStackTrace(t) : null,
-            DateTimes.nowUtc()
-        ));
-    errorsEncounteredOnRun.add(t.getClass());
-    throwableEvents.put(t.getClass(), throwableEventsForClassT);
+    eventStorage.storeThrowable(t);
+
     currentRunSuccessful = false;
   }
 
@@ -160,20 +149,10 @@ public class SeekableStreamSupervisorStateManager
     if (currentRunSuccessful) {
       atLeastOneSuccessfulRun = true;
     }
-    currentRunSuccessful = true;
-
-    // Remove transient errors from throwableEvents
-    for (Class throwableClass : throwableEvents.keySet()) {
-      if (!errorsEncounteredOnRun.contains(throwableClass)) {
-        throwableEvents.remove(throwableClass);
-      }
-    }
-
-    errorsEncounteredOnRun.clear();
 
     State currentRunState = State.RUNNING;
 
-    for (Map.Entry<Class, List<ThrowableEvent>> events : throwableEvents.entrySet()) {
+    for (Map.Entry<Class, Queue<ExceptionEvent>> events : eventStorage.getNonTransientRecentEvents().entrySet()) {
       if (events.getValue().size() >= unhealthinessThreshold) {
         if (events.getKey().equals(NonTransientStreamException.class)) {
           currentRunState = getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
@@ -231,11 +210,15 @@ public class SeekableStreamSupervisorStateManager
     }
 
     setState(currentRunState);
+
+    // Reset manager state for next run
+    currentRunSuccessful = true;
+    eventStorage.resetErrorsEncounteredOnRun();
   }
 
-  public Map<Class, List<ThrowableEvent>> getThrowableEvents()
+  public Queue<ExceptionEvent> getExceptionEvents()
   {
-    return throwableEvents;
+    return eventStorage.getRecentEvents();
   }
 
   public State getSupervisorState()
@@ -248,21 +231,28 @@ public class SeekableStreamSupervisorStateManager
     return s1.priority < s2.priority ? s1 : s2;
   }
 
-  public static class ThrowableEvent
+  public class ExceptionEvent
   {
+    private Class clazz;
     private String message;
     private String stackTrace;
     private DateTime timestamp;
 
-    public ThrowableEvent(
-        String message,
-        @Nullable String stackTrace,
-        DateTime timestamp
+    public ExceptionEvent(
+        Throwable t,
+        boolean storingStackTraces
     )
     {
-      this.stackTrace = stackTrace;
-      this.message = message;
-      this.timestamp = timestamp;
+      this.clazz = t.getClass();
+      this.stackTrace = storingStackTraces ? ExceptionUtils.getStackTrace(t) : null;
+      this.message = t.getMessage();
+      this.timestamp = DateTimes.nowUtc();
+    }
+
+    @JsonProperty
+    public Class getExceptionClass()
+    {
+      return clazz;
     }
 
     @JsonProperty
@@ -273,7 +263,6 @@ public class SeekableStreamSupervisorStateManager
 
     @JsonProperty
     @Nullable
-    // TODO only set if a debug-level property is set
     public String getStackTrace()
     {
       return stackTrace;
@@ -283,6 +272,68 @@ public class SeekableStreamSupervisorStateManager
     public DateTime getTimestamp()
     {
       return timestamp;
+    }
+  }
+
+  private class ExceptionEventStorage
+  {
+    private final Queue<ExceptionEvent> recentEventsQueue;
+    private final ConcurrentHashMap<Class, Queue<ExceptionEvent>> recentEventsMap;
+    private final int numEventsToStore;
+    private final boolean storeStackTraces;
+    private final Set<Class> errorsEncounteredOnRun;
+
+    public ExceptionEventStorage(int numEventsToStore, boolean storeStackTraces)
+    {
+      this.recentEventsQueue = new ConcurrentLinkedQueue<>();
+      this.recentEventsMap = new ConcurrentHashMap<>(numEventsToStore);
+      this.numEventsToStore = numEventsToStore;
+      this.storeStackTraces = storeStackTraces;
+      this.errorsEncounteredOnRun = new HashSet<>();
+    }
+
+    public void storeThrowable(Throwable t)
+    {
+      Queue<ExceptionEvent> exceptionEventsForClassT = recentEventsMap.getOrDefault(
+          t.getClass(),
+          new ConcurrentLinkedQueue<>()
+      );
+
+      ExceptionEvent eventToAdd = new ExceptionEvent(t, storeStackTraces);
+
+      recentEventsQueue.add(eventToAdd);
+
+      if (recentEventsQueue.size() > numEventsToStore) {
+        ExceptionEvent removedEvent = recentEventsQueue.poll();
+        recentEventsMap.get(removedEvent.getExceptionClass()).poll();
+      }
+      exceptionEventsForClassT.add(eventToAdd);
+      errorsEncounteredOnRun.add(t.getClass());
+      recentEventsMap.put(t.getClass(), exceptionEventsForClassT);
+    }
+
+    public void resetErrorsEncounteredOnRun()
+    {
+      errorsEncounteredOnRun.clear();
+    }
+
+    public Queue<ExceptionEvent> getRecentEvents()
+    {
+      return recentEventsQueue;
+    }
+
+    public ConcurrentHashMap<Class, Queue<ExceptionEvent>> getNonTransientRecentEvents()
+    {
+      ConcurrentHashMap<Class, Queue<ExceptionEvent>> nonTransientRecentEventsMap =
+          new ConcurrentHashMap<>(recentEventsMap);
+
+      for (Class throwableClass : recentEventsMap.keySet()) {
+        if (!errorsEncounteredOnRun.contains(throwableClass)) {
+          nonTransientRecentEventsMap.remove(throwableClass);
+        }
+      }
+
+      return nonTransientRecentEventsMap;
     }
   }
 }

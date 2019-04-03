@@ -23,8 +23,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.Queue;
 
 public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<String, String>
 {
@@ -36,7 +35,7 @@ public class KinesisSupervisorReportPayload extends SeekableStreamSupervisorRepo
       Long durationSeconds,
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
-      Map<Class, List<SeekableStreamSupervisorStateManager.ThrowableEvent>> recentErrors
+      Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     super(

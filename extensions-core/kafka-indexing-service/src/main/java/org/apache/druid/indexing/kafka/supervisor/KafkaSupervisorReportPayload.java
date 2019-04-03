@@ -24,8 +24,8 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReportPayload<Integer, Long>
 {
@@ -41,7 +41,7 @@ public class KafkaSupervisorReportPayload extends SeekableStreamSupervisorReport
       @Nullable DateTime offsetsLastUpdated,
       boolean suspended,
       SeekableStreamSupervisorStateManager.State state,
-      Map<Class, List<SeekableStreamSupervisorStateManager.ThrowableEvent>> recentErrors
+      Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> recentErrors
   )
   {
     super(

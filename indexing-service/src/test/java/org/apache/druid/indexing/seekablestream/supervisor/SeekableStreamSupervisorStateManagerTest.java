@@ -19,13 +19,19 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
+import org.apache.druid.indexing.seekablestream.exceptions.NonTransientStreamException;
 import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStreamException;
+import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.util.List;
+import java.util.Queue;
 
 public class SeekableStreamSupervisorStateManagerTest
 {
@@ -258,5 +264,25 @@ public class SeekableStreamSupervisorStateManagerTest
         SeekableStreamSupervisorStateManager.State.UNHEALTHY_SUPERVISOR,
         stateManager.getSupervisorState()
     );
+  }
+
+  @Test
+  public void testGetThrowableEvents()
+  {
+    List<Exception> exceptions = ImmutableList.of(
+        new PossiblyTransientStreamException(new Exception("oof")),
+        new NullPointerException("oof"),
+        new TransientStreamException(new Exception("oof")),
+        new NonTransientStreamException(new Exception("oof")),
+        new PossiblyTransientStreamException(new Exception("oof"))
+    );
+    for (Exception exception : exceptions) {
+      stateManager.storeThrowableEvent(exception);
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> events = stateManager.getExceptionEvents();
+    /*Assert.assertEquals(events.get(TransientStreamException.class).size(), 2);
+    Assert.assertEquals(events.get(NonTransientStreamException.class).size(), 2);
+    Assert.assertEquals(events.get(NullPointerException.class).size(), 1);*/
   }
 }
