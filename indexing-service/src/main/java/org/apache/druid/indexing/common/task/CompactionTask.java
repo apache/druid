@@ -867,8 +867,11 @@ public class CompactionTask extends AbstractTask
             avgRowsPerByte,
             nonNullTargetCompactionSizeBytes
         );
+        // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
+        // If this is set to something too small, compactionTask can generate small segments
+        // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
         return (tuningConfig == null ? IndexTuningConfig.createDefault() : tuningConfig)
-            .withMaxRowsPerSegment(maxRowsPerSegment);
+            .withMaxRowsPerSegment(maxRowsPerSegment).withMaxTotalRows(Long.MAX_VALUE);
       } else {
         return tuningConfig;
       }
