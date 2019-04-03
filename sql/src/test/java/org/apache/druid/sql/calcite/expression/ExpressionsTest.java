@@ -43,6 +43,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
@@ -166,6 +167,53 @@ public class ExpressionsTest extends CalciteTestBase
             "regexp_extract(\"s\",'f(.)')"
         ),
         "fo"
+    );
+  }
+
+  @Test
+  public void testStringFormat()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new StringFormatOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("%x"),
+            inputRef("b")
+        ),
+        DruidExpression.fromExpression("format('%x',\"b\")"),
+        "19"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new StringFormatOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("%s %,d"),
+            inputRef("s"),
+            integerLiteral(1234)
+        ),
+        DruidExpression.fromExpression("format('%s %,d',\"s\",1234)"),
+        "foo 1,234"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new StringFormatOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("%s %,d"),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("format('%s %,d',\"s\")"),
+        "%s %,d; foo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new StringFormatOperatorConversion().calciteOperator(),
+            rexBuilder.makeLiteral("%s %,d"),
+            inputRef("s"),
+            integerLiteral(1234),
+            integerLiteral(6789)
+        ),
+        DruidExpression.fromExpression("format('%s %,d',\"s\",1234,6789)"),
+        "foo 1,234"
     );
   }
 
