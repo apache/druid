@@ -19,8 +19,8 @@
  */
 
 const fs = require('fs-extra');
-const readfile='../docs/content/querying/sql.md'
-const writefile='lib/sql-function-doc.ts'
+const readfile = '../docs/content/querying/sql.md';
+const writefile = 'lib/sql-function-doc.ts';
 
 const license = '/*\n' +
   ' * Licensed to the Apache Software Foundation (ASF) under one\n' +
