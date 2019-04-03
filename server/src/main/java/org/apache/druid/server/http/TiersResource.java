@@ -19,17 +19,11 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.base.Function;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InventoryView;
-import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -41,10 +35,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -55,95 +50,79 @@ public class TiersResource
   private final InventoryView serverInventoryView;
 
   @Inject
-  public TiersResource(
-      InventoryView serverInventoryView
-  )
+  public TiersResource(InventoryView serverInventoryView)
   {
     this.serverInventoryView = serverInventoryView;
   }
 
+  private enum TierMetadataKeys
+  {
+    /** Lowercase on purpose, to match the established format. */
+    currSize,
+    maxSize
+  }
+
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getTiers(
-      @QueryParam("simple") String simple
-  )
+  public Response getTiers(@QueryParam("simple") String simple)
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
     if (simple != null) {
-      Map<String, Map<String, Long>> metadata = new HashMap<>();
+      Map<String, Map<TierMetadataKeys, Long>> metadata = new HashMap<>();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
-        Map<String, Long> tierMetadata = metadata.get(druidServer.getTier());
-
-        if (tierMetadata == null) {
-          tierMetadata = new HashMap<>();
-          metadata.put(druidServer.getTier(), tierMetadata);
-        }
-
-        Long currSize = tierMetadata.get("currSize");
-        tierMetadata.put("currSize", ((currSize == null) ? 0 : currSize) + druidServer.getCurrSize());
-
-        Long maxSize = tierMetadata.get("maxSize");
-        tierMetadata.put("maxSize", ((maxSize == null) ? 0 : maxSize) + druidServer.getMaxSize());
+        Map<TierMetadataKeys, Long> tierMetadata = metadata
+            .computeIfAbsent(druidServer.getTier(), tier -> new EnumMap<>(TierMetadataKeys.class));
+        tierMetadata.merge(TierMetadataKeys.currSize, druidServer.getCurrSize(), Long::sum);
+        tierMetadata.merge(TierMetadataKeys.maxSize, druidServer.getMaxSize(), Long::sum);
       }
       return builder.entity(metadata).build();
     }
 
-    Set<String> tiers = new HashSet<>();
-    for (DruidServer server : serverInventoryView.getInventory()) {
-      tiers.add(server.getTier());
-    }
+    Set<String> tiers = serverInventoryView
+        .getInventory()
+        .stream()
+        .map(DruidServer::getTier)
+        .collect(Collectors.toSet());
 
     return builder.entity(tiers).build();
+  }
+
+  private enum IntervalProperties
+  {
+    /** Lowercase on purpose, to match the established format. */
+    size,
+    count
   }
 
   @GET
   @Path("/{tierName}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getTierDatasources(
-      @PathParam("tierName") String tierName,
-      @QueryParam("simple") String simple
-  )
+  public Response getTierDataSources(@PathParam("tierName") String tierName, @QueryParam("simple") String simple)
   {
     if (simple != null) {
-      Table<String, Interval, Map<String, Object>> retVal = HashBasedTable.create();
+      Map<String, Map<Interval, Map<IntervalProperties, Object>>> tierToStatsPerInterval = new HashMap<>();
       for (DruidServer druidServer : serverInventoryView.getInventory()) {
         if (druidServer.getTier().equalsIgnoreCase(tierName)) {
-          for (DataSegment dataSegment : druidServer.getSegments().values()) {
-            Map<String, Object> properties = retVal.get(dataSegment.getDataSource(), dataSegment.getInterval());
-            if (properties == null) {
-              properties = new HashMap<>();
-              retVal.put(dataSegment.getDataSource(), dataSegment.getInterval(), properties);
-            }
-            properties.put("size", MapUtils.getLong(properties, "size", 0L) + dataSegment.getSize());
-            properties.put("count", MapUtils.getInt(properties, "count", 0) + 1);
+          for (DataSegment dataSegment : druidServer.iterateAllSegments()) {
+            Map<IntervalProperties, Object> properties = tierToStatsPerInterval
+                .computeIfAbsent(dataSegment.getDataSource(), dsName -> new HashMap<>())
+                .computeIfAbsent(dataSegment.getInterval(), interval -> new EnumMap<>(IntervalProperties.class));
+            properties.merge(IntervalProperties.size, dataSegment.getSize(), (a, b) -> (Long) a + (Long) b);
+            properties.merge(IntervalProperties.count, 1, (a, b) -> (Integer) a + (Integer) b);
           }
         }
       }
 
-      return Response.ok(retVal.rowMap()).build();
+      return Response.ok(tierToStatsPerInterval).build();
     }
 
-    Set<String> retVal = new HashSet<>();
-    for (DruidServer druidServer : serverInventoryView.getInventory()) {
-      if (druidServer.getTier().equalsIgnoreCase(tierName)) {
-        retVal.addAll(
-            Lists.newArrayList(
-                Iterables.transform(
-                    druidServer.getDataSources(),
-                    new Function<DruidDataSource, String>()
-                    {
-                      @Override
-                      public String apply(DruidDataSource input)
-                      {
-                        return input.getName();
-                      }
-                    }
-                )
-            )
-        );
-      }
-    }
+    Set<String> retVal = serverInventoryView
+        .getInventory()
+        .stream()
+        .filter(druidServer -> druidServer.getTier().equalsIgnoreCase(tierName))
+        .flatMap(druidServer -> druidServer.getDataSources().stream().map(DruidDataSource::getName))
+        .collect(Collectors.toSet());
 
     return Response.ok(retVal).build();
   }

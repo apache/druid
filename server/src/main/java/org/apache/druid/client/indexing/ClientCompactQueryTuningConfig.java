@@ -22,39 +22,57 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig.UserCompactTuningConfig;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class ClientCompactQueryTuningConfig
 {
-  // These default values should be synchronized with those of IndexTuningConfig
-  private static final int DEFAULT_MAX_ROWS_IN_MEMORY = 75_000;
-  private static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
-  private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
-  private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
-  private static final long DEFAULT_PUBLISH_TIMEOUT = 0;
-
-  private final int maxRowsInMemory;
-  private final int maxTotalRows;
+  @Nullable
+  private final Integer maxRowsPerSegment;
+  @Nullable
+  private final Integer maxRowsInMemory;
+  @Nullable
+  private final Integer maxTotalRows;
+  @Nullable
   private final IndexSpec indexSpec;
-  private final int maxPendingPersists;
-  private final long publishTimeout;
+  @Nullable
+  private final Integer maxPendingPersists;
+  @Nullable
+  private final Long pushTimeout;
+
+  public static ClientCompactQueryTuningConfig from(
+      @Nullable UserCompactTuningConfig userCompactTuningConfig,
+      @Nullable Integer maxRowsPerSegment
+  )
+  {
+    return new ClientCompactQueryTuningConfig(
+        maxRowsPerSegment,
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxRowsInMemory(),
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxTotalRows(),
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getIndexSpec(),
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getMaxPendingPersists(),
+        userCompactTuningConfig == null ? null : userCompactTuningConfig.getPushTimeout()
+    );
+  }
 
   @JsonCreator
   public ClientCompactQueryTuningConfig(
+      @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxTotalRows") @Nullable Integer maxTotalRows,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
-      @JsonProperty("publishTimeout") @Nullable Long publishTimeout
+      @JsonProperty("pushTimeout") @Nullable Long pushTimeout
   )
   {
-    this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
-    this.maxTotalRows = maxTotalRows == null ? DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
-    this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
-    this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-    this.publishTimeout = publishTimeout == null ? DEFAULT_PUBLISH_TIMEOUT : publishTimeout;
+    this.maxRowsPerSegment = maxRowsPerSegment;
+    this.maxRowsInMemory = maxRowsInMemory;
+    this.maxTotalRows = maxTotalRows;
+    this.indexSpec = indexSpec;
+    this.maxPendingPersists = maxPendingPersists;
+    this.pushTimeout = pushTimeout;
   }
 
   @JsonProperty
@@ -64,33 +82,45 @@ public class ClientCompactQueryTuningConfig
   }
 
   @JsonProperty
-  public int getMaxRowsInMemory()
+  @Nullable
+  public Integer getMaxRowsPerSegment()
+  {
+    return maxRowsPerSegment;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Integer getMaxRowsInMemory()
   {
     return maxRowsInMemory;
   }
 
   @JsonProperty
-  public int getMaxTotalRows()
+  @Nullable
+  public Integer getMaxTotalRows()
   {
     return maxTotalRows;
   }
 
   @JsonProperty
+  @Nullable
   public IndexSpec getIndexSpec()
   {
     return indexSpec;
   }
 
   @JsonProperty
-  public int getMaxPendingPersists()
+  @Nullable
+  public Integer getMaxPendingPersists()
   {
     return maxPendingPersists;
   }
 
   @JsonProperty
-  public long getPublishTimeout()
+  @Nullable
+  public Long getPushTimeout()
   {
-    return publishTimeout;
+    return pushTimeout;
   }
 
   @Override
@@ -99,47 +129,34 @@ public class ClientCompactQueryTuningConfig
     if (this == o) {
       return true;
     }
-
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
-    final ClientCompactQueryTuningConfig that = (ClientCompactQueryTuningConfig) o;
-
-    if (maxRowsInMemory != that.maxRowsInMemory) {
-      return false;
-    }
-
-    if (maxTotalRows != that.maxTotalRows) {
-      return false;
-    }
-
-    if (!indexSpec.equals(that.indexSpec)) {
-      return false;
-    }
-
-    if (maxPendingPersists != that.maxPendingPersists) {
-      return false;
-    }
-
-    return publishTimeout == that.publishTimeout;
+    ClientCompactQueryTuningConfig that = (ClientCompactQueryTuningConfig) o;
+    return Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
+           Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
+           Objects.equals(maxTotalRows, that.maxTotalRows) &&
+           Objects.equals(indexSpec, that.indexSpec) &&
+           Objects.equals(maxPendingPersists, that.maxPendingPersists) &&
+           Objects.equals(pushTimeout, that.pushTimeout);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, publishTimeout);
+    return Objects.hash(maxRowsPerSegment, maxRowsInMemory, maxTotalRows, indexSpec, maxPendingPersists, pushTimeout);
   }
 
   @Override
   public String toString()
   {
     return "ClientCompactQueryTuningConfig{" +
-           "maxRowsInMemory='" + maxRowsInMemory +
-           ", maxTotalRows='" + maxTotalRows +
-           ", indexSpec='" + indexSpec +
-           ", maxPendingPersists='" + maxPendingPersists +
-           ", publishTimeout='" + publishTimeout +
-           "}";
+           "maxRowsPerSegment=" + maxRowsPerSegment +
+           ", maxRowsInMemory=" + maxRowsInMemory +
+           ", maxTotalRows=" + maxTotalRows +
+           ", indexSpec=" + indexSpec +
+           ", maxPendingPersists=" + maxPendingPersists +
+           ", pushTimeout=" + pushTimeout +
+           '}';
   }
 }

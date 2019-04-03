@@ -20,14 +20,21 @@
 package org.apache.druid.server.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.server.RequestLogLine;
 import org.slf4j.MDC;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class LoggingRequestLogger implements RequestLogger
 {
@@ -49,7 +56,7 @@ public class LoggingRequestLogger implements RequestLogger
   }
 
   @Override
-  public void log(RequestLogLine requestLogLine) throws IOException
+  public void logNativeQuery(RequestLogLine requestLogLine) throws IOException
   {
     final Map mdc = MDC.getCopyOfContextMap();
     // MDC must be set during the `LOG.info` call at the end of the try block.
@@ -58,8 +65,10 @@ public class LoggingRequestLogger implements RequestLogger
         try {
           final Query query = requestLogLine.getQuery();
           MDC.put("queryId", query.getId());
-          MDC.put("dataSource", query.getDataSource().toString());
+          MDC.put("sqlQueryId", StringUtils.nullToEmptyNonDruidDataString(query.getSqlQueryId()));
+          MDC.put("dataSource", findInnerDatasource(query).toString());
           MDC.put("queryType", query.getType());
+          MDC.put("isNested", String.valueOf(!(query.getDataSource() instanceof TableDataSource)));
           MDC.put("hasFilters", Boolean.toString(query.hasFilters()));
           MDC.put("remoteAddr", requestLogLine.getRemoteAddr());
           MDC.put("duration", query.getDuration().toString());
@@ -77,7 +86,7 @@ public class LoggingRequestLogger implements RequestLogger
           LOG.error(re, "Error preparing MDC");
         }
       }
-      final String line = requestLogLine.getLine(mapper);
+      final String line = requestLogLine.getNativeQueryLine(mapper);
 
       // MDC must be set here
       LOG.info("%s", line);
@@ -93,6 +102,13 @@ public class LoggingRequestLogger implements RequestLogger
     }
   }
 
+  @Override
+  public void logSqlQuery(RequestLogLine requestLogLine) throws IOException
+  {
+    final String line = requestLogLine.getSqlQueryLine(mapper);
+    LOG.info("%s", line);
+  }
+
   public boolean isSetMDC()
   {
     return setMDC;
@@ -101,6 +117,30 @@ public class LoggingRequestLogger implements RequestLogger
   public boolean isSetContextMDC()
   {
     return setContextMDC;
+  }
+
+  private Object findInnerDatasource(Query query)
+  {
+    DataSource _ds = query.getDataSource();
+    if (_ds instanceof TableDataSource) {
+      return ((TableDataSource) _ds).getName();
+    }
+    if (_ds instanceof QueryDataSource) {
+      return findInnerDatasource(((QueryDataSource) _ds).getQuery());
+    }
+    if (_ds instanceof UnionDataSource) {
+      return Joiner.on(",")
+                   .join(
+                       ((UnionDataSource) _ds)
+                           .getDataSources()
+                           .stream()
+                           .map(TableDataSource::getName)
+                           .collect(Collectors.toList())
+                   );
+    } else {
+      // should not come here
+      return query.getDataSource();
+    }
   }
 
   @Override

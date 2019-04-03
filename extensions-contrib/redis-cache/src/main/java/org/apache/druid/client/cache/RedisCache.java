@@ -21,6 +21,7 @@ package org.apache.druid.client.cache;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -145,6 +146,13 @@ public class RedisCache implements Cache
   public void close(String namespace)
   {
     // no resources to cleanup
+  }
+
+  @Override
+  @LifecycleStop
+  public void close()
+  {
+    pool.close();
   }
 
   @Override

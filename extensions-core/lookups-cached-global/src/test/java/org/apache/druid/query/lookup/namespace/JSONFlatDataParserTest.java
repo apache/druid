@@ -21,7 +21,6 @@ package org.apache.druid.query.lookup.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -80,7 +79,7 @@ public class JSONFlatDataParserTest
                   return MAPPER.writeValueAsString(input);
                 }
                 catch (Exception e) {
-                  throw Throwables.propagate(e);
+                  throw new RuntimeException(e);
                 }
               }
             }

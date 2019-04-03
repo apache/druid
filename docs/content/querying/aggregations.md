@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Aggregations"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,6 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Aggregations
 
 Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Druid. 
@@ -262,126 +264,69 @@ JavaScript functions are expected to return floating-point values.
 JavaScript-based functionality is disabled by default. Please refer to the Druid <a href="../development/javascript.html">JavaScript programming guide</a> for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
 </div>
 
+<a name="approx" />
 ## Approximate Aggregations
 
-### Cardinality aggregator
+### Count distinct
 
-Computes the cardinality of a set of Druid dimensions, using HyperLogLog to estimate the cardinality. Please note that this 
-aggregator will be much slower than indexing a column with the hyperUnique aggregator. This aggregator also runs over a dimension column, which 
-means the string dimension cannot be removed from the dataset to improve rollup. In general, we strongly recommend using the hyperUnique aggregator 
-instead of the cardinality aggregator if you do not care about the individual values of a dimension.
+#### DataSketches Theta Sketch
 
-```json
-{
-  "type": "cardinality",
-  "name": "<output_name>",
-  "fields": [ <dimension1>, <dimension2>, ... ],
-  "byRow": <false | true> # (optional, defaults to false),
-  "round": <false | true> # (optional, defaults to false)
-}
-```
+The [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.html) extension-provided aggregator gives distinct count estimates with support for set union, intersection, and difference post-aggregators, using Theta sketches from the [datasketches](http://datasketches.github.io/) library.
 
-Each individual element of the "fields" list can be a String or [DimensionSpec](../querying/dimensionspecs.html). A String dimension in the fields list is equivalent to a DefaultDimensionSpec (no transformations).
+#### DataSketches HLL Sketch
 
-The HyperLogLog algorithm generates decimal estimates with some error. "round" can be set to true to round off estimated
-values to whole numbers. Note that even with rounding, the cardinality is still an estimate. The "round" field only
-affects query-time behavior, and is ignored at ingestion-time.
+The [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator gives distinct count estimates using the HyperLogLog algorithm. The HLL Sketch is faster and requires less storage than the Theta Sketch, but does not support intersection or difference operations.
 
-#### Cardinality by value
+#### Cardinality/HyperUnique (Deprecated)
 
-When setting `byRow` to `false` (the default) it computes the cardinality of the set composed of the union of all dimension values for all the given dimensions.
+<div class="note caution">
+The Cardinality and HyperUnique aggregators are deprecated. Please use <a href="../development/extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
+</div>
 
-* For a single dimension, this is equivalent to
+The [Cardinality and HyperUnique](../querying/hll-old.html) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator has superior accuracy and performance and is recommended instead. 
 
-```sql
-SELECT COUNT(DISTINCT(dimension)) FROM <datasource>
-```
+The DataSketches team has published a [comparison study](https://datasketches.github.io/docs/HLL/HllSketchVsDruidHyperLogLogCollector.html) between Druid's original HLL algorithm and the DataSketches HLL algorithm. Based on the demonstrated advantages of the DataSketches implementation, we have deprecated Druid's original HLL aggregator.
 
-* For multiple dimensions, this is equivalent to something akin to
+Please note that DataSketches HLL aggregators and `hyperUnique` aggregators are not mutually compatible.
 
-```sql
-SELECT COUNT(DISTINCT(value)) FROM (
-  SELECT dim_1 as value FROM <datasource>
-  UNION
-  SELECT dim_2 as value FROM <datasource>
-  UNION
-  SELECT dim_3 as value FROM <datasource>
-)
-```
+### Histograms and quantiles
 
-#### Cardinality by row
+#### DataSketches Quantiles Sketch
 
-When setting `byRow` to `true` it computes the cardinality by row, i.e. the cardinality of distinct dimension combinations.
-This is equivalent to something akin to
+The [DataSketches Quantiles Sketch](../development/extensions-core/datasketches-quantiles.html) extension-provided aggregator provides quantile estimates and histogram approximations using the numeric quantiles DoublesSketch from the [datasketches](http://datasketches.github.io/) library.
 
-```sql
-SELECT COUNT(*) FROM ( SELECT DIM1, DIM2, DIM3 FROM <datasource> GROUP BY DIM1, DIM2, DIM3 )
-```
+We recommend this aggregator in general for quantiles/histogram use cases, as it provides formal error bounds and has distribution-independent accuracy.
 
-**Example**
+#### Moments Sketch (Experimental)
 
-Determine the number of distinct countries people are living in or have come from.
+The [Moments Sketch](../development/extensions-contrib/momentsketch-quantiles.html) extension-provided aggregator is an experimental aggregator that provides quantile estimates using the [Moments Sketch](https://github.com/stanford-futuredata/momentsketch).
 
-```json
-{
-  "type": "cardinality",
-  "name": "distinct_countries",
-  "fields": [ "country_of_origin", "country_of_residence" ]
-}
-```
+The Moments Sketch aggregator is provided as an experimental option. It is optimized for merging speed and it can have higher aggregation performance compared to the DataSketches quantiles aggregator. However, the accuracy of the Moments Sketch is distribution-dependent, so users will need to empirically verify that the aggregator is suitable for their input data.
 
-Determine the number of distinct people (i.e. combinations of first and last name).
+As a general guideline for experimentation, the [Moments Sketch paper](https://arxiv.org/pdf/1803.01969.pdf) points out that this algorithm works better on inputs with high entropy. In particular, the algorithm is not a good fit when the input data consists of a small number of clustered discrete values.
 
-```json
-{
-  "type": "cardinality",
-  "name": "distinct_people",
-  "fields": [ "first_name", "last_name" ],
-  "byRow" : true
-}
-```
+#### Fixed Buckets Histogram
 
-Determine the number of distinct starting characters of last names
+Druid also provides a [simple histogram implementation]((../development/extensions-core/approxiate-histograms.html#fixed-buckets-histogram) that uses a fixed range and fixed number of buckets with support for quantile estimation, backed by an array of bucket count values.
 
-```json
-{
-  "type": "cardinality",
-  "name": "distinct_last_name_first_char",
-  "fields": [
-    {
-     "type" : "extraction",
-     "dimension" : "last_name",
-     "outputName" :  "last_name_first_char",
-     "extractionFn" : { "type" : "substring", "index" : 0, "length" : 1 }
-    }
-  ],
-  "byRow" : true
-}
-```
+The fixed buckets histogram can perform well when the distribution of the input data allows a small number of buckets to be used.
 
+We do not recommend the fixed buckets histogram for general use, as its usefulness is extremely data dependent. However, it is made available for users that have already identified use cases where a fixed buckets histogram is suitable.
 
-### HyperUnique aggregator
+#### Approximate Histogram (Deprecated)
 
-Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension that has been aggregated as a "hyperUnique" metric at indexing time.
+The [Approximate Histogram](../development/extensions-core/approximate-histograms.html) extension-provided aggregator also provides quantile estimates and histogram approximations, based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf).
 
-```json
-{ 
-  "type" : "hyperUnique",
-  "name" : <output_name>,
-  "fieldName" : <metric_name>,
-  "isInputHyperUnique" : false,
-  "round" : false
-}
-```
+The algorithm used by this deprecated aggregator is highly distribution-dependent and its output is subject to serious distortions when the input does not fit within the algorithm's limitations.
 
-"isInputHyperUnique" can be set to true to index pre-computed HLL (Base64 encoded output from druid-hll is expected).
-The "isInputHyperUnique" field only affects ingestion-time behavior, and is ignored at query-time.
+A [study published by the DataSketches team](https://datasketches.github.io/docs/Quantiles/DruidApproxHistogramStudy.html) demonstrates some of the known failure modes of this algorithm:
+- The algorithm's quantile calculations can fail to provide results for a large range of rank values (all ranks less than 0.89 in the example used in the study), returning all zeroes instead.
+- The algorithm can completely fail to record spikes in the tail ends of the distribution
+- In general, the histogram produced by the algorithm can deviate significantly from the true histogram, with no bounds on the errors.
 
-The HyperLogLog algorithm generates decimal estimates with some error. "round" can be set to true to round off estimated
-values to whole numbers. Note that even with rounding, the cardinality is still an estimate. The "round" field only
-affects query-time behavior, and is ignored at ingestion-time.
+It is not possible to determine a priori how well this aggregator will behave for a given input stream, nor does the aggregator provide any indication that serious distortions are present in the output.
 
-For more approximate aggregators, check out the [DataSketches extension](../development/extensions-core/datasketches-extension.html).
+For these reasons, we have deprecated this aggregator and do not recommend its use.
 
 ## Miscellaneous Aggregations
 

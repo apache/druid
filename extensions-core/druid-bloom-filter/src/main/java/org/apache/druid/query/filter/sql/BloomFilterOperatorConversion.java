@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter.sql;
 
-import com.google.common.io.BaseEncoding;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -28,28 +27,36 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.guice.BloomFilterSerializersModule;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.expressions.BloomFilterExprMacro;
 import org.apache.druid.query.filter.BloomDimFilter;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.filter.BloomKFilterHolder;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
-import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.table.RowSignature;
+import org.apache.druid.sql.calcite.rel.DruidQuerySignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 
-public class BloomFilterOperatorConversion implements SqlOperatorConversion
+public class BloomFilterOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
-      .operatorBuilder("BLOOM_FILTER_TEST")
-      .operandTypes(SqlTypeFamily.CHARACTER, SqlTypeFamily.CHARACTER)
+      .operatorBuilder(StringUtils.toUpperCase(BloomFilterExprMacro.FN_NAME))
+      .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.CHARACTER)
       .returnTypeInference(ReturnTypes.BOOLEAN_NULLABLE)
       .build();
+
+  public BloomFilterOperatorConversion()
+  {
+    super(SQL_FUNCTION, BloomFilterExprMacro.FN_NAME);
+  }
 
   @Override
   public SqlOperator calciteOperator()
@@ -61,22 +68,22 @@ public class BloomFilterOperatorConversion implements SqlOperatorConversion
   @Override
   public DimFilter toDruidFilter(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
+      final DruidQuerySignature querySignature,
       final RexNode rexNode
   )
   {
     final List<RexNode> operands = ((RexCall) rexNode).getOperands();
     final DruidExpression druidExpression = Expressions.toDruidExpression(
         plannerContext,
-        rowSignature,
+        querySignature.getRowSignature(),
         operands.get(0)
     );
-    if (druidExpression == null || !druidExpression.isSimpleExtraction()) {
+    if (druidExpression == null) {
       return null;
     }
 
     String base64EncodedBloomKFilter = RexLiteral.stringValue(operands.get(1));
-    final byte[] decoded = BaseEncoding.base64().decode(base64EncodedBloomKFilter);
+    final byte[] decoded = StringUtils.decodeBase64String(base64EncodedBloomKFilter);
     BloomKFilter filter;
     BloomKFilterHolder holder;
     try {
@@ -94,8 +101,19 @@ public class BloomFilterOperatorConversion implements SqlOperatorConversion
           druidExpression.getSimpleExtraction().getExtractionFn()
       );
     } else {
-      // expression virtual columns not currently supported
-      return null;
+      VirtualColumn virtualColumn = querySignature.getOrCreateVirtualColumnForExpression(
+          plannerContext,
+          druidExpression,
+          operands.get(0).getType().getSqlTypeName()
+      );
+      if (virtualColumn == null) {
+        return null;
+      }
+      return new BloomDimFilter(
+          virtualColumn.getOutputName(),
+          holder,
+          null
+      );
     }
   }
 }

@@ -36,6 +36,7 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.search.FragmentSearchQuerySpec;
 import org.apache.druid.query.search.InsensitiveContainsSearchQuerySpec;
@@ -894,6 +895,172 @@ public class Druids
   public static SelectQueryBuilder newSelectQueryBuilder()
   {
     return new SelectQueryBuilder();
+  }
+
+  /**
+   * A Builder for ScanQuery.
+   * <p/>
+   * Required: dataSource(), intervals() must be called before build()
+   * <p/>
+   * Usage example:
+   * <pre><code>
+   *   ScanQuery query = new ScanQueryBuilder()
+   *                                  .dataSource("Example")
+   *                                  .interval("2010/2013")
+   *                                  .build();
+   * </code></pre>
+   *
+   * @see ScanQuery
+   */
+  public static class ScanQueryBuilder
+  {
+    private DataSource dataSource;
+    private QuerySegmentSpec querySegmentSpec;
+    private VirtualColumns virtualColumns;
+    private Map<String, Object> context;
+    private ScanQuery.ResultFormat resultFormat;
+    private int batchSize;
+    private long limit;
+    private DimFilter dimFilter;
+    private List<String> columns;
+    private Boolean legacy;
+    private ScanQuery.Order order;
+
+    public ScanQueryBuilder()
+    {
+      dataSource = null;
+      querySegmentSpec = null;
+      virtualColumns = null;
+      context = null;
+      resultFormat = null;
+      batchSize = 0;
+      limit = 0;
+      dimFilter = null;
+      columns = new ArrayList<>();
+      legacy = null;
+      order = null;
+    }
+
+    public ScanQuery build()
+    {
+      return new ScanQuery(
+          dataSource,
+          querySegmentSpec,
+          virtualColumns,
+          resultFormat,
+          batchSize,
+          limit,
+          order,
+          dimFilter,
+          columns,
+          legacy,
+          context
+      );
+    }
+
+    public static ScanQueryBuilder copy(ScanQuery query)
+    {
+      return new ScanQueryBuilder()
+          .dataSource(query.getDataSource())
+          .intervals(query.getQuerySegmentSpec())
+          .virtualColumns(query.getVirtualColumns())
+          .resultFormat(query.getResultFormat())
+          .batchSize(query.getBatchSize())
+          .limit(query.getLimit())
+          .filters(query.getFilter())
+          .columns(query.getColumns())
+          .legacy(query.isLegacy())
+          .context(query.getContext())
+          .order(query.getOrder());
+    }
+
+    public ScanQueryBuilder dataSource(String ds)
+    {
+      dataSource = new TableDataSource(ds);
+      return this;
+    }
+
+    public ScanQueryBuilder dataSource(DataSource ds)
+    {
+      dataSource = ds;
+      return this;
+    }
+
+    public ScanQueryBuilder intervals(QuerySegmentSpec q)
+    {
+      querySegmentSpec = q;
+      return this;
+    }
+
+    public ScanQueryBuilder virtualColumns(VirtualColumns virtualColumns)
+    {
+      this.virtualColumns = virtualColumns;
+      return this;
+    }
+
+    public ScanQueryBuilder virtualColumns(VirtualColumn... virtualColumns)
+    {
+      return virtualColumns(VirtualColumns.create(Arrays.asList(virtualColumns)));
+    }
+
+    public ScanQueryBuilder context(Map<String, Object> c)
+    {
+      context = c;
+      return this;
+    }
+
+    public ScanQueryBuilder resultFormat(ScanQuery.ResultFormat r)
+    {
+      resultFormat = r;
+      return this;
+    }
+
+    public ScanQueryBuilder batchSize(int b)
+    {
+      batchSize = b;
+      return this;
+    }
+
+    public ScanQueryBuilder limit(long l)
+    {
+      limit = l;
+      return this;
+    }
+
+    public ScanQueryBuilder filters(DimFilter f)
+    {
+      dimFilter = f;
+      return this;
+    }
+
+    public ScanQueryBuilder columns(List<String> c)
+    {
+      columns = c;
+      return this;
+    }
+
+    public ScanQueryBuilder columns(String... c)
+    {
+      columns = Arrays.asList(c);
+      return this;
+    }
+
+    public ScanQueryBuilder legacy(Boolean legacy)
+    {
+      this.legacy = legacy;
+      return this;
+    }
+
+    public ScanQueryBuilder order(ScanQuery.Order order)
+    {
+      this.order = order;
+      return this;
+    }
+  }
+
+  public static ScanQueryBuilder newScanQueryBuilder()
+  {
+    return new ScanQueryBuilder();
   }
 
   /**

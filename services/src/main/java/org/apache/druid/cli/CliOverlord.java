@@ -102,6 +102,7 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
@@ -115,6 +116,7 @@ import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.resource.ResourceCollection;
 
 import java.util.List;
@@ -131,6 +133,7 @@ public class CliOverlord extends ServerRunnable
 
   protected static List<String> UNSECURED_PATHS = ImmutableList.of(
       "/",
+      "/favicon.png",
       "/console.html",
       "/old-console/*",
       "/images/*",
@@ -172,6 +175,7 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.auditlog", TaskAuditLogConfig.class);
 
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
+            binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
 
             binder.bind(TaskLogStreamer.class).to(SwitchingTaskLogStreamer.class).in(LazySingleton.class);
             binder.bind(
@@ -194,7 +198,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(IndexingServiceClient.class).to(HttpIndexingServiceClient.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>(){})
+            binder.bind(new TypeLiteral<IndexTaskClientFactory<ParallelIndexTaskClient>>() {})
                   .toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.of(null));
 
@@ -239,13 +243,11 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.OVERLORD);
 
-            binder
-                .bind(DiscoverySideEffectsProvider.Child.class)
-                .annotatedWith(IndexingService.class)
-                .toProvider(new DiscoverySideEffectsProvider(NodeType.OVERLORD, ImmutableList.of()))
-                .in(LazySingleton.class);
-            LifecycleModule
-                .registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class, IndexingService.class));
+            bindAnnouncer(
+                binder,
+                IndexingService.class,
+                DiscoverySideEffectsProvider.builder(NodeType.OVERLORD).build()
+            );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
@@ -290,10 +292,14 @@ public class CliOverlord extends ServerRunnable
             biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
             binder.bind(ForkingTaskRunnerFactory.class).in(LazySingleton.class);
 
-            biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME).to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
+            biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME)
+                 .to(RemoteTaskRunnerFactory.class)
+                 .in(LazySingleton.class);
             binder.bind(RemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
-            biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME).to(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
+            biddy.addBinding(HttpRemoteTaskRunnerFactory.TYPE_NAME)
+                 .to(HttpRemoteTaskRunnerFactory.class)
+                 .in(LazySingleton.class);
             binder.bind(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
             JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
@@ -356,17 +362,14 @@ public class CliOverlord extends ServerRunnable
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
       root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
       root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
-      root.setWelcomeFiles(new String[]{"index.html", "console.html"});
+      root.setWelcomeFiles(new String[]{"console.html"});
 
       ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
       root.addServlet(holderPwd, "/");
       root.setBaseResource(
           new ResourceCollection(
-              new String[]{
-                  TaskMaster.class.getClassLoader().getResource("static").toExternalForm(),
-                  TaskMaster.class.getClassLoader().getResource("indexer_static").toExternalForm()
-              }
+              Resource.newClassPathResource("org/apache/druid/console")
           )
       );
 

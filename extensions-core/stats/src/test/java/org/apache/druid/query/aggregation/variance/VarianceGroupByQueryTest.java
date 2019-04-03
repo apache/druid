@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -47,6 +47,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class VarianceGroupByQueryTest
@@ -72,7 +73,7 @@ public class VarianceGroupByQueryTest
     this.testName = testName;
     this.config = config;
     this.factory = factory;
-    this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.of(runner));
+    this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
   }
 
   @Test
@@ -114,7 +115,7 @@ public class VarianceGroupByQueryTest
         .build();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, results, "variance");
   }
 
   @Test
@@ -160,7 +161,7 @@ public class VarianceGroupByQueryTest
         .build();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
   @Test
@@ -198,7 +199,7 @@ public class VarianceGroupByQueryTest
         .build();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, results, "havingSpec");
 
     query = query.withLimitSpec(
         new DefaultLimitSpec(
@@ -216,6 +217,6 @@ public class VarianceGroupByQueryTest
         .build();
 
     results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    TestHelper.assertExpectedObjects(expectedResults, results, "limitSpec");
   }
 }

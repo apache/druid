@@ -20,11 +20,10 @@
 package org.apache.druid.segment.realtime.plumber;
 
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.MoreExecutors;
-import junit.framework.Assert;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -33,6 +32,7 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -55,27 +55,10 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   {
     Interval interval = Intervals.of("2011-04-01/2011-04-02");
     SegmentDescriptor descriptor = new SegmentDescriptor(interval, "v1", 2);
-    DataSegment segment = new DataSegment(
-        "test_ds",
-        interval,
-        "v1",
-        null,
-        null,
-        null,
-        new NumberedShardSpec(2, 3),
-        0, 0
-    );
 
     CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
-    EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
-            .andReturn(
-                Collections.singletonList(
-                    new ImmutableSegmentLoadInfo(
-                        segment,
-                        Sets.newHashSet(createRealtimeServerMetadata("a1"))
-                    )
-                )
-            )
+    EasyMock.expect(coordinatorClient.isHandOffComplete("test_ds", descriptor))
+            .andReturn(false)
             .anyTimes();
     EasyMock.replay(coordinatorClient);
     CoordinatorBasedSegmentHandoffNotifier notifier = new CoordinatorBasedSegmentHandoffNotifier(
@@ -86,7 +69,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     final AtomicBoolean callbackCalled = new AtomicBoolean(false);
     notifier.registerSegmentHandoffCallback(
         descriptor,
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         () -> callbackCalled.set(true)
     );
     notifier.checkForSegmentHandoffs();
@@ -102,27 +85,11 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
   {
     Interval interval = Intervals.of("2011-04-01/2011-04-02");
     SegmentDescriptor descriptor = new SegmentDescriptor(interval, "v1", 2);
-    DataSegment segment = new DataSegment(
-        "test_ds",
-        interval,
-        "v1",
-        null,
-        null,
-        null,
-        new NumberedShardSpec(2, 3),
-        0, 0
-    );
+
     final AtomicBoolean callbackCalled = new AtomicBoolean(false);
     CoordinatorClient coordinatorClient = EasyMock.createMock(CoordinatorClient.class);
-    EasyMock.expect(coordinatorClient.fetchServerView("test_ds", interval, true))
-            .andReturn(
-                Collections.singletonList(
-                    new ImmutableSegmentLoadInfo(
-                        segment,
-                        Sets.newHashSet(createHistoricalServerMetadata("a1"))
-                    )
-                )
-            )
+    EasyMock.expect(coordinatorClient.isHandOffComplete("test_ds", descriptor))
+            .andReturn(true)
             .anyTimes();
     EasyMock.replay(coordinatorClient);
     CoordinatorBasedSegmentHandoffNotifier notifier = new CoordinatorBasedSegmentHandoffNotifier(
@@ -133,7 +100,7 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
 
     notifier.registerSegmentHandoffCallback(
         descriptor,
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         () -> callbackCalled.set(true)
     );
     Assert.assertEquals(1, notifier.getHandOffCallbacks().size());

@@ -20,8 +20,8 @@
 package org.apache.druid.security.kerberos;
 
 import com.google.common.base.Strings;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -46,8 +46,6 @@ import java.util.concurrent.locks.ReentrantLock;
 public class DruidKerberosUtil
 {
   private static final Logger log = new Logger(DruidKerberosUtil.class);
-
-  private static final Base64 base64codec = new Base64(0);
 
   // A fair reentrant lock
   private static ReentrantLock kerberosLock = new ReentrantLock(true);
@@ -81,7 +79,7 @@ public class DruidKerberosUtil
       byte[] outToken = gssContext.initSecContext(inToken, 0, inToken.length);
       gssContext.dispose();
       // Base64 encoded and stringified token for server
-      return new String(base64codec.encode(outToken), StandardCharsets.US_ASCII);
+      return new String(StringUtils.encodeBase64(outToken), StandardCharsets.US_ASCII);
     }
     catch (GSSException | IllegalAccessException | NoSuchFieldException | ClassNotFoundException e) {
       throw new AuthenticationException(e);

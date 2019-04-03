@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Segment Metadata Queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,10 +22,8 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
 # Segment Metadata Queries
+
 Segment metadata queries return per-segment information about:
 
 * Cardinality of all columns in the segment
@@ -90,7 +93,7 @@ Only columns which are dimensions (ie, have type `STRING`) will have any cardina
 
 If an interval is not specified, the query will use a default interval that spans a configurable period before the end time of the most recent segment.
 
-The length of this default time period is set in the broker configuration via:
+The length of this default time period is set in the Broker configuration via:
   druid.query.segmentMetadata.defaultHistory
 
 ### toInclude
@@ -127,7 +130,7 @@ This is a list of properties that determines the amount of information returned 
 
 By default, the "cardinality", "interval", and "minmax" types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
 
-The default analysis types can be set in the broker configuration via:
+The default analysis types can be set in the Broker configuration via:
   `druid.query.segmentMetadata.defaultAnalysisTypes`
 
 Types of column analyses are described below:

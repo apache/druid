@@ -24,7 +24,6 @@ import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.indexer.TaskState;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -36,6 +35,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -51,6 +51,7 @@ import java.nio.file.Files;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSupervisorTaskTest
@@ -126,8 +127,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     }
   }
 
-  @Test
-  public void testWithoutInterval() throws Exception
+  private void runTestWithoutIntervalTask() throws Exception
   {
     final ParallelIndexSupervisorTask task = newTask(
         null,
@@ -142,6 +142,29 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     prepareTaskForLocking(task);
     Assert.assertTrue(task.isReady(actionClient));
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
+    shutdownTask(task);
+  }
+
+  @Test
+  public void testWithoutInterval() throws Exception
+  {
+    // Ingest all data.
+    runTestWithoutIntervalTask();
+
+    // Read the segments for one day.
+    final Interval interval = Intervals.of("2017-12-24/P1D");
+    final List<DataSegment> oldSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    Assert.assertEquals(1, oldSegments.size());
+
+    // Reingest the same data. Each segment should get replaced by a segment with a newer version.
+    runTestWithoutIntervalTask();
+
+    // Verify that the segment has been replaced.
+    final List<DataSegment> newSegments =
+        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    Assert.assertEquals(1, newSegments.size());
+    Assert.assertTrue(oldSegments.get(0).getVersion().compareTo(newSegments.get(0).getVersion()) < 0);
   }
 
   @Test()
@@ -187,33 +210,72 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
   }
 
+  @Test
+  public void testPublishEmptySegments() throws Exception
+  {
+    final ParallelIndexSupervisorTask task = newTask(
+        Intervals.of("2020/2021"),
+        new ParallelIndexIOConfig(
+            new LocalFirehoseFactory(inputDir, "test_*", null),
+            false
+        )
+    );
+    actionClient = createActionClient(task);
+    toolbox = createTaskToolbox(task);
+
+    prepareTaskForLocking(task);
+    Assert.assertTrue(task.isReady(actionClient));
+    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
+  }
+
+  @Test
+  public void testWith1MaxNumSubTasks() throws Exception
+  {
+    final ParallelIndexSupervisorTask task = newTask(
+        Intervals.of("2017/2018"),
+        new ParallelIndexIOConfig(
+            new LocalFirehoseFactory(inputDir, "test_*", null),
+            false
+        ),
+        new ParallelIndexTuningConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+    actionClient = createActionClient(task);
+    toolbox = createTaskToolbox(task);
+
+    prepareTaskForLocking(task);
+    Assert.assertTrue(task.isReady(actionClient));
+    Assert.assertEquals(TaskState.SUCCESS, task.run(toolbox).getStatusCode());
+    Assert.assertNull("Runner must be null if the task was in the sequential mode", task.getRunner());
+  }
+
   private ParallelIndexSupervisorTask newTask(
       Interval interval,
       ParallelIndexIOConfig ioConfig
   )
   {
-    // set up ingestion spec
-    final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            getObjectMapper().convertValue(
-                new StringInputRowParser(
-                    DEFAULT_PARSE_SPEC,
-                    null
-                ),
-                Map.class
-            ),
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                interval == null ? null : Collections.singletonList(interval)
-            ),
-            null,
-            getObjectMapper()
-        ),
+    return newTask(
+        interval,
         ioConfig,
         new ParallelIndexTuningConfig(
             null,
@@ -237,6 +299,40 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
             null,
             null
         )
+    );
+  }
+
+  private ParallelIndexSupervisorTask newTask(
+      Interval interval,
+      ParallelIndexIOConfig ioConfig,
+      ParallelIndexTuningConfig tuningConfig
+  )
+  {
+    // set up ingestion spec
+    //noinspection unchecked
+    final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
+        new DataSchema(
+            "dataSource",
+            getObjectMapper().convertValue(
+                new StringInputRowParser(
+                    DEFAULT_PARSE_SPEC,
+                    null
+                ),
+                Map.class
+            ),
+            new AggregatorFactory[]{
+                new LongSumAggregatorFactory("val", "val")
+            },
+            new UniformGranularitySpec(
+                Granularities.DAY,
+                Granularities.MINUTE,
+                interval == null ? null : Collections.singletonList(interval)
+            ),
+            null,
+            getObjectMapper()
+        ),
+        ioConfig,
+        tuningConfig
     );
 
     // set up test tools
@@ -272,9 +368,8 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     }
 
     @Override
-    public TaskStatus run(TaskToolbox toolbox) throws Exception
+    ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
     {
-      setToolbox(toolbox);
       setRunner(
           new TestRunner(
               toolbox,
@@ -282,10 +377,7 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
               indexingServiceClient
           )
       );
-      return TaskStatus.fromCode(
-          getId(),
-          getRunner().run()
-      );
+      return getRunner();
     }
   }
 

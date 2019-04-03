@@ -20,9 +20,11 @@
 package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.curator.discovery.ServerDiscoverySelector;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -39,10 +41,12 @@ import org.apache.druid.testing.utils.ServerDiscoveryUtil;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -70,18 +74,26 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   @Inject
   IntegrationTestingConfig config;
 
+  private String fullDatasourceName;
+
+  @BeforeSuite
+  public void setFullDatasourceName()
+  {
+    fullDatasourceName = UNION_DATASOURCE + config.getExtraDatasourceNameSuffix();
+  }
+
   @Test
   public void testUnionQuery() throws IOException
   {
     final int numTasks = 3;
     final Closer closer = Closer.create();
     for (int i = 0; i < numTasks; i++) {
-      closer.register(unloader(UNION_DATASOURCE + i));
+      closer.register(unloader(fullDatasourceName + i));
     }
     try {
       // Load 4 datasources with same dimensions
       String task = setShutOffTime(
-          getTaskAsString(UNION_TASK_RESOURCE),
+          getResourceAsString(UNION_TASK_RESOURCE),
           DateTimes.utc(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
       List<String> taskIDs = new ArrayList<>();
@@ -89,7 +101,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
         taskIDs.add(
             indexer.submitTask(
                 withServiceName(
-                    withDataSource(task, UNION_DATASOURCE + i),
+                    withDataSource(task, fullDatasourceName + i),
                     EVENT_RECEIVER_SERVICE_PREFIX + i
                 )
             )
@@ -103,9 +115,9 @@ public class ITUnionQueryTest extends AbstractIndexerTest
       RetryUtil.retryUntil(
           () -> {
             for (int i = 0; i < numTasks; i++) {
-              final int countRows = queryHelper.countRows(UNION_DATASOURCE + i, "2013-08-31/2013-09-01");
+              final int countRows = queryHelper.countRows(fullDatasourceName + i, "2013-08-31/2013-09-01");
               if (countRows < 5) {
-                LOG.warn("%d events have been ingested to %s so far", countRows, UNION_DATASOURCE + i);
+                LOG.warn("%d events have been ingested to %s so far", countRows, fullDatasourceName + i);
                 return false;
               }
             }
@@ -119,7 +131,23 @@ public class ITUnionQueryTest extends AbstractIndexerTest
 
       // should hit the queries on realtime task
       LOG.info("Running Union Queries..");
-      this.queryHelper.testQueriesFromFile(UNION_QUERIES_RESOURCE, 2);
+
+      String queryResponseTemplate;
+      try {
+        InputStream is = AbstractITBatchIndexTest.class.getResourceAsStream(UNION_QUERIES_RESOURCE);
+        queryResponseTemplate = IOUtils.toString(is, "UTF-8");
+      }
+      catch (IOException e) {
+        throw new ISE(e, "could not read query file: %s", UNION_QUERIES_RESOURCE);
+      }
+
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%DATASOURCE%%",
+          fullDatasourceName
+      );
+
+      this.queryHelper.testQueriesFromString(queryResponseTemplate, 2);
 
       // wait for the task to complete
       for (int i = 0; i < numTasks; i++) {
@@ -134,7 +162,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
               @Override
               public Boolean call()
               {
-                return coordinator.areSegmentsLoaded(UNION_DATASOURCE + taskNum);
+                return coordinator.areSegmentsLoaded(fullDatasourceName + taskNum);
               }
             },
             true,
@@ -144,7 +172,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
         );
       }
       // run queries on historical nodes
-      this.queryHelper.testQueriesFromFile(UNION_QUERIES_RESOURCE, 2);
+      this.queryHelper.testQueriesFromString(queryResponseTemplate, 2);
 
     }
     catch (Throwable e) {
@@ -162,7 +190,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
 
   private String withDataSource(String taskAsString, String dataSource)
   {
-    return StringUtils.replace(taskAsString, UNION_DATASOURCE, dataSource);
+    return StringUtils.replace(taskAsString, "%%DATASOURCE%%", dataSource);
   }
 
   private String withServiceName(String taskAsString, String serviceName)

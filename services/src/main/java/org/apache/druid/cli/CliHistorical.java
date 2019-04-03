@@ -107,16 +107,13 @@ public class CliHistorical extends ServerRunnable
 
           binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.HISTORICAL);
 
-          binder
-              .bind(DiscoverySideEffectsProvider.Child.class)
-              .toProvider(
-                  new DiscoverySideEffectsProvider(
-                      NodeType.HISTORICAL,
-                      ImmutableList.of(DataNodeService.class, LookupNodeService.class)
-                  )
-              )
-              .in(LazySingleton.class);
-          LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+          bindAnnouncer(
+              binder,
+              DiscoverySideEffectsProvider
+                  .builder(NodeType.HISTORICAL)
+                  .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
+                  .build()
+          );
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));

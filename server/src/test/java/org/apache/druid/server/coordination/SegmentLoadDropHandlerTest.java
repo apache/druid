@@ -45,14 +45,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -63,15 +65,6 @@ public class SegmentLoadDropHandlerTest
   private static final Logger log = new Logger(ZkCoordinatorTest.class);
 
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-  private final DruidServerMetadata me = new DruidServerMetadata(
-      "dummyServer",
-      "dummyHost",
-      null,
-      0,
-      ServerType.HISTORICAL,
-      "normal",
-      0
-  );
 
   private SegmentLoadDropHandler segmentLoadDropHandler;
   private DataSegmentAnnouncer announcer;
@@ -269,7 +262,7 @@ public class SegmentLoadDropHandlerTest
   @Test
   public void testLoadCache() throws Exception
   {
-    List<DataSegment> segments = new ArrayList<>();
+    Set<DataSegment> segments = new HashSet<>();
     for (int i = 0; i < COUNT; ++i) {
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
@@ -285,7 +278,6 @@ public class SegmentLoadDropHandlerTest
       segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
-    Collections.sort(segments);
 
     for (DataSegment segment : segments) {
       writeSegmentToCache(segment);
@@ -331,10 +323,7 @@ public class SegmentLoadDropHandlerTest
       infoDir.mkdir();
     }
 
-    File segmentInfoCacheFile = new File(
-        infoDir,
-        segment.getIdentifier()
-    );
+    File segmentInfoCacheFile = new File(infoDir, segment.getId().toString());
     try {
       jsonMapper.writeValue(segmentInfoCacheFile, segment);
     }
@@ -347,10 +336,7 @@ public class SegmentLoadDropHandlerTest
 
   private void deleteSegmentFromCache(final DataSegment segment)
   {
-    File segmentInfoCacheFile = new File(
-        infoDir,
-        segment.getIdentifier()
-    );
+    File segmentInfoCacheFile = new File(infoDir, segment.getId().toString());
     if (segmentInfoCacheFile.exists()) {
       segmentInfoCacheFile.delete();
     }
@@ -358,19 +344,23 @@ public class SegmentLoadDropHandlerTest
     Assert.assertTrue(!segmentInfoCacheFile.exists());
   }
 
-  private void checkCache(List<DataSegment> segments) throws IOException
+  private void checkCache(Set<DataSegment> expectedSegments)
   {
     Assert.assertTrue(infoDir.exists());
     File[] files = infoDir.listFiles();
 
-    List<File> sortedFiles = Arrays.asList(files);
-    Collections.sort(sortedFiles);
-
-    Assert.assertEquals(segments.size(), sortedFiles.size());
-    for (int i = 0; i < sortedFiles.size(); i++) {
-      DataSegment segment = jsonMapper.readValue(sortedFiles.get(i), DataSegment.class);
-      Assert.assertEquals(segments.get(i), segment);
-    }
+    Set<DataSegment> segmentsInFiles = Arrays
+        .stream(files)
+        .map(file -> {
+          try {
+            return jsonMapper.readValue(file, DataSegment.class);
+          }
+          catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        })
+        .collect(Collectors.toSet());
+    Assert.assertEquals(expectedSegments, segmentsInFiles);
   }
 
   @Test
@@ -401,7 +391,7 @@ public class SegmentLoadDropHandlerTest
         announcer, EasyMock.createNiceMock(DataSegmentServerAnnouncer.class), segmentManager
     );
 
-    List<DataSegment> segments = new ArrayList<>();
+    Set<DataSegment> segments = new HashSet<>();
     for (int i = 0; i < COUNT; ++i) {
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test" + i, "1", Intervals.of("P1d/2011-04-02")));
@@ -409,7 +399,6 @@ public class SegmentLoadDropHandlerTest
       segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-01")));
       segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
-    Collections.sort(segments);
 
     for (DataSegment segment : segments) {
       writeSegmentToCache(segment);

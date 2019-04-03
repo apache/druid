@@ -22,9 +22,9 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -32,6 +32,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -44,6 +45,7 @@ import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -64,6 +66,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
+ *
  */
 public class HttpServerInventoryViewTest
 {
@@ -184,33 +187,33 @@ public class HttpServerInventoryViewTest
 
     CountDownLatch initializeCallback1 = new CountDownLatch(1);
 
-    Map<String, CountDownLatch> segmentAddLathces = ImmutableMap.of(
-        segment1.getIdentifier(), new CountDownLatch(1),
-        segment2.getIdentifier(), new CountDownLatch(1),
-        segment3.getIdentifier(), new CountDownLatch(1),
-        segment4.getIdentifier(), new CountDownLatch(1)
+    Map<SegmentId, CountDownLatch> segmentAddLathces = ImmutableMap.of(
+        segment1.getId(), new CountDownLatch(1),
+        segment2.getId(), new CountDownLatch(1),
+        segment3.getId(), new CountDownLatch(1),
+        segment4.getId(), new CountDownLatch(1)
     );
 
-    Map<String, CountDownLatch> segmentDropLatches = ImmutableMap.of(
-        segment1.getIdentifier(), new CountDownLatch(1),
-        segment2.getIdentifier(), new CountDownLatch(1)
+    Map<SegmentId, CountDownLatch> segmentDropLatches = ImmutableMap.of(
+        segment1.getId(), new CountDownLatch(1),
+        segment2.getId(), new CountDownLatch(1)
     );
 
     httpServerInventoryView.registerSegmentCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         new ServerView.SegmentCallback()
         {
           @Override
           public ServerView.CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
           {
-            segmentAddLathces.get(segment.getIdentifier()).countDown();
+            segmentAddLathces.get(segment.getId()).countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
 
           @Override
           public ServerView.CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
           {
-            segmentDropLatches.get(segment.getIdentifier()).countDown();
+            segmentDropLatches.get(segment.getId()).countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
 
@@ -225,7 +228,7 @@ public class HttpServerInventoryViewTest
 
     final CountDownLatch serverRemovedCalled = new CountDownLatch(1);
     httpServerInventoryView.registerServerRemovedCallback(
-        MoreExecutors.sameThreadExecutor(),
+        Execs.directExecutor(),
         new ServerView.ServerRemovedCallback()
         {
           @Override
@@ -246,16 +249,18 @@ public class HttpServerInventoryViewTest
     druidNodeDiscovery.listener.nodesAdded(ImmutableList.of(druidNode));
 
     initializeCallback1.await();
-    segmentAddLathces.get(segment1.getIdentifier()).await();
-    segmentDropLatches.get(segment1.getIdentifier()).await();
-    segmentAddLathces.get(segment2.getIdentifier()).await();
-    segmentAddLathces.get(segment3.getIdentifier()).await();
-    segmentAddLathces.get(segment4.getIdentifier()).await();
-    segmentDropLatches.get(segment2.getIdentifier()).await();
+    segmentAddLathces.get(segment1.getId()).await();
+    segmentDropLatches.get(segment1.getId()).await();
+    segmentAddLathces.get(segment2.getId()).await();
+    segmentAddLathces.get(segment3.getId()).await();
+    segmentAddLathces.get(segment4.getId()).await();
+    segmentDropLatches.get(segment2.getId()).await();
 
     DruidServer druidServer = httpServerInventoryView.getInventoryValue("host:8080");
-    Assert.assertEquals(ImmutableMap.of(segment3.getIdentifier(), segment3, segment4.getIdentifier(), segment4),
-                        druidServer.getSegments());
+    Assert.assertEquals(
+        ImmutableMap.of(segment3.getId(), segment3, segment4.getId(), segment4),
+        Maps.uniqueIndex(druidServer.iterateAllSegments(), DataSegment::getId)
+    );
 
     druidNodeDiscovery.listener.nodesRemoved(ImmutableList.of(druidNode));
 
@@ -320,7 +325,10 @@ public class HttpServerInventoryViewTest
 
       if (requestNum.get() == 2) {
         //fail scenario where request is sent to server but we got an unexpected response.
-        HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+        HttpResponse httpResponse = new DefaultHttpResponse(
+            HttpVersion.HTTP_1_1,
+            HttpResponseStatus.INTERNAL_SERVER_ERROR
+        );
         httpResponse.setContent(ChannelBuffers.buffer(0));
         httpResponseHandler.handleResponse(httpResponse, null);
         return Futures.immediateFailedFuture(new RuntimeException("server error"));

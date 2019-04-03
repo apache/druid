@@ -33,6 +33,7 @@ import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager.DataSourceState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -89,10 +90,7 @@ public class SegmentManagerTest
     private final String version;
     private final Interval interval;
 
-    SegmentForTesting(
-        String version,
-        Interval interval
-    )
+    SegmentForTesting(String version, Interval interval)
     {
       this.version = version;
       this.interval = interval;
@@ -109,9 +107,9 @@ public class SegmentManagerTest
     }
 
     @Override
-    public String getIdentifier()
+    public SegmentId getId()
     {
-      return version;
+      return SegmentId.dummy(version);
     }
 
     @Override
@@ -311,7 +309,8 @@ public class SegmentManagerTest
   public void testLoadDuplicatedSegmentsInParallel()
       throws ExecutionException, InterruptedException, SegmentLoadingException
   {
-    final List<Future<Boolean>> futures = ImmutableList.of(segments.get(0), segments.get(0), segments.get(0)).stream()
+    final List<Future<Boolean>> futures = ImmutableList.of(segments.get(0), segments.get(0), segments.get(0))
+                                                       .stream()
                                                        .map(
                                                            segment -> executor.submit(
                                                                () -> segmentManager.loadSegment(segment)
@@ -349,16 +348,17 @@ public class SegmentManagerTest
       throws SegmentLoadingException, ExecutionException, InterruptedException
   {
     segmentManager.loadSegment(segments.get(0));
-    final List<Future<Void>> futures = ImmutableList.of(segments.get(1), segments.get(2)).stream()
-                                                       .map(
-                                                           segment -> executor.submit(
-                                                               () -> {
-                                                                 segmentManager.dropSegment(segment);
-                                                                 return (Void) null;
-                                                               }
-                                                           )
-                                                       )
-                                                       .collect(Collectors.toList());
+    final List<Future<Void>> futures = ImmutableList.of(segments.get(1), segments.get(2))
+                                                    .stream()
+                                                    .map(
+                                                        segment -> executor.submit(
+                                                            () -> {
+                                                              segmentManager.dropSegment(segment);
+                                                              return (Void) null;
+                                                            }
+                                                        )
+                                                    )
+                                                    .collect(Collectors.toList());
 
     for (Future<Void> future : futures) {
       future.get();

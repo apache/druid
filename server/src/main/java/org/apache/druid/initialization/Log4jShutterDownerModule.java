@@ -25,7 +25,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import org.apache.druid.common.config.Log4jShutdown;
-import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.guice.ManageLifecycleInit;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -41,8 +41,8 @@ public class Log4jShutterDownerModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    // Instantiate eagerly so that we get everything registered and put into the Lifecycle
-    // This makes the shutdown run pretty darn near last.
+    // Instantiate eagerly so that we get everything registered and put into the Lifecycle as early as possible
+    // Lifecycle scope is INIT to ensure stop runs in the last phase of lifecycle stop.
 
     try {
       ClassLoader loader = Thread.currentThread().getContextClassLoader();
@@ -84,7 +84,7 @@ public class Log4jShutterDownerModule implements Module
   }
 
 
-  @ManageLifecycle
+  @ManageLifecycleInit
   @Provides
   public Log4jShutterDowner getShutterDowner(
       Log4jShutdown log4jShutdown

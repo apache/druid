@@ -39,6 +39,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -67,7 +68,7 @@ public class ScanQueryEngine
 
     if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) != null) {
       long count = (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
-      if (count >= query.getLimit()) {
+      if (count >= query.getLimit() && query.getOrder().equals(ScanQuery.Order.NONE)) {
         return Sequences.empty();
       }
     }
@@ -115,14 +116,14 @@ public class ScanQueryEngine
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
 
-    final String segmentId = segment.getIdentifier();
+    final SegmentId segmentId = segment.getId();
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
 
     if (responseContext.get(ScanQueryRunnerFactory.CTX_COUNT) == null) {
       responseContext.put(ScanQueryRunnerFactory.CTX_COUNT, 0L);
     }
-    final long limit = query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
+    final long limit = calculateLimit(query, responseContext);
     return Sequences.concat(
             adapter
                 .makeCursors(
@@ -130,7 +131,8 @@ public class ScanQueryEngine
                     intervals.get(0),
                     query.getVirtualColumns(),
                     Granularities.ALL,
-                    query.isDescending(),
+                    query.getOrder().equals(ScanQuery.Order.DESCENDING) ||
+                    (query.getOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
                     null
                 )
                 .map(cursor -> new BaseSequence<>(
@@ -176,13 +178,13 @@ public class ScanQueryEngine
                             }
                             final long lastOffset = offset;
                             final Object events;
-                            final String resultFormat = query.getResultFormat();
-                            if (ScanQuery.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
+                            final ScanQuery.ResultFormat resultFormat = query.getResultFormat();
+                            if (ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
                               events = rowsToCompactedList();
-                            } else if (ScanQuery.RESULT_FORMAT_LIST.equals(resultFormat)) {
+                            } else if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
                               events = rowsToList();
                             } else {
-                              throw new UOE("resultFormat[%s] is not supported", resultFormat);
+                              throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
                             }
                             responseContext.put(
                                 ScanQueryRunnerFactory.CTX_COUNT,
@@ -194,7 +196,7 @@ public class ScanQueryEngine
                                   timeoutAt - (System.currentTimeMillis() - start)
                               );
                             }
-                            return new ScanResultValue(segmentId, allColumns, events);
+                            return new ScanResultValue(segmentId.toString(), allColumns, events);
                           }
 
                           @Override
@@ -254,5 +256,17 @@ public class ScanQueryEngine
                     }
             ))
     );
+  }
+
+  /**
+   * If we're performing time-ordering, we want to scan through the first `limit` rows in each segment ignoring the number
+   * of rows already counted on other segments.
+   */
+  private long calculateLimit(ScanQuery query, Map<String, Object> responseContext)
+  {
+    if (query.getOrder().equals(ScanQuery.Order.NONE)) {
+      return query.getLimit() - (long) responseContext.get(ScanQueryRunnerFactory.CTX_COUNT);
+    }
+    return query.getLimit();
   }
 }

@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "DataSketches HLL Sketch module"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-## DataSketches HLL Sketch module
+# DataSketches HLL Sketch module
 
 This module provides Druid aggregators for distinct counting based on HLL sketch from [datasketches](http://datasketches.github.io/) library. At ingestion time, this aggregator creates the HLL sketch objects to be stored in Druid segments. At query time, sketches are read and merged together. In the end, by default, you receive the estimate of the number of distinct values presented to the sketch. Also, you can use post aggregator to produce a union of sketch columns in the same row. 
 You can use the HLL sketch aggregator on columns of any identifiers. It will return estimated cardinality of the column.

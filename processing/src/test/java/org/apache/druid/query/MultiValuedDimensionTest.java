@@ -59,6 +59,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -168,8 +169,8 @@ public class MultiValuedDimensionTest
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
-            new QueryableIndexSegment("sid1", queryableIndex),
-            new IncrementalIndexSegment(incrementalIndex, "sid2")
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
         ),
         query
     );
@@ -185,7 +186,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t7", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "noFilter");
   }
 
   @Test
@@ -203,8 +204,8 @@ public class MultiValuedDimensionTest
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
-            new QueryableIndexSegment("sid1", queryableIndex),
-            new IncrementalIndexSegment(incrementalIndex, "sid2")
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
         ),
         query
     );
@@ -217,7 +218,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t5", "count", 2L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "dimFilter");
   }
 
   @Test
@@ -235,8 +236,8 @@ public class MultiValuedDimensionTest
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
         ImmutableList.of(
-            new QueryableIndexSegment("sid1", queryableIndex),
-            new IncrementalIndexSegment(incrementalIndex, "sid2")
+            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
         ),
         query
     );
@@ -245,7 +246,7 @@ public class MultiValuedDimensionTest
         GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01T00:00:00.000Z", "tags", "t3", "count", 4L)
     );
 
-    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+    TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filteredDim");
   }
 
   @Test
@@ -260,7 +261,7 @@ public class MultiValuedDimensionTest
             null
         ))
         .metric("count")
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
         .threshold(5)
         .filters(new SelectorDimFilter("tags", "t3", null)).build();
@@ -270,13 +271,13 @@ public class MultiValuedDimensionTest
           pool,
           new TopNQueryQueryToolChest(
               new TopNQueryConfig(),
-              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+              QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
           ),
           QueryRunnerTestHelper.NOOP_QUERYWATCHER
       );
       QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
           factory,
-          new QueryableIndexSegment("sid1", queryableIndex),
+          new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
           null
       );
       Map<String, Object> context = new HashMap<>();
@@ -294,7 +295,7 @@ public class MultiValuedDimensionTest
               )
           )
       );
-      TestHelper.assertExpectedObjects(expectedResults, result.toList(), "");
+      TestHelper.assertExpectedObjects(expectedResults, result.toList(), "filteredDim");
     }
   }
 

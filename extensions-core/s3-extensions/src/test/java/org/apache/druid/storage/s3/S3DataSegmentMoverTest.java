@@ -78,10 +78,6 @@ public class S3DataSegmentMoverTest
         "main",
         "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
     );
-    mockS3Client.putObject(
-        "main",
-        "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/descriptor.json"
-    );
 
     DataSegment movedSegment = mover.move(
         sourceSegment,
@@ -103,10 +99,6 @@ public class S3DataSegmentMoverTest
     mockS3Client.putObject(
         "archive",
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
-    );
-    mockS3Client.putObject(
-        "archive",
-        "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/descriptor.json"
     );
 
     DataSegment movedSegment = mover.move(

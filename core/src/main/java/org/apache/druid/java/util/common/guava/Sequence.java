@@ -54,13 +54,13 @@ public interface Sequence<T>
   <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator);
 
  /**
-   * Return an Yielder for accumulated sequence.
+   * Return a Yielder for accumulated sequence.
    *
    * @param initValue   the initial value to pass along to start the accumulation.
    * @param accumulator the accumulator which is responsible for accumulating input values.
    * @param <OutType>   the type of accumulated value.
    *
-   * @return an Yielder for accumulated sequence.
+   * @return a Yielder for accumulated sequence.
    *
    * @see Yielder
    */
@@ -71,19 +71,23 @@ public interface Sequence<T>
     return new MappedSequence<>(this, mapper);
   }
 
+  /**
+   * This will materialize the entire sequence.  Use at your own risk.
+   *
+   * Several benchmarks rely on this method to eagerly accumulate Sequences to ArrayLists.  e.g.
+   * GroupByBenchmark.
+   */
   default List<T> toList()
   {
     return accumulate(new ArrayList<>(), Accumulators.list());
   }
 
-  default Sequence<T> limit(int limit)
+  default Sequence<T> limit(long limit)
   {
     return new LimitedSequence<>(this, limit);
   }
 
-  default <R> Sequence<R> flatMap(
-      Function<? super T, ? extends Sequence<? extends R>> mapper
-  )
+  default <R> Sequence<R> flatMap(Function<? super T, ? extends Sequence<? extends R>> mapper)
   {
     return new ConcatSequence<>(this.map(mapper));
   }

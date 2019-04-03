@@ -44,7 +44,7 @@ public class RemoteTaskRunnerConfigTest
   @Test
   public void testIsJsonConfiguratable()
   {
-    JsonConfigurator.verifyClazzIsConfigurable(mapper, RemoteTaskRunnerConfig.class);
+    JsonConfigurator.verifyClazzIsConfigurable(mapper, RemoteTaskRunnerConfig.class, null);
   }
 
   @Test

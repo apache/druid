@@ -19,11 +19,11 @@
 
 package org.apache.druid.query.aggregation.hyperloglog;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 
 import java.nio.ByteBuffer;
@@ -59,7 +59,7 @@ public class PreComputedHyperUniquesSerde extends HyperUniquesSerde
           return HyperLogLogCollector.makeLatestCollector().fold(ByteBuffer.wrap((byte[]) rawValue));
         } else if (rawValue instanceof String) {
           return HyperLogLogCollector.makeLatestCollector()
-                                     .fold(ByteBuffer.wrap(Base64.decodeBase64((String) rawValue)));
+                                     .fold(ByteBuffer.wrap(StringUtils.decodeBase64String((String) rawValue)));
         }
 
         throw new ISE("Object is not of a type[%s] that can be deserialized to HyperLogLog.", rawValue.getClass());

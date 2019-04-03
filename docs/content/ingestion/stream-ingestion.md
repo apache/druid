@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Loading Streams"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,24 +22,20 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
+# Loading Streams
 
-# Loading streams
-
-Streams can be ingested in Druid using either [Tranquility](https://github.com/druid-io/tranquility) (a Druid-aware 
+Streams can be ingested in Druid using either [Tranquility](https://github.com/druid-io/tranquility) (a Druid-aware
 client) or the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html).
 
 ## Tranquility (Stream Push)
 
-If you have a program that generates a stream, then you can push that stream directly into Druid in 
-real-time. With this approach, Tranquility is embedded in your data-producing application. 
-Tranquility comes with bindings for the 
-Storm and Samza stream processors. It also has a direct API that can be used from any JVM-based 
+If you have a program that generates a stream, then you can push that stream directly into Druid in
+real-time. With this approach, Tranquility is embedded in your data-producing application.
+Tranquility comes with bindings for the
+Storm and Samza stream processors. It also has a direct API that can be used from any JVM-based
 program, such as Spark Streaming or a Kafka consumer.
 
-Tranquility handles partitioning, replication, service discovery, and schema rollover for you, 
+Tranquility handles partitioning, replication, service discovery, and schema rollover for you,
 seamlessly and without downtime. You only have to define your Druid schema.
 
 For examples and more information, please see the [Tranquility README](https://github.com/druid-io/tranquility).

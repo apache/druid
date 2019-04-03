@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "MiddleManager Process"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,16 +22,11 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-Middle Manager Node
-------------------
+# MiddleManager Process
 
 ### Configuration
 
-For Middlemanager Node Configuration, see [Indexing Service Configuration](../configuration/index.html#middlemanager-and-peons).
+For Middlemanager Process Configuration, see [Indexing Service Configuration](../configuration/index.html#middlemanager-and-peons).
 
 ### HTTP Endpoints
 
@@ -34,8 +34,8 @@ For a list of API endpoints supported by the MiddleManager, please see the [API 
 
 ### Overview
 
-The middle manager node is a worker node that executes submitted tasks. Middle Managers forward tasks to peons that run in separate JVMs.
-The reason we have separate JVMs for tasks is for resource and log isolation. Each [Peon](../design/peons.html) is capable of running only one task at a time, however, a middle manager may have multiple peons.
+The MiddleManager process is a worker process that executes submitted tasks. Middle Managers forward tasks to Peons that run in separate JVMs.
+The reason we have separate JVMs for tasks is for resource and log isolation. Each [Peon](../design/peons.html) is capable of running only one task at a time, however, a MiddleManager may have multiple Peons.
 
 ### Running
 

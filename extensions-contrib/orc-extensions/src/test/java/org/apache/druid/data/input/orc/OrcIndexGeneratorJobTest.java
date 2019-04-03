@@ -77,9 +77,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -222,7 +225,7 @@ public class OrcIndexGeneratorJobTest
                 null,
                 null,
                 null,
-                false,
+                true,
                 false,
                 false,
                 false,
@@ -256,6 +259,13 @@ public class OrcIndexGeneratorJobTest
   {
     Assert.assertTrue(JobHelper.runJobs(ImmutableList.of(job), config));
 
+    final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
+    IndexGeneratorJob
+        .getPublishedSegments(config)
+        .forEach(segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>())
+                                              .add(segment));
+
+    final Map<Interval, List<File>> intervalToIndexFiles = new HashMap<>();
     int segmentNum = 0;
     for (DateTime currTime = interval.getStart(); currTime.isBefore(interval.getEnd()); currTime = currTime.plusDays(1)) {
       Integer[][] shardInfo = shardInfoForEachSegment[segmentNum++];
@@ -272,19 +282,37 @@ public class OrcIndexGeneratorJobTest
       Assert.assertTrue(segmentOutputFolder.exists());
       Assert.assertEquals(shardInfo.length, segmentOutputFolder.list().length);
 
-      int rowCount = 0;
       for (int partitionNum = 0; partitionNum < shardInfo.length; ++partitionNum) {
         File individualSegmentFolder = new File(segmentOutputFolder, Integer.toString(partitionNum));
         Assert.assertTrue(individualSegmentFolder.exists());
 
-        File descriptor = new File(individualSegmentFolder, "descriptor.json");
         File indexZip = new File(individualSegmentFolder, "index.zip");
-        Assert.assertTrue(descriptor.exists());
         Assert.assertTrue(indexZip.exists());
 
-        DataSegment dataSegment = mapper.readValue(descriptor, DataSegment.class);
+        intervalToIndexFiles.computeIfAbsent(new Interval(currTime, currTime.plusDays(1)), k -> new ArrayList<>())
+                            .add(indexZip);
+      }
+    }
+
+    Assert.assertEquals(intervalToSegments.size(), intervalToIndexFiles.size());
+
+    segmentNum = 0;
+    for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
+      final Interval interval = entry.getKey();
+      final List<DataSegment> segments = entry.getValue();
+      final List<File> indexFiles = intervalToIndexFiles.get(interval);
+      Collections.sort(segments);
+      indexFiles.sort(Comparator.comparing(File::getAbsolutePath));
+
+      Assert.assertNotNull(indexFiles);
+      Assert.assertEquals(segments.size(), indexFiles.size());
+      Integer[][] shardInfo = shardInfoForEachSegment[segmentNum++];
+
+      int rowCount = 0;
+      for (int i = 0; i < segments.size(); i++) {
+        final DataSegment dataSegment = segments.get(i);
+        final File indexZip = indexFiles.get(i);
         Assert.assertEquals(config.getSchema().getTuningConfig().getVersion(), dataSegment.getVersion());
-        Assert.assertEquals(new Interval(currTime, currTime.plusDays(1)), dataSegment.getInterval());
         Assert.assertEquals("local", dataSegment.getLoadSpec().get("type"));
         Assert.assertEquals(indexZip.getCanonicalPath(), dataSegment.getLoadSpec().get("path"));
         Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());
@@ -297,7 +325,7 @@ public class OrcIndexGeneratorJobTest
         Assert.assertEquals("visited_num", dataSegment.getMetrics().get(0));
         Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(1));
 
-        Integer[] hashShardInfo = shardInfo[partitionNum];
+        Integer[] hashShardInfo = shardInfo[i];
         HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
         Assert.assertEquals((int) hashShardInfo[0], spec.getPartitionNum());
         Assert.assertEquals((int) hashShardInfo[1], spec.getPartitions());

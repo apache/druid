@@ -73,6 +73,7 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -286,7 +287,7 @@ public class GroupByMultiSegmentTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            NoopIntervalChunkingQueryRunnerDecorator()
+            noopIntervalChunkingQueryRunnerDecorator()
         )
     );
   }
@@ -361,8 +362,8 @@ public class GroupByMultiSegmentTest
     for (QueryableIndex qindex : groupByIndices) {
       QueryRunner<Row> runner = makeQueryRunner(
           groupByFactory,
-          qindex.toString(),
-          new QueryableIndexSegment(qindex.toString(), qindex)
+          SegmentId.dummy(qindex.toString()),
+          new QueryableIndexSegment(qindex, SegmentId.dummy(qindex.toString()))
       );
       runners.add(groupByFactory.getToolchest().preMergeQueryDecoration(runner));
     }
@@ -399,7 +400,7 @@ public class GroupByMultiSegmentTest
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
@@ -418,7 +419,7 @@ public class GroupByMultiSegmentTest
     }
   };
 
-  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
       @Override

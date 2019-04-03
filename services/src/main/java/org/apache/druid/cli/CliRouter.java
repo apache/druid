@@ -23,15 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import io.airlift.airline.Command;
 import org.apache.druid.curator.discovery.DiscoveryModule;
-import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
-import org.apache.druid.curator.discovery.ServerDiscoverySelector;
-import org.apache.druid.discovery.DruidLeaderClient;
-import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeType;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -41,11 +36,9 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.RouterProcessingModule;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.AsyncQueryForwardingServlet;
 import org.apache.druid.server.http.RouterResource;
@@ -69,7 +62,8 @@ import java.util.List;
  */
 @Command(
     name = "router",
-    description = "Experimental! Understands tiers and routes things to different brokers, see http://druid.io/docs/latest/development/router.html for a description"
+    description = "Experimental! Understands tiers and routes things to different brokers, "
+                  + "see http://druid.io/docs/latest/development/router.html for a description"
 )
 public class CliRouter extends ServerRunnable
 {
@@ -107,9 +101,7 @@ public class CliRouter extends ServerRunnable
 
             binder.bind(TieredBrokerHostSelector.class).in(ManageLifecycle.class);
             binder.bind(QueryHostFinder.class).in(LazySingleton.class);
-            binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>()
-            {
-            })
+            binder.bind(new TypeLiteral<List<TieredBrokerSelectorStrategy>>() {})
                   .toProvider(TieredBrokerSelectorStrategiesProvider.class)
                   .in(LazySingleton.class);
 
@@ -124,41 +116,13 @@ public class CliRouter extends ServerRunnable
 
             binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.ROUTER);
 
-            binder
-                .bind(DiscoverySideEffectsProvider.Child.class)
-                .toProvider(new DiscoverySideEffectsProvider(NodeType.ROUTER, ImmutableList.of()))
-                .in(LazySingleton.class);
-            LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+            bindAnnouncer(
+                binder,
+                DiscoverySideEffectsProvider.builder(NodeType.ROUTER).build()
+            );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
-          }
-
-          @Provides
-          @ManageLifecycle
-          public ServerDiscoverySelector getCoordinatorServerDiscoverySelector(
-              TieredBrokerConfig config,
-              ServerDiscoveryFactory factory
-          )
-          {
-            return factory.createSelector(config.getCoordinatorServiceName());
-          }
-
-          @Provides
-          @ManageLifecycle
-          public DruidLeaderClient getLeaderHttpClient(
-              @EscalatedGlobal HttpClient httpClient,
-              DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
-              ServerDiscoverySelector serverDiscoverySelector
-          )
-          {
-            return new DruidLeaderClient(
-                httpClient,
-                druidNodeDiscoveryProvider,
-                NodeType.COORDINATOR,
-                "/druid/coordinator/v1/leader",
-                serverDiscoverySelector
-            );
           }
         },
         new LookupModule()

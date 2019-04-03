@@ -21,7 +21,6 @@ package org.apache.druid.cli;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -126,7 +125,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
 
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -161,7 +160,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
         }
       }
       catch (Exception e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
     return config;

@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Task Locking & Priority"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,15 +22,11 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
 # Task Locking & Priority
 
 ## Locking
 
-Once an overlord node accepts a task, the task acquires locks for the data source and intervals specified in the task.
+Once an Overlord process accepts a task, the task acquires locks for the data source and intervals specified in the task.
 
 There are two lock types, i.e., _shared lock_ and _exclusive lock_.
 
@@ -74,5 +75,5 @@ The task context is used for various task configuration parameters. The followin
 
 <div class="note caution">
 When a task acquires a lock, it sends a request via HTTP and awaits until it receives a response containing the lock acquisition result.
-As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of overlords.
+As a result, an HTTP timeout error can occur if `taskLockTimeout` is greater than `druid.server.http.maxIdleTime` of Overlords.
 </div>

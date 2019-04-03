@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Timeseries queries"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-Timeseries queries
-==================
+# Timeseries queries
 
 These types of queries take a timeseries query object and return an array of JSON objects where each object represents a value asked for by the timeseries query.
 

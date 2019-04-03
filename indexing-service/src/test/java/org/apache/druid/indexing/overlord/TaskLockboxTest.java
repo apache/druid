@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.TaskLockbox.TaskLockPosse;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -622,6 +623,78 @@ public class TaskLockboxTest
     }
 
     Assert.assertTrue(lockbox.getAllLocks().isEmpty());
+  }
+
+  @Test
+  public void testFindLockPosseAfterRevokeWithDifferentLockIntervals() throws EntryExistsException
+  {
+    final Task lowPriorityTask = NoopTask.create(0);
+    final Task highPriorityTask = NoopTask.create(10);
+
+    taskStorage.insert(lowPriorityTask, TaskStatus.running(lowPriorityTask.getId()));
+    taskStorage.insert(highPriorityTask, TaskStatus.running(highPriorityTask.getId()));
+    lockbox.add(lowPriorityTask);
+    lockbox.add(highPriorityTask);
+
+    Assert.assertTrue(
+        lockbox.tryLock(
+            TaskLockType.EXCLUSIVE,
+            lowPriorityTask, Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
+        ).isOk()
+    );
+
+    Assert.assertTrue(
+        lockbox.tryLock(
+            TaskLockType.EXCLUSIVE,
+            highPriorityTask, Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
+        ).isOk()
+    );
+
+    final TaskLockPosse highLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+        highPriorityTask,
+        Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
+    );
+
+    Assert.assertTrue(highLockPosse.containsTask(highPriorityTask));
+    Assert.assertFalse(highLockPosse.getTaskLock().isRevoked());
+
+    final TaskLockPosse lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
+        lowPriorityTask,
+        Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
+    );
+
+    Assert.assertTrue(lowLockPosse.containsTask(lowPriorityTask));
+    Assert.assertTrue(lowLockPosse.getTaskLock().isRevoked());
+  }
+
+  @Test
+  public void testLockPosseEquals()
+  {
+    final Task task1 = NoopTask.create();
+    final Task task2 = NoopTask.create();
+
+    TaskLock taskLock1 = new TaskLock(TaskLockType.EXCLUSIVE,
+        task1.getGroupId(),
+        task1.getDataSource(),
+        Intervals.of("2018/2019"),
+        "v1",
+        task1.getPriority());
+
+    TaskLock taskLock2 = new TaskLock(TaskLockType.EXCLUSIVE,
+        task2.getGroupId(),
+        task2.getDataSource(),
+        Intervals.of("2018/2019"),
+        "v2",
+        task2.getPriority());
+
+    TaskLockPosse taskLockPosse1 = new TaskLockPosse(taskLock1);
+    TaskLockPosse taskLockPosse2 = new TaskLockPosse(taskLock2);
+    TaskLockPosse taskLockPosse3 = new TaskLockPosse(taskLock1);
+
+    Assert.assertNotEquals(taskLockPosse1, null);
+    Assert.assertNotEquals(null, taskLockPosse1);
+    Assert.assertNotEquals(taskLockPosse1, taskLockPosse2);
+    Assert.assertEquals(taskLockPosse1, taskLockPosse3);
   }
 
   private Set<TaskLock> getAllLocks(List<Task> tasks)

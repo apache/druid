@@ -50,8 +50,9 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * This class facilitates the usage of long-polling HTTP endpoints powered by {@link ChangeRequestHistory}.
- * For example {@link org.apache.druid.client.HttpServerInventoryView} uses it to keep segment state in sync with data nodes
- * which expose the segment state via HTTP endpoint in {@link org.apache.druid.server.http.SegmentListerResource#getSegments}.
+ * For example {@link org.apache.druid.client.HttpServerInventoryView} uses it to keep segment state in sync with data
+ * nodes which expose the segment state via HTTP endpoint in {@link
+ * org.apache.druid.server.http.SegmentListerResource#getSegments}.
  */
 public class ChangeRequestHttpSyncer<T>
 {
@@ -75,11 +76,11 @@ public class ChangeRequestHttpSyncer<T>
 
   private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
-  // This lock is used to ensure proper start-then-stop semantics and
-  // making sure after stopping no state update happens and
-  // sync is not again scheduled in executor and
-  // if there was a previously scheduled sync before stopping, it is skipped and
-  // also, it is used to ensure that duplicate syncs are never scheduled in the executor
+  /**
+   * This lock is used to ensure proper start-then-stop semantics and making sure after stopping no state update happens
+   * and {@link #sync} is not again scheduled in {@link #executor} and if there was a previously scheduled sync before
+   * stopping, it is skipped and also, it is used to ensure that duplicate syncs are never scheduled in the executor.
+   */
   private final LifecycleLock startStopLock = new LifecycleLock();
 
   private final String logIdentity;
@@ -111,7 +112,7 @@ public class ChangeRequestHttpSyncer<T>
     this.serverUnstabilityTimeout = serverUnstabilityTimeout;
     this.serverHttpTimeout = serverTimeoutMS + HTTP_TIMEOUT_EXTRA_MS;
     this.listener = listener;
-    this.logIdentity = StringUtils.format("%s_%s", baseServerURL, System.currentTimeMillis());
+    this.logIdentity = StringUtils.format("%s_%d", baseServerURL, System.currentTimeMillis());
   }
 
   public void start()
@@ -140,10 +141,10 @@ public class ChangeRequestHttpSyncer<T>
     }
   }
 
-  //wait for first fetch of segment listing from server.
-  public boolean awaitInitialization(long timeoutMS) throws InterruptedException
+  /** Wait for first fetch of segment listing from server. */
+  public boolean awaitInitialization(long timeout, TimeUnit timeUnit) throws InterruptedException
   {
-    return initializationLatch.await(timeoutMS, TimeUnit.MILLISECONDS);
+    return initializationLatch.await(timeout, timeUnit);
   }
 
   /**
@@ -153,10 +154,17 @@ public class ChangeRequestHttpSyncer<T>
   {
     long currTime = System.currentTimeMillis();
 
-    return ImmutableMap.of("notSyncedForSecs", lastSyncTime == 0 ? "Never Synced" : (currTime - lastSyncTime) / 1000,
-                           "notSuccessfullySyncedFor", lastSuccessfulSyncTime == 0 ? "Never Successfully Synced" : (currTime - lastSuccessfulSyncTime) / 1000,
-                           "consecutiveFailedAttemptCount", consecutiveFailedAttemptCount,
-                           "syncScheduled", startStopLock.isStarted()
+    Object notSuccessfullySyncedFor;
+    if (lastSuccessfulSyncTime == 0) {
+      notSuccessfullySyncedFor = "Never Successfully Synced";
+    } else {
+      notSuccessfullySyncedFor = (currTime - lastSuccessfulSyncTime) / 1000;
+    }
+    return ImmutableMap.of(
+        "notSyncedForSecs", lastSyncTime == 0 ? "Never Synced" : (currTime - lastSyncTime) / 1000,
+        "notSuccessfullySyncedFor", notSuccessfullySyncedFor,
+        "consecutiveFailedAttemptCount", consecutiveFailedAttemptCount,
+        "syncScheduled", startStopLock.isStarted()
     );
   }
 
@@ -185,28 +193,13 @@ public class ChangeRequestHttpSyncer<T>
     lastSyncTime = System.currentTimeMillis();
 
     try {
-      final String req;
-      if (counter != null) {
-        req = StringUtils.format(
-            "%s?counter=%s&hash=%s&timeout=%s",
-            baseRequestPath,
-            counter.getCounter(),
-            counter.getHash(),
-            serverTimeoutMS
-        );
-      } else {
-        req = StringUtils.format(
-            "%s?counter=-1&timeout=%s",
-            baseRequestPath,
-            serverTimeoutMS
-        );
-      }
+      final String req = getRequestString();
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
 
       log.debug("Sending sync request to server[%s]", logIdentity);
 
-      ListenableFuture<InputStream> future = httpClient.go(
+      ListenableFuture<InputStream> syncRequestFuture = httpClient.go(
           new Request(HttpMethod.GET, new URL(baseServerURL, req))
               .addHeader(HttpHeaders.Names.ACCEPT, SmileMediaTypes.APPLICATION_JACKSON_SMILE)
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
@@ -217,7 +210,7 @@ public class ChangeRequestHttpSyncer<T>
       log.debug("Sent sync request to [%s]", logIdentity);
 
       Futures.addCallback(
-          future,
+          syncRequestFuture,
           new FutureCallback<InputStream>()
           {
             @Override
@@ -241,26 +234,17 @@ public class ChangeRequestHttpSyncer<T>
 
                   log.debug("Received sync response from [%s]", logIdentity);
 
-                  ChangeRequestsSnapshot<T> changes = smileMapper.readValue(
-                      stream,
-                      responseTypeReferences
-                  );
+                  ChangeRequestsSnapshot<T> changes = smileMapper.readValue(stream, responseTypeReferences);
 
                   log.debug("Finished reading sync response from [%s]", logIdentity);
 
                   if (changes.isResetCounter()) {
-                    log.info(
-                        "[%s] requested resetCounter for reason [%s].",
-                        logIdentity,
-                        changes.getResetCause()
-                    );
+                    log.info("[%s] requested resetCounter for reason [%s].", logIdentity, changes.getResetCause());
                     counter = null;
                     return;
                   }
 
                   if (counter == null) {
-                    // means, on last request either server had asked us to reset the counter or it was very first
-                    // request to the server.
                     listener.fullSync(changes.getRequests());
                   } else {
                     listener.deltaSync(changes.getRequests());
@@ -268,7 +252,7 @@ public class ChangeRequestHttpSyncer<T>
 
                   counter = changes.getCounter();
 
-                  if (!initializationLatch.await(1, TimeUnit.MILLISECONDS)) {
+                  if (initializationLatch.getCount() > 0) {
                     initializationLatch.countDown();
                     log.info("[%s] synced successfully for the first time.", logIdentity);
                   }
@@ -357,6 +341,23 @@ public class ChangeRequestHttpSyncer<T>
     }
   }
 
+  private String getRequestString()
+  {
+    final String req;
+    if (counter != null) {
+      req = StringUtils.format(
+          "%s?counter=%s&hash=%s&timeout=%s",
+          baseRequestPath,
+          counter.getCounter(),
+          counter.getHash(),
+          serverTimeoutMS
+      );
+    } else {
+      req = StringUtils.format("%s?counter=-1&timeout=%s", baseRequestPath, serverTimeoutMS);
+    }
+    return req;
+  }
+
   private void addNextSyncToWorkQueue()
   {
     synchronized (startStopLock) {
@@ -372,11 +373,7 @@ public class ChangeRequestHttpSyncer<T>
               RetryUtils.nextRetrySleepMillis(consecutiveFailedAttemptCount)
           );
           log.info("Scheduling next syncup in [%d] millis for server[%s].", sleepMillis, logIdentity);
-          executor.schedule(
-              this::sync,
-              sleepMillis,
-              TimeUnit.MILLISECONDS
-          );
+          executor.schedule(this::sync, sleepMillis, TimeUnit.MILLISECONDS);
         } else {
           executor.execute(this::sync);
         }
@@ -391,13 +388,10 @@ public class ChangeRequestHttpSyncer<T>
         } else {
           log.makeAlert(
               th,
-              "WTF! Couldn't schedule next sync. [%s] is not being synced any more, restarting Druid process on that server might fix the issue.",
+              "WTF! Couldn't schedule next sync. [%s] is not being synced any more, restarting Druid process on that "
+              + "server might fix the issue.",
               logIdentity
           ).emit();
-        }
-
-        if (th instanceof InterruptedException) {
-          Thread.currentThread().interrupt();
         }
       }
     }
@@ -417,8 +411,16 @@ public class ChangeRequestHttpSyncer<T>
     return false;
   }
 
+  /**
+   * Concurrency guarantees: all calls to {@link #fullSync} and {@link #deltaSync} (that is done within the {@link
+   * #executor}) are linearizable.
+   */
   public interface Listener<T>
   {
+    /**
+     * This method is called either if on the previous request the server had asked to reset the counter or it was the
+     * first request to the server.
+     */
     void fullSync(List<T> changes);
     void deltaSync(List<T> changes);
   }

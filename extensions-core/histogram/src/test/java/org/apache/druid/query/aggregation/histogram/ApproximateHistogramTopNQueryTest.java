@@ -81,7 +81,7 @@ public class ApproximateHistogramTopNQueryTest
                     defaultPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -91,7 +91,7 @@ public class ApproximateHistogramTopNQueryTest
                     customPool,
                     new TopNQueryQueryToolChest(
                         new TopNQueryConfig(),
-                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                        QueryRunnerTestHelper.noopIntervalChunkingQueryRunnerDecorator()
                     ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
@@ -127,7 +127,7 @@ public class ApproximateHistogramTopNQueryTest
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
         .aggregators(
             Lists.newArrayList(
                 Iterables.concat(

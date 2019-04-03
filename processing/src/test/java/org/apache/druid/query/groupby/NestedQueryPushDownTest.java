@@ -81,6 +81,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -353,7 +354,7 @@ public class NestedQueryPushDownTest
         strategySelector,
         new GroupByQueryQueryToolChest(
             strategySelector,
-            NoopIntervalChunkingQueryRunnerDecorator()
+            noopIntervalChunkingQueryRunnerDecorator()
         )
     );
 
@@ -361,7 +362,7 @@ public class NestedQueryPushDownTest
         strategySelector2,
         new GroupByQueryQueryToolChest(
             strategySelector2,
-            NoopIntervalChunkingQueryRunnerDecorator()
+            noopIntervalChunkingQueryRunnerDecorator()
         )
     );
   }
@@ -821,11 +822,7 @@ public class NestedQueryPushDownTest
         .setQuerySegmentSpec(intervalSpec)
         .setDimensions(new DefaultDimensionSpec("dimB", outputNameB))
         .setAggregatorSpecs(new LongSumAggregatorFactory(outputNameAgg, "metASum"))
-        .setContext(
-            ImmutableMap.of(
-                GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true
-            )
-        )
+        .setContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_FORCE_PUSH_DOWN_NESTED_QUERY, true))
         .setGranularity(Granularities.ALL)
         .build();
     QueryToolChest<Row, GroupByQuery> toolChest = groupByFactory.getToolchest();
@@ -836,11 +833,11 @@ public class NestedQueryPushDownTest
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
+    return new FinalizeResultsQueryRunner<>(
         new BySegmentQueryRunner<>(segmentId, adapter.getDataInterval().getStart(), factory.createRunner(adapter)),
         (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
@@ -853,8 +850,8 @@ public class NestedQueryPushDownTest
     QueryableIndex index = groupByIndices.get(0);
     QueryRunner<Row> runner = makeQueryRunnerForSegment(
         groupByFactory,
-        index.toString(),
-        new QueryableIndexSegment(index.toString(), index)
+        SegmentId.dummy(index.toString()),
+        new QueryableIndexSegment(index, SegmentId.dummy(index.toString()))
     );
     runners.add(groupByFactory.getToolchest().preMergeQueryDecoration(runner));
     return runners;
@@ -866,8 +863,8 @@ public class NestedQueryPushDownTest
     QueryableIndex index2 = groupByIndices.get(1);
     QueryRunner<Row> tooSmallRunner = makeQueryRunnerForSegment(
         groupByFactory2,
-        index2.toString(),
-        new QueryableIndexSegment(index2.toString(), index2)
+        SegmentId.dummy(index2.toString()),
+        new QueryableIndexSegment(index2, SegmentId.dummy(index2.toString()))
     );
     runners.add(groupByFactory2.getToolchest().preMergeQueryDecoration(tooSmallRunner));
     return runners;
@@ -901,9 +898,9 @@ public class NestedQueryPushDownTest
     }
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerForSegment(
+  private static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerForSegment(
       QueryRunnerFactory<T, QueryType> factory,
-      String segmentId,
+      SegmentId segmentId,
       Segment adapter
   )
   {
@@ -922,7 +919,7 @@ public class NestedQueryPushDownTest
     }
   };
 
-  public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
+  public static IntervalChunkingQueryRunnerDecorator noopIntervalChunkingQueryRunnerDecorator()
   {
     return new IntervalChunkingQueryRunnerDecorator(null, null, null)
     {

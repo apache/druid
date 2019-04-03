@@ -26,12 +26,12 @@ import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ListenableFutures;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -185,7 +185,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    * This method is to support KafkaIndexTask's legacy mode and will be removed in the future.
    * See KakfaIndexTask.runLegacy().
    */
-  public void moveSegmentOut(final String sequenceName, final List<SegmentIdentifier> identifiers)
+  public void moveSegmentOut(final String sequenceName, final List<SegmentIdWithShardSpec> identifiers)
   {
     synchronized (segments) {
       final SegmentsForSequence activeSegmentsForSequence = segments.get(sequenceName);
@@ -193,7 +193,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
         throw new ISE("WTF?! Asked to remove segments for sequenceName[%s] which doesn't exist...", sequenceName);
       }
 
-      for (final SegmentIdentifier identifier : identifiers) {
+      for (final SegmentIdWithShardSpec identifier : identifiers) {
         log.info("Moving segment[%s] out of active list.", identifier);
         final long key = identifier.getInterval().getStartMillis();
         final SegmentsOfInterval segmentsOfInterval = activeSegmentsForSequence.get(key);
@@ -209,7 +209,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Persist all data indexed through this driver so far. Blocks until complete.
-   *
+   * <p>
    * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
@@ -235,7 +235,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
   /**
    * Persist all data indexed through this driver so far. Returns a future of persisted commitMetadata.
-   *
+   * <p>
    * Should be called after all data has been added through {@link #add(InputRow, String, Supplier, boolean, boolean)}.
    *
    * @param committer committer representing all data that has been added so far
@@ -264,7 +264,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    final List<SegmentIdentifier> theSegments = getSegmentWithStates(sequenceNames)
+    final List<SegmentIdWithShardSpec> theSegments = getSegmentWithStates(sequenceNames)
         .map(SegmentWithState::getSegmentIdentifier)
         .collect(Collectors.toList());
 
@@ -305,9 +305,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       return Futures.immediateFuture(null);
 
     } else {
-      final List<SegmentIdentifier> waitingSegmentIdList = segmentsAndMetadata.getSegments().stream()
-                                                                              .map(SegmentIdentifier::fromDataSegment)
-                                                                              .collect(Collectors.toList());
+      final List<SegmentIdWithShardSpec> waitingSegmentIdList = segmentsAndMetadata.getSegments().stream()
+                                                                                   .map(
+                                                                                       SegmentIdWithShardSpec::fromDataSegment)
+                                                                                   .collect(Collectors.toList());
       final Object metadata = Preconditions.checkNotNull(segmentsAndMetadata.getCommitMetadata(), "commitMetadata");
 
       if (waitingSegmentIdList.isEmpty()) {
@@ -324,14 +325,14 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final SettableFuture<SegmentsAndMetadata> resultFuture = SettableFuture.create();
       final AtomicInteger numRemainingHandoffSegments = new AtomicInteger(waitingSegmentIdList.size());
 
-      for (final SegmentIdentifier segmentIdentifier : waitingSegmentIdList) {
+      for (final SegmentIdWithShardSpec segmentIdentifier : waitingSegmentIdList) {
         handoffNotifier.registerSegmentHandoffCallback(
             new SegmentDescriptor(
                 segmentIdentifier.getInterval(),
                 segmentIdentifier.getVersion(),
                 segmentIdentifier.getShardSpec().getPartitionNum()
             ),
-            MoreExecutors.sameThreadExecutor(),
+            Execs.directExecutor(),
             () -> {
               log.info("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
               metrics.incrementHandOffCount();
@@ -394,8 +395,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   private static class SegmentsForSequenceBuilder
   {
     // segmentId -> (appendingSegment, appendFinishedSegments)
-    private final NavigableMap<SegmentIdentifier, Pair<SegmentWithState, List<SegmentWithState>>> intervalToSegments =
-        new TreeMap<>(Comparator.comparing(SegmentIdentifier::getInterval, Comparators.intervalsByStartThenEnd()));
+    private final NavigableMap<SegmentIdWithShardSpec, Pair<SegmentWithState, List<SegmentWithState>>> intervalToSegments =
+        new TreeMap<>(Comparator.comparing(SegmentIdWithShardSpec::getInterval, Comparators.intervalsByStartThenEnd()));
     private final String lastSegmentId;
 
     SegmentsForSequenceBuilder(String lastSegmentId)
@@ -405,7 +406,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
     void add(SegmentWithState segmentWithState)
     {
-      final SegmentIdentifier identifier = segmentWithState.getSegmentIdentifier();
+      final SegmentIdWithShardSpec identifier = segmentWithState.getSegmentIdentifier();
       final Pair<SegmentWithState, List<SegmentWithState>> pair = intervalToSegments.get(identifier);
       final List<SegmentWithState> appendFinishedSegments = pair == null || pair.rhs == null ?
                                                             new ArrayList<>() :
@@ -432,7 +433,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
     SegmentsForSequence build()
     {
       final NavigableMap<Long, SegmentsOfInterval> map = new TreeMap<>();
-      for (Entry<SegmentIdentifier, Pair<SegmentWithState, List<SegmentWithState>>> entry :
+      for (Entry<SegmentIdWithShardSpec, Pair<SegmentWithState, List<SegmentWithState>>> entry :
           intervalToSegments.entrySet()) {
         map.put(
             entry.getKey().getInterval().getStartMillis(),

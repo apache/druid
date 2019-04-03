@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSubTask;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.query.Query;
@@ -45,8 +46,6 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "append", value = AppendTask.class),
-    @JsonSubTypes.Type(name = "merge", value = MergeTask.class),
     @JsonSubTypes.Type(name = "kill", value = KillTask.class),
     @JsonSubTypes.Type(name = "move", value = MoveTask.class),
     @JsonSubTypes.Type(name = "archive", value = ArchiveTask.class),
@@ -58,7 +57,6 @@ import java.util.Map;
     @JsonSubTypes.Type(name = "index_realtime", value = RealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
     @JsonSubTypes.Type(name = "noop", value = NoopTask.class),
-    @JsonSubTypes.Type(name = "same_interval_merge", value = SameIntervalMergeTask.class),
     @JsonSubTypes.Type(name = "compact", value = CompactionTask.class)
 })
 public interface Task
@@ -163,11 +161,12 @@ public interface Task
   boolean canRestore();
 
   /**
-   * Asks a task to arrange for its "run" method to exit promptly. This method will only be called if
-   * {@link #canRestore()} returns true. Tasks that take too long to stop gracefully will be terminated with
+   * Asks a task to arrange for its "run" method to exit promptly. Tasks that take too long to stop gracefully will be terminated with
    * extreme prejudice.
+   *
+   * @param taskConfig TaskConfig for this task
    */
-  void stopGracefully();
+  void stopGracefully(TaskConfig taskConfig);
 
   /**
    * Execute a task. This typically runs on a worker as determined by a TaskRunner, and will be run while

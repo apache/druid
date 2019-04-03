@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -35,13 +34,14 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdentifier;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
  * <p/>
  * If this action cannot acquire an appropriate lock, or if it cannot expand an existing segment set, it returns null.
  */
-public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
+public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
 {
   private static final Logger log = new Logger(SegmentAllocateAction.class);
 
@@ -134,15 +134,15 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
   }
 
   @Override
-  public TypeReference<SegmentIdentifier> getReturnTypeReference()
+  public TypeReference<SegmentIdWithShardSpec> getReturnTypeReference()
   {
-    return new TypeReference<SegmentIdentifier>()
+    return new TypeReference<SegmentIdWithShardSpec>()
     {
     };
   }
 
   @Override
-  public SegmentIdentifier perform(
+  public SegmentIdWithShardSpec perform(
       final Task task,
       final TaskActionToolbox toolbox
   )
@@ -166,9 +166,9 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
           msc.getUsedSegmentsForInterval(dataSource, rowInterval)
       );
 
-      final SegmentIdentifier identifier = usedSegmentsForRow.isEmpty() ?
-                                           tryAllocateFirstSegment(toolbox, task, rowInterval) :
-                                           tryAllocateSubsequentSegment(
+      final SegmentIdWithShardSpec identifier = usedSegmentsForRow.isEmpty() ?
+                                                tryAllocateFirstSegment(toolbox, task, rowInterval) :
+                                                tryAllocateSubsequentSegment(
                                                toolbox,
                                                task,
                                                rowInterval,
@@ -184,7 +184,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
 
       if (!ImmutableSet.copyOf(msc.getUsedSegmentsForInterval(dataSource, rowInterval)).equals(usedSegmentsForRow)) {
         if (attempt < MAX_ATTEMPTS) {
-          final long shortRandomSleep = 50 + (long) (Math.random() * 450);
+          final long shortRandomSleep = 50 + (long) (ThreadLocalRandom.current().nextDouble() * 450);
           log.debug(
               "Used segment set changed for rowInterval[%s]. Retrying segment allocation in %,dms (attempt = %,d).",
               rowInterval,
@@ -196,7 +196,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
           }
           catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
           }
         } else {
           log.error(
@@ -212,7 +212,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     }
   }
 
-  private SegmentIdentifier tryAllocateFirstSegment(TaskActionToolbox toolbox, Task task, Interval rowInterval)
+  private SegmentIdWithShardSpec tryAllocateFirstSegment(TaskActionToolbox toolbox, Task task, Interval rowInterval)
   {
     // No existing segments for this row, but there might still be nearby ones that conflict with our preferred
     // segment granularity. Try that first, and then progressively smaller ones if it fails.
@@ -222,7 +222,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
                                                    .collect(Collectors.toList());
     for (Interval tryInterval : tryIntervals) {
       if (tryInterval.contains(rowInterval)) {
-        final SegmentIdentifier identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);
+        final SegmentIdWithShardSpec identifier = tryAllocate(toolbox, task, tryInterval, rowInterval, false);
         if (identifier != null) {
           return identifier;
         }
@@ -231,7 +231,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     return null;
   }
 
-  private SegmentIdentifier tryAllocateSubsequentSegment(
+  private SegmentIdWithShardSpec tryAllocateSubsequentSegment(
       TaskActionToolbox toolbox,
       Task task,
       Interval rowInterval,
@@ -249,7 +249,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     }
   }
 
-  private SegmentIdentifier tryAllocate(
+  private SegmentIdWithShardSpec tryAllocate(
       TaskActionToolbox toolbox,
       Task task,
       Interval tryInterval,
@@ -269,12 +269,13 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
     }
 
     if (lockResult.isOk()) {
-      final SegmentIdentifier identifier;
+      final SegmentIdWithShardSpec identifier;
       try {
         identifier = toolbox.getTaskLockbox().doInCriticalSection(
             task,
             ImmutableList.of(tryInterval),
-            CriticalAction.<SegmentIdentifier>builder()
+            CriticalAction
+                .<SegmentIdWithShardSpec>builder()
                 .onValidLocks(
                     () -> toolbox.getIndexerMetadataStorageCoordinator().allocatePendingSegment(
                         dataSource,
@@ -284,9 +285,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
                         lockResult.getTaskLock().getVersion(),
                         skipSegmentLineageCheck
                     )
-                ).onInvalidLocks(
-                    () -> null
-                    )
+                )
+                .onInvalidLocks(() -> null)
                 .build()
         );
       }

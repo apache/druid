@@ -2,7 +2,7 @@
     "type": "index",
     "spec": {
         "dataSchema": {
-            "dataSource": "wikipedia_index_test",
+            "dataSource": "%%DATASOURCE%%",
             "metricsSpec": [
                 {
                     "type": "count",
@@ -64,7 +64,7 @@
         },
         "tuningConfig": {
             "type": "index",
-            "targetPartitionSize": 3
+            "maxRowsPerSegment": 3
         }
     }
 }

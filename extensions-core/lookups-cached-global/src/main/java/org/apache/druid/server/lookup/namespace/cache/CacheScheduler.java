@@ -34,6 +34,7 @@ import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import sun.misc.Cleaner;
 
 import javax.annotation.Nullable;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
@@ -215,7 +216,7 @@ public final class CacheScheduler
           t.addSuppressed(e);
         }
         if (Thread.currentThread().isInterrupted() || t instanceof InterruptedException || t instanceof Error) {
-          throw Throwables.propagate(t);
+          throw new RuntimeException(t);
         }
       }
     }
@@ -424,7 +425,9 @@ public final class CacheScheduler
       NamespaceExtractionCacheManager cacheManager
   )
   {
-    this.namespaceGeneratorMap = namespaceGeneratorMap;
+    // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
+    // Class doesn't override Object.equals().
+    this.namespaceGeneratorMap = new IdentityHashMap<>(namespaceGeneratorMap);
     this.cacheManager = cacheManager;
     cacheManager.scheduledExecutorService().scheduleAtFixedRate(
         new Runnable()
@@ -445,7 +448,7 @@ public final class CacheScheduler
             catch (Exception e) {
               log.error(e, "Error emitting namespace stats");
               if (Thread.currentThread().isInterrupted()) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
           }
@@ -506,6 +509,7 @@ public final class CacheScheduler
 
   public <T extends ExtractionNamespace> Entry schedule(final T namespace)
   {
+    @SuppressWarnings("unchecked")
     final CacheGenerator<T> generator = (CacheGenerator<T>) namespaceGeneratorMap.get(namespace.getClass());
     if (generator == null) {
       throw new ISE("Cannot find generator for namespace [%s]", namespace);

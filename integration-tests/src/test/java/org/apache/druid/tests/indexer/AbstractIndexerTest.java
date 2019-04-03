@@ -25,6 +25,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.utils.RetryUtil;
@@ -53,6 +54,9 @@ public abstract class AbstractIndexerTest
   protected ObjectMapper smileMapper;
   @Inject
   protected TestQueryHelper queryHelper;
+
+  @Inject
+  private IntegrationTestingConfig config;
 
   protected Closeable unloader(final String dataSource)
   {
@@ -108,7 +112,7 @@ public abstract class AbstractIndexerTest
     );
   }
 
-  protected String getTaskAsString(String file) throws IOException
+  protected String getResourceAsString(String file) throws IOException
   {
     final InputStream inputStream = ITRealtimeIndexTaskTest.class.getResourceAsStream(file);
     try {

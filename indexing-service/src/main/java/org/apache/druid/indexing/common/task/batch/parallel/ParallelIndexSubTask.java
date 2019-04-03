@@ -44,7 +44,6 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskClientFactory;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.firehose.IngestSegmentFirehoseFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -185,11 +184,6 @@ public class ParallelIndexSubTask extends AbstractTask
   {
     final FirehoseFactory firehoseFactory = ingestionSchema.getIOConfig().getFirehoseFactory();
 
-    if (firehoseFactory instanceof IngestSegmentFirehoseFactory) {
-      // pass toolbox to Firehose
-      ((IngestSegmentFirehoseFactory) firehoseFactory).setTaskToolbox(toolbox);
-    }
-
     final File firehoseTempDir = toolbox.getFirehoseTemporaryDir();
     // Firehose temporary directory is automatically removed when this IndexTask completes.
     FileUtils.forceMkdir(firehoseTempDir);
@@ -235,9 +229,8 @@ public class ParallelIndexSubTask extends AbstractTask
   )
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
-    final boolean explicitIntervals = dataSchema.getGranularitySpec().bucketIntervals().isPresent();
     final ParallelIndexIOConfig ioConfig = ingestionSchema.getIOConfig();
-    if (ioConfig.isAppendToExisting() || !explicitIntervals) {
+    if (ioConfig.isAppendToExisting()) {
       return new ActionBasedSegmentAllocator(
           toolbox.getTaskActionClient(),
           dataSchema,
@@ -269,7 +262,7 @@ public class ParallelIndexSubTask extends AbstractTask
    *
    * <ul>
    * <li>
-   * If the number of rows in a segment exceeds {@link ParallelIndexTuningConfig#targetPartitionSize}
+   * If the number of rows in a segment exceeds {@link ParallelIndexTuningConfig#maxRowsPerSegment}
    * </li>
    * <li>
    * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link ParallelIndexTuningConfig#maxTotalRows}
@@ -304,7 +297,7 @@ public class ParallelIndexSubTask extends AbstractTask
 
     // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    @Nullable final Integer targetPartitionSize = IndexTask.getValidTargetPartitionSize(tuningConfig);
+    @Nullable final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
     @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
@@ -350,8 +343,7 @@ public class ParallelIndexSubTask extends AbstractTask
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-            if (exceedMaxRowsInSegment(targetPartitionSize, addResult.getNumRowsInSegment()) ||
-                exceedMaxRowsInAppenderator(maxTotalRows, addResult.getTotalNumRowsInAppenderator())) {
+            if (addResult.isPushRequired(maxRowsPerSegment, maxTotalRows)) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.
@@ -383,23 +375,6 @@ public class ParallelIndexSubTask extends AbstractTask
     catch (TimeoutException | ExecutionException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private static boolean exceedMaxRowsInSegment(
-      @Nullable Integer maxRowsInSegment, // maxRowsInSegment can be null if numShards is set in indexTuningConfig
-      int numRowsInSegment
-  )
-  {
-    return maxRowsInSegment != null && maxRowsInSegment <= numRowsInSegment;
-  }
-
-  private static boolean exceedMaxRowsInAppenderator(
-      // maxRowsInAppenderator can be null if numShards is set in indexTuningConfig
-      @Nullable Long maxRowsInAppenderator,
-      long numRowsInAppenderator
-  )
-  {
-    return maxRowsInAppenderator != null && maxRowsInAppenderator <= numRowsInAppenderator;
   }
 
   private static Appenderator newAppenderator(

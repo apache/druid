@@ -22,12 +22,12 @@ package org.apache.druid.query.groupby;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -55,6 +55,7 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
@@ -93,7 +94,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                   {
                     TimeseriesQuery tsQuery = (TimeseriesQuery) queryPlus.getQuery();
                     QueryRunner<Row> newRunner = factory.mergeRunners(
-                        MoreExecutors.sameThreadExecutor(), ImmutableList.of(input)
+                        Execs.directExecutor(), ImmutableList.of(input)
                     );
                     QueryToolChest toolChest = factory.getToolchest();
 
@@ -156,7 +157,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(Granularities.ALL)
-                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .intervals(QueryRunnerTestHelper.fullOnIntervalSpec)
                                   .aggregators(
                                       new DoubleMaxAggregatorFactory("maxIndex", "index"),
                                       new DoubleMinAggregatorFactory("minIndex", "index")

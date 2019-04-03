@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.io.FileUtils;
@@ -42,6 +41,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockAcquireAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
@@ -312,7 +312,7 @@ public class RealtimeIndexTask extends AbstractTask
           return lock.getVersion();
         }
         catch (IOException e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
     };
@@ -335,9 +335,8 @@ public class RealtimeIndexTask extends AbstractTask
 
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip
-    // NOTE: (partitionNum_index.zip for HDFS data storage) and descriptor.json (partitionNum_descriptor.json for
-    // NOTE: HDFS data storage) to mismatch, or it can cause historical nodes to load different instances of
-    // NOTE: the "same" segment.
+    // NOTE: (partitionNum_index.zip for HDFS data storage) to mismatch, or it can cause historical nodes to load
+    // NOTE: different instances of the "same" segment.
     final PlumberSchool plumberSchool = new RealtimePlumberSchool(
         toolbox.getEmitter(),
         toolbox.getQueryRunnerFactoryConglomerate(),
@@ -494,29 +493,31 @@ public class RealtimeIndexTask extends AbstractTask
   }
 
   @Override
-  public void stopGracefully()
+  public void stopGracefully(TaskConfig taskConfig)
   {
-    try {
-      synchronized (this) {
-        if (!gracefullyStopped) {
-          gracefullyStopped = true;
-          if (firehose == null) {
-            log.info("stopGracefully: Firehose not started yet, so nothing to stop.");
-          } else if (finishingJob) {
-            log.info("stopGracefully: Interrupting finishJob.");
-            runThread.interrupt();
-          } else if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
-            log.info("stopGracefully: Draining firehose.");
-            firehose.close();
-          } else {
-            log.info("stopGracefully: Cannot drain firehose by closing, interrupting run thread.");
-            runThread.interrupt();
+    if (taskConfig.isRestoreTasksOnRestart()) {
+      try {
+        synchronized (this) {
+          if (!gracefullyStopped) {
+            gracefullyStopped = true;
+            if (firehose == null) {
+              log.info("stopGracefully: Firehose not started yet, so nothing to stop.");
+            } else if (finishingJob) {
+              log.info("stopGracefully: Interrupting finishJob.");
+              runThread.interrupt();
+            } else if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
+              log.info("stopGracefully: Draining firehose.");
+              firehose.close();
+            } else {
+              log.info("stopGracefully: Cannot drain firehose by closing, interrupting run thread.");
+              runThread.interrupt();
+            }
           }
         }
       }
-    }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 

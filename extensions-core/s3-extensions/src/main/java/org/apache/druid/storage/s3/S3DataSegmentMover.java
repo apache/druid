@@ -68,7 +68,6 @@ public class S3DataSegmentMover implements DataSegmentMover
       Map<String, Object> loadSpec = segment.getLoadSpec();
       String s3Bucket = MapUtils.getString(loadSpec, "bucket");
       String s3Path = MapUtils.getString(loadSpec, "key");
-      String s3DescriptorPath = S3Utils.descriptorPathForSegmentPath(s3Path);
 
       final String targetS3Bucket = MapUtils.getString(targetLoadSpec, "bucket");
       final String targetS3BaseKey = MapUtils.getString(targetLoadSpec, "baseKey");
@@ -77,7 +76,6 @@ public class S3DataSegmentMover implements DataSegmentMover
           targetS3BaseKey,
           DataSegmentPusher.getDefaultStorageDir(segment, false)
       );
-      final String targetS3DescriptorPath = S3Utils.descriptorPathForSegmentPath(targetS3Path);
 
       if (targetS3Bucket.isEmpty()) {
         throw new SegmentLoadingException("Target S3 bucket is not specified");
@@ -87,7 +85,6 @@ public class S3DataSegmentMover implements DataSegmentMover
       }
 
       safeMove(s3Bucket, s3Path, targetS3Bucket, targetS3Path);
-      safeMove(s3Bucket, s3DescriptorPath, targetS3Bucket, targetS3DescriptorPath);
 
       return segment.withLoadSpec(
           ImmutableMap.<String, Object>builder()
@@ -110,7 +107,7 @@ public class S3DataSegmentMover implements DataSegmentMover
       );
     }
     catch (AmazonServiceException e) {
-      throw new SegmentLoadingException(e, "Unable to move segment[%s]: [%s]", segment.getIdentifier(), e);
+      throw new SegmentLoadingException(e, "Unable to move segment[%s]: [%s]", segment.getId(), e);
     }
   }
 
@@ -145,7 +142,7 @@ public class S3DataSegmentMover implements DataSegmentMover
     catch (Exception e) {
       Throwables.propagateIfInstanceOf(e, AmazonServiceException.class);
       Throwables.propagateIfInstanceOf(e, SegmentLoadingException.class);
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -174,7 +171,10 @@ public class S3DataSegmentMover implements DataSegmentMover
               .withPrefix(s3Path)
               .withMaxKeys(1)
       );
-      if (listResult.getKeyCount() == 0) {
+      // Using getObjectSummaries().size() instead of getKeyCount as, in some cases
+      // it is observed that even though the getObjectSummaries returns some data
+      // keyCount is still zero.
+      if (listResult.getObjectSummaries().size() == 0) {
         // should never happen
         throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
       }

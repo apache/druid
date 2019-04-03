@@ -19,17 +19,17 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.InventoryView;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -38,7 +38,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -58,17 +62,53 @@ public class ServersResource
         .build();
   }
 
-  private static Map<String, Object> makeFullServer(DruidServer input)
+  private static Map<String, Object> makeFullServer(DruidServer server)
   {
     return new ImmutableMap.Builder<String, Object>()
-        .put("host", input.getHost())
-        .put("maxSize", input.getMaxSize())
-        .put("type", input.getType().toString())
-        .put("tier", input.getTier())
-        .put("priority", input.getPriority())
-        .put("segments", input.getSegments())
-        .put("currSize", input.getCurrSize())
+        .put("host", server.getHost())
+        .put("maxSize", server.getMaxSize())
+        .put("type", server.getType().toString())
+        .put("tier", server.getTier())
+        .put("priority", server.getPriority())
+        .put("segments", createLazySegmentsMap(server))
+        .put("currSize", server.getCurrSize())
         .build();
+  }
+
+  /**
+   * Emitting this map with "full" options in this resource is excessive because segment ids are repeated in the keys
+   * *and* values, but is done so for compatibility with the existing HTTP JSON API.
+   *
+   * Returns a lazy map suitable for serialization (i. e. entrySet iteration) only, relying on the fact that the
+   * segments returned from {@link DruidServer#iterateAllSegments()} are unique. This is not a part of the {@link
+   * DruidServer} API to not let abuse this map (like trying to get() from it).
+   */
+  private static Map<SegmentId, DataSegment> createLazySegmentsMap(DruidServer server)
+  {
+    return new AbstractMap<SegmentId, DataSegment>()
+    {
+      @Override
+      public Set<Entry<SegmentId, DataSegment>> entrySet()
+      {
+        return new AbstractSet<Entry<SegmentId, DataSegment>>()
+        {
+          @Override
+          public Iterator<Entry<SegmentId, DataSegment>> iterator()
+          {
+            return Iterators.transform(
+                server.iterateAllSegments().iterator(),
+                segment -> new AbstractMap.SimpleImmutableEntry<>(segment.getId(), segment)
+            );
+          }
+
+          @Override
+          public int size()
+          {
+            return server.getTotalSegments();
+          }
+        };
+      }
+    };
   }
 
   private final InventoryView serverInventoryView;
@@ -83,71 +123,29 @@ public class ServersResource
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getClusterServers(
-      @QueryParam("full") String full,
-      @QueryParam("simple") String simple
-  )
+  public Response getClusterServers(@QueryParam("full") String full, @QueryParam("simple") String simple)
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
     if (full != null) {
-      return builder.entity(
-          Lists.newArrayList(
-              Iterables.transform(
-                  serverInventoryView.getInventory(),
-                  new Function<DruidServer, Map<String, Object>>()
-                  {
-                    @Override
-                    public Map<String, Object> apply(DruidServer input)
-                    {
-                      return makeFullServer(input);
-                    }
-                  }
-              )
-          )
-      ).build();
+      return builder
+          .entity(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeFullServer))
+          .build();
     } else if (simple != null) {
-      return builder.entity(
-          Lists.newArrayList(
-              Iterables.transform(
-                  serverInventoryView.getInventory(),
-                  new Function<DruidServer, Map<String, Object>>()
-                  {
-                    @Override
-                    public Map<String, Object> apply(DruidServer input)
-                    {
-                      return makeSimpleServer(input);
-                    }
-                  }
-              )
-          )
-      ).build();
+      return builder
+          .entity(Collections2.transform(serverInventoryView.getInventory(), ServersResource::makeSimpleServer))
+          .build();
     }
 
-    return builder.entity(
-        Lists.newArrayList(
-            Iterables.transform(
-                serverInventoryView.getInventory(),
-                new Function<DruidServer, String>()
-                {
-                  @Override
-                  public String apply(DruidServer druidServer)
-                  {
-                    return druidServer.getHost();
-                  }
-                }
-            )
-        )
-    ).build();
+    return builder
+        .entity(Collections2.transform(serverInventoryView.getInventory(), DruidServer::getHost))
+        .build();
   }
 
   @GET
   @Path("/{serverName}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getServer(
-      @PathParam("serverName") String serverName,
-      @QueryParam("simple") String simple
-  )
+  public Response getServer(@PathParam("serverName") String serverName, @QueryParam("simple") String simple)
   {
     DruidServer server = serverInventoryView.getInventoryValue(serverName);
     if (server == null) {
@@ -160,17 +158,13 @@ public class ServersResource
       return builder.entity(makeSimpleServer(server)).build();
     }
 
-    return builder.entity(makeFullServer(server))
-                  .build();
+    return builder.entity(makeFullServer(server)).build();
   }
 
   @GET
   @Path("/{serverName}/segments")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getServerSegments(
-      @PathParam("serverName") String serverName,
-      @QueryParam("full") String full
-  )
+  public Response getServerSegments(@PathParam("serverName") String serverName, @QueryParam("full") String full)
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
     DruidServer server = serverInventoryView.getInventoryValue(serverName);
@@ -179,42 +173,31 @@ public class ServersResource
     }
 
     if (full != null) {
-      return builder.entity(server.getSegments().values()).build();
+      return builder.entity(Iterables.toString(server.iterateAllSegments())).build();
     }
 
-    return builder.entity(
-        Collections2.transform(
-            server.getSegments().values(),
-            new Function<DataSegment, String>()
-            {
-              @Override
-              public String apply(DataSegment segment)
-              {
-                return segment.getIdentifier();
-              }
-            }
-        )
-    ).build();
+    return builder
+        .entity(Iterables.toString(Iterables.transform(server.iterateAllSegments(), DataSegment::getId)))
+        .build();
   }
 
   @GET
   @Path("/{serverName}/segments/{segmentId}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getServerSegment(
-      @PathParam("serverName") String serverName,
-      @PathParam("segmentId") String segmentId
-  )
+  public Response getServerSegment(@PathParam("serverName") String serverName, @PathParam("segmentId") String segmentId)
   {
     DruidServer server = serverInventoryView.getInventoryValue(serverName);
     if (server == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
 
-    DataSegment segment = server.getSegment(segmentId);
-    if (segment == null) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+    for (SegmentId possibleSegmentId : SegmentId.iterateAllPossibleParsings(segmentId)) {
+      DataSegment segment = server.getSegment(possibleSegmentId);
+      if (segment != null) {
+        return Response.status(Response.Status.OK).entity(segment).build();
+      }
     }
 
-    return Response.status(Response.Status.OK).entity(segment).build();
+    return Response.status(Response.Status.NOT_FOUND).build();
   }
 }

@@ -85,8 +85,8 @@ public class SchemalessTestSimpleTest
       final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
       final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
       argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null), false});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, persistedIncrementalIndex), false});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(null, mergedIncrementalIndex), true});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(persistedIncrementalIndex, null), false});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(mergedIncrementalIndex, null), true});
     }
     return argumentArrays;
   }

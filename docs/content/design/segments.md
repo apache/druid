@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Segments"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-Segments
-========
+# Segments
 
 Druid stores its index in *segment files*, which are partitioned by
 time. In a basic setup, one segment file is created for each time

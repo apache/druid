@@ -117,7 +117,12 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
                       endMetadata
                   )
               )
-              .onInvalidLocks(SegmentPublishResult::fail)
+              .onInvalidLocks(
+                  () -> SegmentPublishResult.fail(
+                      "Invalid task locks. Maybe they are revoked by a higher priority task."
+                      + " Please check the overlord log for details."
+                  )
+              )
               .build()
       );
     }
@@ -153,7 +158,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public String toString()
   {
-    return "SegmentInsertAction{" +
+    return "SegmentTransactionalInsertAction{" +
            "segments=" + segments +
            ", startMetadata=" + startMetadata +
            ", endMetadata=" + endMetadata +

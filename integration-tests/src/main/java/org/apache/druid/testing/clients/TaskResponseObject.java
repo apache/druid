@@ -28,6 +28,7 @@ public class TaskResponseObject
 {
 
   private final String id;
+  private final String type;
   private final DateTime createdTime;
   private final DateTime queueInsertionTime;
   private final TaskState status;
@@ -35,12 +36,14 @@ public class TaskResponseObject
   @JsonCreator
   private TaskResponseObject(
       @JsonProperty("id") String id,
+      @JsonProperty("type") String type,
       @JsonProperty("createdTime") DateTime createdTime,
       @JsonProperty("queueInsertionTime") DateTime queueInsertionTime,
       @JsonProperty("status") TaskState status
   )
   {
     this.id = id;
+    this.type = type;
     this.createdTime = createdTime;
     this.queueInsertionTime = queueInsertionTime;
     this.status = status;
@@ -50,6 +53,12 @@ public class TaskResponseObject
   public String getId()
   {
     return id;
+  }
+
+  @SuppressWarnings("unused") // Used by Jackson serialization?
+  public String getType()
+  {
+    return type;
   }
 
   @SuppressWarnings("unused") // Used by Jackson serialization?

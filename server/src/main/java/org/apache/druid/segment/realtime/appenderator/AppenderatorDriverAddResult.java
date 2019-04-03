@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  */
 public class AppenderatorDriverAddResult
 {
-  private final SegmentIdentifier segmentIdentifier;
+  private final SegmentIdWithShardSpec segmentIdentifier;
   private final int numRowsInSegment;
   private final long totalNumRowsInAppenderator;
   private final boolean isPersistRequired;
@@ -39,7 +39,7 @@ public class AppenderatorDriverAddResult
   private final ParseException parseException;
 
   public static AppenderatorDriverAddResult ok(
-      SegmentIdentifier segmentIdentifier,
+      SegmentIdWithShardSpec segmentIdentifier,
       int numRowsInSegment,
       long totalNumRowsInAppenderator,
       boolean isPersistRequired,
@@ -61,7 +61,7 @@ public class AppenderatorDriverAddResult
   }
 
   private AppenderatorDriverAddResult(
-      @Nullable SegmentIdentifier segmentIdentifier,
+      @Nullable SegmentIdWithShardSpec segmentIdentifier,
       int numRowsInSegment,
       long totalNumRowsInAppenderator,
       boolean isPersistRequired,
@@ -80,7 +80,7 @@ public class AppenderatorDriverAddResult
     return segmentIdentifier != null;
   }
 
-  public SegmentIdentifier getSegmentIdentifier()
+  public SegmentIdWithShardSpec getSegmentIdentifier()
   {
     return segmentIdentifier;
   }
@@ -102,10 +102,17 @@ public class AppenderatorDriverAddResult
 
   public boolean isPushRequired(AppenderatorConfig tuningConfig)
   {
-    boolean overThreshold = getNumRowsInSegment() >= tuningConfig.getMaxRowsPerSegment();
-    Long maxTotal = tuningConfig.getMaxTotalRows();
-    if (maxTotal != null) {
-      overThreshold |= getTotalNumRowsInAppenderator() >= maxTotal;
+    return isPushRequired(tuningConfig.getMaxRowsPerSegment(), tuningConfig.getMaxTotalRows());
+  }
+
+  public boolean isPushRequired(@Nullable Integer maxRowsPerSegment, @Nullable Long maxTotalRows)
+  {
+    boolean overThreshold = false;
+    if (maxRowsPerSegment != null) {
+      overThreshold = getNumRowsInSegment() >= maxRowsPerSegment;
+    }
+    if (maxTotalRows != null) {
+      overThreshold |= getTotalNumRowsInAppenderator() >= maxTotalRows;
     }
     return overThreshold;
   }

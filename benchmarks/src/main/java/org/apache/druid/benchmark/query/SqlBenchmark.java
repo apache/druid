@@ -39,10 +39,10 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.NoopEscalator;
-import org.apache.druid.sql.calcite.planner.DruidPlanner;
+import org.apache.druid.sql.SqlLifecycle;
+import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -86,7 +86,7 @@ public class SqlBenchmark
   private File tmpDir;
   private SegmentGenerator segmentGenerator;
   private SpecificSegmentsQuerySegmentWalker walker;
-  private PlannerFactory plannerFactory;
+  private SqlLifecycleFactory sqlLifecycleFactory;
   private GroupByQuery groupByQuery;
   private String sqlQuery;
   private Closer resourceCloser;
@@ -114,9 +114,9 @@ public class SqlBenchmark
     final QueryRunnerFactoryConglomerate conglomerate = conglomerateCloserPair.lhs;
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     this.walker = new SpecificSegmentsQuerySegmentWalker(conglomerate).add(dataSegment, index);
-    plannerFactory = new PlannerFactory(
+    final PlannerFactory plannerFactory = new PlannerFactory(
         druidSchema,
         systemSchema,
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
@@ -126,6 +126,7 @@ public class SqlBenchmark
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         CalciteTests.getJsonMapper()
     );
+    this.sqlLifecycleFactory = CalciteTests.createSqlLifecycleFactory(plannerFactory);
     groupByQuery = GroupByQuery
         .builder()
         .setDataSource("foo")
@@ -172,10 +173,7 @@ public class SqlBenchmark
   {
     final Sequence<Row> resultSequence = QueryPlus.wrap(groupByQuery).run(walker, new HashMap<>());
     final List<Row> resultList = resultSequence.toList();
-
-    for (Row row : resultList) {
-      blackhole.consume(row);
-    }
+    blackhole.consume(resultList);
   }
 
   @Benchmark
@@ -183,13 +181,12 @@ public class SqlBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryPlanner(Blackhole blackhole) throws Exception
   {
-    try (final DruidPlanner planner = plannerFactory.createPlanner(null)) {
-      final PlannerResult plannerResult = planner.plan(
-          sqlQuery,
-          NoopEscalator.getInstance().createEscalatedAuthenticationResult()
-      );
-      final List<Object[]> results = plannerResult.run().toList();
-      blackhole.consume(results);
-    }
+    SqlLifecycle sqlLifecycle = sqlLifecycleFactory.factorize();
+    final List<Object[]> results = sqlLifecycle.runSimple(
+        sqlQuery,
+        null,
+        NoopEscalator.getInstance().createEscalatedAuthenticationResult()
+    ).toList();
+    blackhole.consume(results);
   }
 }

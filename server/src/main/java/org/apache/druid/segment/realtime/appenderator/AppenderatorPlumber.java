@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -66,6 +65,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -82,7 +82,7 @@ public class AppenderatorPlumber implements Plumber
   private final SegmentPublisher segmentPublisher;
   private final SegmentHandoffNotifier handoffNotifier;
   private final Object handoffCondition = new Object();
-  private final Map<Long, SegmentIdentifier> segments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Long, SegmentIdWithShardSpec> segments = new ConcurrentHashMap<>();
   private final Appenderator appenderator;
 
   private volatile boolean shuttingDown = false;
@@ -114,7 +114,7 @@ public class AppenderatorPlumber implements Plumber
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
 
-  public Map<Long, SegmentIdentifier> getSegmentsView()
+  public Map<Long, SegmentIdWithShardSpec> getSegmentsView()
   {
     return ImmutableMap.copyOf(segments);
   }
@@ -147,9 +147,10 @@ public class AppenderatorPlumber implements Plumber
   }
 
   @Override
-  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier) throws IndexSizeExceededException
+  public IncrementalIndexAddResult add(InputRow row, Supplier<Committer> committerSupplier)
+      throws IndexSizeExceededException
   {
-    final SegmentIdentifier identifier = getSegmentIdentifier(row.getTimestampFromEpoch());
+    final SegmentIdWithShardSpec identifier = getSegmentIdentifier(row.getTimestampFromEpoch());
     if (identifier == null) {
       return Plumber.THROWAWAY;
     }
@@ -199,7 +200,7 @@ public class AppenderatorPlumber implements Plumber
 
     shuttingDown = true;
 
-    List<SegmentIdentifier> pending = appenderator.getSegments();
+    List<SegmentIdWithShardSpec> pending = appenderator.getSegments();
     if (pending.isEmpty()) {
       log.info("No segments to hand off.");
     } else {
@@ -221,7 +222,7 @@ public class AppenderatorPlumber implements Plumber
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       stopped = true;
@@ -235,7 +236,7 @@ public class AppenderatorPlumber implements Plumber
     }
   }
 
-  private SegmentIdentifier getSegmentIdentifier(long timestamp)
+  private SegmentIdWithShardSpec getSegmentIdentifier(long timestamp)
   {
     if (!rejectionPolicy.accept(timestamp)) {
       return null;
@@ -247,7 +248,7 @@ public class AppenderatorPlumber implements Plumber
     DateTime truncatedDateTime = segmentGranularity.bucketStart(DateTimes.utc(timestamp));
     final long truncatedTime = truncatedDateTime.getMillis();
 
-    SegmentIdentifier retVal = segments.get(truncatedTime);
+    SegmentIdWithShardSpec retVal = segments.get(truncatedTime);
 
     if (retVal == null) {
       final Interval interval = new Interval(
@@ -255,7 +256,7 @@ public class AppenderatorPlumber implements Plumber
           segmentGranularity.increment(truncatedDateTime)
       );
 
-      retVal = new SegmentIdentifier(
+      retVal = new SegmentIdWithShardSpec(
           schema.getDataSource(),
           interval,
           versioningPolicy.getVersion(interval),
@@ -282,7 +283,7 @@ public class AppenderatorPlumber implements Plumber
     }
   }
 
-  private void addSegment(final SegmentIdentifier identifier)
+  private void addSegment(final SegmentIdWithShardSpec identifier)
   {
     segments.put(identifier.getInterval().getStartMillis(), identifier);
     try {
@@ -307,7 +308,7 @@ public class AppenderatorPlumber implements Plumber
     }
   }
 
-  public void dropSegment(final SegmentIdentifier identifier)
+  public void dropSegment(final SegmentIdWithShardSpec identifier)
   {
     log.info("Dropping segment: %s", identifier);
     segments.remove(identifier.getInterval().getStartMillis());
@@ -396,8 +397,8 @@ public class AppenderatorPlumber implements Plumber
     );
     long minTimestamp = minTimestampAsDate.getMillis();
 
-    final List<SegmentIdentifier> appenderatorSegments = appenderator.getSegments();
-    final List<SegmentIdentifier> segmentsToPush = new ArrayList<>();
+    final List<SegmentIdWithShardSpec> appenderatorSegments = appenderator.getSegments();
+    final List<SegmentIdWithShardSpec> segmentsToPush = new ArrayList<>();
 
     if (shuttingDown) {
       log.info("Found [%,d] segments. Attempting to hand off all of them.", appenderatorSegments.size());
@@ -409,7 +410,7 @@ public class AppenderatorPlumber implements Plumber
           minTimestampAsDate
       );
 
-      for (SegmentIdentifier segment : appenderatorSegments) {
+      for (SegmentIdWithShardSpec segment : appenderatorSegments) {
         final Long intervalStart = segment.getInterval().getStartMillis();
         if (intervalStart < minTimestamp) {
           log.info("Adding entry [%s] for merge and push.", segment);
@@ -434,14 +435,7 @@ public class AppenderatorPlumber implements Plumber
       {
         final List<String> segmentIdentifierStrings = Lists.transform(
             segmentsToPush,
-            new Function<SegmentIdentifier, String>()
-            {
-              @Override
-              public String apply(SegmentIdentifier input)
-              {
-                return input.getIdentifierAsString();
-              }
-            }
+            SegmentIdWithShardSpec::toString
         );
 
         log.makeAlert(throwable, "Failed to publish merged indexes[%s]", schema.getDataSource())
@@ -452,7 +446,7 @@ public class AppenderatorPlumber implements Plumber
           // We're trying to shut down, and these segments failed to push. Let's just get rid of them.
           // This call will also delete possibly-partially-written files, so we don't need to do it explicitly.
           cleanShutdown = false;
-          for (SegmentIdentifier identifier : segmentsToPush) {
+          for (SegmentIdWithShardSpec identifier : segmentsToPush) {
             dropSegment(identifier);
           }
         }

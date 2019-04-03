@@ -30,14 +30,17 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ResourceLimitExceededException;
-import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.log.TestRequestLogger;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
-import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.SqlLifecycleFactory;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -76,9 +79,18 @@ import java.util.stream.Collectors;
 public class SqlResourceTest extends CalciteTestBase
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  private static final String DUMMY_SQL_QUERY_ID = "dummy";
 
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule
+  public QueryLogHook queryLogHook = QueryLogHook.create();
+  private SpecificSegmentsQuerySegmentWalker walker = null;
+  private TestRequestLogger testRequestLogger;
+  private SqlResource resource;
+  private HttpServletRequest req;
 
   @BeforeClass
   public static void setUpClass()
@@ -95,54 +107,61 @@ public class SqlResourceTest extends CalciteTestBase
     resourceCloser.close();
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create();
-
-  private SpecificSegmentsQuerySegmentWalker walker = null;
-
-  private SqlResource resource;
-
-  private HttpServletRequest req;
-
   @Before
   public void setUp() throws Exception
   {
     walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder());
 
-    final PlannerConfig plannerConfig = new PlannerConfig();
+    final PlannerConfig plannerConfig = new PlannerConfig()
+    {
+      @Override
+      public boolean shouldSerializeComplexValues()
+      {
+        return false;
+      }
+    };
     final DruidSchema druidSchema = CalciteTests.createMockSchema(conglomerate, walker, plannerConfig);
-    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker);
+    final SystemSchema systemSchema = CalciteTests.createMockSystemSchema(druidSchema, walker, plannerConfig);
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
     req = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(req.getRemoteAddr()).andReturn(null).once();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
             .andReturn(null)
             .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
             .anyTimes();
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-            .andReturn(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
             .anyTimes();
     EasyMock.replay(req);
 
+    testRequestLogger = new TestRequestLogger();
+
+    final PlannerFactory plannerFactory = new PlannerFactory(
+        druidSchema,
+        systemSchema,
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        operatorTable,
+        macroTable,
+        plannerConfig,
+        CalciteTests.TEST_AUTHORIZER_MAPPER,
+        CalciteTests.getJsonMapper()
+    );
+
     resource = new SqlResource(
         JSON_MAPPER,
-        new PlannerFactory(
-            druidSchema,
-            systemSchema,
-            CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
-            operatorTable,
-            macroTable,
-            plannerConfig,
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            CalciteTests.getJsonMapper()
+        new SqlLifecycleFactory(
+            plannerFactory,
+            new NoopServiceEmitter(),
+            testRequestLogger
         )
     );
   }
@@ -152,6 +171,38 @@ public class SqlResourceTest extends CalciteTestBase
   {
     walker.close();
     walker = null;
+  }
+
+  @Test
+  public void testUnauthorized() throws Exception
+  {
+    HttpServletRequest testRequest = EasyMock.createStrictMock(HttpServletRequest.class);
+    EasyMock.expect(testRequest.getRemoteAddr()).andReturn(null).once();
+    EasyMock.expect(testRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .anyTimes();
+    EasyMock.expect(testRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
+    EasyMock.expect(testRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
+            .anyTimes();
+    EasyMock.expect(testRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+            .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .anyTimes();
+    testRequest.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(testRequest);
+
+    try {
+      resource.doPost(
+          new SqlQuery("select count(*) from forbiddenDatasource", null, false, null),
+          testRequest
+      );
+      Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
+    }
+    catch (ForbiddenException e) {
+      // expected
+    }
+    Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
   }
 
   @Test
@@ -167,6 +218,7 @@ public class SqlResourceTest extends CalciteTestBase
         ),
         rows
     );
+    checkSqlRequestLog(true);
   }
 
   @Test
@@ -545,15 +597,19 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testExplainCountStar() throws Exception
   {
+    Map<String, Object> queryContext = ImmutableMap.of(PlannerContext.CTX_SQL_QUERY_ID, DUMMY_SQL_QUERY_ID);
     final List<Map<String, Object>> rows = doPost(
-        new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", ResultFormat.OBJECT, false, null)
+        new SqlQuery("EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo", ResultFormat.OBJECT, false, queryContext)
     ).rhs;
 
     Assert.assertEquals(
         ImmutableList.of(
             ImmutableMap.<String, Object>of(
                 "PLAN",
-                "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true}}], signature=[{a0:LONG}])\n"
+                StringUtils.format(
+                    "DruidQueryRel(query=[{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"descending\":false,\"virtualColumns\":[],\"filter\":null,\"granularity\":{\"type\":\"all\"},\"aggregations\":[{\"type\":\"count\",\"name\":\"a0\"}],\"postAggregations\":[],\"limit\":2147483647,\"context\":{\"skipEmptyBuckets\":true,\"sqlQueryId\":\"%s\"}}], signature=[{a0:LONG}])\n",
+                    DUMMY_SQL_QUERY_ID
+                )
             )
         ),
         rows
@@ -576,6 +632,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(QueryInterruptedException.UNKNOWN_EXCEPTION, exception.getErrorCode());
     Assert.assertEquals(ValidationException.class.getName(), exception.getErrorClass());
     Assert.assertTrue(exception.getMessage().contains("Column 'dim4' not found in any table"));
+    checkSqlRequestLog(false);
   }
 
   @Test
@@ -593,6 +650,7 @@ public class SqlResourceTest extends CalciteTestBase
         exception.getMessage()
                  .contains("Cannot build plan for query: SELECT dim1 FROM druid.foo ORDER BY dim1")
     );
+    checkSqlRequestLog(false);
   }
 
   @Test
@@ -610,6 +668,25 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertNotNull(exception);
     Assert.assertEquals(exception.getErrorCode(), QueryInterruptedException.RESOURCE_LIMIT_EXCEEDED);
     Assert.assertEquals(exception.getErrorClass(), ResourceLimitExceededException.class.getName());
+    checkSqlRequestLog(false);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void checkSqlRequestLog(boolean success)
+  {
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+
+    final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
+    final Map<String, Object> queryContext = (Map<String, Object>) stats.get("context");
+    Assert.assertEquals(success, stats.get("success"));
+    Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
+    Assert.assertTrue(stats.containsKey("sqlQuery/time"));
+    Assert.assertTrue(queryContext.containsKey(PlannerContext.CTX_SQL_QUERY_ID));
+    if (success) {
+      Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
+    } else {
+      Assert.assertTrue(stats.containsKey("exception"));
+    }
   }
 
   // Returns either an error or a result, assuming the result is a JSON object.

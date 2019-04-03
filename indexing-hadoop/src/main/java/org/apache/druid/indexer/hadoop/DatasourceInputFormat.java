@@ -83,7 +83,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
             i,
             segments.size(),
             dataSource,
-            segment.getSegment().getIdentifier(),
+            segment.getSegment().getId(),
             segment.getInterval()
         );
       }

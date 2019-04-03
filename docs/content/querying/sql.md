@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "SQL"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,9 +22,13 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
+  <!-- 
+    The format of the tables that describe the functions and operators 
+    should not be changed without updating the script create-sql-function-doc 
+    in web-console/script/create-sql-function-doc, because the script detects
+    patterns in this markdown file and parse it to TypeScript file for web console
+   -->
+
 # SQL
 
 <div class="note caution">
@@ -29,12 +38,12 @@ subject to change.
 
 Druid SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
 parser and planner based on [Apache Calcite](https://calcite.apache.org/). Druid SQL translates SQL into native Druid
-queries on the query broker (the first node you query), which are then passed down to data nodes as native Druid
-queries. Other than the (slight) overhead of translating SQL on the broker, there isn't an additional performance
+queries on the query Broker (the first process you query), which are then passed down to data processes as native Druid
+queries. Other than the (slight) overhead of translating SQL on the Broker, there isn't an additional performance
 penalty versus native queries.
 
 To enable Druid SQL, make sure you have set `druid.sql.enable = true` either in your common.runtime.properties or your
-broker's runtime.properties.
+Broker's runtime.properties.
 
 ## Query syntax
 
@@ -89,7 +98,7 @@ ordinal position (like `ORDER BY 2` to order by the second selected column). For
 can only order by the `__time` column. For aggregation queries, ORDER BY can order by any column.
 
 The LIMIT clause can be used to limit the number of rows returned. It can be used with any query type. It is pushed down
-to data nodes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
+to data processes for queries that run with the native TopN query type, but not the native GroupBy query type. Future
 versions of Druid will support pushing down limits using the native GroupBy query type as well. If you notice that
 adding a limit doesn't change performance very much, then it's likely that Druid didn't push down the limit for your
 query.
@@ -117,7 +126,12 @@ Only the COUNT aggregation can accept DISTINCT.
 |`MAX(expr)`|Takes the maximum of numbers.|
 |`AVG(expr)`|Averages numbers.|
 |`APPROX_COUNT_DISTINCT(expr)`|Counts distinct values of expr, which can be a regular column or a hyperUnique column. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`.|
-|`APPROX_QUANTILE(expr, probability, [resolution])`|Computes approximate quantiles on numeric or approxHistogram exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
+|`APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`|Counts distinct values of expr, which can be a regular column or an [HLL sketch](../development/extensions-core/datasketches-hll.html) column. The `lgK` and `tgtHllType` parameters are described in the HLL sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`|Counts distinct values of expr, which can be a regular column or a [Theta sketch](../development/extensions-core/datasketches-theta.html) column. The `size` parameter is described in the Theta sketch documentation. This is always approximate, regardless of the value of "useApproximateCountDistinct". See also `COUNT(DISTINCT expr)`. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`APPROX_QUANTILE(expr, probability, [resolution])`|Computes approximate quantiles on numeric or [approxHistogram](../development/extensions-core/approximate-histograms.html#approximate-histogram-aggregator) exprs. The "probability" should be between 0 and 1 (exclusive). The "resolution" is the number of centroids to use for the computation. Higher resolutions will give more precise results but also have higher overhead. If not provided, the default resolution is 50. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
+|`APPROX_QUANTILE_DS(expr, probability, [k])`|Computes approximate quantiles on numeric or [Quantiles sketch](../development/extensions-core/datasketches-quantiles.html) exprs. The "probability" should be between 0 and 1 (exclusive). The `k` parameter is described in the Quantiles sketch documentation. The [DataSketches extension](../development/extensions-core/datasketches-extension.html) must be loaded to use this function.|
+|`APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`|Computes approximate quantiles on numeric or [fixed buckets histogram](../development/extensions-core/approximate-histograms.html#fixed-buckets-histogram) exprs. The "probability" should be between 0 and 1 (exclusive). The `numBuckets`, `lowerLimit`, `upperLimit`, and `outlierHandlingMode` parameters are described in the fixed buckets histogram documentation. The [approximate histogram extension](../development/extensions-core/approximate-histograms.html) must be loaded to use this function.|
+|`BLOOM_FILTER(expr, numEntries)`|Computes a bloom filter from values produced by `expr`, with `numEntries` maximum number of distinct values before false positve rate increases. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.|
 
 ### Numeric functions
 
@@ -140,6 +154,14 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`x * y`|Multiplication.|
 |`x / y`|Division.|
 |`MOD(x, y)`|Modulo (remainder of x divided by y).|
+|`SIN(expr)`|Trigonometric sine of an angle expr.|
+|`COS(expr)`|Trigonometric cosine of an angle expr.|
+|`TAN(expr)`|Trigonometric tangent of an angle expr.|
+|`COT(expr)`|Trigonometric cotangent of an angle expr.|
+|`ASIN(expr)`|Arc sine of expr.|
+|`ACOS(expr)`|Arc cosine of expr.|
+|`ATAN(expr)`|Arc tangent of expr.|
+|`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
 
 ### String functions
 
@@ -156,6 +178,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`STRLEN(expr)`|Synonym for `LENGTH`.|
 |`LOOKUP(expr, lookupName)`|Look up expr in a registered [query-time lookup table](lookups.html).|
 |`LOWER(expr)`|Returns expr in all lowercase.|
+|`PARSE_LONG(string[, radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of needle within haystack, with indexes starting from 1. The search will begin at fromIndex, or 1 if fromIndex is not specified. If the needle is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression pattern and extract a capture group, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in expr, and returns the result.|
@@ -233,7 +256,7 @@ over the connection time zone.
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`NULLIF(value1, value2)`|Returns NULL if value1 and value2 match, else returns value1.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-
+|`BLOOM_FILTER_TEST(<expr>, <serialized-filter>)`|Returns true if the value is contained in the base64 serialized bloom filter. See [bloom filter extension](../development/extensions-core/bloom-filter.html) documentation for additional details.
 ### Unsupported features
 
 Druid does not support all SQL features, including:
@@ -320,25 +343,25 @@ computed in memory. See the TopN documentation for more details.
 - [GroupBy](groupbyquery.html) is used for all other aggregations, including any nested aggregation queries. Druid's
 GroupBy is a traditional aggregation engine: it delivers exact results and rankings and supports a wide variety of
 features. GroupBy aggregates in memory if it can, but it may spill to disk if it doesn't have enough memory to complete
-your query. Results are streamed back from data nodes through the broker if you ORDER BY the same expressions in your
+your query. Results are streamed back from data processes through the Broker if you ORDER BY the same expressions in your
 GROUP BY clause, or if you don't have an ORDER BY at all. If your query has an ORDER BY referencing expressions that
-don't appear in the GROUP BY clause (like aggregation functions) then the broker will materialize a list of results in
+don't appear in the GROUP BY clause (like aggregation functions) then the Broker will materialize a list of results in
 memory, up to a max of your LIMIT, if any. See the GroupBy documentation for details about tuning performance and memory
 use.
 
 If your query does nested aggregations (an aggregation subquery in your FROM clause) then Druid will execute it as a
 [nested GroupBy](groupbyquery.html#nested-groupbys). In nested GroupBys, the innermost aggregation is distributed, but
-all outer aggregations beyond that take place locally on the query broker.
+all outer aggregations beyond that take place locally on the query Broker.
 
 Semi-join queries containing WHERE clauses like `col IN (SELECT expr FROM ...)` are executed with a special process. The
-broker will first translate the subquery into a GroupBy to find distinct values of `expr`. Then, the broker will rewrite
+Broker will first translate the subquery into a GroupBy to find distinct values of `expr`. Then, the broker will rewrite
 the subquery to a literal filter, like `col IN (val1, val2, ...)` and run the outer query. The configuration parameter
 druid.sql.planner.maxSemiJoinRowsInMemory controls the maximum number of values that will be materialized for this kind
 of plan.
 
 For all native query types, filters on the `__time` column will be translated into top-level query "intervals" whenever
 possible, which allows Druid to use its global time index to quickly prune the set of data that must be scanned. In
-addition, Druid will use indexes local to each data node to further speed up WHERE evaluation. This can typically be
+addition, Druid will use indexes local to each data process to further speed up WHERE evaluation. This can typically be
 done for filters that involve boolean combinations of references to and functions of single columns, like
 `WHERE col1 = 'a' AND col2 = 'b'`, but not `WHERE col1 = col2`.
 
@@ -349,10 +372,10 @@ Druid SQL will use approximate algorithms in some situations:
 - The `COUNT(DISTINCT col)` aggregation functions by default uses a variant of
 [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf), a fast approximate distinct counting
 algorithm. Druid SQL will switch to exact distinct counts if you set "useApproximateCountDistinct" to "false", either
-through query context or through broker configuration.
+through query context or through Broker configuration.
 - GROUP BY queries over a single column with ORDER BY and LIMIT may be executed using the TopN engine, which uses an
 approximate algorithm. Druid SQL will switch to an exact grouping algorithm if you set "useApproximateTopN" to "false",
-either through query context or through broker configuration.
+either through query context or through Broker configuration.
 - The APPROX_COUNT_DISTINCT and APPROX_QUANTILE aggregation functions always use approximate algorithms, regardless
 of configuration.
 
@@ -442,7 +465,7 @@ you've downloaded the Avatica client jar, add it to your classpath and use the c
 Example code:
 
 ```java
-// Connect to /druid/v2/sql/avatica/ on your broker.
+// Connect to /druid/v2/sql/avatica/ on your Broker.
 String url = "jdbc:avatica:remote:url=http://localhost:8082/druid/v2/sql/avatica/";
 
 // Set any connection context parameters you need here (see "Connection context" below).
@@ -467,9 +490,9 @@ so avoid those.
 
 #### Connection stickiness
 
-Druid's JDBC server does not share connection state between brokers. This means that if you're using JDBC and have
-multiple Druid brokers, you should either connect to a specific broker, or use a load balancer with sticky sessions
-enabled. The Druid Router node provides connection stickiness when balancing JDBC requests, and can be used to achieve
+Druid's JDBC server does not share connection state between Brokers. This means that if you're using JDBC and have
+multiple Druid Brokers, you should either connect to a specific Broker, or use a load balancer with sticky sessions
+enabled. The Druid Router process provides connection stickiness when balancing JDBC requests, and can be used to achieve
 the necessary stickiness even with a normal non-sticky load balancer. Please see the
 [Router](../development/router.html) documentation for more details.
 
@@ -481,19 +504,23 @@ Druid SQL supports setting connection parameters on the client. The parameters i
 All other context parameters you provide will be attached to Druid queries and can affect how they run. See
 [Query context](query-context.html) for details on the possible options.
 
+Note that to specify an unique identifier for SQL query, use `sqlQueryId` instead of `queryId`. Setting `queryId` for a SQL
+request has no effect, all native queries underlying SQL will use auto-generated queryId.
+
 Connection context can be specified as JDBC connection properties or as a "context" object in the JSON API.
 
 |Parameter|Description|Default value|
 |---------|-----------|-------------|
-|`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|druid.sql.planner.sqlTimeZone on the broker (default: UTC)|
-|`useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the broker (default: true)|
-|`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.html) will be used instead.|druid.sql.planner.useApproximateTopN on the broker (default: true)|
-|`useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|druid.sql.planner.useFallback on the broker (default: false)|
+|`sqlQueryId`|Unique identifier given to this SQL query. For HTTP client, it will be returned in `X-Druid-SQL-Query-Id` header.|auto-generated|
+|`sqlTimeZone`|Sets the time zone for this connection, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|druid.sql.planner.sqlTimeZone on the Broker (default: UTC)|
+|`useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|druid.sql.planner.useApproximateCountDistinct on the Broker (default: true)|
+|`useApproximateTopN`|Whether to use approximate [TopN queries](topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](groupbyquery.html) will be used instead.|druid.sql.planner.useApproximateTopN on the Broker (default: true)|
+|`useFallback`|Whether to evaluate operations on the Broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|druid.sql.planner.useFallback on the Broker (default: false)|
 
 ### Retrieving metadata
 
-Druid brokers infer table and column metadata for each dataSource from segments loaded in the cluster, and use this to
-plan SQL queries. This metadata is cached on broker startup and also updated periodically in the background through
+Druid Brokers infer table and column metadata for each dataSource from segments loaded in the cluster, and use this to
+plan SQL queries. This metadata is cached on Broker startup and also updated periodically in the background through
 [SegmentMetadata queries](segmentmetadataquery.html). Background metadata refreshing is triggered by
 segments entering and exiting the cluster, and can also be throttled through configuration.
 
@@ -556,46 +583,65 @@ SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'druid' AND TABLE_
 ## SYSTEM SCHEMA
 
 The "sys" schema provides visibility into Druid segments, servers and tasks.
-For example to retrieve all segments for datasource "wikipedia", use the query:
-```sql
-SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
-```
 
 ### SEGMENTS table
 Segments table provides details on all Druid segments, whether they are published yet or not.
 
+#### CAVEAT
+Note that a segment can be served by more than one stream ingestion tasks or Historical processes, in that case it would have multiple replicas. These replicas are weakly consistent with each other when served by multiple ingestion tasks, until a segment is eventually served by a Historical, at that point the segment is immutable. Broker prefers to query a segment from Historical over an ingestion task. But if a segment has multiple realtime replicas, for eg. kafka index tasks, and one task is slower than other, then the sys.segments query results can vary for the duration of the tasks because only one of the ingestion tasks is queried by the Broker and it is not gauranteed that the same task gets picked everytime. The `num_rows` column of segments table can have inconsistent values during this period. There is an open [issue](https://github.com/apache/incubator-druid/issues/5915) about this inconsistency with stream ingestion tasks.
 
-|Column|Notes|
-|------|-----|
-|segment_id|Unique segment identifier|
-|datasource|Name of datasource|
-|start|Interval start time (in ISO 8601 format)|
-|end|Interval end time (in ISO 8601 format)|
-|size|Size of segment in bytes|
-|version|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
-|partition_num|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
-|num_replicas|Number of replicas of this segment currently being served|
-|num_rows|Number of rows in current segment, this value could be null if unkown to broker at query time|
-|is_published|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store|
-|is_available|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any server(historical or realtime)|
-|is_realtime|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
-|payload|JSON-serialized data segment payload|
+|Column|Type|Notes|
+|------|-----|-----|
+|segment_id|STRING|Unique segment identifier|
+|datasource|STRING|Name of datasource|
+|start|STRING|Interval start time (in ISO 8601 format)|
+|end|STRING|Interval end time (in ISO 8601 format)|
+|size|LONG|Size of segment in bytes|
+|version|STRING|Version string (generally an ISO8601 timestamp corresponding to when the segment set was first started). Higher version means the more recently created segment. Version comparing is based on string comparison.|
+|partition_num|LONG|Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous)|
+|num_replicas|LONG|Number of replicas of this segment currently being served|
+|num_rows|LONG|Number of rows in current segment, this value could be null if unkown to Broker at query time|
+|is_published|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store with `used=1`|
+|is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime)|
+|is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
+|payload|STRING|JSON-serialized data segment payload|
+
+For example to retrieve all segments for datasource "wikipedia", use the query:
+
+```sql
+SELECT * FROM sys.segments WHERE datasource = 'wikipedia'
+```
+
+Another example to retrieve segments total_size, avg_size, avg_num_rows and num_segments per datasource:
+
+```sql
+SELECT
+    datasource,
+    SUM("size") AS total_size,
+    CASE WHEN SUM("size") = 0 THEN 0 ELSE SUM("size") / (COUNT(*) FILTER(WHERE "size" > 0)) END AS avg_size,
+    CASE WHEN SUM(num_rows) = 0 THEN 0 ELSE SUM("num_rows") / (COUNT(*) FILTER(WHERE num_rows > 0)) END AS avg_num_rows,
+    COUNT(*) AS num_segments
+FROM sys.segments
+GROUP BY 1
+ORDER BY 2 DESC
+```
 
 ### SERVERS table
-Servers table lists all data servers(any server that hosts a segment). It includes both historicals and peons.
+Servers table lists all data servers(any server that hosts a segment). It includes both Historicals and Peons.
 
-|Column|Notes|
-|------|-----|
-|server|Server name in the form host:port|
-|host|Hostname of the server|
-|plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
-|tls_port|TLS port of the server, or -1 if TLS is disabled|
-|server_type|Type of Druid service. Possible values include: historical, realtime and indexer_executor(peon).|
-|tier|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
-|current_size|Current size of segments in bytes on this server|
-|max_size|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
+|Column|Type|Notes|
+|------|-----|-----|
+|server|STRING|Server name in the form host:port|
+|host|STRING|Hostname of the server|
+|plaintext_port|LONG|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|tls_port|LONG|TLS port of the server, or -1 if TLS is disabled|
+|server_type|STRING|Type of Druid service. Possible values include: Historical, realtime and indexer_executor(Peon).|
+|tier|STRING|Distribution tier see [druid.server.tier](#../configuration/index.html#Historical-General-Configuration)|
+|current_size|LONG|Current size of segments in bytes on this server|
+|max_size|LONG|Max size in bytes this server recommends to assign to segments see [druid.server.maxSize](#../configuration/index.html#Historical-General-Configuration)|
 
 To retrieve information about all servers, use the query:
+
 ```sql
 SELECT * FROM sys.servers;
 ```
@@ -604,13 +650,14 @@ SELECT * FROM sys.servers;
 
 SERVER_SEGMENTS is used to join servers with segments table
 
-|Column|Notes|
-|------|-----|
-|server|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
-|segment_id|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
+|Column|Type|Notes|
+|------|-----|-----|
+|server|STRING|Server name in format host:port (Primary key of [servers table](#SERVERS-table))|
+|segment_id|STRING|Segment identifier (Primary key of [segments table](#SEGMENTS-table))|
 
 JOIN between "servers" and "segments" can be used to query the number of segments for a specific datasource, 
 grouped by server, example query:
+
 ```sql
 SELECT count(segments.segment_id) as num_segments from sys.segments as segments 
 INNER JOIN sys.server_segments as server_segments 
@@ -626,48 +673,62 @@ GROUP BY servers.server;
 The tasks table provides information about active and recently-completed indexing tasks. For more information 
 check out [ingestion tasks](#../ingestion/tasks.html)
 
-|Column|Notes|
-|------|-----|
-|task_id|Unique task identifier|
-|type|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.md)|
-|datasource|Datasource name being indexed|
-|created_time|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to 1970-01-01T00:00:00Z|
-|queue_insertion_time|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the overlord|
-|status|Status of a task can be RUNNING, FAILED, SUCCESS|
-|runner_status|Runner status of a completed task would be NONE, for in-progress tasks this can be RUNNING, WAITING, PENDING|
-|duration|Time it took to finish the task in milliseconds, this value is present only for completed tasks|
-|location|Server name where this task is running in the format host:port, this information is present only for RUNNING tasks|
-|host|Hostname of the server where task is running|
-|plaintext_port|Unsecured port of the server, or -1 if plaintext traffic is disabled|
-|tls_port|TLS port of the server, or -1 if TLS is disabled|
-|error_msg|Detailed error message in case of FAILED tasks|
+|Column|Type|Notes|
+|------|-----|-----|
+|task_id|STRING|Unique task identifier|
+|type|STRING|Task type, for example this value is "index" for indexing tasks. See [tasks-overview](../ingestion/tasks.html)|
+|datasource|STRING|Datasource name being indexed|
+|created_time|STRING|Timestamp in ISO8601 format corresponding to when the ingestion task was created. Note that this value is populated for completed and waiting tasks. For running and pending tasks this value is set to 1970-01-01T00:00:00Z|
+|queue_insertion_time|STRING|Timestamp in ISO8601 format corresponding to when this task was added to the queue on the Overlord|
+|status|STRING|Status of a task can be RUNNING, FAILED, SUCCESS|
+|runner_status|STRING|Runner status of a completed task would be NONE, for in-progress tasks this can be RUNNING, WAITING, PENDING|
+|duration|LONG|Time it took to finish the task in milliseconds, this value is present only for completed tasks|
+|location|STRING|Server name where this task is running in the format host:port, this information is present only for RUNNING tasks|
+|host|STRING|Hostname of the server where task is running|
+|plaintext_port|LONG|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|tls_port|LONG|TLS port of the server, or -1 if TLS is disabled|
+|error_msg|STRING|Detailed error message in case of FAILED tasks|
 
 For example, to retrieve tasks information filtered by status, use the query
+
 ```sql
-SELECT * FROM sys.tasks where status='FAILED';
+SELECT * FROM sys.tasks WHERE status='FAILED';
 ```
 
+Note that sys tables may not support all the Druid SQL Functions.
 
 ## Server configuration
 
-The Druid SQL server is configured through the following properties on the broker.
+The Druid SQL server is configured through the following properties on the Broker.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.sql.enable`|Whether to enable SQL at all, including background metadata fetching. If false, this overrides all other SQL-related properties and disables SQL metadata, serving, and planning completely.|false|
 |`druid.sql.avatica.enable`|Whether to enable JDBC querying at `/druid/v2/sql/avatica/`.|true|
-|`druid.sql.avatica.maxConnections`|Maximum number of open connections for the Avatica server. These are not HTTP connections, but are logical client connections that may span multiple HTTP connections.|50|
+|`druid.sql.avatica.maxConnections`|Maximum number of open connections for the Avatica server. These are not HTTP connections, but are logical client connections that may span multiple HTTP connections.|25|
 |`druid.sql.avatica.maxRowsPerFrame`|Maximum number of rows to return in a single JDBC frame. Setting this property to -1 indicates that no row limit should be applied. Clients can optionally specify a row limit in their requests; if a client specifies a row limit, the lesser value of the client-provided limit and `maxRowsPerFrame` will be used.|5,000|
-|`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|1|
+|`druid.sql.avatica.maxStatementsPerConnection`|Maximum number of simultaneous open statements per Avatica client connection.|4|
 |`druid.sql.avatica.connectionIdleTimeout`|Avatica client connection idle timeout.|PT5M|
 |`druid.sql.http.enable`|Whether to enable JSON over HTTP querying at `/druid/v2/sql/`.|true|
 |`druid.sql.planner.maxQueryCount`|Maximum number of queries to issue, including nested queries. Set to 1 to disable sub-queries, or set to 0 for unlimited.|8|
 |`druid.sql.planner.maxSemiJoinRowsInMemory`|Maximum number of rows to keep in memory for executing two-stage semi-join queries like `SELECT * FROM Employee WHERE DeptName IN (SELECT DeptName FROM Dept)`.|100000|
 |`druid.sql.planner.maxTopNLimit`|Maximum threshold for a [TopN query](../querying/topnquery.html). Higher limits will be planned as [GroupBy queries](../querying/groupbyquery.html) instead.|100000|
 |`druid.sql.planner.metadataRefreshPeriod`|Throttle for metadata refreshes.|PT1M|
-|`druid.sql.planner.selectPageSize`|Page size threshold for [Select queries](../querying/select-query.html). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
+|`druid.sql.planner.selectThreshold`|Page size threshold for [Select queries](../querying/select-query.html). Select queries for larger resultsets will be issued back-to-back using pagination.|1000|
 |`druid.sql.planner.useApproximateCountDistinct`|Whether to use an approximate cardinalty algorithm for `COUNT(DISTINCT foo)`.|true|
 |`druid.sql.planner.useApproximateTopN`|Whether to use approximate [TopN queries](../querying/topnquery.html) when a SQL query could be expressed as such. If false, exact [GroupBy queries](../querying/groupbyquery.html) will be used instead.|true|
-|`druid.sql.planner.useFallback`|Whether to evaluate operations on the broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|false|
+|`druid.sql.planner.useFallback`|Whether to evaluate operations on the Broker when they cannot be expressed as Druid queries. This option is not recommended for production since it can generate unscalable query plans. If false, SQL queries that cannot be translated to Druid queries will fail.|false|
 |`druid.sql.planner.requireTimeCondition`|Whether to require SQL to have filter conditions on __time column so that all generated native queries will have user specified intervals. If true, all queries wihout filter condition on __time column will fail|false|
 |`druid.sql.planner.sqlTimeZone`|Sets the default time zone for the server, which will affect how time functions and timestamp literals behave. Should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|UTC|
+|`druid.sql.planner.metadataSegmentCacheEnable`|Whether to keep a cache of published segments in broker. If true, broker polls coordinator in background to get segments from metadata store and maintains a local cache. If false, coordinator's REST api will be invoked when broker needs published segments info.|false|
+|`druid.sql.planner.metadataSegmentPollPeriod`|How often to poll coordinator for published segments list if `druid.sql.planner.metadataSegmentCacheEnable` is set to true. Poll period is in milliseconds. |60000|
+
+## SQL Metrics
+
+Broker will emit the following metrics for SQL.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`sqlQuery/time`|Milliseconds taken to complete a SQL.|id, nativeQueryIds, dataSource, remoteAddress, success.|< 1s|
+|`sqlQuery/bytes`|number of bytes returned in SQL response.|id, nativeQueryIds, dataSource, remoteAddress, success.| |
+

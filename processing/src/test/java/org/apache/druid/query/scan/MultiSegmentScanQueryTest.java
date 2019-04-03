@@ -22,15 +22,16 @@ package org.apache.druid.query.scan;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.MergeSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -42,7 +43,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
@@ -60,6 +61,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class MultiSegmentScanQueryTest
@@ -71,7 +73,8 @@ public class MultiSegmentScanQueryTest
 
   private static final QueryRunnerFactory<ScanResultValue, ScanQuery> factory = new ScanQueryRunnerFactory(
       toolChest,
-      new ScanQueryEngine()
+      new ScanQueryEngine(),
+      new ScanQueryConfig()
   );
 
   // time modified version of druid.sample.numeric.tsv
@@ -123,20 +126,14 @@ public class MultiSegmentScanQueryTest
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));
   }
 
-  private static String makeIdentifier(IncrementalIndex index, String version)
+  private static SegmentId makeIdentifier(IncrementalIndex index, String version)
   {
     return makeIdentifier(index.getInterval(), version);
   }
 
-  private static String makeIdentifier(Interval interval, String version)
+  private static SegmentId makeIdentifier(Interval interval, String version)
   {
-    return DataSegment.makeDataSegmentIdentifier(
-        QueryRunnerTestHelper.dataSource,
-        interval.getStart(),
-        interval.getEnd(),
-        version,
-        NoneShardSpec.instance()
-    );
+    return SegmentId.of(QueryRunnerTestHelper.dataSource, interval, version, NoneShardSpec.instance());
   }
 
   private static IncrementalIndex newIndex(String minTimeStamp)
@@ -167,7 +164,10 @@ public class MultiSegmentScanQueryTest
   @Parameterized.Parameters(name = "limit={0},batchSize={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    return QueryRunnerTestHelper.cartesian(Arrays.asList(0, 1, 3, 7, 10, 20, 1000), Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000));
+    return QueryRunnerTestHelper.cartesian(
+        Arrays.asList(0, 1, 3, 7, 10, 20, 1000),
+        Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000)
+    );
   }
 
   private final int limit;
@@ -179,11 +179,11 @@ public class MultiSegmentScanQueryTest
     this.batchSize = batchSize;
   }
 
-  private ScanQuery.ScanQueryBuilder newBuilder()
+  private Druids.ScanQueryBuilder newBuilder()
   {
-    return ScanQuery.newScanQueryBuilder()
+    return Druids.newScanQueryBuilder()
                     .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-                    .intervals(SelectQueryRunnerTest.I_0112_0114)
+                    .intervals(SelectQueryRunnerTest.I_0112_0114_SPEC)
                     .batchSize(batchSize)
                     .columns(Collections.emptyList())
                     .legacy(false)
@@ -196,8 +196,9 @@ public class MultiSegmentScanQueryTest
     ScanQuery query = newBuilder().build();
     List<ScanResultValue> results = factory
         .mergeRunners(
-            MoreExecutors.sameThreadExecutor(),
-            ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1)))
+            Execs.directExecutor(),
+            ImmutableList.of(factory.createRunner(segment0), factory.createRunner(segment1))
+        )
         .run(QueryPlus.wrap(query), new HashMap<>())
         .toList();
     int totalCount = 0;
@@ -215,7 +216,8 @@ public class MultiSegmentScanQueryTest
   public void testMergeResultsWithLimit()
   {
     QueryRunner<ScanResultValue> runner = toolChest.mergeResults(
-        new QueryRunner<ScanResultValue>() {
+        new QueryRunner<ScanResultValue>()
+        {
           @Override
           public Sequence<ScanResultValue> run(
               QueryPlus<ScanResultValue> queryPlus,

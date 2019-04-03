@@ -22,7 +22,6 @@ package org.apache.druid.query.groupby.epinephelinae;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -261,9 +260,10 @@ public class ParallelCombiner<KeyType>
     throw new ISE(
         "Cannot find a proper leaf combine degree for the combining tree. "
         + "Each node of the combining tree requires a buffer of [%d] bytes. "
-        + "Try increasing druid.processing.buffer.sizeBytes for larger buffer or "
+        + "Try increasing druid.processing.buffer.sizeBytes (currently [%d] bytes) for larger buffer or "
         + "druid.query.groupBy.intermediateCombineDegree for a smaller tree",
-        requiredMinimumBufferCapacity
+        requiredMinimumBufferCapacity,
+        combineBuffer.capacity()
     );
   }
 
@@ -418,7 +418,7 @@ public class ParallelCombiner<KeyType>
               }
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
 
             grouper.finish();

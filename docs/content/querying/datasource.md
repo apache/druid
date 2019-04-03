@@ -1,3 +1,8 @@
+---
+layout: doc_page
+title: "Datasources"
+---
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -17,11 +22,7 @@
   ~ under the License.
   -->
 
----
-layout: doc_page
----
-
-## Datasources
+# Datasources
 
 A data source is the Druid equivalent of a database table. However, a query can also masquerade as a data source, providing subquery-like functionality. Query data sources are currently supported only by [GroupBy](../querying/groupbyquery.html) queries.
 
@@ -47,7 +48,7 @@ This data source unions two or more table data sources.
 ```
 
 Note that the data sources being unioned should have the same schema.
-Union Queries should be always sent to the broker/router node and are *NOT* supported directly by the historical nodes. 
+Union Queries should be always sent to a Broker/Router process and are *NOT* supported directly by the Historical processes. 
 
 ### Query Data Source
 

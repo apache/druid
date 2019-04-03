@@ -24,9 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.Firehose;
@@ -65,6 +63,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
 public class RealtimeManager implements QuerySegmentWalker
 {
@@ -175,7 +174,7 @@ public class RealtimeManager implements QuerySegmentWalker
 
     return partitionChiefs == null ? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
         factory.mergeRunners(
-            MoreExecutors.sameThreadExecutor(),
+            Execs.directExecutor(),
             // Chaining query runners which wait on submitted chain query runners can make executor pools deadlock
             Iterables.transform(
                 partitionChiefs.values(), new Function<FireChief, QueryRunner<T>>()
@@ -202,7 +201,7 @@ public class RealtimeManager implements QuerySegmentWalker
            ? new NoopQueryRunner<T>()
            : factory.getToolchest().mergeResults(
                factory.mergeRunners(
-                   MoreExecutors.sameThreadExecutor(),
+                   Execs.directExecutor(),
                    Iterables.transform(
                        specs,
                        new Function<SegmentDescriptor, QueryRunner<T>>()
@@ -245,7 +244,7 @@ public class RealtimeManager implements QuerySegmentWalker
         return fireDepartment.connect();
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 
@@ -319,7 +318,7 @@ public class RealtimeManager implements QuerySegmentWalker
         }
       }
       catch (IOException e) {
-        throw Throwables.propagate(e);
+        throw new RuntimeException(e);
       }
     }
 

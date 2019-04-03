@@ -52,7 +52,6 @@ import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
-import org.apache.druid.server.coordination.broker.DruidBroker;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
@@ -96,7 +95,7 @@ public class CliBroker extends ServerRunnable
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
 
           binder.bind(CachingClusteredClient.class).in(LazySingleton.class);
-          binder.bind(BrokerServerView.class).in(LazySingleton.class);
+          LifecycleModule.register(binder, BrokerServerView.class);
           binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
           JsonConfigProvider.bind(binder, "druid.broker.cache", CacheConfig.class);
@@ -119,7 +118,6 @@ public class CliBroker extends ServerRunnable
           Jerseys.addResource(binder, ClientInfoResource.class);
 
           LifecycleModule.register(binder, BrokerQueryResource.class);
-          LifecycleModule.register(binder, DruidBroker.class);
 
           Jerseys.addResource(binder, HttpServerInventoryViewResource.class);
 
@@ -128,12 +126,15 @@ public class CliBroker extends ServerRunnable
           LifecycleModule.register(binder, Server.class);
 
           binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.BROKER);
-          
-          binder
-              .bind(DiscoverySideEffectsProvider.Child.class)
-              .toProvider(new DiscoverySideEffectsProvider(NodeType.BROKER, ImmutableList.of(LookupNodeService.class)))
-              .in(LazySingleton.class);
-          LifecycleModule.registerKey(binder, Key.get(DiscoverySideEffectsProvider.Child.class));
+
+          bindAnnouncer(
+              binder,
+              DiscoverySideEffectsProvider
+                  .builder(NodeType.BROKER)
+                  .serviceClasses(ImmutableList.of(LookupNodeService.class))
+                  .useLegacyAnnouncer(true)
+                  .build()
+          );
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));

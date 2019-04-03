@@ -23,7 +23,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryWatcher;
 
@@ -76,7 +76,7 @@ public class QueryManager implements QueryWatcher
             }
           }
         },
-        MoreExecutors.sameThreadExecutor()
+        Execs.directExecutor()
     );
   }
 

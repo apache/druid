@@ -131,22 +131,19 @@ public class AppendTest
             Intervals.of("2011-01-14T22:00:00.000Z/2011-01-16T00:00:00.000Z")
         )
     );
-    segment = new QueryableIndexSegment(null, appendedIndex);
+    segment = new QueryableIndexSegment(appendedIndex, null);
 
     // (3, 4) cover overlapping segments of the form
     // |------------|
     //     |-----|
     QueryableIndex append2 = schemalessIndexTest.getAppendedIncrementalIndex(
-        Arrays.asList(
-            new Pair<String, AggregatorFactory[]>("append.json.3", METRIC_AGGS_NO_UNIQ),
-            new Pair<String, AggregatorFactory[]>("append.json.4", METRIC_AGGS)
-        ),
+        Arrays.asList(new Pair<>("append.json.3", METRIC_AGGS_NO_UNIQ), new Pair<>("append.json.4", METRIC_AGGS)),
         Arrays.asList(
             Intervals.of("2011-01-12T00:00:00.000Z/2011-01-16T00:00:00.000Z"),
             Intervals.of("2011-01-13T00:00:00.000Z/2011-01-14T00:00:00.000Z")
         )
     );
-    segment2 = new QueryableIndexSegment(null, append2);
+    segment2 = new QueryableIndexSegment(append2, null);
 
     // (5, 6, 7) test gaps that can be created in data because of rows being discounted
     // |-------------|
@@ -154,9 +151,9 @@ public class AppendTest
     //          |---|
     QueryableIndex append3 = schemalessIndexTest.getAppendedIncrementalIndex(
         Arrays.asList(
-            new Pair<String, AggregatorFactory[]>("append.json.5", METRIC_AGGS),
-            new Pair<String, AggregatorFactory[]>("append.json.6", METRIC_AGGS),
-            new Pair<String, AggregatorFactory[]>("append.json.7", METRIC_AGGS)
+            new Pair<>("append.json.5", METRIC_AGGS),
+            new Pair<>("append.json.6", METRIC_AGGS),
+            new Pair<>("append.json.7", METRIC_AGGS)
         ),
         Arrays.asList(
             Intervals.of("2011-01-12T00:00:00.000Z/2011-01-22T00:00:00.000Z"),
@@ -164,14 +161,14 @@ public class AppendTest
             Intervals.of("2011-01-18T00:00:00.000Z/2011-01-21T00:00:00.000Z")
         )
     );
-    segment3 = new QueryableIndexSegment(null, append3);
+    segment3 = new QueryableIndexSegment(append3, null);
   }
 
   @Test
   public void testTimeBoundary()
   {
     List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeBoundaryResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(

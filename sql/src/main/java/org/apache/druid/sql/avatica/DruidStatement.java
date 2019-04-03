@@ -20,7 +20,6 @@
 package org.apache.druid.sql.avatica;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
@@ -33,9 +32,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.sql.calcite.planner.DruidPlanner;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.planner.PlannerResult;
+import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.SqlLifecycle;
 import org.apache.druid.sql.calcite.rel.QueryMaker;
 
 import javax.annotation.concurrent.GuardedBy;
@@ -52,56 +50,48 @@ import java.util.concurrent.ExecutorService;
 public class DruidStatement implements Closeable
 {
   public static final long START_OFFSET = 0;
-
-  enum State
-  {
-    NEW,
-    PREPARED,
-    RUNNING,
-    DONE
-  }
-
   private final String connectionId;
   private final int statementId;
   private final Map<String, Object> queryContext;
+  private final SqlLifecycle sqlLifecycle;
   private final Runnable onClose;
   private final Object lock = new Object();
-
   /**
    * Query metrics can only be used within a single thread. Because results can be paginated into multiple
    * JDBC frames (each frame being processed by a potentially different thread), the thread that closes the yielder
    * (resulting in a QueryMetrics emit() call) may not be the same thread that created the yielder (which initializes
    * DefaultQueryMetrics with the current thread as the owner). Create and close the yielder with this
    * single-thread executor to prevent this from happening.
-   *
+   * <p>
    * The thread owner check in DefaultQueryMetrics is more aggressive than needed for this specific JDBC case, since
    * the JDBC frames are processed sequentially. If the thread owner check is changed/loosened to permit this use case,
    * we would not need to use this executor.
-   *
+   * <p>
    * See discussion at:
    * https://github.com/apache/incubator-druid/pull/4288
    * https://github.com/apache/incubator-druid/pull/4415
    */
   private final ExecutorService yielderOpenCloseExecutor;
-
   private State state = State.NEW;
   private String query;
   private long maxRowCount;
-  private PlannerResult plannerResult;
   private Meta.Signature signature;
   private Yielder<Object[]> yielder;
   private int offset = 0;
+  private Throwable throwable;
 
   public DruidStatement(
       final String connectionId,
       final int statementId,
       final Map<String, Object> queryContext,
+      final SqlLifecycle sqlLifecycle,
       final Runnable onClose
   )
   {
     this.connectionId = Preconditions.checkNotNull(connectionId, "connectionId");
     this.statementId = statementId;
     this.queryContext = queryContext == null ? ImmutableMap.of() : queryContext;
+    this.sqlLifecycle = Preconditions.checkNotNull(sqlLifecycle, "sqlLifecycle");
     this.onClose = Preconditions.checkNotNull(onClose, "onClose");
     this.yielderOpenCloseExecutor = Execs.singleThreaded(
         StringUtils.format("JDBCYielderOpenCloseExecutor-connection-%s-statement-%d", connectionId, statementId)
@@ -153,20 +143,20 @@ public class DruidStatement implements Closeable
   }
 
   public DruidStatement prepare(
-      final PlannerFactory plannerFactory,
       final String query,
       final long maxRowCount,
       final AuthenticationResult authenticationResult
   )
   {
-    try (final DruidPlanner planner = plannerFactory.createPlanner(queryContext)) {
-      synchronized (lock) {
+    synchronized (lock) {
+      try {
         ensure(State.NEW);
-        this.plannerResult = planner.plan(query, authenticationResult);
+        sqlLifecycle.initialize(query, queryContext);
+        sqlLifecycle.planAndAuthorize(authenticationResult);
         this.maxRowCount = maxRowCount;
         this.query = query;
         this.signature = Meta.Signature.create(
-            createColumnMetaData(plannerResult.rowType()),
+            createColumnMetaData(sqlLifecycle.rowType()),
             query,
             new ArrayList<>(),
             Meta.CursorFactory.ARRAY,
@@ -174,18 +164,19 @@ public class DruidStatement implements Closeable
         );
         this.state = State.PREPARED;
       }
-    }
-    catch (Throwable t) {
-      try {
-        close();
+      catch (Throwable t) {
+        this.throwable = t;
+        try {
+          close();
+        }
+        catch (Throwable t1) {
+          t.addSuppressed(t1);
+        }
+        throw new RuntimeException(t);
       }
-      catch (Throwable t1) {
-        t.addSuppressed(t1);
-      }
-      throw Throwables.propagate(t);
-    }
 
-    return this;
+      return this;
+    }
   }
 
   public DruidStatement execute()
@@ -195,7 +186,7 @@ public class DruidStatement implements Closeable
 
       try {
         final Sequence<Object[]> baseSequence = yielderOpenCloseExecutor.submit(
-            () -> plannerResult.run()
+            sqlLifecycle::execute
         ).get();
 
         // We can't apply limits greater than Integer.MAX_VALUE, ignore them.
@@ -208,13 +199,14 @@ public class DruidStatement implements Closeable
         state = State.RUNNING;
       }
       catch (Throwable t) {
+        this.throwable = t;
         try {
           close();
         }
         catch (Throwable t1) {
           t.addSuppressed(t1);
         }
-        throw Throwables.propagate(t);
+        throw new RuntimeException(t);
       }
 
       return this;
@@ -251,7 +243,7 @@ public class DruidStatement implements Closeable
   {
     synchronized (lock) {
       ensure(State.PREPARED, State.RUNNING, State.DONE);
-      return plannerResult.rowType();
+      return sqlLifecycle.rowType();
     }
   }
 
@@ -292,6 +284,7 @@ public class DruidStatement implements Closeable
         return new Meta.Frame(fetchOffset, done, rows);
       }
       catch (Throwable t) {
+        this.throwable = t;
         try {
           close();
         }
@@ -306,11 +299,11 @@ public class DruidStatement implements Closeable
   @Override
   public void close()
   {
-    synchronized (lock) {
-      final State oldState = state;
-      state = State.DONE;
-
-      try {
+    State oldState = null;
+    try {
+      synchronized (lock) {
+        oldState = state;
+        state = State.DONE;
         if (yielder != null) {
           Yielder<Object[]> theYielder = this.yielder;
           this.yielder = null;
@@ -327,28 +320,32 @@ public class DruidStatement implements Closeable
           yielderOpenCloseExecutor.shutdownNow();
         }
       }
-      catch (Throwable t) {
-        if (oldState != State.DONE) {
-          // First close. Run the onClose function.
-          try {
-            onClose.run();
-          }
-          catch (Throwable t1) {
-            t.addSuppressed(t1);
-          }
-        }
-
-        throw Throwables.propagate(t);
-      }
-
+    }
+    catch (Throwable t) {
       if (oldState != State.DONE) {
         // First close. Run the onClose function.
         try {
           onClose.run();
+          sqlLifecycle.emitLogsAndMetrics(t, null, -1);
         }
-        catch (Throwable t) {
-          throw Throwables.propagate(t);
+        catch (Throwable t1) {
+          t.addSuppressed(t1);
         }
+      }
+
+      throw new RuntimeException(t);
+    }
+
+    if (oldState != State.DONE) {
+      // First close. Run the onClose function.
+      try {
+        if (!(this.throwable instanceof ForbiddenException)) {
+          sqlLifecycle.emitLogsAndMetrics(this.throwable, null, -1);
+        }
+        onClose.run();
+      }
+      catch (Throwable t) {
+        throw new RuntimeException(t);
       }
     }
   }
@@ -362,5 +359,13 @@ public class DruidStatement implements Closeable
       }
     }
     throw new ISE("Invalid action for state[%s]", state);
+  }
+
+  enum State
+  {
+    NEW,
+    PREPARED,
+    RUNNING,
+    DONE
   }
 }

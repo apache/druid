@@ -85,7 +85,7 @@ public class MaterializedViewUtils
   }
 
   /**
-   * caculate the intervals which are covered by interval2, but not covered by interval1.
+   * calculate the intervals which are covered by interval2, but not covered by interval1.
    * result intervals = interval2 - interval1 ∩ interval2
    * e.g. 
    * a list of interval2: ["2018-04-01T00:00:00.000Z/2018-04-02T00:00:00.000Z",

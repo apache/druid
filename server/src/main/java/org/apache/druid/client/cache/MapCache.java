@@ -20,6 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.google.common.primitives.Ints;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 import java.nio.ByteBuffer;
@@ -142,6 +143,15 @@ public class MapCache implements Cache
         baseMap.remove(key);
       }
     }
+  }
+
+  @Override
+  @LifecycleStop
+  public void close()
+  {
+    baseMap.clear();
+    byteCountingLRUMap.clear();
+    namespaceId.clear();
   }
 
   private byte[] getNamespaceId(final String identifier)
