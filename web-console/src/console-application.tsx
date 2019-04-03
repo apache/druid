@@ -17,6 +17,7 @@
  */
 
 import { Intent } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
@@ -61,7 +62,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
       // Status works but SQL 405s => the SQL endpoint is disabled
       AppToaster.show({
-        iconName: 'error',
+        icon: IconNames.ERROR,
         intent: Intent.DANGER,
         timeout: 120000,
         /* tslint:disable:jsx-alignment */

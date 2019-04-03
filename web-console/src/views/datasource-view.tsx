@@ -17,11 +17,11 @@
  */
 
 import { Button, Intent, Switch } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from "react-table";
 
-import { IconNames } from "../components/filler";
 import { RuleEditor } from '../components/rule-editor';
 import { TableColumnSelection } from "../components/table-column-selection";
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
@@ -33,7 +33,7 @@ import {
   countBy,
   formatBytes,
   formatNumber,
-  getDruidErrorMessage,
+  getDruidErrorMessage, LocalStorageKeys,
   lookupBy,
   pluralIfNeeded,
   queryDruidSql,
@@ -42,7 +42,6 @@ import {
 
 import "./datasource-view.scss";
 
-const datasourceTableColumnSelection = "datasource-table-column-selection";
 const tableColumns: string[] = ["Datasource", "Availability", "Retention", "Compaction", "Size", "Num rows", "Actions"];
 
 export interface DatasourcesViewProps extends React.Props<any> {
@@ -111,7 +110,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
     };
 
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
-      datasourceTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
 
@@ -249,11 +248,11 @@ GROUP BY 1`);
     </AsyncActionDialog>;
   }
 
-  private saveRules = async (datasource: string, rules: any[], author: string, comment: string) => {
+  private saveRules = async (datasource: string, rules: any[], comment: string) => {
     try {
       await axios.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
         headers: {
-          "X-Druid-Author": author,
+          "X-Druid-Author": "console",
           "X-Druid-Comment": comment
         }
       });
@@ -527,12 +526,12 @@ GROUP BY 1`);
       <div className="control-bar">
         <div className="control-label">Datasources</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.datasourceQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName={IconNames.APPLICATION}
+          icon={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
         />
