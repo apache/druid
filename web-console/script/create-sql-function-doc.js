@@ -47,10 +47,12 @@ const interfaceStr = 'export interface FunctionDescription {\n' +
   '  description: string;\n' +
   '}\n\n';
 
+const disableTSlint = '/* tslint:disable */\n\n';
+
 const readDoc = async () => {
   try {
 
-    let content = license + comment + interfaceStr + "export const SQLFunctionDoc: FunctionDescription[] = [\n";
+    let content = license + comment + interfaceStr + disableTSlint + "export const SQLFunctionDoc: FunctionDescription[] = [\n";
 
     const data = await fs.readFile(readfile, 'utf-8');
     const sections = data.toString().split("##");
