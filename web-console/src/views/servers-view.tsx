@@ -17,6 +17,7 @@
  */
 
 import { Button, Switch } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as classNames from 'classnames';
 import { sum } from "d3-array";
@@ -24,20 +25,17 @@ import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 
-import { IconNames } from '../components/filler';
 import { TableColumnSelection } from "../components/table-column-selection";
 import {
   addFilter,
   formatBytes,
-  formatBytesCompact,
+  formatBytesCompact, LocalStorageKeys,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
 } from "../utils";
 
 import "./servers-view.scss";
 
-const serverTableColumnSelection = "historical-table-column-selection";
-const middleManagerTableColumnSelection = "middleManager-table-column-selection";
 const serverTableColumns: string[] = ["Server", "Tier", "Curr size", "Max size", "Usage", "Load/drop queues", "Host", "Port"];
 const middleManagerTableColumns: string[] = ["Host", "Usage", "Availability groups", "Last completed task time", "Blacklisted until"];
 
@@ -93,11 +91,11 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
     };
 
     this.serverTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      serverTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
 
     this.middleManagerTableColumnSelectionHandler = new TableColumnSelectionHandler(
-      middleManagerTableColumnSelection, () => this.setState({})
+      LocalStorageKeys.MIDDLEMANAGER_TABLE_COLUMN_SELECTION, () => this.setState({})
     );
   }
 
@@ -375,12 +373,12 @@ WHERE "server_type" = 'historical'`);
       <div className="control-bar">
         <div className="control-label">Historicals</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.serverQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName={IconNames.APPLICATION}
+          icon={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
         />
@@ -402,7 +400,7 @@ WHERE "server_type" = 'historical'`);
       <div className="control-bar">
         <div className="control-label">MiddleManagers</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.middleManagerQueryManager.rerunLastQuery()}
         />

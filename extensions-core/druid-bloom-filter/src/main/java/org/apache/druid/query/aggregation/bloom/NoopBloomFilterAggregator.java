@@ -19,25 +19,18 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
+import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.NilColumnValueSelector;
 
-import java.nio.ByteBuffer;
-
-public final class EmptyBloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator<NilColumnValueSelector>
+public final class NoopBloomFilterAggregator extends BaseBloomFilterAggregator<NilColumnValueSelector>
 {
-  EmptyBloomFilterBufferAggregator(int maxNumEntries)
+  NoopBloomFilterAggregator(BloomKFilter collector)
   {
-    super(NilColumnValueSelector.instance(), maxNumEntries);
+    super(NilColumnValueSelector.instance(), collector);
   }
 
   @Override
-  public void bufferAdd(ByteBuffer buf)
-  {
-    // nothing to do
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public void aggregate()
   {
     // nothing to do
   }

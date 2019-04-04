@@ -197,9 +197,11 @@ public class IngestSegmentFirehoseFactoryTest
             final IngestSegmentFirehoseFactory isfFactory = new IngestSegmentFirehoseFactory(
                 TASK.getDataSource(),
                 Intervals.ETERNITY,
+                null,
                 new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
                 dim_names,
                 metric_names,
+                null,
                 INDEX_IO,
                 cc,
                 slf,

@@ -16,12 +16,15 @@
  * limitations under the License.
  */
 
-.pt-select {
-  &.pt-fill {
-    flex: 1;
+.snitch-dialog {
+  .bp3-dialog-footer-actions {
+    position: relative;
+
+    .left-align-button {
+      position: absolute;
+      left: 0;
+      margin: 0;
+    }
   }
 }
 
-.form-group {
-  margin: 0 0 15px;
-}
