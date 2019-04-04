@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -42,11 +42,14 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class HttpIndexingServiceClient implements IndexingServiceClient
 {
@@ -112,6 +115,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
     return runTask(
         new ClientCompactQuery(
             dataSource,
+            null,
             segments,
             keepSegmentGranularity,
             targetCompactionSizeBytes,
@@ -150,7 +154,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       return Preconditions.checkNotNull(taskId, "Null task id for task[%s]", taskObject);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -184,7 +188,7 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
       return killedTaskId;
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -217,21 +221,30 @@ public class HttpIndexingServiceClient implements IndexingServiceClient
   }
 
   @Override
-  public List<TaskStatusPlus> getRunningTasks()
+  public List<TaskStatusPlus> getActiveTasks()
   {
-    return getTasks("runningTasks");
-  }
+    // Must retrieve waiting, then pending, then running, so if tasks move from one state to the next between
+    // calls then we still catch them. (Tasks always go waiting -> pending -> running.)
+    //
+    // Consider switching to new-style /druid/indexer/v1/tasks API in the future.
+    final List<TaskStatusPlus> tasks = new ArrayList<>();
+    final Set<String> taskIdsSeen = new HashSet<>();
 
-  @Override
-  public List<TaskStatusPlus> getPendingTasks()
-  {
-    return getTasks("pendingTasks");
-  }
+    final Iterable<TaskStatusPlus> activeTasks = Iterables.concat(
+        getTasks("waitingTasks"),
+        getTasks("pendingTasks"),
+        getTasks("runningTasks")
+    );
 
-  @Override
-  public List<TaskStatusPlus> getWaitingTasks()
-  {
-    return getTasks("waitingTasks");
+    for (TaskStatusPlus task : activeTasks) {
+      // Use taskIdsSeen to prevent returning the same task ID more than once (if it hops from 'pending' to 'running',
+      // for example, and we see it twice.)
+      if (taskIdsSeen.add(task.getId())) {
+        tasks.add(task);
+      }
+    }
+
+    return tasks;
   }
 
   private List<TaskStatusPlus> getTasks(String endpointSuffix)
