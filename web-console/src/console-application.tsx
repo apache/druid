@@ -38,6 +38,8 @@ import "./console-application.scss";
 
 export interface ConsoleApplicationProps extends React.Props<any> {
   version: string;
+  hideLegacy: boolean;
+  baseURL?: string;
 }
 
 export interface ConsoleApplicationState {
@@ -94,6 +96,10 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     this.state = {
       aboutDialogOpen: false
     };
+
+    if (props.baseURL) {
+      axios.defaults.baseURL = props.baseURL;
+    }
   }
 
   componentDidMount(): void {
@@ -136,9 +142,11 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   render() {
+    const { hideLegacy } = this.props;
+
     const wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, scrollable = false) => {
       return <>
-        <HeaderBar active={active}/>
+        <HeaderBar active={active} hideLegacy={hideLegacy}/>
         <div className={classNames('view-container', { scrollable })}>{el}</div>
       </>;
     };

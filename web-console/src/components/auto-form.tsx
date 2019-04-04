@@ -134,6 +134,7 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
       onChange={(v: any) => {
         onChange(Object.assign({}, model, { [field.name]: v }));
       }}
+      addOnBlur
       fill
     />;
   }
