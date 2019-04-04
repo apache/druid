@@ -34,6 +34,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -137,14 +138,29 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.resultFormat = (resultFormat == null) ? ResultFormat.RESULT_FORMAT_LIST : resultFormat;
     this.batchSize = (batchSize == 0) ? 4096 * 5 : batchSize;
     this.limit = (limit == 0) ? Long.MAX_VALUE : limit;
-    Preconditions.checkArgument(this.batchSize > 0, "batchSize must be greater than 0");
-    Preconditions.checkArgument(this.limit > 0, "limit must be greater than 0");
     this.dimFilter = dimFilter;
     this.columns = columns;
     this.legacy = legacy;
     this.order = (order == null) ? Order.NONE : order;
     this.maxRowsQueuedForOrdering = maxRowsQueuedForOrdering;
     this.maxSegmentPartitionsOrderedInMemory = maxSegmentPartitionsOrderedInMemory;
+
+    Preconditions.checkArgument(
+        this.batchSize > 0,
+        "batchSize must be greater than 0"
+    );
+    Preconditions.checkArgument(
+        this.limit > 0,
+        "limit must be greater than 0"
+    );
+    Preconditions.checkArgument(
+        this.maxRowsQueuedForOrdering == null || this.maxRowsQueuedForOrdering > 0,
+        "maxRowsQueuedForOrdering must be greater than 0"
+    );
+    Preconditions.checkArgument(
+        this.maxSegmentPartitionsOrderedInMemory == null || this.maxSegmentPartitionsOrderedInMemory > 0,
+        "maxSegmentPartitionsOrderedInMemory must be greater than 0"
+    );
   }
 
   @JsonProperty
@@ -177,12 +193,14 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return order;
   }
 
+  @Nullable
   @JsonProperty
   public Integer getMaxRowsQueuedForOrdering()
   {
     return maxRowsQueuedForOrdering;
   }
 
+  @Nullable
   @JsonProperty
   public Integer getMaxSegmentPartitionsOrderedInMemory()
   {

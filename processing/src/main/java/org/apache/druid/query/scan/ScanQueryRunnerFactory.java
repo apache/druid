@@ -128,10 +128,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           descriptorsOrdered = Lists.reverse(descriptorsOrdered);
           queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
         }
-
-        if (query.getLimit() <= (query.getMaxRowsQueuedForOrdering() == null
-                                 ? scanQueryConfig.getMaxRowsQueuedForOrdering()
-                                 : query.getMaxRowsQueuedForOrdering())) {
+        int maxRowsQueuedForOrdering = (query.getMaxRowsQueuedForOrdering() == null
+                                        ? scanQueryConfig.getMaxRowsQueuedForOrdering()
+                                        : query.getMaxRowsQueuedForOrdering());
+        if (query.getLimit() <= maxRowsQueuedForOrdering) {
           // Use priority queue strategy
           return priorityQueueSortAndLimit(
               Sequences.concat(Sequences.map(
@@ -174,9 +174,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                          .max(Comparator.comparing(Integer::valueOf))
                                          .get();
 
-          if (maxNumPartitionsInSegment <= (query.getMaxSegmentPartitionsOrderedInMemory() == null
-                                            ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
-                                            : query.getMaxSegmentPartitionsOrderedInMemory())) {
+          int segmentPartitionLimit = (query.getMaxSegmentPartitionsOrderedInMemory() == null
+                                       ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
+                                       : query.getMaxSegmentPartitionsOrderedInMemory());
+          if (maxNumPartitionsInSegment <= segmentPartitionLimit) {
             // Use n-way merge strategy
 
             // Create a list of grouped runner lists (i.e. each sublist/"runner group" corresponds to an interval) ->
