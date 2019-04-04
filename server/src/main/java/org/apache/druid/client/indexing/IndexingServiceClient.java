@@ -25,6 +25,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,11 +50,10 @@ public interface IndexingServiceClient
 
   String killTask(String taskId);
 
-  List<TaskStatusPlus> getRunningTasks();
-
-  List<TaskStatusPlus> getPendingTasks();
-
-  List<TaskStatusPlus> getWaitingTasks();
+  /**
+   * Gets all tasks that are waiting, pending, or running.
+   */
+  List<TaskStatusPlus> getActiveTasks();
 
   TaskStatusResponse getTaskStatus(String taskId);
 
