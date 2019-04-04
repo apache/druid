@@ -57,9 +57,9 @@ primitives, as well as any flatten expressions defined in the `flattenSpec`.
 ### Hadoop Job Properties
 Like most Hadoop jobs, the best outcomes will add `"mapreduce.job.user.classpath.first": "true"` or
 `"mapreduce.job.classloader": "true"` to the `jobProperties` section of `tuningConfig`. Note that it is likely if using
-`"mapreduce.job.classloader": "true"` in the `jobProperties` of the indexing task that you will need to set
-`mapreduce.job.classloader.system.classes` to include `-org.apache.hadoop.hive.` to instruct Hadoop to load
-`org.apache.hadoop.hive` classes from the application jars instead of system jars, e.g.
+`"mapreduce.job.classloader": "true"` that you will need to set `mapreduce.job.classloader.system.classes` to include 
+`-org.apache.hadoop.hive.` to instruct Hadoop to load `org.apache.hadoop.hive` classes from the application jars instead
+of system jars, e.g.
 
 ```json
 ...
