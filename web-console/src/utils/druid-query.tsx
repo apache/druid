@@ -44,15 +44,15 @@ export async function queryDruidSql(sqlQuery: Record<string, any>): Promise<any[
   return sqlResultResp.data;
 }
 
-function parseQueryRel(queryRel: string) {
-  if (!queryRel) {
+function parseQueryPlanResult(queryPlanResult: string) {
+  if (!queryPlanResult) {
     return {
       query: null,
       signature: null
     };
   }
 
-  const queryAndSignature = queryRel.split(', signature=');
+  const queryAndSignature = queryPlanResult.split(', signature=');
   const queryValue = new RegExp(/query=(.+)/).exec(queryAndSignature[0]);
   const signatureValue = queryAndSignature[1];
 
@@ -65,15 +65,14 @@ function parseQueryRel(queryRel: string) {
   }
 
   return {
-    query: parsedQuery || queryRel,
+    query: parsedQuery || queryPlanResult,
     signature: signatureValue || null
   };
 }
 
 export function parseQueryPlan(raw: string): any {
   let plan: string = raw;
-
-  plan = plan.replace('\n', '');
+  plan = plan.replace(/\n/g, '');
 
   if (plan.includes('DruidOuterQueryRel(')) {
     return plan; // don't know how to parse this
@@ -91,7 +90,7 @@ export function parseQueryPlan(raw: string): any {
     const keysArgumentIdx = queryArgs.indexOf(leftExpressionsArgs);
     if (keysArgumentIdx !== -1) {
       return {
-        mainQuery: parseQueryRel(queryArgs.substring(0, keysArgumentIdx)),
+        mainQuery: parseQueryPlanResult(queryArgs.substring(0, keysArgumentIdx)),
         subQueryRight: parseQueryPlan(queryArgs.substring(queryArgs.indexOf(queryRelFnStart)))
       };
     }
@@ -99,5 +98,5 @@ export function parseQueryPlan(raw: string): any {
     return plan;
   }
 
-  return parseQueryRel(queryArgs);
+  return parseQueryPlanResult(queryArgs);
 }

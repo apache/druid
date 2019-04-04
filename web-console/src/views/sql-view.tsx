@@ -22,6 +22,7 @@ import * as React from 'react';
 import ReactTable from "react-table";
 
 import { SqlControl } from '../components/sql-control';
+import { QueryPlanDialog } from "../dialogs/query-plan-dialog";
 import {
   decodeRune, getDruidErrorMessage,
   HeaderRows,
@@ -130,97 +131,15 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
   }
 
   renderExplainDialog() {
-    const { explainDialogOpen, explainResult, loadingExplain, explainError } = this.state;
-    let content: JSX.Element;
-    if (loadingExplain) {
-      content = <div>Loading...</div>;
-    } else if (explainError) {
-      content = <div>{explainError.message}</div>;
-    } else if (explainResult == null) {
-      content = <div/>;
-    } else if (explainResult.query) {
-
-      let signature: JSX.Element | null = null;
-      if (explainResult.signature) {
-        signature = <FormGroup
-          label={"Signature"}
-        >
-          <InputGroup defaultValue={explainResult.signature} readOnly/>
-        </FormGroup>;
-      }
-
-      content = <div className={"one-query"}>
-        <FormGroup
-          label={"Query"}
-        >
-          <TextArea
-            readOnly
-            value={JSON.stringify(explainResult.query[0], undefined, 2)}
-          />
-        </FormGroup>
-        {signature}
-      </div>;
-    } else if (explainResult.mainQuery && explainResult.subQueryRight) {
-
-      let mainSignature: JSX.Element | null = null;
-      let subSignature: JSX.Element | null = null;
-      if (explainResult.mainQuery.signature) {
-        mainSignature = <FormGroup
-          label={"Signature"}
-        >
-          <InputGroup defaultValue={explainResult.mainQuery.signature} readOnly/>
-        </FormGroup>;
-      }
-      if (explainResult.subQueryRight.signature) {
-        subSignature = <FormGroup
-          label={"Signature"}
-        >
-          <InputGroup defaultValue={explainResult.subQueryRight.signature} readOnly/>
-        </FormGroup>;
-      }
-
-      content = <div className={"two-queries"}>
-        <FormGroup
-          label={"Main query"}
-        >
-          <TextArea
-            readOnly
-            value={JSON.stringify(explainResult.mainQuery.query, undefined, 2)}
-          />
-        </FormGroup>
-        {mainSignature}
-        <FormGroup
-          label={"Sub query"}
-        >
-          <TextArea
-            readOnly
-            value={JSON.stringify(explainResult.subQueryRight.query, undefined, 2)}
-          />
-        </FormGroup>
-        {subSignature}
-      </div>;
-    } else {
-      content = <div>{explainResult}</div>;
+    const {explainDialogOpen, explainResult, loadingExplain, explainError} = this.state;
+    if (!loadingExplain && explainDialogOpen) {
+      return <QueryPlanDialog
+        explainResult={explainResult}
+        explainError={explainError}
+        onClose={() => this.setState({explainDialogOpen: false})}
+      />;
     }
-
-    return <Dialog
-      className={'sql-view-explain-dialog'}
-      isOpen={explainDialogOpen}
-      onClose={() => this.setState({explainDialogOpen: false})}
-      title={"Query plan"}
-    >
-      <div className={Classes.DIALOG_BODY}>
-        {content}
-      </div>
-      <div className={Classes.DIALOG_FOOTER}>
-        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button
-            text="Close"
-            onClick={() => this.setState({explainDialogOpen: false})}
-          />
-        </div>
-      </div>
-    </Dialog>;
+    return null;
   }
 
   renderResultTable() {

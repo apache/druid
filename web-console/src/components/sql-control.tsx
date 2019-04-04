@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, Classes, FormGroup, Intent, Popover, Position } from "@blueprintjs/core";
+import { Button, Checkbox, Classes, FormGroup, Intent, Menu, Popover, Position } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import axios from "axios";
 import * as ace from 'brace';
@@ -171,24 +171,19 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
     const isRune = query.trim().startsWith('{');
 
-    const morePopover = <div className={"auto-complete-checkbox"}>
-      <FormGroup>
-        <Checkbox
-          checked={isRune ? false : autoCompleteOn}
-          disabled={isRune}
-          label={"Auto complete"}
-          onChange={() => this.setState({autoCompleteOn: !autoCompleteOn})}
-        />
-      </FormGroup>
-      <FormGroup>
-        <Button
-          className={Classes.POPOVER_DISMISS}
-          disabled={isRune}
-          text={"Explain"}
-          onClick={() => onExplain(query)}
-          minimal
-        />
-      </FormGroup>
+    const SqlControlPopover =  <div className={"sql-control-popover"}>
+      <Checkbox
+        checked={isRune ? false : autoCompleteOn}
+        label={"Auto complete"}
+        onChange={() => this.setState({autoCompleteOn: !autoCompleteOn})}
+      />
+      <Button
+        icon={IconNames.CLEAN}
+        className={Classes.POPOVER_DISMISS}
+        text={"Explain"}
+        onClick={() => onExplain(query)}
+        minimal
+      />
     </div>;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
@@ -219,8 +214,8 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         <Button rightIcon={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
           {isRune ? 'Rune' : 'Run'}
         </Button>
-        <Popover position={Position.BOTTOM_LEFT} content={morePopover}>
-          <Button minimal icon={IconNames.MORE}/>
+        <Popover position={Position.BOTTOM_LEFT} content={SqlControlPopover} disabled={isRune}>
+          <Button minimal icon={IconNames.MORE} disabled={isRune}/>
         </Popover>
       </div>
     </div>;
