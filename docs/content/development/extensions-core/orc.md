@@ -54,6 +54,24 @@ the set of ingested dimensions, if missing the discovered fields will make up th
 Auto field discovery will automatically create a string dimension for every (non-timestamp) primitive or `list` of 
 primitives, as well as any flatten expressions defined in the `flattenSpec`.
 
+### Hadoop Job Properties
+Like most Hadoop jobs, the best outcomes will add `"mapreduce.job.user.classpath.first": "true"` or
+`"mapreduce.job.classloader": "true"` to the `jobProperties` section of `tuningConfig`. Note that it is likely if using
+`"mapreduce.job.classloader": "true"` in the `jobProperties` of the indexing task that you will need to set
+`mapreduce.job.classloader.system.classes` to include `-org.apache.hadoop.hive.` to instruct Hadoop to load
+`org.apache.hadoop.hive` classes from the application jars instead of system jars, e.g.
+
+```json
+...
+    "mapreduce.job.classloader": "true",
+    "mapreduce.job.classloader.system.classes" : "java., javax.accessibility., javax.activation., javax.activity., javax.annotation., javax.annotation.processing., javax.crypto., javax.imageio., javax.jws., javax.lang.model., -javax.management.j2ee., javax.management., javax.naming., javax.net., javax.print., javax.rmi., javax.script., -javax.security.auth.message., javax.security.auth., javax.security.cert., javax.security.sasl., javax.sound., javax.sql., javax.swing., javax.tools., javax.transaction., -javax.xml.registry., -javax.xml.rpc., javax.xml., org.w3c.dom., org.xml.sax., org.apache.commons.logging., org.apache.log4j., -org.apache.hadoop.hbase., -org.apache.hadoop.hive., org.apache.hadoop., core-default.xml, hdfs-default.xml, mapred-default.xml, yarn-default.xml",
+...
+```
+
+This is due to the `hive-storage-api` dependency of the
+`orc-mapreduce` library, which provides some classes under the `org.apache.hadoop.hive` package. If instead using the
+setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an issue.
+
 ### Examples
 
 #### `orc` parser, `orc` parseSpec, auto field discovery, flatten expressions
