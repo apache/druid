@@ -58,6 +58,7 @@ Core extensions are maintained by Druid committers.
 |druid-parquet-extensions|Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-core/parquet.html)|
 |druid-protobuf-extensions| Support for data in Protobuf data format.|[link](../development/extensions-core/protobuf.html)|
 |druid-s3-extensions|Interfacing with data in AWS S3, and using S3 as deep storage.|[link](../development/extensions-core/s3.html)|
+|druid-ec2-extensions|Interfacing with AWS EC2 for autoscaling middle managers|UNDOCUMENTED|
 |druid-stats|Statistics related module including variance and standard deviation.|[link](../development/extensions-core/stats.html)|
 |mysql-metadata-storage|MySQL metadata store.|[link](../development/extensions-core/mysql.html)|
 |postgresql-metadata-storage|PostgreSQL metadata store.|[link](../development/extensions-core/postgresql.html)|

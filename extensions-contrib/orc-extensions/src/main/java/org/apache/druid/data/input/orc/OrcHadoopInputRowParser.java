@@ -246,15 +246,14 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     builder.append(parseSpec.getTimestampSpec().getTimestampColumn()).append(":string");
     // the typeString seems positionally dependent, so repeated timestamp column causes incorrect mapping
     if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0) {
-      builder.append(",");
-      builder.append(String.join(
-          ":string,",
-          parseSpec.getDimensionsSpec()
-                   .getDimensionNames()
-                   .stream()
-                   .filter(s -> !s.equals(parseSpec.getTimestampSpec().getTimestampColumn()))
-                   .collect(Collectors.toList())));
-      builder.append(":string");
+      builder.append(
+          parseSpec
+              .getDimensionsSpec()
+              .getDimensionNames()
+              .stream()
+              .filter(s -> !s.equals(parseSpec.getTimestampSpec().getTimestampColumn()))
+              .collect(Collectors.joining(":string,", ",", ":string"))
+      );
     }
     builder.append(">");
 
