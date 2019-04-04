@@ -1365,11 +1365,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-<<<<<<< HEAD
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
-=======
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
->>>>>>> master
+      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private IndexTuningConfig(
@@ -1465,6 +1461,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxRowsInMemory,
           maxBytesInMemory,
           maxTotalRows,
+          maxTotalSegments,
           numShards,
           partitionDimensions,
           indexSpec,
