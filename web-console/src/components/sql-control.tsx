@@ -171,20 +171,23 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
     const isRune = query.trim().startsWith('{');
 
-    const SqlControlPopover =  <div className={"sql-control-popover"}>
-      <Checkbox
-        checked={isRune ? false : autoCompleteOn}
-        label={"Auto complete"}
-        onChange={() => this.setState({autoCompleteOn: !autoCompleteOn})}
-      />
-      <Button
-        icon={IconNames.CLEAN}
-        className={Classes.POPOVER_DISMISS}
-        text={"Explain"}
-        onClick={() => onExplain(query)}
-        minimal
-      />
-    </div>;
+    const SqlControlPopover = <Popover position={Position.BOTTOM_LEFT}>
+        <Button minimal icon={IconNames.MORE}/>
+        <div className={"sql-control-popover"}>
+          <Checkbox
+            checked={isRune ? false : autoCompleteOn}
+            label={"Auto complete"}
+            onChange={() => this.setState({autoCompleteOn: !autoCompleteOn})}
+          />
+          <Button
+            icon={IconNames.CLEAN}
+            className={Classes.POPOVER_DISMISS}
+            text={"Explain"}
+            onClick={() => onExplain(query)}
+            minimal
+          />
+        </div>
+      </Popover>;
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return <div className="sql-control">
@@ -214,9 +217,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         <Button rightIcon={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
           {isRune ? 'Rune' : 'Run'}
         </Button>
-        <Popover position={Position.BOTTOM_LEFT} content={SqlControlPopover} disabled={isRune}>
-          <Button minimal icon={IconNames.MORE} disabled={isRune}/>
-        </Popover>
+        {!isRune ? SqlControlPopover : null}
       </div>
     </div>;
   }

@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, InputGroup, TextArea } from "@blueprintjs/core";
 import * as Hjson from "hjson";
 import * as React from 'react';
 import ReactTable from "react-table";
@@ -24,7 +23,7 @@ import ReactTable from "react-table";
 import { SqlControl } from '../components/sql-control';
 import { QueryPlanDialog } from "../dialogs/query-plan-dialog";
 import {
-  decodeRune, getDruidErrorMessage,
+  decodeRune,
   HeaderRows,
   localStorageGet, LocalStorageKeys,
   localStorageSet, parseQueryPlan,
