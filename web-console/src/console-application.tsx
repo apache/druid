@@ -37,7 +37,6 @@ import { TasksView } from './views/tasks-view';
 import "./console-application.scss";
 
 export interface ConsoleApplicationProps extends React.Props<any> {
-  version: string;
   hideLegacy: boolean;
   baseURL?: string;
 }
