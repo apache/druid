@@ -112,6 +112,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final List<String> columns;
   private final Boolean legacy;
   private final Order order;
+  private final Integer maxRowsQueuedForOrdering;
+  private final Integer maxSegmentPartitionsOrderedInMemory;
 
   @JsonCreator
   public ScanQuery(
@@ -125,7 +127,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("legacy") Boolean legacy,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("maxRowsQueuedForOrdering") Integer maxRowsQueuedForOrdering,
+      @JsonProperty("maxSegmentPartitionsOrderedInMemory") Integer maxSegmentPartitionsOrderedInMemory
   )
   {
     super(dataSource, querySegmentSpec, false, context);
@@ -138,7 +142,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.dimFilter = dimFilter;
     this.columns = columns;
     this.legacy = legacy;
-    this.order = order == null ? Order.NONE : order;
+    this.order = (order == null) ? Order.NONE : order;
+    this.maxRowsQueuedForOrdering = maxRowsQueuedForOrdering;
+    this.maxSegmentPartitionsOrderedInMemory = maxSegmentPartitionsOrderedInMemory;
   }
 
   @JsonProperty
@@ -169,6 +175,18 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public Order getOrder()
   {
     return order;
+  }
+
+  @JsonProperty
+  public Integer getMaxRowsQueuedForOrdering()
+  {
+    return maxRowsQueuedForOrdering;
+  }
+
+  @JsonProperty
+  public Integer getMaxSegmentPartitionsOrderedInMemory()
+  {
+    return maxSegmentPartitionsOrderedInMemory;
   }
 
   @Override

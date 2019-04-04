@@ -129,7 +129,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
         }
 
-        if (query.getLimit() <= scanQueryConfig.getMaxRowsQueuedForOrdering()) {
+        if (query.getLimit() <= (query.getMaxRowsQueuedForOrdering() == null
+                                 ? scanQueryConfig.getMaxRowsQueuedForOrdering()
+                                 : query.getMaxRowsQueuedForOrdering())) {
           // Use priority queue strategy
           return priorityQueueSortAndLimit(
               Sequences.concat(Sequences.map(
@@ -172,7 +174,9 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
                                          .max(Comparator.comparing(Integer::valueOf))
                                          .get();
 
-          if (maxNumPartitionsInSegment <= scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()) {
+          if (maxNumPartitionsInSegment <= (query.getMaxSegmentPartitionsOrderedInMemory() == null
+                                            ? scanQueryConfig.getMaxSegmentPartitionsOrderedInMemory()
+                                            : query.getMaxSegmentPartitionsOrderedInMemory())) {
             // Use n-way merge strategy
 
             // Create a list of grouped runner lists (i.e. each sublist/"runner group" corresponds to an interval) ->
