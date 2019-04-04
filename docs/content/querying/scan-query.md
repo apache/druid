@@ -218,9 +218,9 @@ Configuration properties:
 
 Sample query context JSON object:
 
-```
-  "context": {
-    "maxRowsQueuedForOrdering": 100001,
-	  "maxSegmentPartitionsOrderedInMemory": 100	
-  }
+```json
+{
+  "maxRowsQueuedForOrdering": 100001,
+  "maxSegmentPartitionsOrderedInMemory": 100	
+}
 ```
