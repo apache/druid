@@ -1348,9 +1348,9 @@ interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
       
-      String base = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+      String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
-      String pad = NullHandling.nullToEmptyIfNeeded(args.get(2).eval(bindings).asString());
+      String pad = args.get(2).eval(bindings).asString();
 
       if (base == null || pad == null) {
         return ExprEval.of(null);
@@ -1376,9 +1376,9 @@ interface Function
         throw new IAE("Function[%s] needs 3 arguments", name());
       }
 
-      String base = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
+      String base = args.get(0).eval(bindings).asString();
       int len = args.get(1).eval(bindings).asInt();
-      String pad = NullHandling.nullToEmptyIfNeeded(args.get(2).eval(bindings).asString());
+      String pad = args.get(2).eval(bindings).asString();
 
       if (base == null || pad == null) {
         return ExprEval.of(null);
