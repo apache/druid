@@ -1019,9 +1019,7 @@ public class DruidQuery
         filtration.getDimFilter(),
         Ordering.natural().sortedCopy(ImmutableSet.copyOf(outputRowSignature.getRowOrder())),
         false,
-        ImmutableSortedMap.copyOf(plannerContext.getQueryContext()),
-        null, // This will default to the config value
-        null // This will default to the config value
+        ImmutableSortedMap.copyOf(plannerContext.getQueryContext())
     );
   }
 }

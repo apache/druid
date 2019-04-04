@@ -58,8 +58,6 @@ public class ScanQuerySpecTest
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
         + "\"legacy\":null,"
         + "\"context\":null,"
-        + "\"maxRowsQueuedForOrdering\":null,"
-        + "\"maxSegmentPartitionsOrderedInMemory\":null,"
         + "\"descending\":false,"
         + "\"granularity\":{\"type\":\"all\"}}";
 
@@ -73,8 +71,6 @@ public class ScanQuerySpecTest
         ScanQuery.Order.NONE,
         null,
         Arrays.asList("market", "quality", "index"),
-        null,
-        null,
         null,
         null
     );

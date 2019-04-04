@@ -925,8 +925,6 @@ public class Druids
     private List<String> columns;
     private Boolean legacy;
     private ScanQuery.Order order;
-    private Integer maxRowsQueuedForOrdering;
-    private Integer maxSegmentPartitionsOrderedInMemory;
 
     public ScanQueryBuilder()
     {
@@ -941,8 +939,6 @@ public class Druids
       columns = new ArrayList<>();
       legacy = null;
       order = null;
-      maxRowsQueuedForOrdering = null;
-      maxSegmentPartitionsOrderedInMemory = null;
     }
 
     public ScanQuery build()
@@ -958,9 +954,7 @@ public class Druids
           dimFilter,
           columns,
           legacy,
-          context,
-          maxRowsQueuedForOrdering,
-          maxSegmentPartitionsOrderedInMemory
+          context
       );
     }
 
@@ -977,9 +971,7 @@ public class Druids
           .columns(query.getColumns())
           .legacy(query.isLegacy())
           .context(query.getContext())
-          .order(query.getOrder())
-          .maxSegmentPartitionsOrderedInMemory(query.getMaxSegmentPartitionsOrderedInMemory())
-          .maxRowsQueuedForOrdering(query.getMaxRowsQueuedForOrdering());
+          .order(query.getOrder());
     }
 
     public ScanQueryBuilder dataSource(String ds)
@@ -1062,18 +1054,6 @@ public class Druids
     public ScanQueryBuilder order(ScanQuery.Order order)
     {
       this.order = order;
-      return this;
-    }
-
-    public ScanQueryBuilder maxRowsQueuedForOrdering(Integer maxRows)
-    {
-      this.maxRowsQueuedForOrdering = maxRows;
-      return this;
-    }
-
-    public ScanQueryBuilder maxSegmentPartitionsOrderedInMemory(Integer maxSegmentPartitions)
-    {
-      this.maxSegmentPartitionsOrderedInMemory = maxSegmentPartitions;
       return this;
     }
   }
