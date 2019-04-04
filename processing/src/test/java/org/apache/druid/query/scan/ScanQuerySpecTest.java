@@ -58,6 +58,8 @@ public class ScanQuerySpecTest
         + "\"columns\":[\"market\",\"quality\",\"index\"],"
         + "\"legacy\":null,"
         + "\"context\":null,"
+        + "\"maxRowsQueuedForOrdering\":null,"
+        + "\"maxSegmentPartitionsOrderedInMemory\":null,"
         + "\"descending\":false,"
         + "\"granularity\":{\"type\":\"all\"}}";
 
