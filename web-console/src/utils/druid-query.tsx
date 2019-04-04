@@ -44,7 +44,17 @@ export async function queryDruidSql(sqlQuery: Record<string, any>): Promise<any[
   return sqlResultResp.data;
 }
 
-function parseQueryPlanResult(queryPlanResult: string) {
+export interface BasicQueryExplanation {
+  query: any;
+  signature: string | null;
+}
+
+export interface SemiJoinQueryExplanation {
+  mainQuery: BasicQueryExplanation;
+  subQueryRight: BasicQueryExplanation;
+}
+
+function parseQueryPlanResult(queryPlanResult: string): BasicQueryExplanation {
   if (!queryPlanResult) {
     return {
       query: null,
@@ -70,7 +80,7 @@ function parseQueryPlanResult(queryPlanResult: string) {
   };
 }
 
-export function parseQueryPlan(raw: string): any {
+export function parseQueryPlan(raw: string): BasicQueryExplanation | SemiJoinQueryExplanation | string {
   let plan: string = raw;
   plan = plan.replace(/\n/g, '');
 
@@ -92,7 +102,7 @@ export function parseQueryPlan(raw: string): any {
       return {
         mainQuery: parseQueryPlanResult(queryArgs.substring(0, keysArgumentIdx)),
         subQueryRight: parseQueryPlan(queryArgs.substring(queryArgs.indexOf(queryRelFnStart)))
-      };
+      } as SemiJoinQueryExplanation;
     }
   } else {
     return plan;

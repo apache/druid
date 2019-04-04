@@ -23,12 +23,13 @@ import ReactTable from "react-table";
 import { SqlControl } from '../components/sql-control';
 import { QueryPlanDialog } from "../dialogs/query-plan-dialog";
 import {
+  BasicQueryExplanation,
   decodeRune,
   HeaderRows,
   localStorageGet, LocalStorageKeys,
   localStorageSet, parseQueryPlan,
   queryDruidRune,
-  queryDruidSql, QueryManager
+  queryDruidSql, QueryManager, SemiJoinQueryExplanation
 } from '../utils';
 
 import "./sql-view.scss";
@@ -42,7 +43,7 @@ export interface SqlViewState {
   result: HeaderRows | null;
   error: string | null;
   explainDialogOpen: boolean;
-  explainResult: any;
+  explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
   loadingExplain: boolean;
   explainError: Error | null;
 }
@@ -102,7 +103,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           query: explainQuery,
           resultFormat: "object"
         });
-        const data = parseQueryPlan(result[0]["PLAN"]);
+        const data: BasicQueryExplanation | SemiJoinQueryExplanation | string = parseQueryPlan(result[0]["PLAN"]);
         return data;
       },
       onStateChange: ({ result, loading, error }) => {
