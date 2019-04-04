@@ -92,8 +92,14 @@ public class SeekableStreamSupervisorConfig
   }
 
   @VisibleForTesting
-  public void setNumExceptionEventsToStore(int newNumExceptionEventsToStore)
+  public void setNumExceptionEventsToStore(int numExceptionEventsToStore)
   {
-    numExceptionEventsToStore = newNumExceptionEventsToStore;
+    this.numExceptionEventsToStore = numExceptionEventsToStore;
+  }
+
+  @VisibleForTesting
+  public void setStoringStackTraces(boolean storingStackTraces)
+  {
+    this.storingStackTraces = storingStackTraces;
   }
 }
