@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -509,7 +508,8 @@ public class CalciteTests
                         new ScanQueryConfig(),
                         new DefaultGenericQueryMetricsFactory(TestHelper.makeJsonMapper())
                     ),
-                    new ScanQueryEngine()
+                    new ScanQueryEngine(),
+                    new ScanQueryConfig()
                 )
             )
             .put(
@@ -675,7 +675,7 @@ public class CalciteTests
       return new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -708,7 +708,7 @@ public class CalciteTests
       schema.awaitInitialization();
     }
     catch (InterruptedException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
 
     schema.stop();

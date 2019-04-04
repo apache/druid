@@ -145,7 +145,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
       log.info("Using file [%s] for mapDB off heap namespace cache", tmpFile.getAbsolutePath());
     }
     catch (IOException e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     mmapDB = DBMaker
         .newFileDB(tmpFile)
@@ -182,7 +182,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
       );
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

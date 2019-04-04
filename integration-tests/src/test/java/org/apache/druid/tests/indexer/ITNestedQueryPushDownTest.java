@@ -19,7 +19,6 @@
 
 package org.apache.druid.tests.indexer;
 
-import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -91,13 +90,13 @@ public class ITNestedQueryPushDownTest extends AbstractIndexerTest
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
   private void loadData() throws Exception
   {
-    String taskSpec = getTaskAsString(WIKITICKER_INDEX_TASK);
+    String taskSpec = getResourceAsString(WIKITICKER_INDEX_TASK);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);

@@ -21,28 +21,40 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
-import org.apache.druid.indexing.seekablestream.SeekableStreamPartitions;
-
-import java.util.Map;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 
 public class KafkaDataSourceMetadata extends SeekableStreamDataSourceMetadata<Integer, Long>
 {
 
   @JsonCreator
   public KafkaDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamPartitions<Integer, Long> kafkaPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<Integer, Long> kafkaPartitions
   )
   {
     super(kafkaPartitions);
   }
 
   @Override
+  public DataSourceMetadata asStartMetadata()
+  {
+    final SeekableStreamSequenceNumbers<Integer, Long> sequenceNumbers = getSeekableStreamSequenceNumbers();
+    if (sequenceNumbers instanceof SeekableStreamEndSequenceNumbers) {
+      return createConcreteDataSourceMetaData(
+          ((SeekableStreamEndSequenceNumbers<Integer, Long>) sequenceNumbers).asStartPartitions(true)
+      );
+    } else {
+      return this;
+    }
+  }
+
+  @Override
   protected SeekableStreamDataSourceMetadata<Integer, Long> createConcreteDataSourceMetaData(
-      String streamId,
-      Map<Integer, Long> newMap
+      SeekableStreamSequenceNumbers<Integer, Long> seekableStreamSequenceNumbers
   )
   {
-    return new KafkaDataSourceMetadata(new SeekableStreamPartitions<>(streamId, newMap));
+    return new KafkaDataSourceMetadata(seekableStreamSequenceNumbers);
   }
 }

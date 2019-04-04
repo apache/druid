@@ -506,10 +506,12 @@ public class CompactionTask extends AbstractTask
         new IngestSegmentFirehoseFactory(
             dataSchema.getDataSource(),
             interval,
+            null,
             null, // no filter
             // set dimensions and metrics names to make sure that the generated dataSchema is used for the firehose
             dataSchema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames(),
             Arrays.stream(dataSchema.getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toList()),
+            null,
             toolbox.getIndexIO(),
             coordinatorClient,
             segmentLoaderFactory,
@@ -865,8 +867,11 @@ public class CompactionTask extends AbstractTask
             avgRowsPerByte,
             nonNullTargetCompactionSizeBytes
         );
+        // Setting maxTotalRows to Long.MAX_VALUE to respect the computed maxRowsPerSegment.
+        // If this is set to something too small, compactionTask can generate small segments
+        // which need to be compacted again, which in turn making auto compaction stuck in the same interval.
         return (tuningConfig == null ? IndexTuningConfig.createDefault() : tuningConfig)
-            .withMaxRowsPerSegment(maxRowsPerSegment);
+            .withMaxRowsPerSegment(maxRowsPerSegment).withMaxTotalRows(Long.MAX_VALUE);
       } else {
         return tuningConfig;
       }

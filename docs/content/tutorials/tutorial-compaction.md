@@ -85,8 +85,7 @@ We have included a compaction task spec for this tutorial datasource at `quickst
   "tuningConfig" : {
     "type" : "index",
     "maxRowsPerSegment" : 5000000,
-    "maxRowsInMemory" : 25000,
-    "forceExtendableShardSpecs" : true
+    "maxRowsInMemory" : 25000
   }
 }
 ```

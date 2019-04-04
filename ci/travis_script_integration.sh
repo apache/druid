@@ -21,6 +21,6 @@ set -e
 
 pushd $TRAVIS_BUILD_DIR/integration-tests
 
-mvn verify -P integration-tests -Dit.test=ITAppenderatorDriverRealtimeIndexTaskTest,ITCompactionTaskTest,ITIndexerTest,ITKafkaIndexingServiceTest,ITKafkaTest,ITParallelIndexTest,ITRealtimeIndexTaskTest
+mvn verify -P integration-tests -Dit.test=ITAppenderatorDriverRealtimeIndexTaskTest,ITCompactionTaskTest,ITIndexerTest,ITKafkaIndexingServiceTest,ITKafkaIndexingServiceTransactionalTest,ITParallelIndexTest,ITRealtimeIndexTaskTest
 
 popd

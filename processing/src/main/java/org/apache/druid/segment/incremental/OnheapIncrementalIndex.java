@@ -20,7 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -275,7 +274,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       closer.close();
     }
     catch (IOException e) {
-      Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 

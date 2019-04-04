@@ -70,16 +70,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * This class uses internal-discovery i.e. {@link DruidNodeDiscoveryProvider} to discover various queryable nodes in the cluster
- * such as historicals and realtime peon processes.
- * For each queryable server, it uses HTTP GET /druid-internal/v1/segments (see docs in SegmentListerResource.getSegments(..),
- * to keep sync'd state of segments served by those servers.
+ * This class uses internal-discovery i.e. {@link DruidNodeDiscoveryProvider} to discover various queryable nodes in the
+ * cluster such as historicals and realtime peon processes.
+ *
+ * For each queryable server, it uses HTTP GET /druid-internal/v1/segments (see docs for {@link
+ * org.apache.druid.server.http.SegmentListerResource#getSegments}), to keep sync'd state of segments served by those
+ * servers.
  */
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
-  public static final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> SEGMENT_LIST_RESP_TYPE_REF = new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
-  {
-  };
+  public static final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> SEGMENT_LIST_RESP_TYPE_REF =
+      new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>() {};
 
   private final EmittingLogger log = new EmittingLogger(HttpServerInventoryView.class);
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
@@ -545,7 +546,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
         public void fullSync(List<DataSegmentChangeRequest> changes)
         {
           Map<SegmentId, DataSegment> toRemove = Maps.newHashMapWithExpectedSize(druidServer.getTotalSegments());
-          druidServer.getSegments().forEach(segment -> toRemove.put(segment.getId(), segment));
+          druidServer.iterateAllSegments().forEach(segment -> toRemove.put(segment.getId(), segment));
 
           for (DataSegmentChangeRequest request : changes) {
             if (request instanceof SegmentChangeRequestLoad) {

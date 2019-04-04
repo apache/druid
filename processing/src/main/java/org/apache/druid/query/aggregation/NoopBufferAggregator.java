@@ -58,7 +58,6 @@ public final class NoopBufferAggregator implements BufferAggregator
     return 0;
   }
 
-
   @Override
   public long getLong(ByteBuffer buf, int position)
   {

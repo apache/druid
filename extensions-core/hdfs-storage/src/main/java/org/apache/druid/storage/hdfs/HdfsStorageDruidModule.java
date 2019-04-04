@@ -21,7 +21,6 @@ package org.apache.druid.storage.hdfs;
 
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -106,7 +105,7 @@ public class HdfsStorageDruidModule implements DruidModule
       FileSystem.get(conf);
     }
     catch (IOException ex) {
-      throw Throwables.propagate(ex);
+      throw new RuntimeException(ex);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

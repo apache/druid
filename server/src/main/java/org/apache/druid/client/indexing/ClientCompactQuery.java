@@ -99,4 +99,17 @@ public class ClientCompactQuery implements ClientQuery
   {
     return context;
   }
+
+  @Override
+  public String toString()
+  {
+    return "ClientCompactQuery{" +
+           "dataSource='" + dataSource + '\'' +
+           ", segments=" + segments +
+           ", keepSegmentGranularity=" + keepSegmentGranularity +
+           ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
+           ", tuningConfig=" + tuningConfig +
+           ", context=" + context +
+           '}';
+  }
 }
