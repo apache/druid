@@ -51,6 +51,7 @@ public class SeekableStreamSupervisorConfig
   @Min(3)
   private int supervisorTaskHealthinessThreshold = 3;
 
+  // The maximum number of exception events that can be returned through the supervisor status endpoint
   @JsonProperty
   private int numExceptionEventsToStore = Collections.max(
       ImmutableList.of(

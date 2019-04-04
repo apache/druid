@@ -120,10 +120,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
   private static final String stream = "stream";
-  private static String shardId1 = "1";
-  private static String shardId0 = "0";
-  private static StreamPartition<String> shard1Partition = StreamPartition.of(stream, shardId1);
-  private static StreamPartition<String> shard0Partition = StreamPartition.of(stream, shardId0);
+  private static final String shardId1 = "1";
+  private static final String shardId0 = "0";
+  private static final StreamPartition<String> shard1Partition = StreamPartition.of(stream, shardId1);
+  private static final StreamPartition<String> shard0Partition = StreamPartition.of(stream, shardId0);
 
   private static DataSchema dataSchema;
   private KinesisRecordSupplier supervisorRecordSupplier;
