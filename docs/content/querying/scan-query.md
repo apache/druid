@@ -213,8 +213,8 @@ Configuration properties:
 
 |property|description|values|default|
 |--------|-----------|------|-------|
-|maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used.  Overrides the identically named config.|An integer in [0, 2147483647]|100000|
-|maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used.  Overrides the identically named config.|An integer in [0, 2147483647]|50|
+|maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used.  Overrides the identically named config.|An integer in [0, 2147483647]|`druid.query.scan.maxRowsQueuedForOrdering`|
+|maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used.  Overrides the identically named config.|An integer in [0, 2147483647]|`druid.query.scan.maxSegmentPartitionsOrderedInMemory`|
 
 Sample query context JSON object:
 
