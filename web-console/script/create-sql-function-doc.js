@@ -53,7 +53,7 @@ const heading = `${license}\n\n${comment}\n\n${interfaceStr}\n\n${disableTSlint}
 
 const readDoc = async () => {
   try {
-    let content = `${heading}export const SQLFunctionDoc: FunctionDescription[] = [\n`;
+    let content = `${heading}export const SQLFunctionDoc: FunctionDescription[] = [ \n`;
 
     const data = await fs.readFile(readfile, 'utf-8');
     const sections = data.toString().split("##");
@@ -66,7 +66,7 @@ const readDoc = async () => {
           if (line.startsWith('|`')) {
             const rawSyntax = line.match(/\|`.*`\|/g);
             if (rawSyntax == null) return;
-            const syntax = rawSyntax[0].slice(2, -2);
+            const syntax = rawSyntax[0].slice(2, -2).replace(/\\/g,'');
 
             const rawDescription = line.match(/`\|.*\|/g);
             if (rawDescription == null) return;
@@ -81,7 +81,7 @@ const readDoc = async () => {
               .replace('{', '  {')
               .replace('}', '  }')
               .replace(/\"([^(\")"]+)\":/g,"$1:");
-            content += prettyJson + ',\n';
+            content += `${prettyJson},\n`;
           }
         });
 
@@ -89,7 +89,7 @@ const readDoc = async () => {
     });
 
     content = content.slice(0, -2);
-    content += '\n]\n';
+    content += '\n];\n';
 
     try {
       fs.writeFile(writefile, content, 'utf-8');
