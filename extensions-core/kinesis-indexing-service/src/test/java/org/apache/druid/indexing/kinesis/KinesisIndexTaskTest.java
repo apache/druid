@@ -2478,8 +2478,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
             null,
             null,
             null,
-            null,
-            false
+            null
         ),
         context
     );

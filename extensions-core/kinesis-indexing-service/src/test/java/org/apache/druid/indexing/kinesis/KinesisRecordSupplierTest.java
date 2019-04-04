@@ -29,7 +29,6 @@ import com.amazonaws.services.kinesis.model.Record;
 import com.amazonaws.services.kinesis.model.Shard;
 import com.amazonaws.services.kinesis.model.StreamDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -658,7 +657,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   public void testDeaggregationOfKPLAggregatedMessage() throws IOException
   {
     InputStreamReader reader = new InputStreamReader(
-        new FileInputStream("src/test/resources/base64aggregatedkinesismessage.txt"), Charsets.UTF_8);
+        new FileInputStream("src/test/resources/base64aggregatedkinesismessage.txt"), StandardCharsets.UTF_8);
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();
     Assert.assertNotNull(base64EncodedMessage);
@@ -694,7 +693,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         new FileInputStream(
             "src/test/resources/base64nonaggregatedkinesismessage.txt"
         ),
-        Charsets.UTF_8
+        StandardCharsets.UTF_8
     );
     String base64EncodedMessage = IOUtils.toString(reader);
     reader.close();
