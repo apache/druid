@@ -27,7 +27,6 @@ import org.apache.druid.indexing.seekablestream.exceptions.PossiblyTransientStre
 import org.apache.druid.indexing.seekablestream.exceptions.TransientStreamException;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.List;
@@ -36,20 +35,16 @@ import java.util.Queue;
 public class SeekableStreamSupervisorStateManagerTest
 {
   private SeekableStreamSupervisorStateManager stateManager;
-  private static SeekableStreamSupervisorConfig config;
-
-  @BeforeClass
-  public static void setupClass()
-  {
-    config = new SeekableStreamSupervisorConfig();
-  }
+  private SeekableStreamSupervisorConfig config;
 
   @Before
   public void setupTest()
   {
+    config = new SeekableStreamSupervisorConfig();
+    config.setNumExceptionEventsToStore(10);
     stateManager = new SeekableStreamSupervisorStateManager(
         SeekableStreamSupervisorStateManager.State.WAITING_TO_RUN,
-        new SeekableStreamSupervisorConfig()
+        config
     );
   }
 
@@ -106,11 +101,26 @@ public class SeekableStreamSupervisorStateManagerTest
     stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
       Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
-      stateManager.storeThrowableEvent(new PossiblyTransientStreamException(new Exception("DOH!")));
+      stateManager.storeThrowableEvent(new NonTransientStreamException(new Exception("DOH!")));
       stateManager.markRunFinishedAndEvaluateHealth();
     }
     Assert.assertEquals(
         SeekableStreamSupervisorStateManager.State.UNABLE_TO_CONNECT_TO_STREAM,
+        stateManager.getSupervisorState()
+    );
+  }
+
+  @Test
+  public void testPossiblyTransientStreamFailure()
+  {
+    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    for (int i = 0; i < config.getSupervisorUnhealthinessThreshold(); i++) {
+      Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
+      stateManager.storeThrowableEvent(new PossiblyTransientStreamException(new Exception("DOH!")));
+      stateManager.markRunFinishedAndEvaluateHealth();
+    }
+    Assert.assertEquals(
+        SeekableStreamSupervisorStateManager.State.LOST_CONTACT_WITH_STREAM,
         stateManager.getSupervisorState()
     );
   }
@@ -273,16 +283,20 @@ public class SeekableStreamSupervisorStateManagerTest
         new PossiblyTransientStreamException(new Exception("oof")),
         new NullPointerException("oof"),
         new TransientStreamException(new Exception("oof")),
-        new NonTransientStreamException(new Exception("oof")),
-        new PossiblyTransientStreamException(new Exception("oof"))
+        new NonTransientStreamException(new Exception("oof"))
     );
     for (Exception exception : exceptions) {
       stateManager.storeThrowableEvent(exception);
       stateManager.markRunFinishedAndEvaluateHealth();
     }
+    stateManager.markRunFinishedAndEvaluateHealth();
+    stateManager.storeThrowableEvent(new PossiblyTransientStreamException(new Exception("oof")));
     Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> events = stateManager.getExceptionEvents();
-    /*Assert.assertEquals(events.get(TransientStreamException.class).size(), 2);
-    Assert.assertEquals(events.get(NonTransientStreamException.class).size(), 2);
-    Assert.assertEquals(events.get(NullPointerException.class).size(), 1);*/
+
+    Assert.assertEquals(PossiblyTransientStreamException.class, events.poll().getExceptionClass());
+    Assert.assertEquals(NullPointerException.class, events.poll().getExceptionClass());
+    Assert.assertEquals(TransientStreamException.class, events.poll().getExceptionClass());
+    Assert.assertEquals(NonTransientStreamException.class, events.poll().getExceptionClass());
+    Assert.assertEquals(TransientStreamException.class, events.poll().getExceptionClass());
   }
 }

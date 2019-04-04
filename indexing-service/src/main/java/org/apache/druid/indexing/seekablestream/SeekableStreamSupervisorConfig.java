@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import javax.validation.constraints.Min;
@@ -32,22 +33,22 @@ public class SeekableStreamSupervisorConfig
 
   // The number of runs failed before the supervisor flips from a RUNNING to an UNHEALTHY state
   @JsonProperty
-  @Min(1)
-  private int supervisorUnhealthinessThreshold = 2;
+  @Min(3)
+  private int supervisorUnhealthinessThreshold = 3;
 
   // The number of successful before the supervisor flips from an UNHEALTHY to a RUNNING state
   @JsonProperty
-  @Min(1)
+  @Min(3)
   private int supervisorHealthinessThreshold = 3;
 
   // The number of consecutive task failures before the supervisor flips from a RUNNING to an UNHEALTHY_TASKS state
   @JsonProperty
-  @Min(1)
-  private int supervisorTaskUnhealthinessThreshold = 2;
+  @Min(3)
+  private int supervisorTaskUnhealthinessThreshold = 3;
 
   // The number of consecutive task successes before the supervisor flips from an UNHEALTHY_TASKS to a RUNNING state
   @JsonProperty
-  @Min(1)
+  @Min(3)
   private int supervisorTaskHealthinessThreshold = 3;
 
   @JsonProperty
@@ -88,5 +89,11 @@ public class SeekableStreamSupervisorConfig
   public int getNumExceptionEventsToStore()
   {
     return numExceptionEventsToStore;
+  }
+
+  @VisibleForTesting
+  public void setNumExceptionEventsToStore(int newNumExceptionEventsToStore)
+  {
+    numExceptionEventsToStore = newNumExceptionEventsToStore;
   }
 }

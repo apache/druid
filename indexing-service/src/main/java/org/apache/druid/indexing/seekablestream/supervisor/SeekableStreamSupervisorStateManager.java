@@ -128,14 +128,11 @@ public class SeekableStreamSupervisorStateManager
 
   public void storeThrowableEvent(Throwable t)
   {
-    if (t instanceof PossiblyTransientStreamException && !atLeastOneSuccessfulRun) {
-      t = new NonTransientStreamException(t);
-    } else if (t instanceof PossiblyTransientStreamException) {
+    if (t instanceof PossiblyTransientStreamException && atLeastOneSuccessfulRun) {
       t = new TransientStreamException(t);
     }
 
     eventStorage.storeThrowable(t);
-
     currentRunSuccessful = false;
   }
 
@@ -156,7 +153,8 @@ public class SeekableStreamSupervisorStateManager
       if (events.getValue().size() >= unhealthinessThreshold) {
         if (events.getKey().equals(NonTransientStreamException.class)) {
           currentRunState = getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
-        } else if (events.getKey().equals(TransientStreamException.class)) {
+        } else if (events.getKey().equals(TransientStreamException.class) ||
+                   events.getKey().equals(PossiblyTransientStreamException.class)) {
           currentRunState = getHigherPriorityState(currentRunState, State.LOST_CONTACT_WITH_STREAM);
         } else {
           currentRunState = getHigherPriorityState(currentRunState, State.UNHEALTHY_SUPERVISOR);
