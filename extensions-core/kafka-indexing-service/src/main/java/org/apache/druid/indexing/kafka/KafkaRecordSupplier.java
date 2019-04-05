@@ -25,9 +25,7 @@ import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
-import org.apache.druid.indexing.seekablestream.utils.RandomIdUtils;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -192,14 +190,10 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
 
   private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
   {
+    final Map<String, Object> consumerConfigs = KafkaConsumerConfigs.getConsumerProperties();
     final Properties props = new Properties();
-
-    props.setProperty("metadata.max.age.ms", "10000");
-    props.setProperty("group.id", StringUtils.format("kafka-supervisor-%s", RandomIdUtils.getRandomId()));
-
     addConsumerPropertiesFromConfig(props, sortingMapper, consumerProperties);
-
-    props.setProperty("enable.auto.commit", "false");
+    props.putAll(consumerConfigs);
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {

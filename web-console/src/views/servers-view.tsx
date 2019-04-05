@@ -17,6 +17,7 @@
  */
 
 import { Button, Switch } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as classNames from 'classnames';
 import { sum } from "d3-array";
@@ -24,10 +25,19 @@ import * as React from 'react';
 import ReactTable from "react-table";
 import { Filter } from "react-table";
 
-import { IconNames } from '../components/filler';
-import { addFilter, formatBytes, formatBytesCompact, queryDruidSql, QueryManager } from "../utils";
+import { TableColumnSelection } from "../components/table-column-selection";
+import {
+  addFilter,
+  formatBytes,
+  formatBytesCompact, LocalStorageKeys,
+  queryDruidSql,
+  QueryManager, TableColumnSelectionHandler
+} from "../utils";
 
 import "./servers-view.scss";
+
+const serverTableColumns: string[] = ["Server", "Tier", "Curr size", "Max size", "Usage", "Load/drop queues", "Host", "Port"];
+const middleManagerTableColumns: string[] = ["Host", "Usage", "Availability groups", "Last completed task time", "Blacklisted until"];
 
 function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmentsToDrop: number, segmentsToDropSize: number): string {
   const queueParts: string[] = [];
@@ -62,6 +72,8 @@ export interface ServersViewState {
 export class ServersView extends React.Component<ServersViewProps, ServersViewState> {
   private serverQueryManager: QueryManager<string, any[]>;
   private middleManagerQueryManager: QueryManager<string, any[]>;
+  private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
+  private middleManagerTableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: ServersViewProps, context: any) {
     super(props, context);
@@ -77,6 +89,14 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       middleManagersError: null,
       middleManagerFilter: props.middleManager ? [{ id: 'host', value: props.middleManager }] : []
     };
+
+    this.serverTableColumnSelectionHandler = new TableColumnSelectionHandler(
+      LocalStorageKeys.SERVER_TABLE_COLUMN_SELECTION, () => this.setState({})
+    );
+
+    this.middleManagerTableColumnSelectionHandler = new TableColumnSelectionHandler(
+      LocalStorageKeys.MIDDLEMANAGER_TABLE_COLUMN_SELECTION, () => this.setState({})
+    );
   }
 
   componentDidMount(): void {
@@ -124,6 +144,7 @@ WHERE "server_type" = 'historical'`);
     });
 
     this.middleManagerQueryManager.runQuery('dummy');
+
   }
 
   componentWillUnmount(): void {
@@ -133,6 +154,7 @@ WHERE "server_type" = 'historical'`);
 
   renderServersTable() {
     const { servers, serversLoading, serversError, serverFilter, groupByTier } = this.state;
+    const { serverTableColumnSelectionHandler } = this;
 
     const fillIndicator = (value: number) => {
       return <div className="fill-indicator">
@@ -156,7 +178,8 @@ WHERE "server_type" = 'historical'`);
           Header: "Server",
           accessor: "server",
           width: 300,
-          Aggregated: row => ''
+          Aggregated: row => '',
+          show: serverTableColumnSelectionHandler.showColumn("Server")
         },
         {
           Header: "Tier",
@@ -164,7 +187,8 @@ WHERE "server_type" = 'historical'`);
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) }); }}>{value}</a>;
-          }
+          },
+          show: serverTableColumnSelectionHandler.showColumn("Tier")
         },
         {
           Header: "Curr size",
@@ -181,7 +205,8 @@ WHERE "server_type" = 'historical'`);
             if (row.aggregated) return '';
             if (row.value === null) return '';
             return formatBytes(row.value);
-          }
+          },
+          show: serverTableColumnSelectionHandler.showColumn("Curr size")
         },
         {
           Header: "Max size",
@@ -198,7 +223,8 @@ WHERE "server_type" = 'historical'`);
             if (row.aggregated) return '';
             if (row.value === null) return '';
             return formatBytes(row.value);
-          }
+          },
+          show: serverTableColumnSelectionHandler.showColumn("Max size")
         },
         {
           Header: "Usage",
@@ -216,7 +242,8 @@ WHERE "server_type" = 'historical'`);
             if (row.aggregated) return '';
             if (row.value === null) return '';
             return fillIndicator(row.value);
-          }
+          },
+          show: serverTableColumnSelectionHandler.showColumn("Usage")
         },
         {
           Header: "Load/drop queues",
@@ -236,12 +263,14 @@ WHERE "server_type" = 'historical'`);
             const segmentsToDrop = sum(originals, s => s.segmentsToDrop);
             const segmentsToDropSize = sum(originals, s => s.segmentsToDropSize);
             return formatQueues(segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize);
-          }
+          },
+          show: serverTableColumnSelectionHandler.showColumn("Load/drop queues")
         },
         {
           Header: "Host",
           accessor: "host",
-          Aggregated: () => ''
+          Aggregated: () => '',
+          show: serverTableColumnSelectionHandler.showColumn("Host")
         },
         {
           Header: "Port",
@@ -256,7 +285,8 @@ WHERE "server_type" = 'historical'`);
             }
             return ports.join(', ') || 'No port';
           },
-          Aggregated: () => ''
+          Aggregated: () => '',
+          show: serverTableColumnSelectionHandler.showColumn("Port")
         }
       ]}
       defaultPageSize={10}
@@ -267,6 +297,7 @@ WHERE "server_type" = 'historical'`);
   renderMiddleManagerTable() {
     const { goToTask } = this.props;
     const { middleManagers, middleManagersLoading, middleManagersError, middleManagerFilter } = this.state;
+    const { middleManagerTableColumnSelectionHandler } = this;
 
     return <ReactTable
       data={middleManagers || []}
@@ -285,29 +316,34 @@ WHERE "server_type" = 'historical'`);
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ middleManagerFilter: addFilter(middleManagerFilter, 'host', value) }); }}>{value}</a>;
-          }
+          },
+          show: middleManagerTableColumnSelectionHandler.showColumn("Host")
         },
         {
           Header: "Usage",
           id: "usage",
           width: 60,
           accessor: (row) => `${row.currCapacityUsed} / ${row.worker.capacity}`,
-          filterable: false
+          filterable: false,
+          show: middleManagerTableColumnSelectionHandler.showColumn("Usage")
         },
         {
           Header: "Availability groups",
           id: "availabilityGroups",
           width: 60,
           accessor: (row) => row.availabilityGroups.length,
-          filterable: false
+          filterable: false,
+          show: middleManagerTableColumnSelectionHandler.showColumn("Availability groups")
         },
         {
           Header: "Last completed task time",
-          accessor: "lastCompletedTaskTime"
+          accessor: "lastCompletedTaskTime",
+          show: middleManagerTableColumnSelectionHandler.showColumn("Last completed task time")
         },
         {
           Header: "Blacklisted until",
-          accessor: "blacklistedUntil"
+          accessor: "blacklistedUntil",
+          show: middleManagerTableColumnSelectionHandler.showColumn("Blacklisted until")
         }
       ]}
       defaultPageSize={10}
@@ -331,17 +367,18 @@ WHERE "server_type" = 'historical'`);
   render() {
     const { goToSql } = this.props;
     const { groupByTier } = this.state;
+    const { serverTableColumnSelectionHandler, middleManagerTableColumnSelectionHandler } = this;
 
     return <div className="servers-view app-view">
       <div className="control-bar">
         <div className="control-label">Historicals</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.serverQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName={IconNames.APPLICATION}
+          icon={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
         />
@@ -349,6 +386,11 @@ WHERE "server_type" = 'historical'`);
           checked={groupByTier}
           label="Group by tier"
           onChange={() => this.setState({ groupByTier: !groupByTier })}
+        />
+        <TableColumnSelection
+          columns={serverTableColumns}
+          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
         />
       </div>
       {this.renderServersTable()}
@@ -358,9 +400,14 @@ WHERE "server_type" = 'historical'`);
       <div className="control-bar">
         <div className="control-label">MiddleManagers</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.middleManagerQueryManager.rerunLastQuery()}
+        />
+        <TableColumnSelection
+          columns={middleManagerTableColumns}
+          onChange={(column) => middleManagerTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={middleManagerTableColumnSelectionHandler.hiddenColumns}
         />
       </div>
       {this.renderMiddleManagerTable()}

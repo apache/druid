@@ -40,8 +40,6 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType> extends Clo
 {
   /**
    * assigns the given partitions to this RecordSupplier
-   * and seek to the earliest sequence number. Previously
-   * assigned partitions will be replaced.
    *
    * @param partitions parititions to assign
    */

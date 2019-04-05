@@ -73,7 +73,8 @@ public class MultiSegmentScanQueryTest
 
   private static final QueryRunnerFactory<ScanResultValue, ScanQuery> factory = new ScanQueryRunnerFactory(
       toolChest,
-      new ScanQueryEngine()
+      new ScanQueryEngine(),
+      new ScanQueryConfig()
   );
 
   // time modified version of druid.sample.numeric.tsv

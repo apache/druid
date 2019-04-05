@@ -17,12 +17,13 @@
  */
 
 import { Button, Intent, Switch } from "@blueprintjs/core";
+import { IconNames } from "@blueprintjs/icons";
 import axios from 'axios';
 import * as React from 'react';
 import ReactTable, { Filter } from "react-table";
 
-import { IconNames } from "../components/filler";
 import { RuleEditor } from '../components/rule-editor';
+import { TableColumnSelection } from "../components/table-column-selection";
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { CompactionDialog } from "../dialogs/compaction-dialog";
 import { RetentionDialog } from '../dialogs/retention-dialog';
@@ -32,12 +33,16 @@ import {
   countBy,
   formatBytes,
   formatNumber,
-  getDruidErrorMessage,
+  getDruidErrorMessage, LocalStorageKeys,
   lookupBy,
-  pluralIfNeeded, queryDruidSql, QueryManager
+  pluralIfNeeded,
+  queryDruidSql,
+  QueryManager, TableColumnSelectionHandler
 } from "../utils";
 
 import "./datasource-view.scss";
+
+const tableColumns: string[] = ["Datasource", "Availability", "Retention", "Compaction", "Size", "Num rows", "Actions"];
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -64,6 +69,7 @@ export interface DatasourcesViewState {
   dropDataDatasource: string | null;
   enableDatasource: string | null;
   killDatasource: string | null;
+
 }
 
 export class DatasourcesView extends React.Component<DatasourcesViewProps, DatasourcesViewState> {
@@ -82,6 +88,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   }
 
   private datasourceQueryManager: QueryManager<string, { tiers: string[], defaultRules: any[], datasources: Datasource[] }>;
+  private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: DatasourcesViewProps, context: any) {
     super(props, context);
@@ -99,7 +106,12 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
       dropDataDatasource: null,
       enableDatasource: null,
       killDatasource: null
+
     };
+
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
+      LocalStorageKeys.DATASOURCE_TABLE_COLUMN_SELECTION, () => this.setState({})
+    );
   }
 
   componentDidMount(): void {
@@ -151,6 +163,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
   SUM("num_rows") AS num_rows
 FROM sys.segments
 GROUP BY 1`);
+
   }
 
   componentWillUnmount(): void {
@@ -235,11 +248,11 @@ GROUP BY 1`);
     </AsyncActionDialog>;
   }
 
-  private saveRules = async (datasource: string, rules: any[], author: string, comment: string) => {
+  private saveRules = async (datasource: string, rules: any[], comment: string) => {
     try {
       await axios.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
         headers: {
-          "X-Druid-Author": author,
+          "X-Druid-Author": "console",
           "X-Druid-Comment": comment
         }
       });
@@ -342,12 +355,11 @@ GROUP BY 1`);
   renderDatasourceTable() {
     const { goToSegments } = this.props;
     const { datasources, defaultRules, datasourcesLoading, datasourcesError, datasourcesFilter, showDisabled } = this.state;
-
+    const { tableColumnSelectionHandler } = this;
     let data = datasources || [];
     if (!showDisabled) {
       data = data.filter(d => !d.disabled);
     }
-
     return <>
       <ReactTable
         data={data}
@@ -366,7 +378,8 @@ GROUP BY 1`);
             Cell: row => {
               const value = row.value;
               return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
-            }
+            },
+            show: tableColumnSelectionHandler.showColumn("Datasource")
           },
           {
             Header: "Availability",
@@ -400,7 +413,8 @@ GROUP BY 1`);
                 </span>;
 
               }
-            }
+            },
+            show: tableColumnSelectionHandler.showColumn("Availability")
           },
           {
             Header: 'Retention',
@@ -423,7 +437,8 @@ GROUP BY 1`);
                 {text}&nbsp;
                 <a>&#x270E;</a>
               </span>;
-            }
+            },
+            show: tableColumnSelectionHandler.showColumn("Retention")
           },
           {
             Header: 'Compaction',
@@ -449,21 +464,24 @@ GROUP BY 1`);
                 {text}&nbsp;
                 <a>&#x270E;</a>
               </span>;
-            }
+            },
+            show: tableColumnSelectionHandler.showColumn("Compaction")
           },
           {
             Header: 'Size',
             accessor: 'size',
             filterable: false,
             width: 100,
-            Cell: (row) => formatBytes(row.value)
+            Cell: (row) => formatBytes(row.value),
+            show: tableColumnSelectionHandler.showColumn("Size")
           },
           {
             Header: 'Num rows',
             accessor: 'num_rows',
             filterable: false,
             width: 100,
-            Cell: (row) => formatNumber(row.value)
+            Cell: (row) => formatNumber(row.value),
+            show: tableColumnSelectionHandler.showColumn("Num rows")
           },
           {
             Header: 'Actions',
@@ -484,7 +502,8 @@ GROUP BY 1`);
                   <a onClick={() => this.setState({ dropDataDatasource: datasource })}>Drop data</a>
                 </div>;
               }
-            }
+            },
+            show: tableColumnSelectionHandler.showColumn("Actions")
           }
         ]}
         defaultPageSize={50}
@@ -501,17 +520,18 @@ GROUP BY 1`);
   render() {
     const { goToSql } = this.props;
     const { showDisabled } = this.state;
+    const { tableColumnSelectionHandler } = this;
 
     return <div className="data-sources-view app-view">
       <div className="control-bar">
         <div className="control-label">Datasources</div>
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.datasourceQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName={IconNames.APPLICATION}
+          icon={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.datasourceQueryManager.getLastQuery())}
         />
@@ -519,6 +539,11 @@ GROUP BY 1`);
           checked={showDisabled}
           label="Show disabled"
           onChange={() => this.setState({ showDisabled: !showDisabled })}
+        />
+        <TableColumnSelection
+          columns={tableColumns}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
       </div>
       {this.renderDatasourceTable()}

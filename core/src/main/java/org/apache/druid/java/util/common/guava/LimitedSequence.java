@@ -30,11 +30,11 @@ import java.io.IOException;
 final class LimitedSequence<T> extends YieldingSequenceBase<T>
 {
   private final Sequence<T> baseSequence;
-  private final int limit;
+  private final long limit;
 
   LimitedSequence(
       Sequence<T> baseSequence,
-      int limit
+      long limit
   )
   {
     Preconditions.checkNotNull(baseSequence);
@@ -106,7 +106,7 @@ final class LimitedSequence<T> extends YieldingSequenceBase<T>
 
   private class LimitedYieldingAccumulator<OutType, T> extends DelegatingYieldingAccumulator<OutType, T>
   {
-    int count;
+    long count;
     boolean interruptYield = false;
 
     LimitedYieldingAccumulator(YieldingAccumulator<OutType, T> accumulator)

@@ -95,7 +95,7 @@ public class CoordinatorResource
     }
 
     if (full != null) {
-      return Response.ok(coordinator.getReplicationStatus()).build();
+      return Response.ok(coordinator.computeUnderReplicationCountsPerDataSourcePerTier()).build();
     }
     return Response.ok(coordinator.getLoadStatus()).build();
   }

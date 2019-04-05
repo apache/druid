@@ -24,10 +24,10 @@ import com.google.common.io.Files;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import org.apache.commons.io.FileUtils;
+import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.utils.Time;
 import scala.Some;
@@ -123,13 +123,8 @@ public class TestBroker implements Closeable
 
   public Map<String, Object> consumerProperties()
   {
-    final Map<String, Object> props = new HashMap<>();
+    final Map<String, Object> props = KafkaConsumerConfigs.getConsumerProperties();
     props.put("bootstrap.servers", StringUtils.format("localhost:%d", getPort()));
-    props.put("key.deserializer", ByteArrayDeserializer.class.getName());
-    props.put("value.deserializer", ByteArrayDeserializer.class.getName());
-    props.put("group.id", String.valueOf(RANDOM.nextInt()));
-    props.put("auto.offset.reset", "earliest");
-    props.put("isolation.level", "read_committed");
     return props;
   }
 
