@@ -35,9 +35,9 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.errors.AuthenticationException;
-import org.apache.kafka.common.errors.AuthorizationException;
+import org.apache.kafka.common.errors.InterruptException;
 import org.apache.kafka.common.errors.TimeoutException;
+import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import javax.annotation.Nonnull;
@@ -152,14 +152,14 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
     try {
       return consumer.position(new TopicPartition(partition.getStream(), partition.getPartitionId()));
     }
-    catch (AuthenticationException | AuthorizationException e) {
-      throw new NonTransientStreamException(e);
-    }
     catch (TimeoutException e) {
+      throw new PossiblyTransientStreamException(e);
+    }
+    catch (WakeupException | InterruptException e) {
       throw new TransientStreamException(e);
     }
     catch (KafkaException e) {
-      throw new PossiblyTransientStreamException(e);
+      throw new NonTransientStreamException(e);
     }
   }
 
@@ -173,14 +173,14 @@ public class KafkaRecordSupplier implements RecordSupplier<Integer, Long>
       }
       return partitions.stream().map(PartitionInfo::partition).collect(Collectors.toSet());
     }
-    catch (AuthenticationException | AuthorizationException e) {
-      throw new NonTransientStreamException(e);
-    }
     catch (TimeoutException e) {
+      throw new PossiblyTransientStreamException(e);
+    }
+    catch (WakeupException | InterruptException e) {
       throw new TransientStreamException(e);
     }
     catch (KafkaException e) {
-      throw new PossiblyTransientStreamException(e);
+      throw new NonTransientStreamException(e);
     }
   }
 

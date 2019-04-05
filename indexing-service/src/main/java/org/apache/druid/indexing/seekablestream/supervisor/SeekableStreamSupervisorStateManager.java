@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskState;
@@ -166,8 +167,6 @@ public class SeekableStreamSupervisorStateManager
     if (supervisorState == State.UNHEALTHY_TASKS) {
       boolean tasksHealthy = completedTaskHistory.size() >= healthinessTaskThreshold;
       for (int i = 0; i < Math.min(healthinessTaskThreshold, completedTaskHistory.size()); i++) {
-        // Last healthinessTaskThreshold tasks must be healthy for state to change from
-        // UNHEALTHY_TASKS to RUNNING
         if (completedTaskHistory.getLatest(i) != TaskState.SUCCESS) {
           tasksHealthy = false;
         }
@@ -229,6 +228,7 @@ public class SeekableStreamSupervisorStateManager
     return s1.priority < s2.priority ? s1 : s2;
   }
 
+  @JsonPropertyOrder({"timestamp", "exceptionClass", "message", "stackTrace"})
   public class ExceptionEvent
   {
     private Class clazz;
