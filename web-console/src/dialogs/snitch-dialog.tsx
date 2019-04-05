@@ -24,12 +24,12 @@ import {
   IDialogProps,
   InputGroup,
   Intent
-} from "@blueprintjs/core";
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames = require('classnames');
 import * as React from 'react';
 
-import { HistoryDialog } from "./history-dialog";
+import { HistoryDialog } from './history-dialog';
 
 import './snitch-dialog.scss';
 
@@ -54,7 +54,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
     super(props);
 
     this.state = {
-      comment: "",
+      comment: '',
       saveDisabled: true
     };
   }
@@ -107,11 +107,11 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
 
     return <Dialog {...this.props}>
       <div className={`dialog-body ${Classes.DIALOG_BODY}`}>
-        <FormGroup label={"Why are you making this change?"} className={"comment"}>
+        <FormGroup label="Why are you making this change?" className="comment">
           <InputGroup
             large
             value={comment}
-            placeholder={"Enter description here"}
+            placeholder="Enter description here"
             onChange={(e: any) => this.changeComment(e.target.value)}
           />
         </FormGroup>
@@ -147,7 +147,7 @@ export class SnitchDialog extends React.Component<SnitchDialogProps, SnitchDialo
 
       { showFinalStep
         ? <Button onClick={this.back} icon={IconNames.ARROW_LEFT}>Back</Button>
-        : onReset ? <Button onClick={this.reset} intent={"none" as any}>Reset</Button> : null
+        : onReset ? <Button onClick={this.reset} intent={'none' as any}>Reset</Button> : null
       }
 
       { showFinalStep

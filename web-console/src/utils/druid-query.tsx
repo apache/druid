@@ -27,7 +27,7 @@ export function getDruidErrorMessage(e: any) {
 export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {
   let runeResultResp: AxiosResponse<any>;
   try {
-    runeResultResp = await axios.post("/druid/v2", runeQuery);
+    runeResultResp = await axios.post('/druid/v2', runeQuery);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -37,7 +37,7 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
 export async function queryDruidSql(sqlQuery: Record<string, any>): Promise<any[]> {
   let sqlResultResp: AxiosResponse<any>;
   try {
-    sqlResultResp = await axios.post("/druid/v2/sql", sqlQuery);
+    sqlResultResp = await axios.post('/druid/v2/sql', sqlQuery);
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }

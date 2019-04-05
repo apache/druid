@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent } from "@blueprintjs/core";
-import "brace/mode/json";
-import "brace/theme/solarized_dark";
-import * as React from "react";
-import AceEditor from "react-ace";
+import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import 'brace/mode/json';
+import 'brace/theme/solarized_dark';
+import * as React from 'react';
+import AceEditor from 'react-ace';
 
-import "./spec-dialog.scss";
+import './spec-dialog.scss';
 
 export interface SpecDialogProps extends React.Props<any> {
   onSubmit: (spec: JSON) => void;
@@ -65,7 +65,7 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
     const { spec } = this.state;
 
     return <Dialog
-      className={"spec-dialog"}
+      className="spec-dialog"
       isOpen
       onClose={onClose}
       title={title}
@@ -74,14 +74,14 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
       <AceEditor
         mode="json"
         theme="solarized_dark"
-        className={"spec-dialog-textarea"}
+        className="spec-dialog-textarea"
         onChange={(e) => { this.setState({ spec: e }); }}
         fontSize={12}
         showPrintMargin={false}
         showGutter
         highlightActiveLine
         value={spec}
-        width={"100%"}
+        width="100%"
         setOptions={{
           enableBasicAutocompletion: true,
           enableLiveAutocompletion: true,

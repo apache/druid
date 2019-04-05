@@ -16,25 +16,25 @@
  * limitations under the License.
  */
 
-import { Intent } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
-import { HashRouter, Route, Switch } from "react-router-dom";
+import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar } from './components/header-bar';
 import { AppToaster } from './singletons/toaster';
 import { DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE } from './variables';
 import { DatasourcesView } from './views/datasource-view';
 import { HomeView } from './views/home-view';
-import { LookupsView } from "./views/lookups-view";
+import { LookupsView } from './views/lookups-view';
 import { SegmentsView } from './views/segments-view';
 import { ServersView } from './views/servers-view';
 import { SqlView } from './views/sql-view';
 import { TasksView } from './views/tasks-view';
 
-import "./console-application.scss";
+import './console-application.scss';
 
 export interface ConsoleApplicationProps extends React.Props<any> {
   hideLegacy: boolean;
@@ -51,12 +51,12 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   static async ensureSql() {
     try {
-      await axios.post("/druid/v2/sql", { query: 'SELECT 1337' });
+      await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
     } catch (e) {
       const { response } = e;
-      if (response.status !== 405 || response.statusText !== "Method Not Allowed") return true; // other failure
+      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') return true; // other failure
       try {
-        await axios.get("/status");
+        await axios.get('/status');
       } catch (e) {
         return true; // total failure
       }

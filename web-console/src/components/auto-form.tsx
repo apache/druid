@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { InputGroup } from "@blueprintjs/core";
-import { FormGroup, HTMLSelect, NumericInput, TagInput } from "@blueprintjs/core";
+import { InputGroup } from '@blueprintjs/core';
+import { FormGroup, HTMLSelect, NumericInput, TagInput } from '@blueprintjs/core';
 import * as React from 'react';
 
 import { JSONInput } from './json-input';
 
-import "./auto-form.scss";
+import './auto-form.scss';
 
 interface Field {
   name: string;
@@ -44,7 +44,7 @@ export interface AutoFormState<T> {
 
 export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState<T>> {
   static makeLabelName(label: string): string {
-    let newLabel = label.split(/(?=[A-Z])/).map(s => s.toLowerCase()).join(" ");
+    let newLabel = label.split(/(?=[A-Z])/).map(s => s.toLowerCase()).join(' ');
     newLabel = newLabel[0].toUpperCase() + newLabel.slice(1);
     return newLabel;
   }
@@ -95,9 +95,9 @@ export class AutoForm<T> extends React.Component<AutoFormProps<T>, AutoFormState
   private renderBooleanInput(field: Field): JSX.Element {
     const { model, onChange } = this.props;
     return <HTMLSelect
-      value={(model as any)[field.name] === true ? "True" : "False"}
+      value={(model as any)[field.name] === true ? 'True' : 'False'}
       onChange={(e: any) => {
-        onChange(Object.assign({}, model, { [field.name]: e.currentTarget.value === "True" }));
+        onChange(Object.assign({}, model, { [field.name]: e.currentTarget.value === 'True' }));
       }}
     >
       <option value="True">True</option>

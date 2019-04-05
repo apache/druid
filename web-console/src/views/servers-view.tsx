@@ -16,28 +16,28 @@
  * limitations under the License.
  */
 
-import { Button, Switch } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Button, Switch } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
-import { sum } from "d3-array";
+import { sum } from 'd3-array';
 import * as React from 'react';
-import ReactTable from "react-table";
-import { Filter } from "react-table";
+import ReactTable from 'react-table';
+import { Filter } from 'react-table';
 
-import { TableColumnSelection } from "../components/table-column-selection";
+import { TableColumnSelection } from '../components/table-column-selection';
 import {
   addFilter,
   formatBytes,
   formatBytesCompact, LocalStorageKeys,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
-} from "../utils";
+} from '../utils';
 
-import "./servers-view.scss";
+import './servers-view.scss';
 
-const serverTableColumns: string[] = ["Server", "Tier", "Curr size", "Max size", "Usage", "Load/drop queues", "Host", "Port"];
-const middleManagerTableColumns: string[] = ["Host", "Usage", "Availability groups", "Last completed task time", "Blacklisted until"];
+const serverTableColumns: string[] = ['Server', 'Tier', 'Curr size', 'Max size', 'Usage', 'Load/drop queues', 'Host', 'Port'];
+const middleManagerTableColumns: string[] = ['Host', 'Usage', 'Availability groups', 'Last completed task time', 'Blacklisted until'];
 
 function formatQueues(segmentsToLoad: number, segmentsToLoadSize: number, segmentsToDrop: number, segmentsToDropSize: number): string {
   const queueParts: string[] = [];
@@ -104,7 +104,7 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       processQuery: async (query: string) => {
         const servers = await queryDruidSql({ query });
 
-        const loadQueueResponse = await axios.get("/druid/coordinator/v1/loadqueue?simple");
+        const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
         const loadQueues = loadQueueResponse.data;
 
         return servers.map((s: any) => {
@@ -131,7 +131,7 @@ WHERE "server_type" = 'historical'`);
 
     this.middleManagerQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        const resp = await axios.get("/druid/indexer/v1/workers");
+        const resp = await axios.get('/druid/indexer/v1/workers');
         return resp.data;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -172,26 +172,26 @@ WHERE "server_type" = 'historical'`);
       onFilteredChange={(filtered, column) => {
         this.setState({ serverFilter: filtered });
       }}
-      pivotBy={groupByTier ? ["tier"] : []}
+      pivotBy={groupByTier ? ['tier'] : []}
       columns={[
         {
-          Header: "Server",
-          accessor: "server",
+          Header: 'Server',
+          accessor: 'server',
           width: 300,
           Aggregated: row => '',
-          show: serverTableColumnSelectionHandler.showColumn("Server")
+          show: serverTableColumnSelectionHandler.showColumn('Server')
         },
         {
-          Header: "Tier",
-          accessor: "tier",
+          Header: 'Tier',
+          accessor: 'tier',
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ serverFilter: addFilter(serverFilter, 'tier', value) }); }}>{value}</a>;
           },
-          show: serverTableColumnSelectionHandler.showColumn("Tier")
+          show: serverTableColumnSelectionHandler.showColumn('Tier')
         },
         {
-          Header: "Curr size",
+          Header: 'Curr size',
           id: 'curr_size',
           width: 100,
           filterable: false,
@@ -206,10 +206,10 @@ WHERE "server_type" = 'historical'`);
             if (row.value === null) return '';
             return formatBytes(row.value);
           },
-          show: serverTableColumnSelectionHandler.showColumn("Curr size")
+          show: serverTableColumnSelectionHandler.showColumn('Curr size')
         },
         {
-          Header: "Max size",
+          Header: 'Max size',
           id: 'max_size',
           width: 100,
           filterable: false,
@@ -224,10 +224,10 @@ WHERE "server_type" = 'historical'`);
             if (row.value === null) return '';
             return formatBytes(row.value);
           },
-          show: serverTableColumnSelectionHandler.showColumn("Max size")
+          show: serverTableColumnSelectionHandler.showColumn('Max size')
         },
         {
-          Header: "Usage",
+          Header: 'Usage',
           id: 'usage',
           width: 100,
           filterable: false,
@@ -243,10 +243,10 @@ WHERE "server_type" = 'historical'`);
             if (row.value === null) return '';
             return fillIndicator(row.value);
           },
-          show: serverTableColumnSelectionHandler.showColumn("Usage")
+          show: serverTableColumnSelectionHandler.showColumn('Usage')
         },
         {
-          Header: "Load/drop queues",
+          Header: 'Load/drop queues',
           id: 'queue',
           width: 400,
           filterable: false,
@@ -264,16 +264,16 @@ WHERE "server_type" = 'historical'`);
             const segmentsToDropSize = sum(originals, s => s.segmentsToDropSize);
             return formatQueues(segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize);
           },
-          show: serverTableColumnSelectionHandler.showColumn("Load/drop queues")
+          show: serverTableColumnSelectionHandler.showColumn('Load/drop queues')
         },
         {
-          Header: "Host",
-          accessor: "host",
+          Header: 'Host',
+          accessor: 'host',
           Aggregated: () => '',
-          show: serverTableColumnSelectionHandler.showColumn("Host")
+          show: serverTableColumnSelectionHandler.showColumn('Host')
         },
         {
-          Header: "Port",
+          Header: 'Port',
           id: 'port',
           accessor: (row) => {
             const ports: string[] = [];
@@ -286,7 +286,7 @@ WHERE "server_type" = 'historical'`);
             return ports.join(', ') || 'No port';
           },
           Aggregated: () => '',
-          show: serverTableColumnSelectionHandler.showColumn("Port")
+          show: serverTableColumnSelectionHandler.showColumn('Port')
         }
       ]}
       defaultPageSize={10}
@@ -310,47 +310,47 @@ WHERE "server_type" = 'historical'`);
       }}
       columns={[
         {
-          Header: "Host",
-          id: "host",
+          Header: 'Host',
+          id: 'host',
           accessor: (row) => row.worker.host,
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ middleManagerFilter: addFilter(middleManagerFilter, 'host', value) }); }}>{value}</a>;
           },
-          show: middleManagerTableColumnSelectionHandler.showColumn("Host")
+          show: middleManagerTableColumnSelectionHandler.showColumn('Host')
         },
         {
-          Header: "Usage",
-          id: "usage",
+          Header: 'Usage',
+          id: 'usage',
           width: 60,
           accessor: (row) => `${row.currCapacityUsed} / ${row.worker.capacity}`,
           filterable: false,
-          show: middleManagerTableColumnSelectionHandler.showColumn("Usage")
+          show: middleManagerTableColumnSelectionHandler.showColumn('Usage')
         },
         {
-          Header: "Availability groups",
-          id: "availabilityGroups",
+          Header: 'Availability groups',
+          id: 'availabilityGroups',
           width: 60,
           accessor: (row) => row.availabilityGroups.length,
           filterable: false,
-          show: middleManagerTableColumnSelectionHandler.showColumn("Availability groups")
+          show: middleManagerTableColumnSelectionHandler.showColumn('Availability groups')
         },
         {
-          Header: "Last completed task time",
-          accessor: "lastCompletedTaskTime",
-          show: middleManagerTableColumnSelectionHandler.showColumn("Last completed task time")
+          Header: 'Last completed task time',
+          accessor: 'lastCompletedTaskTime',
+          show: middleManagerTableColumnSelectionHandler.showColumn('Last completed task time')
         },
         {
-          Header: "Blacklisted until",
-          accessor: "blacklistedUntil",
-          show: middleManagerTableColumnSelectionHandler.showColumn("Blacklisted until")
+          Header: 'Blacklisted until',
+          accessor: 'blacklistedUntil',
+          show: middleManagerTableColumnSelectionHandler.showColumn('Blacklisted until')
         }
       ]}
       defaultPageSize={10}
       className="-striped -highlight"
       SubComponent={rowInfo => {
         const runningTasks = rowInfo.original.runningTasks;
-        return <div style={{ padding: "20px" }}>
+        return <div style={{ padding: '20px' }}>
           {
             runningTasks.length ?
               <>

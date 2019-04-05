@@ -23,8 +23,8 @@ import {
   Dialog,
   FormGroup,
   Icon, Intent, NumericInput, ProgressBar, TagInput
-} from "@blueprintjs/core";
-import { IconName } from "@blueprintjs/icons";
+} from '@blueprintjs/core';
+import { IconName } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as React from 'react';
 

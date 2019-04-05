@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import * as Hjson from "hjson";
+import * as Hjson from 'hjson';
 import * as React from 'react';
-import ReactTable from "react-table";
+import ReactTable from 'react-table';
 
 import { SqlControl } from '../components/sql-control';
-import { QueryPlanDialog } from "../dialogs/query-plan-dialog";
+import { QueryPlanDialog } from '../dialogs/query-plan-dialog';
 import {
   BasicQueryExplanation,
   decodeRune,
@@ -32,7 +32,7 @@ import {
   queryDruidSql, QueryManager, SemiJoinQueryExplanation
 } from '../utils';
 
-import "./sql-view.scss";
+import './sql-view.scss';
 
 export interface SqlViewProps extends React.Props<any> {
   initSql: string | null;
@@ -77,7 +77,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
         } else {
           const result = await queryDruidSql({
             query,
-            resultFormat: "array",
+            resultFormat: 'array',
             header: true
           });
 
@@ -101,9 +101,9 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
         const explainQuery = `explain plan for ${query}`;
         const result = await queryDruidSql({
           query: explainQuery,
-          resultFormat: "object"
+          resultFormat: 'object'
         });
-        const data: BasicQueryExplanation | SemiJoinQueryExplanation | string = parseQueryPlan(result[0]["PLAN"]);
+        const data: BasicQueryExplanation | SemiJoinQueryExplanation | string = parseQueryPlan(result[0]['PLAN']);
         return data;
       },
       onStateChange: ({ result, loading, error }) => {

@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-import { Button, Intent } from "@blueprintjs/core";
-import { H5 } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Button, Intent } from '@blueprintjs/core';
+import { H5 } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
-import ReactTable from "react-table";
-import { Filter } from "react-table";
+import ReactTable from 'react-table';
+import { Filter } from 'react-table';
 
-import { TableColumnSelection } from "../components/table-column-selection";
-import { AppToaster } from "../singletons/toaster";
+import { TableColumnSelection } from '../components/table-column-selection';
+import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
   formatBytes,
@@ -35,12 +35,12 @@ import {
   parseList,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
-} from "../utils";
+} from '../utils';
 
-import "./segments-view.scss";
+import './segments-view.scss';
 
-const tableColumns: string[] = ["Segment ID", "Datasource", "Start", "End", "Version", "Partition",
-  "Size", "Num rows", "Replicas", "Is published", "Is realtime", "Is available"];
+const tableColumns: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition',
+  'Size', 'Num rows', 'Replicas', 'Is published', 'Is realtime', 'Is available'];
 
 export interface SegmentsViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -156,7 +156,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       manual
       filterable
       filtered={segmentFilter}
-      defaultSorted={[{id: "start", desc: true}]}
+      defaultSorted={[{id: 'start', desc: true}]}
       onFilteredChange={(filtered, column) => {
         this.setState({ segmentFilter: filtered });
       }}
@@ -165,100 +165,100 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       ofText=""
       columns={[
         {
-          Header: "Segment ID",
-          accessor: "segment_id",
+          Header: 'Segment ID',
+          accessor: 'segment_id',
           width: 300,
-          show: tableColumnSelectionHandler.showColumn("Segment ID")
+          show: tableColumnSelectionHandler.showColumn('Segment ID')
         },
         {
-          Header: "Datasource",
-          accessor: "datasource",
+          Header: 'Datasource',
+          accessor: 'datasource',
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) }); }}>{value}</a>;
           },
-          show: tableColumnSelectionHandler.showColumn("Datasource")
+          show: tableColumnSelectionHandler.showColumn('Datasource')
         },
         {
-          Header: "Start",
-          accessor: "start",
+          Header: 'Start',
+          accessor: 'start',
           width: 120,
           defaultSortDesc: true,
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) }); }}>{value}</a>;
           },
-          show: tableColumnSelectionHandler.showColumn("Start")
+          show: tableColumnSelectionHandler.showColumn('Start')
         },
         {
-          Header: "End",
-          accessor: "end",
+          Header: 'End',
+          accessor: 'end',
           defaultSortDesc: true,
           width: 120,
           Cell: row => {
             const value = row.value;
             return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) }); }}>{value}</a>;
           },
-          show: tableColumnSelectionHandler.showColumn("End")
+          show: tableColumnSelectionHandler.showColumn('End')
         },
         {
-          Header: "Version",
-          accessor: "version",
+          Header: 'Version',
+          accessor: 'version',
           defaultSortDesc: true,
           width: 120,
-          show: tableColumnSelectionHandler.showColumn("Version")
+          show: tableColumnSelectionHandler.showColumn('Version')
         },
         {
-          Header: "Partition",
-          accessor: "partition_num",
+          Header: 'Partition',
+          accessor: 'partition_num',
           width: 60,
           filterable: false,
-          show: tableColumnSelectionHandler.showColumn("Partition")
+          show: tableColumnSelectionHandler.showColumn('Partition')
         },
         {
-          Header: "Size",
-          accessor: "size",
+          Header: 'Size',
+          accessor: 'size',
           filterable: false,
           defaultSortDesc: true,
           Cell: row => formatBytes(row.value),
-          show: tableColumnSelectionHandler.showColumn("Size")
+          show: tableColumnSelectionHandler.showColumn('Size')
         },
         {
-          Header: "Num rows",
-          accessor: "num_rows",
+          Header: 'Num rows',
+          accessor: 'num_rows',
           filterable: false,
           defaultSortDesc: true,
           Cell: row => formatNumber(row.value),
-          show: tableColumnSelectionHandler.showColumn("Num rows")
+          show: tableColumnSelectionHandler.showColumn('Num rows')
         },
         {
-          Header: "Replicas",
-          accessor: "num_replicas",
+          Header: 'Replicas',
+          accessor: 'num_replicas',
           width: 60,
           filterable: false,
           defaultSortDesc: true,
-          show: tableColumnSelectionHandler.showColumn("Replicas")
+          show: tableColumnSelectionHandler.showColumn('Replicas')
         },
         {
-          Header: "Is published",
-          id: "is_published",
+          Header: 'Is published',
+          id: 'is_published',
           accessor: (row) => String(Boolean(row.is_published)),
           Filter: makeBooleanFilter(),
-          show: tableColumnSelectionHandler.showColumn("Is published")
+          show: tableColumnSelectionHandler.showColumn('Is published')
         },
         {
-          Header: "Is realtime",
-          id: "is_realtime",
+          Header: 'Is realtime',
+          id: 'is_realtime',
           accessor: (row) => String(Boolean(row.is_realtime)),
           Filter: makeBooleanFilter(),
-          show: tableColumnSelectionHandler.showColumn("Is realtime")
+          show: tableColumnSelectionHandler.showColumn('Is realtime')
         },
         {
-          Header: "Is available",
-          id: "is_available",
+          Header: 'Is available',
+          id: 'is_available',
           accessor: (row) => String(Boolean(row.is_available)),
           Filter: makeBooleanFilter(),
-          show: tableColumnSelectionHandler.showColumn("Is available")
+          show: tableColumnSelectionHandler.showColumn('Is available')
         }
       ]}
       defaultPageSize={50}

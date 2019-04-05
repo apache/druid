@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, HTMLSelect, InputGroup, Intent } from "@blueprintjs/core";
-import * as React from "react";
-import AceEditor from "react-ace";
+import { Button, Classes, Dialog, FormGroup, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
+import * as React from 'react';
+import AceEditor from 'react-ace';
 
-import { validJson } from "../utils";
+import { validJson } from '../utils';
 
-import "./lookup-edit-dialog.scss";
+import './lookup-edit-dialog.scss';
 
 export interface LookupEditDialogProps extends React.Props<any> {
   isOpen: boolean;
@@ -53,22 +53,22 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
     const {onChange} = this.props;
     const currentDate = new Date();
     const ISOString = currentDate.toISOString();
-    onChange("lookupEditVersion", ISOString);
+    onChange('lookupEditVersion', ISOString);
   }
 
   private renderTierInput() {
     const { isEdit, lookupTier, allLookupTiers, onChange } = this.props;
     if (isEdit) {
-      return <FormGroup className={"lookup-label"} label={"Tier: "}>
+      return <FormGroup className="lookup-label" label="Tier: ">
         <InputGroup
           value={lookupTier}
-          onChange={(e: any) => onChange("lookupEditTier", e.target.value)}
+          onChange={(e: any) => onChange('lookupEditTier', e.target.value)}
           disabled
         />
       </FormGroup>;
     } else {
-      return <FormGroup className={"lookup-label"} label={"Tier:"}>
-        <HTMLSelect disabled={isEdit} value={lookupTier} onChange={(e: any) => onChange("lookupEditTier", e.target.value)}>
+      return <FormGroup className="lookup-label" label="Tier:">
+        <HTMLSelect disabled={isEdit} value={lookupTier} onChange={(e: any) => onChange('lookupEditTier', e.target.value)}>
           {allLookupTiers.map(tier => (
             <option key={tier} value={tier}>{tier}</option>
           ))}
@@ -80,47 +80,47 @@ export class LookupEditDialog extends React.Component<LookupEditDialogProps, Loo
   render() {
     const { isOpen, onClose, onSubmit, lookupSpec, lookupTier, lookupName, lookupVersion, onChange, isEdit, allLookupTiers } = this.props;
 
-    const disableSubmit = lookupName === "" || lookupVersion === "" ||
-      lookupTier === "" || !validJson(lookupSpec);
+    const disableSubmit = lookupName === '' || lookupVersion === '' ||
+      lookupTier === '' || !validJson(lookupSpec);
 
     return <Dialog
-      className={"lookup-edit-dialog"}
+      className="lookup-edit-dialog"
       isOpen={isOpen}
       onClose={onClose}
-      title={isEdit ? "Edit lookup" : "Add lookup"}
+      title={isEdit ? 'Edit lookup' : 'Add lookup'}
     >
-      <FormGroup className={"lookup-label"} label={"Name: "}>
+      <FormGroup className="lookup-label" label="Name: ">
         <InputGroup
           value={lookupName}
-          onChange={(e: any) => onChange("lookupEditName", e.target.value)}
+          onChange={(e: any) => onChange('lookupEditName', e.target.value)}
           disabled={isEdit}
-          placeholder={"Enter the lookup name"}
+          placeholder="Enter the lookup name"
         />
       </FormGroup>
 
       {this.renderTierInput()}
 
-      <FormGroup className={"lookup-label"} label={"Version:"}>
+      <FormGroup className="lookup-label" label="Version:">
         <InputGroup
           value={lookupVersion}
-          onChange={(e: any) => onChange("lookupEditVersion", e.target.value)}
-          placeholder={"Enter the lookup version"}
-          rightElement={<Button minimal text={"Use ISO as version"} onClick={() => this.addISOVersion()} />}
+          onChange={(e: any) => onChange('lookupEditVersion', e.target.value)}
+          placeholder="Enter the lookup version"
+          rightElement={<Button minimal text="Use ISO as version" onClick={() => this.addISOVersion()} />}
         />
       </FormGroup>
 
-      <FormGroup className={"lookup-label"} label={"Spec:"}/>
+      <FormGroup className="lookup-label" label="Spec:"/>
 
       <AceEditor
-        className={"lookup-edit-dialog-textarea"}
+        className="lookup-edit-dialog-textarea"
         mode="sql"
         theme="solarized_dark"
         onChange={
-          (e: any) => onChange("lookupEditSpec", e)
+          (e: any) => onChange('lookupEditSpec', e)
         }
         fontSize={12}
-        height={"40vh"}
-        width={"auto"}
+        height="40vh"
+        width="auto"
         showPrintMargin={false}
         showGutter={false}
         value={lookupSpec}

@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, FormGroup, InputGroup, TextArea } from "@blueprintjs/core";
-import * as React from "react";
+import { Button, Classes, Dialog, FormGroup, InputGroup, TextArea } from '@blueprintjs/core';
+import * as React from 'react';
 
-import { BasicQueryExplanation, SemiJoinQueryExplanation } from "../utils";
+import { BasicQueryExplanation, SemiJoinQueryExplanation } from '../utils';
 
-import "./query-plan-dialog.scss";
+import './query-plan-dialog.scss';
 
 export interface QueryPlanDialogProps extends React.Props<any> {
   explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
@@ -53,17 +53,17 @@ export class QueryPlanDialog extends React.Component<QueryPlanDialogProps, Query
 
       let signature: JSX.Element | null = null;
       if ((explainResult as BasicQueryExplanation).signature) {
-        const signatureContent = (explainResult as BasicQueryExplanation).signature || "";
+        const signatureContent = (explainResult as BasicQueryExplanation).signature || '';
         signature = <FormGroup
-          label={"Signature"}
+          label="Signature"
         >
           <InputGroup defaultValue={signatureContent} readOnly/>
         </FormGroup>;
       }
 
-      content = <div className={"one-query"}>
+      content = <div className="one-query">
         <FormGroup
-          label={"Query"}
+          label="Query"
         >
           <TextArea
             readOnly
@@ -77,25 +77,25 @@ export class QueryPlanDialog extends React.Component<QueryPlanDialogProps, Query
       let mainSignature: JSX.Element | null = null;
       let subSignature: JSX.Element | null = null;
       if ((explainResult as SemiJoinQueryExplanation).mainQuery.signature) {
-        const signatureContent = (explainResult as SemiJoinQueryExplanation).mainQuery.signature || "";
+        const signatureContent = (explainResult as SemiJoinQueryExplanation).mainQuery.signature || '';
         mainSignature = <FormGroup
-          label={"Signature"}
+          label="Signature"
         >
           <InputGroup defaultValue={signatureContent} readOnly/>
         </FormGroup>;
       }
       if ((explainResult as SemiJoinQueryExplanation).subQueryRight.signature) {
-        const signatureContent = (explainResult as SemiJoinQueryExplanation).subQueryRight.signature || "";
+        const signatureContent = (explainResult as SemiJoinQueryExplanation).subQueryRight.signature || '';
         subSignature = <FormGroup
-          label={"Signature"}
+          label="Signature"
         >
           <InputGroup defaultValue={signatureContent} readOnly/>
         </FormGroup>;
       }
 
-      content = <div className={"two-queries"}>
+      content = <div className="two-queries">
         <FormGroup
-          label={"Main query"}
+          label="Main query"
         >
           <TextArea
             readOnly
@@ -104,7 +104,7 @@ export class QueryPlanDialog extends React.Component<QueryPlanDialogProps, Query
         </FormGroup>
         {mainSignature}
         <FormGroup
-          label={"Sub query"}
+          label="Sub query"
         >
           <TextArea
             readOnly
@@ -118,10 +118,10 @@ export class QueryPlanDialog extends React.Component<QueryPlanDialogProps, Query
     }
 
     return <Dialog
-      className={'query-plan-dialog'}
+      className="query-plan-dialog"
       isOpen
       onClose={onClose}
-      title={"Query plan"}
+      title="Query plan"
     >
       <div className={Classes.DIALOG_BODY}>
         {content}

@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { Alignment, AnchorButton, Button, Classes, Menu, MenuItem, Navbar, NavbarDivider, NavbarGroup, Popover, Position } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Alignment, AnchorButton, Button, Classes, Menu, MenuItem, Navbar, NavbarDivider, NavbarGroup, Popover, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as React from 'react';
 
-import { AboutDialog } from "../dialogs/about-dialog";
+import { AboutDialog } from '../dialogs/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../dialogs/coordinator-dynamic-config';
-import { OverlordDynamicConfigDialog } from "../dialogs/overlord-dynamic-config";
+import { OverlordDynamicConfigDialog } from '../dialogs/overlord-dynamic-config';
 import {
   DRUID_DOCS,
   DRUID_GITHUB,
@@ -32,7 +32,7 @@ import {
   LEGACY_OVERLORD_CONSOLE
 } from '../variables';
 
-import "./header-bar.scss";
+import './header-bar.scss';
 
 export type HeaderActiveTab = null | 'datasources' | 'segments' | 'tasks' | 'servers' | 'sql' | 'lookups';
 

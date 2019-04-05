@@ -16,18 +16,18 @@
  * limitations under the License.
  */
 
-import { Intent } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
-import axios from "axios";
-import * as React from "react";
+import { Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import axios from 'axios';
+import * as React from 'react';
 
-import { AutoForm } from "../components/auto-form";
-import { AppToaster } from "../singletons/toaster";
-import { getDruidErrorMessage, QueryManager } from "../utils";
+import { AutoForm } from '../components/auto-form';
+import { AppToaster } from '../singletons/toaster';
+import { getDruidErrorMessage, QueryManager } from '../utils';
 
-import { SnitchDialog } from "./snitch-dialog";
+import { SnitchDialog } from './snitch-dialog';
 
-import "./overlord-dynamic-config.scss";
+import './overlord-dynamic-config.scss';
 
 export interface OverlordDynamicConfigDialogProps extends React.Props<any> {
   onClose: () => void;
@@ -72,7 +72,7 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
   async getConfig() {
     let config: Record<string, any> | null = null;
     try {
-      const configResp = await axios.get("/druid/indexer/v1/worker");
+      const configResp = await axios.get('/druid/indexer/v1/worker');
       config = configResp.data || {};
     } catch (e) {
       AppToaster.show({
@@ -91,10 +91,10 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
     const { onClose } = this.props;
     const newState: any = this.state.dynamicConfig;
     try {
-      await axios.post("/druid/indexer/v1/worker", newState, {
+      await axios.post('/druid/indexer/v1/worker', newState, {
         headers: {
-          "X-Druid-Author": "console",
-          "X-Druid-Comment": comment
+          'X-Druid-Author': 'console',
+          'X-Druid-Comment': comment
         }
       });
     } catch (e) {
@@ -132,12 +132,12 @@ export class OverlordDynamicConfigDialog extends React.Component<OverlordDynamic
       <AutoForm
         fields={[
           {
-            name: "selectStrategy",
-            type: "json"
+            name: 'selectStrategy',
+            type: 'json'
           },
           {
-            name: "autoScaler",
-            type: "json"
+            name: 'autoScaler',
+            type: 'json'
           }
         ]}
         model={dynamicConfig}
