@@ -29,7 +29,8 @@ import {
   localStorageGet, LocalStorageKeys,
   localStorageSet, parseQueryPlan,
   queryDruidRune,
-  queryDruidSql, QueryManager, SemiJoinQueryExplanation
+  queryDruidSql, QueryManager,
+  SemiJoinQueryExplanation
 } from '../utils';
 
 import "./sql-view.scss";
@@ -46,6 +47,7 @@ export interface SqlViewState {
   explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
   loadingExplain: boolean;
   explainError: Error | null;
+  queryElapsed: number;
 }
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
@@ -62,17 +64,23 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
       explainDialogOpen: false,
       loadingExplain: false,
       explainResult: null,
-      explainError: null
+      explainError: null,
+      queryElapsed: 0
     };
   }
 
   componentDidMount(): void {
     this.sqlQueryManager = new QueryManager({
       processQuery: async (query: string) => {
+        const startTime = new Date();
         if (query.trim().startsWith('{')) {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(query);
-          return decodeRune(runeQuery, await queryDruidRune(runeQuery));
+          const result = await queryDruidRune(runeQuery);
+          this.setState({
+            queryElapsed: new Date().valueOf() - startTime.valueOf()
+          });
+          return decodeRune(runeQuery, result);
 
         } else {
           const result = await queryDruidSql({
@@ -80,7 +88,9 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
             resultFormat: "array",
             header: true
           });
-
+          this.setState({
+            queryElapsed: new Date().valueOf() - startTime.valueOf()
+          });
           return {
             header: (result && result.length) ? result[0] : [],
             rows: (result && result.length) ? result.slice(1) : []
@@ -158,6 +168,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   render() {
     const { initSql } = this.props;
+    const { queryElapsed } = this.state;
 
     return <div className="sql-view app-view">
       <SqlControl
@@ -167,6 +178,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           this.sqlQueryManager.runQuery(q);
         }}
         onExplain={(q: string) => this.getExplain(q)}
+        queryElapsed={queryElapsed}
       />
       {this.renderResultTable()}
       {this.renderExplainDialog()}

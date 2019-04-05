@@ -28,11 +28,16 @@
   }
 
   .buttons {
+    position: relative;
 
     button{
       margin-right: 15px;
     }
 
+    .query-elapsed {
+      position: absolute;
+      right: 10px;
+    }
   }
 
 }
