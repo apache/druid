@@ -16,15 +16,4 @@
  * limitations under the License.
  */
 
-.table-column-selection {
-  position: absolute;
-  right: 0;
-  margin: 0;
-}
-
-// This will be mounted in a portal
-.table-column-selection-menu {
-  .bp3-form-group {
-    margin-bottom: 0;
-  }
-}
+window.consoleConfig = { /* future configs may go here */ };

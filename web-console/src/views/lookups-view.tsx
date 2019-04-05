@@ -22,9 +22,9 @@ import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from "react-table";
-import { Filter } from "react-table";
 
 import { TableColumnSelection } from "../components/table-column-selection";
+import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { LookupEditDialog } from "../dialogs/lookup-edit-dialog";
 import { AppToaster } from "../singletons/toaster";
 import {
@@ -35,16 +35,17 @@ import {
 
 import "./lookups-view.scss";
 
-const tableColumns: string[] = ["Lookup Name", "Tier", "Type", "Version", "Config"];
+const tableColumns: string[] = ["Lookup name", "Tier", "Type", "Version", "Actions"];
 
 export interface LookupsViewProps extends React.Props<any> {
 
 }
 
 export interface LookupsViewState {
-  lookups: {}[];
+  lookups: {}[] | null;
   loadingLookups: boolean;
   lookupsError: string | null;
+  lookupsUninitialized: boolean;
   lookupEditDialogOpen: boolean;
   lookupEditName: string;
   lookupEditTier: string;
@@ -52,11 +53,13 @@ export interface LookupsViewState {
   lookupEditSpec: string;
   isEdit: boolean;
   allLookupTiers: string[];
+
+  deleteLookupTier: string | null;
+  deleteLookupName: string | null;
 }
 
 export class LookupsView extends React.Component<LookupsViewProps, LookupsViewState> {
   private lookupsGetQueryManager: QueryManager<string, {lookupEntries: any[], tiers: string[]}>;
-  private lookupDeleteQueryManager: QueryManager<string, any[]>;
   private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: LookupsViewProps, context: any) {
@@ -65,13 +68,17 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       lookups: [],
       loadingLookups: true,
       lookupsError: null,
+      lookupsUninitialized: false,
       lookupEditDialogOpen: false,
       lookupEditTier: "",
       lookupEditName: "",
       lookupEditVersion: "",
       lookupEditSpec: "",
       isEdit: false,
-      allLookupTiers: []
+      allLookupTiers: [],
+
+      deleteLookupTier: null,
+      deleteLookupName: null
     };
     this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
       LocalStorageKeys.LOOKUP_TABLE_COLUMN_SELECTION, () => this.setState({})
@@ -90,9 +97,10 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
         Object.keys(lookupData).map((tier: string) => {
           const lookupIds = lookupData[tier];
           Object.keys(lookupIds).map((id: string) => {
-            lookupEntries.push({tier, id, version: lookupData[tier][id].version, spec: lookupData[tier][id].lookupExtractorFactory});
+            lookupEntries.push({tier, id, version: lookupIds[id].version, spec: lookupIds[id].lookupExtractorFactory});
           });
         });
+
         return {
           lookupEntries,
           tiers
@@ -100,30 +108,20 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          lookups: result === null ? [] : result.lookupEntries,
+          lookups: result ? result.lookupEntries : null,
           loadingLookups: loading,
           lookupsError: error,
+          lookupsUninitialized: error === 'Request failed with status code 404',
           allLookupTiers: result === null ? [] : result.tiers
         });
       }
     });
 
     this.lookupsGetQueryManager.runQuery("dummy");
-
-    this.lookupDeleteQueryManager = new QueryManager({
-      processQuery: async (url: string) => {
-        const lookupDeleteResp = await axios.delete(url);
-        return lookupDeleteResp.data;
-      },
-      onStateChange: ({}) => {
-        this.lookupsGetQueryManager.rerunLastQuery();
-      }
-    });
   }
 
   componentWillUnmount(): void {
     this.lookupsGetQueryManager.terminate();
-    this.lookupDeleteQueryManager.terminate();
   }
 
   private async initializeLookup() {
@@ -143,6 +141,8 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
 
   private async openLookupEditDialog(tier: string, id: string) {
     const { lookups, allLookupTiers } = this.state;
+    if (!lookups) return;
+
     const target: any = lookups.find((lookupEntry: any) => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
     });
@@ -211,16 +211,35 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     }
   }
 
-  private deleteLookup(tier: string, name: string): void {
-    const url = `/druid/coordinator/v1/lookups/config/${tier}/${name}`;
-    this.lookupDeleteQueryManager.runQuery(url);
+  renderDeleteLookupAction() {
+    const { deleteLookupTier, deleteLookupName } = this.state;
+
+    return <AsyncActionDialog
+      action={
+        deleteLookupTier ? async () => {
+          await axios.delete(`/druid/coordinator/v1/lookups/config/${deleteLookupTier}/${deleteLookupName}`);
+        } : null
+      }
+      confirmButtonText="Delete lookup"
+      successText="Lookup was deleted"
+      failText="Could not delete lookup"
+      intent={Intent.DANGER}
+      onClose={(success) => {
+        this.setState({ deleteLookupTier: null, deleteLookupName: null });
+        if (success) this.lookupsGetQueryManager.rerunLastQuery();
+      }}
+    >
+      <p>
+        {`Are you sure you want to delete the lookup '${deleteLookupName}'?`}
+      </p>
+    </AsyncActionDialog>;
   }
 
   renderLookupsTable() {
-    const { lookups, loadingLookups, lookupsError } = this.state;
+    const { lookups, loadingLookups, lookupsError, lookupsUninitialized } = this.state;
     const { tableColumnSelectionHandler } = this;
 
-    if (lookupsError) {
+    if (lookupsUninitialized) {
       return <div className={"init-div"}>
         <Button
           icon={IconNames.BUILD}
@@ -229,19 +248,20 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
         />
       </div>;
     }
+
     return <>
       <ReactTable
-        data={lookups}
+        data={lookups || []}
         loading={loadingLookups}
         noDataText={!loadingLookups && lookups && !lookups.length ? 'No lookups' : (lookupsError || '')}
         filterable
         columns={[
           {
-            Header: "Lookup Name",
+            Header: "Lookup name",
             id: "lookup_name",
             accessor: (row: any) => row.id,
             filterable: true,
-            show: tableColumnSelectionHandler.showColumn("Lookup Name")
+            show: tableColumnSelectionHandler.showColumn("Lookup name")
           },
           {
             Header: "Tier",
@@ -265,8 +285,8 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
             show: tableColumnSelectionHandler.showColumn("Version")
           },
           {
-            Header: "Config",
-            id: "config",
+            Header: "Actions",
+            id: "actions",
             accessor: row => ({id: row.id, tier: row.tier}),
             filterable: false,
             Cell: (row: any) => {
@@ -275,10 +295,10 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
               return <div>
                 <a onClick={() => this.openLookupEditDialog(lookupTier, lookupId)}>Edit</a>
                 &nbsp;&nbsp;&nbsp;
-                <a onClick={() => this.deleteLookup(lookupTier, lookupId)}>Delete</a>
+                <a onClick={() => this.setState({ deleteLookupTier: lookupTier, deleteLookupName: lookupId })}>Delete</a>
               </div>;
             },
-            show: tableColumnSelectionHandler.showColumn("Config")
+            show: tableColumnSelectionHandler.showColumn("Actions")
           }
         ]}
         defaultPageSize={50}
@@ -305,7 +325,9 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
   }
 
   render() {
+    const { lookupsError } = this.state;
     const { tableColumnSelectionHandler } = this;
+
     return <div className="lookups-view app-view">
       <div className="control-bar">
         <div className="control-label">Lookups</div>
@@ -314,12 +336,13 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
           text="Refresh"
           onClick={() => this.lookupsGetQueryManager.rerunLastQuery()}
         />
-        <Button
-          icon={IconNames.PLUS}
-          text="Add"
-          style={{display: this.state.lookupsError !== null ? 'none' : 'inline'}}
-          onClick={() => this.openLookupEditDialog("", "")}
-        />
+        { !lookupsError &&
+          <Button
+            icon={IconNames.PLUS}
+            text="Add"
+            onClick={() => this.openLookupEditDialog("", "")}
+          />
+        }
         <TableColumnSelection
           columns={tableColumns}
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
@@ -328,6 +351,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       </div>
       {this.renderLookupsTable()}
       {this.renderLookupEditDialog()}
+      {this.renderDeleteLookupAction()}
     </div>;
   }
 }

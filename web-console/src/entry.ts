@@ -30,11 +30,18 @@ import "./entry.scss";
 const container = document.getElementsByClassName('app-container')[0];
 if (!container) throw new Error('container not found');
 
+interface ConsoleConfig {
+  hideLegacy?: boolean;
+  baseURL?: string;
+}
+
+const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
 ReactDOM.render(
   React.createElement(
     ConsoleApplication,
     {
-      version: '0.0.1'
+      hideLegacy: Boolean(consoleConfig.hideLegacy),
+      baseURL: consoleConfig.baseURL
     }
   ) as any,
   container
