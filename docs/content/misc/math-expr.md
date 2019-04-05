@@ -66,7 +66,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|concat|concatenate a list of strings|
+|concat|concat(expr, expr...) concatenate a list of strings|
 |format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.html)|
