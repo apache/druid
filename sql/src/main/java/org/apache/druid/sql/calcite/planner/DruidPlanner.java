@@ -91,7 +91,6 @@ public class DruidPlanner implements Closeable
     this.plannerContext = plannerContext;
   }
 
-
   public PrepareResult prepare(final String sql) throws SqlParseException, ValidationException, RelConversionException
   {
     SqlNode parsed = planner.parse(sql);
@@ -104,54 +103,17 @@ public class DruidPlanner implements Closeable
     RelRoot root = planner.rel(validated);
     RelDataType rowType = root.validatedRowType;
 
-    // this is sort of lame, planner won't cough up it's validator, it's private and has no accessors, so make
-    // so make another one so we can get the parameter types...
-    // but i suppose beats creating our own Prepare and Planner implementations
+    // this is sort of lame, planner won't cough up it's validator, it's private and has no accessors, so make another
+    // one so we can get the parameter types... but i suppose beats creating our own Prepare and Planner implementations
     SqlValidator validator = getValidator();
     RelDataType parameterTypes = validator.getParameterRowType(validator.validate(parsed));
 
     if (explain != null) {
       final RelDataTypeFactory typeFactory = root.rel.getCluster().getTypeFactory();
-      return new PrepareResult(typeFactory.createStructType(
-          ImmutableList.of(Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)),
-          ImmutableList.of("PLAN")
-      ), parameterTypes);
+      return new PrepareResult(getExplainStructType(typeFactory), parameterTypes);
     }
     return new PrepareResult(rowType, parameterTypes);
   }
-
-  private SqlValidator getValidator()
-  {
-    Preconditions.checkNotNull(planner.getTypeFactory());
-
-    final CalciteConnectionConfig connectionConfig;
-
-    if (frameworkConfig.getContext() != null) {
-      connectionConfig = frameworkConfig.getContext().unwrap(CalciteConnectionConfig.class);
-    } else {
-      Properties properties = new Properties();
-      properties.setProperty(
-          CalciteConnectionProperty.CASE_SENSITIVE.camelName(),
-          String.valueOf(PlannerFactory.PARSER_CONFIG.caseSensitive())
-      );
-      connectionConfig = new CalciteConnectionConfigImpl(properties);
-    }
-
-    Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
-        CalciteSchema.from(frameworkConfig.getDefaultSchema().getParentSchema()),
-        CalciteSchema.from(frameworkConfig.getDefaultSchema()).path(null),
-        planner.getTypeFactory(),
-        connectionConfig
-    );
-
-    return SqlValidatorUtil.newValidator(
-        frameworkConfig.getOperatorTable(),
-        catalogReader,
-        planner.getTypeFactory(),
-        DruidConformance.instance()
-    );
-  }
-
 
   public PlannerResult plan(final String sql)
       throws SqlParseException, ValidationException, RelConversionException
@@ -193,6 +155,38 @@ public class DruidPlanner implements Closeable
   public void close()
   {
     planner.close();
+  }
+
+  private SqlValidator getValidator()
+  {
+    Preconditions.checkNotNull(planner.getTypeFactory());
+
+    final CalciteConnectionConfig connectionConfig;
+
+    if (frameworkConfig.getContext() != null) {
+      connectionConfig = frameworkConfig.getContext().unwrap(CalciteConnectionConfig.class);
+    } else {
+      Properties properties = new Properties();
+      properties.setProperty(
+          CalciteConnectionProperty.CASE_SENSITIVE.camelName(),
+          String.valueOf(PlannerFactory.PARSER_CONFIG.caseSensitive())
+      );
+      connectionConfig = new CalciteConnectionConfigImpl(properties);
+    }
+
+    Prepare.CatalogReader catalogReader = new CalciteCatalogReader(
+        CalciteSchema.from(frameworkConfig.getDefaultSchema().getParentSchema()),
+        CalciteSchema.from(frameworkConfig.getDefaultSchema()).path(null),
+        planner.getTypeFactory(),
+        connectionConfig
+    );
+
+    return SqlValidatorUtil.newValidator(
+        frameworkConfig.getOperatorTable(),
+        catalogReader,
+        planner.getTypeFactory(),
+        DruidConformance.instance()
+    );
   }
 
   private PlannerResult planWithDruidConvention(
@@ -339,6 +333,26 @@ public class DruidPlanner implements Closeable
     }
   }
 
+  private PlannerResult planExplanation(
+      final RelNode rel,
+      final SqlExplain explain,
+      final Set<String> datasourceNames
+  )
+  {
+    final String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
+    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
+        Sequences.simple(ImmutableList.of(new Object[]{explanation})));
+    return new PlannerResult(resultsSupplier, getExplainStructType(rel.getCluster().getTypeFactory()), datasourceNames);
+  }
+
+  private static RelDataType getExplainStructType(RelDataTypeFactory typeFactory)
+  {
+    return typeFactory.createStructType(
+        ImmutableList.of(Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)),
+        ImmutableList.of("PLAN")
+    );
+  }
+
   private static class EnumeratorIterator<T> implements Iterator<T>
   {
     private final Iterator<T> it;
@@ -359,25 +373,5 @@ public class DruidPlanner implements Closeable
     {
       return it.next();
     }
-  }
-
-  private PlannerResult planExplanation(
-      final RelNode rel,
-      final SqlExplain explain,
-      final Set<String> datasourceNames
-  )
-  {
-    final String explanation = RelOptUtil.dumpPlan("", rel, explain.getFormat(), explain.getDetailLevel());
-    final Supplier<Sequence<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        Sequences.simple(ImmutableList.of(new Object[]{explanation})));
-    final RelDataTypeFactory typeFactory = rel.getCluster().getTypeFactory();
-    return new PlannerResult(
-        resultsSupplier,
-        typeFactory.createStructType(
-            ImmutableList.of(Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)),
-            ImmutableList.of("PLAN")
-        ),
-        datasourceNames
-    );
   }
 }

@@ -99,7 +99,6 @@ public class SqlQuery
     return getParameterList(parameters);
   }
 
-
   @Override
   public boolean equals(final Object o)
   {
