@@ -37,19 +37,19 @@ public class HttpFirehoseFactoryTest
     final ObjectMapper mapper = new DefaultObjectMapper();
     final DefaultPasswordProvider pwProvider = new DefaultPasswordProvider("testPassword");
     final HttpFirehoseFactory factory = new HttpFirehoseFactory(
-            ImmutableList.of(URI.create("http://foo/bar"), URI.create("http://foo/bar2")),
-            2048L,
-            1024L,
-            512L,
-            100L,
-            5,
-            "testUser",
-            pwProvider
+        ImmutableList.of(URI.create("http://foo/bar"), URI.create("http://foo/bar2")),
+        2048L,
+        1024L,
+        512L,
+        100L,
+        5,
+        "testUser",
+        pwProvider
     );
 
     final HttpFirehoseFactory outputFact = mapper.readValue(
-            mapper.writeValueAsString(factory),
-            HttpFirehoseFactory.class
+        mapper.writeValueAsString(factory),
+        HttpFirehoseFactory.class
     );
 
     Assert.assertEquals(factory, outputFact);

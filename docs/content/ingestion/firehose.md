@@ -80,21 +80,32 @@ Omitting these fields from your spec will result in HTTP requests with no Basic 
 |property|description|default|
 |--------|-----------|-------|
 |httpAuthenticationUsername|Username to use for authentication with specified URIs|None|
-|httpAuthenticationPassword|json object with a field called password containing the password to use for authentication with specified URIs|None|
+|httpAuthenticationPassword|PasswordProvider to use with specified URIs|None|
 
-Example with authentication fields:
+Example with authentication fields using the DefaultPassword provider (this requires the password to be in the ingestion spec):
 
-```json
+```JSON
 {
-    "type"    : "http",
-    "uris"  : ["http://example.com/uri1", "http://example2.com/uri2"],
+    "type": "http",
+    "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
     "httpAuthenticationUsername": "username",
-    "httpAuthenticationPassword": {
-        "password": "password123"
-    }
+    "httpAuthenticationPassword": "password123"
 }
 ```
 
+You can also use the other existing Druid PasswordProviders. Here is an example using the EnvironmentVariablePasswordProvider:
+
+```JSON
+{
+    "type": "http",
+    "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
+    "httpAuthenticationUsername": "username",
+    "httpAuthenticationPassword": {
+        "type": "environment",
+        "variable": "HTTP_FIREHOSE_PW"
+    }
+}
+```
 
 The below configurations can be optionally used for tuning the firehose performance.
 

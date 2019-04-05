@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.net.HttpHeaders;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
@@ -32,8 +33,10 @@ import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFa
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.CompressionUtils;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -49,8 +52,9 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   private static final Logger log = new Logger(HttpFirehoseFactory.class);
   private final List<URI> uris;
   private final boolean supportContentRange;
+  @Nullable
   private final String httpAuthenticationUsername;
-  private final DefaultPasswordProvider httpAuthenticationPasswordProvider;
+  private final PasswordProvider httpAuthenticationPasswordProvider;
 
   @JsonCreator
   public HttpFirehoseFactory(
@@ -60,8 +64,10 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
       @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
+      @Nullable
       @JsonProperty("httpAuthenticationUsername") String httpAuthenticationUsername,
-      @JsonProperty("httpAuthenticationPassword") DefaultPasswordProvider httpAuthenticationPasswordProvider
+      @Nullable
+      @JsonProperty("httpAuthenticationPassword") PasswordProvider httpAuthenticationPasswordProvider
   ) throws IOException
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
@@ -82,7 +88,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   }
 
   @JsonProperty("httpAuthenticationPassword")
-  public DefaultPasswordProvider getHttpAuthenticationPasswordProvider()
+  public PasswordProvider getHttpAuthenticationPasswordProvider()
   {
     return httpAuthenticationPasswordProvider;
   }
@@ -103,21 +109,21 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   protected InputStream openObjectStream(URI object) throws IOException
   {
     // A negative start value will ensure no bytes of the InputStream are skipped
-    return openObjectStream(object, -1);
+    return openObjectStream(object, 0);
   }
 
   @Override
   protected InputStream openObjectStream(URI object, long start) throws IOException
   {
     URLConnection urlConnection = openURLConnection(object);
-    if (supportContentRange && start >= 0) {
+    if (supportContentRange && start > 0) {
       // Set header for range request.
       // Since we need to set only the start offset, the header is "bytes=<range-start>-".
       // See https://tools.ietf.org/html/rfc7233#section-2.1
       urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", start));
       return urlConnection.getInputStream();
     } else {
-      if (start != -1) {
+      if (!supportContentRange && start > 0) {
         log.warn(
                 "Since the input source doesn't support range requests, the object input stream is opened from the start and "
                         + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
@@ -203,7 +209,8 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   URLConnection openURLConnection(URI object) throws IOException
   {
     URLConnection urlConnection = object.toURL().openConnection();
-    if (!"".equals(httpAuthenticationUsername) && !"".equals(httpAuthenticationPasswordProvider.getPassword())) {
+    if (!Strings.isNullOrEmpty(httpAuthenticationUsername) &&
+            !Strings.isNullOrEmpty(httpAuthenticationPasswordProvider.getPassword())) {
       String userPass = httpAuthenticationUsername + ":" + httpAuthenticationPasswordProvider.getPassword();
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
       urlConnection.setRequestProperty("Authorization", basicAuthString);
