@@ -324,9 +324,7 @@ converted to zeroes).
 
 ## Query execution
 
-Queries without aggregations will use Druid's [Scan](scan-query.html) or [Select](select-query.html) native query types.
-Scan is used whenever possible, as it is generally higher performance and more efficient than Select. However, Select
-is used in one case: when the query includes an `ORDER BY __time`, since Scan does not have a sorting feature.
+Queries without aggregations will use Druid's [Scan](scan-query.html) native query type.
 
 Aggregation queries (using GROUP BY, DISTINCT, or any aggregation functions) will use one of Druid's three native
 aggregation query types. Two (Timeseries and TopN) are specialized for specific types of aggregations, whereas the other
