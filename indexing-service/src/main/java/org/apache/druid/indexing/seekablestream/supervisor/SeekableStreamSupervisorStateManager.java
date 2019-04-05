@@ -33,7 +33,6 @@ import org.apache.druid.utils.CircularBuffer;
 import org.codehaus.plexus.util.ExceptionUtils;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Queue;
@@ -90,7 +89,7 @@ public class SeekableStreamSupervisorStateManager
   private boolean currentRunSuccessful = true;
   private final CircularBuffer<TaskState> completedTaskHistory;
   private final CircularBuffer<State> stateHistory; // From previous runs
-  private final ExceptionEventStorage eventStorage;
+  private final ExceptionEventStore eventStore;
 
   public SeekableStreamSupervisorStateManager(
       State initialState,
@@ -98,7 +97,7 @@ public class SeekableStreamSupervisorStateManager
   )
   {
     this.supervisorState = initialState;
-    this.eventStorage = new ExceptionEventStorage(
+    this.eventStore = new ExceptionEventStore(
         supervisorConfig.getNumExceptionEventsToStore(),
         supervisorConfig.isStoringStackTraces()
     );
@@ -133,7 +132,7 @@ public class SeekableStreamSupervisorStateManager
       t = new TransientStreamException(t);
     }
 
-    eventStorage.storeThrowable(t);
+    eventStore.storeThrowable(t);
     currentRunSuccessful = false;
   }
 
@@ -150,7 +149,7 @@ public class SeekableStreamSupervisorStateManager
 
     State currentRunState = State.RUNNING;
 
-    for (Map.Entry<Class, Queue<ExceptionEvent>> events : eventStorage.getNonTransientRecentEvents().entrySet()) {
+    for (Map.Entry<Class, Queue<ExceptionEvent>> events : eventStore.getNonTransientRecentEvents().entrySet()) {
       if (events.getValue().size() >= unhealthinessThreshold) {
         if (events.getKey().equals(NonTransientStreamException.class)) {
           currentRunState = getHigherPriorityState(currentRunState, State.UNABLE_TO_CONNECT_TO_STREAM);
@@ -210,12 +209,12 @@ public class SeekableStreamSupervisorStateManager
 
     // Reset manager state for next run
     currentRunSuccessful = true;
-    eventStorage.resetErrorsEncounteredOnRun();
+    eventStore.resetErrorsEncounteredOnRun();
   }
 
   public Queue<ExceptionEvent> getExceptionEvents()
   {
-    return eventStorage.getRecentEvents();
+    return eventStore.getRecentEvents();
   }
 
   public State getSupervisorState()
@@ -232,8 +231,8 @@ public class SeekableStreamSupervisorStateManager
   public class ExceptionEvent
   {
     private Class clazz;
-    private String message;
-    private String stackTrace;
+    // Contains full stackTrace if storingStackTraces is true
+    private String errorMessage;
     private DateTime timestamp;
 
     public ExceptionEvent(
@@ -242,8 +241,7 @@ public class SeekableStreamSupervisorStateManager
     )
     {
       this.clazz = t.getClass();
-      this.stackTrace = storingStackTraces ? ExceptionUtils.getStackTrace(t) : null;
-      this.message = t.getMessage();
+      this.errorMessage = storingStackTraces ? ExceptionUtils.getStackTrace(t) : t.getMessage();
       this.timestamp = DateTimes.nowUtc();
     }
 
@@ -254,16 +252,9 @@ public class SeekableStreamSupervisorStateManager
     }
 
     @JsonProperty
-    public String getMessage()
+    public String getErrorMessage()
     {
-      return message;
-    }
-
-    @JsonProperty
-    @Nullable
-    public String getStackTrace()
-    {
-      return stackTrace;
+      return errorMessage;
     }
 
     @JsonProperty
@@ -273,7 +264,7 @@ public class SeekableStreamSupervisorStateManager
     }
   }
 
-  private class ExceptionEventStorage
+  private class ExceptionEventStore
   {
     private final Queue<ExceptionEvent> recentEventsQueue;
     private final ConcurrentHashMap<Class, Queue<ExceptionEvent>> recentEventsMap;
@@ -281,7 +272,7 @@ public class SeekableStreamSupervisorStateManager
     private final boolean storeStackTraces;
     private final Set<Class> errorsEncounteredOnRun;
 
-    public ExceptionEventStorage(int numEventsToStore, boolean storeStackTraces)
+    public ExceptionEventStore(int numEventsToStore, boolean storeStackTraces)
     {
       this.recentEventsQueue = new ConcurrentLinkedQueue<>();
       this.recentEventsMap = new ConcurrentHashMap<>(numEventsToStore);
