@@ -16,26 +16,25 @@
  * limitations under the License.
  */
 
-@import "../variables";
+.query-plan-dialog {
 
-.sql-view {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  &.bp3-dialog {
+    width: 600px;
+  }
 
-  .sql-control {
+  textarea {
+    width: 100%;
+  }
+
+  .one-query {
     textarea {
-      width: 100%;
-      min-height: 180px;
-    }
-
-    .buttons {
-      padding: $standard-padding 0;
+      height: 50vh !important;
     }
   }
 
-  .ReactTable {
-    flex: 1;
+  .two-queries {
+    textarea {
+      height: 25vh !important;
+    }
   }
 }
-

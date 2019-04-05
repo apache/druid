@@ -37,9 +37,21 @@
 
 }
 
-.auto-complete-checkbox {
-  margin:10px;
+.sql-control-popover {
+  padding:10px;
   min-width: 120px;
+
+  .bp3-form-group {
+    margin-bottom: 0;
+  }
+
+  button {
+    span {
+      position: relative;
+      left: -7px;
+    }
+    padding-right: 35px;
+  }
 }
 
 .ace_tooltip {
