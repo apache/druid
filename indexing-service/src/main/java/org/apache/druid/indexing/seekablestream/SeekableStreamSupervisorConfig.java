@@ -21,10 +21,8 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 
 import javax.validation.constraints.Min;
-import java.util.Collections;
 
 public class SeekableStreamSupervisorConfig
 {
@@ -53,14 +51,7 @@ public class SeekableStreamSupervisorConfig
 
   // The maximum number of exception events that can be returned through the supervisor status endpoint
   @JsonProperty
-  private int numExceptionEventsToStore = Collections.max(
-      ImmutableList.of(
-          supervisorHealthinessThreshold,
-          supervisorUnhealthinessThreshold,
-          supervisorTaskHealthinessThreshold,
-          supervisorTaskUnhealthinessThreshold
-      )
-  );
+  private int numExceptionEventsToStore = Math.max(supervisorUnhealthinessThreshold, supervisorHealthinessThreshold);
 
   public boolean isStoringStackTraces()
   {

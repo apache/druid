@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSupervisorConfig;
@@ -97,14 +98,20 @@ public class SeekableStreamSupervisorStateManager
   )
   {
     this.supervisorState = initialState;
-    this.eventStore = new ExceptionEventStore(
-        supervisorConfig.getNumExceptionEventsToStore(),
-        supervisorConfig.isStoringStackTraces()
-    );
     this.healthinessThreshold = supervisorConfig.getSupervisorHealthinessThreshold();
     this.unhealthinessThreshold = supervisorConfig.getSupervisorUnhealthinessThreshold();
     this.healthinessTaskThreshold = supervisorConfig.getSupervisorTaskHealthinessThreshold();
     this.unhealthinessTaskThreshold = supervisorConfig.getSupervisorTaskUnhealthinessThreshold();
+    Preconditions.checkArgument(
+        supervisorConfig.getNumExceptionEventsToStore() >=
+        Math.max(healthinessThreshold, unhealthinessThreshold),
+        "numExceptionEventsToStore must be greater than or equal to both "
+        + "healthinessThreshold and unhealthinessThreshold"
+    );
+    this.eventStore = new ExceptionEventStore(
+        supervisorConfig.getNumExceptionEventsToStore(),
+        supervisorConfig.isStoringStackTraces()
+    );
     this.completedTaskHistory = new CircularBuffer<>(Math.max(healthinessTaskThreshold, unhealthinessTaskThreshold));
     this.stateHistory = new CircularBuffer<>(Math.max(healthinessThreshold, unhealthinessThreshold));
   }
