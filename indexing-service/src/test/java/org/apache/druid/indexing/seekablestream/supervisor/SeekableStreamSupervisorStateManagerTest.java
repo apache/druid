@@ -293,34 +293,15 @@ public class SeekableStreamSupervisorStateManagerTest
     stateManager.storeThrowableEvent(new PossiblyTransientStreamException(new Exception("oof")));
     Queue<SeekableStreamSupervisorStateManager.ExceptionEvent> events = stateManager.getExceptionEvents();
 
-    Assert.assertNull(events.peek().getErrorMessage());
+    Assert.assertNotNull(events.peek().getErrorMessage());
     Assert.assertEquals(PossiblyTransientStreamException.class, events.poll().getExceptionClass());
-    Assert.assertNull(events.peek().getErrorMessage());
+    Assert.assertNotNull(events.peek().getErrorMessage());
     Assert.assertEquals(NullPointerException.class, events.poll().getExceptionClass());
-    Assert.assertNull(events.peek().getErrorMessage());
+    Assert.assertNotNull(events.peek().getErrorMessage());
     Assert.assertEquals(TransientStreamException.class, events.poll().getExceptionClass());
-    Assert.assertNull(events.peek().getErrorMessage());
+    Assert.assertNotNull(events.peek().getErrorMessage());
     Assert.assertEquals(NonTransientStreamException.class, events.poll().getExceptionClass());
-    Assert.assertNull(events.peek().getErrorMessage());
+    Assert.assertNotNull(events.peek().getErrorMessage());
     Assert.assertEquals(TransientStreamException.class, events.poll().getExceptionClass());
-
-    config = new SeekableStreamSupervisorConfig();
-    config.setNumExceptionEventsToStore(10);
-    config.setStoringStackTraces(true);
-
-    stateManager = new SeekableStreamSupervisorStateManager(SeekableStreamSupervisorStateManager.State.RUNNING, config);
-
-    for (Exception exception : exceptions) {
-      stateManager.storeThrowableEvent(exception);
-      stateManager.markRunFinishedAndEvaluateHealth();
-    }
-    stateManager.markRunFinishedAndEvaluateHealth();
-    stateManager.storeThrowableEvent(new PossiblyTransientStreamException(new Exception("oof")));
-    events = stateManager.getExceptionEvents();
-    Assert.assertNotNull(events.poll().getErrorMessage());
-    Assert.assertNotNull(events.poll().getErrorMessage());
-    Assert.assertNotNull(events.poll().getErrorMessage());
-    Assert.assertNotNull(events.poll().getErrorMessage());
-    Assert.assertNotNull(events.poll().getErrorMessage());
   }
 }
