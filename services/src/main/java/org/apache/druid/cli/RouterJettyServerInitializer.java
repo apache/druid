@@ -113,7 +113,9 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
-    root.addServlet(buildServletHolder(asyncQueryForwardingServlet, routerHttpClientConfig), "/druid/v2/*");
+    ServletHolder queryServletHolder = buildServletHolder(asyncQueryForwardingServlet, routerHttpClientConfig);
+    root.addServlet(queryServletHolder, "/druid/v2/*");
+    root.addServlet(queryServletHolder, "/druid/v1/lookups/*");
 
     if (managementProxyConfig.isEnabled()) {
       ServletHolder managementForwardingServletHolder = buildServletHolder(

@@ -22,15 +22,18 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class ClientCompactQuery implements ClientQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
+  private final Interval interval;
   private final boolean keepSegmentGranularity;
   @Nullable
   private final Long targetCompactionSizeBytes;
@@ -40,7 +43,8 @@ public class ClientCompactQuery implements ClientQuery
   @JsonCreator
   public ClientCompactQuery(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("segments") List<DataSegment> segments,
+      @Nullable @JsonProperty("interval") final Interval interval,
+      @Nullable @JsonProperty("segments") final List<DataSegment> segments,
       @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactQueryTuningConfig tuningConfig,
@@ -49,6 +53,7 @@ public class ClientCompactQuery implements ClientQuery
   {
     this.dataSource = dataSource;
     this.segments = segments;
+    this.interval = interval;
     this.keepSegmentGranularity = keepSegmentGranularity;
     this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
@@ -73,6 +78,12 @@ public class ClientCompactQuery implements ClientQuery
   public List<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  public Interval getInterval()
+  {
+    return interval;
   }
 
   @JsonProperty
@@ -101,11 +112,45 @@ public class ClientCompactQuery implements ClientQuery
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ClientCompactQuery that = (ClientCompactQuery) o;
+    return keepSegmentGranularity == that.keepSegmentGranularity &&
+           Objects.equals(dataSource, that.dataSource) &&
+           Objects.equals(segments, that.segments) &&
+           Objects.equals(interval, that.interval) &&
+           Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
+           Objects.equals(tuningConfig, that.tuningConfig) &&
+           Objects.equals(context, that.context);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        dataSource,
+        segments,
+        interval,
+        keepSegmentGranularity,
+        targetCompactionSizeBytes,
+        tuningConfig,
+        context
+    );
+  }
+
+  @Override
   public String toString()
   {
     return "ClientCompactQuery{" +
            "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
+           ", interval=" + interval +
            ", keepSegmentGranularity=" + keepSegmentGranularity +
            ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
            ", tuningConfig=" + tuningConfig +

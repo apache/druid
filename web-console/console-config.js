@@ -16,10 +16,4 @@
  * limitations under the License.
  */
 
-// Trick blueprint 1.0.1 into accepting React 16 as React 15.
-// This is broken into its own file to make linting and import sorting easy
-// This file "a" to make sure it is imported before console-application in entry.ts
-
-// tslint:disable
-import * as React from 'react';
-(React as any).PropTypes = require('prop-types');
+window.consoleConfig = { /* future configs may go here */ };

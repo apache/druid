@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
-import { Button } from "@blueprintjs/core";
+import { Button } from '@blueprintjs/core';
 import * as React from 'react';
-import { Filter, ReactTableDefaults } from "react-table";
+import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components/loader';
 import { countBy, makeTextFilter } from '../utils';
+
+/* tslint:disable:max-classes-per-file */
 
 class FullButton extends React.Component {
   render() {
@@ -36,6 +38,8 @@ class NoData extends React.Component {
     return <div className="rt-noData">{children}</div>;
   }
 }
+
+/* tslint:enable:max-classes-per-file */
 
 Object.assign(ReactTableDefaults, {
   defaultFilterMethod: (filter: Filter, row: any, column: any) => {

@@ -27,9 +27,11 @@ import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
+import org.apache.calcite.sql.type.SqlOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
@@ -116,8 +118,9 @@ public class OperatorConversions
     private SqlFunctionCategory functionCategory = SqlFunctionCategory.USER_DEFINED_FUNCTION;
 
     // For operand type checking
+    private SqlOperandTypeChecker operandTypeChecker;
     private List<SqlTypeFamily> operandTypes;
-    private int requiredOperands = Integer.MAX_VALUE;
+    private Integer requiredOperands = null;
 
     private OperatorBuilder(final String name)
     {
@@ -158,6 +161,12 @@ public class OperatorConversions
       return this;
     }
 
+    public OperatorBuilder operandTypeChecker(final SqlOperandTypeChecker operandTypeChecker)
+    {
+      this.operandTypeChecker = operandTypeChecker;
+      return this;
+    }
+
     public OperatorBuilder operandTypes(final SqlTypeFamily... operandTypes)
     {
       this.operandTypes = Arrays.asList(operandTypes);
@@ -172,15 +181,25 @@ public class OperatorConversions
 
     public SqlFunction build()
     {
+      final SqlOperandTypeChecker theOperandTypeChecker;
+
+      if (operandTypeChecker == null) {
+        theOperandTypeChecker = OperandTypes.family(
+            Preconditions.checkNotNull(operandTypes, "operandTypes"),
+            i -> requiredOperands == null || i + 1 > requiredOperands
+        );
+      } else if (operandTypes == null && requiredOperands == null) {
+        theOperandTypeChecker = operandTypeChecker;
+      } else {
+        throw new ISE("Cannot have both 'operandTypeChecker' and 'operandTypes' / 'requiredOperands'");
+      }
+
       return new SqlFunction(
           name,
           kind,
           Preconditions.checkNotNull(returnTypeInference, "returnTypeInference"),
           null,
-          OperandTypes.family(
-              Preconditions.checkNotNull(operandTypes, "operandTypes"),
-              i -> i + 1 > requiredOperands
-          ),
+          theOperandTypeChecker,
           functionCategory
       );
     }

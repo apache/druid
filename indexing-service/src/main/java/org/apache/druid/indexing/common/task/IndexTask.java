@@ -1437,6 +1437,28 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
     }
 
+    public IndexTuningConfig withMaxTotalRows(Long maxTotalRows)
+    {
+      return new IndexTuningConfig(
+          maxRowsPerSegment,
+          maxRowsInMemory,
+          maxBytesInMemory,
+          maxTotalRows,
+          numShards,
+          partitionDimensions,
+          indexSpec,
+          maxPendingPersists,
+          forceGuaranteedRollup,
+          reportParseExceptions,
+          pushTimeout,
+          basePersistDirectory,
+          segmentWriteOutMediumFactory,
+          logParseExceptions,
+          maxParseExceptions,
+          maxSavedParseExceptions
+      );
+    }
+
     public IndexTuningConfig withMaxRowsPerSegment(int maxRowsPerSegment)
     {
       return new IndexTuningConfig(

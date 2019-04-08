@@ -17,7 +17,7 @@
  */
 
 .header-bar {
-  z-index: 10;
+  overflow: hidden;
 
   .logo {
     position: relative;

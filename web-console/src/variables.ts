@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-export const LEGACY_COORDINATOR_CONSOLE = "/index.html";
-export const LEGACY_OVERLORD_CONSOLE = "/console.html";
+export const LEGACY_COORDINATOR_CONSOLE = '/index.html';
+export const LEGACY_OVERLORD_CONSOLE = '/console.html';
 
-export const DRUID_WEBSITE = "http://druid.io";
-export const DRUID_GITHUB = "https://github.com/apache/druid";
-export const DRUID_DOCS = "http://druid.io/docs/latest";
-export const DRUID_DOCS_SQL = "http://druid.io/docs/latest/querying/sql.html";
-export const DRUID_COMMUNITY = "http://druid.io/community/";
-export const DRUID_USER_GROUP = "https://groups.google.com/forum/#!forum/druid-user";
-export const DRUID_DEVELOPER_GROUP = "https://lists.apache.org/list.html?dev@druid.apache.org";
+export const DRUID_WEBSITE = 'http://druid.io';
+export const DRUID_GITHUB = 'https://github.com/apache/druid';
+export const DRUID_DOCS = 'http://druid.io/docs/latest';
+export const DRUID_DOCS_SQL = 'http://druid.io/docs/latest/querying/sql.html';
+export const DRUID_COMMUNITY = 'http://druid.io/community/';
+export const DRUID_USER_GROUP = 'https://groups.google.com/forum/#!forum/druid-user';
+export const DRUID_DEVELOPER_GROUP = 'https://lists.apache.org/list.html?dev@druid.apache.org';

@@ -17,28 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.bloom;
+package org.apache.druid.query.lookup;
 
-import org.apache.druid.segment.NilColumnValueSelector;
+import javax.annotation.Nullable;
 
-import java.nio.ByteBuffer;
-
-public final class EmptyBloomFilterBufferAggregator extends BaseBloomFilterBufferAggregator<NilColumnValueSelector>
+/**
+ * Provides {@link LookupExtractorFactoryContainer} to query and indexing time dimension transformations.
+ */
+@FunctionalInterface
+public interface LookupExtractorFactoryContainerProvider
 {
-  EmptyBloomFilterBufferAggregator(int maxNumEntries)
-  {
-    super(NilColumnValueSelector.instance(), maxNumEntries);
-  }
-
-  @Override
-  public void bufferAdd(ByteBuffer buf)
-  {
-    // nothing to do
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position)
-  {
-    // nothing to do
-  }
+  @Nullable
+  LookupExtractorFactoryContainer get(String lookupName);
 }

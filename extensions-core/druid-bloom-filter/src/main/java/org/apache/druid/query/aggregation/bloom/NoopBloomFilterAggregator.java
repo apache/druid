@@ -17,39 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.quantiles;
+package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.segment.NilColumnValueSelector;
 
-public class DoublesSketchNoOpAggregator implements Aggregator
+public final class NoopBloomFilterAggregator extends BaseBloomFilterAggregator<NilColumnValueSelector>
 {
-
-  @Override
-  public Object get()
+  NoopBloomFilterAggregator(BloomKFilter collector)
   {
-    return DoublesSketchOperations.EMPTY_SKETCH;
+    super(NilColumnValueSelector.instance(), collector);
   }
 
   @Override
   public void aggregate()
   {
+    // nothing to do
   }
-
-  @Override
-  public void close()
-  {
-  }
-
-  @Override
-  public float getFloat()
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public long getLong()
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
 }

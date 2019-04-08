@@ -17,48 +17,50 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.distinctcount;
+package org.apache.druid.query.aggregation.datasketches.quantiles;
 
-import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
-public class EmptyDistinctCountAggregator implements Aggregator
+import java.nio.ByteBuffer;
+
+public class NoopDoublesSketchBufferAggregator implements BufferAggregator
 {
-
-  public EmptyDistinctCountAggregator()
+  @Override
+  public void init(final ByteBuffer buf, final int position)
   {
   }
 
   @Override
-  public void aggregate()
+  public void aggregate(final ByteBuffer buf, final int position)
   {
   }
 
   @Override
-  public Object get()
+  public Object get(final ByteBuffer buf, final int position)
   {
-    return 0L;
+    return DoublesSketchOperations.EMPTY_SKETCH;
   }
 
   @Override
-  public float getFloat()
+  public float getFloat(final ByteBuffer buf, final int position)
   {
-    return 0.0f;
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
-  public long getLong()
+  public long getLong(final ByteBuffer buf, final int position)
   {
-    return 0L;
-  }
-
-  @Override
-  public double getDouble()
-  {
-    return 0.0;
+    throw new UnsupportedOperationException("Not implemented");
   }
 
   @Override
   public void close()
+  {
+  }
+
+  @Override
+  public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
   {
   }
 }

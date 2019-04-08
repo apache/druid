@@ -18,7 +18,7 @@
 
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as numeral from "numeral";
+import * as numeral from 'numeral';
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
@@ -55,7 +55,7 @@ export function makeBooleanFilter(): FilterRender {
       key={key}
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
-      value={filterValue || "all"}
+      value={filterValue || 'all'}
       fill
     >
       <option value="all">Show all</option>
@@ -141,13 +141,13 @@ export function stringifyJSON(item: any): string {
   if (item != null) {
     return JSON.stringify(item, null, 2);
   } else {
-    return "";
+    return '';
   }
 }
 
 // parse string to JSON object; if string is empty, return null
 export function parseStringToJSON(s: string): JSON | null {
-  if (s === "") {
+  if (s === '') {
     return null;
   } else {
     return JSON.parse(s);
