@@ -222,8 +222,8 @@ follows:
 |-----|-----------|--------|
 |UNHEALTHY_SUPERVISOR|The supervisor has encountered non-transient errors on the past `druid.supervisor.stream.unhealthinessThreshold` iterations|1|
 |UNHEALTHY_TASKS|The last `druid.supervisor.stream.taskUnhealthinessThreshold` tasks have all failed|2|
-|UNABLE_TO_CONNECT_TO_STREAM|The supervisor is encountering connectivity issues with Kinesis and has not successfully connected in the past|3|
-|LOST_CONTACT_WITH_STREAM|The supervisor is encountering transient connectivity issues with Kinesis but has successfully connected in the past|4|
+|UNABLE_TO_CONNECT_TO_STREAM|The supervisor is encountering connectivity issues with Kafka and has not successfully connected in the past|3|
+|LOST_CONTACT_WITH_STREAM|The supervisor is encountering transient connectivity issues with Kafka but has successfully connected in the past|4|
 |WAITING_TO_RUN (first iteration only)|The supervisor has been initialized and hasn't started connecting to the stream.|5|
 |CONNECTING_TO_STREAM (first iteration only)|The supervisor is trying to connect to the stream and update partition data|5|
 |DISCOVERING_INITIAL_TASKS (first iteration only)|The supervisor is discovering already-running tasks|5|
