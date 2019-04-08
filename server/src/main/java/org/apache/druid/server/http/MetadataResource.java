@@ -202,7 +202,6 @@ public class MetadataResource
       Response.ResponseBuilder builder = Response.status(Response.Status.OK);
       return builder.entity(authorizedSegments).build();
     }
-
   }
 
   /**
