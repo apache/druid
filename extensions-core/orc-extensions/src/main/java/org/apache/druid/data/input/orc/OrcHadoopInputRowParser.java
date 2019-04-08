@@ -37,7 +37,7 @@ import java.util.List;
 public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
 {
   private final ParseSpec parseSpec;
-  private final ObjectFlattener<OrcStruct> groupFlattener;
+  private final ObjectFlattener<OrcStruct> orcStructFlattener;
   private final MapInputRowParser parser;
   private final boolean binaryAsString;
 
@@ -50,12 +50,12 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     this.parseSpec = parseSpec;
     this.binaryAsString = binaryAsString == null ? false : binaryAsString;
     final JSONPathSpec flattenSpec;
-    if ((parseSpec instanceof OrcParseSpec)) {
+    if (parseSpec instanceof OrcParseSpec) {
       flattenSpec = ((OrcParseSpec) parseSpec).getFlattenSpec();
     } else {
       flattenSpec = JSONPathSpec.DEFAULT;
     }
-    this.groupFlattener = ObjectFlatteners.create(flattenSpec, new OrcStructFlattenerMaker(false));
+    this.orcStructFlattener = ObjectFlatteners.create(flattenSpec, new OrcStructFlattenerMaker(binaryAsString));
     this.parser = new MapInputRowParser(parseSpec);
   }
 
@@ -63,7 +63,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   @Override
   public List<InputRow> parseBatch(OrcStruct input)
   {
-    return parser.parseBatch(groupFlattener.flatten(input));
+    return parser.parseBatch(orcStructFlattener.flatten(input));
   }
 
   @Override
