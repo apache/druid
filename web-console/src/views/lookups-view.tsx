@@ -16,26 +16,26 @@
  * limitations under the License.
  */
 
-import { Button, Intent } from "@blueprintjs/core";
+import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
-import ReactTable from "react-table";
+import ReactTable from 'react-table';
 
-import { TableColumnSelection } from "../components/table-column-selection";
+import { TableColumnSelection } from '../components/table-column-selection';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
-import { LookupEditDialog } from "../dialogs/lookup-edit-dialog";
-import { AppToaster } from "../singletons/toaster";
+import { LookupEditDialog } from '../dialogs/lookup-edit-dialog';
+import { AppToaster } from '../singletons/toaster';
 import {
   getDruidErrorMessage, LocalStorageKeys,
   QueryManager,
   TableColumnSelectionHandler
-} from "../utils";
+} from '../utils';
 
-import "./lookups-view.scss";
+import './lookups-view.scss';
 
-const tableColumns: string[] = ["Lookup name", "Tier", "Type", "Version", "Actions"];
+const tableColumns: string[] = ['Lookup name', 'Tier', 'Type', 'Version', 'Actions'];
 
 export interface LookupsViewProps extends React.Props<any> {
 
@@ -70,10 +70,10 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       lookupsError: null,
       lookupsUninitialized: false,
       lookupEditDialogOpen: false,
-      lookupEditTier: "",
-      lookupEditName: "",
-      lookupEditVersion: "",
-      lookupEditSpec: "",
+      lookupEditTier: '',
+      lookupEditName: '',
+      lookupEditVersion: '',
+      lookupEditSpec: '',
       isEdit: false,
       allLookupTiers: [],
 
@@ -92,7 +92,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
         const tiers = tiersResp.data;
 
         const lookupEntries: {}[] = [];
-        const lookupResp = await axios.get("/druid/coordinator/v1/lookups/config/all");
+        const lookupResp = await axios.get('/druid/coordinator/v1/lookups/config/all');
         const lookupData = lookupResp.data;
         Object.keys(lookupData).map((tier: string) => {
           const lookupIds = lookupData[tier];
@@ -117,7 +117,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
       }
     });
 
-    this.lookupsGetQueryManager.runQuery("dummy");
+    this.lookupsGetQueryManager.runQuery('dummy');
   }
 
   componentWillUnmount(): void {
@@ -146,12 +146,12 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     const target: any = lookups.find((lookupEntry: any) => {
       return lookupEntry.tier === tier && lookupEntry.id === id;
     });
-    if (id === "") {
+    if (id === '') {
       this.setState({
-        lookupEditName: "",
+        lookupEditName: '',
         lookupEditTier: allLookupTiers[0],
         lookupEditDialogOpen: true,
-        lookupEditSpec: "",
+        lookupEditSpec: '',
         lookupEditVersion: (new Date()).toISOString(),
         isEdit: false
       });
@@ -175,7 +175,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
 
   private async submitLookupEdit() {
     const { lookupEditTier, lookupEditName, lookupEditSpec, lookupEditVersion, isEdit } = this.state;
-    let endpoint = "/druid/coordinator/v1/lookups/config";
+    let endpoint = '/druid/coordinator/v1/lookups/config';
     const specJSON: any = JSON.parse(lookupEditSpec);
     let dataJSON: any;
     if (isEdit) {
@@ -240,7 +240,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
     const { tableColumnSelectionHandler } = this;
 
     if (lookupsUninitialized) {
-      return <div className={"init-div"}>
+      return <div className="init-div">
         <Button
           icon={IconNames.BUILD}
           text="Initialize lookup"
@@ -257,36 +257,36 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
         filterable
         columns={[
           {
-            Header: "Lookup name",
-            id: "lookup_name",
+            Header: 'Lookup name',
+            id: 'lookup_name',
             accessor: (row: any) => row.id,
             filterable: true,
-            show: tableColumnSelectionHandler.showColumn("Lookup name")
+            show: tableColumnSelectionHandler.showColumn('Lookup name')
           },
           {
-            Header: "Tier",
-            id: "tier",
+            Header: 'Tier',
+            id: 'tier',
             accessor: (row: any) => row.tier,
             filterable: true,
-            show: tableColumnSelectionHandler.showColumn("Tier")
+            show: tableColumnSelectionHandler.showColumn('Tier')
           },
           {
-            Header: "Type",
-            id: "type",
+            Header: 'Type',
+            id: 'type',
             accessor: (row: any) => row.spec.type,
             filterable: true,
-            show: tableColumnSelectionHandler.showColumn("Type")
+            show: tableColumnSelectionHandler.showColumn('Type')
           },
           {
-            Header: "Version",
-            id: "version",
+            Header: 'Version',
+            id: 'version',
             accessor: (row: any) => row.version,
             filterable: true,
-            show: tableColumnSelectionHandler.showColumn("Version")
+            show: tableColumnSelectionHandler.showColumn('Version')
           },
           {
-            Header: "Actions",
-            id: "actions",
+            Header: 'Actions',
+            id: 'actions',
             accessor: row => ({id: row.id, tier: row.tier}),
             filterable: false,
             Cell: (row: any) => {
@@ -298,7 +298,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
                 <a onClick={() => this.setState({ deleteLookupTier: lookupTier, deleteLookupName: lookupId })}>Delete</a>
               </div>;
             },
-            show: tableColumnSelectionHandler.showColumn("Actions")
+            show: tableColumnSelectionHandler.showColumn('Actions')
           }
         ]}
         defaultPageSize={50}
@@ -340,7 +340,7 @@ export class LookupsView extends React.Component<LookupsViewProps, LookupsViewSt
           <Button
             icon={IconNames.PLUS}
             text="Add"
-            onClick={() => this.openLookupEditDialog("", "")}
+            onClick={() => this.openLookupEditDialog('', '')}
           />
         }
         <TableColumnSelection

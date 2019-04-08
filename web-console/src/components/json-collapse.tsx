@@ -41,7 +41,7 @@ export class JSONCollapse extends React.Component<JSONCollapseProps, JSONCollaps
     const { stringValue, buttonText} = this.props;
     const { isOpen } = this.state;
     const prettyValue = JSON.stringify(JSON.parse(stringValue), undefined, 2);
-    return <div className={"json-collapse"}>
+    return <div className="json-collapse">
       <Button
         minimal
         active={isOpen}

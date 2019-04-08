@@ -21,11 +21,10 @@ import 'es7-shim'; // Webpack with automatically pick browser.js which does the 
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
-import "./bootstrap/a-shim-for-react-props";
-import "./bootstrap/react-table-defaults";
+import './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
 
-import "./entry.scss";
+import './entry.scss';
 
 const container = document.getElementsByClassName('app-container')[0];
 if (!container) throw new Error('container not found');

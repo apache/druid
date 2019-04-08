@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent } from "@blueprintjs/core";
+import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import * as React from 'react';
 
 import { AutoForm } from '../components/auto-form';
@@ -52,7 +52,7 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
       inputSegmentSizeBytes: 419430400,
       keepSegmentGranularity: true,
       maxNumSegmentsToCompact: 150,
-      skipOffsetFromLatest: "P1D",
+      skipOffsetFromLatest: 'P1D',
       targetCompactionSizeBytes: 419430400,
       taskContext: null,
       taskPriority: 25,
@@ -79,36 +79,36 @@ export class CompactionDialog extends React.Component<CompactionDialogProps, Com
       <AutoForm
         fields={[
           {
-            name: "inputSegmentSizeBytes",
-            type: "number"
+            name: 'inputSegmentSizeBytes',
+            type: 'number'
           },
           {
-            name: "keepSegmentGranularity",
-            type: "boolean"
+            name: 'keepSegmentGranularity',
+            type: 'boolean'
           },
           {
-            name: "maxNumSegmentsToCompact",
-            type: "number"
+            name: 'maxNumSegmentsToCompact',
+            type: 'number'
           },
           {
-            name: "skipOffsetFromLatest",
-            type: "string"
+            name: 'skipOffsetFromLatest',
+            type: 'string'
           },
           {
-            name: "targetCompactionSizeBytes",
-            type: "number"
+            name: 'targetCompactionSizeBytes',
+            type: 'number'
           },
           {
-            name: "taskContext",
-            type: "json"
+            name: 'taskContext',
+            type: 'json'
           },
           {
-            name: "taskPriority",
-            type: "number"
+            name: 'taskPriority',
+            type: 'number'
           },
           {
-            name: "tuningConfig",
-            type: "json"
+            name: 'tuningConfig',
+            type: 'json'
           }
         ]}
         model={currentConfig}

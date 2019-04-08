@@ -17,9 +17,9 @@
  */
 
 import * as React from 'react';
-import AceEditor from "react-ace";
+import AceEditor from 'react-ace';
 
-import { parseStringToJSON, stringifyJSON, validJson } from "../utils";
+import { parseStringToJSON, stringifyJSON, validJson } from '../utils';
 
 interface JSONInputProps extends React.Props<any> {
   onChange: (newJSONValue: any) => void;
@@ -38,7 +38,7 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
   constructor(props: JSONInputProps) {
     super(props);
     this.state = {
-      stringValue: ""
+      stringValue: ''
     };
   }
 
@@ -62,19 +62,19 @@ export class JSONInput extends React.Component<JSONInputProps, JSONInputState> {
     const { onChange, updateInputValidity, focus, width, height } = this.props;
     const { stringValue } = this.state;
     return <AceEditor
-      key={"hjson"}
-      mode={"hjson"}
+      key="hjson"
+      mode="hjson"
       theme="solarized_dark"
       name="ace-editor"
       onChange={(e: string) => {
         this.setState({stringValue: e});
-        if (validJson(e) || e === "") onChange(parseStringToJSON(e));
+        if (validJson(e) || e === '') onChange(parseStringToJSON(e));
         if (updateInputValidity) updateInputValidity(validJson(e) || e === '');
       }}
       focus={focus}
       fontSize={12}
       width={width || '100%'}
-      height={height || "8vh"}
+      height={height || '8vh'}
       showPrintMargin={false}
       showGutter={false}
       value={stringValue}
