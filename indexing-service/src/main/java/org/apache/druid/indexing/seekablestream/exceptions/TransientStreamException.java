@@ -19,6 +19,11 @@
 
 package org.apache.druid.indexing.seekablestream.exceptions;
 
+/**
+ * An exception wrapper for stream (Kafka/Kinesis) exceptions that will resolve over time.  An example
+ * of such is some sort of rate limit exceeded exception.
+ */
+
 public class TransientStreamException extends RuntimeException
 {
   public TransientStreamException(Throwable t)

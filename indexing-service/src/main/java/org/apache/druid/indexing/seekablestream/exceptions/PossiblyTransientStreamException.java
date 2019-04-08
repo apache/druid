@@ -19,6 +19,12 @@
 
 package org.apache.druid.indexing.seekablestream.exceptions;
 
+/**
+ * An exception wrapper for stream (Kafka/Kinesis) exceptions that might resolve over time.  An example
+ * of such is some sort of connectivity exception that could signify that the resource doesn't exist
+ * or that there's some temporary network issue.
+ */
+
 public class PossiblyTransientStreamException extends RuntimeException
 {
   public PossiblyTransientStreamException(Throwable t)
