@@ -85,7 +85,6 @@ import java.util.List;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
-
   @Test
   public void testSelectConstantExpression() throws Exception
   {
