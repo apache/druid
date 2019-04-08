@@ -169,20 +169,16 @@ public class StringUtilsTest
   @Test
   public void testRepeat()
   {
-    {
-      Assert.assertEquals("", StringUtils.repeat("foo", 0));
-      Assert.assertEquals("foo", StringUtils.repeat("foo", 1));
-      Assert.assertEquals("foofoofoo", StringUtils.repeat("foo", 3));
-    }
-    {
-      Assert.assertEquals("", StringUtils.repeat("", 0));
-      Assert.assertEquals("", StringUtils.repeat("", 1));
-      Assert.assertEquals("", StringUtils.repeat("", 3));
-    }
-    {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("count is negative, -1");
-      Assert.assertEquals("", StringUtils.repeat("foo", -1));
-    }
+    Assert.assertEquals("", StringUtils.repeat("foo", 0));
+    Assert.assertEquals("foo", StringUtils.repeat("foo", 1));
+    Assert.assertEquals("foofoofoo", StringUtils.repeat("foo", 3));
+
+    Assert.assertEquals("", StringUtils.repeat("", 0));
+    Assert.assertEquals("", StringUtils.repeat("", 1));
+    Assert.assertEquals("", StringUtils.repeat("", 3));
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("count is negative, -1");
+    Assert.assertEquals("", StringUtils.repeat("foo", -1));
   }
 }

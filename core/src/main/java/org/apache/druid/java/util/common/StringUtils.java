@@ -364,7 +364,7 @@ public class StringUtils
 
   /**
    * Returns a string whose value is the concatenation of the
-   * string {@code str} repeated {@code count} times.
+   * string {@code s} repeated {@code count} times.
    * <p>
    * If count or length is zero then the empty string is returned.
    * <p>
