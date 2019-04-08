@@ -218,10 +218,10 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         <Button rightIcon={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
           {isRune ? 'Rune' : 'Run'}
         </Button>
-        {!isRune ? SqlControlPopover : null}
-        {queryElapsed === null
-          ? null
-          : <span className={"query-elapsed"}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
+        {!isRune && SqlControlPopover}
+        {
+          queryElapsed &&
+          <span className={"query-elapsed"}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
         }
       </div>
     </div>;

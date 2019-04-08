@@ -50,9 +50,14 @@ export interface SqlViewState {
   queryElapsed: number | null;
 }
 
+interface SqlQueryResult {
+  queryResult: HeaderRows;
+  queryElapsed: number;
+}
+
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
-  private sqlQueryManager: QueryManager<string, Record<string, HeaderRows | number>>;
+  private sqlQueryManager: QueryManager<string, SqlQueryResult>;
   private explainQueryManager: QueryManager<string, any>;
 
   constructor(props: SqlViewProps, context: any) {
@@ -77,10 +82,9 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(query);
           const result = await queryDruidRune(runeQuery);
-          const queryElapsed =  new Date().valueOf() - startTime.valueOf();
           return {
             queryResult: decodeRune(runeQuery, result),
-            queryElapsed
+            queryElapsed: new Date().valueOf() - startTime.valueOf()
           };
         } else {
           const result = await queryDruidSql({
@@ -88,20 +92,19 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
             resultFormat: "array",
             header: true
           });
-          const queryElapsed =  new Date().valueOf() - startTime.valueOf();
           return {
             queryResult: {
               header: (result && result.length) ? result[0] : [],
               rows: (result && result.length) ? result.slice(1) : []
             },
-            queryElapsed
+            queryElapsed: new Date().valueOf() - startTime.valueOf()
           };
         }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          result: result === null ? null : result.queryResult,
-          queryElapsed: result === null ? null : result.queryElapsed,
+          result: result ? result.queryResult : null,
+          queryElapsed: result ? result.queryElapsed : null,
           loading,
           error
         });
