@@ -37,7 +37,7 @@ This expression language supports the following operators (listed in decreasing 
 |*, /, %|Binary multiplicative|
 |+, -|Binary additive|
 |<, <=, >, >=, ==, !=|Binary Comparison|
-|&&,\|\||Binary Logical AND, OR|
+|&&, &#124;|Binary Logical AND, OR|
 
 Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literals should be quoted by single quotation marks.
 
@@ -66,7 +66,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|concat|concatenate a list of strings|
+|concat|concat(expr, expr...) concatenate a list of strings|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.html)|
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
