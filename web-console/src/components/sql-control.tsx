@@ -40,7 +40,7 @@ export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
   onRun: (query: string) => void;
   onExplain: (query: string) => void;
-  queryElapsed: number;
+  queryElapsed: number | null;
 }
 
 export interface SqlControlState {
@@ -219,9 +219,10 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
           {isRune ? 'Rune' : 'Run'}
         </Button>
         {!isRune ? SqlControlPopover : null}
-        <span className={"query-elapsed"}>
-          Last query took {queryElapsed / 1000} seconds
-        </span>
+        {queryElapsed === null
+          ? null
+          : <span className={"query-elapsed"}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
+        }
       </div>
     </div>;
   }

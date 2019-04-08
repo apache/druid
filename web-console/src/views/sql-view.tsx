@@ -47,12 +47,12 @@ export interface SqlViewState {
   explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
   loadingExplain: boolean;
   explainError: Error | null;
-  queryElapsed: number;
+  queryElapsed: number | null;
 }
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
-  private sqlQueryManager: QueryManager<string, HeaderRows>;
+  private sqlQueryManager: QueryManager<string, Record<string, HeaderRows | number>>;
   private explainQueryManager: QueryManager<string, any>;
 
   constructor(props: SqlViewProps, context: any) {
@@ -65,7 +65,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
       loadingExplain: false,
       explainResult: null,
       explainError: null,
-      queryElapsed: 0
+      queryElapsed: null
     };
   }
 
@@ -77,29 +77,31 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(query);
           const result = await queryDruidRune(runeQuery);
-          this.setState({
-            queryElapsed: new Date().valueOf() - startTime.valueOf()
-          });
-          return decodeRune(runeQuery, result);
-
+          const queryElapsed =  new Date().valueOf() - startTime.valueOf();
+          return {
+            queryResult: decodeRune(runeQuery, result),
+            queryElapsed
+          };
         } else {
           const result = await queryDruidSql({
             query,
             resultFormat: "array",
             header: true
           });
-          this.setState({
-            queryElapsed: new Date().valueOf() - startTime.valueOf()
-          });
+          const queryElapsed =  new Date().valueOf() - startTime.valueOf();
           return {
-            header: (result && result.length) ? result[0] : [],
-            rows: (result && result.length) ? result.slice(1) : []
+            queryResult: {
+              header: (result && result.length) ? result[0] : [],
+              rows: (result && result.length) ? result.slice(1) : []
+            },
+            queryElapsed
           };
         }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          result,
+          result: result === null ? null : result.queryResult,
+          queryElapsed: result === null ? null : result.queryElapsed,
           loading,
           error
         });
