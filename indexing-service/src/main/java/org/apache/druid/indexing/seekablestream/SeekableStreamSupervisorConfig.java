@@ -32,60 +32,60 @@ public class SeekableStreamSupervisorConfig
   // The number of runs failed before the supervisor flips from a RUNNING to an UNHEALTHY state
   @JsonProperty
   @Min(3)
-  private int supervisorUnhealthinessThreshold = 3;
+  private int unhealthinessThreshold = 3;
 
   // The number of successful before the supervisor flips from an UNHEALTHY to a RUNNING state
   @JsonProperty
   @Min(3)
-  private int supervisorHealthinessThreshold = 3;
+  private int healthinessThreshold = 3;
 
   // The number of consecutive task failures before the supervisor flips from a RUNNING to an UNHEALTHY_TASKS state
   @JsonProperty
   @Min(3)
-  private int supervisorTaskUnhealthinessThreshold = 3;
+  private int taskUnhealthinessThreshold = 3;
 
   // The number of consecutive task successes before the supervisor flips from an UNHEALTHY_TASKS to a RUNNING state
   @JsonProperty
   @Min(3)
-  private int supervisorTaskHealthinessThreshold = 3;
+  private int taskHealthinessThreshold = 3;
 
   // The maximum number of exception events that can be returned through the supervisor status endpoint
   @JsonProperty
-  private int numExceptionEventsToStore = Math.max(supervisorUnhealthinessThreshold, supervisorHealthinessThreshold);
+  private int maxStoredExceptionEvents = Math.max(unhealthinessThreshold, healthinessThreshold);
 
   public boolean isStoringStackTraces()
   {
     return storingStackTraces;
   }
 
-  public int getSupervisorUnhealthinessThreshold()
+  public int getUnhealthinessThreshold()
   {
-    return supervisorUnhealthinessThreshold;
+    return unhealthinessThreshold;
   }
 
-  public int getSupervisorHealthinessThreshold()
+  public int getHealthinessThreshold()
   {
-    return supervisorHealthinessThreshold;
+    return healthinessThreshold;
   }
 
-  public int getSupervisorTaskUnhealthinessThreshold()
+  public int getTaskUnhealthinessThreshold()
   {
-    return supervisorTaskUnhealthinessThreshold;
+    return taskUnhealthinessThreshold;
   }
 
-  public int getSupervisorTaskHealthinessThreshold()
+  public int getTaskHealthinessThreshold()
   {
-    return supervisorTaskHealthinessThreshold;
+    return taskHealthinessThreshold;
   }
 
-  public int getNumExceptionEventsToStore()
+  public int getMaxStoredExceptionEvents()
   {
-    return numExceptionEventsToStore;
+    return maxStoredExceptionEvents;
   }
 
   @VisibleForTesting
-  public void setNumExceptionEventsToStore(int numExceptionEventsToStore)
+  public void setMaxStoredExceptionEvents(int maxStoredExceptionEvents)
   {
-    this.numExceptionEventsToStore = numExceptionEventsToStore;
+    this.maxStoredExceptionEvents = maxStoredExceptionEvents;
   }
 }

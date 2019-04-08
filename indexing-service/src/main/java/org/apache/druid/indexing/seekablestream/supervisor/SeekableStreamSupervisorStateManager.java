@@ -98,18 +98,18 @@ public class SeekableStreamSupervisorStateManager
   )
   {
     this.supervisorState = initialState;
-    this.healthinessThreshold = supervisorConfig.getSupervisorHealthinessThreshold();
-    this.unhealthinessThreshold = supervisorConfig.getSupervisorUnhealthinessThreshold();
-    this.healthinessTaskThreshold = supervisorConfig.getSupervisorTaskHealthinessThreshold();
-    this.unhealthinessTaskThreshold = supervisorConfig.getSupervisorTaskUnhealthinessThreshold();
+    this.healthinessThreshold = supervisorConfig.getHealthinessThreshold();
+    this.unhealthinessThreshold = supervisorConfig.getUnhealthinessThreshold();
+    this.healthinessTaskThreshold = supervisorConfig.getTaskHealthinessThreshold();
+    this.unhealthinessTaskThreshold = supervisorConfig.getTaskUnhealthinessThreshold();
     Preconditions.checkArgument(
-        supervisorConfig.getNumExceptionEventsToStore() >=
+        supervisorConfig.getMaxStoredExceptionEvents() >=
         Math.max(healthinessThreshold, unhealthinessThreshold),
         "numExceptionEventsToStore must be greater than or equal to both "
         + "healthinessThreshold and unhealthinessThreshold"
     );
     this.eventStore = new ExceptionEventStore(
-        supervisorConfig.getNumExceptionEventsToStore(),
+        supervisorConfig.getMaxStoredExceptionEvents(),
         supervisorConfig.isStoringStackTraces()
     );
     this.completedTaskHistory = new CircularBuffer<>(Math.max(healthinessTaskThreshold, unhealthinessTaskThreshold));

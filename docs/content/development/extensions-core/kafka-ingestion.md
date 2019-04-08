@@ -214,6 +214,30 @@ offsets as reported by Kafka, the consumer lag per partition, as well as the agg
 consumer lag per partition may be reported as negative values if the supervisor has not received a recent latest offset
 response from Kafka. The aggregate lag value will always be >= 0.
 
+The status report also contains the supervisor's state and a list of recently thrown exceptions (whose max size can be 
+controlled using the `druid.supervisor.stream.maxStoredExceptionEvents` config parameter).  The list of states is as
+follows:
+
+|State|Description|Priority|
+|-----|-----------|--------|
+|UNHEALTHY_SUPERVISOR|The supervisor has encountered non-transient errors on the past `druid.supervisor.stream.unhealthinessThreshold` iterations|1|
+|UNHEALTHY_TASKS|The last `druid.supervisor.stream.taskUnhealthinessThreshold` tasks have all failed|2|
+|UNABLE_TO_CONNECT_TO_STREAM|The supervisor is encountering connectivity issues with Kinesis and has not successfully connected in the past|3|
+|LOST_CONTACT_WITH_STREAM|The supervisor is encountering transient connectivity issues with Kinesis but has successfully connected in the past|4|
+|WAITING_TO_RUN (first iteration only)|The supervisor has been initialized and hasn't started connecting to the stream.|5|
+|CONNECTING_TO_STREAM (first iteration only)|The supervisor is trying to connect to the stream and update partition data|5|
+|DISCOVERING_INITIAL_TASKS (first iteration only)|The supervisor is discovering already-running tasks|5|
+|CREATING_TASKS (first iteration only)|The supervisor is creating tasks and discovering state|5|
+|RUNNING|The supervisor has started tasks and is waiting for taskDuration to elapse|5|
+|SUSPENDED|The supervisor has been suspended|5|
+|SHUTTING_DOWN|Shutdown has been called but the supervisor hasn’t fully shutdown yet|5|
+
+Notes about states:
+
+- Since it's possible that 2+ states can apply to a supervisor at the same time, each state is given a priority.  The
+active state with the highest priority will be returned in the status report.
+- States marked with "first iteration only" only occur on the supervisor's first iteration at startup or after suspension.
+
 ### Getting Supervisor Ingestion Stats Report
 
 `GET /druid/indexer/v1/supervisor/<supervisorId>/stats` returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters.
@@ -344,3 +368,14 @@ one can schedule re-indexing tasks be run to merge segments together into new se
 Details on how to optimize the segment size can be found on [Segment size optimization](../../operations/segment-optimization.html).
 There is also ongoing work to support automatic segment compaction of sharded segments as well as compaction not requiring
 Hadoop (see [here](https://github.com/apache/incubator-druid/pull/5102)).
+
+## Configuration Properties
+
+|property|description|values|default|
+|--------|-----------|------|-------|
+|druid.supervisor.stream.healthinessThreshold|The number of successful iterations before the supervisor flips from an UNHEALTHY to a RUNNING state|An integer in [3,2147483647]|3|
+|druid.supervisor.stream.unhealthinessThreshold|The number of iterations failed before the supervisor flips from a RUNNING to an UNHEALTHY state|An integer in [3,2147483647]|3|
+|druid.supervisor.stream.taskHealthinessThreshold|The number of consecutive task successes before the supervisor flips from an UNHEALTHY_TASKS to a RUNNING state|An integer in [3,2147483647]|3|
+|druid.supervisor.stream.taskUnhealthinessThreshold|The number of consecutive task failures before the supervisor flips from a RUNNING to an UNHEALTHY_TASKS state|An integer in [3,2147483647]|3|
+|druid.supervisor.stream.storingStackTraces|Whether full stack traces of supervisor exceptions should be stored and returned by the supervisor `/status` endpoint|true/false|false|
+|druid.supervisor.stream.maxStoredExceptionEvents|The maximum number of exception events that can be returned through the supervisor `/status` endpoint|An integer in [`max(healthinessThreshold, unhealthinessThreshold)`, 2147483647]|`max(healthinessThreshold, unhealthinessThreshold)`|
