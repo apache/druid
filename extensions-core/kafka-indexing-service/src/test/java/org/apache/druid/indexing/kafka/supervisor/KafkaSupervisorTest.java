@@ -42,6 +42,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaDataSourceMetadata;
@@ -75,7 +76,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -138,7 +141,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private static DataSchema dataSchema;
   private static int topicPostfix;
   private static ZkUtils zkUtils;
-
 
   private final int numThreads;
 
@@ -636,6 +638,172 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
   }
+
+  @Test
+  public void testKillIncompatibleTasksMismatchedDatasourceAndType() throws Exception
+  {
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+    addSomeEvents(1);
+
+    // different datasource (don't kill)
+    Task id1 = createKafkaIndexTask(
+        "id1",
+        "other-datasource",
+        2,
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, 10L)),
+        null,
+        null
+    );
+
+    // non KafkaIndexTask (don't kill)
+    Task id2 = new RealtimeIndexTask(
+        "id2",
+        null,
+        new FireDepartment(
+            dataSchema,
+            new RealtimeIOConfig(null, null, null),
+            null
+        ),
+        null
+    );
+
+    List<Task> existingTasks = ImmutableList.of(id1, id2);
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(existingTasks).anyTimes();
+    expect(taskClient.getStatusAsync(EasyMock.anyString()))
+        .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+        .anyTimes();
+    expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+        .anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+
+    expect(taskQueue.add(anyObject(Task.class))).andReturn(true).anyTimes();
+
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+  }
+
+  @Test
+  public void testKillBadPartitionAssignment() throws Exception
+  {
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
+    addSomeEvents(1);
+
+    Task id1 = createKafkaIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L, 2, 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
+        null,
+        null
+    );
+    Task id2 = createKafkaIndexTask(
+        "id2",
+        DATASOURCE,
+        1,
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(1, 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(1, Long.MAX_VALUE)),
+        null,
+        null
+    );
+    Task id3 = createKafkaIndexTask(
+        "id3",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L, 1, 0L, 2, 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>(
+            "topic",
+            ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE, 2, Long.MAX_VALUE)
+        ),
+        null,
+        null
+    );
+    Task id4 = createKafkaIndexTask(
+        "id4",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(0, 0L, 1, 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(0, Long.MAX_VALUE, 1, Long.MAX_VALUE)),
+        null,
+        null
+    );
+    Task id5 = createKafkaIndexTask(
+        "id5",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>("topic", ImmutableMap.of(1, 0L, 2, 0L), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("topic", ImmutableMap.of(1, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
+        null,
+        null
+    );
+
+    List<Task> existingTasks = ImmutableList.of(id1, id2, id3, id4, id5);
+
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(existingTasks).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
+    expect(taskStorage.getStatus("id4")).andReturn(Optional.of(TaskStatus.running("id4"))).anyTimes();
+    expect(taskStorage.getStatus("id5")).andReturn(Optional.of(TaskStatus.running("id5"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
+    expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
+    expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
+    expect(taskStorage.getTask("id4")).andReturn(Optional.of(id4)).anyTimes();
+    expect(taskStorage.getTask("id5")).andReturn(Optional.of(id5)).anyTimes();
+    expect(taskClient.getStatusAsync(EasyMock.anyString()))
+        .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+        .anyTimes();
+    expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+        .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+        .anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.stopAsync("id3", false)).andReturn(Futures.immediateFuture(true));
+    expect(taskClient.stopAsync("id4", false)).andReturn(Futures.immediateFuture(false));
+    expect(taskClient.stopAsync("id5", false)).andReturn(Futures.immediateFuture((Boolean) null));
+
+    TreeMap<Integer, Map<Integer, Long>> checkpoints1 = new TreeMap<>();
+    checkpoints1.put(0, ImmutableMap.of(0, 0L, 2, 0L));
+    TreeMap<Integer, Map<Integer, Long>> checkpoints2 = new TreeMap<>();
+    checkpoints2.put(0, ImmutableMap.of(1, 0L));
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints1))
+        .times(1);
+    expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+        .andReturn(Futures.immediateFuture(checkpoints2))
+        .times(1);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    taskQueue.shutdown("id4", "Task [%s] failed to stop in a timely manner, killing task", "id4");
+    taskQueue.shutdown("id5", "Task [%s] failed to stop in a timely manner, killing task", "id5");
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+  }
+
 
   @Test
   public void testRequeueTaskWhenFailed() throws Exception
@@ -2727,7 +2895,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testKillIncompatibleTasks()
+  public void testKillIncompatibleNonCurrentTasks()
       throws Exception
   {
     // This supervisor always returns false for isTaskCurrent -> it should kill its tasks
