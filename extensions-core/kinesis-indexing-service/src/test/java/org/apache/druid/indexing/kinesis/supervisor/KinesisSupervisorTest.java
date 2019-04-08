@@ -38,6 +38,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
+import org.apache.druid.indexing.common.task.RealtimeIndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
 import org.apache.druid.indexing.kinesis.KinesisIndexTask;
@@ -73,7 +74,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.server.metrics.ExceptionCapturingServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -587,6 +590,77 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
+  }
+
+  @Test
+  public void testDontKillTasksWithMismatchedDatasourceAndType() throws Exception
+  {
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
+
+    supervisorRecordSupplier.assign(anyObject());
+    expectLastCall().anyTimes();
+    expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
+    expect(supervisorRecordSupplier.getAssignment()).andReturn(ImmutableSet.of(shard1Partition, shard0Partition))
+                                                    .anyTimes();
+    supervisorRecordSupplier.seekToLatest(anyObject());
+    expectLastCall().anyTimes();
+    expect(supervisorRecordSupplier.getEarliestSequenceNumber(anyObject())).andReturn("0").anyTimes();
+    expect(supervisorRecordSupplier.getLatestSequenceNumber(anyObject())).andReturn("100").anyTimes();
+    supervisorRecordSupplier.seek(anyObject(), anyString());
+    expectLastCall().anyTimes();
+
+    // different datasource (don't kill)
+    Task id1 = createKinesisIndexTask(
+        "id1",
+        "other-datasource",
+        2,
+        new SeekableStreamStartSequenceNumbers<>(
+            stream,
+            ImmutableMap.of(shardId0, "0", shardId1, "0"),
+            ImmutableSet.of(shardId0, shardId1)
+        ),
+        new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(shardId0, "1", shardId1, "12")),
+        null,
+        null
+    );
+
+    // non KinesisIndexTask (don't kill)
+    Task id2 = new RealtimeIndexTask(
+        "id2",
+        null,
+        new FireDepartment(
+            dataSchema,
+            new RealtimeIOConfig(null, null, null),
+            null
+        ),
+        null
+    );
+
+    List<Task> existingTasks = ImmutableList.of(id1, id2);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(existingTasks).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject(Task.class))).andReturn(true).times(2);
+
+    replayAll();
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
   }
 
   @Test

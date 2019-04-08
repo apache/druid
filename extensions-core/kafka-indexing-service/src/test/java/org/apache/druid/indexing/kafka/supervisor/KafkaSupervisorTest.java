@@ -640,7 +640,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testKillIncompatibleTasksMismatchedDatasourceAndType() throws Exception
+  public void testDontKillTasksWithMismatchedDatasourceAndType() throws Exception
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
     addSomeEvents(1);
@@ -2895,7 +2895,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testKillIncompatibleNonCurrentTasks()
+  public void testKillIncompatibleTasks()
       throws Exception
   {
     // This supervisor always returns false for isTaskCurrent -> it should kill its tasks
