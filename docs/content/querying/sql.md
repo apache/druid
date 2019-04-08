@@ -605,6 +605,7 @@ Note that a segment can be served by more than one stream ingestion tasks or His
 |is_published|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 represents this segment has been published to the metadata store with `used=1`|
 |is_available|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is currently being served by any process(Historical or realtime)|
 |is_realtime|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is being served on any type of realtime tasks|
+|is_overshadowed|LONG|Boolean is represented as long type where 1 = true, 0 = false. 1 if this segment is overshadowed by some other published segment. You can query `is_published && !is_overshadowed` to find segments which should be available and compare those to `is_available` for debugging purposes
 |payload|STRING|JSON-serialized data segment payload|
 
 For example to retrieve all segments for datasource "wikipedia", use the query:

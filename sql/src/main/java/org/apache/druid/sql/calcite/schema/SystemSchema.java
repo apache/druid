@@ -69,6 +69,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentWithOvershadowInfo;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -92,6 +93,9 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
 
+  private static final long AVAILABLE_IS_OVERSHADOWED_VALUE = 0L;
+  private static final long PUBLISHED_IS_PUBLISHED_VALUE = 1L;
+
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
       .add("segment_id", ValueType.STRING)
@@ -106,6 +110,7 @@ public class SystemSchema extends AbstractSchema
       .add("is_published", ValueType.LONG)
       .add("is_available", ValueType.LONG)
       .add("is_realtime", ValueType.LONG)
+      .add("is_overshadowed", ValueType.LONG)
       .add("payload", ValueType.STRING)
       .build();
 
@@ -229,7 +234,7 @@ public class SystemSchema extends AbstractSchema
       }
 
       //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
-      final Iterator<DataSegment> metadataSegments = metadataView.getPublishedSegments();
+      final Iterator<SegmentWithOvershadowInfo> metadataSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
@@ -240,8 +245,9 @@ public class SystemSchema extends AbstractSchema
           ))
           .transform(val -> {
             try {
-              segmentsAlreadySeen.add(val.getId());
-              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getId());
+              final DataSegment segment = val.getDataSegment();
+              segmentsAlreadySeen.add(segment.getId());
+              final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
               long numReplicas = 0L, numRows = 0L, isRealtime = 0L, isAvailable = 0L;
               if (partialSegmentData != null) {
                 numReplicas = partialSegmentData.getNumReplicas();
@@ -250,23 +256,24 @@ public class SystemSchema extends AbstractSchema
                 isRealtime = partialSegmentData.isRealtime();
               }
               return new Object[]{
-                  val.getId(),
-                  val.getDataSource(),
-                  val.getInterval().getStart().toString(),
-                  val.getInterval().getEnd().toString(),
-                  val.getSize(),
-                  val.getVersion(),
-                  Long.valueOf(val.getShardSpec().getPartitionNum()),
+                  segment.getId(),
+                  segment.getDataSource(),
+                  segment.getInterval().getStart().toString(),
+                  segment.getInterval().getEnd().toString(),
+                  segment.getSize(),
+                  segment.getVersion(),
+                  Long.valueOf(segment.getShardSpec().getPartitionNum()),
                   numReplicas,
                   numRows,
-                  1L, //is_published is true for published segments
+                  PUBLISHED_IS_PUBLISHED_VALUE, //is_published is true for published segments
                   isAvailable,
                   isRealtime,
+                  val.isOvershadowed() ? 1L : 0L,
                   jsonMapper.writeValueAsString(val)
               };
             }
             catch (JsonProcessingException e) {
-              throw new RE(e, "Error getting segment payload for segment %s", val.getId());
+              throw new RE(e, "Error getting segment payload for segment %s", val.getDataSegment().getId());
             }
           });
 
@@ -295,6 +302,7 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().isPublished(),
                   val.getValue().isAvailable(),
                   val.getValue().isRealtime(),
+                  AVAILABLE_IS_OVERSHADOWED_VALUE,
                   jsonMapper.writeValueAsString(val.getKey())
               };
             }
@@ -311,18 +319,18 @@ public class SystemSchema extends AbstractSchema
 
     }
 
-    private Iterator<DataSegment> getAuthorizedPublishedSegments(
-        Iterator<DataSegment> it,
+    private Iterator<SegmentWithOvershadowInfo> getAuthorizedPublishedSegments(
+        Iterator<SegmentWithOvershadowInfo> it,
         DataContext root
     )
     {
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+      Function<SegmentWithOvershadowInfo, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+      final Iterable<SegmentWithOvershadowInfo> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
           () -> it,
           raGenerator,

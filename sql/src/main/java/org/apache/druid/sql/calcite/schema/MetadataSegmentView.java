@@ -43,6 +43,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentWithOvershadowInfo;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
@@ -51,8 +52,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -73,8 +73,10 @@ public class MetadataSegmentView
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
+  // Use ConcurrentSkipListMap so that the order of segments is deterministic and
+  // sys.segments queries return the segments in sorted order based on segmentId
   @Nullable
-  private final ConcurrentMap<DataSegment, DateTime> publishedSegments;
+  private final ConcurrentSkipListMap<SegmentWithOvershadowInfo, DateTime> publishedSegments;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -96,7 +98,7 @@ public class MetadataSegmentView
     this.segmentWatcherConfig = segmentWatcherConfig;
     this.isCacheEnabled = plannerConfig.isMetadataSegmentCacheEnable();
     this.pollPeriodInMS = plannerConfig.getMetadataSegmentPollPeriod();
-    this.publishedSegments = isCacheEnabled ? new ConcurrentHashMap<>(1000) : null;
+    this.publishedSegments = isCacheEnabled ? new ConcurrentSkipListMap<>() : null;
     this.scheduledExec = Execs.scheduledSingleThreaded("MetadataSegmentView-Cache--%d");
   }
 
@@ -134,7 +136,7 @@ public class MetadataSegmentView
   private void poll()
   {
     log.info("polling published segments from coordinator");
-    final JsonParserIterator<DataSegment> metadataSegments = getMetadataSegments(
+    final JsonParserIterator<SegmentWithOvershadowInfo> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
         responseHandler,
@@ -143,10 +145,16 @@ public class MetadataSegmentView
 
     final DateTime timestamp = DateTimes.nowUtc();
     while (metadataSegments.hasNext()) {
-      final DataSegment interned = DataSegmentInterner.intern(metadataSegments.next());
+      final SegmentWithOvershadowInfo segment = metadataSegments.next();
+      final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
+      final SegmentWithOvershadowInfo segmentWithOvershadowInfo = new SegmentWithOvershadowInfo(
+          interned,
+          segment.isOvershadowed()
+      );
       // timestamp is used to filter deleted segments
-      publishedSegments.put(interned, timestamp);
+      publishedSegments.put(segmentWithOvershadowInfo, timestamp);
     }
+
     // filter the segments from cache whose timestamp is not equal to latest timestamp stored,
     // since the presence of a segment with an earlier timestamp indicates that
     // "that" segment is not returned by coordinator in latest poll, so it's
@@ -160,7 +168,7 @@ public class MetadataSegmentView
     cachePopulated.set(true);
   }
 
-  public Iterator<DataSegment> getPublishedSegments()
+  public Iterator<SegmentWithOvershadowInfo> getPublishedSegments()
   {
     if (isCacheEnabled) {
       Preconditions.checkState(
@@ -179,14 +187,14 @@ public class MetadataSegmentView
   }
 
   // Note that coordinator must be up to get segments
-  private JsonParserIterator<DataSegment> getMetadataSegments(
+  private JsonParserIterator<SegmentWithOvershadowInfo> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       BytesAccumulatingResponseHandler responseHandler,
       Set<String> watchedDataSources
   )
   {
-    String query = "/druid/coordinator/v1/metadata/segments";
+    String query = "/druid/coordinator/v1/metadata/segments?includeOvershadowInfo";
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
       log.debug(
           "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
@@ -213,7 +221,7 @@ public class MetadataSegmentView
         responseHandler
     );
 
-    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<DataSegment>()
+    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<SegmentWithOvershadowInfo>()
     {
     });
     return new JsonParserIterator<>(

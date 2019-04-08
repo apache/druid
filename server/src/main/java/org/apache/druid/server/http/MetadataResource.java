@@ -19,12 +19,11 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -39,6 +38,8 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentWithOvershadowInfo;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -51,10 +52,12 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -151,7 +154,8 @@ public class MetadataResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseSegments(
       @Context final HttpServletRequest req,
-      @QueryParam("datasources") final Set<String> datasources
+      @QueryParam("datasources") final Set<String> datasources,
+      @QueryParam("includeOvershadowInfo") final String includeOvershadowInfo
   )
   {
     Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
@@ -164,26 +168,69 @@ public class MetadataResource
         .stream()
         .flatMap(t -> t.getSegments().stream());
 
-    final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
-
-    final Iterable<DataSegment> authorizedSegments =
-        AuthorizationUtils.filterAuthorizedResources(req, metadataSegments::iterator, raGenerator, authorizerMapper);
-
-    final StreamingOutput stream = outputStream -> {
-      final JsonFactory jsonFactory = jsonMapper.getFactory();
-      try (final JsonGenerator jsonGenerator = jsonFactory.createGenerator(outputStream)) {
-        jsonGenerator.writeStartArray();
-        for (DataSegment ds : authorizedSegments) {
-          jsonGenerator.writeObject(ds);
-          jsonGenerator.flush();
+    if (includeOvershadowInfo != null) {
+      final Set<SegmentId> overshadowedSegments = findOvershadowedSegments(druidDataSources);
+      //transform DataSegment to SegmentWithOvershadowInfo objects
+      final Stream<SegmentWithOvershadowInfo> metadataSegmentWithOvershadowInfo = metadataSegments.map(segment -> {
+        if (overshadowedSegments.contains(segment.getId())) {
+          return new SegmentWithOvershadowInfo(segment, true);
+        } else {
+          return new SegmentWithOvershadowInfo(segment, false);
         }
-        jsonGenerator.writeEndArray();
-      }
-    };
+      }).collect(Collectors.toList()).stream();
 
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(stream).build();
+      final Function<SegmentWithOvershadowInfo, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
+
+      final Iterable<SegmentWithOvershadowInfo> authorizedSegments =
+          AuthorizationUtils.filterAuthorizedResources(
+              req,
+              metadataSegmentWithOvershadowInfo::iterator,
+              raGenerator,
+              authorizerMapper
+          );
+      Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+      return builder.entity(authorizedSegments).build();
+    } else {
+
+      final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
+      final Iterable<DataSegment> authorizedSegments =
+          AuthorizationUtils.filterAuthorizedResources(req, metadataSegments::iterator, raGenerator, authorizerMapper);
+
+      Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+      return builder.entity(authorizedSegments).build();
+    }
+
+  }
+
+  /**
+   * find fully overshadowed segments
+   *
+   * @param druidDataSources
+   *
+   * @return set of overshadowed segments
+   */
+  private Set<SegmentId> findOvershadowedSegments(Collection<ImmutableDruidDataSource> druidDataSources)
+  {
+    final Stream<DataSegment> segmentStream = druidDataSources
+        .stream()
+        .flatMap(t -> t.getSegments().stream());
+    final Set<DataSegment> usedSegments = segmentStream.collect(Collectors.toSet());
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
+    usedSegments.forEach(segment -> timelines
+        .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
+        .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)));
+
+    final Set<SegmentId> overshadowedSegments = new HashSet<>();
+    for (DataSegment dataSegment : usedSegments) {
+      final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
+      if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
+        overshadowedSegments.add(dataSegment.getId());
+      }
+    }
+    return overshadowedSegments;
   }
 
   @GET
