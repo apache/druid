@@ -149,18 +149,13 @@ public class OrcStructConverter
   }
 
   /**
-   * Convert a orc struct field as though it were a map. Complex types will be transformed
-   * into java lists and maps when possible ({@link OrcStructConverter#convertList} and
-   * {@link OrcStructConverter#convertMap}), and
-   * primitive types will be extracted into an ingestion friendly state (e.g. 'int' and 'long'). Finally,
-   * if a field is not present, this method will return null.
-   *
-   * Note: "Union" types are not currently supported and will be returned as null. Additionally, this method
-   * has a cache of field names to field index that is ONLY valid for the root level {@link OrcStruct}, and should
-   * not be used for nested {@link OrcStruct} fields of the root.
+   * Convert a orc struct field of the "root" {@link OrcStruct} that represents the "row". This method has a cache of
+   * field names to field index that is ONLY valid for this {@link OrcStruct}, and should not be used for
+   * nested {@link OrcStruct} fields of the row. Looks up field index by field name, and delegates to
+   * {@link OrcStructConverter#convertField(OrcStruct, int)}.
    */
   @Nullable
-  Object convertField(OrcStruct struct, String fieldName)
+  Object convertRootField(OrcStruct struct, String fieldName)
   {
     // this cache is only valid for the root level, to skip the indexOf on fieldNames to get the fieldIndex.
     TypeDescription schema = struct.getSchema();

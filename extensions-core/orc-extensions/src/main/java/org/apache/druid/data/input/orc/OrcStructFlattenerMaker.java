@@ -68,7 +68,7 @@ public class OrcStructFlattenerMaker implements ObjectFlatteners.FlattenerMaker<
   @Override
   public Object getRootField(OrcStruct obj, String key)
   {
-    return finalizeConversion(converter.convertField(obj, key));
+    return finalizeConversion(converter.convertRootField(obj, key));
   }
 
   @Override
