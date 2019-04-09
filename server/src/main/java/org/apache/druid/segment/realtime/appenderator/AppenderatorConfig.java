@@ -59,7 +59,7 @@ public interface AppenderatorConfig
   @Nullable
   default Long getMaxTotalRows()
   {
-    throw new UnsupportedOperationException("maxTotalRows is not implemented.");
+    throw new UOE("maxTotalRows is not implemented.");
   }
 
   /**
@@ -68,7 +68,7 @@ public interface AppenderatorConfig
   @Nullable
   default Integer getMaxTotalSegments()
   {
-    throw new UOE("maxTotalRows is not implemented");
+    throw new UOE("maxTotalSegments is not implemented");
   }
 
   /**

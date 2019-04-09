@@ -56,6 +56,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
   private final int maxRowsPerSegment;
+  private final int maxTotalSegments;
   @Nullable
   private final Long maxTotalRows;
   private final Period intermediatePersistPeriod;
@@ -79,6 +80,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+      @JsonProperty("maxTotalSegments") @Nullable Integer maxTotalSegments,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
@@ -160,6 +162,14 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   public Long getMaxTotalRows()
   {
     return maxTotalRows;
+  }
+
+  @Override
+  @JsonProperty
+  @Nullable
+  public Integer getMaxTotalSegments()
+  {
+    return maxTotalSegments;
   }
 
   @Override
