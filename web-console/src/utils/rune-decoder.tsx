@@ -29,7 +29,8 @@ const SUPPORTED_QUERY_TYPES: string[] = [
   'timeBoundary',
   'dataSourceMetadata',
   'select',
-  'scan'
+  'scan',
+  'segmentMetadata'
 ];
 
 function flatArrayToHeaderRows(a: Record<string, any>[], headerOverride?: string[]): HeaderRows {
@@ -71,6 +72,13 @@ function processSelect(rune: any[]): HeaderRows {
 function processScan(rune: any[]): HeaderRows {
   const header = rune[0].columns;
   return flatArrayToHeaderRows([].concat(...rune.map(r => r.events)), header);
+}
+
+function processSegmentMetadata(rune: any[]): HeaderRows {
+  const flatArray = ([] as any).concat(...rune.map(r => Object.keys(r.columns).map(
+    k => Object.assign({id: r.id, column: k},  r.columns[k])
+  )));
+  return flatArrayToHeaderRows(flatArray);
 }
 
 export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
@@ -121,6 +129,9 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
         };
       }
       return processScan(runeResult);
+
+    case 'segmentMetadata':
+      return processSegmentMetadata(runeResult);
 
     default:
       throw new Error(`Should never get here.`);

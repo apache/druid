@@ -30,14 +30,14 @@ public class NoopDataSegmentArchiver implements DataSegmentArchiver
 {
   @Nullable
   @Override
-  public DataSegment archive(DataSegment segment) throws SegmentLoadingException
+  public DataSegment archive(DataSegment segment)
   {
     return segment;
   }
 
   @Nullable
   @Override
-  public DataSegment restore(DataSegment segment) throws SegmentLoadingException
+  public DataSegment restore(DataSegment segment)
   {
     return segment;
   }

@@ -64,7 +64,7 @@ public class ITHadoopIndexTest extends AbstractIndexerTest
 
     try {
       LOG.info("indexerFile name: [%s]", BATCH_TASK);
-      indexerSpec = getTaskAsString(BATCH_TASK);
+      indexerSpec = getResourceAsString(BATCH_TASK);
       indexerSpec = StringUtils.replace(indexerSpec, "%%HADOOP_TEST_PATH%%", hadoopDir);
     }
     catch (Exception e) {

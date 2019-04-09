@@ -19,21 +19,31 @@
 
 package org.apache.druid.indexing.kinesis;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.hamcrest.CoreMatchers;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Collections;
+import java.util.Set;
 
 public class KinesisIOConfigTest
 {
@@ -242,5 +252,233 @@ public class KinesisIOConfigTest
     exception.expectCause(CoreMatchers.isA(NullPointerException.class));
     exception.expectMessage(CoreMatchers.containsString("endpoint"));
     mapper.readValue(jsonStr, IOConfig.class);
+  }
+
+  @Test
+  public void testDeserializeToOldIoConfig() throws IOException
+  {
+    final KinesisIndexTaskIOConfig currentConfig = new KinesisIndexTaskIOConfig(
+        0,
+        "baseSequenceName",
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of("1", "10L", "2", "5L"),
+            ImmutableSet.of("1")
+        ),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of("1", "20L", "2", "30L")),
+        true,
+        DateTimes.nowUtc(),
+        DateTimes.nowUtc(),
+        "endpoint",
+        1000,
+        2000,
+        "awsAssumedRoleArn",
+        "awsExternalId",
+        true
+    );
+
+    final byte[] json = mapper.writeValueAsBytes(currentConfig);
+    final ObjectMapper oldMapper = new DefaultObjectMapper();
+    oldMapper.registerSubtypes(new NamedType(OldKinesisIndexTaskIoConfig.class, "kinesis"));
+
+    final OldKinesisIndexTaskIoConfig oldConfig = (OldKinesisIndexTaskIoConfig) oldMapper.readValue(
+        json,
+        IOConfig.class
+    );
+
+    Assert.assertEquals(currentConfig.getBaseSequenceName(), oldConfig.getBaseSequenceName());
+    Assert.assertEquals(
+        currentConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap(),
+        oldConfig.getStartPartitions().getPartitionSequenceNumberMap()
+    );
+    Assert.assertEquals(
+        currentConfig.getStartSequenceNumbers().getExclusivePartitions(),
+        oldConfig.getExclusiveStartSequenceNumberPartitions()
+    );
+    Assert.assertEquals(currentConfig.getEndSequenceNumbers(), oldConfig.getEndPartitions());
+    Assert.assertEquals(currentConfig.isUseTransaction(), oldConfig.isUseTransaction());
+    Assert.assertEquals(currentConfig.getMinimumMessageTime(), oldConfig.getMinimumMessageTime());
+    Assert.assertEquals(currentConfig.getMaximumMessageTime(), oldConfig.getMaximumMessageTime());
+    Assert.assertEquals(currentConfig.getEndpoint(), oldConfig.getEndpoint());
+    Assert.assertEquals(currentConfig.getRecordsPerFetch(), oldConfig.getRecordsPerFetch());
+    Assert.assertEquals(currentConfig.getFetchDelayMillis(), oldConfig.getFetchDelayMillis());
+    Assert.assertEquals(currentConfig.getAwsAssumedRoleArn(), oldConfig.getAwsAssumedRoleArn());
+    Assert.assertEquals(currentConfig.getAwsExternalId(), oldConfig.getAwsExternalId());
+    Assert.assertEquals(currentConfig.isDeaggregate(), oldConfig.isDeaggregate());
+  }
+
+  @Test
+  public void testDeserializeFromOldIoConfig() throws IOException
+  {
+    final ObjectMapper oldMapper = new DefaultObjectMapper();
+    oldMapper.registerSubtypes(new NamedType(OldKinesisIndexTaskIoConfig.class, "kinesis"));
+
+    final OldKinesisIndexTaskIoConfig oldConfig = new OldKinesisIndexTaskIoConfig(
+        "baseSequenceName",
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of("1", "10L", "2", "5L")),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of("1", "20L", "2", "30L")),
+        ImmutableSet.of("1"),
+        true,
+        DateTimes.nowUtc(),
+        DateTimes.nowUtc(),
+        "endpoint",
+        1000,
+        2000,
+        "awsAssumedRoleArn",
+        "awsExternalId",
+        true
+    );
+
+    final byte[] json = oldMapper.writeValueAsBytes(oldConfig);
+    final KinesisIndexTaskIOConfig currentConfig = (KinesisIndexTaskIOConfig) mapper.readValue(json, IOConfig.class);
+
+    Assert.assertNull(currentConfig.getTaskGroupId());
+    Assert.assertEquals(oldConfig.getBaseSequenceName(), currentConfig.getBaseSequenceName());
+    Assert.assertEquals(
+        oldConfig.getStartPartitions().getPartitionSequenceNumberMap(),
+        currentConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap()
+    );
+    Assert.assertEquals(
+        oldConfig.getExclusiveStartSequenceNumberPartitions(),
+        currentConfig.getStartSequenceNumbers().getExclusivePartitions()
+    );
+    Assert.assertEquals(oldConfig.getEndPartitions(), currentConfig.getEndSequenceNumbers());
+    Assert.assertEquals(oldConfig.isUseTransaction(), currentConfig.isUseTransaction());
+    Assert.assertEquals(oldConfig.getMinimumMessageTime(), currentConfig.getMinimumMessageTime());
+    Assert.assertEquals(oldConfig.getMaximumMessageTime(), currentConfig.getMaximumMessageTime());
+    Assert.assertEquals(oldConfig.getEndpoint(), currentConfig.getEndpoint());
+    Assert.assertEquals(oldConfig.getRecordsPerFetch(), currentConfig.getRecordsPerFetch());
+    Assert.assertEquals(oldConfig.getFetchDelayMillis(), currentConfig.getFetchDelayMillis());
+    Assert.assertEquals(oldConfig.getAwsAssumedRoleArn(), currentConfig.getAwsAssumedRoleArn());
+    Assert.assertEquals(oldConfig.getAwsExternalId(), currentConfig.getAwsExternalId());
+    Assert.assertEquals(oldConfig.isDeaggregate(), currentConfig.isDeaggregate());
+  }
+
+  private static class OldKinesisIndexTaskIoConfig implements IOConfig
+  {
+    private final String baseSequenceName;
+    private final SeekableStreamEndSequenceNumbers<String, String> startPartitions;
+    private final SeekableStreamEndSequenceNumbers<String, String> endPartitions;
+    private final Set<String> exclusiveStartSequenceNumberPartitions;
+    private final boolean useTransaction;
+    private final Optional<DateTime> minimumMessageTime;
+    private final Optional<DateTime> maximumMessageTime;
+    private final String endpoint;
+    private final Integer recordsPerFetch;
+    private final Integer fetchDelayMillis;
+
+    private final String awsAssumedRoleArn;
+    private final String awsExternalId;
+    private final boolean deaggregate;
+
+    @JsonCreator
+    private OldKinesisIndexTaskIoConfig(
+        @JsonProperty("baseSequenceName") String baseSequenceName,
+        @JsonProperty("startPartitions") @Nullable SeekableStreamEndSequenceNumbers<String, String> startPartitions,
+        @JsonProperty("endPartitions") @Nullable SeekableStreamEndSequenceNumbers<String, String> endPartitions,
+        @JsonProperty("exclusiveStartSequenceNumberPartitions") Set<String> exclusiveStartSequenceNumberPartitions,
+        @JsonProperty("useTransaction") Boolean useTransaction,
+        @JsonProperty("minimumMessageTime") DateTime minimumMessageTime,
+        @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
+        @JsonProperty("endpoint") String endpoint,
+        @JsonProperty("recordsPerFetch") Integer recordsPerFetch,
+        @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
+        @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
+        @JsonProperty("awsExternalId") String awsExternalId,
+        @JsonProperty("deaggregate") boolean deaggregate
+    )
+    {
+      this.baseSequenceName = baseSequenceName;
+      this.startPartitions = startPartitions;
+      this.endPartitions = endPartitions;
+      this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions;
+      this.useTransaction = useTransaction;
+      this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
+      this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
+      this.endpoint = endpoint;
+      this.recordsPerFetch = recordsPerFetch;
+      this.fetchDelayMillis = fetchDelayMillis;
+      this.awsAssumedRoleArn = awsAssumedRoleArn;
+      this.awsExternalId = awsExternalId;
+      this.deaggregate = deaggregate;
+    }
+
+    @JsonProperty
+    public String getBaseSequenceName()
+    {
+      return baseSequenceName;
+    }
+
+    @JsonProperty
+    public SeekableStreamEndSequenceNumbers<String, String> getStartPartitions()
+    {
+      return startPartitions;
+    }
+
+    @JsonProperty
+    public SeekableStreamEndSequenceNumbers<String, String> getEndPartitions()
+    {
+      return endPartitions;
+    }
+
+    @JsonProperty
+    public Set<String> getExclusiveStartSequenceNumberPartitions()
+    {
+      return exclusiveStartSequenceNumberPartitions;
+    }
+
+    @JsonProperty
+    public boolean isUseTransaction()
+    {
+      return useTransaction;
+    }
+
+    @JsonProperty
+    public Optional<DateTime> getMinimumMessageTime()
+    {
+      return minimumMessageTime;
+    }
+
+    @JsonProperty
+    public Optional<DateTime> getMaximumMessageTime()
+    {
+      return maximumMessageTime;
+    }
+
+    @JsonProperty
+    public String getEndpoint()
+    {
+      return endpoint;
+    }
+
+    @JsonProperty
+    public int getRecordsPerFetch()
+    {
+      return recordsPerFetch;
+    }
+
+    @JsonProperty
+    public int getFetchDelayMillis()
+    {
+      return fetchDelayMillis;
+    }
+
+    @JsonProperty
+    public String getAwsAssumedRoleArn()
+    {
+      return awsAssumedRoleArn;
+    }
+
+    @JsonProperty
+    public String getAwsExternalId()
+    {
+      return awsExternalId;
+    }
+
+    @JsonProperty
+    public boolean isDeaggregate()
+    {
+      return deaggregate;
+    }
   }
 }

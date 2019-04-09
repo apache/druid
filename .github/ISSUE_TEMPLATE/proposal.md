@@ -1,7 +1,7 @@
 ---
 name: Proposal
 about: A template for major Druid change proposals
-title: "[PROPOSAL]"
+title: ""
 labels: Proposal, Design Review
 assignees: ''
 
