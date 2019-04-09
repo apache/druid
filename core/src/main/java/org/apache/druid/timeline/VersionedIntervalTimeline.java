@@ -123,8 +123,9 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
   }
 
   /**
-   * Returns a lazy collection with all objects in this VersionedIntervalTimeline to be used for iteration or {@link
-   * Collection#stream()} transformation. The order of objects in this collection is unspecified.
+   * Returns a lazy collection with all objects (including overshadowed, see {@link #findOvershadowed}) in this
+   * VersionedIntervalTimeline to be used for iteration or {@link Collection#stream()} transformation. The order of
+   * objects in this collection is unspecified.
    *
    * Note: iteration over the returned collection may not be as trivially cheap as, for example, iteration over an
    * ArrayList. Try (to some reasonable extent) to organize the code so that it iterates the returned collection only
