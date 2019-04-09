@@ -27,7 +27,6 @@ import org.apache.druid.segment.indexing.RealtimeIOConfig;
 
 public class RealtimeAppenderatorIngestionSpec extends IngestionSpec<RealtimeIOConfig, RealtimeAppenderatorTuningConfig>
 {
-
   @JsonCreator
   public RealtimeAppenderatorIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
