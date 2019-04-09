@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, Intent, Switch } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Button, Intent, Switch } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
-import ReactTable, { Filter } from "react-table";
+import ReactTable, { Filter } from 'react-table';
 
 import { RuleEditor } from '../components/rule-editor';
-import { TableColumnSelection } from "../components/table-column-selection";
+import { TableColumnSelection } from '../components/table-column-selection';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
-import { CompactionDialog } from "../dialogs/compaction-dialog";
+import { CompactionDialog } from '../dialogs/compaction-dialog';
 import { RetentionDialog } from '../dialogs/retention-dialog';
 import { AppToaster } from '../singletons/toaster';
 import {
@@ -38,11 +38,11 @@ import {
   pluralIfNeeded,
   queryDruidSql,
   QueryManager, TableColumnSelectionHandler
-} from "../utils";
+} from '../utils';
 
-import "./datasource-view.scss";
+import './datasource-view.scss';
 
-const tableColumns: string[] = ["Datasource", "Availability", "Retention", "Compaction", "Size", "Num rows", "Actions"];
+const tableColumns: string[] = ['Datasource', 'Availability', 'Retention', 'Compaction', 'Size', 'Num rows', 'Actions'];
 
 export interface DatasourcesViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -252,8 +252,8 @@ GROUP BY 1`);
     try {
       await axios.post(`/druid/coordinator/v1/rules/${datasource}`, rules, {
         headers: {
-          "X-Druid-Author": "console",
-          "X-Druid-Comment": comment
+          'X-Druid-Author': 'console',
+          'X-Druid-Comment': comment
         }
       });
     } catch (e) {
@@ -308,7 +308,7 @@ GROUP BY 1`);
       message: `Are you sure you want to delete ${datasource}'s compaction?`,
       intent: Intent.DANGER,
       action: {
-        text: "Confirm",
+        text: 'Confirm',
         onClick: async () => {
           try {
             await axios.delete(`/druid/coordinator/v1/config/compaction/${datasource}`);
@@ -372,18 +372,18 @@ GROUP BY 1`);
         }}
         columns={[
           {
-            Header: "Datasource",
-            accessor: "datasource",
+            Header: 'Datasource',
+            accessor: 'datasource',
             width: 150,
             Cell: row => {
               const value = row.value;
               return <a onClick={() => { this.setState({ datasourcesFilter: addFilter(datasourcesFilter, 'datasource', value) }); }}>{value}</a>;
             },
-            show: tableColumnSelectionHandler.showColumn("Datasource")
+            show: tableColumnSelectionHandler.showColumn('Datasource')
           },
           {
-            Header: "Availability",
-            id: "availability",
+            Header: 'Availability',
+            id: 'availability',
             filterable: false,
             accessor: (row) => row.num_available_segments / row.num_segments,
             Cell: (row) => {
@@ -414,7 +414,7 @@ GROUP BY 1`);
 
               }
             },
-            show: tableColumnSelectionHandler.showColumn("Availability")
+            show: tableColumnSelectionHandler.showColumn('Availability')
           },
           {
             Header: 'Retention',
@@ -432,13 +432,13 @@ GROUP BY 1`);
 
               return <span
                 onClick={() => this.setState({retentionDialogOpenOn: { datasource: row.original.datasource, rules: row.original.rules }})}
-                className={"clickable-cell"}
+                className="clickable-cell"
               >
                 {text}&nbsp;
                 <a>&#x270E;</a>
               </span>;
             },
-            show: tableColumnSelectionHandler.showColumn("Retention")
+            show: tableColumnSelectionHandler.showColumn('Retention')
           },
           {
             Header: 'Compaction',
@@ -458,14 +458,14 @@ GROUP BY 1`);
                 text = 'None';
               }
               return <span
-                className={"clickable-cell"}
+                className="clickable-cell"
                 onClick={() => this.setState({compactionDialogOpenOn: compactionOpenOn})}
               >
                 {text}&nbsp;
                 <a>&#x270E;</a>
               </span>;
             },
-            show: tableColumnSelectionHandler.showColumn("Compaction")
+            show: tableColumnSelectionHandler.showColumn('Compaction')
           },
           {
             Header: 'Size',
@@ -473,7 +473,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatBytes(row.value),
-            show: tableColumnSelectionHandler.showColumn("Size")
+            show: tableColumnSelectionHandler.showColumn('Size')
           },
           {
             Header: 'Num rows',
@@ -481,7 +481,7 @@ GROUP BY 1`);
             filterable: false,
             width: 100,
             Cell: (row) => formatNumber(row.value),
-            show: tableColumnSelectionHandler.showColumn("Num rows")
+            show: tableColumnSelectionHandler.showColumn('Num rows')
           },
           {
             Header: 'Actions',
@@ -503,7 +503,7 @@ GROUP BY 1`);
                 </div>;
               }
             },
-            show: tableColumnSelectionHandler.showColumn("Actions")
+            show: tableColumnSelectionHandler.showColumn('Actions')
           }
         ]}
         defaultPageSize={50}

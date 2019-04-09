@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { Alignment, AnchorButton, Button, Classes, Menu, MenuItem, Navbar, NavbarDivider, NavbarGroup, Popover, Position } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { Alignment, AnchorButton, Button, Classes, Menu, MenuItem, Navbar, NavbarDivider, NavbarGroup, Popover, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as React from 'react';
 
-import { AboutDialog } from "../dialogs/about-dialog";
+import { AboutDialog } from '../dialogs/about-dialog';
 import { CoordinatorDynamicConfigDialog } from '../dialogs/coordinator-dynamic-config';
-import { OverlordDynamicConfigDialog } from "../dialogs/overlord-dynamic-config";
+import { OverlordDynamicConfigDialog } from '../dialogs/overlord-dynamic-config';
 import {
   DRUID_DOCS,
   DRUID_GITHUB,
@@ -32,12 +32,13 @@ import {
   LEGACY_OVERLORD_CONSOLE
 } from '../variables';
 
-import "./header-bar.scss";
+import './header-bar.scss';
 
 export type HeaderActiveTab = null | 'datasources' | 'segments' | 'tasks' | 'servers' | 'sql' | 'lookups';
 
 export interface HeaderBarProps extends React.Props<any> {
   active: HeaderActiveTab;
+  hideLegacy: boolean;
 }
 
 export interface HeaderBarState {
@@ -106,7 +107,7 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
   }
 
   render() {
-    const { active } = this.props;
+    const { active, hideLegacy } = this.props;
     const { aboutDialogOpen, coordinatorDynamicConfigDialogOpen, overlordDynamicConfigDialogOpen } = this.state;
 
     const legacyMenu = <Menu>
@@ -144,22 +145,34 @@ export class HeaderBar extends React.Component<HeaderBarProps, HeaderBarState> {
         </Popover>
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
-        <Popover className="legacy-popover" content={legacyMenu} position={Position.BOTTOM_RIGHT}>
-          <Button className={Classes.MINIMAL} icon={IconNames.SHARE} text="Legacy" />
-        </Popover>
+        {
+          !hideLegacy &&
+          <Popover className="legacy-popover" content={legacyMenu} position={Position.BOTTOM_RIGHT}>
+            <Button className={Classes.MINIMAL} icon={IconNames.SHARE} text="Legacy"/>
+          </Popover>
+        }
         <Popover className="help-popover" content={helpMenu} position={Position.BOTTOM_RIGHT}>
           <Button className={Classes.MINIMAL} icon={IconNames.HELP} text="Help" />
         </Popover>
       </NavbarGroup>
-      { aboutDialogOpen ? <AboutDialog
-        onClose={() => this.setState({ aboutDialogOpen: false })}
-      /> : null }
-      { coordinatorDynamicConfigDialogOpen ? <CoordinatorDynamicConfigDialog
-        onClose={() => this.setState({ coordinatorDynamicConfigDialogOpen: false })}
-      /> : null }
-      { overlordDynamicConfigDialogOpen ? <OverlordDynamicConfigDialog
-        onClose={() => this.setState({ overlordDynamicConfigDialogOpen: false })}
-      /> : null }
+      {
+        aboutDialogOpen &&
+        <AboutDialog
+          onClose={() => this.setState({ aboutDialogOpen: false })}
+        />
+      }
+      {
+        coordinatorDynamicConfigDialogOpen &&
+        <CoordinatorDynamicConfigDialog
+          onClose={() => this.setState({ coordinatorDynamicConfigDialogOpen: false })}
+        />
+      }
+      {
+        overlordDynamicConfigDialogOpen &&
+        <OverlordDynamicConfigDialog
+          onClose={() => this.setState({ overlordDynamicConfigDialogOpen: false })}
+        />
+      }
     </Navbar>;
   }
 }

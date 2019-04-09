@@ -25,7 +25,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 
 import javax.annotation.Nonnull;
@@ -33,12 +33,12 @@ import java.util.List;
 
 public class LookupExprMacro implements ExprMacroTable.ExprMacro
 {
-  private final LookupReferencesManager lookupReferencesManager;
+  private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
 
   @Inject
-  public LookupExprMacro(final LookupReferencesManager lookupReferencesManager)
+  public LookupExprMacro(final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider)
   {
-    this.lookupReferencesManager = lookupReferencesManager;
+    this.lookupExtractorFactoryContainerProvider = lookupExtractorFactoryContainerProvider;
   }
 
   @Override
@@ -63,7 +63,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
 
     final String lookupName = lookupExpr.getLiteralValue().toString();
     final RegisteredLookupExtractionFn extractionFn = new RegisteredLookupExtractionFn(
-        lookupReferencesManager,
+        lookupExtractorFactoryContainerProvider,
         lookupName,
         false,
         null,

@@ -35,7 +35,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   // Protected for moving to not-null by `delegateLock`
   private volatile LookupExtractionFn delegate = null;
   private final Object delegateLock = new Object();
-  private final LookupReferencesManager manager;
+  private final LookupExtractorFactoryContainerProvider manager;
   private final String lookup;
   private final boolean retainMissingValue;
   private final String replaceMissingValueWith;
@@ -44,7 +44,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
   @JsonCreator
   public RegisteredLookupExtractionFn(
-      @JacksonInject LookupReferencesManager manager,
+      @JacksonInject LookupExtractorFactoryContainerProvider manager,
       @JsonProperty("lookup") String lookup,
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
       @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,

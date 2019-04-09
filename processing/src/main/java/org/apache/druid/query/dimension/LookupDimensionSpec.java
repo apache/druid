@@ -30,7 +30,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
-import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ValueType;
 
@@ -63,7 +63,7 @@ public class LookupDimensionSpec implements DimensionSpec
   @JsonProperty
   private final boolean optimize;
 
-  private final LookupReferencesManager lookupReferencesManager;
+  private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
 
   @JsonCreator
   public LookupDimensionSpec(
@@ -73,8 +73,8 @@ public class LookupDimensionSpec implements DimensionSpec
       @JsonProperty("retainMissingValue") boolean retainMissingValue,
       @JsonProperty("replaceMissingValueWith") String replaceMissingValueWith,
       @JsonProperty("name") String name,
-      @JacksonInject LookupReferencesManager lookupReferencesManager,
-      @JsonProperty("optimize") Boolean optimize
+      @JsonProperty("optimize") Boolean optimize,
+      @JacksonInject LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider
   )
   {
     this.retainMissingValue = retainMissingValue;
@@ -82,7 +82,7 @@ public class LookupDimensionSpec implements DimensionSpec
     this.replaceMissingValueWith = NullHandling.emptyToNullIfNeeded(replaceMissingValueWith);
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be Null");
     this.outputName = Preconditions.checkNotNull(outputName, "outputName can not be Null");
-    this.lookupReferencesManager = lookupReferencesManager;
+    this.lookupExtractorFactoryContainerProvider = lookupExtractorFactoryContainerProvider;
     this.name = name;
     this.lookup = lookup;
     Preconditions.checkArgument(
@@ -92,7 +92,7 @@ public class LookupDimensionSpec implements DimensionSpec
 
     if (!Strings.isNullOrEmpty(name)) {
       Preconditions.checkNotNull(
-          this.lookupReferencesManager,
+          this.lookupExtractorFactoryContainerProvider,
           "The system is not configured to allow for lookups, please read about configuring a lookup manager in the docs"
       );
     }
@@ -139,7 +139,7 @@ public class LookupDimensionSpec implements DimensionSpec
     final LookupExtractor lookupExtractor = Strings.isNullOrEmpty(name)
                                             ? this.lookup
                                             : Preconditions.checkNotNull(
-                                                lookupReferencesManager.get(name),
+                                                lookupExtractorFactoryContainerProvider.get(name),
                                                 "Lookup [%s] not found",
                                                 name
                                             ).getLookupExtractorFactory().get();
