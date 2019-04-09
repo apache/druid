@@ -222,6 +222,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   {
     private final SegmentIdWithShardSpec segmentIdentifier;
     private final int numRowsInSegment;
+    private final int numSegmentsInAppenderator;
     private final boolean isPersistRequired;
 
     @Nullable
@@ -230,12 +231,14 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
     AppenderatorAddResult(
         SegmentIdWithShardSpec identifier,
         int numRowsInSegment,
+        int numSegmentsInAppenderator,
         boolean isPersistRequired,
         @Nullable ParseException parseException
     )
     {
       this.segmentIdentifier = identifier;
       this.numRowsInSegment = numRowsInSegment;
+      this.numSegmentsInAppenderator = numSegmentsInAppenderator;
       this.isPersistRequired = isPersistRequired;
       this.parseException = parseException;
     }
@@ -248,6 +251,11 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
     int getNumRowsInSegment()
     {
       return numRowsInSegment;
+    }
+
+    int getNumSegmentsInAppenderator()
+    {
+      return numSegmentsInAppenderator;
     }
 
     boolean isPersistRequired()

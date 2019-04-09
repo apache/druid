@@ -299,6 +299,7 @@ public class ParallelIndexSubTask extends AbstractTask
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     @Nullable final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
     @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
+    @Nullable final Integer maxTotalSegments = IndexTask.getValidMaxTotalSegments(tuningConfig);
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient, ingestionSchema);
@@ -343,7 +344,7 @@ public class ParallelIndexSubTask extends AbstractTask
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {
-            if (addResult.isPushRequired(maxRowsPerSegment, maxTotalRows)) {
+            if (addResult.isPushRequired(maxRowsPerSegment, maxTotalRows, maxTotalSegments)) {
               // There can be some segments waiting for being published even though any rows won't be added to them.
               // If those segments are not published here, the available space in appenderator will be kept to be small
               // which makes the size of segments smaller.

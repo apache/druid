@@ -327,7 +327,7 @@ public class AppenderatorImpl implements Appenderator
         isPersistRequired = true;
       }
     }
-    return new AppenderatorAddResult(identifier, sink.getNumRows(), isPersistRequired, addResult.getParseException());
+    return new AppenderatorAddResult(identifier, sink.getNumRows(), sinks.size(), isPersistRequired, addResult.getParseException());
   }
 
   @Override

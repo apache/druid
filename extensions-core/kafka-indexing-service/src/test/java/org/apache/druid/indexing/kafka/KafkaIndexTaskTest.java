@@ -215,6 +215,7 @@ public class KafkaIndexTaskTest
   private boolean doHandoff = true;
   private Integer maxRowsPerSegment = null;
   private Long maxTotalRows = null;
+  private Integer maxTotalSegments = null;
   private Period intermediateHandoffPeriod = null;
 
   private TaskToolboxFactory toolboxFactory;
@@ -2493,6 +2494,7 @@ public class KafkaIndexTaskTest
         null,
         maxRowsPerSegment,
         maxTotalRows,
+        maxTotalSegments,
         new Period("P1Y"),
         null,
         null,

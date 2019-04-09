@@ -412,7 +412,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
             result.getNumRowsInSegment(),
             appenderator.getTotalRowCount(),
             result.isPersistRequired(),
-            result.getParseException()
+            result.getParseException(),
+            result.getNumSegmentsInAppenderator()
         );
       }
       catch (SegmentNotWritableException e) {

@@ -167,6 +167,7 @@ public class KinesisIndexTaskTuningConfigTest
         (long) 3,
         2,
         100L,
+        4,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -215,5 +216,6 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertTrue(copy.isResetOffsetAutomatically());
     Assert.assertEquals(100, copy.getMaxRecordsPerPoll());
     Assert.assertEquals(new Period().withDays(Integer.MAX_VALUE), copy.getIntermediateHandoffPeriod());
+    Assert.assertEquals(4, copy.getMaxTotalSegments().intValue());
   }
 }

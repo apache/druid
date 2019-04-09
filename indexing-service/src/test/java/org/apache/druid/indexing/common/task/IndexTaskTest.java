@@ -731,7 +731,17 @@ public class IndexTaskTest
                 Granularities.MINUTE,
                 null
             ),
-            createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            createTuningConfig(
+                2,
+                2,
+                null,
+                2L,
+                null,
+                null,
+                null,
+                false,
+                true
+            ),
             false
         ),
         null,
@@ -776,7 +786,17 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, null, 2L, null, null, true, true),
+            createTuningConfig(
+                3,
+                2,
+                null,
+                2L,
+                null,
+                null,
+                null,
+                true,
+                true
+            ),
             false
         ),
         null,
@@ -820,7 +840,17 @@ public class IndexTaskTest
                 true,
                 null
             ),
-            createTuningConfig(3, 2, null, 2L, null, null, false, true),
+            createTuningConfig(
+                3,
+                2,
+                null,
+                2L,
+                null,
+                null,
+                null,
+                false,
+                true
+            ),
             false
         ),
         null,
@@ -893,7 +923,17 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, null, false, false), // ignore parse exception,
+        createTuningConfig(
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            false
+        ), // ignore parse exception,
         false
     );
 
@@ -946,7 +986,17 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, null, false, true), // report parse exception
+        createTuningConfig(
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            true
+        ), // report parse exception
         false
     );
 
@@ -984,11 +1034,15 @@ public class IndexTaskTest
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
       writer.write("{\"time\":\"unparseable\",\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // unparseable time
       writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // valid row
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":\"notnumber\",\"dimFloat\":3.0,\"val\":1}\n"); // row with invalid long dimension
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":\"notnumber\",\"val\":1}\n"); // row with invalid float dimension
-      writer.write("{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":4.0,\"val\":\"notnumber\"}\n"); // row with invalid metric
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":\"notnumber\",\"dimFloat\":3.0,\"val\":1}\n"); // row with invalid long dimension
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":\"notnumber\",\"val\":1}\n"); // row with invalid float dimension
+      writer.write(
+          "{\"time\":\"2014-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":4.0,\"val\":\"notnumber\"}\n"); // row with invalid metric
       writer.write("{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // invalid JSON
-      writer.write("{\"time\":\"3014-03-01T00:00:10Z\",\"dim\":\"outsideofinterval\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // thrown away
+      writer.write(
+          "{\"time\":\"3014-03-01T00:00:10Z\",\"dim\":\"outsideofinterval\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // thrown away
       writer.write("{\"time\":\"99999999999-01-01T00:00:10Z\",\"dim\":\"b\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}\n"); // unparseable time
       writer.write("this is not JSON\n"); // invalid JSON
     }
@@ -996,6 +1050,7 @@ public class IndexTaskTest
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         null,
         2,
+        null,
         null,
         null,
         null,
@@ -1124,6 +1179,7 @@ public class IndexTaskTest
         null,
         null,
         null,
+        null,
         indexSpec,
         null,
         true,
@@ -1233,6 +1289,7 @@ public class IndexTaskTest
     final IndexTask.IndexTuningConfig tuningConfig = new IndexTask.IndexTuningConfig(
         null,
         2,
+        null,
         null,
         null,
         null,
@@ -1374,7 +1431,17 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, 1, null, null, null, null, true, true), // report parse exception
+        createTuningConfig(
+            2,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            true,
+            true
+        ), // report parse exception
         false
     );
 
@@ -1444,7 +1511,17 @@ public class IndexTaskTest
             0
         ),
         null,
-        createTuningConfig(2, null, null, null, null, null, false, true), // report parse exception
+        createTuningConfig(
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            true
+        ), // report parse exception
         false
     );
 
@@ -1661,6 +1738,7 @@ public class IndexTaskTest
         null,
         null,
         null,
+        null,
         forceGuaranteedRollup,
         true
     );
@@ -1677,6 +1755,7 @@ public class IndexTaskTest
         1,
         null,
         null,
+        null,
         numShards,
         partitionDimensions,
         forceGuaranteedRollup,
@@ -1689,6 +1768,7 @@ public class IndexTaskTest
       @Nullable Integer maxRowsInMemory,
       @Nullable Long maxBytesInMemory,
       @Nullable Long maxTotalRows,
+      @Nullable Integer maxTotalSegments,
       @Nullable Integer numShards,
       @Nullable List<String> partitionDimensions,
       boolean forceGuaranteedRollup,
@@ -1701,6 +1781,7 @@ public class IndexTaskTest
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,
+        maxTotalSegments,
         null,
         numShards,
         partitionDimensions,

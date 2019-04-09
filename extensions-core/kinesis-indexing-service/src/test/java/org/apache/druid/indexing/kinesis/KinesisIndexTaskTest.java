@@ -220,6 +220,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
   private int maxRowsInMemory = 1000;
   private Integer maxRowsPerSegment = null;
   private Long maxTotalRows = null;
+  private Integer maxTotalSegments = null;
   private Period intermediateHandoffPeriod = null;
   private int maxRecordsPerPoll;
   private boolean skipAvailabilityCheck = false;
@@ -2620,6 +2621,7 @@ public class KinesisIndexTaskTest extends EasyMockSupport
         null,
         maxRowsPerSegment,
         maxTotalRows,
+        maxTotalSegments,
         new Period("P1Y"),
         null,
         null,

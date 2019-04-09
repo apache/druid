@@ -210,6 +210,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         50000,
         null,
+        null,
         new Period("P1Y"),
         new File("/test"),
         null,

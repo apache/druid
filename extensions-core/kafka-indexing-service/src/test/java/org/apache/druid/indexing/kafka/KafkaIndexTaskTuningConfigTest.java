@@ -111,6 +111,7 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         2,
         10L,
+        4,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -143,6 +144,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
     Assert.assertEquals(true, copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
+    Assert.assertEquals(4, copy.getMaxTotalSegments().intValue());
   }
 
   private static KafkaIndexTaskTuningConfig copy(KafkaIndexTaskTuningConfig config)
@@ -152,6 +154,7 @@ public class KafkaIndexTaskTuningConfigTest
         config.getMaxBytesInMemory(),
         config.getMaxRowsPerSegment(),
         config.getMaxTotalRows(),
+        config.getMaxTotalSegments(),
         config.getIntermediatePersistPeriod(),
         config.getBasePersistDirectory(),
         0,

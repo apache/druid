@@ -161,7 +161,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
       Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
     }
   }
@@ -242,7 +245,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
       Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
     }
 
@@ -259,7 +265,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
       Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
     }
   }
@@ -311,7 +320,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1), segments.get(i).getInterval());
+      Assert.assertEquals(
+          Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
+          segments.get(i).getInterval()
+      );
       Assert.assertEquals(new NumberedShardSpec(0, 0), segments.get(i).getShardSpec());
     }
   }
@@ -344,7 +356,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
                 Granularities.MINUTE,
                 null
             ),
-            IndexTaskTest.createTuningConfig(2, 2, null, 2L, null, null, false, true),
+            IndexTaskTest.createTuningConfig(
+                2,
+                2,
+                null,
+                2L,
+                null,
+                null,
+                null,
+                false,
+                true
+            ),
             false
         ),
         null,
@@ -391,7 +413,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final SegmentLoader loader = new SegmentLoaderLocalCacheManager(
         getIndexIO(),
-        new SegmentLoaderConfig() {
+        new SegmentLoaderConfig()
+        {
           @Override
           public List<StorageLocationConfig> getLocations()
           {
