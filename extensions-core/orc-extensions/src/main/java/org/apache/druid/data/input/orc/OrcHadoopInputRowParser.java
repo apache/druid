@@ -55,7 +55,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     } else {
       flattenSpec = JSONPathSpec.DEFAULT;
     }
-    this.orcStructFlattener = ObjectFlatteners.create(flattenSpec, new OrcStructFlattenerMaker(binaryAsString));
+    this.orcStructFlattener = ObjectFlatteners.create(flattenSpec, new OrcStructFlattenerMaker(this.binaryAsString));
     this.parser = new MapInputRowParser(parseSpec);
   }
 

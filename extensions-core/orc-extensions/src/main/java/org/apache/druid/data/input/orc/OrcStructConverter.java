@@ -19,6 +19,8 @@
 
 package org.apache.druid.data.input.orc;
 
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.hadoop.hive.serde2.io.DateWritable;
@@ -49,6 +51,19 @@ import java.util.stream.Collectors;
 
 public class OrcStructConverter
 {
+  @Nonnull
+  private static List<Object> convertList(TypeDescription fieldDescription, OrcList orcList, boolean binaryAsString)
+  {
+    // if primitive list, convert primitives
+    TypeDescription listType = fieldDescription.getChildren().get(0);
+    if (listType.getCategory().isPrimitive()) {
+      return (List<Object>) orcList.stream()
+                                   .map(li -> convertPrimitive(listType, (WritableComparable) li, binaryAsString))
+                                   .collect(Collectors.toList());
+    }
+    return new ArrayList<Object>(orcList);
+  }
+
   private static Map<Object, Object> convertMap(
       TypeDescription fieldDescription,
       OrcMap<? extends WritableComparable, ? extends WritableComparable> map,
@@ -126,6 +141,7 @@ public class OrcStructConverter
   }
 
   private boolean binaryAsString;
+  private Object2IntMap<String> fieldIndexCache;
 
   OrcStructConverter(boolean binaryAsString)
   {
@@ -139,18 +155,46 @@ public class OrcStructConverter
    * primitive types will be extracted into an ingestion friendly state (e.g. 'int' and 'long'). Finally,
    * if a field is not present, this method will return null.
    *
-   * Note: "Union" types are not currently supported and will be returned as null
+   * Note: "Union" types are not currently supported and will be returned as null. Additionally, this method
+   * has a cache of field names to field index that is ONLY valid for the root level {@link OrcStruct}, and should
+   * not be used for nested {@link OrcStruct} fields of the root.
    */
   @Nullable
   Object convertField(OrcStruct struct, String fieldName)
   {
+    // this cache is only valid for the root level, to skip the indexOf on fieldNames to get the fieldIndex.
     TypeDescription schema = struct.getSchema();
-    int fieldIndex = schema.getFieldNames().indexOf(fieldName);
+    final List<String> fields = schema.getFieldNames();
+    if (fieldIndexCache == null) {
+      fieldIndexCache = new Object2IntOpenHashMap<>(fields.size());
+      for (int i = 0; i < fields.size(); i++) {
+        fieldIndexCache.put(fields.get(i), i);
+      }
+    }
+    WritableComparable wc = struct.getFieldValue(fieldName);
 
+    int fieldIndex = fieldIndexCache.getOrDefault(fieldName, -1);
+
+    return convertField(struct, fieldIndex);
+  }
+
+  /**
+   * Convert a orc struct field as though it were a map, by fieldIndex. Complex types will be transformed
+   * into java lists and maps when possible ({@link OrcStructConverter#convertList} and
+   * {@link OrcStructConverter#convertMap}), and
+   * primitive types will be extracted into an ingestion friendly state (e.g. 'int' and 'long'). Finally,
+   * if a field is not present, this method will return null.
+   *
+   * Note: "Union" types are not currently supported and will be returned as null
+   */
+  @Nullable
+  Object convertField(OrcStruct struct, int fieldIndex)
+  {
     if (fieldIndex < 0) {
       return null;
     }
 
+    TypeDescription schema = struct.getSchema();
     TypeDescription fieldDescription = schema.getChildren().get(fieldIndex);
     WritableComparable fieldValue = struct.getFieldValue(fieldIndex);
 
@@ -172,13 +216,13 @@ public class OrcStructConverter
       switch (fieldDescription.getCategory()) {
         case LIST:
           OrcList orcList = (OrcList) fieldValue;
-          return convertList(fieldDescription, orcList);
+          return convertList(fieldDescription, orcList, binaryAsString);
         case MAP:
           OrcMap map = (OrcMap) fieldValue;
           return convertMap(fieldDescription, map, binaryAsString);
         case STRUCT:
           OrcStruct structMap = (OrcStruct) fieldValue;
-          return convertMap(structMap);
+          return convertStructToMap(structMap);
         case UNION:
           // sorry union types :(
         default:
@@ -187,25 +231,13 @@ public class OrcStructConverter
     }
   }
 
-  @Nonnull
-  private List<Object> convertList(TypeDescription fieldDescription, OrcList orcList)
-  {
-    // if primitive list, convert primitives
-    TypeDescription listType = fieldDescription.getChildren().get(0);
-    if (listType.getCategory().isPrimitive()) {
-      return (List<Object>) orcList.stream()
-                                   .map(li -> convertPrimitive(listType, (WritableComparable) li, binaryAsString))
-                                   .collect(Collectors.toList());
-    }
-    return new ArrayList<Object>(orcList);
-  }
-
-
-  private Map<String, Object> convertMap(OrcStruct map)
+  private Map<String, Object> convertStructToMap(OrcStruct map)
   {
     Map<String, Object> converted = new HashMap<>();
-    for (String key : map.getSchema().getFieldNames()) {
-      converted.put(key, convertField(map, key));
+    List<String> fieldNames = map.getSchema().getFieldNames();
+
+    for (int i = 0; i < fieldNames.size(); i++) {
+      converted.put(fieldNames.get(i), convertField(map, i));
     }
     return converted;
   }

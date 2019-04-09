@@ -106,8 +106,9 @@ public class OrcStructJsonProvider implements JsonProvider
     } else if (o instanceof Map) {
       return ((Map) o).get(s);
     } else if (o instanceof OrcStruct) {
-      OrcStruct g = (OrcStruct) o;
-      return converter.convertField(g, s);
+      OrcStruct struct = (OrcStruct) o;
+      // get field by index since we have no way to know if this map is the root or not
+      return converter.convertField(struct, struct.getSchema().getFieldNames().indexOf(s));
     }
     throw new UnsupportedOperationException(o.getClass().getName());
   }
