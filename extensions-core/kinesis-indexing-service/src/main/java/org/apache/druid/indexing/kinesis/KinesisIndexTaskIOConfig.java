@@ -155,15 +155,17 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   }
 
   /**
-   * This method is for compatibilty so that newer version of KafkaIndexTaskIOConfig can be read by
+   * This method is for compatibilty so that newer version of KinesisIndexTaskIOConfig can be read by
    * old version of Druid. Note that this method returns end sequence numbers instead of start. This is because
    * {@link SeekableStreamStartSequenceNumbers} didn't exist before.
+   *
+   * A SeekableStreamEndSequenceNumbers (has no exclusivity info) is returned here because the Kinesis extension
+   * previously stored exclusivity info separately in exclusiveStartSequenceNumberPartitions.
    */
   @JsonProperty
   @Deprecated
   public SeekableStreamEndSequenceNumbers<String, String> getStartPartitions()
   {
-    // Converting to start sequence numbers. This is allowed for Kafka because the start offset is always inclusive.
     final SeekableStreamStartSequenceNumbers<String, String> startSequenceNumbers = getStartSequenceNumbers();
     return new SeekableStreamEndSequenceNumbers<>(
         startSequenceNumbers.getStream(),
@@ -172,7 +174,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   }
 
   /**
-   * This method is for compatibilty so that newer version of KafkaIndexTaskIOConfig can be read by
+   * This method is for compatibilty so that newer version of KinesisIndexTaskIOConfig can be read by
    * old version of Druid.
    */
   @JsonProperty
