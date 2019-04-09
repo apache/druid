@@ -235,7 +235,7 @@ public class SeekableStreamSupervisorStateManager
   }
 
   @JsonPropertyOrder({"timestamp", "exceptionClass", "message", "stackTrace"})
-  public class ExceptionEvent
+  public static class ExceptionEvent
   {
     private Class clazz;
     // Contains full stackTrace if storingStackTraces is true
@@ -271,7 +271,7 @@ public class SeekableStreamSupervisorStateManager
     }
   }
 
-  private class ExceptionEventStore
+  private static class ExceptionEventStore
   {
     private final Queue<ExceptionEvent> recentEventsQueue;
     private final ConcurrentHashMap<Class, Queue<ExceptionEvent>> recentEventsMap;
