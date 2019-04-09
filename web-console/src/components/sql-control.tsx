@@ -221,7 +221,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         {!isRune && SqlControlPopover}
         {
           queryElapsed &&
-          <span className={"query-elapsed"}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
+          <span className={'query-elapsed'}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
         }
       </div>
     </div>;
