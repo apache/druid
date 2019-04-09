@@ -3550,7 +3550,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         getDataSchema(dataSource),
         tuningConfig,
         new KinesisIndexTaskIOConfig(
-            null,
+            0,
             "sequenceName-" + taskGroupId,
             startPartitions,
             endPartitions,
