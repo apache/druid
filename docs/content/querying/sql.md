@@ -162,6 +162,8 @@ Numeric functions will return 64 bit integers or 64 bit floats, depending on the
 |`ACOS(expr)`|Arc cosine of expr.|
 |`ATAN(expr)`|Arc tangent of expr.|
 |`ATAN2(y, x)`|Angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta).|
+|`DEGREES(expr)`|Converts an angle measured in radians to an approximately equivalent angle measured in degrees|
+|`RADIANS(expr)`|Converts an angle measured in degrees to an approximately equivalent angle measured in radians|
 
 ### String functions
 
@@ -172,6 +174,7 @@ String functions accept strings, and return a type appropriate to the function.
 |`x \|\| y`|Concat strings x and y.|
 |`CONCAT(expr, expr...)`|Concats a list of expressions.|
 |`TEXTCAT(expr, expr)`|Two argument version of CONCAT.|
+|`FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |`LENGTH(expr)`|Length of expr in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Synonym for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Synonym for `LENGTH`.|
@@ -321,9 +324,7 @@ converted to zeroes).
 
 ## Query execution
 
-Queries without aggregations will use Druid's [Scan](scan-query.html) or [Select](select-query.html) native query types.
-Scan is used whenever possible, as it is generally higher performance and more efficient than Select. However, Select
-is used in one case: when the query includes an `ORDER BY __time`, since Scan does not have a sorting feature.
+Queries without aggregations will use Druid's [Scan](scan-query.html) native query type.
 
 Aggregation queries (using GROUP BY, DISTINCT, or any aggregation functions) will use one of Druid's three native
 aggregation query types. Two (Timeseries and TopN) are specialized for specific types of aggregations, whereas the other

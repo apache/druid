@@ -22,10 +22,12 @@ package org.apache.druid.client.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Client representation of {@link org.apache.druid.indexing.common.task.CompactionTask}. JSON serialization fields of
@@ -35,6 +37,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
 {
   private final String dataSource;
   private final List<DataSegment> segments;
+  private final Interval interval;
   private final boolean keepSegmentGranularity;
   @Nullable
   private final Long targetCompactionSizeBytes;
@@ -44,7 +47,8 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   @JsonCreator
   public ClientCompactionTaskQuery(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("segments") List<DataSegment> segments,
+      @Nullable @JsonProperty("interval") final Interval interval,
+      @Nullable @JsonProperty("segments") final List<DataSegment> segments,
       @JsonProperty("keepSegmentGranularity") boolean keepSegmentGranularity,
       @JsonProperty("targetCompactionSizeBytes") @Nullable Long targetCompactionSizeBytes,
       @JsonProperty("tuningConfig") ClientCompactionTaskQueryTuningConfig tuningConfig,
@@ -53,6 +57,7 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   {
     this.dataSource = dataSource;
     this.segments = segments;
+    this.interval = interval;
     this.keepSegmentGranularity = keepSegmentGranularity;
     this.targetCompactionSizeBytes = targetCompactionSizeBytes;
     this.tuningConfig = tuningConfig;
@@ -77,6 +82,12 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   public List<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  public Interval getInterval()
+  {
+    return interval;
   }
 
   @JsonProperty
@@ -105,11 +116,45 @@ public class ClientCompactionTaskQuery implements ClientTaskQuery
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ClientCompactionTaskQuery that = (ClientCompactionTaskQuery) o;
+    return keepSegmentGranularity == that.keepSegmentGranularity &&
+           Objects.equals(dataSource, that.dataSource) &&
+           Objects.equals(segments, that.segments) &&
+           Objects.equals(interval, that.interval) &&
+           Objects.equals(targetCompactionSizeBytes, that.targetCompactionSizeBytes) &&
+           Objects.equals(tuningConfig, that.tuningConfig) &&
+           Objects.equals(context, that.context);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        dataSource,
+        segments,
+        interval,
+        keepSegmentGranularity,
+        targetCompactionSizeBytes,
+        tuningConfig,
+        context
+    );
+  }
+
+  @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
+           ", interval=" + interval +
            ", keepSegmentGranularity=" + keepSegmentGranularity +
            ", targetCompactionSizeBytes=" + targetCompactionSizeBytes +
            ", tuningConfig=" + tuningConfig +

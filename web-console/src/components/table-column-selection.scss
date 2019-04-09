@@ -17,17 +17,14 @@
  */
 
 .table-column-selection {
-  &.pt-popover-target{
-    position: absolute;
-    right: 0;
-  }
+  position: absolute;
+  right: 0;
+  margin: 0;
+}
 
-  .pt-popover-content {
-    padding: 10px 10px 1px 10px;
-  }
-
-  .form-group {
+// This will be mounted in a portal
+.table-column-selection-menu {
+  .bp3-form-group {
     margin-bottom: 0;
   }
-
 }

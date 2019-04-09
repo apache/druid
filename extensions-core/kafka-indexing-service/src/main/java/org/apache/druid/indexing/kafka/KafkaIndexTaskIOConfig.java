@@ -41,8 +41,10 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId, // can be null for backward compabitility
       @JsonProperty("baseSequenceName") String baseSequenceName,
       // startPartitions and endPartitions exist to be able to read old ioConfigs in metadata store
-      @JsonProperty("startPartitions") @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> startPartitions,
-      @JsonProperty("endPartitions") @Nullable SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
+      @JsonProperty("startPartitions") @Nullable
+      @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> startPartitions,
+      @JsonProperty("endPartitions") @Nullable
+      @Deprecated SeekableStreamEndSequenceNumbers<Integer, Long> endPartitions,
       // startSequenceNumbers and endSequenceNumbers must be set for new versions
       @JsonProperty("startSequenceNumbers")
       @Nullable SeekableStreamStartSequenceNumbers<Integer, Long> startSequenceNumbers,
@@ -115,6 +117,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
    * {@link SeekableStreamStartSequenceNumbers} didn't exist before.
    */
   @JsonProperty
+  @Deprecated
   public SeekableStreamEndSequenceNumbers<Integer, Long> getStartPartitions()
   {
     // Converting to start sequence numbers. This is allowed for Kafka because the start offset is always inclusive.
@@ -130,6 +133,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Inte
    * old version of Druid.
    */
   @JsonProperty
+  @Deprecated
   public SeekableStreamEndSequenceNumbers<Integer, Long> getEndPartitions()
   {
     return getEndSequenceNumbers();

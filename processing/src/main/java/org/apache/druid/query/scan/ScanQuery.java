@@ -20,6 +20,7 @@
 package org.apache.druid.query.scan;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
@@ -34,6 +35,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -112,6 +114,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   private final List<String> columns;
   private final Boolean legacy;
   private final Order order;
+  private final Integer maxRowsQueuedForOrdering;
+  private final Integer maxSegmentPartitionsOrderedInMemory;
 
   @JsonCreator
   public ScanQuery(
@@ -132,13 +136,43 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.resultFormat = (resultFormat == null) ? ResultFormat.RESULT_FORMAT_LIST : resultFormat;
     this.batchSize = (batchSize == 0) ? 4096 * 5 : batchSize;
+    Preconditions.checkArgument(
+        this.batchSize > 0,
+        "batchSize must be greater than 0"
+    );
     this.limit = (limit == 0) ? Long.MAX_VALUE : limit;
-    Preconditions.checkArgument(this.batchSize > 0, "batchSize must be greater than 0");
-    Preconditions.checkArgument(this.limit > 0, "limit must be greater than 0");
+    Preconditions.checkArgument(
+        this.limit > 0,
+        "limit must be greater than 0"
+    );
     this.dimFilter = dimFilter;
     this.columns = columns;
     this.legacy = legacy;
-    this.order = order == null ? Order.NONE : order;
+    this.order = (order == null) ? Order.NONE : order;
+    this.maxRowsQueuedForOrdering = validateAndGetMaxRowsQueuedForOrdering();
+    this.maxSegmentPartitionsOrderedInMemory = validateAndGetMaxSegmentPartitionsOrderedInMemory();
+  }
+
+  private Integer validateAndGetMaxRowsQueuedForOrdering()
+  {
+    final Integer maxRowsQueuedForOrdering =
+        getContextValue(ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING, null);
+    Preconditions.checkArgument(
+        maxRowsQueuedForOrdering == null || maxRowsQueuedForOrdering > 0,
+        "maxRowsQueuedForOrdering must be greater than 0"
+    );
+    return maxRowsQueuedForOrdering;
+  }
+
+  private Integer validateAndGetMaxSegmentPartitionsOrderedInMemory()
+  {
+    final Integer maxSegmentPartitionsOrderedInMemory =
+        getContextValue(ScanQueryConfig.CTX_KEY_MAX_SEGMENT_PARTITIONS_FOR_ORDERING, null);
+    Preconditions.checkArgument(
+        maxSegmentPartitionsOrderedInMemory == null || maxSegmentPartitionsOrderedInMemory > 0,
+        "maxRowsQueuedForOrdering must be greater than 0"
+    );
+    return maxSegmentPartitionsOrderedInMemory;
   }
 
   @JsonProperty
@@ -169,6 +203,20 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   public Order getOrder()
   {
     return order;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Integer getMaxRowsQueuedForOrdering()
+  {
+    return maxRowsQueuedForOrdering;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Integer getMaxSegmentPartitionsOrderedInMemory()
+  {
+    return maxSegmentPartitionsOrderedInMemory;
   }
 
   @Override

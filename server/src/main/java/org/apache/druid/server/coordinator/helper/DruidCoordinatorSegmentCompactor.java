@@ -41,7 +41,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +52,9 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
   static final String COMPACTION_TASK_COUNT = "compactTaskCount";
   static final String SEGMENT_SIZE_WAIT_COMPACT = "segmentSizeWaitCompact";
 
-  // Should be synced with CompactionTask.TYPE
-  private static final String COMPACT_TASK_TYPE = "compact";
+  /** Should be synced with {@link org.apache.druid.indexing.common.task.CompactionTask#TYPE} */
+  private static final String COMPACTION_TASK_TYPE = "compact";
+
   private static final Logger LOG = new Logger(DruidCoordinatorSegmentCompactor.class);
 
   private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy();
@@ -84,11 +84,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
         Map<String, DataSourceCompactionConfig> compactionConfigs = compactionConfigList
             .stream()
             .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-        final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(
-            indexingServiceClient.getRunningTasks(),
-            indexingServiceClient.getPendingTasks(),
-            indexingServiceClient.getWaitingTasks()
-        );
+        final List<TaskStatusPlus> compactionTasks = filterNonCompactionTasks(indexingServiceClient.getActiveTasks());
         // dataSource -> list of intervals of compact tasks
         final Map<String, List<Interval>> compactionTaskIntervals = new HashMap<>(compactionConfigList.size());
         for (TaskStatusPlus status : compactionTasks) {
@@ -96,15 +92,24 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
           if (response == null) {
             throw new ISE("WTH? got a null paylord from overlord for task[%s]", status.getId());
           }
-          if (COMPACT_TASK_TYPE.equals(response.getPayload().getType())) {
+          if (COMPACTION_TASK_TYPE.equals(response.getPayload().getType())) {
             final ClientCompactionTaskQuery compactionTaskQuery = (ClientCompactionTaskQuery) response.getPayload();
-            final Interval interval = JodaUtils.umbrellaInterval(
-                compactionTaskQuery.getSegments()
-                            .stream()
-                            .map(DataSegment::getInterval)
-                            .sorted(Comparators.intervalsByStartThenEnd())
-                            .collect(Collectors.toList())
-            );
+            final Interval interval;
+
+            if (compactionTaskQuery.getSegments() != null) {
+              interval = JodaUtils.umbrellaInterval(
+                  compactionTaskQuery.getSegments()
+                              .stream()
+                              .map(DataSegment::getInterval)
+                              .sorted(Comparators.intervalsByStartThenEnd())
+                              .collect(Collectors.toList())
+              );
+            } else if (compactionTaskQuery.getInterval() != null) {
+              interval = compactionTaskQuery.getInterval();
+            } else {
+              throw new ISE("task[%s] has neither 'segments' nor 'interval'", status.getId());
+            }
+
             compactionTaskIntervals.computeIfAbsent(status.getDataSource(), k -> new ArrayList<>()).add(interval);
           } else {
             throw new ISE("WTH? task[%s] is not a compactionTask?", status.getId());
@@ -149,13 +154,9 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
                  .build();
   }
 
-  @SafeVarargs
-  private static List<TaskStatusPlus> filterNonCompactionTasks(List<TaskStatusPlus>...taskStatusStreams)
+  private static List<TaskStatusPlus> filterNonCompactionTasks(List<TaskStatusPlus> taskStatuses)
   {
-    final List<TaskStatusPlus> allTaskStatusPlus = new ArrayList<>();
-    Arrays.stream(taskStatusStreams).forEach(allTaskStatusPlus::addAll);
-
-    return allTaskStatusPlus
+    return taskStatuses
         .stream()
         .filter(status -> {
           final String taskType = status.getType();
@@ -163,7 +164,7 @@ public class DruidCoordinatorSegmentCompactor implements DruidCoordinatorHelper
           // the tasks of the unknown taskType as the compactionTask. This is because it's important to not run
           // compactionTasks more than the configured limit at any time which might impact to the ingestion
           // performance.
-          return taskType == null || COMPACT_TASK_TYPE.equals(taskType);
+          return taskType == null || COMPACTION_TASK_TYPE.equals(taskType);
         })
         .collect(Collectors.toList());
   }

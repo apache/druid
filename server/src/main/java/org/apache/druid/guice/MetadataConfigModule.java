@@ -22,9 +22,9 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import org.apache.druid.metadata.MetadataRuleManagerConfig;
-import org.apache.druid.metadata.SegmentsMetadataConfig;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SegmentsMetadataConfig;
 
 public class MetadataConfigModule implements Module
 {

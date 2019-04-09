@@ -1220,7 +1220,7 @@ public class CompactionTaskTest
             41943040, // automatically computed targetPartitionSize
             500000,
             1000000L,
-            null,
+            Long.MAX_VALUE,
             null,
             null,
             null,

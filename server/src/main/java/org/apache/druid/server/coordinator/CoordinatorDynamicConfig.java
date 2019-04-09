@@ -390,7 +390,7 @@ public class CoordinatorDynamicConfig
   public static class Builder
   {
     private static final
-    long DEFAULT_MILLIS_LAG_SINCE_COORDINATOR_BECOMES_LEADER_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS
+        long DEFAULT_MILLIS_LAG_SINCE_COORDINATOR_BECOMES_LEADER_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS
         = TimeUnit.MINUTES.toMillis(15);
     private static final long DEFAULT_MERGE_BYTES_LIMIT = 524_288_000L;
     private static final int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
