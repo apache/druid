@@ -101,6 +101,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.maxTotalRows = maxTotalRows;
+    this.maxTotalSegments = maxTotalSegments == null ? 0 : 4; //TODO TODO TODO
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
@@ -258,6 +259,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
         maxBytesInMemory,
         maxRowsPerSegment,
         maxTotalRows,
+        maxTotalSegments,
         intermediatePersistPeriod,
         dir,
         maxPendingPersists,

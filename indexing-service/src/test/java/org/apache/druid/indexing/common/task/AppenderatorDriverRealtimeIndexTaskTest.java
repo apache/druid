@@ -1317,7 +1317,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         0,
         1,
         maxRowsPerSegment,
-        maxTotalRows
+        maxTotalRows,
+        null
     );
   }
 
@@ -1354,6 +1355,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         maxParseExceptions,
         maxSavedParseExceptions,
         1000,
+        null,
         null
     );
   }
@@ -1367,7 +1369,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       final Integer maxParseExceptions,
       final Integer maxSavedParseExceptions,
       final Integer maxRowsPerSegment,
-      final Long maxTotalRows
+      final Long maxTotalRows,
+      final Integer maxTotalSegments
   )
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -1407,6 +1410,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         maxRowsPerSegment,
         maxTotalRows,
+        maxTotalSegments,
         null,
         null,
         null,
