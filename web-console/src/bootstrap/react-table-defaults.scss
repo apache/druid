@@ -16,15 +16,18 @@
  * limitations under the License.
  */
 
-.-pageJump {
-  .bp3-input {
-    background-color: #374653 !important;
+.ReactTable {
+  .-pageJump {
+    .bp3-input {
+      background-color: #374653;
+    }
+  }
+
+  .-pageSizeOptions {
+    .bp3-html-select select {
+      background-color: #394b59;
+      width: 90px;
+    }
   }
 }
 
-.-pageSizeOptions {
-  .bp3-html-select select {
-    background-color: #394b59 !important;
-    width: 90px !important;
-  }
-}
