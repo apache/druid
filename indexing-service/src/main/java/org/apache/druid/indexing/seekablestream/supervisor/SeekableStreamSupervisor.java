@@ -453,7 +453,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final ConcurrentHashMap<Integer, TaskGroup> activelyReadingTaskGroups = new ConcurrentHashMap<>();
 
   // After telling a taskGroup to stop reading and begin publishing a segment, it is moved from [activelyReadingTaskGroups] to here so
-  // After telling a taskGroup to stop reading and begin publishing a segment, it is moved from [activelyReadingTaskGroups] to here so
   // we can monitor its status while we queue new tasks to read the next range of sequences. This is a list since we could
   // have multiple sets of tasks publishing at once if time-to-publish > taskDuration.
   // Map<{group RandomIdUtils}, List<{pending completion task groups}>>
