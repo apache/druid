@@ -27,7 +27,7 @@ import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
-import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -44,12 +44,12 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
       .functionCategory(SqlFunctionCategory.STRING)
       .build();
 
-  private final LookupReferencesManager lookupReferencesManager;
+  private final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider;
 
   @Inject
-  public QueryLookupOperatorConversion(final LookupReferencesManager lookupReferencesManager)
+  public QueryLookupOperatorConversion(final LookupExtractorFactoryContainerProvider lookupExtractorFactoryContainerProvider)
   {
-    this.lookupReferencesManager = lookupReferencesManager;
+    this.lookupExtractorFactoryContainerProvider = lookupExtractorFactoryContainerProvider;
   }
 
   @Override
@@ -77,7 +77,7 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
             return arg.getSimpleExtraction().cascade(
                 new RegisteredLookupExtractionFn(
-                    lookupReferencesManager,
+                    lookupExtractorFactoryContainerProvider,
                     (String) lookupNameExpr.getLiteralValue(),
                     false,
                     null,

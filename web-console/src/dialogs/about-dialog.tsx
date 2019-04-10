@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import { AnchorButton, Button, Classes, Dialog, Intent } from "@blueprintjs/core";
-import { IconNames } from "@blueprintjs/icons";
+import { AnchorButton, Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
 
 import { DRUID_COMMUNITY, DRUID_DEVELOPER_GROUP, DRUID_USER_GROUP, DRUID_WEBSITE } from '../variables';

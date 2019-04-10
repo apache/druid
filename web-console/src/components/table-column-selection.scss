@@ -24,11 +24,7 @@
 
 // This will be mounted in a portal
 .table-column-selection-menu {
-  .form-group {
+  .bp3-form-group {
     margin-bottom: 0;
-
-    .bp3-checkbox:last-child {
-      margin-bottom: 0;
-    }
   }
 }

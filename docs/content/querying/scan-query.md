@@ -63,7 +63,7 @@ The following are the main parameters for Scan queries:
 |limit|How many rows to return. If not specified, all rows will be returned.|no|
 |order|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the limit is less than `druid.query.scan.maxRowsQueuedForOrdering`.  Scan queries that are either legacy mode or have a limit greater than `druid.query.scan.maxRowsQueuedForOrdering` will not be time-ordered and default to a order of "none".|none|
 |legacy|Return results consistent with the legacy "scan-query" contrib extension. Defaults to the value set by `druid.query.scan.legacy`, which in turn defaults to false. See [Legacy mode](#legacy-mode) for details.|no|
-|context|An additional JSON Object which can be used to specify certain flags.|no|
+|context|An additional JSON Object which can be used to specify certain flags (see the Query Context Properties section below).|no|
 
 ## Example results
 
@@ -179,7 +179,9 @@ decompression and decoding buffers for each.  The `druid.query.scan.maxSegmentPa
 from this by capping the number of partitions opened at any times when time ordering is used.
 
 Both `druid.query.scan.maxRowsQueuedForOrdering` and `druid.query.scan.maxSegmentPartitionsOrderedInMemory` are 
-configurable and can be tuned based on hardware specs and number of dimensions being queried.
+configurable and can be tuned based on hardware specs and number of dimensions being queried.  These config properties
+can also be overridden using the `maxRowsQueuedForOrdering` and `maxSegmentPartitionsOrderedInMemory` properties in 
+the query context (see the Query Context Properties section).
   
 ## Legacy mode
 
@@ -198,8 +200,27 @@ is complete.
 
 ## Configuration Properties
 
+Configuration properties:
+
 |property|description|values|default|
 |--------|-----------|------|-------|
-|druid.query.scan.maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used|An integer in [0, 2147483647]|100000|
-|druid.query.scan.maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used|An integer in [0, 2147483647]|50|
+|druid.query.scan.maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used|An integer in [1, 2147483647]|100000|
+|druid.query.scan.maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used|An integer in [1, 2147483647]|50|
 |druid.query.scan.legacy|Whether legacy mode should be turned on for Scan queries|true or false|false|
+
+
+## Query Context Properties
+
+|property|description|values|default|
+|--------|-----------|------|-------|
+|maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used.  Overrides the identically named config.|An integer in [1, 2147483647]|`druid.query.scan.maxRowsQueuedForOrdering`|
+|maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used.  Overrides the identically named config.|An integer in [1, 2147483647]|`druid.query.scan.maxSegmentPartitionsOrderedInMemory`|
+
+Sample query context JSON object:
+
+```json
+{
+  "maxRowsQueuedForOrdering": 100001,
+  "maxSegmentPartitionsOrderedInMemory": 100	
+}
+```

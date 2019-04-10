@@ -28,6 +28,7 @@ import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.IllegalFormatException;
 import java.util.Locale;
@@ -359,5 +360,55 @@ public class StringUtils
   public static byte[] decodeBase64String(String input)
   {
     return BASE64_DECODER.decode(input);
+  }
+
+  /**
+   * Returns a string whose value is the concatenation of the
+   * string {@code s} repeated {@code count} times.
+   * <p>
+   * If count or length is zero then the empty string is returned.
+   * <p>
+   * This method may be used to create space padding for
+   * formatting text or zero padding for formatting numbers.
+   *
+   * @param count number of times to repeat
+   *
+   * @return A string composed of this string repeated
+   * {@code count} times or the empty string if count
+   * or length is zero.
+   *
+   * @throws IllegalArgumentException if the {@code count} is negative.
+   * @link https://bugs.openjdk.java.net/browse/JDK-8197594
+   */
+  public static String repeat(String s, int count)
+  {
+    if (count < 0) {
+      throw new IllegalArgumentException("count is negative, " + count);
+    }
+    if (count == 1) {
+      return s;
+    }
+    byte[] value = s.getBytes(StandardCharsets.UTF_8);
+    final int len = value.length;
+    if (len == 0 || count == 0) {
+      return "";
+    }
+    if (len == 1) {
+      final byte[] single = new byte[count];
+      Arrays.fill(single, value[0]);
+      return new String(single, StandardCharsets.UTF_8);
+    }
+    if (Integer.MAX_VALUE / count < len) {
+      throw new RuntimeException("The produced string is too large.");
+    }
+    final int limit = len * count;
+    final byte[] multiple = new byte[limit];
+    System.arraycopy(value, 0, multiple, 0, len);
+    int copied = len;
+    for (; copied < limit - copied; copied <<= 1) {
+      System.arraycopy(multiple, 0, multiple, copied, copied);
+    }
+    System.arraycopy(multiple, 0, multiple, copied, limit - copied);
+    return new String(multiple, StandardCharsets.UTF_8);
   }
 }
