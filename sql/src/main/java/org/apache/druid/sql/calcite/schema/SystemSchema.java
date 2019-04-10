@@ -69,7 +69,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowInfo;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
@@ -234,7 +234,7 @@ public class SystemSchema extends AbstractSchema
       }
 
       //get published segments from metadata segment cache (if enabled in sql planner config), else directly from coordinator
-      final Iterator<SegmentWithOvershadowInfo> metadataSegments = metadataView.getPublishedSegments();
+      final Iterator<SegmentWithOvershadowedStatus> metadataSegments = metadataView.getPublishedSegments();
 
       final Set<SegmentId> segmentsAlreadySeen = new HashSet<>();
 
@@ -319,18 +319,18 @@ public class SystemSchema extends AbstractSchema
 
     }
 
-    private Iterator<SegmentWithOvershadowInfo> getAuthorizedPublishedSegments(
-        Iterator<SegmentWithOvershadowInfo> it,
+    private Iterator<SegmentWithOvershadowedStatus> getAuthorizedPublishedSegments(
+        Iterator<SegmentWithOvershadowedStatus> it,
         DataContext root
     )
     {
       final AuthenticationResult authenticationResult =
           (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
 
-      Function<SegmentWithOvershadowInfo, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+      Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-      final Iterable<SegmentWithOvershadowInfo> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
           authenticationResult,
           () -> it,
           raGenerator,

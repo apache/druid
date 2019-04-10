@@ -38,7 +38,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowInfo;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
@@ -155,7 +155,7 @@ public class MetadataResource
   public Response getDatabaseSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final Set<String> datasources,
-      @QueryParam("includeOvershadowInfo") final String includeOvershadowInfo
+      @QueryParam("includeOvershadowedStatus") final String includeOvershadowedStatus
   )
   {
     Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
@@ -168,24 +168,24 @@ public class MetadataResource
         .stream()
         .flatMap(t -> t.getSegments().stream());
 
-    if (includeOvershadowInfo != null) {
+    if (includeOvershadowedStatus != null) {
       final Set<SegmentId> overshadowedSegments = findOvershadowedSegments(druidDataSources);
-      //transform DataSegment to SegmentWithOvershadowInfo objects
-      final Stream<SegmentWithOvershadowInfo> metadataSegmentWithOvershadowInfo = metadataSegments.map(segment -> {
+      //transform DataSegment to SegmentWithOvershadowedStatus objects
+      final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments.map(segment -> {
         if (overshadowedSegments.contains(segment.getId())) {
-          return new SegmentWithOvershadowInfo(segment, true);
+          return new SegmentWithOvershadowedStatus(segment, true);
         } else {
-          return new SegmentWithOvershadowInfo(segment, false);
+          return new SegmentWithOvershadowedStatus(segment, false);
         }
       }).collect(Collectors.toList()).stream();
 
-      final Function<SegmentWithOvershadowInfo, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+      final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-      final Iterable<SegmentWithOvershadowInfo> authorizedSegments =
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments =
           AuthorizationUtils.filterAuthorizedResources(
               req,
-              metadataSegmentWithOvershadowInfo::iterator,
+              segmentsWithOvershadowedStatus::iterator,
               raGenerator,
               authorizerMapper
           );

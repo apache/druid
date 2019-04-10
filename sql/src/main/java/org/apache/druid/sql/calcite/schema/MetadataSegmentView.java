@@ -43,7 +43,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentWithOvershadowInfo;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 
@@ -76,7 +76,7 @@ public class MetadataSegmentView
   // Use ConcurrentSkipListMap so that the order of segments is deterministic and
   // sys.segments queries return the segments in sorted order based on segmentId
   @Nullable
-  private final ConcurrentSkipListMap<SegmentWithOvershadowInfo, DateTime> publishedSegments;
+  private final ConcurrentSkipListMap<SegmentWithOvershadowedStatus, DateTime> publishedSegments;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -136,7 +136,7 @@ public class MetadataSegmentView
   private void poll()
   {
     log.info("polling published segments from coordinator");
-    final JsonParserIterator<SegmentWithOvershadowInfo> metadataSegments = getMetadataSegments(
+    final JsonParserIterator<SegmentWithOvershadowedStatus> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
         responseHandler,
@@ -145,14 +145,14 @@ public class MetadataSegmentView
 
     final DateTime timestamp = DateTimes.nowUtc();
     while (metadataSegments.hasNext()) {
-      final SegmentWithOvershadowInfo segment = metadataSegments.next();
+      final SegmentWithOvershadowedStatus segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-      final SegmentWithOvershadowInfo segmentWithOvershadowInfo = new SegmentWithOvershadowInfo(
+      final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = new SegmentWithOvershadowedStatus(
           interned,
           segment.isOvershadowed()
       );
       // timestamp is used to filter deleted segments
-      publishedSegments.put(segmentWithOvershadowInfo, timestamp);
+      publishedSegments.put(segmentWithOvershadowedStatus, timestamp);
     }
 
     // filter the segments from cache whose timestamp is not equal to latest timestamp stored,
@@ -168,7 +168,7 @@ public class MetadataSegmentView
     cachePopulated.set(true);
   }
 
-  public Iterator<SegmentWithOvershadowInfo> getPublishedSegments()
+  public Iterator<SegmentWithOvershadowedStatus> getPublishedSegments()
   {
     if (isCacheEnabled) {
       Preconditions.checkState(
@@ -187,14 +187,14 @@ public class MetadataSegmentView
   }
 
   // Note that coordinator must be up to get segments
-  private JsonParserIterator<SegmentWithOvershadowInfo> getMetadataSegments(
+  private JsonParserIterator<SegmentWithOvershadowedStatus> getMetadataSegments(
       DruidLeaderClient coordinatorClient,
       ObjectMapper jsonMapper,
       BytesAccumulatingResponseHandler responseHandler,
       Set<String> watchedDataSources
   )
   {
-    String query = "/druid/coordinator/v1/metadata/segments?includeOvershadowInfo";
+    String query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus";
     if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
       log.debug(
           "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
@@ -203,7 +203,7 @@ public class MetadataSegmentView
         sb.append("datasources=").append(ds).append("&");
       }
       sb.setLength(sb.length() - 1);
-      query = "/druid/coordinator/v1/metadata/segments?" + sb;
+      query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus?" + sb;
     }
     Request request;
     try {
@@ -221,7 +221,7 @@ public class MetadataSegmentView
         responseHandler
     );
 
-    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<SegmentWithOvershadowInfo>()
+    final JavaType typeRef = jsonMapper.getTypeFactory().constructType(new TypeReference<SegmentWithOvershadowedStatus>()
     {
     });
     return new JsonParserIterator<>(

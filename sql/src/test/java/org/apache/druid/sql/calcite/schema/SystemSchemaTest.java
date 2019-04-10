@@ -76,7 +76,7 @@ import org.apache.druid.sql.calcite.util.TestServerInventoryView;
 import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentWithOvershadowInfo;
+import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -409,12 +409,12 @@ public class SystemSchemaTest extends CalciteTestBase
         .withConstructor(druidSchema, metadataView, mapper, authMapper)
         .createMock();
     EasyMock.replay(segmentsTable);
-    final Set<SegmentWithOvershadowInfo> publishedSegments = Stream.of(
-        new SegmentWithOvershadowInfo(publishedSegment1, true),
-        new SegmentWithOvershadowInfo(publishedSegment2, false),
-        new SegmentWithOvershadowInfo(publishedSegment3, false),
-        new SegmentWithOvershadowInfo(segment1, true),
-        new SegmentWithOvershadowInfo(segment2, false)
+    final Set<SegmentWithOvershadowedStatus> publishedSegments = Stream.of(
+        new SegmentWithOvershadowedStatus(publishedSegment1, true),
+        new SegmentWithOvershadowedStatus(publishedSegment2, false),
+        new SegmentWithOvershadowedStatus(publishedSegment3, false),
+        new SegmentWithOvershadowedStatus(segment1, true),
+        new SegmentWithOvershadowedStatus(segment2, false)
     ).collect(Collectors.toSet());
 
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
