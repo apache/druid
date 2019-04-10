@@ -16,22 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, Classes, HTMLSelect } from '@blueprintjs/core';
 import * as React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components/loader';
 import { countBy, makeTextFilter } from '../utils';
 
-import './react-table-defaults.scss';
+import {CustomPagination} from './react-table-custom-pagination';
 
 /* tslint:disable:max-classes-per-file */
-
-class FullButton extends React.Component {
-  render() {
-    return <Button fill {...this.props}/>;
-  }
-}
 
 class NoData extends React.Component {
   render() {
@@ -40,38 +33,6 @@ class NoData extends React.Component {
     return <div className="rt-noData">{children}</div>;
   }
 }
-
-const renderPageJump = ({ onChange, value, onBlur, onKeyPress, inputType, pageJumpText }: {[key: string]: any}) => {
-  return <div className="-pageJump">
-    <input
-      className={Classes.INPUT}
-      aria-label={pageJumpText}
-      type={inputType}
-      onChange={onChange}
-      value={value}
-      onBlur={onBlur}
-      onKeyPress={onKeyPress}
-    />
-  </div>;
-};
-
-const renderPageSizeOptions = ({ pageSize, pageSizeOptions, rowsSelectorText, onPageSizeChange, rowsText}: {[key: string]: any}) => {
-  return (
-    <div className={`select-wrap -pageSizeOptions`}>
-      <HTMLSelect
-        aria-label={rowsSelectorText}
-        onChange={e => onPageSizeChange(Number(e.target.value))}
-        value={pageSize}
-      >
-        {pageSizeOptions.map((option: any, i: number) => (
-          <option key={i} value={option}>
-            {`${option} ${rowsText}`}
-          </option>
-        ))}
-      </HTMLSelect>
-    </div>
-  );
-};
 
 /* tslint:enable:max-classes-per-file */
 
@@ -84,10 +45,7 @@ Object.assign(ReactTableDefaults, {
   loadingText: '',
   NoDataComponent: NoData,
   FilterComponent: makeTextFilter(),
-  PreviousComponent: FullButton,
-  NextComponent: FullButton,
-  renderPageJump: renderPageJump,
-  renderPageSizeOptions: renderPageSizeOptions,
+  PaginationComponent: CustomPagination,
   AggregatedComponent: (opt: any) => {
     const { subRows, column } = opt;
     const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row[column.id]);
