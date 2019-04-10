@@ -34,7 +34,6 @@ import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.common.aws.AWSClientConfig;
-import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.SearchableVersionedDataFinder;
@@ -51,12 +50,63 @@ import java.net.URI;
 import java.util.List;
 
 /**
+ *
  */
 public class S3StorageDruidModule implements DruidModule
 {
   public static final String SCHEME = "s3_zip";
 
   private static final Logger log = new Logger(S3StorageDruidModule.class);
+
+  private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
+  {
+    if (StringUtils.isNotEmpty(proxyConfig.getHost())) {
+      conf.setProxyHost(proxyConfig.getHost());
+    }
+    if (proxyConfig.getPort() != -1) {
+      conf.setProxyPort(proxyConfig.getPort());
+    }
+    if (StringUtils.isNotEmpty(proxyConfig.getUsername())) {
+      conf.setProxyUsername(proxyConfig.getUsername());
+    }
+    if (StringUtils.isNotEmpty(proxyConfig.getPassword())) {
+      conf.setProxyPassword(proxyConfig.getPassword());
+    }
+    return conf;
+  }
+
+  @Nullable
+  private static Protocol parseProtocol(@Nullable String protocol)
+  {
+    if (protocol == null) {
+      return null;
+    }
+
+    if (protocol.equalsIgnoreCase("http")) {
+      return Protocol.HTTP;
+    } else if (protocol.equalsIgnoreCase("https")) {
+      return Protocol.HTTPS;
+    } else {
+      throw new IAE("Unknown protocol[%s]", protocol);
+    }
+  }
+
+  private static Protocol determineProtocol(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
+  {
+    final Protocol protocolFromClientConfig = parseProtocol(clientConfig.getProtocol());
+    final String endpointUrl = endpointConfig.getUrl();
+    if (StringUtils.isNotEmpty(endpointUrl)) {
+      //noinspection ConstantConditions
+      final URI uri = URIs.parse(endpointUrl, protocolFromClientConfig.toString());
+      final Protocol protocol = parseProtocol(uri.getScheme());
+      if (protocol != null && (protocol != protocolFromClientConfig)) {
+        log.warn("[%s] protocol will be used for endpoint [%s]", protocol, endpointUrl);
+      }
+      return protocol;
+    } else {
+      return protocolFromClientConfig;
+    }
+  }
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -88,10 +138,6 @@ public class S3StorageDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.s3", AWSCredentialsConfig.class);
-    JsonConfigProvider.bind(binder, "druid.s3", AWSClientConfig.class);
-    JsonConfigProvider.bind(binder, "druid.s3.proxy", AWSProxyConfig.class);
-    JsonConfigProvider.bind(binder, "druid.s3.endpoint", AWSEndpointConfig.class);
     MapBinder.newMapBinder(binder, String.class, SearchableVersionedDataFinder.class)
              .addBinding("s3")
              .to(S3TimestampVersionedDataFinder.class)
@@ -145,55 +191,5 @@ public class S3StorageDruidModule implements DruidModule
     }
 
     return new ServerSideEncryptingAmazonS3(builder.build(), storageConfig.getServerSideEncryption());
-  }
-
-  private static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
-  {
-    if (StringUtils.isNotEmpty(proxyConfig.getHost())) {
-      conf.setProxyHost(proxyConfig.getHost());
-    }
-    if (proxyConfig.getPort() != -1) {
-      conf.setProxyPort(proxyConfig.getPort());
-    }
-    if (StringUtils.isNotEmpty(proxyConfig.getUsername())) {
-      conf.setProxyUsername(proxyConfig.getUsername());
-    }
-    if (StringUtils.isNotEmpty(proxyConfig.getPassword())) {
-      conf.setProxyPassword(proxyConfig.getPassword());
-    }
-    return conf;
-  }
-
-  @Nullable
-  private static Protocol parseProtocol(@Nullable String protocol)
-  {
-    if (protocol == null) {
-      return null;
-    }
-
-    if (protocol.equalsIgnoreCase("http")) {
-      return Protocol.HTTP;
-    } else if (protocol.equalsIgnoreCase("https")) {
-      return Protocol.HTTPS;
-    } else {
-      throw new IAE("Unknown protocol[%s]", protocol);
-    }
-  }
-
-  private static Protocol determineProtocol(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
-  {
-    final Protocol protocolFromClientConfig = parseProtocol(clientConfig.getProtocol());
-    final String endpointUrl = endpointConfig.getUrl();
-    if (StringUtils.isNotEmpty(endpointUrl)) {
-      //noinspection ConstantConditions
-      final URI uri = URIs.parse(endpointUrl, protocolFromClientConfig.toString());
-      final Protocol protocol = parseProtocol(uri.getScheme());
-      if (protocol != null && (protocol != protocolFromClientConfig)) {
-        log.warn("[%s] protocol will be used for endpoint [%s]", protocol, endpointUrl);
-      }
-      return protocol;
-    } else {
-      return protocolFromClientConfig;
-    }
   }
 }

@@ -170,6 +170,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:mysql-metadata-storage</argument>
                                         <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-orc-extensions</argument>
+                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-parquet-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:postgresql-metadata-storage</argument>
@@ -177,6 +179,10 @@
                                         <argument>org.apache.druid.extensions:druid-kerberos</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-s3-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-ec2-extensions</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-google-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-stats</argument>
                                         <argument>-c</argument>
@@ -300,8 +306,6 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-rocketmq</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-google-extensions</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:graphite-emitter</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-influx-extensions</argument>
@@ -315,8 +319,6 @@
                                         <argument>org.apache.druid.extensions.contrib:materialized-view-selection</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-opentsdb-emitter</argument>
-                                        <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions.contrib:druid-orc-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-rabbitmq</argument>
                                         <argument>-c</argument>

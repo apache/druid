@@ -55,7 +55,7 @@ public class EventReceiverFirehoseIdleTest
   private HttpServletRequest req;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     req = EasyMock.createMock(HttpServletRequest.class);
     eventReceiverFirehoseFactory = new EventReceiverFirehoseFactory(

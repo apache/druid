@@ -156,4 +156,36 @@ public class CoordinatorClient
       throw new RuntimeException(e);
     }
   }
+
+  public DataSegment getDatabaseSegmentDataSourceSegment(String dataSource, String segmentId)
+  {
+    try {
+      FullResponseHolder response = druidLeaderClient.go(
+          druidLeaderClient.makeRequest(
+              HttpMethod.GET,
+              StringUtils.format(
+                  "/druid/coordinator/v1/metadata/datasources/%s/segments/%s",
+                  StringUtils.urlEncode(dataSource),
+                  StringUtils.urlEncode(segmentId)
+              )
+          )
+      );
+
+      if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        throw new ISE(
+            "Error while fetching database segment data source segment status[%s] content[%s]",
+            response.getStatus(),
+            response.getContent()
+        );
+      }
+      return jsonMapper.readValue(
+          response.getContent(), new TypeReference<DataSegment>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
 }
