@@ -275,19 +275,28 @@ The [DataSketches Theta Sketch](../development/extensions-core/datasketches-thet
 
 #### DataSketches HLL Sketch
 
-The [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator gives distinct count estimates using the HyperLogLog algorithm. The HLL Sketch is faster and requires less storage than the Theta Sketch, but does not support intersection or difference operations.
+The [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator gives distinct count estimates using the HyperLogLog algorithm.
+
+Compared to the Theta sketch, the HLL sketch does not support set operations and has slightly slower update and merge speed, but requires significantly less space.
 
 #### Cardinality/HyperUnique (Deprecated)
 
 <div class="note caution">
-The Cardinality and HyperUnique aggregators are deprecated. Please use <a href="../development/extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
+The Cardinality and HyperUnique aggregators are deprecated. Please use <a href="../development/extensions-core/datasketches-theta.html">DataSketches Theta Sketch</a> or <a href="../development/extensions-core/datasketches-hll.html">DataSketches HLL Sketch</a> instead.
 </div>
 
-The [Cardinality and HyperUnique](../querying/hll-old.html) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.html) extension-provided aggregator has superior accuracy and performance and is recommended instead. 
+The [Cardinality and HyperUnique](../querying/hll-old.html) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer DataSketches Theta and HLL extension-provided aggregators described above have superior accuracy and performance and are recommended instead. 
 
 The DataSketches team has published a [comparison study](https://datasketches.github.io/docs/HLL/HllSketchVsDruidHyperLogLogCollector.html) between Druid's original HLL algorithm and the DataSketches HLL algorithm. Based on the demonstrated advantages of the DataSketches implementation, we have deprecated Druid's original HLL aggregator.
 
-Please note that DataSketches HLL aggregators and `hyperUnique` aggregators are not mutually compatible.
+Please note that `hyperUnique` aggregators are not mutually compatible with Datasketches HLL or Theta sketches.
+
+##### Multi-column handling
+
+Note the DataSketches Theta and HLL aggregators currently only support single-column inputs. If you were previously using the Cardinality aggregator with multiple-column inputs, equivalent operations using Theta or HLL sketches are described below:
+
+* Multi-column `byValue` Cardinality can be replaced with a union of Theta sketches on the individual input columns
+* Multi-column `byRow` Cardinality can be replaced with a Theta or HLL sketch on a single [virtual column]((../querying/virtual-columns.html) that combines the individual input columns.
 
 ### Histograms and quantiles
 

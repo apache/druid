@@ -67,7 +67,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   {
     DimensionSelector selector = makeDimensionSelector(columnFactory);
     if (selector == null) {
-      return new EmptyDistinctCountAggregator();
+      return new NoopDistinctCountAggregator();
     } else {
       return new DistinctCountAggregator(
           selector,
@@ -81,7 +81,7 @@ public class DistinctCountAggregatorFactory extends AggregatorFactory
   {
     DimensionSelector selector = makeDimensionSelector(columnFactory);
     if (selector == null) {
-      return EmptyDistinctCountBufferAggregator.instance();
+      return NoopDistinctCountBufferAggregator.instance();
     } else {
       return new DistinctCountBufferAggregator(makeDimensionSelector(columnFactory));
     }

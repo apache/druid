@@ -17,13 +17,13 @@
  */
 
 import { Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 
 import { AutoForm } from '../components/auto-form';
-import { IconNames } from '../components/filler';
 import { AppToaster } from '../singletons/toaster';
-import { getDruidErrorMessage } from '../utils';
+import { getDruidErrorMessage, QueryManager } from '../utils';
 
 import { SnitchDialog } from './snitch-dialog';
 
@@ -35,28 +35,46 @@ export interface CoordinatorDynamicConfigDialogProps extends React.Props<any> {
 
 export interface CoordinatorDynamicConfigDialogState {
   dynamicConfig: Record<string, any> | null;
+  historyRecords: any[];
 }
 
 export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorDynamicConfigDialogProps, CoordinatorDynamicConfigDialogState> {
+  private historyQueryManager: QueryManager<string, any>;
+
   constructor(props: CoordinatorDynamicConfigDialogProps) {
     super(props);
     this.state = {
-      dynamicConfig: null
+      dynamicConfig: null,
+      historyRecords: []
     };
   }
 
-  componentDidMount(): void {
+  componentDidMount() {
     this.getClusterConfig();
+
+    this.historyQueryManager = new QueryManager({
+      processQuery: async (query) => {
+        const historyResp = await axios(`/druid/coordinator/v1/config/history?count=100`);
+        return historyResp.data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          historyRecords: result
+        });
+      }
+    });
+
+    this.historyQueryManager.runQuery(`dummy`);
   }
 
   async getClusterConfig() {
     let config: Record<string, any> | null = null;
     try {
-      const configResp = await axios.get("/druid/coordinator/v1/config");
+      const configResp = await axios.get('/druid/coordinator/v1/config');
       config = configResp.data;
     } catch (e) {
       AppToaster.show({
-        iconName: IconNames.ERROR,
+        icon: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not load coordinator dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -67,19 +85,19 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     });
   }
 
-  private saveClusterConfig = async (author: string, comment: string) => {
+  private saveClusterConfig = async (comment: string) => {
     const { onClose } = this.props;
     const newState: any = this.state.dynamicConfig;
     try {
-      await axios.post("/druid/coordinator/v1/config", newState, {
+      await axios.post('/druid/coordinator/v1/config', newState, {
         headers: {
-          "X-Druid-Author": author,
-          "X-Druid-Comment": comment
+          'X-Druid-Author': 'console',
+          'X-Druid-Comment': comment
         }
       });
     } catch (e) {
       AppToaster.show({
-        iconName: IconNames.ERROR,
+        icon: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not save coordinator dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -94,7 +112,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
 
   render() {
     const { onClose } = this.props;
-    const { dynamicConfig } = this.state;
+    const { dynamicConfig, historyRecords } = this.state;
 
     return <SnitchDialog
       className="coordinator-dynamic-config"
@@ -102,6 +120,7 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
       onSave={this.saveClusterConfig}
       onClose={onClose}
       title="Coordinator dynamic config"
+      historyRecords={historyRecords}
     >
       <p>
         Edit the coordinator dynamic configuration on the fly.
@@ -110,52 +129,52 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
       <AutoForm
         fields={[
           {
-            name: "balancerComputeThreads",
-            type: "number"
+            name: 'balancerComputeThreads',
+            type: 'number'
           },
           {
-            name: "emitBalancingStats",
-            type: "boolean"
+            name: 'emitBalancingStats',
+            type: 'boolean'
           },
           {
-            name: "killAllDataSources",
-            type: "boolean"
+            name: 'killAllDataSources',
+            type: 'boolean'
           },
           {
-            name: "killDataSourceWhitelist",
-            type: "string-array"
+            name: 'killDataSourceWhitelist',
+            type: 'string-array'
           },
           {
-            name: "killPendingSegmentsSkipList",
-            type: "string-array"
+            name: 'killPendingSegmentsSkipList',
+            type: 'string-array'
           },
           {
-            name: "maxSegmentsInNodeLoadingQueue",
-            type: "number"
+            name: 'maxSegmentsInNodeLoadingQueue',
+            type: 'number'
           },
           {
-            name: "maxSegmentsToMove",
-            type: "number"
+            name: 'maxSegmentsToMove',
+            type: 'number'
           },
           {
-            name: "mergeBytesLimit",
-            type: "size-bytes"
+            name: 'mergeBytesLimit',
+            type: 'size-bytes'
           },
           {
-            name: "mergeSegmentsLimit",
-            type: "number"
+            name: 'mergeSegmentsLimit',
+            type: 'number'
           },
           {
-            name: "millisToWaitBeforeDeleting",
-            type: "number"
+            name: 'millisToWaitBeforeDeleting',
+            type: 'number'
           },
           {
-            name: "replicantLifetime",
-            type: "number"
+            name: 'replicantLifetime',
+            type: 'number'
           },
           {
-            name: "replicationThrottleLimit",
-            type: "number"
+            name: 'replicationThrottleLimit',
+            type: 'number'
           }
         ]}
         model={dynamicConfig}

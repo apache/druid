@@ -87,7 +87,8 @@ The below configurations can be optionally used for tuning the firehose performa
 ### IngestSegmentFirehose
 
 This Firehose can be used to read the data from existing druid segments.
-It can be used ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
+It can be used to ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
+This firehose is _splittable_ and can be used by [native parallel index tasks](./native_tasks.html#parallel-index-task).
 A sample ingest firehose spec is shown below -
 
 ```json
@@ -106,6 +107,7 @@ A sample ingest firehose spec is shown below -
 |dimensions|The list of dimensions to select. If left empty, no dimensions are returned. If left null or not defined, all dimensions are returned. |no|
 |metrics|The list of metrics to select. If left empty, no metrics are returned. If left null or not defined, all metrics are selected.|no|
 |filter| See [Filters](../querying/filters.html)|no|
+|maxInputSegmentBytesPerTask|When used with the native parallel index task, the maximum number of bytes of input segments to process in a single task. If a single segment is larger than this number, it will be processed by itself in a single task (input segments are never split across tasks). Defaults to 150MB.|no|
 
 #### SqlFirehose
 

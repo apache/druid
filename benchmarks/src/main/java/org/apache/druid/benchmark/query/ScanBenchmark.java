@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.benchmark.datagen.BenchmarkDataGenerator;
@@ -30,6 +31,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.hll.HyperLogLogHash;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,6 +44,8 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.extraction.StrlenExtractionFn;
 import org.apache.druid.query.filter.BoundDimFilter;
@@ -55,6 +59,7 @@ import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexIO;
@@ -107,11 +112,14 @@ public class ScanBenchmark
   @Param({"200000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.B", "basic.C", "basic.D"})
   private String schemaAndQuery;
 
   @Param({"1000", "99999"})
   private int limit;
+
+  @Param({"NONE", "DESCENDING", "ASCENDING"})
+  private static ScanQuery.Order ordering;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final ObjectMapper JSON_MAPPER;
@@ -178,7 +186,8 @@ public class ScanBenchmark
 
     return Druids.newScanQueryBuilder()
                  .dataSource("blah")
-                 .intervals(intervalSpec);
+                 .intervals(intervalSpec)
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicB(final BenchmarkSchemaInfo basicSchema)
@@ -197,7 +206,9 @@ public class ScanBenchmark
 
     return Druids.newScanQueryBuilder()
                  .filters(filter)
-                 .intervals(intervalSpec);
+                 .dataSource("blah")
+                 .intervals(intervalSpec)
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicC(final BenchmarkSchemaInfo basicSchema)
@@ -207,8 +218,10 @@ public class ScanBenchmark
 
     final String dimName = "dimUniform";
     return Druids.newScanQueryBuilder()
-        .filters(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()))
-        .intervals(intervalSpec);
+                 .filters(new SelectorDimFilter(dimName, "3", StrlenExtractionFn.instance()))
+                 .intervals(intervalSpec)
+                 .dataSource("blah")
+                 .order(ordering);
   }
 
   private static Druids.ScanQueryBuilder basicD(final BenchmarkSchemaInfo basicSchema)
@@ -220,8 +233,10 @@ public class ScanBenchmark
     final String dimName = "dimUniform";
 
     return Druids.newScanQueryBuilder()
-        .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))
-        .intervals(intervalSpec);
+                 .filters(new BoundDimFilter(dimName, "100", "10000", true, true, true, null, null))
+                 .intervals(intervalSpec)
+                 .dataSource("blah")
+                 .order(ordering);
   }
 
   @Setup
@@ -289,7 +304,8 @@ public class ScanBenchmark
             config,
             DefaultGenericQueryMetricsFactory.instance()
         ),
-        new ScanQueryEngine()
+        new ScanQueryEngine(),
+        new ScanQueryConfig()
     );
   }
 
@@ -331,7 +347,24 @@ public class ScanBenchmark
         new IncrementalIndexSegment(incIndexes.get(0), SegmentId.dummy("incIndex"))
     );
 
-    List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, query);
+    Query effectiveQuery = query
+        .withDataSource(new TableDataSource("incIndex"))
+        .withQuerySegmentSpec(
+            new MultipleSpecificSegmentSpec(
+                ImmutableList.of(
+                    new SegmentDescriptor(
+                        Intervals.ETERNITY,
+                        "dummy_version",
+                        0
+                    )
+                )
+            )
+        )
+        .withOverriddenContext(
+            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
+        );
+
+    List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, effectiveQuery);
     blackhole.consume(results);
   }
 
@@ -346,7 +379,24 @@ public class ScanBenchmark
         new QueryableIndexSegment(qIndexes.get(0), SegmentId.dummy("qIndex"))
     );
 
-    List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, query);
+    Query effectiveQuery = query
+        .withDataSource(new TableDataSource("qIndex"))
+        .withQuerySegmentSpec(
+            new MultipleSpecificSegmentSpec(
+                ImmutableList.of(
+                    new SegmentDescriptor(
+                        Intervals.ETERNITY,
+                        "dummy_version",
+                        0
+                    )
+                )
+            )
+        )
+        .withOverriddenContext(
+            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
+        );
+
+    List<ScanResultValue> results = ScanBenchmark.runQuery(factory, runner, effectiveQuery);
     blackhole.consume(results);
   }
 
@@ -355,14 +405,22 @@ public class ScanBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void queryMultiQueryableIndex(Blackhole blackhole)
   {
+    List<SegmentDescriptor> segmentDescriptors = new ArrayList<>();
     List<QueryRunner<Row>> runners = new ArrayList<>();
     QueryToolChest toolChest = factory.getToolchest();
     for (int i = 0; i < numSegments; i++) {
-      String segmentName = "qIndex" + i;
+      String segmentName = "qIndex";
       final QueryRunner<Result<ScanResultValue>> runner = QueryBenchmarkUtil.makeQueryRunner(
           factory,
           SegmentId.dummy(segmentName),
-          new QueryableIndexSegment(qIndexes.get(i), SegmentId.dummy(segmentName))
+          new QueryableIndexSegment(qIndexes.get(i), SegmentId.dummy(segmentName, i))
+      );
+      segmentDescriptors.add(
+          new SegmentDescriptor(
+              Intervals.ETERNITY,
+              "dummy_version",
+              i
+          )
       );
       runners.add(toolChest.preMergeQueryDecoration(runner));
     }
@@ -374,8 +432,17 @@ public class ScanBenchmark
         )
     );
 
+    Query effectiveQuery = query
+        .withDataSource(new TableDataSource("qIndex"))
+        .withQuerySegmentSpec(
+            new MultipleSpecificSegmentSpec(segmentDescriptors)
+        )
+        .withOverriddenContext(
+            ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false)
+        );
+
     Sequence<Result<ScanResultValue>> queryResult = theRunner.run(
-        QueryPlus.wrap(query),
+        QueryPlus.wrap(effectiveQuery),
         new HashMap<>()
     );
     List<Result<ScanResultValue>> results = queryResult.toList();
