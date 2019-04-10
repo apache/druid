@@ -32,7 +32,6 @@ import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.PasswordProvider;
 import org.apache.druid.utils.CompressionUtils;
 
@@ -54,6 +53,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   private final boolean supportContentRange;
   @Nullable
   private final String httpAuthenticationUsername;
+  @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
   @JsonCreator
@@ -78,7 +78,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
     final String acceptRanges = connection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
     this.supportContentRange = acceptRanges != null && "bytes".equalsIgnoreCase(acceptRanges);
     this.httpAuthenticationUsername = httpAuthenticationUsername;
-    this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider == null ? new DefaultPasswordProvider("") : httpAuthenticationPasswordProvider;
+    this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
   }
 
   @JsonProperty
@@ -209,8 +209,7 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   URLConnection openURLConnection(URI object) throws IOException
   {
     URLConnection urlConnection = object.toURL().openConnection();
-    if (!Strings.isNullOrEmpty(httpAuthenticationUsername) &&
-            !Strings.isNullOrEmpty(httpAuthenticationPasswordProvider.getPassword())) {
+    if (!Strings.isNullOrEmpty(httpAuthenticationUsername) && httpAuthenticationPasswordProvider != null) {
       String userPass = httpAuthenticationUsername + ":" + httpAuthenticationPasswordProvider.getPassword();
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
       urlConnection.setRequestProperty("Authorization", basicAuthString);
