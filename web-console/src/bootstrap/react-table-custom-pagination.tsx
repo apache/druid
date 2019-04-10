@@ -21,7 +21,7 @@ import * as React from 'react';
 
 import './react-table-custom-pagination.scss';
 
-interface CustomPaginationProps extends React.Props<any> {
+interface ReactTableCustomPaginationProps extends React.Props<any> {
   pages: number;
   page: number;
   showPageSizeOptions: boolean;
@@ -40,12 +40,12 @@ interface CustomPaginationProps extends React.Props<any> {
   style: Record<string, any>;
 }
 
-interface CustomPaginationState {
+interface ReactTableCustomPaginationState {
   page: string | number;
 }
 
-export class CustomPagination extends React.Component<CustomPaginationProps, CustomPaginationState> {
-  constructor(props: CustomPaginationProps) {
+export class ReactTableCustomPagination extends React.Component<ReactTableCustomPaginationProps, ReactTableCustomPaginationState> {
+  constructor(props: ReactTableCustomPaginationProps) {
     super(props);
 
     this.state = {
@@ -53,7 +53,7 @@ export class CustomPagination extends React.Component<CustomPaginationProps, Cus
     };
   }
 
-  componentWillReceiveProps(nextProps: CustomPaginationProps) {
+  componentWillReceiveProps(nextProps: ReactTableCustomPaginationProps) {
     this.setState({ page: nextProps.page });
   }
 

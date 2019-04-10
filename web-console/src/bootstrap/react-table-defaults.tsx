@@ -22,7 +22,7 @@ import { Filter, ReactTableDefaults } from 'react-table';
 import { Loader } from '../components/loader';
 import { countBy, makeTextFilter } from '../utils';
 
-import {CustomPagination} from './react-table-custom-pagination';
+import { ReactTableCustomPagination } from './react-table-custom-pagination';
 
 /* tslint:disable:max-classes-per-file */
 
@@ -45,7 +45,7 @@ Object.assign(ReactTableDefaults, {
   loadingText: '',
   NoDataComponent: NoData,
   FilterComponent: makeTextFilter(),
-  PaginationComponent: CustomPagination,
+  PaginationComponent: ReactTableCustomPagination,
   AggregatedComponent: (opt: any) => {
     const { subRows, column } = opt;
     const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row[column.id]);
