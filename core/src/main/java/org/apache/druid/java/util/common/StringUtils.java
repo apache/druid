@@ -414,12 +414,14 @@ public class StringUtils
    
   /**
    * Returns the string left-padded with the string pad to a length of len characters.
-   * If str is longer than len, the return value is shortened to len characters. 
+   * If str is longer than len, the return value is shortened to len characters.
+   * Lpad and rpad functions are migrated from flink's scala function with minor refactor
+   * https://github.com/apache/flink/blob/master/flink-table/flink-table-planner/src/main/scala/org/apache/flink/table/runtime/functions/ScalarFunctions.scala
    *
    * @param base The base string to be padded
    * @param len The length of padded string
    * @param pad The pad string
-   * @return the string left-padded with pad to a lenght of len
+   * @return the string left-padded with pad to a length of len
    */
   public static String lpad(String base, Integer len, String pad)
   {
@@ -430,32 +432,23 @@ public class StringUtils
     }
 
     char[] data = new char[len];
-    char[] baseChars = base.toCharArray();
-    char[] padChars = pad.toCharArray();
 
     // The length of the padding needed
     int pos = Math.max(len - base.length(), 0);
 
     // Copy the padding
-    int i = 0;
-    while (i < pos) {
-      int j = 0;
-      while (j < pad.length() && j < pos - i) {
-        data[i + j] = padChars[j];
-        j += 1;
+    for (int i = 0; i < pos; i += pad.length()) {
+      for (int j = 0; j < pad.length() && j < pos - i; j++) {
+        data[i + j] = pad.charAt(j);
       }
-      i += pad.length();
     }
 
     // Copy the base
-    i = 0;
-    while (pos + i < len && i < base.length()) {
-      data[pos + i] = baseChars[i];
-      i += 1;
+    for (int i = 0; pos + i < len && i < base.length(); i++) {
+      data[pos + i] = base.charAt(i);
     }
 
     return new String(data);
-
   }
 
   /**
@@ -465,7 +458,7 @@ public class StringUtils
    * @param base The base string to be padded
    * @param len The length of padded string
    * @param pad The pad string
-   * @return the string right-padded with pad to a lenght of len
+   * @return the string right-padded with pad to a length of len
    */
   public static String rpad(String base, Integer len, String pad)
   {
@@ -476,25 +469,19 @@ public class StringUtils
     }
 
     char[] data = new char[len];
-    char[] baseChars = base.toCharArray();
-    char[] padChars = pad.toCharArray();
 
     int pos = 0;
 
     // Copy the base
-    while (pos < base.length() && pos < len) {
-      data[pos] = baseChars[pos];
-      pos += 1;
+    for ( ; pos < base.length() && pos < len; pos++) {
+      data[pos] = base.charAt(pos);
     }
 
     // Copy the padding
-    while (pos < len) {
-      int i = 0;
-      while (i < pad.length() && i < len - pos) {
-        data[pos + i] = padChars[i];
-        i += 1;
+    for ( ; pos < len; pos += pad.length()) {
+      for (int i = 0; i < pad.length() && i < len - pos; i++) {
+        data[pos + i] = pad.charAt(i);
       }
-      pos += pad.length();
     }
 
     return new String(data);

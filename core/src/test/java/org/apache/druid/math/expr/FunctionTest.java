@@ -142,6 +142,8 @@ public class FunctionTest
     assertExpr("lpad(x, 4, 'ab')", "afoo");
     assertExpr("lpad(x, 2, 'ab')", "fo");
     assertExpr("lpad(x, 0, 'ab')", null);
+    assertExpr("lpad(x, 5, null)", null);
+    assertExpr("lpad(null, 5, x)", null);
   }
 
   @Test
@@ -151,5 +153,7 @@ public class FunctionTest
     assertExpr("rpad(x, 4, 'ab')", "fooa");
     assertExpr("rpad(x, 2, 'ab')", "fo");
     assertExpr("rpad(x, 0, 'ab')", null);
+    assertExpr("rpad(x, 5, null)", null);
+    assertExpr("rpad(null, 5, x)", null);
   }
 }
