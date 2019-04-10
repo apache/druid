@@ -36,13 +36,18 @@ import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
@@ -61,13 +66,18 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
 public class ExpressionsTest extends CalciteTestBase
 {
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private final PlannerContext plannerContext = PlannerContext.create(
       CalciteTests.createOperatorTable(),
@@ -892,6 +902,292 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         DruidExpression.fromExpression("timestamp_floor(\"t\",'P1D',null,'UTC')"),
         DateTimes.of("2000-02-03").getMillis()
+    );
+  }
+
+  @Test
+  public void testReverse()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new ReverseOperatorConversion().calciteOperator(),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("reverse(\"s\")"),
+        "oof"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new ReverseOperatorConversion().calciteOperator(),
+            inputRef("spacey")
+        ),
+        DruidExpression.fromExpression("reverse(\"spacey\")"),
+        "  ereht yeh  "
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new ReverseOperatorConversion().calciteOperator(),
+            inputRef("tstr")
+        ),
+        DruidExpression.fromExpression("reverse(\"tstr\")"),
+        "60:50:40 30-20-0002"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new ReverseOperatorConversion().calciteOperator(),
+            inputRef("dstr")
+        ),
+        DruidExpression.fromExpression("reverse(\"dstr\")"),
+        "30-20-0002"
+    );
+  }
+
+  @Test
+  public void testAbnormalReverseWithWrongType()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[reverse] needs a string argument");
+
+    testExpression(
+        rexBuilder.makeCall(
+            new ReverseOperatorConversion().calciteOperator(),
+            inputRef("a")
+        ),
+        DruidExpression.fromExpression("reverse(\"a\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testRight()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new RightOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(1)
+        ),
+        DruidExpression.fromExpression("right(\"s\",1)"),
+        "o"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RightOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(2)
+        ),
+        DruidExpression.fromExpression("right(\"s\",2)"),
+        "oo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RightOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(3)
+        ),
+        DruidExpression.fromExpression("right(\"s\",3)"),
+        "foo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RightOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(4)
+        ),
+        DruidExpression.fromExpression("right(\"s\",4)"),
+        "foo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RightOperatorConversion().calciteOperator(),
+            inputRef("tstr"),
+            integerLiteral(5)
+        ),
+        DruidExpression.fromExpression("right(\"tstr\",5)"),
+        "05:06"
+    );
+  }
+
+  @Test
+  public void testAbnormalRightWithNegativeNumber()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[right] needs a postive integer as second argument");
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RightOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(-1)
+        ),
+        DruidExpression.fromExpression("right(\"s\",-1)"),
+        null
+    );
+  }
+
+  @Test
+  public void testAbnormalRightWithWrongType()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[right] needs a string as first argument "
+                                    + "and an integer as second argument");
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RightOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("right(\"s\",\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testLeft()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new LeftOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(1)
+        ),
+        DruidExpression.fromExpression("left(\"s\",1)"),
+        "f"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new LeftOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(2)
+        ),
+        DruidExpression.fromExpression("left(\"s\",2)"),
+        "fo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new LeftOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(3)
+        ),
+        DruidExpression.fromExpression("left(\"s\",3)"),
+        "foo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new LeftOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(4)
+        ),
+        DruidExpression.fromExpression("left(\"s\",4)"),
+        "foo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new LeftOperatorConversion().calciteOperator(),
+            inputRef("tstr"),
+            integerLiteral(10)
+        ),
+        DruidExpression.fromExpression("left(\"tstr\",10)"),
+        "2000-02-03"
+    );
+  }
+
+  @Test
+  public void testAbnormalLeftWithNegativeNumber()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[left] needs a postive integer as second argument");
+
+    testExpression(
+        rexBuilder.makeCall(
+            new LeftOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(-1)
+        ),
+        DruidExpression.fromExpression("left(\"s\",-1)"),
+        null
+    );
+  }
+
+  @Test
+  public void testAbnormalLeftWithWrongType()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[left] needs a string as first argument "
+                                    + "and an integer as second argument");
+
+    testExpression(
+        rexBuilder.makeCall(
+            new LeftOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("left(\"s\",\"s\")"),
+        null
+    );
+  }
+
+  @Test
+  public void testRepeat()
+  {
+    testExpression(
+        rexBuilder.makeCall(
+            new RepeatOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(1)
+        ),
+        DruidExpression.fromExpression("repeat(\"s\",1)"),
+        "foo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RepeatOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(3)
+        ),
+        DruidExpression.fromExpression("repeat(\"s\",3)"),
+        "foofoofoo"
+    );
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RepeatOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            integerLiteral(-1)
+        ),
+        DruidExpression.fromExpression("repeat(\"s\",-1)"),
+        null
+    );
+  }
+
+  @Test
+  public void testAbnormalRepeatWithWrongType()
+  {
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("Function[repeat] needs a string as first argument "
+                                    + "and an integer as second argument");
+
+    testExpression(
+        rexBuilder.makeCall(
+            new RepeatOperatorConversion().calciteOperator(),
+            inputRef("s"),
+            inputRef("s")
+        ),
+        DruidExpression.fromExpression("repeat(\"s\",\"s\")"),
+        null
     );
   }
 

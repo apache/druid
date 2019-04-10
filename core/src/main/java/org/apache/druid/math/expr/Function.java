@@ -122,6 +122,23 @@ interface Function
     }
   }
 
+  abstract class DoubleParamString extends DoubleParam
+  {
+    @Override
+    protected final ExprEval eval(ExprEval x, ExprEval y)
+    {
+      if (x.type() != ExprType.STRING || y.type() != ExprType.LONG) {
+        throw new IAE(
+            "Function[%s] needs a string as first argument and an integer as second argument",
+            name()
+        );
+      }
+      return eval(x.asString(), y.asInt());
+    }
+
+    protected abstract ExprEval eval(String x, int y);
+  }
+
   class ParseLong implements Function
   {
     @Override
@@ -325,7 +342,6 @@ interface Function
       return ExprEval.of(Math.cos(param) / Math.sin(param));
     }
   }
-
 
   class Div extends DoubleParamMath
   {
@@ -1126,6 +1142,49 @@ interface Function
     }
   }
 
+  class RightFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "right";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      if (y < 0) {
+        throw new IAE(
+            "Function[%s] needs a postive integer as second argument",
+            name()
+        );
+      }
+      int len = x.length();
+      return ExprEval.of(y < len ? x.substring(len - y) : x);
+    }
+  }
+
+  class LeftFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "left";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      if (y < 0) {
+        throw new IAE(
+            "Function[%s] needs a postive integer as second argument",
+            name()
+        );
+      }
+      return ExprEval.of(y < x.length() ? x.substring(0, y) : x);
+    }
+  }
+
   class ReplaceFunc implements Function
   {
     @Override
@@ -1194,6 +1253,43 @@ interface Function
         return ExprEval.of(NullHandling.defaultStringValue());
       }
       return ExprEval.of(StringUtils.toUpperCase(arg));
+    }
+  }
+
+  class ReverseFunc extends SingleParam
+  {
+    @Override
+    public String name()
+    {
+      return "reverse";
+    }
+
+    @Override
+    protected ExprEval eval(ExprEval param)
+    {
+      if (param.type() != ExprType.STRING) {
+        throw new IAE(
+            "Function[%s] needs a string argument",
+            name()
+        );
+      }
+      final String arg = param.asString();
+      return ExprEval.of(arg == null ? NullHandling.defaultStringValue() : new StringBuilder(arg).reverse().toString());
+    }
+  }
+
+  class RepeatFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "repeat";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
     }
   }
 
