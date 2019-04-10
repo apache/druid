@@ -759,7 +759,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(shardId0, "0"));
     TreeMap<Integer, Map<String, String>> checkpoints4 = new TreeMap<>();
-    checkpoints2.put(0, ImmutableMap.of(shardId0, "0"));
+    checkpoints4.put(0, ImmutableMap.of(shardId0, "0"));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(1);
