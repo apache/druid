@@ -268,19 +268,15 @@ public class DruidSchemaTest extends CalciteTestBase
     SegmentMetadataHolder updatedHolder = SegmentMetadataHolder.from(existingHolder).withNumRows(5).build();
     schema.setSegmentMetadataHolder(existingSegment, updatedHolder);
     // find a druidServer holding existingSegment
-    final Pair<ImmutableDruidServer, DataSegment> pair = druidServers.stream()
-                                                                     .flatMap(druidServer -> druidServer.getSegments()
-                                                                                                        .stream()
-                                                                                                        .filter(segment -> segment
-                                                                                                            .equals(
-                                                                                                                existingSegment))
-                                                                                                        .map(segment -> Pair
-                                                                                                            .of(
-                                                                                                                druidServer,
-                                                                                                                segment
-                                                                                                            )))
-                                                                     .findAny()
-                                                                     .orElse(null);
+    final Pair<ImmutableDruidServer, DataSegment> pair = druidServers
+        .stream()
+        .flatMap(druidServer -> druidServer
+            .getLazyAllSegments().stream()
+            .filter(segment -> segment.equals(existingSegment))
+            .map(segment -> Pair.of(druidServer, segment))
+        )
+        .findAny()
+        .orElse(null);
     Assert.assertNotNull(pair);
     final ImmutableDruidServer server = pair.lhs;
     Assert.assertNotNull(server);

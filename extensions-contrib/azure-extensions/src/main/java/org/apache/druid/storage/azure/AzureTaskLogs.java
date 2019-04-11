@@ -57,7 +57,7 @@ public class AzureTaskLogs implements TaskLogs
   }
 
   @Override
-  public void pushTaskReports(String taskid, File reportFile) throws IOException
+  public void pushTaskReports(String taskid, File reportFile)
   {
     final String taskKey = getTaskReportsKey(taskid);
     log.info("Pushing task reports %s to: %s", reportFile, taskKey);

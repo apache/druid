@@ -85,7 +85,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- *
+ * Managers {@link org.apache.druid.query.lookup.LookupExtractorFactoryContainer} specifications, distributing them
+ * to {@link org.apache.druid.query.lookup.LookupReferencesManager} around the cluster by monitoring the lookup
+ * announce path for servers and utilizing their {@link org.apache.druid.query.lookup.LookupListeningResource} API
+ * to load, drop, and update lookups around the cluster.
  */
 public class LookupCoordinatorManager
 {

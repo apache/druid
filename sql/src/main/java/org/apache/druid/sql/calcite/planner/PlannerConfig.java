@@ -46,9 +46,6 @@ public class PlannerConfig
   private int maxQueryCount = 8;
 
   @JsonProperty
-  private int selectThreshold = 1000;
-
-  @JsonProperty
   private boolean useApproximateCountDistinct = true;
 
   @JsonProperty
@@ -104,11 +101,6 @@ public class PlannerConfig
     return maxQueryCount;
   }
 
-  public int getSelectThreshold()
-  {
-    return selectThreshold;
-  }
-
   public boolean isUseApproximateCountDistinct()
   {
     return useApproximateCountDistinct;
@@ -155,7 +147,6 @@ public class PlannerConfig
     newConfig.maxSemiJoinRowsInMemory = getMaxSemiJoinRowsInMemory();
     newConfig.maxTopNLimit = getMaxTopNLimit();
     newConfig.maxQueryCount = getMaxQueryCount();
-    newConfig.selectThreshold = getSelectThreshold();
     newConfig.useApproximateCountDistinct = getContextBoolean(
         context,
         CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
@@ -211,7 +202,6 @@ public class PlannerConfig
     return maxSemiJoinRowsInMemory == that.maxSemiJoinRowsInMemory &&
            maxTopNLimit == that.maxTopNLimit &&
            maxQueryCount == that.maxQueryCount &&
-           selectThreshold == that.selectThreshold &&
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
            useFallback == that.useFallback &&
@@ -233,7 +223,6 @@ public class PlannerConfig
         maxSemiJoinRowsInMemory,
         maxTopNLimit,
         maxQueryCount,
-        selectThreshold,
         useApproximateCountDistinct,
         useApproximateTopN,
         useFallback,
@@ -254,7 +243,6 @@ public class PlannerConfig
            ", maxSemiJoinRowsInMemory=" + maxSemiJoinRowsInMemory +
            ", maxTopNLimit=" + maxTopNLimit +
            ", maxQueryCount=" + maxQueryCount +
-           ", selectThreshold=" + selectThreshold +
            ", useApproximateCountDistinct=" + useApproximateCountDistinct +
            ", useApproximateTopN=" + useApproximateTopN +
            ", useFallback=" + useFallback +

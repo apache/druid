@@ -258,7 +258,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      Iterable<DataSegment> segments = server.getServer().getSegments();
+      Iterable<DataSegment> segments = server.getServer().getLazyAllSegments();
       for (DataSegment s : segments) {
         cost += computeJointSegmentsCost(s, segments);
       }
@@ -280,7 +280,7 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      for (DataSegment segment : server.getServer().getSegments()) {
+      for (DataSegment segment : server.getServer().getLazyAllSegments()) {
         cost += computeJointSegmentsCost(segment, segment);
       }
     }
@@ -334,7 +334,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     // the sum of the costs of other (exclusive of the proposalSegment) segments on the server
     cost += computeJointSegmentsCost(
         proposalSegment,
-        Iterables.filter(server.getServer().getSegments(), segment -> !proposalSegment.equals(segment))
+        Iterables.filter(server.getServer().getLazyAllSegments(), segment -> !proposalSegment.equals(segment))
     );
 
     // plus the costs of segments that will be loaded

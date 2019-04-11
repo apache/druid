@@ -54,7 +54,7 @@ import java.util.concurrent.Executor;
 )
 public class CliRealtimeExample extends ServerRunnable
 {
-  private static final Logger log = new Logger(CliBroker.class);
+  private static final Logger log = new Logger(CliRealtimeExample.class);
 
   @Inject
   private Properties properties;

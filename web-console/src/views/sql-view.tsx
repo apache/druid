@@ -16,23 +16,24 @@
  * limitations under the License.
  */
 
-import axios from 'axios';
-import * as classNames from 'classnames';
-import * as Hjson from "hjson";
+import * as Hjson from 'hjson';
 import * as React from 'react';
-import ReactTable from "react-table";
+import ReactTable from 'react-table';
 
 import { SqlControl } from '../components/sql-control';
+import { QueryPlanDialog } from '../dialogs/query-plan-dialog';
 import {
+  BasicQueryExplanation,
   decodeRune,
   HeaderRows,
-  localStorageGet,
-  localStorageSet,
+  localStorageGet, LocalStorageKeys,
+  localStorageSet, parseQueryPlan,
   queryDruidRune,
-  queryDruidSql, QueryManager
+  queryDruidSql, QueryManager,
+  SemiJoinQueryExplanation
 } from '../utils';
 
-import "./sql-view.scss";
+import './sql-view.scss';
 
 export interface SqlViewProps extends React.Props<any> {
   initSql: string | null;
@@ -42,48 +43,89 @@ export interface SqlViewState {
   loading: boolean;
   result: HeaderRows | null;
   error: string | null;
+  explainDialogOpen: boolean;
+  explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
+  loadingExplain: boolean;
+  explainError: Error | null;
+  queryElapsed: number | null;
+}
+
+interface SqlQueryResult {
+  queryResult: HeaderRows;
+  queryElapsed: number;
 }
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
-  static QUERY_KEY = 'druid-console-query';
 
-  private sqlQueryManager: QueryManager<string, HeaderRows>;
+  private sqlQueryManager: QueryManager<string, SqlQueryResult>;
+  private explainQueryManager: QueryManager<string, any>;
 
   constructor(props: SqlViewProps, context: any) {
     super(props, context);
     this.state = {
       loading: false,
       result: null,
-      error: null
+      error: null,
+      explainDialogOpen: false,
+      loadingExplain: false,
+      explainResult: null,
+      explainError: null,
+      queryElapsed: null
     };
   }
 
   componentDidMount(): void {
     this.sqlQueryManager = new QueryManager({
       processQuery: async (query: string) => {
+        const startTime = new Date();
         if (query.trim().startsWith('{')) {
           // Secret way to issue a native JSON "rune" query
           const runeQuery = Hjson.parse(query);
-          return decodeRune(runeQuery, await queryDruidRune(runeQuery));
-
+          const result = await queryDruidRune(runeQuery);
+          return {
+            queryResult: decodeRune(runeQuery, result),
+            queryElapsed: new Date().valueOf() - startTime.valueOf()
+          };
         } else {
           const result = await queryDruidSql({
             query,
-            resultFormat: "array",
+            resultFormat: 'array',
             header: true
           });
-
           return {
-            header: (result && result.length) ? result[0] : [],
-            rows: (result && result.length) ? result.slice(1) : []
+            queryResult: {
+              header: (result && result.length) ? result[0] : [],
+              rows: (result && result.length) ? result.slice(1) : []
+            },
+            queryElapsed: new Date().valueOf() - startTime.valueOf()
           };
         }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          result,
+          result: result ? result.queryResult : null,
+          queryElapsed: result ? result.queryElapsed : null,
           loading,
           error
+        });
+      }
+    });
+
+    this.explainQueryManager = new QueryManager({
+      processQuery: async (query: string) => {
+        const explainQuery = `explain plan for ${query}`;
+        const result = await queryDruidSql({
+          query: explainQuery,
+          resultFormat: 'object'
+        });
+        const data: BasicQueryExplanation | SemiJoinQueryExplanation | string = parseQueryPlan(result[0]['PLAN']);
+        return data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          explainResult: result,
+          loadingExplain: loading,
+          explainError: error !== null ? new Error(error) : null
         });
       }
     });
@@ -91,6 +133,28 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   componentWillUnmount(): void {
     this.sqlQueryManager.terminate();
+    this.explainQueryManager.terminate();
+  }
+
+  getExplain = (q: string) => {
+    this.setState({
+      explainDialogOpen: true,
+      loadingExplain: true,
+      explainError: null
+    });
+    this.explainQueryManager.runQuery(q);
+  }
+
+  renderExplainDialog() {
+    const {explainDialogOpen, explainResult, loadingExplain, explainError} = this.state;
+    if (!loadingExplain && explainDialogOpen) {
+      return <QueryPlanDialog
+        explainResult={explainResult}
+        explainError={explainError}
+        onClose={() => this.setState({explainDialogOpen: false})}
+      />;
+    }
+    return null;
   }
 
   renderResultTable() {
@@ -109,16 +173,20 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   render() {
     const { initSql } = this.props;
+    const { queryElapsed } = this.state;
 
     return <div className="sql-view app-view">
       <SqlControl
-        initSql={initSql || localStorageGet(SqlView.QUERY_KEY)}
+        initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
         onRun={q => {
-          localStorageSet(SqlView.QUERY_KEY, q);
+          localStorageSet(LocalStorageKeys.QUERY_KEY, q);
           this.sqlQueryManager.runQuery(q);
         }}
+        onExplain={(q: string) => this.getExplain(q)}
+        queryElapsed={queryElapsed}
       />
       {this.renderResultTable()}
+      {this.renderExplainDialog()}
     </div>;
   }
 }

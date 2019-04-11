@@ -96,7 +96,7 @@ public class ITNestedQueryPushDownTest extends AbstractIndexerTest
 
   private void loadData() throws Exception
   {
-    String taskSpec = getTaskAsString(WIKITICKER_INDEX_TASK);
+    String taskSpec = getResourceAsString(WIKITICKER_INDEX_TASK);
     taskSpec = StringUtils.replace(taskSpec, "%%DATASOURCE%%", fullDatasourceName);
     final String taskID = indexer.submitTask(taskSpec);
     LOG.info("TaskID for loading index task %s", taskID);
