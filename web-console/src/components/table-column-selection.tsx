@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, Menu, Popover, Position } from "@blueprintjs/core";
+import { Button, Checkbox, FormGroup, Menu, Popover, Position } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
 
-import { FormGroup, IconNames } from "./filler";
-
-import "./table-column-selection.scss";
+import './table-column-selection.scss';
 
 interface TableColumnSelectionProps extends React.Props<any> {
   columns: string[];
@@ -62,7 +61,7 @@ export class TableColumnSelection extends React.Component<TableColumnSelectionPr
       content={checkboxes}
       position={Position.BOTTOM_RIGHT}
     >
-      <Button rightIconName={IconNames.CARET_DOWN} text={"Columns"} />
+      <Button rightIcon={IconNames.CARET_DOWN} text="Columns" />
     </Popover>;
   }
 }

@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Intent } from '@blueprintjs/core';
-import * as numeral from "numeral";
+import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import * as numeral from 'numeral';
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
-
-import { HTMLSelect, IconNames } from "../components/filler";
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
   const currentFilter = filters.find(f => f.id === id);
@@ -43,7 +42,7 @@ export function makeTextFilter(placeholder = ''): FilterRender {
       key={key}
       onChange={(e: any) => onChange(e.target.value)}
       value={filterValue}
-      rightElement={filterValue && <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} />}
+      rightElement={filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />}
       placeholder={placeholder}
     />;
   };
@@ -56,7 +55,7 @@ export function makeBooleanFilter(): FilterRender {
       key={key}
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
-      value={filterValue || "all"}
+      value={filterValue || 'all'}
       fill
     >
       <option value="all">Show all</option>
@@ -142,13 +141,13 @@ export function stringifyJSON(item: any): string {
   if (item != null) {
     return JSON.stringify(item, null, 2);
   } else {
-    return "";
+    return '';
   }
 }
 
 // parse string to JSON object; if string is empty, return null
 export function parseStringToJSON(s: string): JSON | null {
-  if (s === "") {
+  if (s === '') {
     return null;
   } else {
     return JSON.parse(s);

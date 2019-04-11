@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { localStorageGet, LocalStorageKeys, localStorageSet } from "../utils";
+import { localStorageGet, LocalStorageKeys, localStorageSet } from '../utils';
 
 export class TableColumnSelectionHandler {
   tableName: LocalStorageKeys;

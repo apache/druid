@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.SortedSet;
 
 /**
+ *
  */
 public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
 {
@@ -45,21 +46,12 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
     Set<DataSegment> availableSegments = params.getAvailableSegments();
     DruidCluster cluster = params.getDruidCluster();
 
-    if (availableSegments.isEmpty()) {
-      log.info(
-          "Found 0 availableSegments, skipping the cleanup of segments from historicals. This is done to prevent " +
-          "a race condition in which the coordinator would drop all segments if it started running cleanup before " +
-          "it finished polling the metadata storage for available segments for the first time."
-      );
-      return params.buildFromExisting().withCoordinatorStats(stats).build();
-    }
-
-    // Drop segments that no longer exist in the available segments configuration, *if* it has been populated. (It might
-    // not have been loaded yet since it's filled asynchronously. But it's also filled atomically, so if there are any
-    // segments at all, we should have all of them.)
-    // Note that if metadata store has no segments, then availableSegments will stay empty and nothing will be dropped.
-    // This is done to prevent a race condition in which the coordinator would drop all segments if it started running
-    // cleanup before it finished polling the metadata storage for available segments for the first time.
+    // Drop segments that no longer exist in the available segments configuration, *if* it has been populated. (It's
+    // also filled atomically, so if there are any segments at all, we should have all of them.)
+    //
+    // Note that if the metadata store has not been polled yet, "getAvailableSegments" would throw an error since
+    // "availableSegments" is null. But this won't happen, since the earlier helper "DruidCoordinatorSegmentInfoLoader"
+    // would have canceled the run.
     for (SortedSet<ServerHolder> serverHolders : cluster.getSortedHistoricalsByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
         ImmutableDruidServer server = serverHolder.getServer();

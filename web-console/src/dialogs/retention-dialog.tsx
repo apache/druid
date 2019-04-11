@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { Button } from "@blueprintjs/core";
+import { Button, FormGroup } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 
-import { FormGroup, IconNames } from '../components/filler';
 import { Rule, RuleEditor } from '../components/rule-editor';
-import { QueryManager } from "../utils";
+import { QueryManager } from '../utils';
 
 import { SnitchDialog } from './snitch-dialog';
 
@@ -183,7 +183,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
         {(currentRules || []).map(this.renderRule)}
       </FormGroup>
       <FormGroup className="right">
-        <Button iconName={IconNames.PLUS} onClick={this.addRule}>New rule</Button>
+        <Button icon={IconNames.PLUS} onClick={this.addRule}>New rule</Button>
       </FormGroup>
       {
         (!currentRules.length && datasource !== '_default') &&

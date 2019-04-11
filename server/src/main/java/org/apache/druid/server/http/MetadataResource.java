@@ -52,6 +52,7 @@ import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Stream;
@@ -88,7 +89,10 @@ public class MetadataResource
       @Context final HttpServletRequest req
   )
   {
-    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
+    // If we haven't polled the metadata store yet, use an empty list of datasources.
+    final Collection<ImmutableDruidDataSource> druidDataSources = Optional.ofNullable(metadataSegmentManager.getDataSources())
+                                                                          .orElse(Collections.emptyList());
+
     final Set<String> dataSourceNamesPreAuth;
     if (includeDisabled != null) {
       dataSourceNamesPreAuth = new TreeSet<>(metadataSegmentManager.getAllDataSourceNames());
@@ -146,7 +150,9 @@ public class MetadataResource
       @QueryParam("datasources") final Set<String> datasources
   )
   {
-    Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
+    // If we haven't polled the metadata store yet, use an empty list of datasources.
+    Collection<ImmutableDruidDataSource> druidDataSources = Optional.ofNullable(metadataSegmentManager.getDataSources())
+                                                                    .orElse(Collections.emptyList());
     final Stream<DataSegment> metadataSegments = druidDataSources
         .stream()
         .filter((datasources != null && !datasources.isEmpty())

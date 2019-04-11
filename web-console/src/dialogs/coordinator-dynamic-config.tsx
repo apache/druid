@@ -17,11 +17,11 @@
  */
 
 import { Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as React from 'react';
 
 import { AutoForm } from '../components/auto-form';
-import { IconNames } from '../components/filler';
 import { AppToaster } from '../singletons/toaster';
 import { getDruidErrorMessage, QueryManager } from '../utils';
 
@@ -70,11 +70,11 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
   async getClusterConfig() {
     let config: Record<string, any> | null = null;
     try {
-      const configResp = await axios.get("/druid/coordinator/v1/config");
+      const configResp = await axios.get('/druid/coordinator/v1/config');
       config = configResp.data;
     } catch (e) {
       AppToaster.show({
-        iconName: IconNames.ERROR,
+        icon: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not load coordinator dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -89,15 +89,15 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
     const { onClose } = this.props;
     const newState: any = this.state.dynamicConfig;
     try {
-      await axios.post("/druid/coordinator/v1/config", newState, {
+      await axios.post('/druid/coordinator/v1/config', newState, {
         headers: {
-          "X-Druid-Author": "console",
-          "X-Druid-Comment": comment
+          'X-Druid-Author': 'console',
+          'X-Druid-Comment': comment
         }
       });
     } catch (e) {
       AppToaster.show({
-        iconName: IconNames.ERROR,
+        icon: IconNames.ERROR,
         intent: Intent.DANGER,
         message: `Could not save coordinator dynamic config: ${getDruidErrorMessage(e)}`
       });
@@ -129,52 +129,52 @@ export class CoordinatorDynamicConfigDialog extends React.Component<CoordinatorD
       <AutoForm
         fields={[
           {
-            name: "balancerComputeThreads",
-            type: "number"
+            name: 'balancerComputeThreads',
+            type: 'number'
           },
           {
-            name: "emitBalancingStats",
-            type: "boolean"
+            name: 'emitBalancingStats',
+            type: 'boolean'
           },
           {
-            name: "killAllDataSources",
-            type: "boolean"
+            name: 'killAllDataSources',
+            type: 'boolean'
           },
           {
-            name: "killDataSourceWhitelist",
-            type: "string-array"
+            name: 'killDataSourceWhitelist',
+            type: 'string-array'
           },
           {
-            name: "killPendingSegmentsSkipList",
-            type: "string-array"
+            name: 'killPendingSegmentsSkipList',
+            type: 'string-array'
           },
           {
-            name: "maxSegmentsInNodeLoadingQueue",
-            type: "number"
+            name: 'maxSegmentsInNodeLoadingQueue',
+            type: 'number'
           },
           {
-            name: "maxSegmentsToMove",
-            type: "number"
+            name: 'maxSegmentsToMove',
+            type: 'number'
           },
           {
-            name: "mergeBytesLimit",
-            type: "size-bytes"
+            name: 'mergeBytesLimit',
+            type: 'size-bytes'
           },
           {
-            name: "mergeSegmentsLimit",
-            type: "number"
+            name: 'mergeSegmentsLimit',
+            type: 'number'
           },
           {
-            name: "millisToWaitBeforeDeleting",
-            type: "number"
+            name: 'millisToWaitBeforeDeleting',
+            type: 'number'
           },
           {
-            name: "replicantLifetime",
-            type: "number"
+            name: 'replicantLifetime',
+            type: 'number'
           },
           {
-            name: "replicationThrottleLimit",
-            type: "number"
+            name: 'replicationThrottleLimit',
+            type: 'number'
           }
         ]}
         model={dynamicConfig}
