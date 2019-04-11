@@ -44,16 +44,16 @@ export class TableColumnSelection extends React.Component<TableColumnSelectionPr
   render() {
     const { columns, onChange, tableColumnsHidden } = this.props;
     const checkboxes = <Menu className="table-column-selection-menu">
-      <FormGroup>
-        {columns.map(column => (
+      {columns.map(column => (
+        <li className="checkbox-menu-item">
           <Checkbox
             label={column}
             key={column}
             checked={!tableColumnsHidden.includes(column)}
             onChange={() => onChange(column)}
           />
-        ))}
-      </FormGroup>
+        </li>
+      ))}
     </Menu>;
 
     return <Popover

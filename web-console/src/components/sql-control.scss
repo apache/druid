@@ -37,23 +37,6 @@
 
 }
 
-.sql-control-popover {
-  padding:10px;
-  min-width: 120px;
-
-  .bp3-form-group {
-    margin-bottom: 0;
-  }
-
-  button {
-    span {
-      position: relative;
-      left: -7px;
-    }
-    padding-right: 35px;
-  }
-}
-
 .ace_tooltip {
   padding: 10px;
   background-color: #333D47;
@@ -66,7 +49,7 @@
   hr {
     margin: 10px 0;
   }
-  
+
   .function-doc-name {
     font-size: 18px;
   }

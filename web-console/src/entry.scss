@@ -50,3 +50,14 @@ svg {
   height: 100%;
   width: 100%;
 }
+
+.bp3-menu {
+  li.checkbox-menu-item {
+    height: 30px;
+    padding: 7px 4px;
+
+    label {
+      margin: 0;
+    }
+  }
+}
