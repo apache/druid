@@ -21,7 +21,10 @@ package org.apache.druid.server.coordinator.helper;
 
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 
+import javax.annotation.Nullable;
+
 /**
+ *
  */
 public interface DruidCoordinatorHelper
 {
@@ -29,8 +32,13 @@ public interface DruidCoordinatorHelper
    * Implementations of this method run various activities performed by the coordinator.
    * Input params can be used and modified. They are typically in a list and returned
    * DruidCoordinatorRuntimeParams is passed to the next helper.
+   *
    * @param params
-   * @return same as input or a modified value to be used by next helper.
+   *
+   * @return same as input or a modified value to be used by next helper. Null return
+   * values will prevent future DruidCoordinatorHelpers from running until the next
+   * cycle.
    */
+  @Nullable
   DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params);
 }
