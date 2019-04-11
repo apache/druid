@@ -29,23 +29,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOvershadowedStatus>
 {
-  private final boolean isOvershadowed;
+  private final boolean overshadowed;
   private final DataSegment dataSegment;
 
   @JsonCreator
   public SegmentWithOvershadowedStatus(
       @JsonProperty("dataSegment") DataSegment dataSegment,
-      @JsonProperty("overshadowed") boolean isOvershadowed
+      @JsonProperty("overshadowed") boolean overshadowed
   )
   {
     this.dataSegment = dataSegment;
-    this.isOvershadowed = isOvershadowed;
+    this.overshadowed = overshadowed;
   }
 
   @JsonProperty
   public boolean isOvershadowed()
   {
-    return isOvershadowed;
+    return overshadowed;
   }
 
   @JsonProperty
@@ -67,7 +67,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
     if (!dataSegment.equals(that.dataSegment)) {
       return false;
     }
-    if (isOvershadowed != (that.isOvershadowed)) {
+    if (overshadowed != (that.overshadowed)) {
       return false;
     }
     return true;
@@ -77,7 +77,7 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   public int hashCode()
   {
     int result = dataSegment.hashCode();
-    result = 31 * result + Boolean.hashCode(isOvershadowed);
+    result = 31 * result + Boolean.hashCode(overshadowed);
     return result;
   }
 

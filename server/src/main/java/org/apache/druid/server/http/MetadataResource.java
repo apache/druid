@@ -171,13 +171,12 @@ public class MetadataResource
     if (includeOvershadowedStatus != null) {
       final Set<SegmentId> overshadowedSegments = findOvershadowedSegments(druidDataSources);
       //transform DataSegment to SegmentWithOvershadowedStatus objects
-      final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments.map(segment -> {
-        if (overshadowedSegments.contains(segment.getId())) {
-          return new SegmentWithOvershadowedStatus(segment, true);
-        } else {
-          return new SegmentWithOvershadowedStatus(segment, false);
-        }
-      }).collect(Collectors.toList()).stream();
+      final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
+          .map(
+              segment -> new SegmentWithOvershadowedStatus(
+                  segment,
+                  overshadowedSegments.contains(segment.getId())
+              )).collect(Collectors.toList()).stream();
 
       final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
