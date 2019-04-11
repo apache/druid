@@ -21,6 +21,11 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+/**
+ * This Interface is used as a MixIn for ObjectMapper objects when there is a desire to avoid serializing a Password
+ * from a PasswordProvider to JSON in plaintext when that JSON is going to be used for purposes that don't require the
+ * password to be present, such as logging to a file.
+ */
 public interface PasswordProviderRedactionMixIn
 {
   @JsonIgnore
