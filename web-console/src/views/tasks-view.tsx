@@ -522,13 +522,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             },
             sortMethod: (status1: string, status2: string) => {
               const statusRanking: any = this.statusRanking;
-              if (statusRanking[status1] > statusRanking[status2]) {
-                return 1;
-              } else if (statusRanking[status1] < statusRanking[status2]) {
-                return -1;
-              } else {
-                return 0;
-              }
+              return statusRanking[status1] - statusRanking[status2];
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
