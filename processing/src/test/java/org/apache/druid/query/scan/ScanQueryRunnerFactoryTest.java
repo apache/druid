@@ -277,7 +277,6 @@ public class ScanQueryRunnerFactoryTest
     @Test
     public void testGetValidSegmentDescriptorsFromSpec()
     {
-      /* valid */
       QuerySegmentSpec multiSpecificSpec = new MultipleSpecificSegmentSpec(
           Collections.singletonList(
               descriptor
@@ -297,7 +296,6 @@ public class ScanQueryRunnerFactoryTest
     @Test(expected = UOE.class)
     public void testGetSegmentDescriptorsFromInvalidIntervalSpec()
     {
-      /* invalid */
       QuerySegmentSpec multiIntervalSpec = new MultipleIntervalSegmentSpec(
           Collections.singletonList(
               new Interval(
