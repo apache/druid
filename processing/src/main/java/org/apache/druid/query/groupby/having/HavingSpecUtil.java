@@ -31,5 +31,6 @@ public class HavingSpecUtil
   static final byte CACHE_TYPE_ID_NEVER = 0x7;
   static final byte CACHE_TYPE_ID_NOT = 0x8;
   static final byte CACHE_TYPE_ID_OR = 0x9;
+  static final byte CACHE_TYPE_ID_COUNTING = 0xA;
   static final byte STRING_SEPARATOR = (byte) 0xFF;
 }

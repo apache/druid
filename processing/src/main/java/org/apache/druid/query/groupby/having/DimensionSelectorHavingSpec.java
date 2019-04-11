@@ -24,11 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.data.input.Row;
-import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Objects;
 
@@ -123,16 +122,10 @@ public class DimensionSelectorHavingSpec extends BaseHavingSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    byte[] valueBytes = value == null ? new byte[]{} : StringUtils.toUtf8(value);
-    byte[] extractionFnBytes = extractionFn.getCacheKey();
-    return ByteBuffer.allocate(3 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
-                     .put(HavingSpecUtil.CACHE_TYPE_ID_DIM_SELECTOR)
-                     .put(dimensionBytes)
-                     .put(HavingSpecUtil.STRING_SEPARATOR)
-                     .put(valueBytes)
-                     .put(HavingSpecUtil.STRING_SEPARATOR)
-                     .put(extractionFnBytes)
-                     .array();
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_DIM_SELECTOR)
+        .appendString(dimension)
+        .appendString(value)
+        .appendByteArray(extractionFn == null ? new byte[0] : extractionFn.getCacheKey())
+        .build();
   }
 }

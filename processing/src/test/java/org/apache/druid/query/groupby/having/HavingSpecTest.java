@@ -26,9 +26,9 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -239,12 +239,10 @@ public class HavingSpecTest
     @Override
     public byte[] getCacheKey()
     {
-      byte valueByte = (byte) (value ? 1 : 0);
-      byte[] counterBytes = StringUtils.toUtf8(String.valueOf(counter));
-      return ByteBuffer.allocate(1 + counterBytes.length)
-                       .put(valueByte)
-                       .put(counterBytes)
-                       .array();
+      return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_COUNTING)
+          .appendByte((byte) (value ? 1 : 0))
+          .appendByteArray(StringUtils.toUtf8(String.valueOf(counter)))
+          .build();
     }
   }
 

@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby.having;
 
 import org.apache.druid.data.input.Row;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 
 /**
  * A "having" spec that always evaluates to false
@@ -35,6 +36,6 @@ public class NeverHavingSpec extends BaseHavingSpec
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[]{HavingSpecUtil.CACHE_TYPE_ID_NEVER};
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_NEVER).build();
   }
 }

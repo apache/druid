@@ -24,9 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.column.ValueType;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -115,19 +115,8 @@ public class OrHavingSpec extends BaseHavingSpec
   @Override
   public byte[] getCacheKey()
   {
-    final byte[][] havingBytes = new byte[havingSpecs.size()][];
-    int havingBytesSize = 0;
-    int index = 0;
-    for (HavingSpec spec : havingSpecs) {
-      havingBytes[index] = spec.getCacheKey();
-      havingBytesSize += havingBytes[index].length;
-      ++index;
-    }
-    ByteBuffer buffer = ByteBuffer.allocate(1 + havingBytesSize)
-                                  .put(HavingSpecUtil.CACHE_TYPE_ID_OR);
-    for (byte[] havingByte : havingBytes) {
-      buffer.put(havingByte);
-    }
-    return buffer.array();
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_OR)
+        .appendCacheables(havingSpecs)
+        .build();
   }
 }

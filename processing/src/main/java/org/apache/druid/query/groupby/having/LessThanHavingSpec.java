@@ -20,13 +20,11 @@
 package org.apache.druid.query.groupby.having;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -125,32 +123,11 @@ public class LessThanHavingSpec extends BaseHavingSpec
   @Override
   public byte[] getCacheKey()
   {
-    try {
-      final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      outputStream.write(HavingSpecUtil.CACHE_TYPE_ID_LESS_THAN);
-      if (!Strings.isNullOrEmpty(aggregationName)) {
-        outputStream.write(StringUtils.toUtf8(aggregationName));
-      }
-      outputStream.write(HavingSpecUtil.STRING_SEPARATOR);
-      outputStream.write(StringUtils.toUtf8(String.valueOf(value)));
-      if (aggregators == null) {
-        return outputStream.toByteArray();
-      }
-      for (Map.Entry<String, AggregatorFactory> entry : aggregators.entrySet()) {
-        final String key = entry.getKey();
-        final AggregatorFactory val = entry.getValue();
-        if (!Strings.isNullOrEmpty(key)) {
-          outputStream.write(StringUtils.toUtf8(key));
-        }
-        outputStream.write(HavingSpecUtil.STRING_SEPARATOR);
-        byte[] aggregatorBytes = val.getCacheKey();
-        outputStream.write(aggregatorBytes);
-      }
-      return outputStream.toByteArray();
-    }
-    catch (IOException ex) {
-      // If ByteArrayOutputStream.write has problems, that is a very bad thing
-      throw new RuntimeException(ex);
-    }
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_LESS_THAN)
+        .appendString(aggregationName)
+        .appendByteArray(StringUtils.toUtf8(String.valueOf(value)))
+        .appendStrings(aggregators.keySet())
+        .appendCacheables(aggregators.values())
+        .build();
   }
 }
