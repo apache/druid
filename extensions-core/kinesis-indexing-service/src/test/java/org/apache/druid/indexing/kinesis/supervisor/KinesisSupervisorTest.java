@@ -45,6 +45,7 @@ import org.apache.druid.indexing.kinesis.KinesisIndexTask;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClient;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskClientFactory;
 import org.apache.druid.indexing.kinesis.KinesisIndexTaskIOConfig;
+import org.apache.druid.indexing.kinesis.KinesisIndexTaskTuningConfig;
 import org.apache.druid.indexing.kinesis.KinesisRecordSupplier;
 import org.apache.druid.indexing.kinesis.KinesisSequenceNumber;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -57,6 +58,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
@@ -67,6 +69,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -111,8 +114,6 @@ import static org.easymock.EasyMock.expectLastCall;
 
 public class KinesisSupervisorTest extends EasyMockSupport
 {
-
-
   private static final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
   private static final String DATASOURCE = "testDS";
   private static final int TEST_CHAT_THREADS = 3;
@@ -208,7 +209,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testNoInitialState() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -273,7 +274,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testMultiTask() throws Exception
   {
-    supervisor = getSupervisor(1, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -330,7 +331,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testReplicas() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -404,7 +405,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testLateMessageRejectionPeriod() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", new Period("PT1H"), null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", new Period("PT1H"), null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -453,7 +454,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testEarlyMessageRejectionPeriod() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, new Period("PT1H"));
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, new Period("PT1H"));
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -507,7 +508,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
    */
   public void testDatasourceMetadata() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -528,7 +529,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KinesisDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(stream, ImmutableMap.of(shardId1, "2", shardId0, "1"), ImmutableSet.of())
+            new SeekableStreamStartSequenceNumbers<>(
+                stream,
+                ImmutableMap.of(shardId1, "2", shardId0, "1"),
+                ImmutableSet.of()
+            )
         )
     ).anyTimes();
 
@@ -555,7 +560,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test(expected = ISE.class)
   public void testBadMetadataOffsets() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -574,7 +579,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of()).anyTimes();
     EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
         new KinesisDataSourceMetadata(
-            new SeekableStreamStartSequenceNumbers<>(stream, ImmutableMap.of(shardId1, "101", shardId0, "-1"), ImmutableSet.of())
+            new SeekableStreamStartSequenceNumbers<>(
+                stream,
+                ImmutableMap.of(shardId1, "101", shardId0, "-1"),
+                ImmutableSet.of()
+            )
         )
     ).anyTimes();
     replayAll();
@@ -584,9 +593,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testKillIncompatibleTasks() throws Exception
+  public void testDontKillTasksWithMismatchedDatasourceAndType() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -600,48 +609,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisorRecordSupplier.seek(anyObject(), anyString());
     expectLastCall().anyTimes();
 
-    // unexpected # of partitions (kill)
+    // different datasource (don't kill)
     Task id1 = createKinesisIndexTask(
         "id1",
-        DATASOURCE,
-        1,
-        new SeekableStreamStartSequenceNumbers<>(stream, ImmutableMap.of(shardId0, "0"), ImmutableSet.of()),
-        new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(shardId0, "1")),
-        null,
-        null
-    );
-
-    // correct number of partitions and ranges (don't kill)
-    Task id2 = createKinesisIndexTask(
-        "id2",
-        DATASOURCE,
-        0,
-        new SeekableStreamStartSequenceNumbers<>(
-            stream,
-            ImmutableMap.of(shardId0, "0", shardId1, "0"), ImmutableSet.of(shardId0, shardId1)
-        ),
-        new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(shardId0, "1", shardId1, "12")),
-        null,
-        null
-    );
-
-    // unexpected range on partition 2 (kill)
-    Task id3 = createKinesisIndexTask(
-        "id3",
-        DATASOURCE,
-        1,
-        new SeekableStreamStartSequenceNumbers<>(
-            stream,
-            ImmutableMap.of(shardId0, "0", shardId1, "1"), ImmutableSet.of(shardId0, shardId1)
-        ),
-        new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(shardId0, "1", shardId1, "11")),
-        null,
-        null
-    );
-
-    // different datasource (don't kill)
-    Task id4 = createKinesisIndexTask(
-        "id4",
         "other-datasource",
         2,
         new SeekableStreamStartSequenceNumbers<>(
@@ -655,8 +625,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     // non KinesisIndexTask (don't kill)
-    Task id5 = new RealtimeIndexTask(
-        "id5",
+    Task id2 = new RealtimeIndexTask(
+        "id2",
         null,
         new FireDepartment(
             dataSchema,
@@ -666,18 +636,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null
     );
 
-    List<Task> existingTasks = ImmutableList.of(id1, id2, id3, id4, id5);
+    List<Task> existingTasks = ImmutableList.of(id1, id2);
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
     EasyMock.expect(taskStorage.getActiveTasks()).andReturn(existingTasks).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
             .anyTimes();
@@ -689,24 +653,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null
         )
     ).anyTimes();
-    EasyMock.expect(taskClient.stopAsync("id1", false)).andReturn(Futures.immediateFuture(true));
-    EasyMock.expect(taskClient.stopAsync("id3", false)).andReturn(Futures.immediateFuture(false));
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    taskQueue.shutdown("id3", "Task [%s] failed to stop in a timely manner, killing task", "id3");
 
-    EasyMock.expect(taskQueue.add(EasyMock.anyObject(Task.class))).andReturn(true);
-
-    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
-    checkpoints.put(0, ImmutableMap.of(
-        shardId0,
-        "0",
-        shardId1,
-        "0"
-    ));
-
-    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(checkpoints))
-            .times(2);
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject(Task.class))).andReturn(true).times(2);
 
     replayAll();
     supervisor.start();
@@ -717,7 +666,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testKillBadPartitionAssignment() throws Exception
   {
-    supervisor = getSupervisor(1, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(
+        1,
+        2,
+        true,
+        "PT1H",
+        null,
+        null
+    );
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -770,17 +726,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null,
         null
     );
-    Task id5 = createKinesisIndexTask(
-        "id5",
-        DATASOURCE,
-        0,
-        new SeekableStreamStartSequenceNumbers<>(stream, ImmutableMap.of(shardId0, "0"), ImmutableSet.of(shardId0)),
-        new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(shardId0, "1")),
-        null,
-        null
-    );
 
-    List<Task> existingTasks = ImmutableList.of(id1, id2, id3, id4, id5);
+    List<Task> existingTasks = ImmutableList.of(id1, id2, id3, id4);
 
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
@@ -790,12 +737,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id3")).andReturn(Optional.of(TaskStatus.running("id3"))).anyTimes();
     EasyMock.expect(taskStorage.getStatus("id4")).andReturn(Optional.of(TaskStatus.running("id4"))).anyTimes();
-    EasyMock.expect(taskStorage.getStatus("id5")).andReturn(Optional.of(TaskStatus.running("id5"))).anyTimes();
     EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(id1)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(id2)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id3")).andReturn(Optional.of(id3)).anyTimes();
     EasyMock.expect(taskStorage.getTask("id4")).andReturn(Optional.of(id4)).anyTimes();
-    EasyMock.expect(taskStorage.getTask("id5")).andReturn(Optional.of(id5)).anyTimes();
     EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
             .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
             .anyTimes();
@@ -808,24 +753,26 @@ public class KinesisSupervisorTest extends EasyMockSupport
         )
     ).anyTimes();
     EasyMock.expect(taskClient.stopAsync("id3", false)).andReturn(Futures.immediateFuture(true));
-    EasyMock.expect(taskClient.stopAsync("id4", false)).andReturn(Futures.immediateFuture(false));
-    EasyMock.expect(taskClient.stopAsync("id5", false)).andReturn(Futures.immediateFuture((Boolean) null));
 
     TreeMap<Integer, Map<String, String>> checkpoints1 = new TreeMap<>();
     checkpoints1.put(0, ImmutableMap.of(shardId1, "0"));
     TreeMap<Integer, Map<String, String>> checkpoints2 = new TreeMap<>();
     checkpoints2.put(0, ImmutableMap.of(shardId0, "0"));
+    TreeMap<Integer, Map<String, String>> checkpoints4 = new TreeMap<>();
+    checkpoints4.put(0, ImmutableMap.of(shardId0, "0"));
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id1"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints1))
             .times(1);
     EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(checkpoints2))
             .times(1);
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id4"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints4))
+            .times(1);
 
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    taskQueue.shutdown("id4", "Task [%s] failed to stop in a timely manner, killing task", "id4");
-    taskQueue.shutdown("id5", "Task [%s] failed to stop in a timely manner, killing task", "id5");
+    taskQueue.shutdown("id4", "Task [%s] failed to return status, killing task", "id4");
     replayAll();
 
     supervisor.start();
@@ -836,7 +783,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testRequeueTaskWhenFailed() throws Exception
   {
-    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -945,7 +892,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testRequeueAdoptedTaskWhenFailed() throws Exception
   {
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -964,7 +911,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(shardId1, "0", shardId0, "0"), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(shardId1, "0", shardId0, "0"),
+            ImmutableSet.of()
+        ),
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             ImmutableMap.of(
@@ -1075,7 +1026,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testQueueNextTasksOnSuccess() throws Exception
   {
-    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -1196,7 +1147,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -1332,7 +1283,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -1351,7 +1302,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(shardId1, "0", shardId0, "0"), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(shardId1, "0", shardId0, "0"),
+            ImmutableSet.of()
+        ),
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             ImmutableMap.of(
@@ -1481,7 +1436,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -1499,7 +1454,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(shardId1, "0", shardId0, "0"), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(shardId1, "0", shardId0, "0"),
+            ImmutableSet.of()
+        ),
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             ImmutableMap.of(
@@ -1620,7 +1579,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -1790,7 +1749,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testKillUnresponsiveTasksWhileGettingStartTime() throws Exception
   {
-    supervisor = getSupervisor(2, 2, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -1869,7 +1828,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -1974,7 +1933,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   {
     final TaskLocation location = new TaskLocation("testHost", 1234, -1);
 
-    supervisor = getSupervisor(2, 2, true, "PT1M", null, null);
+    supervisor = getTestableSupervisor(2, 2, true, "PT1M", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -2090,7 +2049,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test(expected = IllegalStateException.class)
   public void testStopNotStarted()
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     supervisor.stop(false);
   }
 
@@ -2105,7 +2064,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     taskRunner.unregisterListener(StringUtils.format("KinesisSupervisor-%s", DATASOURCE));
     replayAll();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     supervisor.start();
     supervisor.stop(false);
 
@@ -2119,7 +2078,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -2137,7 +2096,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(shardId1, "0", shardId0, "0"), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(shardId1, "0", shardId0, "0"),
+            ImmutableSet.of()
+        ),
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             ImmutableMap.of(
@@ -2295,7 +2258,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
 
 
     supervisor.start();
@@ -2315,7 +2278,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testResetDataSourceMetadata() throws Exception
   {
     expect(supervisorRecordSupplier.getPartitionIds(anyObject())).andReturn(Collections.emptySet()).anyTimes();
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
@@ -2392,7 +2355,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testResetNoDataSourceMetadata() throws Exception
   {
     expect(supervisorRecordSupplier.getPartitionIds(anyObject())).andReturn(Collections.emptySet()).anyTimes();
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.emptyList()).anyTimes();
@@ -2428,7 +2391,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
     expect(supervisorRecordSupplier.getPartitionIds(stream)).andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
@@ -2446,7 +2409,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(shardId1, "0", shardId0, "0"), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(shardId1, "0", shardId0, "0"),
+            ImmutableSet.of()
+        ),
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             ImmutableMap.of(
@@ -2579,7 +2546,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testNoDataIngestionTasks() throws Exception
   {
     final DateTime startTime = DateTimes.nowUtc();
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
 
     //not adding any events
     Task id1 = createKinesisIndexTask(
@@ -2724,7 +2691,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testCheckpointForInactiveTaskGroup()
       throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
-    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null, false);
     //not adding any events
     final Task id1;
     id1 = createKinesisIndexTask(
@@ -2862,7 +2829,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         new KinesisDataSourceMetadata(
             new SeekableStreamStartSequenceNumbers<>(stream, checkpoints.get(0), checkpoints.get(0).keySet())
         ),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, fakeCheckpoints, ImmutableSet.of()))
+        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
+            stream,
+            fakeCheckpoints,
+            ImmutableSet.of()
+        ))
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -2880,7 +2851,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testCheckpointForUnknownTaskGroup()
       throws InterruptedException
   {
-    supervisor = getSupervisor(2, 1, true, "PT1S", null, null, false);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null, false);
 
 
     supervisorRecordSupplier.assign(anyObject());
@@ -2984,8 +2955,16 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.checkpoint(
         0,
         ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, Collections.emptyMap(), ImmutableSet.of())),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, Collections.emptyMap(), ImmutableSet.of()))
+        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
+            stream,
+            Collections.emptyMap(),
+            ImmutableSet.of()
+        )),
+        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
+            stream,
+            Collections.emptyMap(),
+            ImmutableSet.of()
+        ))
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -3011,7 +2990,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   public void testCheckpointWithNullTaskGroupId()
       throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException
   {
-    supervisor = getSupervisor(1, 3, true, "PT1S", null, null, false);
+    supervisor = getTestableSupervisor(1, 3, true, "PT1S", null, null, false);
     //not adding any events
     final Task id1 = createKinesisIndexTask(
         "id1",
@@ -3100,8 +3079,16 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.checkpoint(
         null,
         ((KinesisIndexTask) id1).getIOConfig().getBaseSequenceName(),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, checkpoints.get(0), ImmutableSet.of())),
-        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(stream, newCheckpoints.get(0), ImmutableSet.of()))
+        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
+            stream,
+            checkpoints.get(0),
+            ImmutableSet.of()
+        )),
+        new KinesisDataSourceMetadata(new SeekableStreamStartSequenceNumbers<>(
+            stream,
+            newCheckpoints.get(0),
+            ImmutableSet.of()
+        ))
     );
 
     while (supervisor.getNoticesQueueSize() > 0) {
@@ -3115,7 +3102,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testSuspendedNoRunningTasks() throws Exception
   {
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, true);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
 
     expect(supervisorRecordSupplier.getPartitionIds(anyObject())).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -3148,7 +3135,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     final TaskLocation location2 = new TaskLocation("testHost2", 145, -1);
     final DateTime startTime = DateTimes.nowUtc();
 
-    supervisor = getSupervisor(2, 1, true, "PT1H", null, null, true);
+    supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null, true);
 
     supervisorRecordSupplier.assign(anyObject());
     expectLastCall().anyTimes();
@@ -3168,7 +3155,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
         "id1",
         DATASOURCE,
         0,
-        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(shardId1, "0", shardId0, "0"), ImmutableSet.of()),
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(shardId1, "0", shardId0, "0"),
+            ImmutableSet.of()
+        ),
         new SeekableStreamEndSequenceNumbers<>(
             "stream",
             ImmutableMap.of(
@@ -3313,7 +3304,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     replayAll();
 
-    supervisor = getSupervisor(1, 1, true, "PT1H", null, null, true);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true);
     supervisor.start();
     supervisor.runInternal();
     verifyAll();
@@ -3330,7 +3321,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   @Test
   public void testGetCurrentTotalStats()
   {
-    supervisor = getSupervisor(1, 2, true, "PT1H", null, null, false);
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false);
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition("0"),
         ImmutableMap.of("0", "0"),
@@ -3371,208 +3362,344 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Assert.assertEquals(ImmutableMap.of("task2", ImmutableMap.of("prop2", "val2")), stats.get("1"));
   }
 
-  private KinesisSupervisor getSupervisor(
-      int replicas,
-      int taskCount,
-      boolean useEarliestOffset,
-      String duration,
-      Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod
-  )
+  @Test
+  public void testDoNotKillCompatibleTasks()
+      throws InterruptedException, EntryExistsException, ExecutionException, TimeoutException, JsonProcessingException
   {
-    return getSupervisor(
-        replicas,
-        taskCount,
-        useEarliestOffset,
-        duration,
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
+    // This supervisor always returns true for isTaskCurrent -> it should not kill its tasks
+    int numReplicas = 2;
+    supervisor = getTestableSupervisorCustomIsTaskCurrent(
+        numReplicas,
+        1,
+        true,
+        "PT1H",
+        new Period("P1D"),
+        new Period("P1D"),
         false,
+        42,
+        1000,
+        true
+    );
+
+    supervisorRecordSupplier.assign(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(stream))
+            .andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getAssignment())
+            .andReturn(ImmutableSet.of(shard1Partition, shard0Partition))
+            .anyTimes();
+    supervisorRecordSupplier.seekToLatest(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
+    supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
+    EasyMock.expectLastCall().anyTimes();
+
+    Task task = createKinesisIndexTask(
+        "id2",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            stream,
+            ImmutableMap.of(
+                shardId0,
+                "0",
+                shardId1,
+                "0"
+            ),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(
+            shardId0,
+            "1",
+            shardId1,
+            "12"
+        )),
         null,
         null
     );
+
+    List<Task> existingTasks = ImmutableList.of(task);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(existingTasks).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id2")).andReturn(Optional.of(TaskStatus.running("id2"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id2")).andReturn(Optional.of(task)).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject(Task.class))).andReturn(true);
+
+    TreeMap<Integer, Map<String, String>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, ImmutableMap.of(
+        shardId0,
+        "0",
+        shardId1,
+        "0"
+    ));
+
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.contains("id2"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints))
+            .times(numReplicas);
+
+    replayAll();
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
   }
 
-  private KinesisSupervisor getSupervisor(
-      int replicas,
-      int taskCount,
-      boolean useEarliestOffset,
-      String duration,
-      Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod,
-      boolean suspended,
-      Integer recordsPerFetch,
-      Integer fetchDelayMillis
-
-  )
+  @Test
+  public void testKillIncompatibleTasks()
+      throws InterruptedException, ExecutionException, TimeoutException, JsonProcessingException, EntryExistsException
   {
-    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
-        stream,
-        "awsEndpoint",
-        null,
-        replicas,
-        taskCount,
-        new Period(duration),
+    // This supervisor always returns false for isTaskCurrent -> it should kill its tasks
+    int numReplicas = 2;
+    supervisor = getTestableSupervisorCustomIsTaskCurrent(
+        numReplicas,
+        1,
+        true,
+        "PT1H",
         new Period("P1D"),
-        new Period("PT30S"),
-        useEarliestOffset,
-        new Period("PT30M"),
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        recordsPerFetch,
-        fetchDelayMillis,
-        null,
-        null,
+        new Period("P1D"),
+        false,
+        42,
+        1000,
         false
     );
+    supervisorRecordSupplier.assign(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getPartitionIds(stream))
+            .andReturn(ImmutableSet.of(shardId1, shardId0)).anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getAssignment())
+            .andReturn(ImmutableSet.of(shard1Partition, shard0Partition))
+            .anyTimes();
+    supervisorRecordSupplier.seekToLatest(EasyMock.anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getEarliestSequenceNumber(EasyMock.anyObject())).andReturn("0").anyTimes();
+    EasyMock.expect(supervisorRecordSupplier.getLatestSequenceNumber(EasyMock.anyObject())).andReturn("100").anyTimes();
+    supervisorRecordSupplier.seek(EasyMock.anyObject(), EasyMock.anyString());
+    EasyMock.expectLastCall().anyTimes();
 
-    KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
-        null,
-        null
-    )
-    {
-      @Override
-      public KinesisIndexTaskClient build(
-          TaskInfoProvider taskInfoProvider,
-          String dataSource,
-          int numThreads,
-          Duration httpTimeout,
-          long numRetries
-      )
-      {
-        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
-        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
-        return taskClient;
-      }
-    };
-
-    return new TestableKinesisSupervisor(
-        taskStorage,
-        taskMaster,
-        indexerMetadataStorageCoordinator,
-        taskClientFactory,
-        objectMapper,
-        new KinesisSupervisorSpec(
-            dataSchema,
-            tuningConfig,
-            KinesisSupervisorIOConfig,
-            null,
-            suspended,
-            taskStorage,
-            taskMaster,
-            indexerMetadataStorageCoordinator,
-            taskClientFactory,
-            objectMapper,
-            new NoopServiceEmitter(),
-            new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory,
-            null
-        ),
-        rowIngestionMetersFactory
-    );
-  }
-
-  private static DataSchema getDataSchema(String dataSource)
-  {
-    List<DimensionSchema> dimensions = new ArrayList<>();
-    dimensions.add(StringDimensionSchema.create("dim1"));
-    dimensions.add(StringDimensionSchema.create("dim2"));
-
-    return new DataSchema(
-        dataSource,
-        objectMapper.convertValue(
-            new StringInputRowParser(
-                new JSONParseSpec(
-                    new TimestampSpec("timestamp", "iso", null),
-                    new DimensionsSpec(
-                        dimensions,
-                        null,
-                        null
-                    ),
-                    new JSONPathSpec(true, ImmutableList.of()),
-                    ImmutableMap.of()
-                ),
-                StandardCharsets.UTF_8.name()
+    Task task = createKinesisIndexTask(
+        "id1",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            stream,
+            ImmutableMap.of(
+                shardId0,
+                "0",
+                shardId1,
+                "0"
             ),
-            Map.class
+            ImmutableSet.of()
         ),
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(
-            Granularities.HOUR,
-            Granularities.NONE,
-            ImmutableList.of()
-        ),
+        new SeekableStreamEndSequenceNumbers<>(stream, ImmutableMap.of(
+            shardId0,
+            "1",
+            shardId1,
+            "12"
+        )),
         null,
-        objectMapper
-    );
-  }
-
-  private static List<byte[]> jb(
-      String timestamp,
-      String dim1,
-      String dim2,
-      String dimLong,
-      String dimFloat,
-      String met1
-  )
-  {
-    try {
-      return Collections.singletonList(new ObjectMapper().writeValueAsBytes(
-          ImmutableMap.builder()
-                      .put("timestamp", timestamp)
-                      .put("dim1", dim1)
-                      .put("dim2", dim2)
-                      .put("dimLong", dimLong)
-                      .put("dimFloat", dimFloat)
-                      .put("met1", met1)
-                      .build()
-      ));
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private KinesisIndexTask createKinesisIndexTask(
-      String id,
-      String dataSource,
-      int taskGroupId,
-      SeekableStreamStartSequenceNumbers<String, String> startPartitions,
-      SeekableStreamEndSequenceNumbers<String, String> endPartitions,
-      DateTime minimumMessageTime,
-      DateTime maximumMessageTime
-  )
-  {
-    return new KinesisIndexTask(
-        id,
-        null,
-        getDataSchema(dataSource),
-        tuningConfig,
-        new KinesisIndexTaskIOConfig(
-            0,
-            "sequenceName-" + taskGroupId,
-            startPartitions,
-            endPartitions,
-            true,
-            minimumMessageTime,
-            maximumMessageTime,
-            "awsEndpoint",
-            null,
-            null,
-            null,
-            null,
-            false
-        ),
-        Collections.emptyMap(),
-        null,
-        null,
-        rowIngestionMetersFactory,
         null
     );
+
+    List<Task> existingTasks = ImmutableList.of(task);
+
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(Collections.EMPTY_LIST).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasks()).andReturn(existingTasks).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("id1")).andReturn(Optional.of(task)).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(Status.NOT_STARTED))
+            .anyTimes();
+    EasyMock.expect(taskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KinesisDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    EasyMock.expect(taskClient.stopAsync("id1", false)).andReturn(Futures.immediateFuture(true));
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject(Task.class))).andReturn(true).times(2);
+
+    replayAll();
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
   }
 
-  private KinesisSupervisor getSupervisor(
+  @Test
+  public void testIsTaskCurrent()
+  {
+    DateTime minMessageTime = DateTimes.nowUtc();
+    DateTime maxMessageTime = DateTimes.nowUtc().plus(10000);
+
+    KinesisSupervisor supervisor = getSupervisor(
+        1,
+        1,
+        true,
+        "PT1H",
+        new Period("P1D"),
+        new Period("P1D"),
+        false,
+        42,
+        42,
+        dataSchema,
+        tuningConfig
+    );
+
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        42,
+        ImmutableMap.of(shardId1, "3"),
+        Optional.of(minMessageTime),
+        Optional.of(maxMessageTime),
+        ImmutableSet.of("id1", "id2", "id3", "id4"),
+        ImmutableSet.of()
+    );
+
+    DataSchema modifiedDataSchema = getDataSchema("some other datasource");
+
+    KinesisSupervisorTuningConfig modifiedTuningConfig = new KinesisSupervisorTuningConfig(
+        1000,
+        null,
+        50000,
+        null,
+        new Period("P1Y"),
+        new File("/test"),
+        null,
+        null,
+        true,
+        false,
+        null,
+        null,
+        null,
+        null,
+        numThreads,
+        TEST_CHAT_THREADS,
+        TEST_CHAT_RETRIES,
+        TEST_HTTP_TIMEOUT,
+        TEST_SHUTDOWN_TIMEOUT,
+        null,
+        null,
+        null,
+        5000,
+        null,
+        null,
+        null,
+        null,
+        42, // This property is different from tuningConfig
+        null
+    );
+
+    KinesisIndexTask taskFromStorage = createKinesisIndexTask(
+        "id1",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
+            shardId1,
+            "3"
+        ), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
+            shardId1,
+            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+        )),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema
+    );
+
+    KinesisIndexTask taskFromStorageMismatchedDataSchema = createKinesisIndexTask(
+        "id2",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
+            shardId1,
+            "3"
+        ), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
+            shardId1,
+            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+        )),
+        minMessageTime,
+        maxMessageTime,
+        modifiedDataSchema
+    );
+
+    KinesisIndexTask taskFromStorageMismatchedTuningConfig = createKinesisIndexTask(
+        "id3",
+        0,
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of(
+            shardId1,
+            "3"
+        ), ImmutableSet.of()),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
+            shardId1,
+            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+        )),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema,
+        modifiedTuningConfig
+    );
+
+    KinesisIndexTask taskFromStorageMismatchedPartitionsWithTaskGroup = createKinesisIndexTask(
+        "id4",
+        0,
+        new SeekableStreamStartSequenceNumbers<>(
+            "stream",
+            ImmutableMap.of(
+                shardId1,
+                "4" // this is the mismatch
+            ),
+            ImmutableSet.of()
+        ),
+        new SeekableStreamEndSequenceNumbers<>("stream", ImmutableMap.of(
+            shardId1,
+            KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER
+        )),
+        minMessageTime,
+        maxMessageTime,
+        dataSchema
+    );
+
+    EasyMock.expect(taskStorage.getTask("id1"))
+            .andReturn(Optional.of(taskFromStorage))
+            .once();
+    EasyMock.expect(taskStorage.getTask("id2"))
+            .andReturn(Optional.of(taskFromStorageMismatchedDataSchema))
+            .once();
+    EasyMock.expect(taskStorage.getTask("id3"))
+            .andReturn(Optional.of(taskFromStorageMismatchedTuningConfig))
+            .once();
+    EasyMock.expect(taskStorage.getTask("id4"))
+            .andReturn(Optional.of(taskFromStorageMismatchedPartitionsWithTaskGroup))
+            .once();
+
+    replayAll();
+
+    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1"));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2"));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3"));
+    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4"));
+    verifyAll();
+  }
+
+  private KinesisSupervisor getTestableSupervisor(
       int replicas,
       int taskCount,
       boolean useEarliestOffset,
@@ -3649,6 +3776,394 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
   }
 
+  private KinesisSupervisor getTestableSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod
+  )
+  {
+    return getTestableSupervisor(
+        replicas,
+        taskCount,
+        useEarliestOffset,
+        duration,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        false,
+        null,
+        null
+    );
+  }
+
+  private KinesisSupervisor getTestableSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended,
+      Integer recordsPerFetch,
+      Integer fetchDelayMillis
+  )
+  {
+    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+        stream,
+        "awsEndpoint",
+        null,
+        replicas,
+        taskCount,
+        new Period(duration),
+        new Period("P1D"),
+        new Period("PT30S"),
+        useEarliestOffset,
+        new Period("PT30M"),
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        recordsPerFetch,
+        fetchDelayMillis,
+        null,
+        null,
+        false
+    );
+
+    KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
+        null,
+        null
+    )
+    {
+      @Override
+      public KinesisIndexTaskClient build(
+          TaskInfoProvider taskInfoProvider,
+          String dataSource,
+          int numThreads,
+          Duration httpTimeout,
+          long numRetries
+      )
+      {
+        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
+        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        return taskClient;
+      }
+    };
+
+    return new TestableKinesisSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        objectMapper,
+        new KinesisSupervisorSpec(
+            dataSchema,
+            tuningConfig,
+            KinesisSupervisorIOConfig,
+            null,
+            suspended,
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            taskClientFactory,
+            objectMapper,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig(),
+            rowIngestionMetersFactory,
+            null
+        ),
+        rowIngestionMetersFactory
+    );
+  }
+
+  /**
+   * Use when you want to mock the return value of SeekableStreamSupervisor#isTaskCurrent()
+   */
+  private KinesisSupervisor getTestableSupervisorCustomIsTaskCurrent(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended,
+      Integer recordsPerFetch,
+      Integer fetchDelayMillis,
+      boolean isTaskCurrentReturn
+  )
+  {
+    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+        stream,
+        "awsEndpoint",
+        null,
+        replicas,
+        taskCount,
+        new Period(duration),
+        new Period("P1D"),
+        new Period("PT30S"),
+        useEarliestOffset,
+        new Period("PT30M"),
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        recordsPerFetch,
+        fetchDelayMillis,
+        null,
+        null,
+        false
+    );
+
+    KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
+        null,
+        null
+    )
+    {
+      @Override
+      public KinesisIndexTaskClient build(
+          TaskInfoProvider taskInfoProvider,
+          String dataSource,
+          int numThreads,
+          Duration httpTimeout,
+          long numRetries
+      )
+      {
+        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
+        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        return taskClient;
+      }
+    };
+
+    return new TestableKinesisSupervisorWithCustomIsTaskCurrent(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        objectMapper,
+        new KinesisSupervisorSpec(
+            dataSchema,
+            tuningConfig,
+            KinesisSupervisorIOConfig,
+            null,
+            suspended,
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            taskClientFactory,
+            objectMapper,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig(),
+            rowIngestionMetersFactory,
+            null
+        ),
+        rowIngestionMetersFactory,
+        isTaskCurrentReturn
+    );
+  }
+
+  /**
+   * Use for tests where you don't want generateSequenceName to be overridden out
+   */
+  private KinesisSupervisor getSupervisor(
+      int replicas,
+      int taskCount,
+      boolean useEarliestOffset,
+      String duration,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      boolean suspended,
+      Integer recordsPerFetch,
+      Integer fetchDelayMillis,
+      DataSchema dataSchema,
+      KinesisSupervisorTuningConfig tuningConfig
+  )
+  {
+    KinesisSupervisorIOConfig KinesisSupervisorIOConfig = new KinesisSupervisorIOConfig(
+        stream,
+        "awsEndpoint",
+        null,
+        replicas,
+        taskCount,
+        new Period(duration),
+        new Period("P1D"),
+        new Period("PT30S"),
+        useEarliestOffset,
+        new Period("PT30M"),
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        recordsPerFetch,
+        fetchDelayMillis,
+        null,
+        null,
+        false
+    );
+
+    KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(
+        null,
+        null
+    )
+    {
+      @Override
+      public KinesisIndexTaskClient build(
+          TaskInfoProvider taskInfoProvider,
+          String dataSource,
+          int numThreads,
+          Duration httpTimeout,
+          long numRetries
+      )
+      {
+        Assert.assertEquals(TEST_CHAT_THREADS, numThreads);
+        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), httpTimeout);
+        Assert.assertEquals(TEST_CHAT_RETRIES, numRetries);
+        return taskClient;
+      }
+    };
+
+    return new KinesisSupervisor(
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        taskClientFactory,
+        objectMapper,
+        new KinesisSupervisorSpec(
+            dataSchema,
+            tuningConfig,
+            KinesisSupervisorIOConfig,
+            null,
+            suspended,
+            taskStorage,
+            taskMaster,
+            indexerMetadataStorageCoordinator,
+            taskClientFactory,
+            objectMapper,
+            new NoopServiceEmitter(),
+            new DruidMonitorSchedulerConfig(),
+            rowIngestionMetersFactory,
+            null
+        ),
+        rowIngestionMetersFactory,
+        null
+    );
+  }
+
+  private static DataSchema getDataSchema(String dataSource)
+  {
+    List<DimensionSchema> dimensions = new ArrayList<>();
+    dimensions.add(StringDimensionSchema.create("dim1"));
+    dimensions.add(StringDimensionSchema.create("dim2"));
+
+    return new DataSchema(
+        dataSource,
+        objectMapper.convertValue(
+            new StringInputRowParser(
+                new JSONParseSpec(
+                    new TimestampSpec("timestamp", "iso", null),
+                    new DimensionsSpec(
+                        dimensions,
+                        null,
+                        null
+                    ),
+                    new JSONPathSpec(true, ImmutableList.of()),
+                    ImmutableMap.of()
+                ),
+                StandardCharsets.UTF_8.name()
+            ),
+            Map.class
+        ),
+        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
+        new UniformGranularitySpec(
+            Granularities.HOUR,
+            Granularities.NONE,
+            ImmutableList.of()
+        ),
+        null,
+        objectMapper
+    );
+  }
+
+
+  private KinesisIndexTask createKinesisIndexTask(
+      String id,
+      String dataSource,
+      int taskGroupId,
+      SeekableStreamStartSequenceNumbers<String, String> startPartitions,
+      SeekableStreamEndSequenceNumbers<String, String> endPartitions,
+      DateTime minimumMessageTime,
+      DateTime maximumMessageTime
+  )
+  {
+    return createKinesisIndexTask(
+        id,
+        taskGroupId,
+        startPartitions,
+        endPartitions,
+        minimumMessageTime,
+        maximumMessageTime,
+        getDataSchema(dataSource)
+    );
+  }
+
+  private KinesisIndexTask createKinesisIndexTask(
+      String id,
+      int taskGroupId,
+      SeekableStreamStartSequenceNumbers<String, String> startPartitions,
+      SeekableStreamEndSequenceNumbers<String, String> endPartitions,
+      DateTime minimumMessageTime,
+      DateTime maximumMessageTime,
+      DataSchema dataSchema
+  )
+  {
+    return createKinesisIndexTask(
+        id,
+        taskGroupId,
+        startPartitions,
+        endPartitions,
+        minimumMessageTime,
+        maximumMessageTime,
+        dataSchema,
+        (KinesisIndexTaskTuningConfig) tuningConfig.convertToTaskTuningConfig()
+    );
+  }
+
+  private KinesisIndexTask createKinesisIndexTask(
+      String id,
+      int taskGroupId,
+      SeekableStreamStartSequenceNumbers<String, String> startPartitions,
+      SeekableStreamEndSequenceNumbers<String, String> endPartitions,
+      DateTime minimumMessageTime,
+      DateTime maximumMessageTime,
+      DataSchema dataSchema,
+      KinesisIndexTaskTuningConfig tuningConfig
+  )
+  {
+    return new KinesisIndexTask(
+        id,
+        null,
+        dataSchema,
+        tuningConfig,
+        new KinesisIndexTaskIOConfig(
+            0,
+            "sequenceName-" + taskGroupId,
+            startPartitions,
+            endPartitions,
+            true,
+            minimumMessageTime,
+            maximumMessageTime,
+            "awsEndpoint",
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        Collections.emptyMap(),
+        null,
+        null,
+        rowIngestionMetersFactory,
+        null
+    );
+  }
+
   private static class TestTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
     private final String taskType;
@@ -3714,7 +4229,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     protected String generateSequenceName(
         Map<String, String> startPartitions,
         Optional<DateTime> minimumMessageTime,
-        Optional<DateTime> maximumMessageTime
+        Optional<DateTime> maximumMessageTime,
+        DataSchema dataSchema,
+        SeekableStreamIndexTaskTuningConfig tuningConfig
     )
     {
       final int groupId = getTaskGroupIdForPartition(startPartitions.keySet().iterator().next());
@@ -3726,7 +4243,39 @@ public class KinesisSupervisorTest extends EasyMockSupport
     {
       return supervisorRecordSupplier;
     }
+  }
 
+  private class TestableKinesisSupervisorWithCustomIsTaskCurrent extends TestableKinesisSupervisor
+  {
+    private boolean isTaskCurrentReturn;
 
+    public TestableKinesisSupervisorWithCustomIsTaskCurrent(
+        TaskStorage taskStorage,
+        TaskMaster taskMaster,
+        IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+        KinesisIndexTaskClientFactory taskClientFactory,
+        ObjectMapper mapper,
+        KinesisSupervisorSpec spec,
+        RowIngestionMetersFactory rowIngestionMetersFactory,
+        boolean isTaskCurrentReturn
+    )
+    {
+      super(
+          taskStorage,
+          taskMaster,
+          indexerMetadataStorageCoordinator,
+          taskClientFactory,
+          mapper,
+          spec,
+          rowIngestionMetersFactory
+      );
+      this.isTaskCurrentReturn = isTaskCurrentReturn;
+    }
+
+    @Override
+    public boolean isTaskCurrent(int taskGroupId, String taskId)
+    {
+      return isTaskCurrentReturn;
+    }
   }
 }
