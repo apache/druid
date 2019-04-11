@@ -64,14 +64,7 @@ public class MultipleSpecificSegmentSpec implements QuerySegmentSpec
     intervals = JodaUtils.condenseIntervals(
         Iterables.transform(
             descriptors,
-            new Function<SegmentDescriptor, Interval>()
-            {
-              @Override
-              public Interval apply(SegmentDescriptor input)
-              {
-                return input.getInterval();
-              }
-            }
+            input -> input.getInterval()
         )
     );
 
