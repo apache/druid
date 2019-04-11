@@ -43,6 +43,12 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
   {
     log.info("Starting coordination. Getting available segments.");
 
+    final Iterable<DataSegment> dataSegments = coordinator.iterateAvailableDataSegments();
+    if (dataSegments == null) {
+      log.info("Metadata store not polled yet, canceling this run.");
+      return null;
+    }
+
     // The following transform() call doesn't actually transform the iterable. It only checks the sizes of the segments
     // and emits alerts if segments with negative sizes are encountered. In other words, semantically it's similar to
     // Stream.peek(). It works as long as DruidCoordinatorRuntimeParams.createAvailableSegmentsSet() (which is called
@@ -54,7 +60,7 @@ public class DruidCoordinatorSegmentInfoLoader implements DruidCoordinatorHelper
     //
     //noinspection StaticPseudoFunctionalStyleMethod: https://youtrack.jetbrains.com/issue/IDEA-153047
     Iterable<DataSegment> availableSegmentsWithSizeChecking = Iterables.transform(
-        coordinator.iterateAvailableDataSegments(),
+        dataSegments,
         segment -> {
           if (segment.getSize() < 0) {
             log.makeAlert("No size on a segment")

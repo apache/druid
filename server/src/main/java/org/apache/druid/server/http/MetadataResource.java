@@ -58,6 +58,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -99,7 +100,10 @@ public class MetadataResource
       @Context final HttpServletRequest req
   )
   {
-    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
+    // If we haven't polled the metadata store yet, use an empty list of datasources.
+    final Collection<ImmutableDruidDataSource> druidDataSources = Optional.ofNullable(metadataSegmentManager.getDataSources())
+                                                                          .orElse(Collections.emptyList());
+
     final Set<String> dataSourceNamesPreAuth;
     if (includeDisabled != null) {
       dataSourceNamesPreAuth = new TreeSet<>(metadataSegmentManager.getAllDataSourceNames());
@@ -158,7 +162,10 @@ public class MetadataResource
       @QueryParam("includeOvershadowedStatus") final String includeOvershadowedStatus
   )
   {
-    Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
+    // If we haven't polled the metadata store yet, use an empty list of datasources.
+    Collection<ImmutableDruidDataSource> druidDataSources = Optional.ofNullable(metadataSegmentManager.getDataSources())
+                                                                    .orElse(Collections.emptyList());
+
     if (datasources != null && !datasources.isEmpty()) {
       druidDataSources = druidDataSources.stream()
                                          .filter(src -> datasources.contains(src.getName()))

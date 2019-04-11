@@ -40,6 +40,7 @@ export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
   onRun: (query: string) => void;
   onExplain: (query: string) => void;
+  queryElapsed: number | null;
 }
 
 export interface SqlControlState {
@@ -166,7 +167,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
   }
 
   render() {
-    const { onRun, onExplain } = this.props;
+    const { onRun, onExplain, queryElapsed } = this.props;
     const { query, autoCompleteOn } = this.state;
 
     const isRune = query.trim().startsWith('{');
@@ -217,7 +218,11 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         <Button rightIcon={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
           {isRune ? 'Rune' : 'Run'}
         </Button>
-        {!isRune ? SqlControlPopover : null}
+        {!isRune && SqlControlPopover}
+        {
+          queryElapsed &&
+          <span className={'query-elapsed'}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
+        }
       </div>
     </div>;
   }
