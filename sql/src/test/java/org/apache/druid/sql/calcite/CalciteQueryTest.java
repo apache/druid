@@ -239,8 +239,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectPadFamily() throws Exception
   {
-    // TRIM has some whacky parsing. Make sure the different forms work.
-
     testQuery(
         "SELECT\n"
         + "LPAD('foo', 5, 'x'),\n"
