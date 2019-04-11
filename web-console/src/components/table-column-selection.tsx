@@ -20,6 +20,8 @@ import { Button, Checkbox, FormGroup, Menu, Popover, Position } from '@blueprint
 import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
 
+import { MenuCheckbox } from './menu-checkbox';
+
 import './table-column-selection.scss';
 
 interface TableColumnSelectionProps extends React.Props<any> {
@@ -45,14 +47,12 @@ export class TableColumnSelection extends React.Component<TableColumnSelectionPr
     const { columns, onChange, tableColumnsHidden } = this.props;
     const checkboxes = <Menu className="table-column-selection-menu">
       {columns.map(column => (
-        <li className="checkbox-menu-item">
-          <Checkbox
-            label={column}
-            key={column}
-            checked={!tableColumnsHidden.includes(column)}
-            onChange={() => onChange(column)}
-          />
-        </li>
+        <MenuCheckbox
+          label={column}
+          key={column}
+          checked={!tableColumnsHidden.includes(column)}
+          onChange={() => onChange(column)}
+        />
       ))}
     </Menu>;
 

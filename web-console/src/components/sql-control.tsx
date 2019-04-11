@@ -42,6 +42,8 @@ import * as ReactDOMServer from 'react-dom/server';
 import { SQLFunctionDoc } from '../../lib/sql-function-doc';
 import { AppToaster } from '../singletons/toaster';
 
+import { MenuCheckbox } from './menu-checkbox';
+
 import './sql-control.scss';
 
 function validHjson(query: string) {
@@ -207,29 +209,23 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
             text="Explain"
             onClick={() => onExplain(query)}
           />
-          <li className="checkbox-menu-item">
-            <Checkbox
-              checked={autoComplete}
-              label="Auto complete"
-              onChange={() => this.setState({autoComplete: !autoComplete})}
-            />
-          </li>
-          <li className="checkbox-menu-item">
-            <Checkbox
-              checked={wrapQuery}
-              label="Wrap query with limit"
-              onChange={() => this.setState({wrapQuery: !wrapQuery})}
-            />
-          </li>
+          <MenuCheckbox
+            checked={autoComplete}
+            label="Auto complete"
+            onChange={() => this.setState({autoComplete: !autoComplete})}
+          />
+          <MenuCheckbox
+            checked={wrapQuery}
+            label="Wrap query with limit"
+            onChange={() => this.setState({wrapQuery: !wrapQuery})}
+          />
         </>
       }
-      <li className="checkbox-menu-item">
-        <Checkbox
-          checked={bypassCache}
-          label="Bypass cache"
-          onChange={() => this.setState({bypassCache: !bypassCache})}
-        />
-      </li>
+      <MenuCheckbox
+        checked={bypassCache}
+        label="Bypass cache"
+        onChange={() => this.setState({bypassCache: !bypassCache})}
+      />
     </Menu>;
   }
 

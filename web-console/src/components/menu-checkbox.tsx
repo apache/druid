@@ -16,37 +16,16 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../lib/react-table';
+import { Checkbox, ICheckboxProps } from '@blueprintjs/core';
+import * as React from 'react';
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  height: 100%;
-  overflow: hidden;
-  font-size: 13px;
-}
+import './menu-checkbox.scss';
 
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
+export class MenuCheckbox extends React.Component<ICheckboxProps, {}> {
+
+  render() {
+    return <li className="menu-checkbox">
+      <Checkbox {...this.props}/>
+    </li>;
   }
-
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
-
-svg {
-  width: auto;
-  height: auto;
-}
-
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
 }

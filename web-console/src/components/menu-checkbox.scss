@@ -16,37 +16,11 @@
  * limitations under the License.
  */
 
-@import '../node_modules/normalize.css/normalize';
-@import '../node_modules/@blueprintjs/core/lib/css/blueprint';
-@import '../lib/react-table';
+.menu-checkbox {
+  height: 30px;
+  padding: 7px 4px;
 
-html,
-body {
-  //font-family: 'Open Sans', Helvetica, Arial, sans-serif;
-  height: 100%;
-  overflow: hidden;
-  font-size: 13px;
-}
-
-body {
-  &.bp3-dark {
-    background: rgb(41, 55, 66);
+  label {
+    margin: 0;
   }
-
-  &.mouse-mode {
-    *:focus {
-      outline: none !important;
-    }
-  }
-}
-
-svg {
-  width: auto;
-  height: auto;
-}
-
-.app-container {
-  position: absolute;
-  height: 100%;
-  width: 100%;
 }
