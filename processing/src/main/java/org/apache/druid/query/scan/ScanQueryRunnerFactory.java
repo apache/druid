@@ -282,10 +282,10 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   @VisibleForTesting
   List<SegmentDescriptor> getSegmentDescriptorsFromSpecificQuerySpec(QuerySegmentSpec spec)
   {
-    // Query segment spec must be an instance of MultipleSpecificSegmentSpec because segment descriptors need
-    // to be present for a 1:1 matching of intervals with query runners.  The other types of segment spec condense
-    // the intervals (i.e. merge neighbouring intervals), eliminating the 1:1 relationship between intervals
-    // and query runners.
+    // Query segment spec must be an instance of MultipleSpecificSegmentSpec or SpecificSegmentSpec because
+    // segment descriptors need to be present for a 1:1 matching of intervals with query runners.
+    // The other types of segment spec condense the intervals (i.e. merge neighbouring intervals), eliminating
+    // the 1:1 relationship between intervals and query runners.
     List<SegmentDescriptor> descriptorsOrdered;
 
     if (spec instanceof MultipleSpecificSegmentSpec) {
@@ -295,7 +295,8 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       descriptorsOrdered = Collections.singletonList(((SpecificSegmentSpec) spec).getDescriptor());
     } else {
       throw new UOE("Time-ordering on scan queries is only supported for queries with segment specs"
-                    + "of type MultipleSpecificSegmentSpec or SpecificSegmentSpec");
+                    + "of type MultipleSpecificSegmentSpec or SpecificSegmentSpec...a [%s] was received instead.",
+                    spec.getClass().getSimpleName());
     }
     return descriptorsOrdered;
   }
