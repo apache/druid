@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.PriorityQueue;
 
 /**
+ * Used to perform an n-way merge on n ordered sequences
  */
 public class MergeSequence<T> extends YieldingSequenceBase<T>
 {
@@ -42,20 +43,18 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
     this.baseSequences = (Sequence<? extends Sequence<T>>) baseSequences;
   }
 
+  /*
+    Note: the yielder for MergeSequence returns elements from the priority queue in order of increasing priority.
+    This is due to the fact that PriorityQueue#remove() polls from the head of the queue which is, according to
+    the PriorityQueue javadoc, "the least element with respect to the specified ordering"
+   */
   @Override
   public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
   {
     PriorityQueue<Yielder<T>> pQueue = new PriorityQueue<>(
         32,
         ordering.onResultOf(
-            new Function<Yielder<T>, T>()
-            {
-              @Override
-              public T apply(Yielder<T> input)
-              {
-                return input.get();
-              }
-            }
+            (Function<Yielder<T>, T>) input -> input.get()
         )
     );
 

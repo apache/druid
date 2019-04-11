@@ -199,7 +199,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   }
 
   /**
-   * This class essentially incapsulates the major part of the logic of {@link CachingClusteredClient}. It's state and
+   * This class essentially encapsulates the major part of the logic of {@link CachingClusteredClient}. It's state and
    * methods couldn't belong to {@link CachingClusteredClient} itself, because they depend on the specific query object
    * being run, but {@link QuerySegmentWalker} API is designed so that implementations should be able to accept
    * arbitrary queries.

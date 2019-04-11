@@ -93,7 +93,8 @@ public class DoubleStorageTest
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
       scanQueryQueryToolChest,
-      new ScanQueryEngine()
+      new ScanQueryEngine(),
+      new ScanQueryConfig()
   );
 
   private Druids.ScanQueryBuilder newTestQuery()

@@ -28,31 +28,30 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import java.util.concurrent.Callable;
-
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITWikipediaQueryTest
 {
   private static final String WIKIPEDIA_DATA_SOURCE = "wikipedia_editstream";
+  private static final String WIKI_LOOKUP = "wiki-simple";
   private static final String WIKIPEDIA_QUERIES_RESOURCE = "/queries/wikipedia_editstream_queries.json";
+  private static final String WIKIPEDIA_LOOKUP_RESOURCE = "/queries/wiki-lookup-config.json";
+
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
   @Inject
   private TestQueryHelper queryHelper;
 
   @BeforeMethod
-  public void before()
+  public void before() throws Exception
   {
+
     // ensure that wikipedia segments are loaded completely
     RetryUtil.retryUntilTrue(
-        new Callable<Boolean>()
-        {
-          @Override
-          public Boolean call()
-          {
-            return coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE);
-          }
-        }, "wikipedia segment load"
+        () -> coordinatorClient.areSegmentsLoaded(WIKIPEDIA_DATA_SOURCE), "wikipedia segment load"
+    );
+    coordinatorClient.initializeLookups(WIKIPEDIA_LOOKUP_RESOURCE);
+    RetryUtil.retryUntilTrue(
+        () -> coordinatorClient.areLookupsLoaded(WIKI_LOOKUP), "wikipedia lookup load"
     );
   }
 
@@ -61,5 +60,4 @@ public class ITWikipediaQueryTest
   {
     queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE, 2);
   }
-
 }

@@ -28,6 +28,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<String, String>
 {
@@ -46,6 +47,17 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   public KinesisIndexTaskIOConfig(
       @JsonProperty("taskGroupId") @Nullable Integer taskGroupId,
       @JsonProperty("baseSequenceName") String baseSequenceName,
+      // below three deprecated variables exist to be able to read old ioConfigs in metadata store
+      @JsonProperty("startPartitions")
+      @Nullable
+      @Deprecated SeekableStreamEndSequenceNumbers<String, String> startPartitions,
+      @JsonProperty("endPartitions")
+      @Nullable
+      @Deprecated SeekableStreamEndSequenceNumbers<String, String> endPartitions,
+      @JsonProperty("exclusiveStartSequenceNumberPartitions")
+      @Nullable
+      @Deprecated Set<String> exclusiveStartSequenceNumberPartitions,
+      // startSequenceNumbers and endSequenceNumbers must be set for new versions
       @JsonProperty("startSequenceNumbers") SeekableStreamStartSequenceNumbers<String, String> startSequenceNumbers,
       @JsonProperty("endSequenceNumbers") SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers,
       @JsonProperty("useTransaction") Boolean useTransaction,
@@ -62,17 +74,17 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     super(
         taskGroupId,
         baseSequenceName,
-        startSequenceNumbers,
-        endSequenceNumbers,
+        getStartSequenceNumbers(startSequenceNumbers, startPartitions, exclusiveStartSequenceNumberPartitions),
+        endSequenceNumbers == null ? endPartitions : endSequenceNumbers,
         useTransaction,
         minimumMessageTime,
         maximumMessageTime
     );
     Preconditions.checkArgument(
-        endSequenceNumbers.getPartitionSequenceNumberMap()
-                          .values()
-                          .stream()
-                          .noneMatch(x -> x.equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)),
+        getEndSequenceNumbers().getPartitionSequenceNumberMap()
+                               .values()
+                               .stream()
+                               .noneMatch(x -> x.equals(KinesisSequenceNumber.END_OF_SHARD_MARKER)),
         "End sequenceNumbers must not have the end of shard marker (EOS)"
     );
 
@@ -82,6 +94,101 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
+  }
+
+  public KinesisIndexTaskIOConfig(
+      int taskGroupId,
+      String baseSequenceName,
+      SeekableStreamStartSequenceNumbers<String, String> startSequenceNumbers,
+      SeekableStreamEndSequenceNumbers<String, String> endSequenceNumbers,
+      Boolean useTransaction,
+      DateTime minimumMessageTime,
+      DateTime maximumMessageTime,
+      String endpoint,
+      Integer recordsPerFetch,
+      Integer fetchDelayMillis,
+      String awsAssumedRoleArn,
+      String awsExternalId,
+      boolean deaggregate
+  )
+  {
+    this(
+        taskGroupId,
+        baseSequenceName,
+        null,
+        null,
+        null,
+        startSequenceNumbers,
+        endSequenceNumbers,
+        useTransaction,
+        minimumMessageTime,
+        maximumMessageTime,
+        endpoint,
+        recordsPerFetch,
+        fetchDelayMillis,
+        awsAssumedRoleArn,
+        awsExternalId,
+        deaggregate
+    );
+  }
+
+  private static SeekableStreamStartSequenceNumbers<String, String> getStartSequenceNumbers(
+      @Nullable SeekableStreamStartSequenceNumbers<String, String> newStartSequenceNumbers,
+      @Nullable SeekableStreamEndSequenceNumbers<String, String> oldStartSequenceNumbers,
+      @Nullable Set<String> exclusiveStartSequenceNumberPartitions
+  )
+  {
+    if (newStartSequenceNumbers == null) {
+      Preconditions.checkNotNull(
+          oldStartSequenceNumbers,
+          "Either startSequenceNumbers or startPartitions shoulnd't be null"
+      );
+
+      return new SeekableStreamStartSequenceNumbers<>(
+          oldStartSequenceNumbers.getStream(),
+          oldStartSequenceNumbers.getPartitionSequenceNumberMap(),
+          exclusiveStartSequenceNumberPartitions
+      );
+    } else {
+      return newStartSequenceNumbers;
+    }
+  }
+
+  /**
+   * This method is for compatibilty so that newer version of KinesisIndexTaskIOConfig can be read by
+   * old version of Druid. Note that this method returns end sequence numbers instead of start. This is because
+   * {@link SeekableStreamStartSequenceNumbers} didn't exist before.
+   *
+   * A SeekableStreamEndSequenceNumbers (has no exclusivity info) is returned here because the Kinesis extension
+   * previously stored exclusivity info separately in exclusiveStartSequenceNumberPartitions.
+   */
+  @JsonProperty
+  @Deprecated
+  public SeekableStreamEndSequenceNumbers<String, String> getStartPartitions()
+  {
+    final SeekableStreamStartSequenceNumbers<String, String> startSequenceNumbers = getStartSequenceNumbers();
+    return new SeekableStreamEndSequenceNumbers<>(
+        startSequenceNumbers.getStream(),
+        startSequenceNumbers.getPartitionSequenceNumberMap()
+    );
+  }
+
+  /**
+   * This method is for compatibilty so that newer version of KinesisIndexTaskIOConfig can be read by
+   * old version of Druid.
+   */
+  @JsonProperty
+  @Deprecated
+  public SeekableStreamEndSequenceNumbers<String, String> getEndPartitions()
+  {
+    return getEndSequenceNumbers();
+  }
+
+  @JsonProperty
+  @Deprecated
+  public Set<String> getExclusiveStartSequenceNumberPartitions()
+  {
+    return getStartSequenceNumbers().getExclusivePartitions();
   }
 
   @JsonProperty
