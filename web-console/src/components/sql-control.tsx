@@ -18,8 +18,7 @@
 
 import {
   Button,
-  Checkbox,
-  ControlGroup,
+  ButtonGroup,
   Intent,
   Menu,
   MenuItem,
@@ -61,6 +60,7 @@ export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
   onRun: (query: string, bypassCache: boolean, wrapQuery: boolean) => void;
   onExplain: (sqlQuery: string) => void;
+  queryElapsed: number | null;
 }
 
 export interface SqlControlState {
@@ -197,7 +197,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
   }
 
   renderExtraMenu(isRune: boolean) {
-    const { onRun, onExplain } = this.props;
+    const { onExplain } = this.props;
     const { query, autoComplete, bypassCache, wrapQuery } = this.state;
 
     return <Menu>
@@ -230,7 +230,8 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
   }
 
   render() {
-    const { query, autoComplete } = this.state;
+    const { queryElapsed } = this.props;
+    const { query, autoComplete, wrapQuery } = this.state;
     const isRune = query.trim().startsWith('{');
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
@@ -258,17 +259,21 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
         }}
       />
       <div className="buttons">
-        <ControlGroup>
+        <ButtonGroup>
           <Button
-            rightIcon={IconNames.CARET_RIGHT}
+            icon={IconNames.CARET_RIGHT}
             onClick={this.onRunClick}
-            text={isRune ? 'Rune' : 'Run'}
+            text={isRune ? 'Rune' : (wrapQuery ? 'Run with limit' : 'Run as is')}
             disabled={isRune && !validHjson(query)}
           />
           <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu(isRune)}>
             <Button icon={IconNames.MORE}/>
           </Popover>
-        </ControlGroup>
+        </ButtonGroup>
+        {
+          queryElapsed &&
+          <span className={'query-elapsed'}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
+        }
       </div>
     </div>;
   }
