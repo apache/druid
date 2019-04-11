@@ -71,7 +71,8 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       "/unified-console.html",
       "/favicon.png",
       "/console.html",
-      "/index.html"
+      "/index.html",
+      "/console-config.js"
   );
 
   private final DruidHttpClientConfig routerHttpClientConfig;
