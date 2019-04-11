@@ -84,7 +84,7 @@ Omitting these fields from your spec will result in HTTP requests with no Basic 
 
 Example with authentication fields using the DefaultPassword provider (this requires the password to be in the ingestion spec):
 
-```JSON
+```json
 {
     "type": "http",
     "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
@@ -95,7 +95,7 @@ Example with authentication fields using the DefaultPassword provider (this requ
 
 You can also use the other existing Druid PasswordProviders. Here is an example using the EnvironmentVariablePasswordProvider:
 
-```JSON
+```json
 {
     "type": "http",
     "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
