@@ -122,7 +122,12 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         if (f.value === 'all') return null;
         return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
       } else {
-        return `${JSON.stringify(f.id)} LIKE '%${f.value}%'`;
+        const filterValue = f.value;
+        if (filterValue.startsWith(`"`) && filterValue.endsWith(`"`)) {
+          const exactString = filterValue.slice(1, -1);
+          return `${JSON.stringify(f.id)} = '${exactString}'`;
+        }
+        return `${JSON.stringify(f.id)} LIKE '%${filterValue}%'`;
       }
     }).filter(Boolean);
 
@@ -175,7 +180,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           accessor: 'datasource',
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) }); }}>{value}</a>;
+            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value)}); }}>{value}</a>;
           },
           show: tableColumnSelectionHandler.showColumn('Datasource')
         },

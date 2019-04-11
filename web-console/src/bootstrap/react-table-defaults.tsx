@@ -44,7 +44,13 @@ class NoData extends React.Component {
 Object.assign(ReactTableDefaults, {
   defaultFilterMethod: (filter: Filter, row: any, column: any) => {
     const id = filter.pivotId || filter.id;
-    return row[id] !== undefined ? String(row[id]).includes(filter.value) : true;
+    const filterValue = filter.value.toLowerCase();
+    const rowValue = row[id].toLowerCase();
+    if (filterValue.startsWith(`"`) && filterValue.endsWith(`"`)) {
+      const exactString = filterValue.slice(1, -1);
+      return row[id] !== undefined ? String(rowValue) === exactString : true;
+    }
+    return row[id] !== undefined ? String(rowValue).includes(filterValue) : true;
   },
   LoadingComponent: Loader,
   loadingText: '',
