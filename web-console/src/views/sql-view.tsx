@@ -35,6 +35,12 @@ import {
 
 import './sql-view.scss';
 
+interface QueryWithFlags {
+  queryString: string;
+  bypassCache?: boolean;
+  wrapQuery?: boolean;
+}
+
 export interface SqlViewProps extends React.Props<any> {
   initSql: string | null;
 }
@@ -57,7 +63,7 @@ interface SqlQueryResult {
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
-  private sqlQueryManager: QueryManager<string, SqlQueryResult>;
+  private sqlQueryManager: QueryManager<QueryWithFlags, SqlQueryResult>;
   private explainQueryManager: QueryManager<string, any>;
 
   constructor(props: SqlViewProps, context: any) {
@@ -76,22 +82,46 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   componentDidMount(): void {
     this.sqlQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
+      processQuery: async (queryWithFlags: QueryWithFlags) => {
+        const { queryString, bypassCache, wrapQuery } = queryWithFlags;
         const startTime = new Date();
-        if (query.trim().startsWith('{')) {
+
+        if (queryString.trim().startsWith('{')) {
           // Secret way to issue a native JSON "rune" query
-          const runeQuery = Hjson.parse(query);
+          const runeQuery = Hjson.parse(queryString);
+
+          if (bypassCache) {
+            runeQuery.context = runeQuery.context || {};
+            runeQuery.context.useCache = false;
+            runeQuery.context.populateCache = false;
+          }
+
           const result = await queryDruidRune(runeQuery);
           return {
             queryResult: decodeRune(runeQuery, result),
             queryElapsed: new Date().valueOf() - startTime.valueOf()
           };
+
         } else {
-          const result = await queryDruidSql({
-            query,
+          const actualQuery = wrapQuery ?
+            `SELECT * FROM (${queryString.trim().replace(/;+$/, '')}) LIMIT 5000` :
+            queryString;
+
+          const queryPayload: Record<string, any> = {
+            query: actualQuery,
             resultFormat: 'array',
             header: true
-          });
+          };
+
+          if (wrapQuery) {
+            queryPayload.context = {
+              useCache: false,
+              populateCache: false
+            };
+          }
+
+          const result = await queryDruidSql(queryPayload);
+
           return {
             queryResult: {
               header: (result && result.length) ? result[0] : [],
@@ -178,11 +208,11 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
     return <div className="sql-view app-view">
       <SqlControl
         initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
-        onRun={q => {
-          localStorageSet(LocalStorageKeys.QUERY_KEY, q);
-          this.sqlQueryManager.runQuery(q);
+        onRun={(queryString, bypassCache, wrapQuery) => {
+          localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
+          this.sqlQueryManager.runQuery({ queryString, bypassCache, wrapQuery });
         }}
-        onExplain={(q: string) => this.getExplain(q)}
+        onExplain={this.getExplain}
         queryElapsed={queryElapsed}
       />
       {this.renderResultTable()}

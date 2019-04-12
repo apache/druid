@@ -24,6 +24,7 @@ import ReactTable, { Filter } from 'react-table';
 
 import { RuleEditor } from '../components/rule-editor';
 import { TableColumnSelection } from '../components/table-column-selection';
+import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { CompactionDialog } from '../dialogs/compaction-dialog';
 import { RetentionDialog } from '../dialogs/retention-dialog';
@@ -523,8 +524,7 @@ GROUP BY 1`);
     const { tableColumnSelectionHandler } = this;
 
     return <div className="data-sources-view app-view">
-      <div className="control-bar">
-        <div className="control-label">Datasources</div>
+      <ViewControlBar label="Datasources">
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
@@ -545,7 +545,7 @@ GROUP BY 1`);
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderDatasourceTable()}
     </div>;
   }

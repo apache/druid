@@ -26,6 +26,7 @@ import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
 import { TableColumnSelection } from '../components/table-column-selection';
+import { ViewControlBar } from '../components/view-control-bar';
 import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
@@ -285,8 +286,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     const { tableColumnSelectionHandler } = this;
 
     return <div className="segments-view app-view">
-      <div className="control-bar">
-        <div className="control-label">Segments</div>
+      <ViewControlBar label="Segments">
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
@@ -302,7 +302,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderSegmentsTable()}
     </div>;
   }

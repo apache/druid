@@ -16,46 +16,25 @@
  * limitations under the License.
  */
 
+import * as React from 'react';
 
-.sql-control {
+import './view-control-bar.scss';
 
-  .ace_scroller {
-    background-color: #232C35;
-  }
-
-  .ace_gutter-layer {
-    background-color: #27313c;
-  }
-
-  .buttons {
-    position: relative;
-
-    button{
-      margin-right: 15px;
-    }
-
-    .query-elapsed {
-      position: absolute;
-      right: 10px;
-    }
-  }
-
+export interface ViewControlBarProps {
+  label: string;
 }
 
-.ace_tooltip {
-  padding: 10px;
-  background-color: #333D47;
-  color: #C1CCD5;
-  width: 500px;
-  display: block;
-  height: auto;
-  white-space: initial;
-
-  hr {
-    margin: 10px 0;
+export class ViewControlBar extends React.Component<ViewControlBarProps, {}> {
+  constructor(props: ViewControlBarProps) {
+    super(props);
   }
 
-  .function-doc-name {
-    font-size: 18px;
+  render() {
+    const { label, children } = this.props;
+
+    return <div className="view-control-bar">
+      <div className="control-label">{label}</div>
+      {children}
+    </div>;
   }
 }
