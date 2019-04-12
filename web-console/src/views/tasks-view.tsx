@@ -87,6 +87,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   private taskQueryManager: QueryManager<string, any[]>;
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
+  private statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -491,7 +492,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Status',
             id: 'status',
             width: 110,
-            accessor: (row) => `${row.rank}_${row.created_time}_${row.status}`,
+            accessor: 'status',
             Cell: row => {
               if (row.aggregated) return '';
               const { status, location } = row.original;
@@ -518,6 +519,10 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row._original[column.id]);
               const previewCount = countBy(previewValues);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
+            },
+            sortMethod: (status1: string, status2: string) => {
+              const statusRanking: any = this.statusRanking;
+              return statusRanking[status1] - statusRanking[status2];
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },

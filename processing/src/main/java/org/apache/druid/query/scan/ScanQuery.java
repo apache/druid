@@ -256,6 +256,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public Ordering<ScanResultValue> getResultOrdering()
   {
+    if (order == Order.NONE) {
+      return Ordering.natural();
+    }
     return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
   }
 
