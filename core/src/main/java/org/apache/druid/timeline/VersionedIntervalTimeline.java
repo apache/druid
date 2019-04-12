@@ -109,6 +109,15 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     );
   }
 
+  public static Map<String, VersionedIntervalTimeline<String, DataSegment>> buildTimelines(Iterable<DataSegment> segments)
+  {
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
+    segments.forEach(segment -> timelines
+        .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
+        .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)));
+    return timelines;
+  }
+
   @VisibleForTesting
   public Map<Interval, TreeMap<VersionType, TimelineEntry>> getAllTimelineEntries()
   {

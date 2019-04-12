@@ -73,8 +73,9 @@ public class MetadataSegmentView
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
-  // Use ConcurrentSkipListMap so that the order of segments is deterministic and
-  // sys.segments queries return the segments in sorted order based on segmentId
+  /**
+   * Use {@link ConcurrentSkipListMap} so that the order of segments is deterministic and sys.segments queries return the segments in sorted order based on segmentId
+   */
   @Nullable
   private final ConcurrentSkipListMap<SegmentWithOvershadowedStatus, DateTime> publishedSegments;
   private final ScheduledExecutorService scheduledExec;

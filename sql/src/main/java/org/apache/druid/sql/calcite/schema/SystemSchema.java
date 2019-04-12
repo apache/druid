@@ -93,8 +93,9 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
 
-  private static final long AVAILABLE_IS_OVERSHADOWED_VALUE = 0L;
-  private static final long PUBLISHED_IS_PUBLISHED_VALUE = 1L;
+  private static final long IS_OVERSHADOWED_FALSE = 0L;
+  private static final long IS_OVERSHADOWED_TRUE = 1L;
+  private static final long IS_PUBLISHED_TRUE = 1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -265,10 +266,10 @@ public class SystemSchema extends AbstractSchema
                   Long.valueOf(segment.getShardSpec().getPartitionNum()),
                   numReplicas,
                   numRows,
-                  PUBLISHED_IS_PUBLISHED_VALUE, //is_published is true for published segments
+                  IS_PUBLISHED_TRUE, //is_published is true for published segments
                   isAvailable,
                   isRealtime,
-                  val.isOvershadowed() ? 1L : 0L,
+                  val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
                   jsonMapper.writeValueAsString(val)
               };
             }
@@ -302,7 +303,7 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().isPublished(),
                   val.getValue().isAvailable(),
                   val.getValue().isRealtime(),
-                  AVAILABLE_IS_OVERSHADOWED_VALUE,
+                  IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
                   jsonMapper.writeValueAsString(val.getKey())
               };
             }

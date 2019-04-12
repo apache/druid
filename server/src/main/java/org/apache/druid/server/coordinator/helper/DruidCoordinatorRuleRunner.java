@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.helper;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -36,7 +35,6 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -141,13 +139,8 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
 
   private Set<DataSegment> determineOvershadowedSegments(DruidCoordinatorRuntimeParams params)
   {
-    Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
-    for (DataSegment segment : params.getAvailableSegments()) {
-      timelines
-          .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
-          .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
-    }
-
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline.buildTimelines(
+        params.getAvailableSegments());
     Set<DataSegment> overshadowed = new HashSet<>();
     for (VersionedIntervalTimeline<String, DataSegment> timeline : timelines.values()) {
       for (TimelineObjectHolder<String, DataSegment> holder : timeline.findOvershadowed()) {

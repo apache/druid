@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -54,7 +53,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -177,24 +175,20 @@ public class MetadataResource
 
     if (includeOvershadowedStatus != null) {
       final Set<SegmentId> overshadowedSegments = findOvershadowedSegments(druidDataSources);
-      //transform DataSegment to SegmentWithOvershadowedStatus objects
-      final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments
-          .map(
-              segment -> new SegmentWithOvershadowedStatus(
-                  segment,
-                  overshadowedSegments.contains(segment.getId())
-              )).collect(Collectors.toList()).stream();
+      final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments.map(segment -> new SegmentWithOvershadowedStatus(
+          segment,
+          overshadowedSegments.contains(segment.getId())
+      ));
 
       final Function<SegmentWithOvershadowedStatus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
-      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments =
-          AuthorizationUtils.filterAuthorizedResources(
-              req,
-              segmentsWithOvershadowedStatus::iterator,
-              raGenerator,
-              authorizerMapper
-          );
+      final Iterable<SegmentWithOvershadowedStatus> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+          req,
+          segmentsWithOvershadowedStatus::iterator,
+          raGenerator,
+          authorizerMapper
+      );
       Response.ResponseBuilder builder = Response.status(Response.Status.OK);
       return builder.entity(authorizedSegments).build();
     } else {
@@ -202,8 +196,12 @@ public class MetadataResource
       final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
 
-      final Iterable<DataSegment> authorizedSegments =
-          AuthorizationUtils.filterAuthorizedResources(req, metadataSegments::iterator, raGenerator, authorizerMapper);
+      final Iterable<DataSegment> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
+          req,
+          metadataSegments::iterator,
+          raGenerator,
+          authorizerMapper
+      );
 
       Response.ResponseBuilder builder = Response.status(Response.Status.OK);
       return builder.entity(authorizedSegments).build();
@@ -211,7 +209,7 @@ public class MetadataResource
   }
 
   /**
-   * find fully overshadowed segments
+   * This method finds the fully overshadowed segments from the given druidDataSources
    *
    * @param druidDataSources
    *
@@ -222,17 +220,16 @@ public class MetadataResource
     final Stream<DataSegment> segmentStream = druidDataSources
         .stream()
         .flatMap(t -> t.getSegments().stream());
-    final Set<DataSegment> usedSegments = segmentStream.collect(Collectors.toSet());
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = new HashMap<>();
-    usedSegments.forEach(segment -> timelines
-        .computeIfAbsent(segment.getDataSource(), dataSource -> new VersionedIntervalTimeline<>(Ordering.natural()))
-        .add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment)));
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline.buildTimelines(
+        () -> segmentStream.iterator());
 
     final Set<SegmentId> overshadowedSegments = new HashSet<>();
-    for (DataSegment dataSegment : usedSegments) {
-      final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
-      if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
-        overshadowedSegments.add(dataSegment.getId());
+    for (ImmutableDruidDataSource dataSource : druidDataSources) {
+      for (DataSegment dataSegment : dataSource.getSegments()) {
+        final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
+        if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
+          overshadowedSegments.add(dataSegment.getId());
+        }
       }
     }
     return overshadowedSegments;
