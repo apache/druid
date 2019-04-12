@@ -523,7 +523,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             },
             sortMethod: (d1, d2) => {
               const statusRanking: any = this.statusRanking;
-              return statusRanking[d1.status] - statusRanking[d2.status] || Date.parse(d1.created_time) - Date.parse(d2.created_time);
+              return statusRanking[d1.status] - statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
