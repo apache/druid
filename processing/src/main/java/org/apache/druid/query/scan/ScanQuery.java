@@ -153,7 +153,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     if (order != Order.NONE) {
       Preconditions.checkArgument(
           (columns.contains(ColumnHolder.TIME_COLUMN_NAME)),
-          "The timestamp column must be selected if the results are time-ordered."
+          "The __time column must be selected if the results are time-ordered."
       );
     }
     this.maxRowsQueuedForOrdering = validateAndGetMaxRowsQueuedForOrdering();
