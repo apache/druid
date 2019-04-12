@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
