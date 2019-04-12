@@ -25,6 +25,7 @@ import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
 import { TableColumnSelection } from '../components/table-column-selection';
+import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { SpecDialog } from '../dialogs/spec-dialog';
 import { AppToaster } from '../singletons/toaster';
@@ -570,8 +571,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
 
     return <div className="tasks-view app-view">
-      <div className="control-bar">
-        <div className="control-label">Supervisors</div>
+      <ViewControlBar label="Supervisors">
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
@@ -587,13 +587,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={supervisorTableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderSupervisorTable()}
 
       <div className="control-separator"/>
 
-      <div className="control-bar">
-        <div className="control-label">Tasks</div>
+      <ViewControlBar label="Tasks">
         <Label>Group by</Label>
         <ButtonGroup>
           <Button active={groupTasksBy === null} onClick={() => this.setState({ groupTasksBy: null })}>None</Button>
@@ -621,7 +620,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={taskTableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderTaskTable()}
       { supervisorSpecDialogOpen ? <SpecDialog
         onClose={() => this.setState({ supervisorSpecDialogOpen: false })}

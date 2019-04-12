@@ -16,41 +16,25 @@
  * limitations under the License.
  */
 
-@import "../variables";
+import * as React from 'react';
 
-.servers-view {
-  padding-bottom: 50px;
+import './view-control-bar.scss';
 
-  .view-control-bar,
-  .ReactTable {
-    margin-bottom: $standard-padding;
+export interface ViewControlBarProps {
+  label: string;
+}
+
+export class ViewControlBar extends React.Component<ViewControlBarProps, {}> {
+  constructor(props: ViewControlBarProps) {
+    super(props);
   }
 
-  ul {
-    line-height: 20px;
-  }
+  render() {
+    const { label, children } = this.props;
 
-  .fill-indicator {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background-color: #dadada;
-    border-radius: 2px;
-
-    .bar {
-      height: 100%;
-      background-color: #85cc00;
-      border-radius: 2px;
-      transition: all .2s ease-out;
-    }
-
-    .label {
-      position: absolute;
-      height: 100%;
-      width: 100%;
-      text-align: center;
-      top: 0;
-      color: #421890;
-    }
+    return <div className="view-control-bar">
+      <div className="control-label">{label}</div>
+      {children}
+    </div>;
   }
 }
