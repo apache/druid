@@ -35,6 +35,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -117,37 +118,41 @@ public class ScanQueryTest
   @Test
   public void testValidScanQueryInitialization()
   {
-    Druids.newScanQueryBuilder()
-          .order(ScanQuery.Order.NONE)
-          .columns(ImmutableList.of("not time"))
-          .dataSource("source")
-          .intervals(intervalSpec)
-          .build();
+    List<ScanQuery.Order> nonOrderedOrders = Arrays.asList(null, ScanQuery.Order.NONE);
 
-    Druids.newScanQueryBuilder()
-          .order(ScanQuery.Order.NONE)
-          .dataSource("source")
-          .intervals(intervalSpec)
-          .build();
+    for (ScanQuery.Order order : nonOrderedOrders) {
+      Druids.newScanQueryBuilder()
+            .order(order)
+            .columns(ImmutableList.of("not time"))
+            .dataSource("source")
+            .intervals(intervalSpec)
+            .build();
+
+      Druids.newScanQueryBuilder()
+            .order(order)
+            .dataSource("source")
+            .intervals(intervalSpec)
+            .build();
 
 
-    Druids.newScanQueryBuilder()
-          .order(ScanQuery.Order.NONE)
-          .columns(ImmutableList.of())
-          .dataSource("source")
-          .intervals(intervalSpec)
-          .build();
+      Druids.newScanQueryBuilder()
+            .order(order)
+            .columns(ImmutableList.of())
+            .dataSource("source")
+            .intervals(intervalSpec)
+            .build();
 
-    Druids.newScanQueryBuilder()
-          .order(ScanQuery.Order.NONE)
-          .columns(ImmutableList.of("__time"))
-          .dataSource("source")
-          .intervals(intervalSpec)
-          .build();
+      Druids.newScanQueryBuilder()
+            .order(order)
+            .columns(ImmutableList.of("__time"))
+            .dataSource("source")
+            .intervals(intervalSpec)
+            .build();
+    }
 
-    Set<ScanQuery.Order> orders = ImmutableSet.of(ScanQuery.Order.ASCENDING, ScanQuery.Order.DESCENDING);
+    Set<ScanQuery.Order> orderedOrders = ImmutableSet.of(ScanQuery.Order.ASCENDING, ScanQuery.Order.DESCENDING);
 
-    for (ScanQuery.Order order : orders) {
+    for (ScanQuery.Order order : orderedOrders) {
       Druids.newScanQueryBuilder()
             .order(order)
             .columns((List<String>) null)
