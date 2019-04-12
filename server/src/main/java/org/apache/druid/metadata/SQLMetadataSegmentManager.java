@@ -105,7 +105,9 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final SQLMetadataConnector connector;
 
   // Volatile since this reference is reassigned in "poll" and then read from in other threads.
-  // Starts null so we can differentiate "never polled" (null) from "polled, but empty" (empty map)
+  // Starts null so we can differentiate "never polled" (null) from "polled, but empty" (empty map).
+  // Note that this is not simply a lazy-initialized variable: it starts off as null, and may transition between
+  // null and nonnull multiple times as stop() and start() are called.
   @Nullable
   private volatile ConcurrentHashMap<String, DruidDataSource> dataSources = null;
 
