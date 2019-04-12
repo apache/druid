@@ -521,9 +521,10 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const previewCount = countBy(previewValues);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
             },
-            sortMethod: (d1, d2) => {
+            sortMethod: (d1, d2, desc) => {
               const statusRanking: any = this.statusRanking;
-              return statusRanking[d1.status] - statusRanking[d2.status] || Date.parse(d1.created_time) - Date.parse(d2.created_time);
+              const timeDifference = Date.parse(d1.created_time) - Date.parse(d2.created_time);
+              return statusRanking[d1.status] - statusRanking[d2.status] || (desc ? timeDifference : -timeDifference);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
