@@ -16,7 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, Checkbox, Classes, FormGroup, Intent, Menu, Popover, Position } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Menu,
+  MenuItem,
+  Popover,
+  Position
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as ace from 'brace';
@@ -25,6 +33,7 @@ import 'brace/mode/hjson';
 import 'brace/mode/sql';
 import 'brace/theme/solarized_dark';
 import * as classNames from 'classnames';
+import * as Hjson from 'hjson';
 import * as React from 'react';
 import AceEditor from 'react-ace';
 import * as ReactDOMServer from 'react-dom/server';
@@ -32,21 +41,34 @@ import * as ReactDOMServer from 'react-dom/server';
 import { SQLFunctionDoc } from '../../lib/sql-function-doc';
 import { AppToaster } from '../singletons/toaster';
 
+import { MenuCheckbox } from './menu-checkbox';
+
 import './sql-control.scss';
+
+function validHjson(query: string) {
+  try {
+    Hjson.parse(query);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const langTools = ace.acequire('ace/ext/language_tools');
 
 export interface SqlControlProps extends React.Props<any> {
   initSql: string | null;
-  onRun: (query: string) => void;
-  onExplain: (query: string) => void;
+  onRun: (query: string, bypassCache: boolean, wrapQuery: boolean) => void;
+  onExplain: (sqlQuery: string) => void;
   queryElapsed: number | null;
 }
 
 export interface SqlControlState {
   query: string;
-  autoCompleteOn: boolean;
+  autoComplete: boolean;
   autoCompleteLoading: boolean;
+  bypassCache: boolean;
+  wrapQuery: boolean;
 }
 
 export class SqlControl extends React.Component<SqlControlProps, SqlControlState> {
@@ -54,8 +76,10 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     super(props, context);
     this.state = {
       query: props.initSql || '',
-      autoCompleteOn: true,
-      autoCompleteLoading: false
+      autoComplete: true,
+      autoCompleteLoading: false,
+      bypassCache: false,
+      wrapQuery: true
     };
   }
 
@@ -166,29 +190,49 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     });
   }
 
-  render() {
-    const { onRun, onExplain, queryElapsed } = this.props;
-    const { query, autoCompleteOn } = this.state;
+  private onRunClick = () => {
+    const { onRun } = this.props;
+    const { query, bypassCache, wrapQuery } = this.state;
+    onRun(query, bypassCache, wrapQuery);
+  }
 
-    const isRune = query.trim().startsWith('{');
+  renderExtraMenu(isRune: boolean) {
+    const { onExplain } = this.props;
+    const { query, autoComplete, bypassCache, wrapQuery } = this.state;
 
-    const SqlControlPopover = <Popover position={Position.BOTTOM_LEFT}>
-        <Button minimal icon={IconNames.MORE}/>
-        <div className="sql-control-popover">
-          <Checkbox
-            checked={isRune ? false : autoCompleteOn}
-            label="Auto complete"
-            onChange={() => this.setState({autoCompleteOn: !autoCompleteOn})}
-          />
-          <Button
+    return <Menu>
+      {
+        !isRune &&
+        <>
+          <MenuItem
             icon={IconNames.CLEAN}
-            className={Classes.POPOVER_DISMISS}
             text="Explain"
             onClick={() => onExplain(query)}
-            minimal
           />
-        </div>
-      </Popover>;
+          <MenuCheckbox
+            checked={autoComplete}
+            label="Auto complete"
+            onChange={() => this.setState({autoComplete: !autoComplete})}
+          />
+          <MenuCheckbox
+            checked={wrapQuery}
+            label="Wrap query with limit"
+            onChange={() => this.setState({wrapQuery: !wrapQuery})}
+          />
+        </>
+      }
+      <MenuCheckbox
+        checked={bypassCache}
+        label="Bypass cache"
+        onChange={() => this.setState({bypassCache: !bypassCache})}
+      />
+    </Menu>;
+  }
+
+  render() {
+    const { queryElapsed } = this.props;
+    const { query, autoComplete, wrapQuery } = this.state;
+    const isRune = query.trim().startsWith('{');
 
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return <div className="sql-control">
@@ -208,17 +252,24 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
           $blockScrolling: Infinity
         }}
         setOptions={{
-          enableBasicAutocompletion: isRune ? false : autoCompleteOn,
-          enableLiveAutocompletion: isRune ? false : autoCompleteOn,
+          enableBasicAutocompletion: isRune ? false : autoComplete,
+          enableLiveAutocompletion: isRune ? false : autoComplete,
           showLineNumbers: true,
           tabSize: 2
         }}
       />
       <div className="buttons">
-        <Button rightIcon={IconNames.CARET_RIGHT} onClick={() => onRun(query)}>
-          {isRune ? 'Rune' : 'Run'}
-        </Button>
-        {!isRune && SqlControlPopover}
+        <ButtonGroup>
+          <Button
+            icon={IconNames.CARET_RIGHT}
+            onClick={this.onRunClick}
+            text={isRune ? 'Rune' : (wrapQuery ? 'Run with limit' : 'Run as is')}
+            disabled={isRune && !validHjson(query)}
+          />
+          <Popover position={Position.BOTTOM_LEFT} content={this.renderExtraMenu(isRune)}>
+            <Button icon={IconNames.MORE}/>
+          </Popover>
+        </ButtonGroup>
         {
           queryElapsed &&
           <span className={'query-elapsed'}> Last query took {(queryElapsed / 1000).toFixed(2)} seconds</span>
