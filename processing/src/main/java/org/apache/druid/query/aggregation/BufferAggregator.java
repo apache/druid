@@ -76,6 +76,9 @@ public interface BufferAggregator extends HotLoopCallee
    *
    * <b>The object returned must not have any references to the given buffer (i.e., make a copy).</b>
    *
+   * <b>If the corresponding {@link AggregatorFactory#combine(Object, Object)} method for this aggregator
+   * expects its inputs to be mutable, then the object returned by this method must be mutable.</b>
+   *
    * @param buf byte buffer storing the byte array representation of the aggregate
    * @param position offset within the byte buffer at which the aggregate value is stored
    * @return the Object representation of the aggregate
