@@ -74,7 +74,11 @@ public interface BufferAggregator extends HotLoopCallee
    *
    * <b>Implementations must not change the position, limit or mark of the given buffer.</b>
    *
-   * <b>The object returned must not have any references to the given buffer (i.e., make a copy).</b>
+   * <b>
+   * The object returned must not have any references to the given buffer (i.e., make a copy), since the
+   * underlying buffer is a shared resource and may be given to another processing thread
+   * while the objects returned by this aggregator are still in use.
+   * </b>
    *
    * <b>If the corresponding {@link AggregatorFactory#combine(Object, Object)} method for this aggregator
    * expects its inputs to be mutable, then the object returned by this method must be mutable.</b>
