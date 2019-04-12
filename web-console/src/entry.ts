@@ -30,17 +30,26 @@ const container = document.getElementsByClassName('app-container')[0];
 if (!container) throw new Error('container not found');
 
 interface ConsoleConfig {
+  title?: string;
   hideLegacy?: boolean;
   baseURL?: string;
+  customHeaderName?: string;
+  customHeaderValue?: string;
 }
 
 const consoleConfig: ConsoleConfig = (window as any).consoleConfig;
+if (typeof consoleConfig.title === 'string') {
+  window.document.title = consoleConfig.title;
+}
+
 ReactDOM.render(
   React.createElement(
     ConsoleApplication,
     {
       hideLegacy: Boolean(consoleConfig.hideLegacy),
-      baseURL: consoleConfig.baseURL
+      baseURL: consoleConfig.baseURL,
+      customHeaderName: consoleConfig.customHeaderName,
+      customHeaderValue: consoleConfig.customHeaderValue
     }
   ) as any,
   container

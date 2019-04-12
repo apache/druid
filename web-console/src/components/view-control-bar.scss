@@ -16,46 +16,30 @@
  * limitations under the License.
  */
 
+.view-control-bar {
+  height: 30px;
+  white-space: nowrap;
 
-.sql-control {
-
-  .ace_scroller {
-    background-color: #232C35;
+  & > * {
+    display: inline-block;
+    margin-right: 15px;
+    vertical-align: bottom;
   }
 
-  .ace_gutter-layer {
-    background-color: #27313c;
+  .control-label {
+    font-size: 30px;
+    line-height: 30px;
+    cursor: default;
+    margin-right: 20px;
   }
 
-  .buttons {
-    position: relative;
-
-    button{
-      margin-right: 15px;
-    }
-
-    .query-elapsed {
-      position: absolute;
-      right: 10px;
-    }
+  label.bp3-control,
+  label.bp3-label {
+    display: inline-block;
+    margin-bottom: 8px;
   }
 
-}
-
-.ace_tooltip {
-  padding: 10px;
-  background-color: #333D47;
-  color: #C1CCD5;
-  width: 500px;
-  display: block;
-  height: auto;
-  white-space: initial;
-
-  hr {
-    margin: 10px 0;
-  }
-
-  .function-doc-name {
-    font-size: 18px;
+  .table-column-selection {
+    margin-right: 0;
   }
 }

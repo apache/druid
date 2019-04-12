@@ -16,46 +16,16 @@
  * limitations under the License.
  */
 
+import { Checkbox, ICheckboxProps } from '@blueprintjs/core';
+import * as React from 'react';
 
-.sql-control {
+import './menu-checkbox.scss';
 
-  .ace_scroller {
-    background-color: #232C35;
-  }
+export class MenuCheckbox extends React.Component<ICheckboxProps, {}> {
 
-  .ace_gutter-layer {
-    background-color: #27313c;
-  }
-
-  .buttons {
-    position: relative;
-
-    button{
-      margin-right: 15px;
-    }
-
-    .query-elapsed {
-      position: absolute;
-      right: 10px;
-    }
-  }
-
-}
-
-.ace_tooltip {
-  padding: 10px;
-  background-color: #333D47;
-  color: #C1CCD5;
-  width: 500px;
-  display: block;
-  height: auto;
-  white-space: initial;
-
-  hr {
-    margin: 10px 0;
-  }
-
-  .function-doc-name {
-    font-size: 18px;
+  render() {
+    return <li className="menu-checkbox">
+      <Checkbox {...this.props}/>
+    </li>;
   }
 }

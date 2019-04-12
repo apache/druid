@@ -133,8 +133,8 @@ public class SQLMetadataSegmentManagerTest
         ImmutableSet.copyOf(manager.getDataSource("wikipedia").getSegments())
     );
     Assert.assertEquals(
-                        ImmutableSet.of(segment1, segment2),
-                        ImmutableSet.copyOf(manager.iterateAllSegments())
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(manager.iterateAllSegments())
     );
   }
 
