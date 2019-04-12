@@ -16,41 +16,30 @@
  * limitations under the License.
  */
 
-@import "../variables";
+.view-control-bar {
+  height: 30px;
+  white-space: nowrap;
 
-.servers-view {
-  padding-bottom: 50px;
-
-  .view-control-bar,
-  .ReactTable {
-    margin-bottom: $standard-padding;
+  & > * {
+    display: inline-block;
+    margin-right: 15px;
+    vertical-align: bottom;
   }
 
-  ul {
-    line-height: 20px;
+  .control-label {
+    font-size: 30px;
+    line-height: 30px;
+    cursor: default;
+    margin-right: 20px;
   }
 
-  .fill-indicator {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background-color: #dadada;
-    border-radius: 2px;
+  label.bp3-control,
+  label.bp3-label {
+    display: inline-block;
+    margin-bottom: 8px;
+  }
 
-    .bar {
-      height: 100%;
-      background-color: #85cc00;
-      border-radius: 2px;
-      transition: all .2s ease-out;
-    }
-
-    .label {
-      position: absolute;
-      height: 100%;
-      width: 100%;
-      text-align: center;
-      top: 0;
-      color: #421890;
-    }
+  .table-column-selection {
+    margin-right: 0;
   }
 }
