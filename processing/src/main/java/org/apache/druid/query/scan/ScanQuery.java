@@ -256,7 +256,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public Ordering<ScanResultValue> getResultOrdering()
   {
-    return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
+    if (order == Order.NONE) {
+      return Ordering.natural();
+    } else {
+      return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
+    }
   }
 
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)
