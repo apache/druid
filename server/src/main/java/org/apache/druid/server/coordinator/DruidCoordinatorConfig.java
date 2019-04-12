@@ -87,18 +87,6 @@ public abstract class DruidCoordinatorConfig
     return 1;
   }
 
-  @Config("druid.coordinator.curator.create.zknode.batchSize")
-  public int getCuratorCreateZkNodeBatchSize()
-  {
-    return 5000;
-  }
-
-  @Config("druid.coordinator.curator.create.zknode.repeatDelay")
-  public Duration getCuratorCreateZkNodesRepeatDelay()
-  {
-    return Duration.millis(60000);
-  }
-
   @Config("druid.coordinator.loadqueuepeon.http.repeatDelay")
   public Duration getHttpLoadQueuePeonRepeatDelay()
   {

@@ -32,7 +32,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorKillDurationToRetain;
   private final Duration getLoadQueuePeonRepeatDelay;
   private final int coordinatorKillMaxSegments;
-  private final Duration curatorCreateZkNodesRepeatDelay;
 
   private final String consoleStatic;
 
@@ -60,7 +59,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.consoleStatic = consoleStatic;
     this.getLoadQueuePeonRepeatDelay = getLoadQueuePeonRepeatDelay;
-    this.curatorCreateZkNodesRepeatDelay = CuratorCreateZkNodesRepeatDelay;
   }
 
   @Override
@@ -111,15 +109,10 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     return consoleStatic;
   }
 
-  @Override public Duration getLoadQueuePeonRepeatDelay()
+  @Override
+  public Duration getLoadQueuePeonRepeatDelay()
   {
     return getLoadQueuePeonRepeatDelay;
-  }
-
-  @Override
-  public Duration getCuratorCreateZkNodesRepeatDelay()
-  {
-    return curatorCreateZkNodesRepeatDelay;
   }
 
 }

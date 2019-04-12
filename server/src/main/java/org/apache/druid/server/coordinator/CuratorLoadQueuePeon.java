@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.utils.ZKPaths;
@@ -46,7 +45,6 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -84,8 +82,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
 
-  private final LinkedBlockingQueue<SegmentHolder> segmentProcessingQueue;
-
   CuratorLoadQueuePeon(
       CuratorFramework curator,
       String basePath,
@@ -102,15 +98,12 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     this.processingExecutor = processingExecutor;
     this.config = config;
     // Threadpool with daemon threads running scheduled tasks that monitor whether
-    // the zk nodes created for segment processing are deleted after a certain period
-    // determined by config.getLoadTimeoutDelay()
+    // the zk nodes created for segment processing are removed
     this.monitorNodeRemovedExecutor =
         Executors.newScheduledThreadPool(
             config.getNumZookeeperMonitorThreads(),
             Execs.makeThreadFactory("LoadQueuePeon-NodeRemovedMonitor--%d")
         );
-    Preconditions.checkArgument(config.getCuratorCreateZkNodeBatchSize() > 0);
-    this.segmentProcessingQueue = new LinkedBlockingQueue();
   }
 
   @JsonProperty
@@ -167,7 +160,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     queuedSize.addAndGet(segment.getSize());
     SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
     segmentsToLoad.put(segment, segmentHolder);
-    segmentProcessingQueue.offer(segmentHolder);
+    processingExecutor.submit(new SegmentChangeProcessor(segmentHolder));
   }
 
   @Override
@@ -186,7 +179,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getId());
     SegmentHolder segmentHolder = new SegmentHolder(segment, DROP, Collections.singletonList(callback));
     segmentsToDrop.put(segment, segmentHolder);
-    segmentProcessingQueue.offer(segmentHolder);
+    processingExecutor.submit(new SegmentChangeProcessor(segmentHolder));
   }
 
   @Override
@@ -203,100 +196,87 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   private class SegmentChangeProcessor implements Runnable
   {
+    private final SegmentHolder segmentHolder;
+
+    private SegmentChangeProcessor(SegmentHolder segmentHolder)
+    {
+      this.segmentHolder = segmentHolder;
+    }
+
     @Override
     public void run()
     {
       try {
-        int numProcessed = 0;
-        int batchSize = config.getCuratorCreateZkNodeBatchSize();
-        while (numProcessed++ < batchSize && !segmentProcessingQueue.isEmpty()) {
-          // Instead of calling poll for every element, drain the batch to a list.
-          List<SegmentHolder> batch = new ArrayList<>(batchSize);
-          segmentProcessingQueue.drainTo(batch, batchSize);
-          for (SegmentHolder s : batch) {
-            processSegmentChangeRequest(s);
-          }
-        }
-      }
-      catch (Throwable e) {
-        // Swallow all errors so that the executor thread doesn't die
-        log.error(e, "Throwable caught and ignored when processing segments from the queue");
-      }
-    }
-  }
+        final String path = ZKPaths.makePath(basePath, segmentHolder.getSegmentIdentifier());
+        final byte[] payload = jsonMapper.writeValueAsBytes(segmentHolder.getChangeRequest());
+        curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
+        log.debug(
+            "ZKNode created for server to [%s] %s [%s]",
+            basePath,
+            segmentHolder.getType() == LOAD ? "load" : "drop",
+            segmentHolder.getSegmentIdentifier()
+        );
+        final ScheduledFuture<?> future = monitorNodeRemovedExecutor.schedule(
+            () -> {
+              try {
+                if (curator.checkExists().forPath(path) != null) {
+                  failAssign(segmentHolder, new ISE("%s was never removed! Failing this operation!", path));
+                } else {
+                  log.debug("%s detected to be removed. ", path);
+                }
+              }
+              catch (Exception e) {
+                failAssign(segmentHolder, e);
+              }
+            },
+            config.getLoadTimeoutDelay().getMillis(),
+            TimeUnit.MILLISECONDS
+        );
 
-  private void processSegmentChangeRequest(SegmentHolder segmentHolder)
-  {
-    try {
-      final String path = ZKPaths.makePath(basePath, segmentHolder.getSegmentIdentifier());
-      final byte[] payload = jsonMapper.writeValueAsBytes(segmentHolder.getChangeRequest());
-      curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, payload);
-      log.debug(
-          "ZKNode created for server to [%s] %s [%s]",
-          basePath,
-          segmentHolder.getType() == LOAD ? "load" : "drop",
-          segmentHolder.getSegmentIdentifier()
-      );
-      final ScheduledFuture<?> future = monitorNodeRemovedExecutor.schedule(
-          () -> {
-            try {
-              if (curator.checkExists().forPath(path) != null) {
-                failAssign(segmentHolder, new ISE("%s was never removed! Failing this operation!", path));
-              } else {
-                log.debug("%s detected to be removed. ", path);
+        final Stat stat = curator.checkExists().usingWatcher(
+            (CuratorWatcher) watchedEvent -> {
+              switch (watchedEvent.getType()) {
+                case NodeDeleted:
+                  // Cancel the check node deleted task since we have already
+                  // been notified by the zk watcher
+                  future.cancel(true);
+                  entryRemoved(segmentHolder, watchedEvent.getPath());
+                  break;
+                default:
+                  // do nothing
               }
             }
-            catch (Exception e) {
-              failAssign(segmentHolder, e);
-            }
-          },
-          config.getLoadTimeoutDelay().getMillis(),
-          TimeUnit.MILLISECONDS
-      );
+        ).forPath(path);
 
-      final Stat stat = curator.checkExists().usingWatcher(
-          (CuratorWatcher) watchedEvent -> {
-            switch (watchedEvent.getType()) {
-              case NodeDeleted:
-                // Cancel the check node deleted task since we have already
-                // been notified by the zk watcher
-                future.cancel(true);
-                entryRemoved(segmentHolder, watchedEvent.getPath());
-                break;
-              default:
-                // do nothing
-            }
-          }
-      ).forPath(path);
+        if (stat == null) {
+          final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
 
-      if (stat == null) {
-        final byte[] noopPayload = jsonMapper.writeValueAsBytes(new SegmentChangeRequestNoop());
-
-        // Create a node and then delete it to remove the registered watcher.  This is a work-around for
-        // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
-        // that happens for that node.  If no events happen, the watcher stays registered foreverz.
-        // Couple that with the fact that you cannot set a watcher when you create a node, but what we
-        // want is to create a node and then watch for it to get deleted.  The solution is that you *can*
-        // set a watcher when you check to see if it exists so, we first create the node and then set a
-        // watcher on its existence.  However, if already does not exist by the time the existence check
-        // returns, then the watcher that was set will never fire (nobody will ever create the node
-        // again) and thus lead to a slow, but real, memory leak.  So, we create another node to cause
-        // that watcher to fire and delete it right away.
-        //
-        // We do not create the existence watcher first, because then it will fire when we create the
-        // node and we'll have the same race when trying to refresh that watcher.
-        curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
-        entryRemoved(segmentHolder, path);
+          // Create a node and then delete it to remove the registered watcher.  This is a work-around for
+          // a zookeeper race condition.  Specifically, when you set a watcher, it fires on the next event
+          // that happens for that node.  If no events happen, the watcher stays registered foreverz.
+          // Couple that with the fact that you cannot set a watcher when you create a node, but what we
+          // want is to create a node and then watch for it to get deleted.  The solution is that you *can*
+          // set a watcher when you check to see if it exists so, we first create the node and then set a
+          // watcher on its existence.  However, if already does not exist by the time the existence check
+          // returns, then the watcher that was set will never fire (nobody will ever create the node
+          // again) and thus lead to a slow, but real, memory leak.  So, we create another node to cause
+          // that watcher to fire and delete it right away.
+          //
+          // We do not create the existence watcher first, because then it will fire when we create the
+          // node and we'll have the same race when trying to refresh that watcher.
+          curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, noopPayload);
+          entryRemoved(segmentHolder, path);
+        }
       }
-    }
-    catch (KeeperException.NodeExistsException ne) {
-      // This is expected when historicals haven't yet picked up processing this segment and coordinator
-      // tries reassigning it to the same node.
-      log.warn(ne, "ZK node already exists because segment change request hasn't yet been processed");
-      failAssign(segmentHolder);
-    }
-    catch (Exception e) {
-      failAssign(segmentHolder, e);
+      catch (KeeperException.NodeExistsException ne) {
+        // This is expected when historicals haven't yet picked up processing this segment and coordinator
+        // tries reassigning it to the same node.
+        log.warn(ne, "ZK node already exists because segment change request hasn't yet been processed");
+        failAssign(segmentHolder);
+      }
+      catch (Exception e) {
+        failAssign(segmentHolder, e);
+      }
     }
   }
 
@@ -322,14 +302,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   @Override
   public void start()
-  {
-    processingExecutor.scheduleAtFixedRate(
-        new SegmentChangeProcessor(),
-        0,
-        config.getCuratorCreateZkNodesRepeatDelay().getMillis(),
-        TimeUnit.MILLISECONDS
-    );
-  }
+  { }
 
   @Override
   public void stop()
