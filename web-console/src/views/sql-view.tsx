@@ -195,7 +195,8 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
       loading={loading}
       noDataText={!loading && result && !result.rows.length ? 'No results' : (error || '')}
       sortable={false}
-      columns={(result ? result.header : []).map((h: any, i) => {
+      columns={
+        (result ? result.header : []).map((h: any, i) => {
           return {
             Header: h,
             accessor: String(i),
@@ -205,7 +206,8 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
               return value;
             }
           };
-        })}
+        })
+      }
       defaultPageSize={10}
       className="-striped -highlight"
     />;
