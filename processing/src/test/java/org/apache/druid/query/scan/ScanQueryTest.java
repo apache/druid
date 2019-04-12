@@ -20,6 +20,8 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.sun.javaws.exceptions.InvalidArgumentException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -37,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 public class ScanQueryTest
 {
@@ -87,6 +90,92 @@ public class ScanQueryTest
         Collections.singletonList("yah"),
         events3
     );
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAscendingScanQueryWithInvalidColumns()
+  {
+    Druids.newScanQueryBuilder()
+          .order(ScanQuery.Order.ASCENDING)
+          .columns(ImmutableList.of("not time", "also not time"))
+          .dataSource("source")
+          .intervals(intervalSpec)
+          .build();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testDescendingScanQueryWithInvalidColumns()
+  {
+    Druids.newScanQueryBuilder()
+          .order(ScanQuery.Order.DESCENDING)
+          .columns(ImmutableList.of("not time", "also not time"))
+          .dataSource("source")
+          .intervals(intervalSpec)
+          .build();
+  }
+
+  // No assertions because we're checking that no IllegalArgumentExceptions are thrown
+  @Test
+  public void testValidScanQueryInitialization()
+  {
+    Druids.newScanQueryBuilder()
+          .order(ScanQuery.Order.NONE)
+          .columns(ImmutableList.of("not time"))
+          .dataSource("source")
+          .intervals(intervalSpec)
+          .build();
+
+    Druids.newScanQueryBuilder()
+          .order(ScanQuery.Order.NONE)
+          .dataSource("source")
+          .intervals(intervalSpec)
+          .build();
+
+
+    Druids.newScanQueryBuilder()
+          .order(ScanQuery.Order.NONE)
+          .columns(ImmutableList.of())
+          .dataSource("source")
+          .intervals(intervalSpec)
+          .build();
+
+    Druids.newScanQueryBuilder()
+          .order(ScanQuery.Order.NONE)
+          .columns(ImmutableList.of("__time"))
+          .dataSource("source")
+          .intervals(intervalSpec)
+          .build();
+
+    Set<ScanQuery.Order> orders = ImmutableSet.of(ScanQuery.Order.ASCENDING, ScanQuery.Order.DESCENDING);
+
+    for (ScanQuery.Order order : orders) {
+      Druids.newScanQueryBuilder()
+            .order(order)
+            .columns((List<String>) null)
+            .dataSource("source")
+            .intervals(intervalSpec)
+            .build();
+
+      Druids.newScanQueryBuilder()
+            .order(order)
+            .columns(ImmutableList.of())
+            .dataSource("source")
+            .intervals(intervalSpec)
+            .build();
+
+      Druids.newScanQueryBuilder()
+            .order(order)
+            .dataSource("source")
+            .intervals(intervalSpec)
+            .build();
+
+      Druids.newScanQueryBuilder()
+            .order(order)
+            .columns(ImmutableList.of("__time", "col2"))
+            .dataSource("source")
+            .intervals(intervalSpec)
+            .build();
+    }
   }
 
   // Validates that getResultOrdering will work for the broker n-way merge

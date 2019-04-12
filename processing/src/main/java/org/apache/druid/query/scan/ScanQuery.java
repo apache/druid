@@ -152,7 +152,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.order = (order == null) ? Order.NONE : order;
     if (order != Order.NONE) {
       Preconditions.checkArgument(
-          (columns.contains(ColumnHolder.TIME_COLUMN_NAME)),
+          columns == null || columns.size() == 0 || columns.contains(ColumnHolder.TIME_COLUMN_NAME),
           "The __time column must be selected if the results are time-ordered."
       );
     }
