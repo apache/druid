@@ -201,7 +201,7 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
             accessor: String(i),
             Cell: row => {
               const value = row.value;
-              if (value === '') return <span className="null-table-cell">null</span>;
+              if (value === '' || value === null) return <span className="null-table-cell">null</span>;
               return value;
             }
           };
