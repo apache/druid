@@ -153,9 +153,9 @@ public class MetadataResource
     // If we haven't polled the metadata store yet, use an empty list of datasources.
     Collection<ImmutableDruidDataSource> druidDataSources = Optional.ofNullable(metadataSegmentManager.getDataSources())
                                                                     .orElse(Collections.emptyList());
-    final Stream<ImmutableDruidDataSource> dataSourceStream = druidDataSources.stream();
+    Stream<ImmutableDruidDataSource> dataSourceStream = druidDataSources.stream();
     if (datasources != null && !datasources.isEmpty()) {
-      dataSourceStream.filter(src -> datasources.contains(src.getName()));
+      dataSourceStream = dataSourceStream.filter(src -> datasources.contains(src.getName()));
     }
     final Stream<DataSegment> metadataSegments = dataSourceStream.flatMap(t -> t.getSegments().stream());
 
