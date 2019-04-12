@@ -61,7 +61,7 @@ The following are the main parameters for Scan queries:
 |columns|A String array of dimensions and metrics to scan. If left empty, all dimensions and metrics are returned.|no|
 |batchSize|How many rows buffered before return to client. Default is `20480`|no|
 |limit|How many rows to return. If not specified, all rows will be returned.|no|
-|order|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the limit is less than `druid.query.scan.maxRowsQueuedForOrdering`.  Scan queries that are either legacy mode or have a limit greater than `druid.query.scan.maxRowsQueuedForOrdering` will not be time-ordered and default to a order of "none".|none|
+|order|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the limit is less than `druid.query.scan.maxRowsQueuedForOrdering` and the timestamp column is included in the `columns` field.  Scan queries that are either legacy mode or have a limit greater than `druid.query.scan.maxRowsQueuedForOrdering` will not be time-ordered and default to a order of "none".|none|
 |legacy|Return results consistent with the legacy "scan-query" contrib extension. Defaults to the value set by `druid.query.scan.legacy`, which in turn defaults to false. See [Legacy mode](#legacy-mode) for details.|no|
 |context|An additional JSON Object which can be used to specify certain flags (see the Query Context Properties section below).|no|
 
