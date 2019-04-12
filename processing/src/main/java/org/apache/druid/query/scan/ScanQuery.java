@@ -258,9 +258,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   {
     if (order == Order.NONE) {
       return Ordering.natural();
-    } else {
-      return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
     }
+    return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
   }
 
   public ScanQuery withNonNullLegacy(final ScanQueryConfig scanQueryConfig)
