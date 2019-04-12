@@ -37,7 +37,7 @@ public class LessThanHavingSpec extends BaseHavingSpec
   private final String aggregationName;
   private final Number value;
 
-  private volatile Map<String, AggregatorFactory> aggregators = new HashMap<>();
+  private volatile Map<String, AggregatorFactory> aggregators;
 
   public LessThanHavingSpec(
       @JsonProperty("aggregation") String aggName,
@@ -127,8 +127,6 @@ public class LessThanHavingSpec extends BaseHavingSpec
     return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_LESS_THAN)
         .appendString(aggregationName)
         .appendByteArray(StringUtils.toUtf8(String.valueOf(value)))
-        .appendStrings(aggregators.keySet())
-        .appendCacheables(aggregators.values())
         .build();
   }
 }

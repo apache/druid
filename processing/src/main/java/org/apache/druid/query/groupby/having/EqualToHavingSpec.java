@@ -38,7 +38,7 @@ public class EqualToHavingSpec extends BaseHavingSpec
   private final String aggregationName;
   private final Number value;
 
-  private volatile Map<String, AggregatorFactory> aggregators = new HashMap<>();
+  private volatile Map<String, AggregatorFactory> aggregators;
 
   @JsonCreator
   public EqualToHavingSpec(
@@ -133,8 +133,6 @@ public class EqualToHavingSpec extends BaseHavingSpec
     return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_EQUAL)
         .appendString(aggregationName)
         .appendByteArray(StringUtils.toUtf8(String.valueOf(value)))
-        .appendStrings(aggregators.keySet())
-        .appendCacheables(aggregators.values())
         .build();
   }
 }

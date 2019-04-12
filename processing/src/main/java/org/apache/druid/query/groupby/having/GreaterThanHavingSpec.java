@@ -26,7 +26,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -38,7 +37,7 @@ public class GreaterThanHavingSpec extends BaseHavingSpec
   private final String aggregationName;
   private final Number value;
 
-  private volatile Map<String, AggregatorFactory> aggregators = new HashMap<>();
+  private volatile Map<String, AggregatorFactory> aggregators;
 
   @JsonCreator
   public GreaterThanHavingSpec(
@@ -129,8 +128,6 @@ public class GreaterThanHavingSpec extends BaseHavingSpec
     return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_GREATER_THAN)
         .appendString(aggregationName)
         .appendByteArray(StringUtils.toUtf8(String.valueOf(value)))
-        .appendStrings(aggregators.keySet())
-        .appendCacheables(aggregators.values())
         .build();
   }
 }

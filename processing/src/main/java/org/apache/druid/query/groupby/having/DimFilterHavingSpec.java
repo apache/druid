@@ -40,7 +40,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class DimFilterHavingSpec extends BaseHavingSpec
 {
@@ -175,18 +174,9 @@ public class DimFilterHavingSpec extends BaseHavingSpec
   @Override
   public byte[] getCacheKey()
   {
-    final List<String> rowSignatureValues = rowSignature.values()
-                                                        .stream()
-                                                        .map(val -> val.toString())
-                                                        .collect(Collectors.toList());
     return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_DIM_FILTER)
         .appendCacheable(dimFilter)
         .appendByte((byte) (isFinalize() ? 1 : 0))
-        .appendStrings(rowSignature.keySet())
-        .appendStrings(rowSignatureValues)
-        .appendStrings(aggregators.keySet())
-        .appendCacheables(aggregators.values())
-        .appendInt(evalCount)
         .build();
   }
 
