@@ -197,8 +197,8 @@ String functions accept strings, and return a type appropriate to the function.
 |`UPPER(expr)`|Returns expr in all uppercase.|
 |`REVERSE(expr)`|Reverses expr.|
 |`REPEAT(expr, [N])`|Repeats expr N times|
-|`LPAD(expr, length[, chars])`|Returns a string, left-padded to a specified length with the specified characters; or, when the string to be padded is longer than the length specified after padding, only that portion of the expression that fits into the specified length.|
-|`RPAD(expr, length[, chars])`|Returns a string, right-padded to a specified length with the specified characters; or, when the string to be padded is longer than the length specified after padding, only that portion of the expression that fits into the specified length.|
+|`LPAD(expr, length[, chars])`|Returns a string of "length" from "expr" left-padded with "chars". If "length" is shorter than the length of "expr", the result is "expr" which is truncated to "length". If either "expr" or "chars" are null, the result will be null.|
+|`RPAD(expr, length[, chars])`|Returns a string of "length" from "expr" right-padded with "chars". If "length" is shorter than the length of "expr", the result is "expr" which is truncated to "length". If either "expr" or "chars" are null, the result will be null.|
 
 
 ### Time functions

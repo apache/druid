@@ -85,8 +85,8 @@ The following built-in functions are available.
 |upper|upper(expr) converts a string to uppercase|
 |reverse|reverse(expr) reverses a string|
 |repeat|repeat(expr, N) repeats a string N times|
-|lpad|lpad(expr, length, chars) returns a string, left-padded to a specified length with the specified characters; or, when the string to be padded is longer than the length specified after padding, only that portion of the expression that fits into the specified length.
-|rpad|rpad(expr, length, chars) returns a string, right-padded to a specified length with the specified characters; or, when the string to be padded is longer than the length specified after padding, only that portion of the expression that fits into the specified length.
+|lpad|lpad(expr, length, chars) returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. If either `expr` or `chars` are null, the result will be null.|
+|rpad|rpad(expr, length, chars) returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. If either `expr` or `chars` are null, the result will be null.|
 
 ## Time functions
 
