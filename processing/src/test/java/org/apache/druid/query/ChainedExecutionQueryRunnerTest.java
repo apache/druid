@@ -207,7 +207,7 @@ public class ChainedExecutionQueryRunnerTest
     final CountDownLatch queriesInterrupted = new CountDownLatch(2);
     final CountDownLatch queryIsRegistered = new CountDownLatch(1);
 
-    Capture<ListenableFuture> capturedFuture = new Capture<>();
+    Capture<ListenableFuture> capturedFuture = Capture.newInstance();
     QueryWatcher watcher = EasyMock.createStrictMock(QueryWatcher.class);
     watcher.registerQuery(
         EasyMock.anyObject(),
