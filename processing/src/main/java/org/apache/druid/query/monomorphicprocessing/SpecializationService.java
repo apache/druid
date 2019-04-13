@@ -23,17 +23,21 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.JvmUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.commons.SimpleRemapper;
-import sun.misc.Unsafe;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
+import java.security.ProtectionDomain;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -65,17 +69,153 @@ public final class SpecializationService
 {
   private static final Logger LOG = new Logger(SpecializationService.class);
 
-  private static final Unsafe UNSAFE;
+  private static final MethodHandle DEFINE_CLASS;
+  private static final RuntimeException DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION;
 
   static {
+    MethodHandle defineClass = null;
+    RuntimeException exception = null;
     try {
-      Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-      theUnsafe.setAccessible(true);
-      UNSAFE = (Unsafe) theUnsafe.get(null);
+      defineClass = lookupDefineClassMethodHandle();
     }
-    catch (Exception e) {
-      throw new RuntimeException("Cannot access Unsafe methods", e);
+    catch (RuntimeException e) {
+      exception = e;
     }
+    if (defineClass != null) {
+      DEFINE_CLASS = defineClass;
+      DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION = null;
+    } else {
+      DEFINE_CLASS = null;
+      DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION = exception;
+    }
+  }
+
+  private static MethodHandle lookupDefineClassMethodHandle()
+  {
+    try {
+      MethodHandles.Lookup lookup = MethodHandles.lookup();
+      if (JvmUtils.isIsJava9Compatible()) {
+        return defineClassJava9(lookup);
+      } else {
+        return defineClassJava8(lookup);
+      }
+    }
+    catch (ReflectiveOperationException | RuntimeException e) {
+      throw new UnsupportedOperationException(
+          "defineClass is not supported on this platform, because internal Java APIs are not compatible "
+          + "with this Druid version", e
+      );
+    }
+  }
+
+  private static MethodHandle defineClassJava9(MethodHandles.Lookup lookup) throws ReflectiveOperationException
+  {
+    // "Compile" a MethodHandle that is equivalent to the following closure:
+    //
+    //  Class<?> defineClass(Class targetClass, String className, byte[] byteCode) {
+    //    MethodHandles.Lookup targetClassLookup = MethodHandles.privateLookupIn(targetClass, lookup);
+    //    return targetClassLookup.defineClass(byteCode);
+    //  }
+
+    // this is getting meta
+    MethodHandle defineClass = lookup.unreflect(MethodHandles.Lookup.class.getMethod("defineClass", byte[].class));
+    MethodHandle privateLookupIn = lookup.findStatic(
+        MethodHandles.class,
+        "privateLookupIn",
+        MethodType.methodType(MethodHandles.Lookup.class, Class.class, MethodHandles.Lookup.class)
+    );
+
+    // bind privateLookupIn lookup argument to this method's lookup
+    privateLookupIn = MethodHandles.insertArguments(privateLookupIn, 1, lookup);
+
+    // -> defineClass(Class targetClass, byte[] byteCode)
+    defineClass = MethodHandles.filterArguments(defineClass, 0, privateLookupIn);
+
+    // add a dummy String argument to match the corresponding JDK8 version
+    // -> defineClass(Class targetClass, byte[] byteCode, String className)
+    defineClass = MethodHandles.dropArguments(defineClass, 2, String.class);
+    return defineClass;
+  }
+
+  private static MethodHandle defineClassJava8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
+  {
+    Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
+    Field f = unsafeClass.getDeclaredField("theUnsafe");
+    f.setAccessible(true);
+    Object theUnsafe = f.get(null);
+
+    // "Compile" a MethodHandle that is equilavent to
+    //
+    //  Class<?> defineClass(Class targetClass, byte[] byteCode, String className) {
+    //    return Unsafe.defineClass(
+    //        className,
+    //        byteCode,
+    //        0,
+    //        byteCode.length,
+    //        targetClass.getClassLoader(),
+    //        targetClass.getProtectionDomain()
+    //    );
+    //  }
+
+    MethodHandle defineClass = lookup.findVirtual(
+        unsafeClass,
+        "defineClass",
+        MethodType.methodType(
+            Class.class,
+            String.class,
+            byte[].class,
+            int.class,
+            int.class,
+            ClassLoader.class,
+            ProtectionDomain.class
+        )
+    ).bindTo(theUnsafe);
+
+    MethodHandle getProtectionDomain = lookup.unreflect(Class.class.getMethod("getProtectionDomain"));
+    MethodHandle getClassLoader = lookup.unreflect(Class.class.getMethod("getClassLoader"));
+
+    // apply methods to the targetClass
+    // -> defineClass(String className, byte[] byteCode, int offset, int length, Class targetClass, Class targetClass)
+    defineClass = MethodHandles.filterArguments(defineClass, 5, getProtectionDomain);
+    defineClass = MethodHandles.filterArguments(defineClass, 4, getClassLoader);
+
+    // duplicate the last argument to apply the methods above to the same class
+    // -> defineClass(String className, byte[] byteCode, int offset, int length, Class targetClass, Class targetClass)
+    defineClass = MethodHandles.permuteArguments(
+        defineClass,
+        MethodType.methodType(Class.class, String.class, byte[].class, int.class, int.class, Class.class),
+        0, 1, 2, 3, 4, 4
+    );
+
+    // set offset argument to 0
+    // -> defineClass(String className, byte[] byteCode, int length, Class targetClass, Class targetClass)
+    defineClass = MethodHandles.insertArguments(defineClass, 2, (int) 0);
+
+    // JDK8 does not implement MethodHandles.arrayLength so we have to roll our own
+    MethodHandle arrayLength = lookup.findStatic(
+        lookup.lookupClass(),
+        "getArrayLength",
+        MethodType.methodType(int.class, byte[].class)
+    );
+
+    // apply arrayLength to the length argument
+    // -> defineClass(String className, byte[] byteCode, byte[] byteCode, Class targetClass)
+    defineClass = MethodHandles.filterArguments(defineClass, 2, arrayLength);
+
+    // duplicate the byte[] argument and reorder to match JDK9 signature
+    // -> defineClass(Class targetClass, byte[] byteCode, String className)
+    defineClass = MethodHandles.permuteArguments(
+        defineClass,
+        MethodType.methodType(Class.class, Class.class, byte[].class, String.class),
+        2, 1, 1, 0
+    );
+
+    return defineClass;
+  }
+
+  static int getArrayLength(byte[] bytes)
+  {
+    return bytes.length;
   }
 
   /**
@@ -209,14 +349,20 @@ public final class SpecializationService
     @SuppressWarnings("unchecked")
     private Class<T> defineClass(String specializedClassName, byte[] specializedClassBytecode)
     {
-      return (Class<T>) UNSAFE.defineClass(
-          specializedClassName,
-          specializedClassBytecode,
-          0,
-          specializedClassBytecode.length,
-          prototypeClass.getClassLoader(),
-          prototypeClass.getProtectionDomain()
-      );
+      if (DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION != null) {
+        throw new UnsupportedOperationException(DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION);
+      }
+
+      try {
+        return (Class<T>) DEFINE_CLASS.invokeExact(
+            prototypeClass,
+            specializedClassBytecode,
+            specializedClassName
+            );
+      }
+      catch (Throwable t) {
+        throw new UnsupportedOperationException("Unable to define specialized class: " + specializedClassName, t);
+      }
     }
 
     /**
