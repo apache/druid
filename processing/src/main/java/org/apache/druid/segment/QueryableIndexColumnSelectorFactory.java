@@ -32,6 +32,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * The basic implementation of {@link ColumnSelectorFactory} over a historical segment (i. e. {@link QueryableIndex}).
@@ -76,21 +77,26 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
-    return dimensionSelectorCache.computeIfAbsent(
-        dimensionSpec,
-        spec -> {
-          if (virtualColumns.exists(spec.getDimension())) {
-            DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(dimensionSpec, index, offset);
-            if (dimensionSelector == null) {
-              return virtualColumns.makeDimensionSelector(dimensionSpec, this);
-            } else {
-              return dimensionSelector;
-            }
-          }
-
-          return spec.decorate(makeDimensionSelectorUndecorated(spec));
+    Function<DimensionSpec, DimensionSelector> mappingFunction = spec -> {
+      if (virtualColumns.exists(spec.getDimension())) {
+        DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(dimensionSpec, index, offset);
+        if (dimensionSelector == null) {
+          return virtualColumns.makeDimensionSelector(dimensionSpec, this);
+        } else {
+          return dimensionSelector;
         }
-    );
+      }
+
+      return spec.decorate(makeDimensionSelectorUndecorated(spec));
+    };
+
+    DimensionSelector dimensionSelector = dimensionSelectorCache.get(dimensionSpec);
+    if (dimensionSelector == null) {
+      dimensionSelector = mappingFunction.apply(dimensionSpec);
+      dimensionSelectorCache.put(dimensionSpec, dimensionSelector);
+    }
+
+    return dimensionSelector;
   }
 
   private DimensionSelector makeDimensionSelectorUndecorated(DimensionSpec dimensionSpec)
@@ -124,27 +130,32 @@ class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(String columnName)
   {
-    return valueSelectorCache.computeIfAbsent(
-        columnName,
-        name -> {
-          if (virtualColumns.exists(columnName)) {
-            ColumnValueSelector<?> selector = virtualColumns.makeColumnValueSelector(columnName, index, offset);
-            if (selector == null) {
-              return virtualColumns.makeColumnValueSelector(columnName, this);
-            } else {
-              return selector;
-            }
-          }
-
-          BaseColumn column = getCachedColumn(columnName, BaseColumn.class);
-
-          if (column != null) {
-            return column.makeColumnValueSelector(offset);
-          } else {
-            return NilColumnValueSelector.instance();
-          }
+    Function<String, ColumnValueSelector<?>> mappingFunction = name -> {
+      if (virtualColumns.exists(columnName)) {
+        ColumnValueSelector<?> selector = virtualColumns.makeColumnValueSelector(columnName, index, offset);
+        if (selector == null) {
+          return virtualColumns.makeColumnValueSelector(columnName, this);
+        } else {
+          return selector;
         }
-    );
+      }
+
+      BaseColumn column = getCachedColumn(columnName, BaseColumn.class);
+
+      if (column != null) {
+        return column.makeColumnValueSelector(offset);
+      } else {
+        return NilColumnValueSelector.instance();
+      }
+    };
+
+    ColumnValueSelector<?> columnValueSelector = valueSelectorCache.get(columnName);
+    if (columnValueSelector == null) {
+      columnValueSelector = mappingFunction.apply(columnName);
+      valueSelectorCache.put(columnName, columnValueSelector);
+    }
+
+    return columnValueSelector;
   }
 
   @Nullable
