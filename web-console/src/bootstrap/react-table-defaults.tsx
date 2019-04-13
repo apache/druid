@@ -21,7 +21,7 @@ import * as React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components/loader';
-import {countBy, customTableFilter, makeTextFilter} from '../utils';
+import { countBy, customTableFilter, makeTextFilter } from '../utils';
 
 /* tslint:disable:max-classes-per-file */
 
