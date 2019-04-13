@@ -66,7 +66,11 @@ public abstract class BaseBloomFilterBufferAggregator<TSelector extends BaseNull
     // | k (byte) | numLongs (int) | bitset (long[numLongs]) |
     int sizeBytes = 1 + Integer.BYTES + (buf.getInt(position + 1) * Long.BYTES);
     mutationBuffer.limit(position + sizeBytes);
-    return mutationBuffer.slice();
+
+    ByteBuffer resultCopy = ByteBuffer.allocate(sizeBytes);
+    resultCopy.put(mutationBuffer.slice());
+    resultCopy.rewind();
+    return resultCopy;
   }
 
   @Override
