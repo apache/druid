@@ -580,7 +580,7 @@ public class ScanQueryRunnerTest
       } else {
         for (List<Map<String, Object>> batch : ascendingEvents) {
           for (Map<String, Object> event : batch) {
-            event.put("__time", (new DateTime(event.get("__time"))).getMillis());
+            event.put("__time", (DateTimes.of((String) event.get("__time"))).getMillis());
           }
         }
       }
@@ -669,7 +669,7 @@ public class ScanQueryRunnerTest
       } else {
         for (List<Map<String, Object>> batch : descendingEvents) {
           for (Map<String, Object> event : batch) {
-            event.put("__time", (new DateTime(event.get("__time"))).getMillis());
+            event.put("__time", (DateTimes.of((String) event.get("__time"))).getMillis());
           }
         }
       }
@@ -758,7 +758,7 @@ public class ScanQueryRunnerTest
       } else {
         for (List<Map<String, Object>> batch : ascendingEvents) {
           for (Map<String, Object> event : batch) {
-            event.put("__time", (new DateTime(event.get("__time"))).getMillis());
+            event.put("__time", ((DateTimes.of((String) event.get("__time"))).getMillis()));
           }
         }
       }
@@ -851,7 +851,7 @@ public class ScanQueryRunnerTest
       } else {
         for (List<Map<String, Object>> batch : descendingEvents) {
           for (Map<String, Object> event : batch) {
-            event.put("__time", (new DateTime(event.get("__time"))).getMillis());
+            event.put("__time", ((DateTimes.of((String) event.get("__time"))).getMillis()));
           }
         }
       }
