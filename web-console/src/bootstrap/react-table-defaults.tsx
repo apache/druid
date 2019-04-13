@@ -21,7 +21,7 @@ import * as React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components/loader';
-import { countBy, makeTextFilter } from '../utils';
+import {countBy, customTableFilter, makeTextFilter} from '../utils';
 
 /* tslint:disable:max-classes-per-file */
 
@@ -43,13 +43,7 @@ class NoData extends React.Component {
 
 Object.assign(ReactTableDefaults, {
   defaultFilterMethod: (filter: Filter, row: any, column: any) => {
-    const id = filter.pivotId || filter.id;
-    const filterValue = filter.value.toLowerCase();
-    if (filterValue.startsWith(`"`) && filterValue.endsWith(`"`)) {
-      const exactString = filterValue.slice(1, -1);
-      return row[id] !== undefined ? String(row[id].toLowerCase()) === exactString : true;
-    }
-    return row[id] !== undefined ? String(row[id].toLowerCase()).includes(filterValue) : true;
+    return customTableFilter(filter, row);
   },
   LoadingComponent: Loader,
   loadingText: '',

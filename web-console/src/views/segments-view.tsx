@@ -28,7 +28,7 @@ import { Filter } from 'react-table';
 import { TableColumnSelection } from '../components/table-column-selection';
 import { AppToaster } from '../singletons/toaster';
 import {
-  addFilter,
+  addFilter, customTableFilter,
   formatBytes,
   formatNumber, LocalStorageKeys,
   makeBooleanFilter,
@@ -122,12 +122,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         if (f.value === 'all') return null;
         return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
       } else {
-        const filterValue = f.value;
-        if (filterValue.startsWith(`"`) && filterValue.endsWith(`"`)) {
-          const exactString = filterValue.slice(1, -1);
-          return `${JSON.stringify(f.id)} = '${exactString}'`;
-        }
-        return `${JSON.stringify(f.id)} LIKE '%${filterValue}%'`;
+        return customTableFilter(f);
       }
     }).filter(Boolean);
 

@@ -154,3 +154,30 @@ export function parseStringToJSON(s: string): JSON | null {
     return JSON.parse(s);
   }
 }
+
+// ----------------------------
+export function customTableFilter(filter: Filter, row?: any): boolean | string {
+  const id = filter.pivotId || filter.id;
+  const clientSideFilter: boolean = row !== undefined;
+  if (clientSideFilter && row[id] === undefined) {
+    return true;
+  }
+  const targetValue = (clientSideFilter && String(row[id].toLowerCase())) || JSON.stringify(filter.id).toLowerCase();
+  let filterValue = filter.value.toLowerCase();
+  if (filterValue.startsWith(`"`) && filterValue.endsWith(`"`)) {
+    const exactString = filterValue.slice(1, -1);
+    if (clientSideFilter) {
+      return String(targetValue) === exactString;
+    } else {
+      return `${targetValue} = '${exactString}'`;
+    }
+  }
+  if (filterValue.startsWith(`"`)) {
+    filterValue = filterValue.substring(1);
+  }
+  if (clientSideFilter) {
+    return targetValue.includes(filterValue);
+  } else {
+    return `${targetValue} LIKE '%${filterValue}%'`;
+  }
+}
