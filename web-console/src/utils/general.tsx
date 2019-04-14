@@ -16,15 +16,14 @@
  * limitations under the License.
  */
 
-import { Button, InputGroup, Intent } from '@blueprintjs/core';
-import { IconNames, HTMLSelect } from "../components/filler";
-import * as numeral from "numeral";
+import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
+import * as numeral from 'numeral';
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
-
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
-  let currentFilter = filters.find(f => f.id === id);
+  const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {
     filters = filters.filter(f => f.id !== id);
     if (currentFilter.value !== value) {
@@ -36,17 +35,17 @@ export function addFilter(filters: Filter[], id: string, value: string): Filter[
   return filters;
 }
 
-export function makeTextFilter(placeholder: string = ''): FilterRender {
+export function makeTextFilter(placeholder = ''): FilterRender {
   return ({ filter, onChange, key }) => {
     const filterValue = filter ? filter.value : '';
     return <InputGroup
       key={key}
       onChange={(e: any) => onChange(e.target.value)}
       value={filterValue}
-      rightElement={filterValue ? <Button iconName={IconNames.CROSS} className="pt-minimal" onClick={() => onChange('')} /> : undefined}
+      rightElement={filterValue && <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} />}
       placeholder={placeholder}
-    />
-  }
+    />;
+  };
 }
 
 export function makeBooleanFilter(): FilterRender {
@@ -56,14 +55,14 @@ export function makeBooleanFilter(): FilterRender {
       key={key}
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
-      value={filterValue || "all"}
-      fill={true}
+      value={filterValue || 'all'}
+      fill
     >
       <option value="all">Show all</option>
       <option value="true">true</option>
       <option value="false">false</option>
     </HTMLSelect>;
-  }
+  };
 }
 
 // ----------------------------
@@ -128,12 +127,29 @@ export function getHeadProp(results: Record<string, any>[], prop: string): any {
 
 // ----------------------------
 
-export function localStorageSet(key: string, value: string): void {
-  if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(key, value);
+export function validJson(json: string): boolean {
+  try {
+    JSON.parse(json);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
-export function localStorageGet(key: string): string | null {
-  if (typeof localStorage === 'undefined') return null;
-  return localStorage.getItem(key);
+// stringify JSON to string; if JSON is null, parse empty string ""
+export function stringifyJSON(item: any): string {
+  if (item != null) {
+    return JSON.stringify(item, null, 2);
+  } else {
+    return '';
+  }
+}
+
+// parse string to JSON object; if string is empty, return null
+export function parseStringToJSON(s: string): JSON | null {
+  if (s === '') {
+    return null;
+  } else {
+    return JSON.parse(s);
+  }
 }

@@ -56,8 +56,7 @@
     },
     "tuningConfig" : {
       "type" : "index",
-      "maxRowsPerSegment" : 1000,
-      "forceExtendableShardSpecs" : true
+      "maxRowsPerSegment" : 1000
     }
   }
 }

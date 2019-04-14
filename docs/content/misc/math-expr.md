@@ -37,7 +37,7 @@ This expression language supports the following operators (listed in decreasing 
 |*, /, %|Binary multiplicative|
 |+, -|Binary additive|
 |<, <=, >, >=, ==, !=|Binary Comparison|
-|&&,\|\||Binary Logical AND, OR|
+|&&, &#124;|Binary Logical AND, OR|
 
 Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literals should be quoted by single quotation marks.
 
@@ -66,12 +66,16 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|concat|concatenate a list of strings|
+|concat|concat(expr, expr...) concatenate a list of strings|
+|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name) looks up expr in a registered [query-time lookup](../querying/lookups.html)|
+|parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
 |regexp_extract|regexp_extract(expr, pattern[, index]) applies a regular expression pattern and extracts a capture group index, or null if there is no match. If index is unspecified or zero, returns the substring that matched the pattern.|
 |replace|replace(expr, pattern, replacement) replaces pattern with replacement|
 |substring|substring(expr, index, length) behaves like java.lang.String's substring|
+|right|right(expr, length) returns the rightmost length characters from a string|
+|left|left(expr, length) returns the leftmost length characters from a string|
 |strlen|strlen(expr) returns length of a string in UTF-16 code units|
 |strpos|strpos(haystack, needle[, fromIndex]) returns the position of the needle within the haystack, with indexes starting from 0. The search will begin at fromIndex, or 0 if fromIndex is not specified. If the needle is not found then the function returns -1.|
 |trim|trim(expr[, chars]) remove leading and trailing characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
@@ -79,6 +83,8 @@ The following built-in functions are available.
 |rtrim|rtrim(expr[, chars]) remove trailing characters from `expr` if they are present in `chars`. `chars` defaults to ' ' (space) if not provided.|
 |lower|lower(expr) converts a string to lowercase|
 |upper|upper(expr) converts a string to uppercase|
+|reverse|reverse(expr) reverses a string|
+|repeat|repeat(expr, N) repeats a string N times|
 
 ## Time functions
 

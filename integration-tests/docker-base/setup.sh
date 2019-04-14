@@ -34,14 +34,14 @@ apt-get install -y mysql-server
 apt-get install -y supervisor
 
 # Zookeeper
-wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.11/zookeeper-3.4.11.tar.gz | tar -xzf - -C /usr/local \
-  && cp /usr/local/zookeeper-3.4.11/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.11/conf/zoo.cfg \
-  && ln -s /usr/local/zookeeper-3.4.11 /usr/local/zookeeper
+wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.13/zookeeper-3.4.13.tar.gz | tar -xzf - -C /usr/local \
+  && cp /usr/local/zookeeper-3.4.13/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.13/conf/zoo.cfg \
+  && ln -s /usr/local/zookeeper-3.4.13 /usr/local/zookeeper
 
 # Kafka
 # Match the version to the Kafka client used by KafkaSupervisor
-wget -q -O - http://www.us.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz | tar -xzf - -C /usr/local \
- && ln -s /usr/local/kafka_2.12-0.10.2.2 /usr/local/kafka
+wget -q -O - http://www.us.apache.org/dist/kafka/2.1.0/kafka_2.12-2.1.0.tgz | tar -xzf - -C /usr/local \
+ && ln -s /usr/local/kafka_2.12-2.1.0 /usr/local/kafka
 
 # Druid system user
 adduser --system --group --no-create-home druid \

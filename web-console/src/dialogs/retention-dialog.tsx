@@ -16,17 +16,20 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import { Button, FormGroup } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import { Button } from "@blueprintjs/core";
-import { FormGroup, IconNames } from '../components/filler';
-import { RuleEditor, Rule } from '../components/rule-editor';
+import * as React from 'react';
+
+import { Rule, RuleEditor } from '../components/rule-editor';
+import { QueryManager } from '../utils';
+
 import { SnitchDialog } from './snitch-dialog';
 
 import './retention-dialog.scss';
 
 export function reorderArray<T>(items: T[], oldIndex: number, newIndex: number): T[] {
-  let newItems = items.concat();
+  const newItems = items.concat();
 
   if (newIndex > oldIndex) newIndex--;
 
@@ -41,28 +44,48 @@ export interface RetentionDialogProps extends React.Props<any> {
   tiers: string[];
   onEditDefaults: () => void;
   onCancel: () => void;
-  onSave: (datasource: string, newRules: any[], author: string, comment: string) => void;
+  onSave: (datasource: string, newRules: any[], comment: string) => void;
 }
 
 export interface RetentionDialogState {
   currentRules: any[];
+  historyRecords: any[];
 }
 
 export class RetentionDialog extends React.Component<RetentionDialogProps, RetentionDialogState> {
+  private historyQueryManager: QueryManager<string, any>;
 
   constructor(props: RetentionDialogProps) {
     super(props);
 
     this.state = {
-      currentRules: props.rules
+      currentRules: props.rules,
+      historyRecords: []
     };
   }
 
-  private save = (author: string, comment: string) => {
+  componentDidMount() {
+    const { datasource } = this.props;
+    this.historyQueryManager = new QueryManager({
+      processQuery: async (query) => {
+        const historyResp = await axios(`/druid/coordinator/v1/rules/${datasource}/history`);
+        return historyResp.data;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          historyRecords: result
+        });
+      }
+    });
+
+    this.historyQueryManager.runQuery(`dummy`);
+  }
+
+  private save = (comment: string) => {
     const { datasource, onSave } = this.props;
     const { currentRules } = this.state;
 
-    onSave(datasource, currentRules, author, comment);
+    onSave(datasource, currentRules, comment);
   }
 
   private changeRule = (newRule: any, index: number) => {
@@ -111,7 +134,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
       onDelete={() => this.onDeleteRule(index)}
       moveUp={index > 0 ? () => this.moveRule(index, -1) : null}
       moveDown={index < (currentRules || []).length - 1 ? () => this.moveRule(index, 2) : null}
-    />
+    />;
   }
 
   reset = () => {
@@ -138,18 +161,18 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
 
   render() {
     const { datasource, onCancel, onEditDefaults } = this.props;
-    const { currentRules } = this.state;
+    const { currentRules, historyRecords } = this.state;
 
     return <SnitchDialog
       className="retention-dialog"
       saveDisabled={false}
       canOutsideClickClose={false}
       isOpen
-      inline
       onClose={onCancel}
       title={`Edit retention rules: ${datasource}${datasource === '_default' ? ' (cluster defaults)' : ''}`}
       onReset={this.reset}
       onSave={this.save}
+      historyRecords={historyRecords}
     >
       <p>
         Druid uses rules to determine what data should be retained in the cluster.
@@ -160,7 +183,7 @@ export class RetentionDialog extends React.Component<RetentionDialogProps, Reten
         {(currentRules || []).map(this.renderRule)}
       </FormGroup>
       <FormGroup className="right">
-        <Button iconName={IconNames.PLUS} onClick={this.addRule}>New rule</Button>
+        <Button icon={IconNames.PLUS} onClick={this.addRule}>New rule</Button>
       </FormGroup>
       {
         (!currentRules.length && datasource !== '_default') &&

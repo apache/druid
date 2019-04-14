@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -189,7 +188,7 @@ public class JdbcExtractionNamespaceTest
               }
               catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
 
@@ -237,7 +236,7 @@ public class JdbcExtractionNamespaceTest
               lifecycle.start();
             }
             catch (Exception e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
             closer.register(
                 new Closeable()
@@ -295,7 +294,7 @@ public class JdbcExtractionNamespaceTest
               closer.close();
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         }

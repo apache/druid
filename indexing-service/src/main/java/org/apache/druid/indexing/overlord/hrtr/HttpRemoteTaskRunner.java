@@ -248,7 +248,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       log.info("Started.");
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
     finally {
       lifecycleLock.exitStart();
@@ -539,7 +539,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           scheduleTasksCleanupForWorker(worker.getHost());
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
         finally {
           checkAndRemoveWorkersFromBlackList();
@@ -597,7 +597,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             }
             catch (Exception e) {
               log.makeAlert("Exception while cleaning up worker[%s]", workerHostAndPort).emit();
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
           }
         },
@@ -792,7 +792,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           }
         }
         catch (Exception e) {
-          throw Throwables.propagate(e);
+          throw new RuntimeException(e);
         }
       }
       return getLazyWorkers();
@@ -871,12 +871,12 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 ).get();
               }
               catch (InterruptedException e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
               catch (ExecutionException e) {
                 // Unwrap if possible
                 Throwables.propagateIfPossible(e.getCause(), IOException.class);
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
               }
             }
           }

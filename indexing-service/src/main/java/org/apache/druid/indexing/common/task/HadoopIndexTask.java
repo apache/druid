@@ -230,7 +230,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   }
 
   @Override
-  public TaskStatus run(TaskToolbox toolbox) throws Exception
+  public TaskStatus run(TaskToolbox toolbox)
   {
     try {
       taskConfig = toolbox.getConfig();

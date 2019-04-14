@@ -199,7 +199,7 @@ public class MaterializedViewSupervisorSpecTest
   }
 
   @Test
-  public void testEmptyBaseDataSource() throws Exception
+  public void testEmptyBaseDataSource()
   {
     expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectMessage(
@@ -244,7 +244,7 @@ public class MaterializedViewSupervisorSpecTest
   }
 
   @Test
-  public void testNullBaseDataSource() throws Exception
+  public void testNullBaseDataSource()
   {
     expectedException.expect(CoreMatchers.instanceOf(IllegalArgumentException.class));
     expectedException.expectMessage(

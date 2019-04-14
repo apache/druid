@@ -232,7 +232,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                      "a4:v",
+                      "v0",
                       "(\"m1\" * 2)",
                       ValueType.FLOAT,
                       TestExprMacroTable.INSTANCE
@@ -241,7 +241,7 @@ public class QuantileSqlAggregatorTest extends CalciteTestBase
               .aggregators(ImmutableList.of(
                   new ApproximateHistogramAggregatorFactory("a0:agg", "m1", null, null, null, null),
                   new ApproximateHistogramAggregatorFactory("a2:agg", "m1", 200, null, null, null),
-                  new ApproximateHistogramAggregatorFactory("a4:agg", "a4:v", null, null, null, null),
+                  new ApproximateHistogramAggregatorFactory("a4:agg", "v0", null, null, null, null),
                   new FilteredAggregatorFactory(
                       new ApproximateHistogramAggregatorFactory("a5:agg", "m1", null, null, null, null),
                       new SelectorDimFilter("dim1", "abc", null)
