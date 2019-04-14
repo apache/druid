@@ -576,6 +576,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testSelectWithExpressionFilter() throws Exception
+  {
+    testQuery(
+        "SELECT dim1 FROM druid.foo WHERE m1 + 1 = 7",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "(\"m1\" + 1)", ValueType.FLOAT)
+                )
+                .filters(selector("v0", "7", null))
+                .columns("dim1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc"}
+        )
+    );
+  }
+
+  @Test
   public void testSelectStarWithLimitTimeDescending() throws Exception
   {
     testQuery(
