@@ -69,9 +69,7 @@ public class MetadataResource
 {
   private final MetadataSegmentManager metadataSegmentManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
-  private final ObjectMapper jsonMapper;
 
   @Inject
   public MetadataResource(
@@ -84,9 +82,7 @@ public class MetadataResource
   {
     this.metadataSegmentManager = metadataSegmentManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
-    this.jsonMapper = jsonMapper;
   }
 
   @GET
