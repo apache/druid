@@ -49,7 +49,7 @@ public class ScanResultValueTimestampComparatorTest
   }
 
   @Test
-  public void comparisonDescendingListTest()
+  public void testComparisonDescendingList()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .order(ScanQuery.Order.DESCENDING)
@@ -86,7 +86,7 @@ public class ScanResultValueTimestampComparatorTest
   }
 
   @Test
-  public void comparisonAscendingListTest()
+  public void testComparisonAscendingList()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .order(ScanQuery.Order.ASCENDING)
@@ -123,7 +123,7 @@ public class ScanResultValueTimestampComparatorTest
   }
 
   @Test
-  public void comparisonDescendingCompactedListTest()
+  public void testComparisonDescendingCompactedList()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .order(ScanQuery.Order.DESCENDING)
@@ -158,7 +158,7 @@ public class ScanResultValueTimestampComparatorTest
   }
 
   @Test
-  public void comparisonAscendingCompactedListTest()
+  public void testAscendingCompactedList()
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .order(ScanQuery.Order.ASCENDING)
