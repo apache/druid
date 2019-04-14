@@ -322,12 +322,9 @@ public class TaskQueue
 
   private boolean isTaskPending(Task task)
   {
-    for (TaskRunnerWorkItem workItem : taskRunner.getPendingTasks()) {
-      if (workItem.getTaskId().equals(task.getId())) {
-        return true;
-      }
-    }
-    return false;
+    return taskRunner.getPendingTasks()
+                     .stream()
+                     .anyMatch(workItem -> workItem.getTaskId().equals(task.getId()));
   }
 
   /**
