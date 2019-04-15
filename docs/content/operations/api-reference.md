@@ -63,7 +63,13 @@ Returns the current configuration properties of the process.
 Returns a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has recieved a confirmation
 from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the
 cluster. It is recommended to not consider a Druid node "healthy" or "ready" in automated deployment/container
-management systems until it returns `{"selfDiscovered": true}` from this endpoint.
+management systems until it returns `{"selfDiscovered": true}` from this endpoint. This is because a node may be
+isolated from the rest of the cluster due to network issues and it doesn't make sense to consider nodes "healthy" in
+this case. Also, when nodes such as Brokers use ZooKeeper segment discovery for building their view of the Druid cluster
+(as opposed to HTTP segment discovery), they may be unusable until the ZooKeeper client is fully initialized and starts
+to receive data from the ZooKeeper cluster. `{"selfDiscovered": true}` is a proxy event indicating that the ZooKeeper
+client on the node has started to receive data from the ZooKeeper cluster and it's expected that all segments and other
+nodes will be discovered by this node timely from this point.
 
 ## Master Server
 
