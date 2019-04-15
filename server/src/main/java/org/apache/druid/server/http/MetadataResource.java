@@ -59,7 +59,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -159,15 +158,11 @@ public class MetadataResource
     // If we haven't polled the metadata store yet, use an empty list of datasources.
     Collection<ImmutableDruidDataSource> druidDataSources = Optional.ofNullable(metadataSegmentManager.getDataSources())
                                                                     .orElse(Collections.emptyList());
-
+    Stream<ImmutableDruidDataSource> dataSourceStream = druidDataSources.stream();
     if (datasources != null && !datasources.isEmpty()) {
-      druidDataSources = druidDataSources.stream()
-                                         .filter(src -> datasources.contains(src.getName()))
-                                         .collect(Collectors.toSet());
+      dataSourceStream = dataSourceStream.filter(src -> datasources.contains(src.getName()));
     }
-    final Stream<DataSegment> metadataSegments = druidDataSources
-        .stream()
-        .flatMap(t -> t.getSegments().stream());
+    final Stream<DataSegment> metadataSegments = dataSourceStream.flatMap(t -> t.getSegments().stream());
 
     if (includeOvershadowedStatus != null) {
       final Set<SegmentId> overshadowedSegments = findOvershadowedSegments(druidDataSources);
