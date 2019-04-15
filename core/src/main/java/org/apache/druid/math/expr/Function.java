@@ -532,12 +532,12 @@ interface Function
       }
     }
 
-    protected ExprEval eval(ExprEval param)
+    private ExprEval eval(ExprEval param)
     {
       return eval(param, 0);
     }
 
-    protected ExprEval eval(ExprEval param, int scale)
+    private ExprEval eval(ExprEval param, int scale)
     {
       if (param.type() == ExprType.LONG) {
         return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());

@@ -24,8 +24,6 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.Expr;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
@@ -52,20 +50,10 @@ public class RoundOperatorConversion implements SqlOperatorConversion
   public DruidExpression toDruidExpression(final PlannerContext plannerContext, final RowSignature rowSignature, final RexNode rexNode)
   {
     return OperatorConversions.convertCall(plannerContext, rowSignature, rexNode, inputExpressions -> {
-      final DruidExpression arg = inputExpressions.get(0);
-      final Expr digitsExpr = inputExpressions.size() > 1
-          ? inputExpressions.get(1).parse(plannerContext.getExprMacroTable())
-          : null;
-
-      if (digitsExpr == null) {
-        return DruidExpression.fromExpression(StringUtils.format("round(%s)",
-            arg.getExpression()));
-      } else {
-        final int digits = ((Number) digitsExpr.getLiteralValue()).intValue();
-        String digitsString = DruidExpression.numberLiteral(digits);
-        return DruidExpression.fromExpression(StringUtils.format("round(%s, %s)",
-            arg.getExpression(), digitsString));
-      }
+      return DruidExpression.fromFunctionCall(
+        "round",
+        inputExpressions
+      );
     });
   }
 }

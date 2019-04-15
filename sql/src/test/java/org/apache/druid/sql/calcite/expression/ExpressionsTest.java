@@ -120,9 +120,6 @@ public class ExpressionsTest extends CalciteTestBase
   private final RexBuilder rexBuilder = new RexBuilder(typeFactory);
   private final RelDataType relDataType = rowSignature.getRelDataType(typeFactory);
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testConcat()
   {
@@ -486,7 +483,7 @@ public class ExpressionsTest extends CalciteTestBase
 
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("b"), integerLiteral(-1)),
-        DruidExpression.fromExpression("round(\"b\", -1)"),
+        DruidExpression.fromExpression("round(\"b\",-1)"),
         30L
     );
 
@@ -498,7 +495,7 @@ public class ExpressionsTest extends CalciteTestBase
 
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("x"), integerLiteral(1)),
-        DruidExpression.fromExpression("round(\"x\", 1)"),
+        DruidExpression.fromExpression("round(\"x\",1)"),
         2.3
     );
 
@@ -534,12 +531,12 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
 
-    expectedException.expect(ClassCastException.class);
-    expectedException.expectMessage("java.lang.String cannot be cast to java.lang.Number");
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("The second argument to the function[round] should be integer type but get the STRING type");
     testExpression(
         rexBuilder.makeCall(roundFunction, inputRef("x"), rexBuilder.makeLiteral("foo")),
-        DruidExpression.fromExpression("round(\"x\", foo)"),
-        "ClassCast Exception"
+        DruidExpression.fromExpression("round(\"x\",'foo')"),
+        "IAE Exception"
     );
   }
 
