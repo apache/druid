@@ -58,6 +58,13 @@ public interface MetadataSegmentManager
   @Nullable
   ImmutableDruidDataSource getDataSource(String dataSourceName);
 
+  /**
+   * Returns a collection of known datasources.
+   *
+   * Will return null if we do not have a valid snapshot of segments yet (perhaps the underlying metadata store has
+   * not yet been polled.)
+   */
+  @Nullable
   Collection<ImmutableDruidDataSource> getDataSources();
 
   /**
@@ -65,7 +72,11 @@ public interface MetadataSegmentManager
    * unspecified. Note: the iteration may not be as trivially cheap as, for example, iteration over an ArrayList. Try
    * (to some reasonable extent) to organize the code so that it iterates the returned iterable only once rather than
    * several times.
+   *
+   * Will return null if we do not have a valid snapshot of segments yet (perhaps the underlying metadata store has
+   * not yet been polled.)
    */
+  @Nullable
   Iterable<DataSegment> iterateAllSegments();
 
   Collection<String> getAllDataSourceNames();

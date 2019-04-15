@@ -16,27 +16,31 @@
  * limitations under the License.
  */
 
-import { Intent } from "@blueprintjs/core";
+import { Intent } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
-import { HashRouter, Route, Switch } from "react-router-dom";
+import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar } from './components/header-bar';
 import { AppToaster } from './singletons/toaster';
 import { DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE } from './variables';
 import { DatasourcesView } from './views/datasource-view';
 import { HomeView } from './views/home-view';
-import { LookupsView } from "./views/lookups-view";
+import { LookupsView } from './views/lookups-view';
 import { SegmentsView } from './views/segments-view';
 import { ServersView } from './views/servers-view';
 import { SqlView } from './views/sql-view';
 import { TasksView } from './views/tasks-view';
 
-import "./console-application.scss";
+import './console-application.scss';
 
 export interface ConsoleApplicationProps extends React.Props<any> {
-  version: string;
+  hideLegacy: boolean;
+  baseURL?: string;
+  customHeaderName?: string;
+  customHeaderValue?: string;
 }
 
 export interface ConsoleApplicationState {
@@ -49,19 +53,19 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   static async ensureSql() {
     try {
-      await axios.post("/druid/v2/sql", { query: 'SELECT 1337' });
+      await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
     } catch (e) {
       const { response } = e;
-      if (response.status !== 405 || response.statusText !== "Method Not Allowed") return true; // other failure
+      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') return true; // other failure
       try {
-        await axios.get("/status");
+        await axios.get('/status');
       } catch (e) {
         return true; // total failure
       }
 
       // Status works but SQL 405s => the SQL endpoint is disabled
       AppToaster.show({
-        iconName: 'error',
+        icon: IconNames.ERROR,
         intent: Intent.DANGER,
         timeout: 120000,
         /* tslint:disable:jsx-alignment */
@@ -93,6 +97,13 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     this.state = {
       aboutDialogOpen: false
     };
+
+    if (props.baseURL) {
+      axios.defaults.baseURL = props.baseURL;
+    }
+    if (props.customHeaderName && props.customHeaderValue) {
+      axios.defaults.headers.common[props.customHeaderName] = props.customHeaderValue;
+    }
   }
 
   componentDidMount(): void {
@@ -135,9 +146,11 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   render() {
+    const { hideLegacy } = this.props;
+
     const wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, scrollable = false) => {
       return <>
-        <HeaderBar active={active}/>
+        <HeaderBar active={active} hideLegacy={hideLegacy}/>
         <div className={classNames('view-container', { scrollable })}>{el}</div>
       </>;
     };

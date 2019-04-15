@@ -28,18 +28,18 @@
   }
 
   .buttons {
+    position: relative;
 
     button{
       margin-right: 15px;
     }
 
+    .query-elapsed {
+      position: absolute;
+      right: 10px;
+    }
   }
 
-}
-
-.auto-complete-checkbox {
-  margin:10px;
-  min-width: 120px;
 }
 
 .ace_tooltip {
@@ -54,7 +54,7 @@
   hr {
     margin: 10px 0;
   }
-  
+
   .function-doc-name {
     font-size: 18px;
   }

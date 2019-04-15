@@ -25,8 +25,6 @@ import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
@@ -43,12 +41,10 @@ public class RoaringBitmapFactory implements BitmapFactory
   static {
     try {
       final RoaringBitmap roaringBitmap = new RoaringBitmap();
-      final ByteArrayOutputStream out = new ByteArrayOutputStream();
-      roaringBitmap.serialize(new DataOutputStream(out));
-      final byte[] bytes = out.toByteArray();
-
-      ByteBuffer buf = ByteBuffer.wrap(bytes);
-      EMPTY_IMMUTABLE_BITMAP = new ImmutableRoaringBitmap(buf);
+      final ByteBuffer buffer = ByteBuffer.allocate(roaringBitmap.serializedSizeInBytes());
+      roaringBitmap.serialize(buffer);
+      buffer.flip();
+      EMPTY_IMMUTABLE_BITMAP = new ImmutableRoaringBitmap(buffer);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
