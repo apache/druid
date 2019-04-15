@@ -35,7 +35,7 @@ import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
@@ -125,12 +125,12 @@ public class CliBroker extends ServerRunnable
 
           LifecycleModule.register(binder, Server.class);
 
-          binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.BROKER);
+          binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.BROKER);
 
           bindAnnouncer(
               binder,
               DiscoverySideEffectsProvider
-                  .builder(NodeType.BROKER)
+                  .builder(NodeRole.BROKER)
                   .serviceClasses(ImmutableList.of(LookupNodeService.class))
                   .useLegacyAnnouncer(true)
                   .build()

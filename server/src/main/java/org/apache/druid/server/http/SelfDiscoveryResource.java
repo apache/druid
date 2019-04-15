@@ -22,10 +22,8 @@ package org.apache.druid.server.http;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.discovery.DiscoveryDruidNode;
-import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
@@ -36,12 +34,12 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.function.BooleanSupplier;
 
 /**
- * This class is annotated {@link Singleton} rather than {@link org.apache.druid.guice.LazySingleton}, because it adds
- * a lifecycle handler in the constructor, that should happen before the lifecycle is started, i. e. eagerly during the
+ * This class is annotated {@link Singleton} rather than {@link org.apache.druid.guice.LazySingleton} because it adds
+ * a lifecycle handler in the constructor. That should happen before the lifecycle is started, i. e. eagerly during the
  * DI configuration phase.
  */
 @Singleton
@@ -49,12 +47,12 @@ import java.util.Collections;
 @ResourceFilters(StateResourceFilter.class)
 public class SelfDiscoveryResource
 {
-  private boolean selfDiscovered = false;
+  private BooleanSupplier selfDiscovered;
 
   @Inject
   public SelfDiscoveryResource(
       @Self DruidNode thisDruidNode,
-      @Self NodeType thisNodeType,
+      @Self NodeRole thisNodeRole,
       DruidNodeDiscoveryProvider nodeDiscoveryProvider,
       Lifecycle lifecycle
   )
@@ -64,7 +62,7 @@ public class SelfDiscoveryResource
       @Override
       public void start()
       {
-        registerSelfDiscoveryListener(thisDruidNode, thisNodeType, nodeDiscoveryProvider);
+        selfDiscovered = nodeDiscoveryProvider.getForNode(thisDruidNode, thisNodeRole);
       }
 
       @Override
@@ -73,45 +71,15 @@ public class SelfDiscoveryResource
         // do nothing
       }
     };
-    // Using Lifecycle.Stage.LAST because DruidNodeDiscoveryProvider should be already started when
-    // registerSelfDiscoveryListener() is called.
-    lifecycle.addHandler(selfDiscoveryListenerRegistrator, Lifecycle.Stage.LAST);
-  }
-
-  private void registerSelfDiscoveryListener(
-      DruidNode thisDruidNode,
-      NodeType thisNodeType,
-      DruidNodeDiscoveryProvider nodeDiscoveryProvider
-  )
-  {
-    nodeDiscoveryProvider.getForNodeType(thisNodeType).registerListener(new DruidNodeDiscovery.Listener()
-    {
-      @Override
-      public void nodesAdded(Collection<DiscoveryDruidNode> nodes)
-      {
-        if (selfDiscovered) {
-          return;
-        }
-        for (DiscoveryDruidNode node : nodes) {
-          if (node.getDruidNode().equals(thisDruidNode)) {
-            selfDiscovered = true;
-            break;
-          }
-        }
-      }
-
-      @Override
-      public void nodesRemoved(Collection<DiscoveryDruidNode> nodes)
-      {
-        // do nothing
-      }
-    });
+    // Using Lifecycle.Stage.SERVER because DruidNodeDiscoveryProvider should be already started when
+    // selfDiscoveryListenerRegistrator.start() is called.
+    lifecycle.addHandler(selfDiscoveryListenerRegistrator, Lifecycle.Stage.SERVER);
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSelfDiscovered()
   {
-    return Response.ok(Collections.singletonMap("selfDiscovered", selfDiscovered)).build();
+    return Response.ok(Collections.singletonMap("selfDiscovered", selfDiscovered.getAsBoolean())).build();
   }
 }

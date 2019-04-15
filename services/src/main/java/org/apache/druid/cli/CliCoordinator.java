@@ -36,7 +36,7 @@ import org.apache.druid.client.HttpServerInventoryViewResource;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ConditionalMultibind;
 import org.apache.druid.guice.ConfigProvider;
 import org.apache.druid.guice.Jerseys;
@@ -234,12 +234,12 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorCleanupPendingSegments.class
             );
 
-            binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.COORDINATOR);
+            binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.COORDINATOR);
 
             bindAnnouncer(
                 binder,
                 Coordinator.class,
-                DiscoverySideEffectsProvider.builder(NodeType.COORDINATOR).build()
+                DiscoverySideEffectsProvider.builder(NodeRole.COORDINATOR).build()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);

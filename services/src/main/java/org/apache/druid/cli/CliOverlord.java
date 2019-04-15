@@ -38,7 +38,7 @@ import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.client.indexing.IndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceSelectorConfig;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
@@ -241,12 +241,12 @@ public class CliOverlord extends ServerRunnable
               LifecycleModule.register(binder, Server.class);
             }
 
-            binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.OVERLORD);
+            binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.OVERLORD);
 
             bindAnnouncer(
                 binder,
                 IndexingService.class,
-                DiscoverySideEffectsProvider.builder(NodeType.OVERLORD).build()
+                DiscoverySideEffectsProvider.builder(NodeRole.OVERLORD).build()
             );
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);

@@ -28,7 +28,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CacheMonitor;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.LookupNodeService;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.Jerseys;
@@ -105,12 +105,12 @@ public class CliHistorical extends ServerRunnable
           binder.install(new CacheModule());
           MetricsModule.register(binder, CacheMonitor.class);
 
-          binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.HISTORICAL);
+          binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.HISTORICAL);
 
           bindAnnouncer(
               binder,
               DiscoverySideEffectsProvider
-                  .builder(NodeType.HISTORICAL)
+                  .builder(NodeRole.HISTORICAL)
                   .serviceClasses(ImmutableList.of(DataNodeService.class, LookupNodeService.class))
                   .build()
           );

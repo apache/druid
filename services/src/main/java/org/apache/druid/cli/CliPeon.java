@@ -40,7 +40,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.indexing.HttpIndexingServiceClient;
 import org.apache.druid.client.indexing.IndexingServiceClient;
-import org.apache.druid.discovery.NodeType;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
@@ -290,7 +290,7 @@ public class CliPeon extends GuiceRunnable
                 .to(RemoteTaskActionClientFactory.class)
                 .in(LazySingleton.class);
 
-            binder.bind(NodeType.class).annotatedWith(Self.class).toInstance(NodeType.PEON);
+            binder.bind(NodeRole.class).annotatedWith(Self.class).toInstance(NodeRole.PEON);
           }
 
           @Provides
