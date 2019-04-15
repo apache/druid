@@ -435,17 +435,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     return (String) connectionIdObj;
   }
 
-  private class MetricsEmittingProxyResponseListener extends ProxyResponseListener
+  private class MetricsEmittingProxyResponseListener<T> extends ProxyResponseListener
   {
     private final HttpServletRequest req;
     private final HttpServletResponse res;
-    private final Query query;
+    private final Query<T> query;
     private final long startNs;
 
     public MetricsEmittingProxyResponseListener(
         HttpServletRequest request,
         HttpServletResponse response,
-        Query query,
+        Query<T> query,
         long startNs
     )
     {

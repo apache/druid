@@ -149,7 +149,7 @@ public class ExpressionPostAggregator implements PostAggregator
         aggregators.entrySet().stream().collect(
             Collectors.toMap(
                 entry -> entry.getKey(),
-                entry -> entry.getValue()::finalizeComputation
+                entry -> (Function<Object, Object>) entry.getValue()::finalizeComputation
             )
         )
     );
