@@ -31,7 +31,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -83,7 +82,7 @@ public class ExecutorLifecycle
     this.taskConfig = taskConfig;
     this.taskActionClientFactory = taskActionClientFactory;
     this.taskRunner = taskRunner;
-    this.jsonMapper = new DefaultObjectMapper((DefaultObjectMapper) jsonMapper).addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
   }
 
   @LifecycleStart
