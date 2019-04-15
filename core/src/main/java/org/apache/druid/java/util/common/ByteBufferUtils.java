@@ -28,6 +28,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.Objects;
 
 /**
  */
@@ -66,7 +67,7 @@ public class ByteBufferUtils
       throw new IllegalArgumentException("Unmapping only works with direct buffers");
     }
     if (UNMAP == null) {
-      throw UNMAP_NOT_SUPPORTED_EXCEPTION;
+      throw new UnsupportedOperationException(UNMAP_NOT_SUPPORTED_EXCEPTION);
     }
 
     try {
@@ -111,7 +112,7 @@ public class ByteBufferUtils
     MethodHandle directBufferCleanerMethod = lookup.unreflect(m);
     Class<?> cleanerClass = directBufferCleanerMethod.type().returnType();
     MethodHandle cleanMethod = lookup.findVirtual(cleanerClass, "clean", MethodType.methodType(void.class));
-    MethodHandle nonNullTest = lookup.findStatic(ByteBufferUtils.class, "nonNull",
+    MethodHandle nonNullTest = lookup.findStatic(Objects.class, "nonNull",
                                                  MethodType.methodType(boolean.class, Object.class)
     ).asType(MethodType.methodType(boolean.class, cleanerClass));
     MethodHandle noop = MethodHandles.dropArguments(MethodHandles.constant(
@@ -157,10 +158,5 @@ public class ByteBufferUtils
   public static void unmap(MappedByteBuffer buffer)
   {
     free(buffer);
-  }
-
-  private static boolean nonNull(Object o)
-  {
-    return o != null;
   }
 }
