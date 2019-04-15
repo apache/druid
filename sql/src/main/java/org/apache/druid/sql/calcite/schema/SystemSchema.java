@@ -93,9 +93,16 @@ public class SystemSchema extends AbstractSchema
   private static final String SERVER_SEGMENTS_TABLE = "server_segments";
   private static final String TASKS_TABLE = "tasks";
 
+  /**
+   * Booleans constants represented as long type,
+   * where 1 = true and 0 = false to make it easy to count number of segments
+   * which are published, available etc.
+   */
+  private static final long IS_PUBLISHED_FALSE = 0L;
+  private static final long IS_PUBLISHED_TRUE = 1L;
+  private static final long IS_AVAILABLE_TRUE = 1L;
   private static final long IS_OVERSHADOWED_FALSE = 0L;
   private static final long IS_OVERSHADOWED_TRUE = 1L;
-  private static final long IS_PUBLISHED_TRUE = 1L;
 
   static final RowSignature SEGMENTS_SIGNATURE = RowSignature
       .builder()
@@ -195,14 +202,6 @@ public class SystemSchema extends AbstractSchema
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
 
-    /**
-     * Booleans constants used for available segments represented as long type,
-     * where 1 = true and 0 = false to make it easy to count number of segments
-     * which are published, available
-     */
-    private static final long DEFAULT_IS_PUBLISHED = 0;
-    private static final long DEFAULT_IS_AVAILABLE = 1;
-
     public SegmentsTable(
         DruidSchema druidSchemna,
         MetadataSegmentView metadataView,
@@ -241,7 +240,7 @@ public class SystemSchema extends AbstractSchema
           Maps.newHashMapWithExpectedSize(druidSchema.getTotalSegments());
       for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
         PartialSegmentData partialSegmentData =
-            new PartialSegmentData(DEFAULT_IS_AVAILABLE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
+            new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
         partialSegmentDataMap.put(h.getSegmentId(), partialSegmentData);
       }
 
@@ -311,8 +310,8 @@ public class SystemSchema extends AbstractSchema
                   Long.valueOf(val.getKey().getShardSpec().getPartitionNum()),
                   numReplicas,
                   val.getValue().getNumRows(),
-                  DEFAULT_IS_PUBLISHED,
-                  DEFAULT_IS_AVAILABLE,
+                  IS_PUBLISHED_FALSE, // is_published is false for unpublished segments
+                  IS_AVAILABLE_TRUE, // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                   val.getValue().isRealtime(),
                   IS_OVERSHADOWED_FALSE, // there is an assumption here that unpublished segments are never overshadowed
                   jsonMapper.writeValueAsString(val.getKey())
