@@ -1011,7 +1011,7 @@ public class DruidQuery
     return new ScanQuery(
         dataSource,
         filtration.getQuerySegmentSpec(),
-        selectProjection != null ? VirtualColumns.create(selectProjection.getVirtualColumns()) : VirtualColumns.EMPTY,
+        getVirtualColumns(true),
         ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST,
         0,
         scanLimit,

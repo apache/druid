@@ -28,30 +28,18 @@
   }
 
   .buttons {
+    position: relative;
 
     button{
       margin-right: 15px;
     }
 
-  }
-
-}
-
-.sql-control-popover {
-  padding:10px;
-  min-width: 120px;
-
-  .bp3-form-group {
-    margin-bottom: 0;
-  }
-
-  button {
-    span {
-      position: relative;
-      left: -7px;
+    .query-elapsed {
+      position: absolute;
+      right: 10px;
     }
-    padding-right: 35px;
   }
+
 }
 
 .ace_tooltip {
@@ -66,7 +54,7 @@
   hr {
     margin: 10px 0;
   }
-  
+
   .function-doc-name {
     font-size: 18px;
   }

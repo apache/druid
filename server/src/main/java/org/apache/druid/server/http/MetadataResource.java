@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -51,13 +49,12 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -67,9 +64,7 @@ public class MetadataResource
 {
   private final MetadataSegmentManager metadataSegmentManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
-  private final AuthConfig authConfig;
   private final AuthorizerMapper authorizerMapper;
-  private final ObjectMapper jsonMapper;
 
   @Inject
   public MetadataResource(
@@ -82,9 +77,7 @@ public class MetadataResource
   {
     this.metadataSegmentManager = metadataSegmentManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
-    this.authConfig = authConfig;
     this.authorizerMapper = authorizerMapper;
-    this.jsonMapper = jsonMapper;
   }
 
   @GET
@@ -96,7 +89,10 @@ public class MetadataResource
       @Context final HttpServletRequest req
   )
   {
-    final Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
+    // If we haven't polled the metadata store yet, use an empty list of datasources.
+    final Collection<ImmutableDruidDataSource> druidDataSources = Optional.ofNullable(metadataSegmentManager.getDataSources())
+                                                                          .orElse(Collections.emptyList());
+
     final Set<String> dataSourceNamesPreAuth;
     if (includeDisabled != null) {
       dataSourceNamesPreAuth = new TreeSet<>(metadataSegmentManager.getAllDataSourceNames());
@@ -154,15 +150,14 @@ public class MetadataResource
       @QueryParam("datasources") final Set<String> datasources
   )
   {
-    Collection<ImmutableDruidDataSource> druidDataSources = metadataSegmentManager.getDataSources();
+    // If we haven't polled the metadata store yet, use an empty list of datasources.
+    Collection<ImmutableDruidDataSource> druidDataSources = Optional.ofNullable(metadataSegmentManager.getDataSources())
+                                                                    .orElse(Collections.emptyList());
+    Stream<ImmutableDruidDataSource> dataSourceStream = druidDataSources.stream();
     if (datasources != null && !datasources.isEmpty()) {
-      druidDataSources = druidDataSources.stream()
-                                         .filter(src -> datasources.contains(src.getName()))
-                                         .collect(Collectors.toSet());
+      dataSourceStream = dataSourceStream.filter(src -> datasources.contains(src.getName()));
     }
-    final Stream<DataSegment> metadataSegments = druidDataSources
-        .stream()
-        .flatMap(t -> t.getSegments().stream());
+    final Stream<DataSegment> metadataSegments = dataSourceStream.flatMap(t -> t.getSegments().stream());
 
     final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
         AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
@@ -170,20 +165,8 @@ public class MetadataResource
     final Iterable<DataSegment> authorizedSegments =
         AuthorizationUtils.filterAuthorizedResources(req, metadataSegments::iterator, raGenerator, authorizerMapper);
 
-    final StreamingOutput stream = outputStream -> {
-      final JsonFactory jsonFactory = jsonMapper.getFactory();
-      try (final JsonGenerator jsonGenerator = jsonFactory.createGenerator(outputStream)) {
-        jsonGenerator.writeStartArray();
-        for (DataSegment ds : authorizedSegments) {
-          jsonGenerator.writeObject(ds);
-          jsonGenerator.flush();
-        }
-        jsonGenerator.writeEndArray();
-      }
-    };
-
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(stream).build();
+    final Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    return builder.entity(authorizedSegments).build();
   }
 
   @GET

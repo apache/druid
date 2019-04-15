@@ -26,6 +26,7 @@ import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
 import { TableColumnSelection } from '../components/table-column-selection';
+import { ViewControlBar } from '../components/view-control-bar';
 import {
   addFilter,
   formatBytes,
@@ -370,8 +371,7 @@ WHERE "server_type" = 'historical'`);
     const { serverTableColumnSelectionHandler, middleManagerTableColumnSelectionHandler } = this;
 
     return <div className="servers-view app-view">
-      <div className="control-bar">
-        <div className="control-label">Historicals</div>
+      <ViewControlBar label="Historicals">
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
@@ -392,13 +392,12 @@ WHERE "server_type" = 'historical'`);
           onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderServersTable()}
 
       <div className="control-separator"/>
 
-      <div className="control-bar">
-        <div className="control-label">MiddleManagers</div>
+      <ViewControlBar label="MiddleManagers">
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
@@ -409,7 +408,7 @@ WHERE "server_type" = 'historical'`);
           onChange={(column) => middleManagerTableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={middleManagerTableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderMiddleManagerTable()}
     </div>;
   }

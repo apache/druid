@@ -24,6 +24,7 @@ import ReactTable, { Filter } from 'react-table';
 
 import { RuleEditor } from '../components/rule-editor';
 import { TableColumnSelection } from '../components/table-column-selection';
+import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { CompactionDialog } from '../dialogs/compaction-dialog';
 import { RetentionDialog } from '../dialogs/retention-dialog';
@@ -385,7 +386,12 @@ GROUP BY 1`);
             Header: 'Availability',
             id: 'availability',
             filterable: false,
-            accessor: (row) => row.num_available_segments / row.num_segments,
+            accessor: (row) => {
+              return {
+                num_available: row.num_available_segments,
+                num_total: row.num_segments
+              };
+            },
             Cell: (row) => {
               const { datasource, num_available_segments, num_segments, disabled } = row.original;
 
@@ -413,6 +419,11 @@ GROUP BY 1`);
                 </span>;
 
               }
+            },
+            sortMethod: (d1, d2) => {
+              const percentAvailable1 = d1.num_available / d1.num_total;
+              const percentAvailable2 = d2.num_available / d2.num_total;
+              return (percentAvailable1 - percentAvailable2) || (d1.num_total - d2.num_total);
             },
             show: tableColumnSelectionHandler.showColumn('Availability')
           },
@@ -523,8 +534,7 @@ GROUP BY 1`);
     const { tableColumnSelectionHandler } = this;
 
     return <div className="data-sources-view app-view">
-      <div className="control-bar">
-        <div className="control-label">Datasources</div>
+      <ViewControlBar label="Datasources">
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
@@ -545,7 +555,7 @@ GROUP BY 1`);
           onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderDatasourceTable()}
     </div>;
   }

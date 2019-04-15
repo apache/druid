@@ -16,20 +16,15 @@
  * limitations under the License.
  */
 
-import { Button } from '@blueprintjs/core';
 import * as React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components/loader';
 import { countBy, makeTextFilter } from '../utils';
 
-/* tslint:disable:max-classes-per-file */
+import { ReactTableCustomPagination } from './react-table-custom-pagination';
 
-class FullButton extends React.Component {
-  render() {
-    return <Button fill {...this.props}/>;
-  }
-}
+/* tslint:disable:max-classes-per-file */
 
 class NoData extends React.Component {
   render() {
@@ -50,8 +45,7 @@ Object.assign(ReactTableDefaults, {
   loadingText: '',
   NoDataComponent: NoData,
   FilterComponent: makeTextFilter(),
-  PreviousComponent: FullButton,
-  NextComponent: FullButton,
+  PaginationComponent: ReactTableCustomPagination,
   AggregatedComponent: (opt: any) => {
     const { subRows, column } = opt;
     const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row[column.id]);

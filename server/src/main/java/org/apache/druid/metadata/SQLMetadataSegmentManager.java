@@ -66,6 +66,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -73,6 +74,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 /**
+ *
  */
 @ManageLifecycle
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
@@ -102,9 +104,16 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
 
-  private ConcurrentHashMap<String, DruidDataSource> dataSources = new ConcurrentHashMap<>();
+  // Volatile since this reference is reassigned in "poll" and then read from in other threads.
+  // Starts null so we can differentiate "never polled" (null) from "polled, but empty" (empty map).
+  // Note that this is not simply a lazy-initialized variable: it starts off as null, and may transition between
+  // null and nonnull multiple times as stop() and start() are called.
+  @Nullable
+  private volatile ConcurrentHashMap<String, DruidDataSource> dataSources = null;
 
-  /** The number of times this SQLMetadataSegmentManager was started. */
+  /**
+   * The number of times this SQLMetadataSegmentManager was started.
+   */
   private long startCount = 0;
   /**
    * Equal to the current {@link #startCount} value, if the SQLMetadataSegmentManager is currently started; -1 if
@@ -200,7 +209,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         return;
       }
 
-      dataSources = new ConcurrentHashMap<>();
+      dataSources = null;
       currentStartOrder = -1;
       exec.shutdownNow();
       exec = null;
@@ -325,7 +334,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
           ).bind("dataSource", dataSource).execute()
       );
 
-      dataSources.remove(dataSource);
+      Optional.ofNullable(dataSources).ifPresent(m -> m.remove(dataSource));
 
       if (removed == 0) {
         return false;
@@ -348,18 +357,21 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
       // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
       List<SegmentId> possibleSegmentIds = SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId);
-      dataSources.computeIfPresent(
-          dataSourceName,
-          (dsName, dataSource) -> {
-            for (SegmentId possibleSegmentId : possibleSegmentIds) {
-              if (dataSource.removeSegment(possibleSegmentId) != null) {
-                break;
-              }
-            }
-            // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-            //noinspection ReturnOfNull
-            return dataSource.isEmpty() ? null : dataSource;
-          }
+      Optional.ofNullable(dataSources).ifPresent(
+          m ->
+              m.computeIfPresent(
+                  dataSourceName,
+                  (dsName, dataSource) -> {
+                    for (SegmentId possibleSegmentId : possibleSegmentIds) {
+                      if (dataSource.removeSegment(possibleSegmentId) != null) {
+                        break;
+                      }
+                    }
+                    // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+                    //noinspection ReturnOfNull
+                    return dataSource.isEmpty() ? null : dataSource;
+                  }
+              )
       );
 
       return removed;
@@ -375,14 +387,17 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   {
     try {
       final boolean removed = removeSegmentFromTable(segmentId.toString());
-      dataSources.computeIfPresent(
-          segmentId.getDataSource(),
-          (dsName, dataSource) -> {
-            dataSource.removeSegment(segmentId);
-            // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-            //noinspection ReturnOfNull
-            return dataSource.isEmpty() ? null : dataSource;
-          }
+      Optional.ofNullable(dataSources).ifPresent(
+          m ->
+              m.computeIfPresent(
+                  segmentId.getDataSource(),
+                  (dsName, dataSource) -> {
+                    dataSource.removeSegment(segmentId);
+                    // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
+                    //noinspection ReturnOfNull
+                    return dataSource.isEmpty() ? null : dataSource;
+                  }
+              )
       );
       return removed;
     }
@@ -422,23 +437,37 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   @Nullable
   public ImmutableDruidDataSource getDataSource(String dataSourceName)
   {
-    final DruidDataSource dataSource = dataSources.get(dataSourceName);
+    final DruidDataSource dataSource = Optional.ofNullable(dataSources).map(m -> m.get(dataSourceName)).orElse(null);
     return dataSource == null ? null : dataSource.toImmutableDruidDataSource();
   }
 
   @Override
+  @Nullable
   public Collection<ImmutableDruidDataSource> getDataSources()
   {
-    return dataSources.values()
-                      .stream()
-                      .map(DruidDataSource::toImmutableDruidDataSource)
-                      .collect(Collectors.toList());
+    return Optional.ofNullable(dataSources)
+                   .map(m ->
+                            m.values()
+                             .stream()
+                             .map(DruidDataSource::toImmutableDruidDataSource)
+                             .collect(Collectors.toList())
+                   )
+                   .orElse(null);
   }
 
   @Override
+  @Nullable
   public Iterable<DataSegment> iterateAllSegments()
   {
-    return () -> dataSources.values().stream().flatMap(dataSource -> dataSource.getSegments().stream()).iterator();
+    final ConcurrentHashMap<String, DruidDataSource> dataSourcesSnapshot = dataSources;
+    if (dataSourcesSnapshot == null) {
+      return null;
+    }
+
+    return () -> dataSourcesSnapshot.values()
+                                    .stream()
+                                    .flatMap(dataSource -> dataSource.getSegments().stream())
+                                    .iterator();
   }
 
   @Override
@@ -543,6 +572,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
               .addSegmentIfAbsent(segment);
         });
 
+    // Replace "dataSources" atomically.
     dataSources = newDataSources;
   }
 
@@ -557,7 +587,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
    */
   private DataSegment replaceWithExistingSegmentIfPresent(DataSegment segment)
   {
-    DruidDataSource dataSource = dataSources.get(segment.getDataSource());
+    DruidDataSource dataSource = Optional.ofNullable(dataSources).map(m -> m.get(segment.getDataSource())).orElse(null);
     if (dataSource == null) {
       return segment;
     }

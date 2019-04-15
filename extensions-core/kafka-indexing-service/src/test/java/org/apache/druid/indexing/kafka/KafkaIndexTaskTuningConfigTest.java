@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
+import org.apache.druid.indexing.kafka.test.TestModifiedKafkaIndexTaskTuningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -30,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 
 public class KafkaIndexTaskTuningConfigTest
 {
@@ -143,6 +145,100 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(new IndexSpec(), copy.getIndexSpec());
     Assert.assertEquals(true, copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
+  }
+
+  @Test
+  public void testSerdeWithModifiedTuningConfigAddedField() throws IOException
+  {
+    KafkaIndexTaskTuningConfig base = new KafkaIndexTaskTuningConfig(
+        1,
+        null,
+        2,
+        10L,
+        new Period("PT3S"),
+        new File("/tmp/xxx"),
+        4,
+        new IndexSpec(),
+        true,
+        true,
+        5L,
+        null,
+        null,
+        null,
+        true,
+        42,
+        42
+    );
+
+    String serialized = mapper.writeValueAsString(base);
+    TestModifiedKafkaIndexTaskTuningConfig deserialized =
+        mapper.readValue(serialized, TestModifiedKafkaIndexTaskTuningConfig.class);
+
+    Assert.assertEquals(null, deserialized.getExtra());
+    Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
+    Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
+    Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
+    Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
+    Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
+    Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
+    Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
+    Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
+    Assert.assertEquals(base.getBuildV9Directly(), deserialized.getBuildV9Directly());
+    Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
+    Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
+    Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
+    Assert.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
+    Assert.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
+    Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
+    Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
+    Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
+  }
+
+  @Test
+  public void testSerdeWithModifiedTuningConfigRemovedField() throws IOException
+  {
+    TestModifiedKafkaIndexTaskTuningConfig base = new TestModifiedKafkaIndexTaskTuningConfig(
+        1,
+        null,
+        2,
+        10L,
+        new Period("PT3S"),
+        new File("/tmp/xxx"),
+        4,
+        new IndexSpec(),
+        true,
+        true,
+        5L,
+        null,
+        null,
+        null,
+        true,
+        42,
+        42,
+        "extra string"
+    );
+
+    String serialized = mapper.writeValueAsString(base);
+    KafkaIndexTaskTuningConfig deserialized =
+        mapper.readValue(serialized, KafkaIndexTaskTuningConfig.class);
+
+    Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
+    Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
+    Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
+    Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
+    Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
+    Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
+    Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
+    Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
+    Assert.assertEquals(base.getBuildV9Directly(), deserialized.getBuildV9Directly());
+    Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
+    Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
+    Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
+    Assert.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
+    Assert.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
+    Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
+    Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
+    Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
   }
 
   private static KafkaIndexTaskTuningConfig copy(KafkaIndexTaskTuningConfig config)
