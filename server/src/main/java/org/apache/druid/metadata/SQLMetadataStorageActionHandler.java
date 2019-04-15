@@ -82,7 +82,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   )
   {
     this.connector = connector;
-    this.jsonMapper = jsonMapper;
+    //fully qualified references required below due to identical package names across project modules.
+    //noinspection UnnecessaryFullyQualifiedName
+    this.jsonMapper = jsonMapper.copy().addMixIn(org.apache.druid.metadata.PasswordProvider.class,
+            org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
     this.logType = types.getLogType();
