@@ -223,7 +223,7 @@ follows:
 |UNHEALTHY_SUPERVISOR|The supervisor has encountered non-transient errors on the past `druid.supervisor.stream.unhealthinessThreshold` iterations|1|
 |UNHEALTHY_TASKS|The last `druid.supervisor.stream.taskUnhealthinessThreshold` tasks have all failed|2|
 |UNABLE_TO_CONNECT_TO_STREAM|The supervisor is encountering connectivity issues with Kafka and has not successfully connected in the past|3|
-|LOST_CONTACT_WITH_STREAM|The supervisor is encountering transient connectivity issues with Kafka but has successfully connected in the past|4|
+|LOST_CONTACT_WITH_STREAM|The supervisor is encountering connectivity issues with Kafka but has successfully connected in the past|4|
 |WAITING_TO_RUN (first iteration only)|The supervisor has been initialized and hasn't started connecting to the stream.|5|
 |CONNECTING_TO_STREAM (first iteration only)|The supervisor is trying to connect to the stream and update partition data|5|
 |DISCOVERING_INITIAL_TASKS (first iteration only)|The supervisor is discovering already-running tasks|5|
@@ -235,7 +235,7 @@ follows:
 Notes about states:
 
 - Since it's possible that 2+ states can apply to a supervisor at the same time, each state is given a priority.  The
-active state with the highest priority will be returned in the status report.
+active state with the highest priority (i.e. lowest priority number) will be returned in the status report.
 - States marked with "first iteration only" only occur on the supervisor's first iteration at startup or after suspension.
 
 ### Getting Supervisor Ingestion Stats Report

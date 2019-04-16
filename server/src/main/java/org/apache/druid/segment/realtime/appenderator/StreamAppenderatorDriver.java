@@ -167,7 +167,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    *
    * @return {@link AppenderatorDriverAddResult}
    *
-   * @throws IOException if there is an I/O error while allocating or writing to a segment
+   * @throws IOException if there is an I/O error while allocating or writing to a segmentq
    */
   public AppenderatorDriverAddResult add(
       final InputRow row,

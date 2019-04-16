@@ -80,7 +80,6 @@ public class SeekableStreamSupervisorStateManager
   }
 
   private State supervisorState;
-  // Remove all throwableEvents that aren't in this set at the end of each run (transient)
   private final int healthinessThreshold;
   private final int unhealthinessThreshold;
   private final int healthinessTaskThreshold;
@@ -177,9 +176,9 @@ public class SeekableStreamSupervisorStateManager
           tasksHealthy = false;
         }
       }
-      if (tasksHealthy && currentRunState == State.UNHEALTHY_TASKS) {
+      if (tasksHealthy) {
         currentRunState = State.RUNNING;
-      } else if (!tasksHealthy) {
+      } else {
         currentRunState = State.UNHEALTHY_TASKS;
       }
     } else {
