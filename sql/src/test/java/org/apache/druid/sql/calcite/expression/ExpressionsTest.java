@@ -48,6 +48,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConv
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.TimeExtractOperatorConversion;
@@ -460,6 +461,82 @@ public class ExpressionsTest extends CalciteTestBase
         rexBuilder.makeCall(truncateFunction, inputRef("z"), integerLiteral(-1)),
         DruidExpression.fromExpression("(cast(cast(\"z\" * 0.1,'long'),'double') / 0.1)"),
         0.0
+    );
+  }
+
+  @Test
+  public void testRound()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("a")),
+        DruidExpression.fromExpression("round(\"a\")"),
+        10L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("b")),
+        DruidExpression.fromExpression("round(\"b\")"),
+        25L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("b"), integerLiteral(-1)),
+        DruidExpression.fromExpression("round(\"b\",-1)"),
+        30L
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x")),
+        DruidExpression.fromExpression("round(\"x\")"),
+        2.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x"), integerLiteral(1)),
+        DruidExpression.fromExpression("round(\"x\",1)"),
+        2.3
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("y")),
+        DruidExpression.fromExpression("round(\"y\")"),
+        3.0
+    );
+
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("z")),
+        DruidExpression.fromExpression("round(\"z\")"),
+        -2.0
+    );
+  }
+
+  @Test
+  public void testRoundWithInvalidArgument()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("The first argument to the function[round] should be integer or double type but get the STRING type");
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("s")),
+        DruidExpression.fromExpression("round(\"s\")"),
+        "IAE Exception"
+    );
+  }
+
+  @Test
+  public void testRoundWithInvalidSecondArgument()
+  {
+    final SqlFunction roundFunction = new RoundOperatorConversion().calciteOperator();
+
+    expectedException.expect(IAE.class);
+    expectedException.expectMessage("The second argument to the function[round] should be integer type but get the STRING type");
+    testExpression(
+        rexBuilder.makeCall(roundFunction, inputRef("x"), rexBuilder.makeLiteral("foo")),
+        DruidExpression.fromExpression("round(\"x\",'foo')"),
+        "IAE Exception"
     );
   }
 
