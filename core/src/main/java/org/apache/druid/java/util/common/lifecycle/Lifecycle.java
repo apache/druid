@@ -60,7 +60,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *  - Stage.SERVER: This lifecycle stage is intended for all 'server' objects, and currently only contains the Jetty
  *    module, but any sort of 'server' that expects most Lifecycle objects to be initialized by the time it starts, and
  *    still available at the time it stops can logically live in this stage.
- *  - Stage.ANNOUNCENTS: Any object which announces to a cluster this servers location belongs in this stage. By being
+ *  - Stage.ANNOUNCEMENTS: Any object which announces to a cluster this servers location belongs in this stage. By being
  *    last, we can be sure that all servers are initialized before we advertise the endpoint locations, and also can be
  *    sure that we un-announce these advertisements prior to the Stage.SERVER objects stop.
  *

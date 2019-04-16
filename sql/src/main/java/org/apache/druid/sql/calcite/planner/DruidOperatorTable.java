@@ -65,6 +65,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConver
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
@@ -159,6 +160,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, "<="))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
+          .add(new RoundOperatorConversion())
           // time operators
           .add(new CeilOperatorConversion())
           .add(new DateTruncOperatorConversion())
