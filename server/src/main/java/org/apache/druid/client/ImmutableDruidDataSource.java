@@ -27,10 +27,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * An immutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
@@ -107,6 +110,27 @@ public class ImmutableDruidDataSource
   public long getTotalSizeOfSegments()
   {
     return totalSizeOfSegments;
+  }
+
+  /**
+   * This method finds the fully overshadowed segments in this datasource
+   *
+   * @return set of overshadowed segments
+   */
+  public Set<SegmentId> getFullyOvershadowedSegments()
+  {
+    final Collection<DataSegment> segments = this.getSegments();
+    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline.buildTimelines(
+        segments);
+
+    final Set<SegmentId> overshadowedSegments = new HashSet<>();
+    for (DataSegment dataSegment : segments) {
+      final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
+      if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
+        overshadowedSegments.add(dataSegment.getId());
+      }
+    }
+    return overshadowedSegments;
   }
 
   @Override

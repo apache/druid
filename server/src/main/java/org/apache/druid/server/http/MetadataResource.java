@@ -38,7 +38,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -55,7 +54,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -165,7 +163,10 @@ public class MetadataResource
     final Stream<DataSegment> metadataSegments = dataSourceStream.flatMap(t -> t.getSegments().stream());
 
     if (includeOvershadowedStatus != null) {
-      final Set<SegmentId> overshadowedSegments = findOvershadowedSegments(druidDataSources);
+      final Set<SegmentId> overshadowedSegments = new HashSet<>();
+      for (ImmutableDruidDataSource dataSource : druidDataSources) {
+        overshadowedSegments.addAll(dataSource.getFullyOvershadowedSegments());
+      }
       final Stream<SegmentWithOvershadowedStatus> segmentsWithOvershadowedStatus = metadataSegments.map(segment -> new SegmentWithOvershadowedStatus(
           segment,
           overshadowedSegments.contains(segment.getId())
@@ -197,33 +198,6 @@ public class MetadataResource
       Response.ResponseBuilder builder = Response.status(Response.Status.OK);
       return builder.entity(authorizedSegments).build();
     }
-  }
-
-  /**
-   * This method finds the fully overshadowed segments from the given druidDataSources
-   *
-   * @param druidDataSources
-   *
-   * @return set of overshadowed segments
-   */
-  private Set<SegmentId> findOvershadowedSegments(Collection<ImmutableDruidDataSource> druidDataSources)
-  {
-    final Stream<DataSegment> segmentStream = druidDataSources
-        .stream()
-        .flatMap(t -> t.getSegments().stream());
-    final Map<String, VersionedIntervalTimeline<String, DataSegment>> timelines = VersionedIntervalTimeline.buildTimelines(
-        () -> segmentStream.iterator());
-
-    final Set<SegmentId> overshadowedSegments = new HashSet<>();
-    for (ImmutableDruidDataSource dataSource : druidDataSources) {
-      for (DataSegment dataSegment : dataSource.getSegments()) {
-        final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.get(dataSegment.getDataSource());
-        if (timeline != null && timeline.isOvershadowed(dataSegment.getInterval(), dataSegment.getVersion())) {
-          overshadowedSegments.add(dataSegment.getId());
-        }
-      }
-    }
-    return overshadowedSegments;
   }
 
   @GET
