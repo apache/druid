@@ -202,8 +202,8 @@ ORDER BY "rank" DESC, "created_time" DESC`);
         duration: d.duration ? d.duration : 0,
         error_msg: d.errorMsg,
         location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
-        rank: (this.statusRanking as any)[d.status === 'RUNNING' ? d.runnerStatusCode : d.status],
-        status: d.status === 'RUNNING' ? d.runnerStatusCode : d.status,
+        rank: (this.statusRanking as any)[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
+        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
         task_id: d.id,
         type: d.type
       };
