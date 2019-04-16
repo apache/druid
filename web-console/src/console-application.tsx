@@ -45,6 +45,7 @@ export interface ConsoleApplicationProps extends React.Props<any> {
 
 export interface ConsoleApplicationState {
   aboutDialogOpen: boolean;
+  noSqlMode: boolean;
 }
 
 export class ConsoleApplication extends React.Component<ConsoleApplicationProps, ConsoleApplicationState> {
@@ -95,7 +96,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   constructor(props: ConsoleApplicationProps, context: any) {
     super(props, context);
     this.state = {
-      aboutDialogOpen: false
+      aboutDialogOpen: false,
+      noSqlMode: false
     };
 
     if (props.baseURL) {
@@ -147,6 +149,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   render() {
     const { hideLegacy } = this.props;
+    const { noSqlMode } = this.state;
 
     const wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, scrollable = false) => {
       return <>
@@ -161,25 +164,25 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
           <Route
             path="/datasources"
             component={() => {
-              return wrapInViewContainer('datasources', <DatasourcesView goToSql={this.goToSql} goToSegments={this.goToSegments}/>);
+              return wrapInViewContainer('datasources', <DatasourcesView goToSql={this.goToSql} goToSegments={this.goToSegments} noSqlMode={noSqlMode}/>);
             }}
           />
           <Route
             path="/segments"
             component={() => {
-              return wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql}/>);
+              return wrapInViewContainer('segments', <SegmentsView datasource={this.datasource} onlyUnavailable={this.onlyUnavailable} goToSql={this.goToSql} noSqlMode={noSqlMode}/>);
             }}
           />
           <Route
             path="/tasks"
             component={() => {
-              return wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager}/>, true);
+              return wrapInViewContainer('tasks', <TasksView taskId={this.taskId} goToSql={this.goToSql} goToMiddleManager={this.goToMiddleManager} noSqlMode={noSqlMode}/>, true);
             }}
           />
           <Route
             path="/servers"
             component={() => {
-              return wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask}/>, true);
+              return wrapInViewContainer('servers', <ServersView middleManager={this.middleManager} goToSql={this.goToSql} goToTask={this.goToTask} noSqlMode={noSqlMode}/>, true);
             }}
           />
           <Route
@@ -196,7 +199,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
           />
           <Route
             component={() => {
-              return wrapInViewContainer(null, <HomeView/>);
+              return wrapInViewContainer(null, <HomeView noSqlMode={noSqlMode}/>);
             }}
           />
         </Switch>

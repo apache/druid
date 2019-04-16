@@ -47,6 +47,7 @@ export interface TasksViewProps extends React.Props<any> {
   taskId: string | null;
   goToSql: (initSql: string) => void;
   goToMiddleManager: (middleManager: string) => void;
+  noSqlMode: boolean;
 }
 
 export interface TasksViewState {
@@ -126,6 +127,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   }
 
   componentDidMount(): void {
+    const { noSqlMode } = this.props;
     this.supervisorQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const resp = await axios.get('/druid/indexer/v1/supervisor?full');
@@ -144,7 +146,20 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
 
     this.taskQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        return await queryDruidSql({ query });
+        if (!noSqlMode) {
+          return await queryDruidSql({ query });
+        } else {
+          const completeTasksResp = await axios.get('/druid/indexer/v1/completeTasks');
+          const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
+          const waitingTasksResp = await axios.get('/druid/indexer/v1/waitingTasks');
+          const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
+          const completeTasksResult = this.parseTasks(completeTasksResp.data);
+          const runningTasksResult = this.parseTasks(runningTasksResp.data);
+          const waitingTasksResult = this.parseTasks(waitingTasksResp.data);
+          const pendingTasksResult = this.parseTasks(pendingTasksResp.data);
+          const result = [].concat.apply([], [completeTasksResult, runningTasksResult, waitingTasksResult, pendingTasksResult]);
+          return result;
+        }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -177,6 +192,22 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   componentWillUnmount(): void {
     this.supervisorQueryManager.terminate();
     this.taskQueryManager.terminate();
+  }
+
+  private parseTasks = (data: any[]): any[] => {
+    return data.map((d: any) => {
+      return {
+        created_time: d.createdTime,
+        datasource: d.dataSource,
+        duration: d.duration ? d.duration : 0,
+        error_msg: d.errorMsg,
+        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+        rank: (this.statusRanking as any)[d.status === 'RUNNING' ? d.runnerStatusCode : d.status],
+        status: d.status === 'RUNNING' ? d.runnerStatusCode : d.status,
+        task_id: d.id,
+        type: d.type
+      };
+    });
   }
 
   private submitSupervisor = async (spec: JSON) => {
@@ -566,7 +597,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   }
 
   render() {
-    const { goToSql } = this.props;
+    const { goToSql, noSqlMode } = this.props;
     const { groupTasksBy, supervisorSpecDialogOpen, taskSpecDialogOpen, alertErrorMsg } = this.state;
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
 
@@ -605,11 +636,14 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           text="Refresh"
           onClick={() => this.taskQueryManager.rerunLastQuery()}
         />
-        <Button
-          icon={IconNames.APPLICATION}
-          text="Go to SQL"
-          onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
-        />
+        {
+          !noSqlMode &&
+          <Button
+            icon={IconNames.APPLICATION}
+            text="Go to SQL"
+            onClick={() => goToSql(this.taskQueryManager.getLastQuery())}
+          />
+        }
         <Button
           icon={IconNames.PLUS}
           text="Submit task"

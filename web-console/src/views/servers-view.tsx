@@ -55,6 +55,7 @@ export interface ServersViewProps extends React.Props<any> {
   middleManager: string | null;
   goToSql: (initSql: string) => void;
   goToTask: (taskId: string) => void;
+  noSqlMode: boolean;
 }
 
 export interface ServersViewState {
@@ -101,13 +102,13 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
   }
 
   componentDidMount(): void {
+    const { noSqlMode } = this.props;
     this.serverQueryManager = new QueryManager({
       processQuery: async (query: string) => {
         const servers = await queryDruidSql({ query });
 
         const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
         const loadQueues = loadQueueResponse.data;
-
         return servers.map((s: any) => {
           const loadQueueInfo = loadQueues[s.server];
           if (loadQueueInfo) {
@@ -125,10 +126,12 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       }
     });
 
-    this.serverQueryManager.runQuery(`SELECT
+    if (!noSqlMode) {
+      this.serverQueryManager.runQuery(`SELECT
   "tier", "server", "host", "plaintext_port", "tls_port", "curr_size", "max_size"
 FROM sys.servers
 WHERE "server_type" = 'historical'`);
+    }
 
     this.middleManagerQueryManager = new QueryManager({
       processQuery: async (query: string) => {
@@ -366,36 +369,38 @@ WHERE "server_type" = 'historical'`);
   }
 
   render() {
-    const { goToSql } = this.props;
+    const { goToSql, noSqlMode } = this.props;
     const { groupByTier } = this.state;
     const { serverTableColumnSelectionHandler, middleManagerTableColumnSelectionHandler } = this;
 
     return <div className="servers-view app-view">
-      <ViewControlBar label="Historicals">
-        <Button
-          icon={IconNames.REFRESH}
-          text="Refresh"
-          onClick={() => this.serverQueryManager.rerunLastQuery()}
-        />
-        <Button
-          icon={IconNames.APPLICATION}
-          text="Go to SQL"
-          onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
-        />
-        <Switch
-          checked={groupByTier}
-          label="Group by tier"
-          onChange={() => this.setState({ groupByTier: !groupByTier })}
-        />
-        <TableColumnSelection
-          columns={serverTableColumns}
-          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
-          tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
-        />
-      </ViewControlBar>
-      {this.renderServersTable()}
-
-      <div className="control-separator"/>
+      {
+        !noSqlMode &&
+        <ViewControlBar label="Historicals">
+          <Button
+            icon={IconNames.REFRESH}
+            text="Refresh"
+            onClick={() => this.serverQueryManager.rerunLastQuery()}
+          />
+          <Button
+            icon={IconNames.APPLICATION}
+            text="Go to SQL"
+            onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
+          />
+          <Switch
+            checked={groupByTier}
+            label="Group by tier"
+            onChange={() => this.setState({groupByTier: !groupByTier})}
+          />
+          <TableColumnSelection
+            columns={serverTableColumns}
+            onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
+            tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
+          />
+        </ViewControlBar>
+      }
+      {!noSqlMode && this.renderServersTable()}
+      {!noSqlMode && <div className="control-separator"/>}
 
       <ViewControlBar label="MiddleManagers">
         <Button

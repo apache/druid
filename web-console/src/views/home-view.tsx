@@ -36,6 +36,7 @@ export interface CardOptions {
 }
 
 export interface HomeViewProps extends React.Props<any> {
+  noSqlMode: boolean;
 }
 
 export interface HomeViewState {
@@ -110,6 +111,8 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
   }
 
   componentDidMount(): void {
+    const { noSqlMode } = this.props;
+
     this.statusQueryManager = new QueryManager({
       processQuery: async (query) => {
         const statusResp = await axios.get('/status');
@@ -130,7 +133,13 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
 
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const datasources = await queryDruidSql({ query });
+        let datasources: string[];
+        if (!noSqlMode) {
+          datasources = await queryDruidSql({ query });
+        } else {
+          const datasourcesResp = await axios.get('/druid/coordinator/v1/datasources');
+          datasources = datasourcesResp.data;
+        }
         return datasources.length;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -148,8 +157,26 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
 
     this.segmentQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const segments = await queryDruidSql({ query });
-        return getHeadProp(segments, 'count') || 0;
+        if (!noSqlMode) {
+          const segments = await queryDruidSql({ query });
+          return getHeadProp(segments, 'count') || 0;
+        } else {
+
+          const loadstatusResp = await axios.get('/druid/coordinator/v1/loadstatus?simple');
+          const loadstatus = loadstatusResp.data;
+          const unavailableSegmentNum = Object.keys(loadstatus).reduce((sum, key) => {
+            return sum + loadstatus[key];
+          }, 0);
+
+          const datasourcesMetaResp = await axios.get('/druid/coordinator/v1/datasources?simple');
+          const datasourcesMeta = datasourcesMetaResp.data;
+          const availableSegmentNum = datasourcesMeta.reduce((sum: number, curr: any) => {
+            return sum + curr.properties.segments.count;
+          }, 0);
+
+          return availableSegmentNum + unavailableSegmentNum;
+        }
+
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -160,33 +187,31 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
       }
     });
 
-    this.segmentQueryManager.runQuery(`SELECT COUNT(*) as "count" FROM sys.segments`);
+    this.segmentQueryManager.runQuery(`SELECT COUNT (*) as "count" FROM sys.segments`);
 
     // -------------------------
 
     this.taskQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const taskCountsFromSql = await queryDruidSql({ query });
-        const taskCounts = {
-          successTaskCount: 0,
-          failedTaskCount: 0,
-          runningTaskCount: 0,
-          waitingTaskCount: 0,
-          pendingTaskCount: 0
-        };
-        for (const dataStatus of taskCountsFromSql) {
-          if (dataStatus.status === 'SUCCESS') {
-            taskCounts.successTaskCount = dataStatus.count;
-          } else if (dataStatus.status === 'FAILED') {
-            taskCounts.failedTaskCount = dataStatus.count;
-          } else if (dataStatus.status === 'RUNNING') {
-            taskCounts.runningTaskCount = dataStatus.count;
-          } else if (dataStatus.status === 'WAITING') {
-            taskCounts.waitingTaskCount = dataStatus.count;
-          } else {
-            taskCounts.pendingTaskCount = dataStatus.count;
-          }
+        let taskCountsFromQuery: any[] = [];
+        if (!noSqlMode) {
+          taskCountsFromQuery = await queryDruidSql({ query });
+        } else {
+          const completeTasksResp = await axios.get('/druid/indexer/v1/completeTasks');
+          const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
+          const waitingTasksResp = await axios.get('/druid/indexer/v1/waitingTasks');
+          const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
+          taskCountsFromQuery.push({status: 'SUCCESS', count: completeTasksResp.data.filter((d: any) => d.status === 'SUCCESS').length});
+          taskCountsFromQuery.push({status: 'FAILED', count: completeTasksResp.data.filter((d: any) => d.status === 'FAILED').length});
+          taskCountsFromQuery.push({status: 'RUNNING', count: runningTasksResp.data.length});
+          taskCountsFromQuery.push({status: 'WAITING', count: waitingTasksResp.data.length});
+          taskCountsFromQuery.push({status: 'PENDING', count: pendingTasksResp.data.length});
         }
+        const taskCounts = taskCountsFromQuery.reduce((acc: any, curr: any) => {
+          const status = curr.status.toLowerCase();
+          const property = `${status}TaskCount`;
+          return {...acc, [property]: curr.count};
+        }, {});
         return taskCounts;
       },
       onStateChange: ({ result, loading, error }) => {
@@ -212,8 +237,10 @@ GROUP BY 1`);
 
     this.dataServerQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const dataServerCounts = await queryDruidSql({ query });
-        return getHeadProp(dataServerCounts, 'count') || 0;
+        if (!noSqlMode) {
+          const dataServerCounts = await queryDruidSql({ query });
+          return getHeadProp(dataServerCounts, 'count') || 0;
+        }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
@@ -306,7 +333,8 @@ GROUP BY 1`);
           {Boolean(state.successTaskCount) && <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p>}
           {Boolean(state.waitingTaskCount) && <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p>}
           {Boolean(state.failedTaskCount) && <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p>}
-          { !(state.runningTaskCount + state.pendingTaskCount + state.successTaskCount + state.waitingTaskCount + state.failedTaskCount) &&
+          {!(Boolean(state.runningTaskCount) || Boolean(state.pendingTaskCount) || Boolean(state.successTaskCount) ||
+            Boolean(state.waitingTaskCount) || Boolean(state.failedTaskCount)) &&
             <p>There are no tasks</p>
           }
           </>,
@@ -319,7 +347,7 @@ GROUP BY 1`);
         title: 'Data servers',
         loading: state.dataServerCountLoading || state.middleManagerCountLoading,
         content: <>
-          <p>{pluralIfNeeded(state.dataServerCount, 'historical')}</p>
+          {!this.props.noSqlMode && <p>{pluralIfNeeded(state.dataServerCount, 'historical')}</p>}
           <p>{pluralIfNeeded(state.middleManagerCount, 'middlemanager')}</p>
         </>,
         error: state.dataServerCountError
