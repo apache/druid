@@ -102,8 +102,9 @@ public final class SpecializationService
     }
     catch (ReflectiveOperationException | RuntimeException e) {
       throw new UnsupportedOperationException(
-          "defineClass is not supported on this platform, because internal Java APIs are not compatible "
-          + "with this Druid version", e
+          "defineClass is not supported on this platform, "
+          + "because internal Java APIs are not compatible with this Druid version",
+          e
       );
     }
   }
@@ -126,13 +127,14 @@ public final class SpecializationService
     );
 
     // bind privateLookupIn lookup argument to this method's lookup
+    // privateLookupIn = (Class targetClass) -> privateLookupIn(MethodHandles.privateLookupIn(targetClass, lookup))
     privateLookupIn = MethodHandles.insertArguments(privateLookupIn, 1, lookup);
 
-    // -> defineClass(Class targetClass, byte[] byteCode)
+    // defineClass = (Class targetClass, byte[] byteCode) -> privateLookupIn(targetClass).defineClass(byteCode)
     defineClass = MethodHandles.filterArguments(defineClass, 0, privateLookupIn);
 
     // add a dummy String argument to match the corresponding JDK8 version
-    // -> defineClass(Class targetClass, byte[] byteCode, String className)
+    // defineClass = (Class targetClass, byte[] byteCode, String className) -> defineClass(targetClass, byteCode)
     defineClass = MethodHandles.dropArguments(defineClass, 2, String.class);
     return defineClass;
   }
@@ -174,21 +176,24 @@ public final class SpecializationService
     MethodHandle getProtectionDomain = lookup.unreflect(Class.class.getMethod("getProtectionDomain"));
     MethodHandle getClassLoader = lookup.unreflect(Class.class.getMethod("getClassLoader"));
 
-    // apply methods to the targetClass
-    // -> defineClass(String className, byte[] byteCode, int offset, int length, Class targetClass, Class targetClass)
+    // apply getProtectionDomain and getClassLoader to the targetClass, modifying the methodHandle as follows:
+    // defineClass = (String className, byte[] byteCode, int offset, int length, Class class1, Class class2) ->
+    //   defineClass(className, byteCode, offset, length, class1.getClassLoader(), class2.getProtectionDomain())
     defineClass = MethodHandles.filterArguments(defineClass, 5, getProtectionDomain);
     defineClass = MethodHandles.filterArguments(defineClass, 4, getClassLoader);
 
-    // duplicate the last argument to apply the methods above to the same class
-    // -> defineClass(String className, byte[] byteCode, int offset, int length, Class targetClass, Class targetClass)
+    // duplicate the last argument to apply the methods above to the same class, modifying the methodHandle as follows:
+    // defineClass = (String className, byte[] byteCode, int offset, int length, Class targetClass) ->
+    //   defineClass(className, byteCode, offset, length, targetClass, targetClass)
     defineClass = MethodHandles.permuteArguments(
         defineClass,
         MethodType.methodType(Class.class, String.class, byte[].class, int.class, int.class, Class.class),
         0, 1, 2, 3, 4, 4
     );
 
-    // set offset argument to 0
-    // -> defineClass(String className, byte[] byteCode, int length, Class targetClass, Class targetClass)
+    // set offset argument to 0, modifying the methodHandle as follows:
+    // defineClass = (String className, byte[] byteCode, int length, Class targetClass) ->
+    //   defineClass(className, byteCode, 0, length, targetClass)
     defineClass = MethodHandles.insertArguments(defineClass, 2, (int) 0);
 
     // JDK8 does not implement MethodHandles.arrayLength so we have to roll our own
@@ -198,12 +203,14 @@ public final class SpecializationService
         MethodType.methodType(int.class, byte[].class)
     );
 
-    // apply arrayLength to the length argument
-    // -> defineClass(String className, byte[] byteCode, byte[] byteCode, Class targetClass)
+    // apply arrayLength to the length argument, modifying the methodHandle as follows:
+    // defineClass = (String className, byte[] byteCode1, byte[] byteCode2, Class targetClass) ->
+    //   defineClass(className, byteCode1, byteCode2.length, targetClass)
     defineClass = MethodHandles.filterArguments(defineClass, 2, arrayLength);
 
-    // duplicate the byte[] argument and reorder to match JDK9 signature
-    // -> defineClass(Class targetClass, byte[] byteCode, String className)
+    // duplicate the byteCode argument and reorder to match JDK9 signature, modifying the methodHandle as follows:
+    // defineClass = (Class targetClass, byte[] byteCode, String className) ->
+    //   defineClass(targetClass, byteCode, byteCode, className)
     defineClass = MethodHandles.permuteArguments(
         defineClass,
         MethodType.methodType(Class.class, Class.class, byte[].class, String.class),
