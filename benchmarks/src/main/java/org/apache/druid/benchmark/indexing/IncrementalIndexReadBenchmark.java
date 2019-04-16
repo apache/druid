@@ -60,6 +60,10 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.RunnerException;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -141,9 +145,9 @@ public class IncrementalIndexReadBenchmark
         .setMaxRowCount(rowsPerSegment);
     switch (indexType) {
       case "onheap":
-        builder.buildOnheap();
+        return builder.buildOnheap();
       case "oak":
-        builder.buildOak();
+        return builder.buildOak();
     }
     return null;
   }
@@ -224,4 +228,18 @@ public class IncrementalIndexReadBenchmark
   {
     return cursor.getColumnSelectorFactory().makeDimensionSelector(new DefaultDimensionSpec(name, null));
   }
+
+  public static void main(String[] args) throws RunnerException
+  {
+    Options opt = new OptionsBuilder()
+            .include(IncrementalIndexReadBenchmark.class.getSimpleName())
+            .forks(0)
+            .threads(1)
+            .param("indexType", "oak")
+            .build();
+
+    new Runner(opt).run();
+  }
+
+
 }
