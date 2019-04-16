@@ -1257,8 +1257,6 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.segmentCache.numLoadingThreads`|How many segments to drop or load concurrently from from deep storage.|10|
 |`druid.coordinator.loadqueuepeon.curator.numCallbackThreads`|Number of threads for executing callback actions associated with loading or dropping of segments.|2|
 |`druid.coordinator.loadqueuepeon.curator.numMonitorThreads`|Number of threads to use for monitoring deletion of zk nodes|1|
-|`druid.coordinator.curator.create.zknode.batchSize`|Number of zk nodes to create in one iteration.|5000|
-|`druid.coordinator.curator.create.zknode.repeatDelay`|Delay before creating next batch of zk nodes|PT1M|
 
 In `druid.segmentCache.locations`, *freeSpacePercent* was added because *maxSize* setting is only a theoretical limit and assumes that much space will always be available for storing segments. In case of any druid bug leading to unaccounted segment files left alone on disk or some other process writing stuff to disk, This check can start failing segment loading early before filling up the disk completely and leaving the host usable otherwise.
 
