@@ -41,6 +41,10 @@ public interface MetadataSegmentManager
 
   boolean enableSegment(String segmentId);
 
+  boolean enableSegments(String dataSource, Interval interval);
+
+  boolean enableSegments(String dataSource, Collection<String> segmentIds);
+
   boolean removeDataSource(String dataSource);
 
   /**

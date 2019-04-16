@@ -38,9 +38,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
-import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
@@ -48,7 +46,6 @@ import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
-import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
@@ -72,6 +69,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  *
@@ -80,6 +79,7 @@ import java.util.stream.Collectors;
 public class SQLMetadataSegmentManager implements MetadataSegmentManager
 {
   private static final EmittingLogger log = new EmittingLogger(SQLMetadataSegmentManager.class);
+  private static final Interval FOREVER = Intervals.of("0000-01-01/3000-01-01");
 
   /**
    * Use to synchronize {@link #start()}, {@link #stop()}, {@link #poll()}, and {@link #isStarted()}. These methods
@@ -219,81 +219,110 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  private VersionedIntervalTimeline<String, DataSegment> getVersionedIntervalTimeline(final String dataSource)
+  {
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> VersionedIntervalTimeline.forSegments(
+            Iterators.transform(
+                handle
+                    .createQuery(
+                        StringUtils.format(
+                            "SELECT payload FROM %s WHERE dataSource = :dataSource",
+                            getSegmentsTable()
+                        )
+                    )
+                    .setFetchSize(connector.getStreamingFetchSize())
+                    .bind("dataSource", dataSource)
+                    .map(ByteArrayMapper.FIRST)
+                    .iterator(),
+                payload -> {
+                  try {
+                    return jsonMapper.readValue(payload, DataSegment.class);
+                  }
+                  catch (IOException e) {
+                    throw new RuntimeException(e);
+                  }
+                }
+            )
+
+        )
+    );
+  }
+
+  private Stream<SegmentId> segmentIdsForInterval(
+      final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline,
+      final Interval interval
+  )
+  {
+    return versionedIntervalTimeline.lookup(interval).stream().flatMap(
+        objectHolder -> StreamSupport.stream(objectHolder.getObject().spliterator(), false).map(
+            dataSegmentPartitionChunk -> dataSegmentPartitionChunk.getObject().getId()
+        )
+    );
+  }
+
   @Override
   public boolean enableDataSource(final String dataSource)
   {
     try {
-      final IDBI dbi = connector.getDBI();
-      VersionedIntervalTimeline<String, DataSegment> segmentTimeline = connector.inReadOnlyTransaction(
-          (handle, status) -> VersionedIntervalTimeline.forSegments(
-              Iterators.transform(
-                  handle
-                      .createQuery(
-                          StringUtils.format(
-                              "SELECT payload FROM %s WHERE dataSource = :dataSource",
-                              getSegmentsTable()
-                          )
-                      )
-                      .setFetchSize(connector.getStreamingFetchSize())
-                      .bind("dataSource", dataSource)
-                      .map(ByteArrayMapper.FIRST)
-                      .iterator(),
-                  payload -> {
-                    try {
-                      return jsonMapper.readValue(payload, DataSegment.class);
-                    }
-                    catch (IOException e) {
-                      throw new RuntimeException(e);
-                    }
-                  }
-              )
-
-          )
-      );
-
-      final List<DataSegment> segments = new ArrayList<>();
-      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
-          Intervals.of("0000-01-01/3000-01-01")
-      );
-      for (TimelineObjectHolder<String, DataSegment> objectHolder : timelineObjectHolders) {
-        for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
-          segments.add(partitionChunk.getObject());
-        }
-      }
-
-      if (segments.isEmpty()) {
-        log.warn("No segments found in the database!");
-        return false;
-      }
-
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              Batch batch = handle.createBatch();
-
-              for (DataSegment segment : segments) {
-                batch.add(
-                    StringUtils.format(
-                        "UPDATE %s SET used=true WHERE id = '%s'",
-                        getSegmentsTable(),
-                        segment.getId()
-                    )
-                );
-              }
-              batch.execute();
-
-              return null;
-            }
-          }
-      );
+      return enableSegments(dataSource, FOREVER);
     }
     catch (Exception e) {
       log.error(e, "Exception enabling datasource %s", dataSource);
       return false;
     }
+  }
+
+  @Override
+  public boolean enableSegments(final String dataSource, final Interval interval)
+  {
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource);
+
+    return enableSegments(
+        segmentIdsForInterval(versionedIntervalTimeline, interval).collect(Collectors.toSet()),
+        versionedIntervalTimeline
+    );
+  }
+
+  @Override
+  public boolean enableSegments(final String dataSource, final Collection<String> segmentIds)
+  {
+    VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline = getVersionedIntervalTimeline(dataSource);
+
+    return enableSegments(
+        segmentIdsForInterval(versionedIntervalTimeline, FOREVER)
+            .filter(segmentId -> segmentIds.contains(segmentId.toString()))
+            .collect(Collectors.toSet()),
+        versionedIntervalTimeline
+    );
+  }
+
+  private boolean enableSegments(
+      final Collection<SegmentId> segmentIds,
+      final VersionedIntervalTimeline<String, DataSegment> versionedIntervalTimeline
+  )
+  {
+    if (segmentIds.isEmpty()) {
+      return false;
+    }
+
+    connector.getDBI().withHandle(handle -> {
+      Batch batch = handle.createBatch();
+      segmentIds
+          .stream()
+          .filter(segmentId -> !versionedIntervalTimeline.isOvershadowed(
+              segmentId.getInterval(),
+              segmentId.getVersion()
+          ))
+          .forEach(segmentId -> batch.add(
+              StringUtils.format(
+                  "UPDATE %s SET used=true WHERE id = '%s'",
+                  getSegmentsTable(),
+                  segmentId
+              )
+          ));
+      return batch.execute();
+    });
 
     return true;
   }

@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -62,6 +65,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -699,5 +703,86 @@ public class DataSourcesResource
       }
     }
     return false;
+  }
+
+  @PUT
+  @Path("/{dataSourceName}/markUsed")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response enableDatasourceSegments(
+      @PathParam("dataSourceName") String dataSourceName,
+      MarkDatasourceSegmentsPayload payload
+  )
+  {
+    if (payload == null || !payload.isValid()) {
+      return Response.status(Response.Status.BAD_REQUEST).entity(
+          ImmutableMap.of(
+              "error",
+              "Either interval or segments can be specified"
+          )
+      ).build();
+    }
+
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    if (dataSource == null) {
+      return Response.noContent().build();
+    }
+
+    boolean success;
+    try {
+      if (payload.getInterval() != null) {
+        success = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getInterval());
+      } else {
+        success = databaseSegmentManager.enableSegments(dataSource.getName(), payload.getSegmentIds());
+      }
+    }
+    catch (Exception e) {
+      return Response.serverError().entity(
+          ImmutableMap.of(
+              "error",
+              "Exception occurred.",
+              "message",
+              e.toString()
+          )
+      ).build();
+    }
+
+    if (!success) {
+      return Response.noContent().build();
+    }
+
+    return Response.ok().build();
+  }
+
+  @VisibleForTesting
+  protected static class MarkDatasourceSegmentsPayload
+  {
+    private final Interval interval;
+    private final Set<String> segmentIds;
+
+    @JsonCreator
+    public MarkDatasourceSegmentsPayload(
+        @JsonProperty("interval") Interval interval,
+        @JsonProperty("segments") Set<String> segmentIds
+    )
+    {
+      this.interval = interval;
+      this.segmentIds = segmentIds;
+    }
+
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    public Set<String> getSegmentIds()
+    {
+      return segmentIds;
+    }
+
+    public boolean isValid()
+    {
+      return interval == null ^ segmentIds == null;
+    }
   }
 }
