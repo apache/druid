@@ -210,7 +210,7 @@ public final class SpecializationService
 
     // duplicate the byteCode argument and reorder to match JDK9 signature, modifying the methodHandle as follows:
     // defineClass = (Class targetClass, byte[] byteCode, String className) ->
-    //   defineClass(targetClass, byteCode, byteCode, className)
+    //   defineClass(className, byteCode, byteCode, targetClass)
     defineClass = MethodHandles.permuteArguments(
         defineClass,
         MethodType.methodType(Class.class, Class.class, byte[].class, String.class),
