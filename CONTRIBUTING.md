@@ -23,21 +23,25 @@ When submitting a pull request (PR), please use the following guidelines:
 
 - Make sure your code respects existing formatting conventions. In general, follow
   the same coding style as the code that you are modifying.
-- For Intellij you can import our code style settings xml: [druid_intellij_formatting.xml](https://github.com/apache/incubator-druid/raw/master/druid_intellij_formatting.xml).
-- For Eclipse you can import our code style settings xml: [eclipse_formatting.xml](https://github.com/apache/incubator-druid/raw/master/eclipse_formatting.xml).
+- For Intellij you can import our code style settings xml: [`druid_intellij_formatting.xml`](
+  https://github.com/apache/incubator-druid/raw/master/dev/druid_intellij_formatting.xml).
+- For Eclipse you can import our code style settings xml: [`eclipse_formatting.xml`](
+  https://github.com/apache/incubator-druid/raw/master/dev/eclipse_formatting.xml).
 - Do add/update documentation appropriately for the change you are making.
 - If you are introducing a new feature you may want to first write about your idea
-  for feedback to [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org).
-  Non-trivial features should include unit tests covering the new functionality.
+  for feedback to [dev@druid.apache.org](https://lists.apache.org/list.html?dev@druid.apache.org). Or create an issue
+  using "Feature/Change" template. Non-trivial features should include unit tests covering the new functionality. Open
+  a "Proposal" issue for large changes.
 - Bugfixes should include a unit test or integration test reproducing the issue.
 - Do not use author tags/information in the code.
-- Always include license header on each java file your create. See [this example](https://github.com/apache/incubator-druid/blob/master/core/src/main/java/org/apache/druid/metadata/PasswordProvider.java)
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
 - Keep the number of commits small and combine commits for related changes.
   Each commit should compile on its own and ideally pass tests.
 - Keep formatting changes in separate commits to make code reviews easier and
   distinguish them from actual code changes.
+
+You can find more developers' resources in [`dev/`](dev) directory.
 
 ## GitHub Workflow
 
@@ -136,7 +140,7 @@ When submitting a pull request (PR), please use the following guidelines:
   committer that merges your change will rebase and squash it into a single commit before
   committing it to master.
 
-# FAQ
+## FAQ
 
 ### Help! I merged changes from upstream and cannot figure out how to resolve conflicts when rebasing!
 
