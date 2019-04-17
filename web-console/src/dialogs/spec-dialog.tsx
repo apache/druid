@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 
-import * as React from "react";
-import { Button, Classes, Dialog, Intent } from "@blueprintjs/core";
-import "./spec-dialog.scss"
-import AceEditor from "react-ace";
-import "brace/theme/solarized_dark";
-import "brace/mode/json"
+import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
+import 'brace/mode/json';
+import 'brace/theme/solarized_dark';
+import * as React from 'react';
+import AceEditor from 'react-ace';
+
+import './spec-dialog.scss';
 
 export interface SpecDialogProps extends React.Props<any> {
   onSubmit: (spec: JSON) => void;
   onClose: () => void;
   title: string;
+  initSpec?: any;
 }
 
 export interface SpecDialogState {
@@ -46,8 +48,8 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
   constructor(props: SpecDialogProps) {
     super(props);
     this.state = {
-      spec: ""
-    }
+      spec: props.initSpec ? JSON.stringify(props.initSpec, null, 2) : '{\n\n}'
+    };
   }
 
   private postSpec(): void {
@@ -63,28 +65,29 @@ export class SpecDialog extends React.Component<SpecDialogProps, SpecDialogState
     const { spec } = this.state;
 
     return <Dialog
-      className={"post-spec-dialog"}
+      className="spec-dialog"
       isOpen
       onClose={onClose}
       title={title}
+      canOutsideClickClose={false}
     >
       <AceEditor
         mode="json"
         theme="solarized_dark"
-        className={"post-spec-dialog-textarea"}
-        onChange={ (e) => {this.setState({ spec: e })} }
+        className="spec-dialog-textarea"
+        onChange={(e) => { this.setState({ spec: e }); }}
         fontSize={12}
         showPrintMargin={false}
-        showGutter={true}
-        highlightActiveLine={true}
+        showGutter
+        highlightActiveLine
         value={spec}
-        width={"100%"}
+        width="100%"
         setOptions={{
           enableBasicAutocompletion: true,
           enableLiveAutocompletion: true,
           showLineNumbers: true,
           enableSnippets: true,
-          tabSize: 2,
+          tabSize: 2
         }}
       />
       <div className={Classes.DIALOG_FOOTER}>

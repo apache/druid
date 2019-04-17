@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -95,7 +94,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
                       jgen.writeObject(o1);
                     }
                     catch (IOException e) {
-                      throw Throwables.propagate(e);
+                      throw new RuntimeException(e);
                     }
                     return null;
                   }

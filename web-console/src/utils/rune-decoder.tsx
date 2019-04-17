@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-
 export interface HeaderRows {
   header: string[];
   rows: any[][];
@@ -30,7 +29,8 @@ const SUPPORTED_QUERY_TYPES: string[] = [
   'timeBoundary',
   'dataSourceMetadata',
   'select',
-  'scan'
+  'scan',
+  'segmentMetadata'
 ];
 
 function flatArrayToHeaderRows(a: Record<string, any>[], headerOverride?: string[]): HeaderRows {
@@ -74,6 +74,13 @@ function processScan(rune: any[]): HeaderRows {
   return flatArrayToHeaderRows([].concat(...rune.map(r => r.events)), header);
 }
 
+function processSegmentMetadata(rune: any[]): HeaderRows {
+  const flatArray = ([] as any).concat(...rune.map(r => Object.keys(r.columns).map(
+    k => Object.assign({id: r.id, column: k},  r.columns[k])
+  )));
+  return flatArrayToHeaderRows(flatArray);
+}
+
 export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
   let queryType = runeQuery.queryType;
   if (typeof queryType !== 'string') throw new Error('must have queryType');
@@ -86,7 +93,11 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
         throw new Error(`Unsupported query type in treatQueryTypeAs: '${treatQueryTypeAs}'`);
       }
     } else {
-      throw new Error(`Unsupported query type '${queryType}'. Supported query types are: '${SUPPORTED_QUERY_TYPES.join("', '")}'. If this is a custom query you can parse the result as a known query type by setting 'treatQueryTypeAs' in the context to one of the supported types.`);
+      throw new Error([
+        `Unsupported query type '${queryType}'.`,
+        `Supported query types are: '${SUPPORTED_QUERY_TYPES.join("', '")}'.`,
+        `If this is a custom query you can parse the result as a known query type by setting 'treatQueryTypeAs' in the context to one of the supported types.`
+      ].join(' '));
     }
   }
 
@@ -118,6 +129,9 @@ export function decodeRune(runeQuery: any, runeResult: any[]): HeaderRows {
         };
       }
       return processScan(runeResult);
+
+    case 'segmentMetadata':
+      return processSegmentMetadata(runeResult);
 
     default:
       throw new Error(`Should never get here.`);

@@ -21,21 +21,26 @@ package org.apache.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.google.common.net.HttpHeaders;
 import org.apache.druid.data.input.FiniteFirehoseFactory;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.prefetch.PrefetchableTextFilesFirehoseFactory;
-import org.apache.druid.java.util.common.CompressionUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.utils.CompressionUtils;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -46,6 +51,10 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   private static final Logger log = new Logger(HttpFirehoseFactory.class);
   private final List<URI> uris;
   private final boolean supportContentRange;
+  @Nullable
+  private final String httpAuthenticationUsername;
+  @Nullable
+  private final PasswordProvider httpAuthenticationPasswordProvider;
 
   @JsonCreator
   public HttpFirehoseFactory(
@@ -54,7 +63,11 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
       @JsonProperty("maxFetchCapacityBytes") Long maxFetchCapacityBytes,
       @JsonProperty("prefetchTriggerBytes") Long prefetchTriggerBytes,
       @JsonProperty("fetchTimeout") Long fetchTimeout,
-      @JsonProperty("maxFetchRetry") Integer maxFetchRetry
+      @JsonProperty("maxFetchRetry") Integer maxFetchRetry,
+      @Nullable
+      @JsonProperty("httpAuthenticationUsername") String httpAuthenticationUsername,
+      @Nullable
+      @JsonProperty("httpAuthenticationPassword") PasswordProvider httpAuthenticationPasswordProvider
   ) throws IOException
   {
     super(maxCacheCapacityBytes, maxFetchCapacityBytes, prefetchTriggerBytes, fetchTimeout, maxFetchRetry);
@@ -64,6 +77,20 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
     final URLConnection connection = uris.get(0).toURL().openConnection();
     final String acceptRanges = connection.getHeaderField(HttpHeaders.ACCEPT_RANGES);
     this.supportContentRange = acceptRanges != null && "bytes".equalsIgnoreCase(acceptRanges);
+    this.httpAuthenticationUsername = httpAuthenticationUsername;
+    this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
+  }
+
+  @JsonProperty
+  public String getHttpAuthenticationUsername()
+  {
+    return httpAuthenticationUsername;
+  }
+
+  @JsonProperty("httpAuthenticationPassword")
+  public PasswordProvider getHttpAuthenticationPasswordProvider()
+  {
+    return httpAuthenticationPasswordProvider;
   }
 
   @JsonProperty
@@ -81,26 +108,29 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
   @Override
   protected InputStream openObjectStream(URI object) throws IOException
   {
-    return object.toURL().openConnection().getInputStream();
+    // A negative start value will ensure no bytes of the InputStream are skipped
+    return openObjectStream(object, 0);
   }
 
   @Override
   protected InputStream openObjectStream(URI object, long start) throws IOException
   {
-    if (supportContentRange) {
-      final URLConnection connection = object.toURL().openConnection();
+    URLConnection urlConnection = openURLConnection(object);
+    if (supportContentRange && start > 0) {
       // Set header for range request.
       // Since we need to set only the start offset, the header is "bytes=<range-start>-".
       // See https://tools.ietf.org/html/rfc7233#section-2.1
-      connection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", start));
-      return connection.getInputStream();
+      urlConnection.addRequestProperty(HttpHeaders.RANGE, StringUtils.format("bytes=%d-", start));
+      return urlConnection.getInputStream();
     } else {
-      log.warn(
-          "Since the input source doesn't support range requests, the object input stream is opened from the start and "
-          + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
-          + " a lot."
-      );
-      final InputStream in = openObjectStream(object);
+      if (!supportContentRange && start > 0) {
+        log.warn(
+                "Since the input source doesn't support range requests, the object input stream is opened from the start and "
+                        + "then skipped. This may make the ingestion speed slower. Consider enabling prefetch if you see this message"
+                        + " a lot."
+        );
+      }
+      final InputStream in = urlConnection.getInputStream();
       in.skip(start);
       return in;
     }
@@ -129,7 +159,9 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
            getMaxFetchCapacityBytes() == that.getMaxFetchCapacityBytes() &&
            getPrefetchTriggerBytes() == that.getPrefetchTriggerBytes() &&
            getFetchTimeout() == that.getFetchTimeout() &&
-           getMaxFetchRetry() == that.getMaxFetchRetry();
+           getMaxFetchRetry() == that.getMaxFetchRetry() &&
+           httpAuthenticationUsername.equals(that.getHttpAuthenticationUsername()) &&
+           httpAuthenticationPasswordProvider.equals(that.getHttpAuthenticationPasswordProvider());
   }
 
   @Override
@@ -141,7 +173,9 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
         getMaxFetchCapacityBytes(),
         getPrefetchTriggerBytes(),
         getFetchTimeout(),
-        getMaxFetchRetry()
+        getMaxFetchRetry(),
+        httpAuthenticationUsername,
+        httpAuthenticationPasswordProvider
     );
   }
 
@@ -161,11 +195,25 @@ public class HttpFirehoseFactory extends PrefetchableTextFilesFirehoseFactory<UR
           getMaxFetchCapacityBytes(),
           getPrefetchTriggerBytes(),
           getFetchTimeout(),
-          getMaxFetchRetry()
+          getMaxFetchRetry(),
+          getHttpAuthenticationUsername(),
+          httpAuthenticationPasswordProvider
       );
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @VisibleForTesting
+  URLConnection openURLConnection(URI object) throws IOException
+  {
+    URLConnection urlConnection = object.toURL().openConnection();
+    if (!Strings.isNullOrEmpty(httpAuthenticationUsername) && httpAuthenticationPasswordProvider != null) {
+      String userPass = httpAuthenticationUsername + ":" + httpAuthenticationPasswordProvider.getPassword();
+      String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));
+      urlConnection.setRequestProperty("Authorization", basicAuthString);
+    }
+    return urlConnection;
   }
 }

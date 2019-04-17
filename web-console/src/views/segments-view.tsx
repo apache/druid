@@ -16,23 +16,32 @@
  * limitations under the License.
  */
 
+import { Button, Intent } from '@blueprintjs/core';
+import { H5 } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
-import ReactTable from "react-table";
-import { Filter } from "react-table";
-import { Button } from "@blueprintjs/core";
-import { H5, IconNames } from "../components/filler";
+import * as React from 'react';
+import ReactTable from 'react-table';
+import { Filter } from 'react-table';
+
+import { TableColumnSelection } from '../components/table-column-selection';
+import { ViewControlBar } from '../components/view-control-bar';
+import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
-  makeBooleanFilter,
-  QueryManager,
   formatBytes,
-  formatNumber,
+  formatNumber, LocalStorageKeys,
+  makeBooleanFilter,
   parseList,
-  queryDruidSql
-} from "../utils";
-import "./segments-view.scss";
+  queryDruidSql,
+  QueryManager, TableColumnSelectionHandler
+} from '../utils';
+
+import './segments-view.scss';
+
+const tableColumns: string[] = ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition',
+  'Size', 'Num rows', 'Replicas', 'Is published', 'Is realtime', 'Is available'];
 
 export interface SegmentsViewProps extends React.Props<any> {
   goToSql: (initSql: string) => void;
@@ -54,6 +63,7 @@ interface QueryAndSkip {
 
 export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
   private segmentsQueryManager: QueryManager<QueryAndSkip, any[]>;
+  private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: SegmentsViewProps, context: any) {
     super(props, context);
@@ -88,7 +98,11 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
           segmentsError: error
         });
       }
-    })
+    });
+
+    this.tableColumnSelectionHandler = new TableColumnSelectionHandler(
+      LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION, () => this.setState({})
+    );
   }
 
   componentWillUnmount(): void {
@@ -99,7 +113,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     const { page, pageSize, filtered, sorted } = state;
     const totalQuerySize = (page + 1) * pageSize;
 
-    let queryParts = [
+    const queryParts = [
       `SELECT "segment_id", "datasource", "start", "end", "size", "version", "partition_num", "num_replicas", "num_rows", "is_published", "is_available", "is_realtime", "payload"`,
       `FROM sys.segments`
     ];
@@ -114,7 +128,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     }).filter(Boolean);
 
     if (whereParts.length) {
-      queryParts.push('WHERE ' + whereParts.join(' AND '))
+      queryParts.push('WHERE ' + whereParts.join(' AND '));
     }
 
     if (sorted.length) {
@@ -133,6 +147,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
 
   renderSegmentsTable() {
     const { segments, segmentsLoading, segmentsError, segmentFilter } = this.state;
+    const { tableColumnSelectionHandler } = this;
 
     return <ReactTable
       data={segments || []}
@@ -142,7 +157,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       manual
       filterable
       filtered={segmentFilter}
-      defaultSorted={[{id: "start", desc: true}]}
+      defaultSorted={[{id: 'start', desc: true}]}
       onFilteredChange={(filtered, column) => {
         this.setState({ segmentFilter: filtered });
       }}
@@ -151,88 +166,100 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       ofText=""
       columns={[
         {
-          Header: "Segment ID",
-          accessor: "segment_id",
-          width: 300
+          Header: 'Segment ID',
+          accessor: 'segment_id',
+          width: 300,
+          show: tableColumnSelectionHandler.showColumn('Segment ID')
         },
         {
-          Header: "Datasource",
-          accessor: "datasource",
+          Header: 'Datasource',
+          accessor: 'datasource',
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) }) }}>{value}</a>
-          }
+            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'datasource', value) }); }}>{value}</a>;
+          },
+          show: tableColumnSelectionHandler.showColumn('Datasource')
         },
         {
-          Header: "Start",
-          accessor: "start",
+          Header: 'Start',
+          accessor: 'start',
           width: 120,
           defaultSortDesc: true,
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) }) }}>{value}</a>
-          }
+            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'start', value) }); }}>{value}</a>;
+          },
+          show: tableColumnSelectionHandler.showColumn('Start')
         },
         {
-          Header: "End",
-          accessor: "end",
+          Header: 'End',
+          accessor: 'end',
           defaultSortDesc: true,
           width: 120,
           Cell: row => {
             const value = row.value;
-            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) }) }}>{value}</a>
-          }
+            return <a onClick={() => { this.setState({ segmentFilter: addFilter(segmentFilter, 'end', value) }); }}>{value}</a>;
+          },
+          show: tableColumnSelectionHandler.showColumn('End')
         },
         {
-          Header: "Version",
-          accessor: "version",
+          Header: 'Version',
+          accessor: 'version',
           defaultSortDesc: true,
           width: 120,
+          show: tableColumnSelectionHandler.showColumn('Version')
         },
         {
-          Header: "Partition",
-          accessor: "partition_num",
-          width: 60,
-          filterable: false
-        },
-        {
-          Header: "Size",
-          accessor: "size",
-          filterable: false,
-          defaultSortDesc: true,
-          Cell: row => formatBytes(row.value)
-        },
-        {
-          Header: "Num rows",
-          accessor: "num_rows",
-          filterable: false,
-          defaultSortDesc: true,
-          Cell: row => formatNumber(row.value)
-        },
-        {
-          Header: "Replicas",
-          accessor: "num_replicas",
+          Header: 'Partition',
+          accessor: 'partition_num',
           width: 60,
           filterable: false,
-          defaultSortDesc: true
+          show: tableColumnSelectionHandler.showColumn('Partition')
         },
         {
-          Header: "Is published",
-          id: "is_published",
+          Header: 'Size',
+          accessor: 'size',
+          filterable: false,
+          defaultSortDesc: true,
+          Cell: row => formatBytes(row.value),
+          show: tableColumnSelectionHandler.showColumn('Size')
+        },
+        {
+          Header: 'Num rows',
+          accessor: 'num_rows',
+          filterable: false,
+          defaultSortDesc: true,
+          Cell: row => formatNumber(row.value),
+          show: tableColumnSelectionHandler.showColumn('Num rows')
+        },
+        {
+          Header: 'Replicas',
+          accessor: 'num_replicas',
+          width: 60,
+          filterable: false,
+          defaultSortDesc: true,
+          show: tableColumnSelectionHandler.showColumn('Replicas')
+        },
+        {
+          Header: 'Is published',
+          id: 'is_published',
           accessor: (row) => String(Boolean(row.is_published)),
-          Filter: makeBooleanFilter()
+          Filter: makeBooleanFilter(),
+          show: tableColumnSelectionHandler.showColumn('Is published')
         },
         {
-          Header: "Is realtime",
-          id: "is_realtime",
+          Header: 'Is realtime',
+          id: 'is_realtime',
           accessor: (row) => String(Boolean(row.is_realtime)),
-          Filter: makeBooleanFilter()
+          Filter: makeBooleanFilter(),
+          show: tableColumnSelectionHandler.showColumn('Is realtime')
         },
         {
-          Header: "Is available",
-          id: "is_available",
+          Header: 'Is available',
+          id: 'is_available',
           accessor: (row) => String(Boolean(row.is_available)),
-          Filter: makeBooleanFilter()
+          Filter: makeBooleanFilter(),
+          show: tableColumnSelectionHandler.showColumn('Is available')
         }
       ]}
       defaultPageSize={50}
@@ -256,22 +283,27 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
 
   render() {
     const { goToSql } = this.props;
+    const { tableColumnSelectionHandler } = this;
 
     return <div className="segments-view app-view">
-      <div className="control-bar">
-        <div className="control-label">Segments</div>
+      <ViewControlBar label="Segments">
         <Button
-          iconName={IconNames.REFRESH}
+          icon={IconNames.REFRESH}
           text="Refresh"
           onClick={() => this.segmentsQueryManager.rerunLastQuery()}
         />
         <Button
-          iconName={IconNames.APPLICATION}
+          icon={IconNames.APPLICATION}
           text="Go to SQL"
           onClick={() => goToSql(this.segmentsQueryManager.getLastQuery().query)}
         />
-      </div>
+        <TableColumnSelection
+          columns={tableColumns}
+          onChange={(column) => tableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={tableColumnSelectionHandler.hiddenColumns}
+        />
+      </ViewControlBar>
       {this.renderSegmentsTable()}
-    </div>
+    </div>;
   }
 }

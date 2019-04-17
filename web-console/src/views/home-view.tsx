@@ -16,16 +16,19 @@
  * limitations under the License.
  */
 
+import { Card, H5, Icon } from '@blueprintjs/core';
+import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as React from 'react';
 import * as classNames from 'classnames';
-import { H5, Card, Icon, IconNames } from "../components/filler";
-import { QueryManager, pluralIfNeeded, queryDruidSql, getHeadProp } from '../utils';
+import * as React from 'react';
+
+import { getHeadProp, pluralIfNeeded, queryDruidSql, QueryManager } from '../utils';
+
 import './home-view.scss';
 
 export interface CardOptions {
   href: string;
-  icon: string;
+  icon: IconName;
   title: string;
   loading?: boolean;
   content: JSX.Element | string;
@@ -164,21 +167,21 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
     this.taskQueryManager = new QueryManager({
       processQuery: async (query) => {
         const taskCountsFromSql = await queryDruidSql({ query });
-        let taskCounts = {
+        const taskCounts = {
           successTaskCount: 0,
           failedTaskCount: 0,
           runningTaskCount: 0,
           waitingTaskCount: 0,
           pendingTaskCount: 0
         };
-        for (let dataStatus of taskCountsFromSql) {
-          if (dataStatus.status === "SUCCESS") {
+        for (const dataStatus of taskCountsFromSql) {
+          if (dataStatus.status === 'SUCCESS') {
             taskCounts.successTaskCount = dataStatus.count;
-          } else if (dataStatus.status === "FAILED") {
+          } else if (dataStatus.status === 'FAILED') {
             taskCounts.failedTaskCount = dataStatus.count;
-          } else if (dataStatus.status === "RUNNING") {
+          } else if (dataStatus.status === 'RUNNING') {
             taskCounts.runningTaskCount = dataStatus.count;
-          } else if (dataStatus.status === "WAITING") {
+          } else if (dataStatus.status === 'WAITING') {
             taskCounts.waitingTaskCount = dataStatus.count;
           } else {
             taskCounts.pendingTaskCount = dataStatus.count;
@@ -227,7 +230,7 @@ GROUP BY 1`);
 
     this.middleManagerQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const middleManagerResp = await axios.get("/druid/indexer/v1/workers");
+        const middleManagerResp = await axios.get('/druid/indexer/v1/workers');
         const middleManagerCount: number = middleManagerResp.data.length;
         return middleManagerCount;
       },
@@ -254,7 +257,7 @@ GROUP BY 1`);
 
   renderCard(cardOptions: CardOptions): JSX.Element {
     return <a href={cardOptions.href} target={cardOptions.href[0] === '/' ? '_blank' : undefined}>
-      <Card interactive={true}>
+      <Card className="status-card" interactive>
         <H5><Icon color="#bfccd5" icon={cardOptions.icon}/>&nbsp;{cardOptions.title}</H5>
         {cardOptions.loading ? <p>Loading...</p> : (cardOptions.error ? `Error: ${cardOptions.error}` : cardOptions.content)}
       </Card>
@@ -266,43 +269,43 @@ GROUP BY 1`);
 
     return <div className="home-view app-view">
       {this.renderCard({
-        href: "/status",
+        href: '/status',
         icon: IconNames.GRAPH,
-        title: "Status",
+        title: 'Status',
         loading: state.statusLoading,
         content: state.status ? `Apache Druid is running version ${state.status.version}` : '',
         error: state.statusError
       })}
 
       {this.renderCard({
-        href: "#datasources",
+        href: '#datasources',
         icon: IconNames.MULTI_SELECT,
-        title: "Datasources",
+        title: 'Datasources',
         loading: state.datasourceCountLoading,
         content: pluralIfNeeded(state.datasourceCount, 'datasource'),
         error: state.datasourceCountError
       })}
 
       {this.renderCard({
-        href: "#segments",
+        href: '#segments',
         icon: IconNames.STACKED_CHART,
-        title: "Segments",
+        title: 'Segments',
         loading: state.segmentCountLoading,
         content: pluralIfNeeded(state.segmentCount, 'segment'),
         error: state.datasourceCountError
       })}
 
       {this.renderCard({
-        href: "#tasks",
+        href: '#tasks',
         icon: IconNames.GANTT_CHART,
-        title: "Tasks",
+        title: 'Tasks',
         loading: state.taskCountLoading,
         content: <>
-          { Boolean(state.runningTaskCount) && <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p> }
-          { Boolean(state.pendingTaskCount) && <p>{pluralIfNeeded(state.pendingTaskCount, 'pending task')}</p> }
-          { Boolean(state.successTaskCount) && <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p> }
-          { Boolean(state.waitingTaskCount) && <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p> }
-          { Boolean(state.failedTaskCount) && <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p> }
+          {Boolean(state.runningTaskCount) && <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p>}
+          {Boolean(state.pendingTaskCount) && <p>{pluralIfNeeded(state.pendingTaskCount, 'pending task')}</p>}
+          {Boolean(state.successTaskCount) && <p>{pluralIfNeeded(state.successTaskCount, 'successful task')}</p>}
+          {Boolean(state.waitingTaskCount) && <p>{pluralIfNeeded(state.waitingTaskCount, 'waiting task')}</p>}
+          {Boolean(state.failedTaskCount) && <p>{pluralIfNeeded(state.failedTaskCount, 'failed task')}</p>}
           { !(state.runningTaskCount + state.pendingTaskCount + state.successTaskCount + state.waitingTaskCount + state.failedTaskCount) &&
             <p>There are no tasks</p>
           }
@@ -311,9 +314,9 @@ GROUP BY 1`);
       })}
 
       {this.renderCard({
-        href: "#servers",
+        href: '#servers',
         icon: IconNames.DATABASE,
-        title: "Data servers",
+        title: 'Data servers',
         loading: state.dataServerCountLoading || state.middleManagerCountLoading,
         content: <>
           <p>{pluralIfNeeded(state.dataServerCount, 'historical')}</p>
@@ -321,7 +324,6 @@ GROUP BY 1`);
         </>,
         error: state.dataServerCountError
       })}
-    </div>
+    </div>;
   }
 }
-

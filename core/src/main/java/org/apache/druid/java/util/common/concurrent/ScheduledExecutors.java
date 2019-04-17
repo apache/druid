@@ -88,9 +88,9 @@ public class ScheduledExecutors
           public void run()
           {
             try {
-              log.debug("Running %s (delay %s)", callable, delay);
+              log.trace("Running %s (delay %s)", callable, delay);
               if (callable.call() == Signal.REPEAT) {
-                log.debug("Rescheduling %s (delay %s)", callable, delay);
+                log.trace("Rescheduling %s (delay %s)", callable, delay);
                 exec.schedule(this, delay.getMillis(), TimeUnit.MILLISECONDS);
               } else {
                 log.debug("Stopped rescheduling %s (delay %s)", callable, delay);
@@ -154,7 +154,7 @@ public class ScheduledExecutors
             }
 
             try {
-              log.debug("Running %s (period %s)", callable, rate);
+              log.trace("Running %s (period %s)", callable, rate);
               prevSignal = callable.call();
             }
             catch (Throwable e) {

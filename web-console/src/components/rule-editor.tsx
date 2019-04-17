@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import * as React from 'react';
+import { Button, Card, Collapse, ControlGroup, FormGroup, HTMLSelect, InputGroup, NumericInput, TagInput } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import { Button, InputGroup, Collapse } from "@blueprintjs/core";
-import { IconNames, FormGroup, HTMLSelect, Card, ControlGroup, NumericInput, TagInput } from "../components/filler";
+import * as React from 'react';
+
 import './rule-editor.scss';
 
 export interface Rule {
@@ -107,7 +108,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     super(props);
     this.state = {
       isOpen: true
-    }
+    };
   }
 
   private removeTier = (key: string) => {
@@ -126,9 +127,9 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     let newTierName = tiers[0];
 
     if (rule.tieredReplicants) {
-      for (let i = 0; i < tiers.length; i++) {
-        if (rule.tieredReplicants[tiers[i]] === undefined) {
-          newTierName = tiers[i];
+      for (const tier of tiers) {
+        if (rule.tieredReplicants[tier] === undefined) {
+          newTierName = tier;
           break;
         }
       }
@@ -148,7 +149,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     const ruleTiers = Object.keys(tieredReplicants).sort();
     return ruleTiers.map(tier => {
       return <ControlGroup key={tier}>
-        <Button className="pt-minimal" style={{pointerEvents: 'none'}}>Replicants:</Button>
+        <Button minimal style={{pointerEvents: 'none'}}>Replicants:</Button>
         <NumericInput
           value={tieredReplicants[tier]}
           onValueChange={(v: number) => {
@@ -158,9 +159,9 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
           min={1}
           max={256}
         />
-        <Button className="pt-minimal" style={{pointerEvents: 'none'}}>Tier:</Button>
+        <Button minimal style={{pointerEvents: 'none'}}>Tier:</Button>
         <HTMLSelect
-          fill={true}
+          fill
           value={tier}
           onChange={(e: any) => onChange(RuleEditor.changeTier(rule, tier, e.target.value))}
         >
@@ -173,7 +174,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
         <Button
           disabled={ruleTiers.length === 1}
           onClick={() => this.removeTier(tier)}
-          iconName={IconNames.TRASH}
+          icon={IconNames.TRASH}
         />
       </ControlGroup>;
     });
@@ -184,7 +185,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     if (Object.keys(rule.tieredReplicants || {}).length >= Object.keys(tiers).length) return null;
 
     return <FormGroup className="right">
-      <Button onClick={this.addTier} className="pt-minimal" iconName={IconNames.PLUS}>Add a tier</Button>
+      <Button onClick={this.addTier} minimal icon={IconNames.PLUS}>Add a tier</Button>
     </FormGroup>;
   }
 
@@ -194,7 +195,7 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
     return <FormGroup label="Colocated datasources:">
       <TagInput
         values={rule.colocatedDataSources || []}
-        onChange={(v: any) => onChange(RuleEditor.changeColocatedDataSources(rule, v)) }
+        onChange={(v: any) => onChange(RuleEditor.changeColocatedDataSources(rule, v))}
         fill
       />
     </FormGroup>;
@@ -211,13 +212,13 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
 
     return <div className="rule-editor">
       <div className="title">
-        <Button className="left pt-minimal" rightIconName={isOpen ? IconNames.CARET_DOWN : IconNames.CARET_RIGHT} onClick={() => this.setState({isOpen: !isOpen})}>
+        <Button className="left" minimal rightIcon={isOpen ? IconNames.CARET_DOWN : IconNames.CARET_RIGHT} onClick={() => this.setState({isOpen: !isOpen})}>
           {RuleEditor.ruleToString(rule)}
         </Button>
         <div className="spacer"/>
-        {moveUp ? <Button className="pt-minimal" iconName={IconNames.ARROW_UP} onClick={moveUp}/> : null}
-        {moveDown ? <Button className="pt-minimal" iconName={IconNames.ARROW_DOWN} onClick={moveDown}/> : null}
-        <Button className="pt-minimal" iconName={IconNames.TRASH} onClick={onDelete}/>
+        {moveUp ? <Button minimal icon={IconNames.ARROW_UP} onClick={moveUp}/> : null}
+        {moveDown ? <Button minimal icon={IconNames.ARROW_DOWN} onClick={moveDown}/> : null}
+        <Button minimal icon={IconNames.TRASH} onClick={onDelete}/>
       </div>
 
       <Collapse isOpen={isOpen}>
@@ -240,21 +241,21 @@ export class RuleEditor extends React.Component<RuleEditorProps, RuleEditorState
                 <option value="ByPeriod">by period</option>
                 <option value="ByInterval">by interval</option>
               </HTMLSelect>
-              { ruleTimeType === 'ByPeriod' && <InputGroup value={rule.period || ''} onChange={(e: any) => onChange(RuleEditor.changePeriod(rule, e.target.value as any))}/>}
-              { ruleTimeType === 'ByInterval' && <InputGroup value={rule.interval || ''} onChange={(e: any) => onChange(RuleEditor.changeInterval(rule, e.target.value as any))}/>}
+              {ruleTimeType === 'ByPeriod' && <InputGroup value={rule.period || ''} onChange={(e: any) => onChange(RuleEditor.changePeriod(rule, e.target.value as any))}/>}
+              {ruleTimeType === 'ByInterval' && <InputGroup value={rule.interval || ''} onChange={(e: any) => onChange(RuleEditor.changeInterval(rule, e.target.value as any))}/>}
             </ControlGroup>
           </FormGroup>
           {
             ruleLoadType === 'load' &&
             <FormGroup>
-              { this.renderTiers() }
-              { this.renderTierAdder() }
+              {this.renderTiers()}
+              {this.renderTierAdder()}
             </FormGroup>
           }
           {
             ruleLoadType === 'broadcast' &&
             <FormGroup>
-              { this.renderColocatedDataSources() }
+              {this.renderColocatedDataSources()}
             </FormGroup>
           }
         </Card>

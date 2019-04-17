@@ -74,10 +74,7 @@ public abstract class LoadRule implements Rule
       currentReplicants.putAll(params.getSegmentReplicantLookup().getClusterTiers(segment.getId()));
 
       final CoordinatorStats stats = new CoordinatorStats();
-
-      if (params.getAvailableSegments().contains(segment)) {
-        assign(params, segment, stats);
-      }
+      assign(params, segment, stats);
 
       drop(params, segment, stats);
 
@@ -153,8 +150,8 @@ public abstract class LoadRule implements Rule
       log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
       return Collections.emptyList();
     }
-    Predicate<ServerHolder> isNotInMaintenance = s -> !s.isInMaintenance();
-    return queue.stream().filter(isNotInMaintenance.and(predicate)).collect(Collectors.toList());
+    Predicate<ServerHolder> isActive = s -> !s.isDecommissioning();
+    return queue.stream().filter(isActive.and(predicate)).collect(Collectors.toList());
   }
 
   /**
@@ -385,14 +382,14 @@ public abstract class LoadRule implements Rule
     Map<Boolean, TreeSet<ServerHolder>> holders = holdersInTier.stream()
                                                                .filter(s -> s.isServingSegment(segment))
                                                                .collect(Collectors.partitioningBy(
-                                                                   ServerHolder::isInMaintenance,
+                                                                   ServerHolder::isDecommissioning,
                                                                    Collectors.toCollection(TreeSet::new)
                                                                ));
-    TreeSet<ServerHolder> maintenanceServers = holders.get(true);
-    TreeSet<ServerHolder> availableServers = holders.get(false);
-    int left = dropSegmentFromServers(balancerStrategy, segment, maintenanceServers, numToDrop);
+    TreeSet<ServerHolder> decommissioningServers = holders.get(true);
+    TreeSet<ServerHolder> activeServers = holders.get(false);
+    int left = dropSegmentFromServers(balancerStrategy, segment, decommissioningServers, numToDrop);
     if (left > 0) {
-      left = dropSegmentFromServers(balancerStrategy, segment, availableServers, left);
+      left = dropSegmentFromServers(balancerStrategy, segment, activeServers, left);
     }
     if (left != 0) {
       log.warn("Wtf, holder was null?  I have no servers serving [%s]?", segment.getId());

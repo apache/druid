@@ -54,7 +54,7 @@ import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.BloomKFilter;
-import org.apache.druid.query.lookup.LookupReferencesManager;
+import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -99,7 +99,7 @@ public class BloomFilterSqlAggregatorTest
   private static final Injector injector = Guice.createInjector(
       binder -> {
         binder.bind(Key.get(ObjectMapper.class, Json.class)).toInstance(TestHelper.makeJsonMapper());
-        binder.bind(LookupReferencesManager.class).toInstance(
+        binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(
             LookupEnabledTestExprMacroTable.createTestLookupReferencesManager(
                 ImmutableMap.of(
                     "a", "xa",
@@ -493,7 +493,7 @@ public class BloomFilterSqlAggregatorTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "a0:agg:v",
+                    "v0",
                     "(\"l1\" * 2)",
                     ValueType.LONG,
                     TestExprMacroTable.INSTANCE
@@ -503,7 +503,7 @@ public class BloomFilterSqlAggregatorTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("a0:agg:v", "a0:agg:v"),
+                        new DefaultDimensionSpec("v0", "v0"),
                         TEST_NUM_ENTRIES
                     )
                 )
@@ -556,7 +556,7 @@ public class BloomFilterSqlAggregatorTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "a0:agg:v",
+                    "v0",
                     "(\"f1\" * 2)",
                     ValueType.FLOAT,
                     TestExprMacroTable.INSTANCE
@@ -566,7 +566,7 @@ public class BloomFilterSqlAggregatorTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("a0:agg:v", "a0:agg:v"),
+                        new DefaultDimensionSpec("v0", "v0"),
                         TEST_NUM_ENTRIES
                     )
                 )
@@ -619,7 +619,7 @@ public class BloomFilterSqlAggregatorTest
               .granularity(Granularities.ALL)
               .virtualColumns(
                   new ExpressionVirtualColumn(
-                    "a0:agg:v",
+                    "v0",
                     "(\"d1\" * 2)",
                     ValueType.DOUBLE,
                     TestExprMacroTable.INSTANCE
@@ -629,7 +629,7 @@ public class BloomFilterSqlAggregatorTest
                   ImmutableList.of(
                     new BloomFilterAggregatorFactory(
                         "a0:agg",
-                        new DefaultDimensionSpec("a0:agg:v", "a0:agg:v"),
+                        new DefaultDimensionSpec("v0", "v0"),
                         TEST_NUM_ENTRIES
                     )
                 )

@@ -22,7 +22,6 @@ package org.apache.druid.cli;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
@@ -195,7 +194,7 @@ public class DumpSegment extends GuiceRunnable
       }
     }
     catch (Exception e) {
-      throw Throwables.propagate(e);
+      throw new RuntimeException(e);
     }
   }
 
@@ -232,7 +231,7 @@ public class DumpSegment extends GuiceRunnable
                           objectMapper.writeValue(out, analysis);
                         }
                         catch (IOException e) {
-                          throw Throwables.propagate(e);
+                          throw new RuntimeException(e);
                         }
                         return null;
                       }
@@ -300,7 +299,7 @@ public class DumpSegment extends GuiceRunnable
                         out.write('\n');
                       }
                       catch (IOException e) {
-                        throw Throwables.propagate(e);
+                        throw new RuntimeException(e);
                       }
 
                       cursor.advance();
@@ -389,7 +388,7 @@ public class DumpSegment extends GuiceRunnable
               jg.writeEndObject();
             }
             catch (IOException e) {
-              throw Throwables.propagate(e);
+              throw new RuntimeException(e);
             }
 
             return null;

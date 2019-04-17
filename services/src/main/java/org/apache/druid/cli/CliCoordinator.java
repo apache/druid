@@ -66,7 +66,6 @@ import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
-import org.apache.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import org.apache.druid.server.http.ClusterResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
@@ -205,16 +204,24 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DataSourcesResource.class);
 
-            ConditionalMultibind.create(
+            final ConditionalMultibind<DruidCoordinatorHelper> conditionalMultibind = ConditionalMultibind.create(
                 properties,
                 binder,
                 DruidCoordinatorHelper.class,
                 CoordinatorIndexingServiceHelper.class
-            ).addConditionBinding(
-                "druid.coordinator.merge.on",
-                Predicates.equalTo("true"),
-                DruidCoordinatorSegmentMerger.class
-            ).addConditionBinding(
+            );
+
+            if (conditionalMultibind.matchCondition("druid.coordinator.merge.on", Predicates.equalTo("true"))) {
+              throw new UnsupportedOperationException(
+                  "'druid.coordinator.merge.on' is not supported anymore. "
+                  + "Please consider using Coordinator's automatic compaction instead. "
+                  + "See http://druid.io/docs/latest/operations/segment-optimization.html and "
+                  + "http://druid.io/docs/latest/operations/api-reference.html#compaction-configuration for more "
+                  + "details about compaction."
+              );
+            }
+
+            conditionalMultibind.addConditionBinding(
                 "druid.coordinator.kill.on",
                 Predicates.equalTo("true"),
                 DruidCoordinatorSegmentKiller.class

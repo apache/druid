@@ -20,7 +20,9 @@
 package org.apache.druid.java.util.common;
 
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.BufferUnderflowException;
@@ -31,6 +33,9 @@ import java.nio.ByteBuffer;
  */
 public class StringUtilsTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void fromUtf8ConversionTest() throws UnsupportedEncodingException
   {
@@ -159,5 +164,21 @@ public class StringUtilsTest
     String s2 = StringUtils.urlEncode("fff+ggg");
     Assert.assertEquals(s2, "fff%2Bggg");
     Assert.assertEquals("fff+ggg", StringUtils.urlDecode(s2));
+  }
+
+  @Test
+  public void testRepeat()
+  {
+    Assert.assertEquals("", StringUtils.repeat("foo", 0));
+    Assert.assertEquals("foo", StringUtils.repeat("foo", 1));
+    Assert.assertEquals("foofoofoo", StringUtils.repeat("foo", 3));
+
+    Assert.assertEquals("", StringUtils.repeat("", 0));
+    Assert.assertEquals("", StringUtils.repeat("", 1));
+    Assert.assertEquals("", StringUtils.repeat("", 3));
+
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("count is negative, -1");
+    Assert.assertEquals("", StringUtils.repeat("foo", -1));
   }
 }
