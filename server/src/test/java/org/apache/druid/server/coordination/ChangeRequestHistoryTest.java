@@ -22,7 +22,6 @@ package org.apache.druid.server.coordination;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.utils.CircularBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -31,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
+ *
  */
 public class ChangeRequestHistoryTest
 {
@@ -43,7 +43,8 @@ public class ChangeRequestHistoryTest
     history.addChangeRequest(new SegmentChangeRequestNoop());
     Assert.assertEquals(1, history.getLastCounter().getCounter());
 
-    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(ChangeRequestHistory.Counter.ZERO).get();
+    ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot = history.getRequestsSince(ChangeRequestHistory.Counter.ZERO)
+                                                                       .get();
     Assert.assertEquals(1, snapshot.getRequests().size());
     Assert.assertEquals(1, snapshot.getCounter().getCounter());
 
