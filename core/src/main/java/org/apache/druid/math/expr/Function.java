@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 /**
@@ -499,7 +501,7 @@ interface Function
     }
   }
 
-  class Round extends SingleParamMath
+  class Round implements Function
   {
     @Override
     public String name()
@@ -508,9 +510,42 @@ interface Function
     }
 
     @Override
-    protected ExprEval eval(double param)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      return ExprEval.of(Math.round(param));
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+
+      ExprEval value1 = args.get(0).eval(bindings);
+      if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
+        throw new IAE("The first argument to the function[%s] should be integer or double type but get the %s type", name(), value1.type());
+      }
+
+      if (args.size() == 1) {
+        return eval(value1);
+      } else {
+        ExprEval value2 = args.get(1).eval(bindings);
+        if (value2.type() != ExprType.LONG) {
+          throw new IAE("The second argument to the function[%s] should be integer type but get the %s type", name(), value2.type());
+        }
+        return eval(value1, value2.asInt());
+      }
+    }
+
+    private ExprEval eval(ExprEval param)
+    {
+      return eval(param, 0);
+    }
+
+    private ExprEval eval(ExprEval param, int scale)
+    {
+      if (param.type() == ExprType.LONG) {
+        return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
+      } else if (param.type() == ExprType.DOUBLE) {
+        return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale, RoundingMode.HALF_UP).doubleValue());
+      } else {
+        return ExprEval.of(null);
+      }
     }
   }
 

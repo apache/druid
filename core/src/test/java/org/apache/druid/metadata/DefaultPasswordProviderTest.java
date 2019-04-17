@@ -58,4 +58,13 @@ public class DefaultPasswordProviderTest
         PasswordProvider.class);
     Assert.assertEquals(pwd, pp.getPassword());
   }
+
+  @Test
+  public void testSerializationWithMixIn() throws Exception
+  {
+    DefaultPasswordProvider pp = new DefaultPasswordProvider(pwd);
+    jsonMapper.addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    String valueAsString = jsonMapper.writeValueAsString(pp);
+    Assert.assertEquals("{\"type\":\"default\"}", valueAsString);
+  }
 }

@@ -127,8 +127,10 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
                                    DEFAULT_TASK_STATUS_CHECK_PERIOD_MS :
                                    taskStatusCheckPeriodMs;
 
-    this.chatHandlerTimeout = DEFAULT_CHAT_HANDLER_TIMEOUT;
-    this.chatHandlerNumRetries = DEFAULT_CHAT_HANDLER_NUM_RETRIES;
+    this.chatHandlerTimeout = chatHandlerTimeout == null ? DEFAULT_CHAT_HANDLER_TIMEOUT : chatHandlerTimeout;
+    this.chatHandlerNumRetries = chatHandlerNumRetries == null
+                                 ? DEFAULT_CHAT_HANDLER_NUM_RETRIES
+                                 : chatHandlerNumRetries;
 
     Preconditions.checkArgument(this.maxNumSubTasks > 0, "maxNumSubTasks must be positive");
   }
