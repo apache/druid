@@ -26,11 +26,31 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
+/**
+ * All bloom filter aggregations are done using {@link ByteBuffer}, so this base class implements both {@link Aggregator}
+ * and {@link BufferAggregator}.
+ *
+ * If used as an {@link Aggregator} the caller MUST specify the 'onHeap' parameter in the
+ * constructor as "true", or else the "collector" will not be allocated and null pointer exceptions will make things sad.
+ *
+ * If used as a {@link BufferAggregator}, the "collector" buffer is not necessary, and should be called with "false",
+ * but at least nothing dramatic will happen like incorrect use in the {@link Aggregator} case.
+ *
+ * {@link BloomFilterAggregatorFactory} and {@link BloomFilterMergeAggregatorFactory}, which should be the creators of
+ * all implementations of {@link BaseBloomFilterAggregator} outside of tests, should be sure to set the 'onHeap' value
+ * to "true" and "false" respectively for
+ * {@link org.apache.druid.query.aggregation.AggregatorFactory#factorize(ColumnSelectorFactory)} and
+ * {@link org.apache.druid.query.aggregation.AggregatorFactory#factorizeBuffered(ColumnSelectorFactory)}
+ *
+ * @param <TSelector> type of {@link BaseNullableColumnValueSelector} that feeds this aggregator, likely either values
+ *                  to add to a bloom filter, or other bloom filters to merge into this bloom filter.
+ */
 public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableColumnValueSelector>
     implements BufferAggregator, Aggregator
 {
@@ -39,6 +59,11 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
   protected final int maxNumEntries;
   protected final TSelector selector;
 
+  /**
+   * @param selector selector that feeds values to the aggregator
+   * @param maxNumEntries maximum number of entries that can be added to a bloom filter before accuracy degrades rapidly
+   * @param onHeap allocate a ByteBuffer "collector" to use as an {@link Aggregator}
+   */
   BaseBloomFilterAggregator(TSelector selector, int maxNumEntries, boolean onHeap)
   {
     this.selector = selector;
@@ -146,20 +171,5 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("selector", selector);
-  }
-
-  static void bufferAddFloat(ByteBuffer buffer, BaseFloatColumnValueSelector selector)
-  {
-
-  }
-
-  static void bufferAddLong(ByteBuffer buffer, BaseLongColumnValueSelector selector)
-  {
-
-  }
-
-  static void bufferAddDimension(ByteBuffer buffer, DimensionSelector selector)
-  {
-
   }
 }
