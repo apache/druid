@@ -24,7 +24,6 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
-import org.apache.druid.segment.ColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -42,8 +41,8 @@ import java.nio.ByteBuffer;
  * {@link BloomFilterAggregatorFactory} and {@link BloomFilterMergeAggregatorFactory}, which should be the creators of
  * all implementations of {@link BaseBloomFilterAggregator} outside of tests, should be sure to set the 'onHeap' value
  * to "true" and "false" respectively for
- * {@link org.apache.druid.query.aggregation.AggregatorFactory#factorize(ColumnSelectorFactory)} and
- * {@link org.apache.druid.query.aggregation.AggregatorFactory#factorizeBuffered(ColumnSelectorFactory)}
+ * {@link org.apache.druid.query.aggregation.AggregatorFactory#factorize} and
+ * {@link org.apache.druid.query.aggregation.AggregatorFactory#factorizeBuffered}
  *
  * @param <TSelector> type of {@link BaseNullableColumnValueSelector} that feeds this aggregator, likely either values
  *                  to add to a bloom filter, or other bloom filters to merge into this bloom filter.
