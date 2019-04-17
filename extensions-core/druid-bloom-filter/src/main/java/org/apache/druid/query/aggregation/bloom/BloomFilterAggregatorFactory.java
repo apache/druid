@@ -40,7 +40,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
@@ -223,7 +222,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
       return ByteBuffer.wrap(StringUtils.decodeBase64String((String) object));
     } else if (object instanceof byte[]) {
       return ByteBuffer.wrap((byte[]) object);
-    }  else {
+    } else {
       return object;
     }
   }
