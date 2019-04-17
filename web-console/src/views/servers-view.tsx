@@ -105,8 +105,26 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
     const { noSqlMode } = this.props;
     this.serverQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        const servers = await queryDruidSql({ query });
-
+        let servers: any[];
+        if (!noSqlMode) {
+          servers = await queryDruidSql({ query });
+        } else {
+          const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
+          const allServers = allServerResp.data;
+          servers = allServers.map((s: any) => {
+            if (s.type === 'historical') {
+              return {
+                host: s.host.split(':')[0],
+                plaintext_port: parseInt(s.host.split(':')[1], 10),
+                server: s.host,
+                curr_size: s.currSize,
+                max_size: s.maxSize,
+                tier: s.tier
+              };
+            }
+            return null;
+          }).filter((s: any) => s != null);
+        }
         const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
         const loadQueues = loadQueueResponse.data;
         return servers.map((s: any) => {
@@ -126,12 +144,10 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
       }
     });
 
-    if (!noSqlMode) {
-      this.serverQueryManager.runQuery(`SELECT
+    this.serverQueryManager.runQuery(`SELECT
   "tier", "server", "host", "plaintext_port", "tls_port", "curr_size", "max_size"
 FROM sys.servers
 WHERE "server_type" = 'historical'`);
-    }
 
     this.middleManagerQueryManager = new QueryManager({
       processQuery: async (query: string) => {
@@ -284,7 +300,7 @@ WHERE "server_type" = 'historical'`);
             if (row.plaintext_port !== -1) {
               ports.push(`${row.plaintext_port} (plain)`);
             }
-            if (row.tls_port !== -1) {
+            if (row.tls_port !== undefined && row.tls_port !== -1) {
               ports.push(`${row.tls_port} (TLS)`);
             }
             return ports.join(', ') || 'No port';
@@ -374,33 +390,33 @@ WHERE "server_type" = 'historical'`);
     const { serverTableColumnSelectionHandler, middleManagerTableColumnSelectionHandler } = this;
 
     return <div className="servers-view app-view">
-      {
-        !noSqlMode &&
-        <ViewControlBar label="Historicals">
-          <Button
-            icon={IconNames.REFRESH}
-            text="Refresh"
-            onClick={() => this.serverQueryManager.rerunLastQuery()}
-          />
+      <ViewControlBar label="Historicals">
+        <Button
+          icon={IconNames.REFRESH}
+          text="Refresh"
+          onClick={() => this.serverQueryManager.rerunLastQuery()}
+        />
+        {
+          !noSqlMode &&
           <Button
             icon={IconNames.APPLICATION}
             text="Go to SQL"
             onClick={() => goToSql(this.serverQueryManager.getLastQuery())}
           />
-          <Switch
-            checked={groupByTier}
-            label="Group by tier"
-            onChange={() => this.setState({groupByTier: !groupByTier})}
-          />
-          <TableColumnSelection
-            columns={serverTableColumns}
-            onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
-            tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
-          />
-        </ViewControlBar>
-      }
-      {!noSqlMode && this.renderServersTable()}
-      {!noSqlMode && <div className="control-separator"/>}
+        }
+        <Switch
+          checked={groupByTier}
+          label="Group by tier"
+          onChange={() => this.setState({groupByTier: !groupByTier})}
+        />
+        <TableColumnSelection
+          columns={serverTableColumns}
+          onChange={(column) => serverTableColumnSelectionHandler.changeTableColumnSelection(column)}
+          tableColumnsHidden={serverTableColumnSelectionHandler.hiddenColumns}
+        />
+      </ViewControlBar>
+      {this.renderServersTable()}
+      <div className="control-separator"/>
 
       <ViewControlBar label="MiddleManagers">
         <Button
