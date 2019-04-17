@@ -71,6 +71,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -82,6 +83,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+      @JsonProperty("maxTotalSegments") @Nullable Integer maxTotalSegments,
       @JsonProperty("numShards") @Nullable Integer numShards,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
       @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
@@ -105,6 +107,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxRowsInMemory,
         maxBytesInMemory,
         maxTotalRows,
+        maxTotalSegments,
         null,
         numShards,
         null,

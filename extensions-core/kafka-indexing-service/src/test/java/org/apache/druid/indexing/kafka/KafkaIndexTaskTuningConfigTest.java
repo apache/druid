@@ -113,6 +113,7 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         2,
         10L,
+        42,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -155,6 +156,7 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         2,
         10L,
+        42,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -202,6 +204,7 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         2,
         10L,
+        42,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -226,6 +229,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
     Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
     Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
+    Assert.assertEquals(base.getMaxTotalSegments(), deserialized.getMaxTotalSegments());
     Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
     Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
     Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
@@ -248,6 +252,7 @@ public class KafkaIndexTaskTuningConfigTest
         config.getMaxBytesInMemory(),
         config.getMaxRowsPerSegment(),
         config.getMaxTotalRows(),
+        config.getMaxTotalSegments(),
         config.getIntermediatePersistPeriod(),
         config.getBasePersistDirectory(),
         0,

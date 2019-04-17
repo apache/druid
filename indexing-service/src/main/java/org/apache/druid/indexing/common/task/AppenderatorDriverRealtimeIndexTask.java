@@ -742,4 +742,3 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     return taskId + "_" + sequenceNumber;
   }
 }
-

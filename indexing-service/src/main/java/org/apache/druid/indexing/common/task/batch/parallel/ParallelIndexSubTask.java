@@ -299,6 +299,7 @@ public class ParallelIndexSubTask extends AbstractTask
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
     @Nullable final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
     @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
+    @Nullable final Integer maxTotalSegments = IndexTask.getValidMaxTotalSegments(tuningConfig);
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient, ingestionSchema);

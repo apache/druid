@@ -329,6 +329,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemory(),
         tuningConfig.getMaxTotalRows(),
+        tuningConfig.getMaxTotalSegments(),
         null,
         tuningConfig.getNumShards(),
         null,

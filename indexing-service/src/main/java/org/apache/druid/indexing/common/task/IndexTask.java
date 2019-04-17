@@ -434,6 +434,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final IndexTuningConfig tuningConfig = ingestionSchema.tuningConfig;
       @Nullable final Integer maxRowsPerSegment = getValidMaxRowsPerSegment(tuningConfig);
       @Nullable final Long maxTotalRows = getValidMaxTotalRows(tuningConfig);
+      @Nullable final Integer maxTotalSegments = getValidMaxTotalSegments(tuningConfig);
       final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir, maxRowsPerSegment);
       final DataSchema dataSchema;
       final Map<Interval, String> versions;
@@ -472,7 +473,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
           firehoseFactory,
           firehoseTempDir,
           maxRowsPerSegment,
-          maxTotalRows
+          maxTotalRows,
+          maxTotalSegments
       );
     }
     catch (Exception e) {
@@ -842,7 +844,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final FirehoseFactory firehoseFactory,
       final File firehoseTempDir,
       @Nullable final Integer maxRowsPerSegment,
-      @Nullable final Long maxTotalRows
+      @Nullable final Long maxTotalRows,
+      @Nullable final Integer maxTotalSegments
   ) throws IOException, InterruptedException
   {
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
@@ -1068,6 +1071,12 @@ public class IndexTask extends AbstractTask implements ChatHandler
     }
   }
 
+  public static Integer getValidMaxTotalSegments(IndexTuningConfig tuningConfig)
+  {
+    @Nullable final Integer maxTotalSegments = tuningConfig.maxTotalSegments;
+    return maxTotalSegments == null ? IndexTuningConfig.DEFAULT_MAX_TOTAL_SEGMENTS : maxTotalSegments;
+  }
+
   private void handleParseException(ParseException e)
   {
     if (e.isFromPartiallyValidRow()) {
@@ -1258,6 +1267,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
   {
     static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
     static final int DEFAULT_MAX_TOTAL_ROWS = 20_000_000;
+    static final int DEFAULT_MAX_TOTAL_SEGMENTS = 1000;
 
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
     private static final int DEFAULT_MAX_PENDING_PERSISTS = 0;
@@ -1271,6 +1281,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
     private final long maxBytesInMemory;
     @Nullable
     private final Long maxTotalRows;
+    @Nullable
+    private final Integer maxTotalSegments;
     @Nullable
     private final Integer numShards;
     private final List<String> partitionDimensions;
@@ -1306,6 +1318,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+        @JsonProperty("maxTotalSegments") @Nullable Integer maxTotalSegments,
         @JsonProperty("rowFlushBoundary") @Deprecated @Nullable Integer rowFlushBoundary_forBackCompatibility,
         @JsonProperty("numShards") @Nullable Integer numShards,
         @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
@@ -1329,6 +1342,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
           maxBytesInMemory != null ? maxBytesInMemory : 0,
           maxTotalRows,
+          maxTotalSegments,
           numShards,
           partitionDimensions,
           indexSpec,
@@ -1351,7 +1365,25 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     private IndexTuningConfig()
     {
-      this(null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      this(
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
     }
 
     private IndexTuningConfig(
@@ -1359,6 +1391,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
         @Nullable Integer maxRowsInMemory,
         @Nullable Long maxBytesInMemory,
         @Nullable Long maxTotalRows,
+        @Nullable Integer maxTotalSegments,
         @Nullable Integer numShards,
         @Nullable List<String> partitionDimensions,
         @Nullable IndexSpec indexSpec,
@@ -1386,6 +1419,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.maxTotalRows = maxTotalRows;
+      this.maxTotalSegments = maxTotalSegments;
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -1422,6 +1456,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxRowsInMemory,
           maxBytesInMemory,
           maxTotalRows,
+          maxTotalSegments,
           numShards,
           partitionDimensions,
           indexSpec,
@@ -1444,6 +1479,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxRowsInMemory,
           maxBytesInMemory,
           maxTotalRows,
+          maxTotalSegments,
           numShards,
           partitionDimensions,
           indexSpec,
@@ -1466,6 +1502,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
           maxRowsInMemory,
           maxBytesInMemory,
           maxTotalRows,
+          maxTotalSegments,
           numShards,
           partitionDimensions,
           indexSpec,
@@ -1517,6 +1554,14 @@ public class IndexTask extends AbstractTask implements ChatHandler
     public Long getMaxTotalRows()
     {
       return maxTotalRows;
+    }
+
+    @JsonProperty
+    @Override
+    @Nullable
+    public Integer getMaxTotalSegments()
+    {
+      return maxTotalSegments;
     }
 
     @JsonProperty

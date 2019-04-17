@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.realtime.appenderator;
 
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
@@ -57,7 +58,13 @@ public interface AppenderatorConfig
   @Nullable
   default Long getMaxTotalRows()
   {
-    throw new UnsupportedOperationException("maxTotalRows is not implemented.");
+    throw new UOE("maxTotalRows is not implemented.");
+  }
+
+  @Nullable
+  default Integer getMaxTotalSegments()
+  {
+    throw new UOE("maxTotalSegments is not implemented.");
   }
 
   /**

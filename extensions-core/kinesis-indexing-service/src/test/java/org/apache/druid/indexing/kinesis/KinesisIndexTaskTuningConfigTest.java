@@ -140,6 +140,7 @@ public class KinesisIndexTaskTuningConfigTest
         3L,
         2,
         100L,
+        42,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -198,6 +199,7 @@ public class KinesisIndexTaskTuningConfigTest
         3L,
         2,
         100L,
+        42,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -284,6 +286,7 @@ public class KinesisIndexTaskTuningConfigTest
         (long) 3,
         2,
         100L,
+        42,
         new Period("PT3S"),
         new File("/tmp/xxx"),
         4,
@@ -316,6 +319,7 @@ public class KinesisIndexTaskTuningConfigTest
     Assert.assertEquals(3, copy.getMaxBytesInMemory());
     Assert.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
     Assert.assertEquals(100L, (long) copy.getMaxTotalRows());
+    Assert.assertEquals(42, (int) copy.getMaxTotalSegments());
     Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
     Assert.assertEquals(new File("/tmp/xxx"), copy.getBasePersistDirectory());
     Assert.assertEquals(4, copy.getMaxPendingPersists());

@@ -58,6 +58,8 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   private final int maxRowsPerSegment;
   @Nullable
   private final Long maxTotalRows;
+  @Nullable
+  private final Integer maxTotalSegments;
   private final Period intermediatePersistPeriod;
   private final File basePersistDirectory;
   private final int maxPendingPersists;
@@ -79,6 +81,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("maxRowsPerSegment") @Nullable Integer maxRowsPerSegment,
       @JsonProperty("maxTotalRows") @Nullable Long maxTotalRows,
+      @JsonProperty("maxTotalSegments") @Nullable Integer maxTotalSegments,
       @JsonProperty("intermediatePersistPeriod") Period intermediatePersistPeriod,
       @JsonProperty("basePersistDirectory") File basePersistDirectory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
@@ -95,10 +98,11 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? defaultMaxRowsPerSegment : maxRowsPerSegment;
-    // initializing this to 0, it will be lazily intialized to a value
+    // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
     this.maxTotalRows = maxTotalRows;
+    this.maxTotalSegments = maxTotalSegments;
     this.intermediatePersistPeriod = intermediatePersistPeriod == null
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
@@ -161,6 +165,15 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
   {
     return maxTotalRows;
   }
+
+  @Override
+  @JsonProperty
+  @Nullable
+  public Integer getMaxTotalSegments()
+  {
+    return maxTotalSegments;
+  }
+
 
   @Override
   @JsonProperty
@@ -248,6 +261,7 @@ public class RealtimeAppenderatorTuningConfig implements TuningConfig, Appendera
         maxBytesInMemory,
         maxRowsPerSegment,
         maxTotalRows,
+        maxTotalSegments,
         intermediatePersistPeriod,
         dir,
         maxPendingPersists,

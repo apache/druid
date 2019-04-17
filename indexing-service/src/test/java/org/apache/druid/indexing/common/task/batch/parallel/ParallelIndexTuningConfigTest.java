@@ -64,6 +64,7 @@ public class ParallelIndexTuningConfigTest
         10,
         1000L,
         100L,
+        42,
         null,
         new IndexSpec(
             new RoaringBitmapSerdeFactory(true),
