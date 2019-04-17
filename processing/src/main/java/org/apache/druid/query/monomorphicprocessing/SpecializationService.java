@@ -109,14 +109,16 @@ public final class SpecializationService
     }
   }
 
+  /**
+   * "Compile" a MethodHandle that is equivalent to the following closure:
+   *
+   *  Class<?> defineClass(Class targetClass, String className, byte[] byteCode) {
+   *    MethodHandles.Lookup targetClassLookup = MethodHandles.privateLookupIn(targetClass, lookup);
+   *    return targetClassLookup.defineClass(byteCode);
+   *  }
+   */
   private static MethodHandle defineClassJava9(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
-    // "Compile" a MethodHandle that is equivalent to the following closure:
-    //
-    //  Class<?> defineClass(Class targetClass, String className, byte[] byteCode) {
-    //    MethodHandles.Lookup targetClassLookup = MethodHandles.privateLookupIn(targetClass, lookup);
-    //    return targetClassLookup.defineClass(byteCode);
-    //  }
 
     // this is getting meta
     MethodHandle defineClass = lookup.unreflect(MethodHandles.Lookup.class.getMethod("defineClass", byte[].class));
@@ -139,22 +141,22 @@ public final class SpecializationService
     return defineClass;
   }
 
+  /**
+   * "Compile" a MethodHandle that is equilavent to:
+   *
+   *  Class<?> defineClass(Class targetClass, byte[] byteCode, String className) {
+   *    return Unsafe.defineClass(
+   *        className,
+   *        byteCode,
+   *        0,
+   *        byteCode.length,
+   *        targetClass.getClassLoader(),
+   *        targetClass.getProtectionDomain()
+   *    );
+   *  }
+   */
   private static MethodHandle defineClassJava8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
-
-    // "Compile" a MethodHandle that is equilavent to
-    //
-    //  Class<?> defineClass(Class targetClass, byte[] byteCode, String className) {
-    //    return Unsafe.defineClass(
-    //        className,
-    //        byteCode,
-    //        0,
-    //        byteCode.length,
-    //        targetClass.getClassLoader(),
-    //        targetClass.getProtectionDomain()
-    //    );
-    //  }
-
     MethodHandle defineClass = lookup.findVirtual(
         Unsafe.theUnsafeClass(),
         "defineClass",
