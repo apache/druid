@@ -24,11 +24,12 @@ import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.ColumnValueSelector;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
-public class BloomFilterAggregateCombiner extends ObjectAggregateCombiner<BloomKFilter>
+public class BloomFilterAggregateCombiner extends ObjectAggregateCombiner<ByteBuffer>
 {
   @Nullable
-  private BloomKFilter combined;
+  private ByteBuffer combined;
 
   private final int maxNumEntries;
 
@@ -47,26 +48,30 @@ public class BloomFilterAggregateCombiner extends ObjectAggregateCombiner<BloomK
   @Override
   public void fold(ColumnValueSelector selector)
   {
-    BloomKFilter other = (BloomKFilter) selector.getObject();
+    ByteBuffer other = (ByteBuffer) selector.getObject();
     if (other == null) {
       return;
     }
     if (combined == null) {
-      combined = new BloomKFilter(maxNumEntries);
+      BloomKFilter bloomFilter = new BloomKFilter(maxNumEntries);
+      ByteBuffer buffer = ByteBuffer.allocate(BloomKFilter.computeSizeBytes(maxNumEntries));
+      BloomKFilter.serialize(buffer, bloomFilter);
     }
-    combined.merge(other);
+
+    BloomKFilter.mergeBloomFilterByteBuffers(combined, 0, other, 0);
   }
+
 
   @Nullable
   @Override
-  public BloomKFilter getObject()
+  public ByteBuffer getObject()
   {
     return combined;
   }
 
   @Override
-  public Class<? extends BloomKFilter> classOfObject()
+  public Class<? extends ByteBuffer> classOfObject()
   {
-    return BloomKFilter.class;
+    return ByteBuffer.class;
   }
 }

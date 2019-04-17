@@ -19,14 +19,20 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseDoubleColumnValueSelector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
 
-public abstract class BaseBloomFilterBufferAggregator<TSelector extends BaseNullableColumnValueSelector> implements BufferAggregator
+public abstract class BaseBloomFilterBufferAggregator<TSelector extends BaseNullableColumnValueSelector>
+    implements BufferAggregator
 {
   protected final int maxNumEntries;
   protected final TSelector selector;
@@ -64,7 +70,7 @@ public abstract class BaseBloomFilterBufferAggregator<TSelector extends BaseNull
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
     // | k (byte) | numLongs (int) | bitset (long[numLongs]) |
-    int sizeBytes = 1 + Integer.BYTES + (buf.getInt(position + 1) * Long.BYTES);
+    int sizeBytes = BloomKFilter.computeSizeBytes(maxNumEntries);
     mutationBuffer.limit(position + sizeBytes);
 
     ByteBuffer resultCopy = ByteBuffer.allocate(sizeBytes);
@@ -101,5 +107,53 @@ public abstract class BaseBloomFilterBufferAggregator<TSelector extends BaseNull
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
     inspector.visit("selector", selector);
+  }
+
+  public static void bufferAddFloat(ByteBuffer buffer, BaseFloatColumnValueSelector selector)
+  {
+    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      BloomKFilter.addFloat(buffer, selector.getFloat());
+    } else {
+      BloomKFilter.addBytes(buffer, null, 0, 0);
+    }
+  }
+
+  public static void bufferAddLong(ByteBuffer buffer, BaseLongColumnValueSelector selector)
+  {
+    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      BloomKFilter.addLong(buffer, selector.getLong());
+    } else {
+      BloomKFilter.addBytes(buffer, null, 0, 0);
+    }
+  }
+
+  public static void bufferAddDouble(ByteBuffer buffer, BaseDoubleColumnValueSelector selector)
+  {
+    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+      BloomKFilter.addDouble(buffer, selector.getDouble());
+    } else {
+      BloomKFilter.addBytes(buffer, null, 0, 0);
+    }
+  }
+
+  public static void bufferAddDim(ByteBuffer buffer, DimensionSelector selector)
+  {
+    if (selector.getRow().size() > 1) {
+      selector.getRow().forEach(v -> {
+        String value = selector.lookupName(v);
+        if (value == null) {
+          BloomKFilter.addBytes(buffer, null, 0, 0);
+        } else {
+          BloomKFilter.addString(buffer, value);
+        }
+      });
+    } else {
+      String value = (String) selector.getObject();
+      if (value == null) {
+        BloomKFilter.addBytes(buffer, null, 0, 0);
+      } else {
+        BloomKFilter.addString(buffer, value);
+      }
+    }
   }
 }

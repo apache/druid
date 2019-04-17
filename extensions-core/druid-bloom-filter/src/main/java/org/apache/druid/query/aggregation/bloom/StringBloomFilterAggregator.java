@@ -19,36 +19,18 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.DimensionSelector;
 
 public final class StringBloomFilterAggregator extends BaseBloomFilterAggregator<DimensionSelector>
 {
-  StringBloomFilterAggregator(DimensionSelector selector, BloomKFilter collector)
+  StringBloomFilterAggregator(DimensionSelector selector, int maxNumEntries)
   {
-    super(selector, collector);
+    super(selector, maxNumEntries);
   }
 
   @Override
   public void aggregate()
   {
-    // note: there might be room for optimization here but behavior must match BloomDimFilter implementation
-    if (selector.getRow().size() > 1) {
-      selector.getRow().forEach(v -> {
-        String value = selector.lookupName(v);
-        if (value == null) {
-          collector.addBytes(null, 0, 0);
-        } else {
-          collector.addString(value);
-        }
-      });
-    } else {
-      String value = (String) selector.getObject();
-      if (value == null) {
-        collector.addBytes(null, 0, 0);
-      } else {
-        collector.addString(value);
-      }
-    }
+    BaseBloomFilterBufferAggregator.bufferAddDim(collector, selector);
   }
 }

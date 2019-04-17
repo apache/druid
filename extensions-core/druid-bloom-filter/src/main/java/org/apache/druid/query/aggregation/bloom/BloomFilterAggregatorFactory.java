@@ -59,10 +59,6 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
           BloomKFilter.getNumSetBits(buf1, buf1.position()),
           BloomKFilter.getNumSetBits(buf2, buf2.position())
       );
-    } else if (o1 instanceof BloomKFilter && o2 instanceof BloomKFilter) {
-      BloomKFilter o1f = (BloomKFilter) o1;
-      BloomKFilter o2f = (BloomKFilter) o2;
-      return Integer.compare(o1f.getNumSetBits(), o2f.getNumSetBits());
     } else {
       throw new RE("Unable to compare unexpected types [%s]", o1.getClass().getName());
     }
@@ -104,13 +100,13 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     ValueType type = capabilities.getType();
     switch (type) {
       case STRING:
-        return new StringBloomFilterAggregator(columnFactory.makeDimensionSelector(field), filter);
+        return new StringBloomFilterAggregator(columnFactory.makeDimensionSelector(field), maxNumEntries);
       case LONG:
-        return new LongBloomFilterAggregator(columnFactory.makeColumnValueSelector(field.getDimension()), filter);
+        return new LongBloomFilterAggregator(columnFactory.makeColumnValueSelector(field.getDimension()), maxNumEntries);
       case FLOAT:
-        return new FloatBloomFilterAggregator(columnFactory.makeColumnValueSelector(field.getDimension()), filter);
+        return new FloatBloomFilterAggregator(columnFactory.makeColumnValueSelector(field.getDimension()), maxNumEntries);
       case DOUBLE:
-        return new DoubleBloomFilterAggregator(columnFactory.makeColumnValueSelector(field.getDimension()), filter);
+        return new DoubleBloomFilterAggregator(columnFactory.makeColumnValueSelector(field.getDimension()), maxNumEntries);
       default:
         throw new IAE("Cannot create bloom filter aggregator for invalid column type [%s]", type);
     }
@@ -168,7 +164,12 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
     if (lhs == null) {
       return rhs;
     }
-    ((BloomKFilter) lhs).merge((BloomKFilter) rhs);
+    BloomKFilter.mergeBloomFilterByteBuffers(
+        (ByteBuffer) lhs,
+        ((ByteBuffer) lhs).position(),
+        (ByteBuffer) rhs,
+        ((ByteBuffer) rhs).position()
+    );
     return lhs;
   }
 
@@ -195,7 +196,9 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   {
     if (object instanceof String) {
       return ByteBuffer.wrap(StringUtils.decodeBase64String((String) object));
-    } else {
+    } else if (object instanceof byte[]) {
+      return ByteBuffer.wrap((byte[]) object);
+    }  else {
       return object;
     }
   }

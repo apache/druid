@@ -19,24 +19,18 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
 public final class FloatBloomFilterAggregator extends BaseBloomFilterAggregator<BaseFloatColumnValueSelector>
 {
-  FloatBloomFilterAggregator(BaseFloatColumnValueSelector selector, BloomKFilter collector)
+  FloatBloomFilterAggregator(BaseFloatColumnValueSelector selector, int maxNumEntries)
   {
-    super(selector, collector);
+    super(selector, maxNumEntries);
   }
 
   @Override
   public void aggregate()
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      collector.addFloat(selector.getFloat());
-    } else {
-      collector.addBytes(null, 0, 0);
-    }
+    BaseBloomFilterBufferAggregator.bufferAddFloat(collector, selector);
   }
 }

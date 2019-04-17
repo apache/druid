@@ -26,7 +26,7 @@ public final class NoopBloomFilterAggregator extends BaseBloomFilterAggregator<N
 {
   NoopBloomFilterAggregator(BloomKFilter collector)
   {
-    super(NilColumnValueSelector.instance(), collector);
+    super(NilColumnValueSelector.instance(), 1);
   }
 
   @Override

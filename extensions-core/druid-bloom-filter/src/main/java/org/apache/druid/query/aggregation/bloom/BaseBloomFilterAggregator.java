@@ -24,16 +24,21 @@ import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
 public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableColumnValueSelector> implements Aggregator
 {
-  final BloomKFilter collector;
+  protected final int maxNumEntries;
   protected final TSelector selector;
+  final ByteBuffer collector;
 
-  BaseBloomFilterAggregator(TSelector selector, BloomKFilter collector)
+  BaseBloomFilterAggregator(TSelector selector, int maxNumEntries)
   {
-    this.collector = collector;
     this.selector = selector;
+    this.maxNumEntries = maxNumEntries;
+    BloomKFilter bloomFilter = new BloomKFilter(maxNumEntries);
+    this.collector = ByteBuffer.allocate(BloomKFilter.computeSizeBytes(maxNumEntries));
+    BloomKFilter.serialize(collector, bloomFilter);
   }
 
   @Nullable

@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
 import java.nio.ByteBuffer;
@@ -35,10 +33,6 @@ public final class DoubleBloomFilterBufferAggregator extends BaseBloomFilterBuff
   @Override
   public void bufferAdd(ByteBuffer buf)
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
-      BloomKFilter.addDouble(buf, selector.getDouble());
-    } else {
-      BloomKFilter.addBytes(buf, null, 0, 0);
-    }
+    BaseBloomFilterBufferAggregator.bufferAddDouble(buf, selector);
   }
 }
