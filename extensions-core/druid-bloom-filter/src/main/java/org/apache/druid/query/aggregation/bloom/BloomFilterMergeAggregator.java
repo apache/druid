@@ -24,21 +24,23 @@ import org.apache.druid.segment.ColumnValueSelector;
 
 import java.nio.ByteBuffer;
 
-public final class BloomFilterMergeAggregator extends BaseBloomFilterAggregator<ColumnValueSelector<Object>>
+public final class BloomFilterMergeAggregator extends BaseBloomFilterAggregator<ColumnValueSelector<ByteBuffer>>
 {
-  public BloomFilterMergeAggregator(ColumnValueSelector<Object> selector, int maxNumEntries)
+  public BloomFilterMergeAggregator(ColumnValueSelector<ByteBuffer> selector, int maxNumEntries, boolean onHeap)
   {
-    super(selector, maxNumEntries);
+    super(selector, maxNumEntries, onHeap);
+  }
+
+  @Override
+  public void bufferAdd(ByteBuffer buf)
+  {
+    ByteBuffer other = selector.getObject();
+    BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
   }
 
   @Override
   public void aggregate()
   {
-    Object other = selector.getObject();
-    if (other != null) {
-      if (other instanceof ByteBuffer) {
-        BloomKFilter.mergeBloomFilterByteBuffers(collector, 0, (ByteBuffer) other, 0);
-      }
-    }
+    bufferAdd(collector);
   }
 }

@@ -20,25 +20,89 @@
 package org.apache.druid.query.aggregation.bloom;
 
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.filter.BloomKFilter;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseFloatColumnValueSelector;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableColumnValueSelector> implements Aggregator
+public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableColumnValueSelector>
+    implements BufferAggregator, Aggregator
 {
+
+  protected final ByteBuffer collector;
   protected final int maxNumEntries;
   protected final TSelector selector;
-  final ByteBuffer collector;
 
-  BaseBloomFilterAggregator(TSelector selector, int maxNumEntries)
+  BaseBloomFilterAggregator(TSelector selector, int maxNumEntries, boolean onHeap)
   {
     this.selector = selector;
     this.maxNumEntries = maxNumEntries;
-    BloomKFilter bloomFilter = new BloomKFilter(maxNumEntries);
-    this.collector = ByteBuffer.allocate(BloomKFilter.computeSizeBytes(maxNumEntries));
-    BloomKFilter.serialize(collector, bloomFilter);
+    if (onHeap) {
+      BloomKFilter bloomFilter = new BloomKFilter(maxNumEntries);
+      this.collector = ByteBuffer.allocate(BloomKFilter.computeSizeBytes(maxNumEntries));
+      BloomKFilter.serialize(collector, bloomFilter);
+    } else {
+      collector = null;
+    }
+  }
+
+  abstract void bufferAdd(ByteBuffer buf);
+
+  @Override
+  public void init(ByteBuffer buf, int position)
+  {
+    final ByteBuffer mutationBuffer = buf.duplicate();
+    mutationBuffer.position(position);
+    BloomKFilter filter = new BloomKFilter(maxNumEntries);
+    BloomKFilter.serialize(mutationBuffer, filter);
+  }
+
+  @Override
+  public void aggregate(ByteBuffer buf, int position)
+  {
+    final int oldPosition = buf.position();
+    buf.position(position);
+    bufferAdd(buf);
+    buf.position(oldPosition);
+  }
+
+  @Override
+  public Object get(ByteBuffer buf, int position)
+  {
+    ByteBuffer mutationBuffer = buf.duplicate();
+    mutationBuffer.position(position);
+    // | k (byte) | numLongs (int) | bitset (long[numLongs]) |
+    int sizeBytes = BloomKFilter.computeSizeBytes(maxNumEntries);
+    mutationBuffer.limit(position + sizeBytes);
+
+    ByteBuffer resultCopy = ByteBuffer.allocate(sizeBytes);
+    resultCopy.put(mutationBuffer.slice());
+    resultCopy.rewind();
+    return resultCopy;
+  }
+
+  @Override
+  public float getFloat(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getFloat()");
+  }
+
+  @Override
+  public long getLong(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getDouble()");
   }
 
   @Nullable
@@ -51,24 +115,45 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getFloat()");
+    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getFloat()");
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getLong()");
+    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getLong()");
   }
 
   @Override
   public double getDouble()
   {
-    throw new UnsupportedOperationException("BloomFilterAggregator does not support getDouble()");
+    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getDouble()");
   }
 
   @Override
   public void close()
   {
     // nothing to close
+  }
+
+  @Override
+  public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+  {
+    inspector.visit("selector", selector);
+  }
+
+  static void bufferAddFloat(ByteBuffer buffer, BaseFloatColumnValueSelector selector)
+  {
+
+  }
+
+  static void bufferAddLong(ByteBuffer buffer, BaseLongColumnValueSelector selector)
+  {
+
+  }
+
+  static void bufferAddDimension(ByteBuffer buffer, DimensionSelector selector)
+  {
+
   }
 }

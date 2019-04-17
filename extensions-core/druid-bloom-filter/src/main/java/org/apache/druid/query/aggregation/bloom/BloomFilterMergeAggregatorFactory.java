@@ -47,23 +47,13 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
   @Override
   public Aggregator factorize(final ColumnSelectorFactory metricFactory)
   {
-    final BaseNullableColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    // null columns should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
-    if (selector instanceof NilColumnValueSelector) {
-      throw new ISE("WTF?! Unexpected NilColumnValueSelector");
-    }
-    return new BloomFilterMergeAggregator((ColumnValueSelector<Object>) selector, getMaxNumEntries());
+    return makeMergeAggregator(metricFactory);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory metricFactory)
   {
-    final BaseNullableColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
-    // null columns should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
-    if (selector instanceof NilColumnValueSelector) {
-      throw new ISE("WTF?! Unexpected NilColumnValueSelector");
-    }
-    return new BloomFilterMergeBufferAggregator((ColumnValueSelector<ByteBuffer>) selector, getMaxNumEntries());
+    return makeMergeAggregator(metricFactory);
   }
 
   @Override
@@ -79,5 +69,15 @@ public class BloomFilterMergeAggregatorFactory extends BloomFilterAggregatorFact
         .appendString(fieldName)
         .appendInt(getMaxNumEntries())
         .build();
+  }
+
+  private BloomFilterMergeAggregator makeMergeAggregator(ColumnSelectorFactory metricFactory)
+  {
+    final BaseNullableColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
+    // null columns should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
+    if (selector instanceof NilColumnValueSelector) {
+      throw new ISE("WTF?! Unexpected NilColumnValueSelector");
+    }
+    return new BloomFilterMergeAggregator((ColumnValueSelector<ByteBuffer>) selector, getMaxNumEntries(), true);
   }
 }
