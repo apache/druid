@@ -21,6 +21,7 @@ package org.apache.druid.query.monomorphicprocessing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
+import org.apache.druid.java.util.common.Unsafe;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
@@ -36,7 +37,6 @@ import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.reflect.Field;
 import java.security.ProtectionDomain;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -141,10 +141,6 @@ public final class SpecializationService
 
   private static MethodHandle defineClassJava8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
-    Class<?> unsafeClass = Class.forName("sun.misc.Unsafe");
-    Field f = unsafeClass.getDeclaredField("theUnsafe");
-    f.setAccessible(true);
-    Object theUnsafe = f.get(null);
 
     // "Compile" a MethodHandle that is equilavent to
     //
@@ -160,7 +156,7 @@ public final class SpecializationService
     //  }
 
     MethodHandle defineClass = lookup.findVirtual(
-        unsafeClass,
+        Unsafe.theUnsafeClass(),
         "defineClass",
         MethodType.methodType(
             Class.class,
@@ -171,7 +167,7 @@ public final class SpecializationService
             ClassLoader.class,
             ProtectionDomain.class
         )
-    ).bindTo(theUnsafe);
+    ).bindTo(Unsafe.theUnsafe());
 
     MethodHandle getProtectionDomain = lookup.unreflect(Class.class.getMethod("getProtectionDomain"));
     MethodHandle getClassLoader = lookup.unreflect(Class.class.getMethod("getClassLoader"));
