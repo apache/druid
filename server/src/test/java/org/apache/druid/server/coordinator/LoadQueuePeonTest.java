@@ -88,8 +88,19 @@ public class LoadQueuePeonTest extends CuratorTestBase
         jsonMapper,
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
-        new TestDruidCoordinatorConfig(null, null, null, null, null, null, 10, null, false, false,
-                                       Duration.millis(0), Duration.millis(10)
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            10,
+            null,
+            false,
+            false,
+            Duration.millis(0),
+            Duration.millis(10)
         )
     );
 
@@ -275,8 +286,20 @@ public class LoadQueuePeonTest extends CuratorTestBase
         Execs.scheduledSingleThreaded("test_load_queue_peon_scheduled-%d"),
         Execs.singleThreaded("test_load_queue_peon-%d"),
         // set time-out to 1 ms so that LoadQueuePeon will fail the assignment quickly
-        new TestDruidCoordinatorConfig(null, null, null, new Duration(1), null, null, 10, null, false, false,
-                                       new Duration("PT1s"), Duration.millis(10))
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            null,
+            new Duration(1),
+            null,
+            null,
+            10,
+            null,
+            false,
+            false,
+            new Duration("PT1s"),
+            Duration.millis(10)
+        )
     );
 
     loadQueuePeon.start();

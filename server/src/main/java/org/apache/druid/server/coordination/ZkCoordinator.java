@@ -115,55 +115,7 @@ public class ZkCoordinator
                 final ChildData child = event.getData();
                 switch (event.getType()) {
                   case CHILD_ADDED:
-                    segmentLoadUnloadService.submit(() -> {
-                      final String path = child.getPath();
-                      DataSegmentChangeRequest request = new SegmentChangeRequestNoop();
-                      try {
-                        final DataSegmentChangeRequest finalRequest = jsonMapper.readValue(
-                            child.getData(),
-                            DataSegmentChangeRequest.class
-                        );
-
-                        finalRequest.go(
-                            dataSegmentChangeHandler,
-                            new DataSegmentChangeCallback()
-                            {
-                              @Override
-                              public void execute()
-                              {
-                                try {
-                                  curator.delete().guaranteed().forPath(path);
-                                  log.info("Completed request [%s]", finalRequest.asString());
-                                }
-                                catch (Exception e) {
-                                  try {
-                                    curator.delete().guaranteed().forPath(path);
-                                  }
-                                  catch (Exception e1) {
-                                    log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
-                                  }
-                                  log.error(e, "Exception while removing zNode[%s]", path);
-                                  throw new RuntimeException(e);
-                                } 
-                              }
-                            }
-                        );
-                      }
-                      catch (Exception e) {
-                        // Something went wrong in either deserializing the request using jsonMapper or when invoking it
-                        try {
-                          curator.delete().guaranteed().forPath(path);
-                        }
-                        catch (Exception e1) {
-                          log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
-                        }
-
-                        log.makeAlert(e, "Segment load/unload: uncaught exception.")
-                           .addData("node", path)
-                           .addData("nodeProperties", request)
-                           .emit();
-                      }
-                    });
+                    childAdded(child);
                     break;
                   case CHILD_REMOVED:
                     log.info("zNode[%s] was removed", event.getData().getPath());
@@ -184,6 +136,59 @@ public class ZkCoordinator
 
       started = true;
     }
+  }
+
+  private void childAdded(ChildData child)
+  {
+    segmentLoadUnloadService.submit(() -> {
+      final String path = child.getPath();
+      DataSegmentChangeRequest request = new SegmentChangeRequestNoop();
+      try {
+        final DataSegmentChangeRequest finalRequest = jsonMapper.readValue(
+            child.getData(),
+            DataSegmentChangeRequest.class
+        );
+
+        finalRequest.go(
+            dataSegmentChangeHandler,
+            new DataSegmentChangeCallback()
+            {
+              @Override
+              public void execute()
+              {
+                try {
+                  curator.delete().guaranteed().forPath(path);
+                  log.info("Completed request [%s]", finalRequest.asString());
+                }
+                catch (Exception e) {
+                  try {
+                    curator.delete().guaranteed().forPath(path);
+                  }
+                  catch (Exception e1) {
+                    log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
+                  }
+                  log.error(e, "Exception while removing zNode[%s]", path);
+                  throw new RuntimeException(e);
+                }
+              }
+            }
+        );
+      }
+      catch (Exception e) {
+        // Something went wrong in either deserializing the request using jsonMapper or when invoking it
+        try {
+          curator.delete().guaranteed().forPath(path);
+        }
+        catch (Exception e1) {
+          log.error(e1, "Failed to delete zNode[%s], but ignoring exception.", path);
+        }
+
+        log.makeAlert(e, "Segment load/unload: uncaught exception.")
+           .addData("node", path)
+           .addData("nodeProperties", request)
+           .emit();
+      }
+    });
   }
 
   @LifecycleStop

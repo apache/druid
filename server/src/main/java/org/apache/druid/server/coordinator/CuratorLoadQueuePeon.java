@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.CuratorWatcher;
 import org.apache.curator.utils.ZKPaths;
@@ -65,6 +66,10 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   private final String basePath;
   private final ObjectMapper jsonMapper;
   private final ScheduledExecutorService processingExecutor;
+  /**
+   * Threadpool with daemon threads running scheduled tasks that monitor whether
+   * the zk nodes created for segment processing are removed
+   */
   private final ScheduledExecutorService monitorNodeRemovedExecutor;
   private final ExecutorService callBackExecutor;
   private final DruidCoordinatorConfig config;
@@ -97,8 +102,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     this.callBackExecutor = callbackExecutor;
     this.processingExecutor = processingExecutor;
     this.config = config;
-    // Threadpool with daemon threads running scheduled tasks that monitor whether
-    // the zk nodes created for segment processing are removed
     this.monitorNodeRemovedExecutor =
         Executors.newScheduledThreadPool(
             config.getNumZookeeperMonitorThreads(),
@@ -406,11 +409,11 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       }
     }
 
-    LoadPeonCallback[] getCallbacks()
+    List<LoadPeonCallback> snapshotCallbacks()
     {
       synchronized (callbacks) {
         // Return a copy so that callers get a consistent view
-        return callbacks.toArray(new LoadPeonCallback[0]);
+        return ImmutableList.copyOf(callbacks);
       }
     }
 
@@ -428,7 +431,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
 
   private void executeCallbacks(SegmentHolder holder)
   {
-    for (LoadPeonCallback callback : holder.getCallbacks()) {
+    for (LoadPeonCallback callback : holder.snapshotCallbacks()) {
       if (callback != null) {
         callBackExecutor.submit(() -> callback.execute());
       }
