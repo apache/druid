@@ -115,19 +115,19 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getFloat()");
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getFloat()");
   }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getLong()");
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getLong()");
   }
 
   @Override
   public double getDouble(ByteBuffer buf, int position)
   {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getDouble()");
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getDouble()");
   }
 
   @Override
@@ -146,19 +146,19 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
   @Override
   public float getFloat()
   {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getFloat()");
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getFloat()");
   }
 
   @Override
   public long getLong()
   {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getLong()");
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getLong()");
   }
 
   @Override
   public double getDouble()
   {
-    throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getDouble()");
+    throw new UnsupportedOperationException("BloomFilterAggregator does not support getDouble()");
   }
 
   @Override
