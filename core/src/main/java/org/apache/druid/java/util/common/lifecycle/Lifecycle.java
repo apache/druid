@@ -416,7 +416,7 @@ public class Lifecycle
   {
     void start() throws Exception;
 
-    void stop() throws Exception;
+    void stop();
   }
 
   private static class AnnotationBasedHandler implements Handler
