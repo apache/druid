@@ -231,18 +231,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    try {
-      if (object instanceof ByteBuffer) {
-        return BloomKFilter.deserialize((ByteBuffer) object);
-      } else if (object instanceof byte[]) {
-        return BloomKFilter.deserialize(ByteBuffer.wrap((byte[]) object));
-      } else {
-        return object;
-      }
-    }
-    catch (IOException ioe) {
-      throw new RuntimeException("Failed to deserialize BloomKFilter", ioe);
-    }
+    return object;
   }
 
   @JsonProperty

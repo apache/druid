@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.bloom;
 
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -35,12 +36,10 @@ public final class BloomFilterMergeAggregator extends BaseBloomFilterAggregator<
   public void bufferAdd(ByteBuffer buf)
   {
     ByteBuffer other = selector.getObject();
+    if (other == null) {
+      // nulls should be empty bloom filters by this point, so encountering a nil column in merge agg is unexpected
+      throw new ISE("WTF?! Unexpected null value in BloomFilterMergeAggregator");
+    }
     BloomKFilter.mergeBloomFilterByteBuffers(buf, buf.position(), other, other.position());
-  }
-
-  @Override
-  public void aggregate()
-  {
-    bufferAdd(collector);
   }
 }

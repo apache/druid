@@ -247,7 +247,9 @@ public class BloomFilterAggregatorTest
       aggregateDimension(Collections.singletonList(dimSelector), agg);
     }
 
-    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get());
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
+    );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedFilter1, serialized);
   }
@@ -262,7 +264,9 @@ public class BloomFilterAggregatorTest
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
-    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get());
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
+    );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedLongFilter, serialized);
   }
@@ -277,7 +281,9 @@ public class BloomFilterAggregatorTest
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
-    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get());
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
+    );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedFloatFilter, serialized);
   }
@@ -292,7 +298,9 @@ public class BloomFilterAggregatorTest
       aggregateColumn(Collections.singletonList(selector), agg);
     }
 
-    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get());
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
+    );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedDoubleFilter, serialized);
   }
@@ -313,7 +321,9 @@ public class BloomFilterAggregatorTest
     for (int i = 0; i < values2.size(); ++i) {
       bufferAggregateDimension(Collections.singletonList(dimSelector), agg, buf, pos);
     }
-    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
+    );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedFilter2, serialized);
   }
@@ -333,7 +343,9 @@ public class BloomFilterAggregatorTest
 
     IntStream.range(0, longValues1.length)
              .forEach(i -> bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos));
-    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
+    );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedLongFilter, serialized);
   }
@@ -353,7 +365,9 @@ public class BloomFilterAggregatorTest
 
     IntStream.range(0, floatValues1.length)
              .forEach(i -> bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos));
-    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
+    );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedFloatFilter, serialized);
   }
@@ -373,7 +387,9 @@ public class BloomFilterAggregatorTest
 
     IntStream.range(0, doubleValues1.length)
              .forEach(i -> bufferAggregateColumn(Collections.singletonList(selector), agg, buf, pos));
-    BloomKFilter bloomKFilter = (BloomKFilter) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos));
+    BloomKFilter bloomKFilter = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
+    );
     String serialized = filterToString(bloomKFilter);
     Assert.assertEquals(serializedDoubleFilter, serialized);
   }
@@ -394,10 +410,12 @@ public class BloomFilterAggregatorTest
       aggregateDimension(Collections.singletonList(dimSelector2), agg2);
     }
 
-    BloomKFilter combined = (BloomKFilter) valueAggregatorFactory.finalizeComputation(
-        valueAggregatorFactory.combine(
-            agg1.get(),
-            agg2.get()
+    BloomKFilter combined = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.finalizeComputation(
+          valueAggregatorFactory.combine(
+              agg1.get(),
+              agg2.get()
+          )
         )
     );
 
@@ -424,8 +442,9 @@ public class BloomFilterAggregatorTest
     }
 
 
-    BloomKFilter merged = (BloomKFilter) valueAggregatorFactory.getCombiningFactory()
-                                                               .finalizeComputation(mergeAggregator.get());
+    BloomKFilter merged = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.getCombiningFactory().finalizeComputation(mergeAggregator.get())
+    );
     String serialized = filterToString(merged);
     Assert.assertEquals(serializedCombinedFilter, serialized);
   }
@@ -449,8 +468,9 @@ public class BloomFilterAggregatorTest
     }
 
 
-    BloomKFilter merged = (BloomKFilter) valueAggregatorFactory.getCombiningFactory()
-                                                               .finalizeComputation(mergeAggregator.get());
+    BloomKFilter merged = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.getCombiningFactory().finalizeComputation(mergeAggregator.get())
+    );
     String serialized = filterToString(merged);
     Assert.assertEquals(serializedCombinedFilter, serialized);
   }
@@ -479,8 +499,9 @@ public class BloomFilterAggregatorTest
       bufferAggregateColumn(Collections.singletonList(mergeDim), mergeAggregator, buf, pos);
     }
 
-    BloomKFilter merged = (BloomKFilter) valueAggregatorFactory.getCombiningFactory()
-                                                               .finalizeComputation(mergeAggregator.get(buf, pos));
+    BloomKFilter merged = BloomKFilter.deserialize(
+        (ByteBuffer) valueAggregatorFactory.getCombiningFactory().finalizeComputation(mergeAggregator.get(buf, pos))
+    );
     String serialized = filterToString(merged);
 
     Assert.assertEquals(serializedCombinedFilter, serialized);

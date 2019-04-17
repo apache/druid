@@ -41,10 +41,4 @@ public final class FloatBloomFilterAggregator extends BaseBloomFilterAggregator<
       BloomKFilter.addBytes(buf, null, 0, 0);
     }
   }
-
-  @Override
-  public void aggregate()
-  {
-    bufferAdd(collector);
-  }
 }

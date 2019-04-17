@@ -53,10 +53,4 @@ public final class StringBloomFilterAggregator extends BaseBloomFilterAggregator
       }
     }
   }
-
-  @Override
-  public void aggregate()
-  {
-    bufferAdd(collector);
-  }
 }

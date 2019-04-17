@@ -105,6 +105,12 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
     throw new UnsupportedOperationException("BloomFilterBufferAggregator does not support getDouble()");
   }
 
+  @Override
+  public void aggregate()
+  {
+    aggregate(collector, 0);
+  }
+
   @Nullable
   @Override
   public Object get()
