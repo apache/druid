@@ -240,6 +240,12 @@ GROUP BY 1`);
         if (!noSqlMode) {
           const dataServerCounts = await queryDruidSql({ query });
           return getHeadProp(dataServerCounts, 'count') || 0;
+        } else {
+          const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
+          const allServers = allServerResp.data;
+          return allServers.reduce((acc: number, s: any) => {
+            return acc + Number(s.type === 'historical');
+          }, 0);
         }
       },
       onStateChange: ({ result, loading, error }) => {
@@ -347,7 +353,7 @@ GROUP BY 1`);
         title: 'Data servers',
         loading: state.dataServerCountLoading || state.middleManagerCountLoading,
         content: <>
-          {!this.props.noSqlMode && <p>{pluralIfNeeded(state.dataServerCount, 'historical')}</p>}
+          <p>{pluralIfNeeded(state.dataServerCount, 'historical')}</p>
           <p>{pluralIfNeeded(state.middleManagerCount, 'middlemanager')}</p>
         </>,
         error: state.dataServerCountError
