@@ -157,6 +157,11 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
     return toggleSuspend(false);
   }
 
+  public SeekableStreamSupervisorConfig getSupervisorConfig()
+  {
+    return supervisorConfig;
+  }
+
   @Override
   @JsonProperty("suspended")
   public boolean isSuspended()

@@ -126,8 +126,7 @@ public class KinesisSupervisorSpec extends SeekableStreamSupervisorSpec
         mapper,
         this,
         rowIngestionMetersFactory,
-        awsCredentialsConfig,
-        supervisorConfig
+        awsCredentialsConfig
     );
   }
 

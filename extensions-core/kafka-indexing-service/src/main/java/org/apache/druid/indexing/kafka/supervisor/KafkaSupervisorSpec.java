@@ -112,8 +112,7 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         (KafkaIndexTaskClientFactory) indexTaskClientFactory,
         mapper,
         this,
-        rowIngestionMetersFactory,
-        supervisorConfig
+        rowIngestionMetersFactory
     );
   }
 

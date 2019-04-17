@@ -142,6 +142,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   private TaskQueue taskQueue;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private ExceptionCapturingServiceEmitter serviceEmitter;
+  private SeekableStreamSupervisorConfig supervisorConfig;
 
   public KinesisSupervisorTest()
   {
@@ -199,6 +200,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new ExceptionCapturingServiceEmitter();
     EmittingLogger.registerEmitter(serviceEmitter);
+    supervisorConfig = new SeekableStreamSupervisorConfig();
   }
 
   @After
@@ -3880,7 +3882,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            null
+            null,
+            supervisorConfig
         ),
         rowIngestionMetersFactory
     );
@@ -3963,7 +3966,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
-            null
+            null,
+            supervisorConfig
         ),
         rowIngestionMetersFactory,
         isTaskCurrentReturn
@@ -4049,7 +4053,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             new DruidMonitorSchedulerConfig(),
             rowIngestionMetersFactory,
             null,
-            new SeekableStreamSupervisorConfig()
+            supervisorConfig
         ),
         rowIngestionMetersFactory,
         null
@@ -4230,8 +4234,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
           mapper,
           spec,
           rowIngestionMetersFactory,
-          null,
-          new SeekableStreamSupervisorConfig()
+          null
       );
       this.spec = spec;
     }

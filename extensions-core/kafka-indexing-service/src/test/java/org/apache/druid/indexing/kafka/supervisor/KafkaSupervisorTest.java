@@ -157,6 +157,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private String topic;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private ExceptionCapturingServiceEmitter serviceEmitter;
+  private SeekableStreamSupervisorConfig supervisorConfig;
 
   private static String getTopic()
   {
@@ -239,6 +240,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new ExceptionCapturingServiceEmitter();
     EmittingLogger.registerEmitter(serviceEmitter);
+    supervisorConfig = new SeekableStreamSupervisorConfig();
   }
 
   @After
@@ -3304,7 +3306,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            supervisorConfig
         ),
         rowIngestionMetersFactory,
         isTaskCurrentReturn
@@ -3387,7 +3390,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             objectMapper,
             new NoopServiceEmitter(),
             new DruidMonitorSchedulerConfig(),
-            rowIngestionMetersFactory
+            rowIngestionMetersFactory,
+            supervisorConfig
         ),
         rowIngestionMetersFactory
     );
@@ -3558,8 +3562,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
           taskClientFactory,
           mapper,
           spec,
-          rowIngestionMetersFactory,
-          new SeekableStreamSupervisorConfig()
+          rowIngestionMetersFactory
       );
     }
 
