@@ -230,6 +230,20 @@ Enables all segments of datasource which are not overshadowed by others.
 
 Enables a segment of a datasource.
 
+##### PUT
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
+
+Marks segments unused for a datasource by interval or set of segment Ids. The request payload contains the interval or set of segment Ids to be marked unused.
+
+JSON Payload:
+
+ |Key|Description|Example|
+|----------|-------------|---------|
+|`interval`|The interval for which to mark segments unused|"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"|
+|`segmentIds`|Set of segment Ids to be marked unused|["segmentId1", "segmentId2"]|
+
+
 ##### DELETE<a name="coordinator-delete"></a>
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`

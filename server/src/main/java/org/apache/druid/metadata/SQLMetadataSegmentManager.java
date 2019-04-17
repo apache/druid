@@ -407,6 +407,55 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  @Override
+  public boolean disableSegments(String dataSource, Collection<String> segmentIds)
+  {
+    if (segmentIds.isEmpty()) {
+      return false;
+    }
+    try {
+      connector.getDBI().withHandle(handle -> {
+        Batch batch = handle.createBatch();
+        segmentIds
+            .forEach(segmentId -> batch.add(
+                StringUtils.format(
+                    "UPDATE %s SET used=false WHERE id = '%s'",
+                    getSegmentsTable(),
+                    segmentId
+                )
+            ));
+        return batch.execute();
+      });
+    }
+    catch (Exception e) {
+      log.error(e, e.toString());
+      return false;
+    }
+    return true;
+  }
+
+  @Override
+  public boolean disableSegments(String datasource, Interval interval)
+  {
+    try {
+      final int removed = connector.getDBI().withHandle(
+          handle -> handle
+              .createStatement(StringUtils.format(
+                  "UPDATE %s SET used=false WHERE start = :start and end = :end",
+                  getSegmentsTable()
+              ))
+              .bind("start", interval.getStart().toString())
+              .bind("end", interval.getEnd().toString())
+              .execute()
+      );
+      return removed > 0;
+    }
+    catch (Exception e) {
+      log.error(e, e.toString());
+      return false;
+    }
+  }
+
   private boolean removeSegmentFromTable(String segmentId)
   {
     final int removed = connector.getDBI().withHandle(

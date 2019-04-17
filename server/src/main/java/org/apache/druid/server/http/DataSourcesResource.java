@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.api.client.repackaged.com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -30,6 +33,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.client.indexing.IndexingServiceClient;
+import org.apache.druid.common.utils.ServletResourceUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -62,6 +66,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -686,6 +691,63 @@ public class DataSourcesResource
     }
   }
 
+  @PUT
+  @Path("/{dataSourceName}/markUnused")
+  @ResourceFilters(DatasourceResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response markDatasourceUnused(
+      @PathParam("dataSourceName") final String dataSourceName,
+      final MarkDatasourceSegmentsPayload payload
+  )
+  {
+    if (payload == null) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", "Request payload is null"))
+                     .build();
+    }
+    final Interval interval = payload.getInterval();
+    final Set<String> segmentIds = payload.getSegmentIds();
+    if (!payload.isValid()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ServletResourceUtils.jsonize(
+                         "Request payload contains invalid interval[%s] or segmentIds[%s], atmost one valid value must be provided",
+                         interval,
+                         segmentIds
+                     ))
+                     .build();
+    }
+
+    final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
+    if (dataSource == null) {
+      return Response.noContent().build();
+    }
+
+    boolean markedUnused = false;
+    try {
+      if (interval != null) {
+        markedUnused = databaseSegmentManager.disableSegments(dataSourceName, interval);
+      } else if (segmentIds != null) {
+        markedUnused = databaseSegmentManager.disableSegments(dataSourceName, segmentIds);
+      }
+    }
+    catch (Exception e) {
+      return Response.serverError().entity(
+          ImmutableMap.of(
+              "error",
+              "Exception occurred.",
+              "message",
+              e.toString()
+          )
+      ).build();
+
+    }
+    if (!markedUnused) {
+      return Response.noContent().build();
+    }
+    return Response.ok().build();
+  }
+
   static boolean isSegmentLoaded(Iterable<ImmutableSegmentLoadInfo> serverView, SegmentDescriptor descriptor)
   {
     for (ImmutableSegmentLoadInfo segmentLoadInfo : serverView) {
@@ -699,5 +761,37 @@ public class DataSourcesResource
       }
     }
     return false;
+  }
+
+  @VisibleForTesting
+  protected static class MarkDatasourceSegmentsPayload
+  {
+    private final Interval interval;
+    private final Set<String> segmentIds;
+
+    @JsonCreator
+    public MarkDatasourceSegmentsPayload(
+        @JsonProperty("interval") Interval interval,
+        @JsonProperty("segmentIds") Set<String> segmentIds
+    )
+    {
+      this.interval = interval;
+      this.segmentIds = segmentIds;
+    }
+
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    public Set<String> getSegmentIds()
+    {
+      return segmentIds;
+    }
+
+    public boolean isValid()
+    {
+      return interval == null ^ segmentIds == null;
+    }
   }
 }
