@@ -110,6 +110,17 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   componentDidMount(): void {
     ConsoleApplication.shownNotifications();
+    this.setSqlMode();
+  }
+
+  private setSqlMode = async () => {
+    try {
+      await axios.post('/druid/v2/sql', {query: 'SELECT 1337'});
+    } catch (e) {
+      this.setState({
+        noSqlMode: true
+      });
+    }
   }
 
   private resetInitialsDelay() {
