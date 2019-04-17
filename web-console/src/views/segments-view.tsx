@@ -107,7 +107,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     this.segmentsJsonQueryManager = new QueryManager({
       processQuery: async (query: any) => {
         const datasourceList = (await axios.get('/druid/coordinator/v1/metadata/datasources')).data;
-        const resultsNested: any[][] = await Promise.all(datasourceList.map(async (d: string) => {
+        const nestedResults: any[][] = await Promise.all(datasourceList.map(async (d: string) => {
           const segments = (await axios.get(`/druid/coordinator/v1/datasources/${d}?full`)).data.segments;
           return segments.map((segment: any) => {
             return {
@@ -122,7 +122,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
             };
           });
         }));
-        const results = [].concat.apply([], resultsNested).sort((d1: any, d2: any) => {
+        const results = [].concat.apply([], nestedResults).sort((d1: any, d2: any) => {
           return d2.start.localeCompare(d1.start);
         });
         return results;
@@ -188,7 +188,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     });
   }
 
-  private fecthDataClientSide = (state: any, instance: any) => {
+  private fecthClientSideData = (state: any, instance: any) => {
     const { page, pageSize, filtered, sorted } = state;
     const { allSegments } = this.state;
     if (allSegments == null) return;
@@ -232,7 +232,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
       onFilteredChange={(filtered, column) => {
         this.setState({ segmentFilter: filtered });
       }}
-      onFetchData={noSqlMode ? this.fecthDataClientSide : this.fetchData}
+      onFetchData={noSqlMode ? this.fecthClientSideData : this.fetchData}
       showPageJump={false}
       ofText=""
       columns={[

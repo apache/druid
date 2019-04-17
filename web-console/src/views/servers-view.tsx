@@ -407,7 +407,7 @@ WHERE "server_type" = 'historical'`);
         <Switch
           checked={groupByTier}
           label="Group by tier"
-          onChange={() => this.setState({groupByTier: !groupByTier})}
+          onChange={() => this.setState({ groupByTier: !groupByTier })}
         />
         <TableColumnSelection
           columns={serverTableColumns}
@@ -416,6 +416,7 @@ WHERE "server_type" = 'historical'`);
         />
       </ViewControlBar>
       {this.renderServersTable()}
+
       <div className="control-separator"/>
 
       <ViewControlBar label="MiddleManagers">
