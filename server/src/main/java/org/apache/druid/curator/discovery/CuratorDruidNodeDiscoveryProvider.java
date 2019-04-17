@@ -423,7 +423,8 @@ public class CuratorDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvide
     }
 
     @GuardedBy("lock")
-    private void cacheInitialized() {
+    private void cacheInitialized()
+    {
       // No need to wait on CountDownLatch, because we are holding the lock under which it could only be
       // counted down.
       if (cacheInitialized.getCount() == 0) {
