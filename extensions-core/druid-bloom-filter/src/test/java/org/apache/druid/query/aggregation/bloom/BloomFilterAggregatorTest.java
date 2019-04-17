@@ -622,14 +622,6 @@ public class BloomFilterAggregatorTest
     }
   }
 
-  public static class TestBloomFilterColumnSelector extends SteppableSelector<Object>
-  {
-    public TestBloomFilterColumnSelector(List<Object> values)
-    {
-      super(values);
-    }
-  }
-
   public static class TestBloomFilterBufferColumnSelector extends SteppableSelector<ByteBuffer>
   {
     public TestBloomFilterBufferColumnSelector(List<ByteBuffer> values)
