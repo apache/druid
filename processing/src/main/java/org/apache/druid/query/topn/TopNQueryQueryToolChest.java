@@ -327,6 +327,21 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       @Override
+      public byte[] computeResultLevelCacheKey(TopNQuery query)
+      {
+        final CacheKeyBuilder builder = new CacheKeyBuilder(TOPN_QUERY)
+            .appendCacheable(query.getDimensionSpec())
+            .appendCacheable(query.getTopNMetricSpec())
+            .appendInt(query.getThreshold())
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimensionsFilter())
+            .appendCacheables(query.getAggregatorSpecs())
+            .appendCacheable(query.getVirtualColumns())
+            .appendCacheables(query.getPostAggregatorSpecs());
+        return builder.build();
+      }
+
+      @Override
       public TypeReference<Object> getCacheObjectClazz()
       {
         return OBJECT_TYPE_REFERENCE;

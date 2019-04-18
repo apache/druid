@@ -19,23 +19,17 @@
 
 package org.apache.druid.query.groupby.having;
 
-import org.apache.druid.data.input.Row;
-import org.apache.druid.query.cache.CacheKeyBuilder;
-
-/**
- * A "having" spec that always evaluates to true
- */
-public class AlwaysHavingSpec extends BaseHavingSpec
+public class HavingSpecUtil
 {
-  @Override
-  public boolean eval(Row row)
-  {
-    return true;
-  }
-
-  @Override
-  public byte[] getCacheKey()
-  {
-    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_ALWAYS).build();
-  }
+  static final byte CACHE_TYPE_ID_ALWAYS = 0x0;
+  static final byte CACHE_TYPE_ID_AND = 0x1;
+  static final byte CACHE_TYPE_ID_DIM_SELECTOR = 0x2;
+  static final byte CACHE_TYPE_ID_DIM_FILTER = 0x3;
+  static final byte CACHE_TYPE_ID_EQUAL = 0x4;
+  static final byte CACHE_TYPE_ID_GREATER_THAN = 0x5;
+  static final byte CACHE_TYPE_ID_LESS_THAN = 0x6;
+  static final byte CACHE_TYPE_ID_NEVER = 0x7;
+  static final byte CACHE_TYPE_ID_NOT = 0x8;
+  static final byte CACHE_TYPE_ID_OR = 0x9;
+  static final byte CACHE_TYPE_ID_COUNTING = 0xA;
 }
