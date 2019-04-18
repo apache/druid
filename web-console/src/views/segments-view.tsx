@@ -29,13 +29,15 @@ import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
 import { AppToaster } from '../singletons/toaster';
 import {
-  addFilter, customTableFilter,
+  addFilter,
   formatBytes,
-  formatNumber, LocalStorageKeys,
-  makeBooleanFilter,
+  formatNumber,
+  LocalStorageKeys, makeBooleanFilter,
   parseList,
   queryDruidSql,
-  QueryManager, TableColumnSelectionHandler
+  QueryManager,
+  sqlQueryCustomTableFilter,
+  TableColumnSelectionHandler
 } from '../utils';
 
 import './segments-view.scss';
@@ -123,7 +125,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         if (f.value === 'all') return null;
         return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
       } else {
-        return customTableFilter(f, false);
+        return sqlQueryCustomTableFilter(f);
       }
     }).filter(Boolean);
 

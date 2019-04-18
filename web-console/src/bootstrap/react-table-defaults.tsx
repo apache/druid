@@ -20,7 +20,7 @@ import * as React from 'react';
 import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components/loader';
-import { countBy, customTableFilter, makeTextFilter } from '../utils';
+import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
 import { ReactTableCustomPagination } from './react-table-custom-pagination';
 
@@ -39,7 +39,7 @@ class NoData extends React.Component {
 Object.assign(ReactTableDefaults, {
   defaultFilterMethod: (filter: Filter, row: any, column: any) => {
     const id = filter.pivotId || filter.id;
-    return customTableFilter(filter, true, row[id]);
+    return booleanCustomTableFilter(filter, row[id]);
   },
   LoadingComponent: Loader,
   loadingText: '',

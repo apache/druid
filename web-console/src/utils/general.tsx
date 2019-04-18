@@ -66,28 +66,48 @@ export function makeBooleanFilter(): FilterRender {
   };
 }
 
-export function customTableFilter(filter: Filter, clientSideFilter: boolean, value?: any): boolean | string {
-  if (clientSideFilter && value === undefined) {
+// ----------------------------
+
+interface NeedleAndMode {
+  needle: string;
+  mode: 'exact' | 'prefix';
+}
+
+function getNeedleAndMode(filter: Filter): NeedleAndMode {
+  const input = filter.value.toLowerCase();
+  if (input.startsWith(`"`) && input.endsWith(`"`)) {
+    return {
+      needle: input.slice(1, -1),
+      mode: 'exact'
+    };
+  }
+  return {
+    needle: input.startsWith(`"`) ? input.substring(1) : input,
+    mode: 'prefix'
+  };
+}
+
+export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
+  if (value === undefined) {
     return true;
   }
-  const targetValue = (clientSideFilter && String(value.toLowerCase())) || JSON.stringify(filter.id).toLowerCase();
-  let filterValue = filter.value.toLowerCase();
-  if (filterValue.startsWith(`"`) && filterValue.endsWith(`"`)) {
-    const exactString = filterValue.slice(1, -1);
-    if (clientSideFilter) {
-      return String(targetValue) === exactString;
-    } else {
-      return `${targetValue} = '${exactString}'`;
-    }
+  const haystack = String(value.toLowerCase());
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
+  const needle = needleAndMode.needle;
+  if (needleAndMode.mode === 'exact') {
+    return needle === haystack;
   }
-  if (filterValue.startsWith(`"`)) {
-    filterValue = filterValue.substring(1);
+  return haystack.includes(needle);
+}
+
+export function sqlQueryCustomTableFilter(filter: Filter): string {
+  const columnName = JSON.stringify(filter.id).toLowerCase();
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
+  const needle = needleAndMode.needle;
+  if (needleAndMode.mode === 'exact') {
+    return `${columnName} = '${needle}'`;
   }
-  if (clientSideFilter) {
-    return targetValue.includes(filterValue);
-  } else {
-    return `${targetValue} LIKE '%${filterValue}%'`;
-  }
+  return `${columnName} LIKE '%${needle}%'`;
 }
 
 // ----------------------------

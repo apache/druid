@@ -31,7 +31,8 @@ import { SpecDialog } from '../dialogs/spec-dialog';
 import { AppToaster } from '../singletons/toaster';
 import {
   addFilter,
-  countBy, customTableFilter,
+  booleanCustomTableFilter,
+  countBy,
   formatDuration,
   getDruidErrorMessage, LocalStorageKeys,
   queryDruidSql,
@@ -526,7 +527,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return statusRanking[d1.status] - statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
             },
             filterMethod: (filter: Filter, row: any) => {
-              return (customTableFilter(filter, true, row.status.status) as boolean);
+              return booleanCustomTableFilter(filter, row.status.status);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
