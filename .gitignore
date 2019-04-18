@@ -13,5 +13,7 @@ target
 *.log
 *.DS_Store
 _site
+indexing-service/foo/*
+indexing-service/testDataSource/*
 dependency-reduced-pom.xml
 README.BINARY
