@@ -66,7 +66,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
       // Status works but SQL 405s => the SQL endpoint is disabled
       return false;
     }
-    return false;
+    return true;
   }
 
   static shownNotifications() {
