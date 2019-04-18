@@ -660,7 +660,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       try {
         scheduledExec.shutdownNow(); // stop recurring executions
         reportingExec.shutdownNow();
-        recordSupplier.close();
 
         if (started) {
           Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();

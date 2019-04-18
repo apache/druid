@@ -34,6 +34,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -149,6 +150,12 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     this.columns = columns;
     this.legacy = legacy;
     this.order = (order == null) ? Order.NONE : order;
+    if (this.order != Order.NONE) {
+      Preconditions.checkArgument(
+          columns == null || columns.size() == 0 || columns.contains(ColumnHolder.TIME_COLUMN_NAME),
+          "The __time column must be selected if the results are time-ordered."
+      );
+    }
     this.maxRowsQueuedForOrdering = validateAndGetMaxRowsQueuedForOrdering();
     this.maxSegmentPartitionsOrderedInMemory = validateAndGetMaxSegmentPartitionsOrderedInMemory();
   }
@@ -256,6 +263,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   @Override
   public Ordering<ScanResultValue> getResultOrdering()
   {
+    if (order == Order.NONE) {
+      return Ordering.natural();
+    }
     return Ordering.from(new ScanResultValueTimestampComparator(this)).reverse();
   }
 

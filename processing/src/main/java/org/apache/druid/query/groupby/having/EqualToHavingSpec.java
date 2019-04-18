@@ -22,7 +22,9 @@ package org.apache.druid.query.groupby.having;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 
 import java.util.Map;
 
@@ -122,5 +124,14 @@ public class EqualToHavingSpec extends BaseHavingSpec
     sb.append(", value=").append(value);
     sb.append('}');
     return sb.toString();
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new CacheKeyBuilder(HavingSpecUtil.CACHE_TYPE_ID_EQUAL)
+        .appendString(aggregationName)
+        .appendByteArray(StringUtils.toUtf8(String.valueOf(value)))
+        .build();
   }
 }

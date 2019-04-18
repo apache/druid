@@ -207,7 +207,7 @@ handle all formatting decisions on their own, without using the ParseSpec.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | column | String | The column of the timestamp. | yes |
-| format | String | iso, posix, millis, micro, nano, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto' |
+| format | String | iso, posix, millis, micro, nano, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto') |
 
 <a name="dimensions" />
 
@@ -216,8 +216,8 @@ handle all formatting decisions on their own, without using the ParseSpec.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | dimensions | JSON array | A list of [dimension schema](#dimension-schema) objects or dimension names. Providing a name is equivalent to providing a String-typed dimension schema with the given name. If this is an empty array, Druid will treat all non-timestamp, non-metric columns that do not appear in "dimensionExclusions" as String-typed dimension columns. | yes |
-| dimensionExclusions | JSON String array | The names of dimensions to exclude from ingestion. | no (default == [] |
-| spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geo.html) | no (default == [] |
+| dimensionExclusions | JSON String array | The names of dimensions to exclude from ingestion. | no (default == []) |
+| spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geo.html) | no (default == []) |
 
 #### Dimension Schema
 A dimension schema specifies the type and name of a dimension to be ingested.

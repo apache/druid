@@ -27,28 +27,25 @@ import java.util.Set;
 
 /**
  * Immutable representation of RowSignature and other segment attributes needed by {@link SystemSchema.SegmentsTable}
+ * This class contains the metadata of segments announced by historicals or ingestion tasks.
  */
-public class SegmentMetadataHolder
+public class AvailableSegmentMetadata
 {
   public static Builder builder(
       SegmentId segmentId,
-      long isPublished,
-      long isAvailable,
       long isRealtime,
       Set<String> segmentServers,
       RowSignature rowSignature,
       long numRows
   )
   {
-    return new Builder(segmentId, isPublished, isAvailable, isRealtime, segmentServers, rowSignature, numRows);
+    return new Builder(segmentId, isRealtime, segmentServers, rowSignature, numRows);
   }
 
-  public static Builder from(SegmentMetadataHolder h)
+  public static Builder from(AvailableSegmentMetadata h)
   {
     return new Builder(
         h.getSegmentId(),
-        h.isPublished(),
-        h.isAvailable(),
         h.isRealtime(),
         h.getReplicas(),
         h.getRowSignature(),
@@ -58,10 +55,7 @@ public class SegmentMetadataHolder
 
   private final SegmentId segmentId;
   // Booleans represented as long type, where 1 = true and 0 = false
-  // to make it easy to count number of segments which are
-  // published, available or realtime etc.
-  private final long isPublished;
-  private final long isAvailable;
+  // to make it easy to count number of segments which are realtime
   private final long isRealtime;
   // set of servers that contain the segment
   private final Set<String> segmentServers;
@@ -69,25 +63,13 @@ public class SegmentMetadataHolder
   @Nullable
   private final RowSignature rowSignature;
 
-  private SegmentMetadataHolder(Builder builder)
+  private AvailableSegmentMetadata(Builder builder)
   {
     this.rowSignature = builder.rowSignature;
-    this.isPublished = builder.isPublished;
-    this.isAvailable = builder.isAvailable;
     this.isRealtime = builder.isRealtime;
     this.segmentServers = builder.segmentServers;
     this.numRows = builder.numRows;
     this.segmentId = builder.segmentId;
-  }
-
-  public long isPublished()
-  {
-    return isPublished;
-  }
-
-  public long isAvailable()
-  {
-    return isAvailable;
   }
 
   public long isRealtime()
@@ -124,8 +106,6 @@ public class SegmentMetadataHolder
   public static class Builder
   {
     private final SegmentId segmentId;
-    private final long isPublished;
-    private final long isAvailable;
     private final long isRealtime;
 
     private Set<String> segmentServers;
@@ -135,8 +115,6 @@ public class SegmentMetadataHolder
 
     private Builder(
         SegmentId segmentId,
-        long isPublished,
-        long isAvailable,
         long isRealtime,
         Set<String> servers,
         RowSignature rowSignature,
@@ -144,8 +122,6 @@ public class SegmentMetadataHolder
     )
     {
       this.segmentId = segmentId;
-      this.isPublished = isPublished;
-      this.isAvailable = isAvailable;
       this.isRealtime = isRealtime;
       this.segmentServers = servers;
       this.rowSignature = rowSignature;
@@ -170,9 +146,9 @@ public class SegmentMetadataHolder
       return this;
     }
 
-    public SegmentMetadataHolder build()
+    public AvailableSegmentMetadata build()
     {
-      return new SegmentMetadataHolder(this);
+      return new AvailableSegmentMetadata(this);
     }
   }
 

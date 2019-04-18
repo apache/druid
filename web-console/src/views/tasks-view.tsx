@@ -541,7 +541,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Status',
             id: 'status',
             width: 110,
-            accessor: 'status',
+            accessor: (row) => { return {status: row.status, created_time: row.created_time}; },
             Cell: row => {
               if (row.aggregated) return '';
               const { status, location } = row.original;
