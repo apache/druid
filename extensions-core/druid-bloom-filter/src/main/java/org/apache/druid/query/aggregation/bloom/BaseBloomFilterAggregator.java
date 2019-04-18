@@ -91,7 +91,8 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
     try {
       buf.position(position);
       bufferAdd(buf);
-    } finally {
+    }
+    finally {
       buf.position(oldPosition);
     }
   }
