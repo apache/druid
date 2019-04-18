@@ -425,8 +425,6 @@ public class CalciteTests
       )
   );
 
-
-
   public static final List<InputRow> ROWS2 = ImmutableList.of(
       createRow("2000-01-01", "דרואיד", "he", 1.0),
       createRow("2000-01-01", "druid", "en", 1.0),
