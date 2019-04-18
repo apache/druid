@@ -569,9 +569,9 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const previewCount = countBy(previewValues);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
             },
-            sortMethod: (status1: string, status2: string) => {
+            sortMethod: (d1, d2) => {
               const statusRanking: any = TasksView.statusRanking;
-              return statusRanking[status1] - statusRanking[status2];
+              return statusRanking[d1.status] - statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
