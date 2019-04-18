@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
+import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -73,6 +74,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
   };
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
+  private static final byte SEGMENT_METADATA_QUERY = 0x16;
   private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN = new Function<SegmentAnalysis, SegmentAnalysis>()
   {
     @Override
@@ -197,7 +199,11 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Override
       public byte[] computeResultLevelCacheKey(SegmentMetadataQuery query)
       {
-        return computeCacheKey(query);
+        // need to include query "merge" and "lenientAggregatorMerge" for result level cache key
+        return new CacheKeyBuilder(SEGMENT_METADATA_QUERY).appendByteArray(computeCacheKey(query))
+                                                          .appendBoolean(query.isMerge())
+                                                          .appendBoolean(query.isLenientAggregatorMerge())
+                                                          .build();
       }
 
       @Override

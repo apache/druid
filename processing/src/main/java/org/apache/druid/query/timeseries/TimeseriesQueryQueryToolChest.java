@@ -285,10 +285,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             .appendCacheables(query.getAggregatorSpecs())
             .appendCacheable(query.getVirtualColumns())
             .appendCacheables(query.getPostAggregatorSpecs())
-            .appendInt(query.getLimit());
-        if (query.isGrandTotal()) {
-          builder.appendBoolean(query.getContextValue(TimeseriesQuery.CTX_GRAND_TOTAL));
-        }
+            .appendInt(query.getLimit())
+            .appendBoolean(query.isGrandTotal());
         return builder.build();
       }
 

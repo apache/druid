@@ -492,11 +492,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             .appendCacheables(query.getDimensions())
             .appendCacheable(query.getVirtualColumns())
             .appendCacheable(query.getHavingSpec())
-            .appendCacheable(query.getLimitSpec());
+            .appendCacheable(query.getLimitSpec())
+            .appendCacheables(query.getPostAggregatorSpecs());
 
-        if (!query.getPostAggregatorSpecs().isEmpty()) {
-          builder.appendCacheables(query.getPostAggregatorSpecs());
-        }
         if (query.getSubtotalsSpec() != null && !query.getSubtotalsSpec().isEmpty()) {
           for (List<String> subTotalSpec : query.getSubtotalsSpec()) {
             builder.appendStrings(subTotalSpec);
