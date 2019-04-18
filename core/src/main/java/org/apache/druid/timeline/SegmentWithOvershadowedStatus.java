@@ -84,6 +84,6 @@ public class SegmentWithOvershadowedStatus implements Comparable<SegmentWithOver
   @Override
   public int compareTo(SegmentWithOvershadowedStatus o)
   {
-    return getDataSegment().getId().compareTo(dataSegment.getId());
+    return dataSegment.getId().compareTo(o.dataSegment.getId());
   }
 }
