@@ -289,7 +289,8 @@ public class AppenderatorTester implements AutoCloseable
         queryExecutor,
         MapCache.create(2048),
         new CacheConfig(),
-        new CachePopulatorStats()
+        new CachePopulatorStats(),
+        false
     );
   }
 

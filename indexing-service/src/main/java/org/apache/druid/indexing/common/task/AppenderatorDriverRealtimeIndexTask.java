@@ -703,7 +703,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
         toolbox.getQueryExecutorService(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
-        toolbox.getCachePopulatorStats()
+        toolbox.getCachePopulatorStats(),
+        toolbox.isUseOak()
     );
   }
 

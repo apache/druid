@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.name.Named;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -81,35 +82,36 @@ public class TaskToolboxFactory
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
   private final TaskReportFileWriter taskReportFileWriter;
+  private final boolean useOak;
 
   @Inject
   public TaskToolboxFactory(
-      TaskConfig config,
-      TaskActionClientFactory taskActionClientFactory,
-      ServiceEmitter emitter,
-      DataSegmentPusher segmentPusher,
-      DataSegmentKiller dataSegmentKiller,
-      DataSegmentMover dataSegmentMover,
-      DataSegmentArchiver dataSegmentArchiver,
-      DataSegmentAnnouncer segmentAnnouncer,
-      DataSegmentServerAnnouncer serverAnnouncer,
-      SegmentHandoffNotifierFactory handoffNotifierFactory,
-      Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
-      @Processing ExecutorService queryExecutorService,
-      MonitorScheduler monitorScheduler,
-      SegmentLoaderFactory segmentLoaderFactory,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      Cache cache,
-      CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats,
-      IndexMergerV9 indexMergerV9,
-      DruidNodeAnnouncer druidNodeAnnouncer,
-      @RemoteChatHandler DruidNode druidNode,
-      LookupNodeService lookupNodeService,
-      DataNodeService dataNodeService,
-      TaskReportFileWriter taskReportFileWriter
-  )
+          TaskConfig config,
+          TaskActionClientFactory taskActionClientFactory,
+          ServiceEmitter emitter,
+          DataSegmentPusher segmentPusher,
+          DataSegmentKiller dataSegmentKiller,
+          DataSegmentMover dataSegmentMover,
+          DataSegmentArchiver dataSegmentArchiver,
+          DataSegmentAnnouncer segmentAnnouncer,
+          DataSegmentServerAnnouncer serverAnnouncer,
+          SegmentHandoffNotifierFactory handoffNotifierFactory,
+          Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
+          @Processing ExecutorService queryExecutorService,
+          MonitorScheduler monitorScheduler,
+          SegmentLoaderFactory segmentLoaderFactory,
+          ObjectMapper objectMapper,
+          IndexIO indexIO,
+          Cache cache,
+          CacheConfig cacheConfig,
+          CachePopulatorStats cachePopulatorStats,
+          IndexMergerV9 indexMergerV9,
+          DruidNodeAnnouncer druidNodeAnnouncer,
+          @RemoteChatHandler DruidNode druidNode,
+          LookupNodeService lookupNodeService,
+          DataNodeService dataNodeService,
+          TaskReportFileWriter taskReportFileWriter,
+          @Named("useOak") boolean useOak)
   {
     this.config = config;
     this.taskActionClientFactory = taskActionClientFactory;
@@ -136,6 +138,7 @@ public class TaskToolboxFactory
     this.lookupNodeService = lookupNodeService;
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
+    this.useOak = useOak;
   }
 
   public TaskToolbox build(Task task)
@@ -167,7 +170,8 @@ public class TaskToolboxFactory
         druidNode,
         lookupNodeService,
         dataNodeService,
-        taskReportFileWriter
+        taskReportFileWriter,
+        useOak
     );
   }
 }

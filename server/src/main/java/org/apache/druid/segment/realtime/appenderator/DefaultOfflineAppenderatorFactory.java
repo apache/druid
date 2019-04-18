@@ -22,6 +22,7 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.name.Named;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -36,24 +37,27 @@ public class DefaultOfflineAppenderatorFactory implements AppenderatorFactory
   private final ObjectMapper objectMapper;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
+  private final boolean useOak;
 
   @JsonCreator
   public DefaultOfflineAppenderatorFactory(
       @JacksonInject DataSegmentPusher dataSegmentPusher,
       @JacksonInject ObjectMapper objectMapper,
       @JacksonInject IndexIO indexIO,
-      @JacksonInject IndexMerger indexMerger
+      @JacksonInject IndexMerger indexMerger,
+      @JacksonInject @Named("useOak") boolean useOak
   )
   {
     this.dataSegmentPusher = dataSegmentPusher;
     this.objectMapper = objectMapper;
     this.indexIO = indexIO;
     this.indexMerger = indexMerger;
+    this.useOak = useOak;
   }
 
   @Override
   public Appenderator build(DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics)
   {
-    return Appenderators.createOffline(schema, config, metrics, dataSegmentPusher, objectMapper, indexIO, indexMerger);
+    return Appenderators.createOffline(schema, config, metrics, dataSegmentPusher, objectMapper, indexIO, indexMerger, useOak);
   }
 }

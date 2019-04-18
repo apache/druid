@@ -119,8 +119,8 @@ public class TaskToolboxTest
         null,
         null,
         null,
-        new NoopTestTaskFileWriter()
-    );
+        new NoopTestTaskFileWriter(),
+        false);
   }
 
   @Test
@@ -206,5 +206,11 @@ public class TaskToolboxTest
   public void testGetCacheConfig()
   {
     Assert.assertEquals(mockCacheConfig, taskToolbox.build(task).getCacheConfig());
+  }
+
+  @Test
+  public void testIsUseOak()
+  {
+    Assert.assertEquals(false, taskToolbox.build(task).isUseOak());
   }
 }

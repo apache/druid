@@ -95,8 +95,8 @@ public class FlushingPlumber extends RealtimePlumber
         cache,
         cacheConfig,
         cachePopulatorStats,
-        objectMapper
-    );
+        objectMapper,
+        false);
 
     this.flushDuration = flushDuration;
     this.schema = schema;

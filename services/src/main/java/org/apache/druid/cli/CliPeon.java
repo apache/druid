@@ -200,6 +200,8 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
+            binder.bindConstant().annotatedWith(Names.named("useOak")).to(Boolean.parseBoolean(properties.getProperty("druid.indexer.useOak")));
+
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 
             JsonConfigProvider.bind(binder, "druid.indexer.task", TaskConfig.class);

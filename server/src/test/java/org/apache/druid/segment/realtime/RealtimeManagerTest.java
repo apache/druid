@@ -220,8 +220,8 @@ public class RealtimeManagerTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
-    ));
+        tuningConfig.getDedupColumn(),
+        false));
 
     realtimeManager = new RealtimeManager(
         Collections.singletonList(
@@ -242,8 +242,8 @@ public class RealtimeManagerTest
         tuningConfig.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory()),
         tuningConfig.isReportParseExceptions(),
-        tuningConfig.getDedupColumn()
-    ));
+        tuningConfig.getDedupColumn(),
+        false));
 
     realtimeManager2 = new RealtimeManager(
         Collections.singletonList(

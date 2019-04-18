@@ -1578,8 +1578,8 @@ public class IndexTaskTest
         null,
         null,
         null,
-        new TaskReportFileWriter(reportsFile)
-    );
+        new TaskReportFileWriter(reportsFile),
+        false);
 
     indexTask.isReady(box.getTaskActionClient());
     TaskStatus status = indexTask.run(box);

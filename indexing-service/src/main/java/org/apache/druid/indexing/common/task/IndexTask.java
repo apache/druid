@@ -1117,7 +1117,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
         toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9()
+        toolbox.getIndexMergerV9(),
+        toolbox.isUseOak()
     );
   }
 

@@ -350,7 +350,8 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getCache(),
         toolbox.getCacheConfig(),
         toolbox.getCachePopulatorStats(),
-        toolbox.getObjectMapper()
+        toolbox.getObjectMapper(),
+        toolbox.isUseOak()
     );
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);

@@ -391,7 +391,8 @@ public class ParallelIndexSubTask extends AbstractTask
         toolbox.getSegmentPusher(),
         toolbox.getObjectMapper(),
         toolbox.getIndexIO(),
-        toolbox.getIndexMergerV9()
+        toolbox.getIndexMergerV9(),
+        toolbox.isUseOak()
     );
   }
 

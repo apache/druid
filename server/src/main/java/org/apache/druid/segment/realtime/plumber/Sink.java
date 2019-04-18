@@ -72,17 +72,18 @@ public class Sink implements Iterable<FireHydrant>
   private volatile boolean writable = true;
   private final String dedupColumn;
   private final Set<Long> dedupSet = new HashSet<>();
+  private final boolean useOak;
 
   public Sink(
-      Interval interval,
-      DataSchema schema,
-      ShardSpec shardSpec,
-      String version,
-      int maxRowsInMemory,
-      long maxBytesInMemory,
-      boolean reportParseExceptions,
-      String dedupColumn
-  )
+          Interval interval,
+          DataSchema schema,
+          ShardSpec shardSpec,
+          String version,
+          int maxRowsInMemory,
+          long maxBytesInMemory,
+          boolean reportParseExceptions,
+          String dedupColumn,
+          boolean useOak)
   {
     this.schema = schema;
     this.shardSpec = shardSpec;
@@ -92,21 +93,22 @@ public class Sink implements Iterable<FireHydrant>
     this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
     this.dedupColumn = dedupColumn;
+    this.useOak = useOak;
 
     makeNewCurrIndex(interval.getStartMillis(), schema);
   }
 
   public Sink(
-      Interval interval,
-      DataSchema schema,
-      ShardSpec shardSpec,
-      String version,
-      int maxRowsInMemory,
-      long maxBytesInMemory,
-      boolean reportParseExceptions,
-      String dedupColumn,
-      List<FireHydrant> hydrants
-  )
+          Interval interval,
+          DataSchema schema,
+          ShardSpec shardSpec,
+          String version,
+          int maxRowsInMemory,
+          long maxBytesInMemory,
+          boolean reportParseExceptions,
+          String dedupColumn,
+          List<FireHydrant> hydrants,
+          boolean useOak)
   {
     this.schema = schema;
     this.shardSpec = shardSpec;
@@ -116,6 +118,7 @@ public class Sink implements Iterable<FireHydrant>
     this.maxBytesInMemory = maxBytesInMemory;
     this.reportParseExceptions = reportParseExceptions;
     this.dedupColumn = dedupColumn;
+    this.useOak = useOak;
 
     int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
@@ -329,12 +332,12 @@ public class Sink implements Iterable<FireHydrant>
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
         .build();
-    final IncrementalIndex newIndex = new IncrementalIndex.Builder()
-        .setIndexSchema(indexSchema)
-        .setReportParseExceptions(reportParseExceptions)
-        .setMaxRowCount(maxRowsInMemory)
-        .setMaxBytesInMemory(maxBytesInMemory)
-        .buildOnheap();
+    IncrementalIndex.Builder indexBuilder = new IncrementalIndex.Builder()
+            .setIndexSchema(indexSchema)
+            .setReportParseExceptions(reportParseExceptions)
+            .setMaxRowCount(maxRowsInMemory)
+            .setMaxBytesInMemory(maxBytesInMemory);
+    final IncrementalIndex newIndex = useOak ? indexBuilder.buildOak() : indexBuilder.buildOnheap();
 
     final FireHydrant old;
     synchronized (hydrantLock) {

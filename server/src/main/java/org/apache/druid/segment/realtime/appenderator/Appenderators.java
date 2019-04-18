@@ -54,7 +54,8 @@ public class Appenderators
       ExecutorService queryExecutorService,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean useOak
   )
   {
     return new AppenderatorImpl(
@@ -71,7 +72,8 @@ public class Appenderators
         indexMerger,
         cache,
         cacheConfig,
-        cachePopulatorStats
+        cachePopulatorStats,
+        useOak
     );
   }
 
@@ -82,7 +84,8 @@ public class Appenderators
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
-      IndexMerger indexMerger
+      IndexMerger indexMerger,
+      boolean useOak
   )
   {
     return new AppenderatorImpl(
@@ -124,7 +127,8 @@ public class Appenderators
         indexMerger,
         null,
         null,
-        null
+        null,
+        useOak
     );
   }
 

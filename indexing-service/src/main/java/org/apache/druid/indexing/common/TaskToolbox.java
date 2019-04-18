@@ -98,35 +98,36 @@ public class TaskToolbox
   private final DruidNode druidNode;
   private final LookupNodeService lookupNodeService;
   private final DataNodeService dataNodeService;
+  private final boolean useOak;
 
   public TaskToolbox(
-      TaskConfig config,
-      TaskActionClient taskActionClient,
-      ServiceEmitter emitter,
-      DataSegmentPusher segmentPusher,
-      DataSegmentKiller dataSegmentKiller,
-      DataSegmentMover dataSegmentMover,
-      DataSegmentArchiver dataSegmentArchiver,
-      DataSegmentAnnouncer segmentAnnouncer,
-      DataSegmentServerAnnouncer serverAnnouncer,
-      SegmentHandoffNotifierFactory handoffNotifierFactory,
-      Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
-      ExecutorService queryExecutorService,
-      MonitorScheduler monitorScheduler,
-      SegmentLoader segmentLoader,
-      ObjectMapper objectMapper,
-      File taskWorkDir,
-      IndexIO indexIO,
-      Cache cache,
-      CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats,
-      IndexMergerV9 indexMergerV9,
-      DruidNodeAnnouncer druidNodeAnnouncer,
-      DruidNode druidNode,
-      LookupNodeService lookupNodeService,
-      DataNodeService dataNodeService,
-      TaskReportFileWriter taskReportFileWriter
-  )
+          TaskConfig config,
+          TaskActionClient taskActionClient,
+          ServiceEmitter emitter,
+          DataSegmentPusher segmentPusher,
+          DataSegmentKiller dataSegmentKiller,
+          DataSegmentMover dataSegmentMover,
+          DataSegmentArchiver dataSegmentArchiver,
+          DataSegmentAnnouncer segmentAnnouncer,
+          DataSegmentServerAnnouncer serverAnnouncer,
+          SegmentHandoffNotifierFactory handoffNotifierFactory,
+          Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
+          ExecutorService queryExecutorService,
+          MonitorScheduler monitorScheduler,
+          SegmentLoader segmentLoader,
+          ObjectMapper objectMapper,
+          File taskWorkDir,
+          IndexIO indexIO,
+          Cache cache,
+          CacheConfig cacheConfig,
+          CachePopulatorStats cachePopulatorStats,
+          IndexMergerV9 indexMergerV9,
+          DruidNodeAnnouncer druidNodeAnnouncer,
+          DruidNode druidNode,
+          LookupNodeService lookupNodeService,
+          DataNodeService dataNodeService,
+          TaskReportFileWriter taskReportFileWriter,
+          boolean useOak)
   {
     this.config = config;
     this.taskActionClient = taskActionClient;
@@ -155,6 +156,7 @@ public class TaskToolbox
     this.dataNodeService = dataNodeService;
     this.taskReportFileWriter = taskReportFileWriter;
     this.taskReportFileWriter.setObjectMapper(this.objectMapper);
+    this.useOak = useOak;
   }
 
   public TaskConfig getConfig()
@@ -320,5 +322,10 @@ public class TaskToolbox
   public TaskReportFileWriter getTaskReportFileWriter()
   {
     return taskReportFileWriter;
+  }
+
+  public boolean isUseOak()
+  {
+    return useOak;
   }
 }

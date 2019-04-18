@@ -130,25 +130,26 @@ public class RealtimePlumber implements Plumber
 
   private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
   private static final String COMMIT_METADATA_TIMESTAMP_KEY = "%commitMetadataTimestamp%";
+  private final boolean useOak;
 
   public RealtimePlumber(
-      DataSchema schema,
-      RealtimeTuningConfig config,
-      FireDepartmentMetrics metrics,
-      ServiceEmitter emitter,
-      QueryRunnerFactoryConglomerate conglomerate,
-      DataSegmentAnnouncer segmentAnnouncer,
-      ExecutorService queryExecutorService,
-      DataSegmentPusher dataSegmentPusher,
-      SegmentPublisher segmentPublisher,
-      SegmentHandoffNotifier handoffNotifier,
-      IndexMerger indexMerger,
-      IndexIO indexIO,
-      Cache cache,
-      CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats,
-      ObjectMapper objectMapper
-  )
+          DataSchema schema,
+          RealtimeTuningConfig config,
+          FireDepartmentMetrics metrics,
+          ServiceEmitter emitter,
+          QueryRunnerFactoryConglomerate conglomerate,
+          DataSegmentAnnouncer segmentAnnouncer,
+          ExecutorService queryExecutorService,
+          DataSegmentPusher dataSegmentPusher,
+          SegmentPublisher segmentPublisher,
+          SegmentHandoffNotifier handoffNotifier,
+          IndexMerger indexMerger,
+          IndexIO indexIO,
+          Cache cache,
+          CacheConfig cacheConfig,
+          CachePopulatorStats cachePopulatorStats,
+          ObjectMapper objectMapper,
+          boolean useOak)
   {
     this.schema = schema;
     this.config = config;
@@ -172,6 +173,7 @@ public class RealtimePlumber implements Plumber
         cacheConfig,
         cachePopulatorStats
     );
+    this.useOak = useOak;
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -260,8 +262,8 @@ public class RealtimePlumber implements Plumber
           config.getMaxRowsInMemory(),
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
           config.isReportParseExceptions(),
-          config.getDedupColumn()
-      );
+          config.getDedupColumn(),
+          useOak);
       addSink(retVal);
 
     }
@@ -723,8 +725,8 @@ public class RealtimePlumber implements Plumber
           TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
           config.isReportParseExceptions(),
           config.getDedupColumn(),
-          hydrants
-      );
+          hydrants,
+          useOak);
       addSink(currSink);
     }
     return metadata;

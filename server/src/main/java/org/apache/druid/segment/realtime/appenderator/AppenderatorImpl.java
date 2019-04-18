@@ -156,6 +156,7 @@ public class AppenderatorImpl implements Appenderator
   private volatile FileChannel basePersistDirLockChannel = null;
 
   private volatile Throwable persistError;
+  private boolean useOak;
 
   AppenderatorImpl(
       DataSchema schema,
@@ -171,7 +172,8 @@ public class AppenderatorImpl implements Appenderator
       IndexMerger indexMerger,
       Cache cache,
       CacheConfig cacheConfig,
-      CachePopulatorStats cachePopulatorStats
+      CachePopulatorStats cachePopulatorStats,
+      boolean useOak
   )
   {
     this.schema = Preconditions.checkNotNull(schema, "schema");
@@ -195,6 +197,7 @@ public class AppenderatorImpl implements Appenderator
         cachePopulatorStats
     );
     maxBytesTuningConfig = TuningConfigs.getMaxBytesInMemoryOrDefault(tuningConfig.getMaxBytesInMemory());
+    this.useOak = useOak;
     log.info("Created Appenderator for dataSource[%s].", schema.getDataSource());
   }
 
@@ -391,8 +394,8 @@ public class AppenderatorImpl implements Appenderator
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
           tuningConfig.isReportParseExceptions(),
-          null
-      );
+          null,
+          useOak);
 
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
@@ -1058,8 +1061,8 @@ public class AppenderatorImpl implements Appenderator
             maxBytesTuningConfig,
             tuningConfig.isReportParseExceptions(),
             null,
-            hydrants
-        );
+            hydrants,
+            false);
         rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);
         sinkTimeline.add(

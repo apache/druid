@@ -436,8 +436,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         null,
         null,
         null,
-        new NoopTestTaskFileWriter()
-    );
+        new NoopTestTaskFileWriter(),
+        false);
 
     if (task.isReady(box.getTaskActionClient())) {
       TaskStatus status = task.run(box);

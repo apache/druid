@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.inject.name.Named;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
@@ -63,18 +64,18 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
 
   @JsonCreator
   public FlushingPlumberSchool(
-      @JsonProperty("flushDuration") Duration flushDuration,
-      @JacksonInject ServiceEmitter emitter,
-      @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
-      @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
-      @JacksonInject @Processing ExecutorService queryExecutorService,
-      @JacksonInject IndexMergerV9 indexMergerV9,
-      @JacksonInject IndexIO indexIO,
-      @JacksonInject Cache cache,
-      @JacksonInject CacheConfig cacheConfig,
-      @JacksonInject CachePopulatorStats cachePopulatorStats,
-      @JacksonInject ObjectMapper objectMapper
-  )
+          @JsonProperty("flushDuration") Duration flushDuration,
+          @JacksonInject ServiceEmitter emitter,
+          @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
+          @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
+          @JacksonInject @Processing ExecutorService queryExecutorService,
+          @JacksonInject IndexMergerV9 indexMergerV9,
+          @JacksonInject IndexIO indexIO,
+          @JacksonInject Cache cache,
+          @JacksonInject CacheConfig cacheConfig,
+          @JacksonInject CachePopulatorStats cachePopulatorStats,
+          @JacksonInject ObjectMapper objectMapper,
+          @JacksonInject @Named("useOak") boolean useOak)
   {
     super(
         emitter,
@@ -89,7 +90,8 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         cache,
         cacheConfig,
         cachePopulatorStats,
-        objectMapper
+        objectMapper,
+        useOak
     );
 
     this.flushDuration = flushDuration == null ? defaultFlushDuration : flushDuration;
