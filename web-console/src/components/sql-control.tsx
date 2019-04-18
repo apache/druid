@@ -83,6 +83,28 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
     };
   }
 
+  private replaceDefaultAutoCompleter = () => {
+    /*
+     Please refer to the source code @
+     https://github.com/ajaxorg/ace/blob/9b5b63d1dc7c1b81b58d30c87d14b5905d030ca5/lib/ace/ext/language_tools.js#L41
+     for the implementation of keyword completer
+    */
+    const keywordCompleter = {
+      getCompletions: (editor: any, session: any, pos: any, prefix: any, callback: any) => {
+        if (session.$mode.completer) {
+          return session.$mode.completer.getCompletions(editor, session, pos, prefix, callback);
+        }
+        const state = editor.session.getState(pos.row);
+        let keywordCompletions = session.$mode.getCompletions(state, session, pos, prefix);
+        keywordCompletions = keywordCompletions.map((d: any) => {
+          return Object.assign(d, {name: d.name.toUpperCase(), value: d.value.toUpperCase()});
+        });
+        return callback(null, keywordCompletions);
+      }
+    };
+    langTools.setCompleters([langTools.snippetCompleter, langTools.textCompleter, keywordCompleter]);
+  }
+
   private addDatasourceAutoCompleter = async (): Promise<any> => {
     const datasourceResp = await axios.post('/druid/v2/sql', { query: `SELECT datasource FROM sys.segments GROUP BY 1`});
     const datasourceList: any[] = datasourceResp.data.map((d: any) => {
@@ -169,6 +191,7 @@ export class SqlControl extends React.Component<SqlControlProps, SqlControlState
 
   private addCompleters = async () => {
     try {
+      this.replaceDefaultAutoCompleter();
       this.addFunctionAutoCompleter();
       await this.addDatasourceAutoCompleter();
       await this.addColumnNameAutoCompleter();
