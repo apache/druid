@@ -66,13 +66,11 @@ export function makeBooleanFilter(): FilterRender {
   };
 }
 
-export function customTableFilter(filter: Filter, row?: any): boolean | string {
-  const id = filter.pivotId || filter.id;
-  const clientSideFilter: boolean = row !== undefined;
-  if (clientSideFilter && row[id] === undefined) {
+export function customTableFilter(filter: Filter, clientSideFilter: boolean, value?: any): boolean | string {
+  if (clientSideFilter && value === undefined) {
     return true;
   }
-  const targetValue = (clientSideFilter && String(row[id].toLowerCase())) || JSON.stringify(filter.id).toLowerCase();
+  const targetValue = (clientSideFilter && String(value.toLowerCase())) || JSON.stringify(filter.id).toLowerCase();
   let filterValue = filter.value.toLowerCase();
   if (filterValue.startsWith(`"`) && filterValue.endsWith(`"`)) {
     const exactString = filterValue.slice(1, -1);

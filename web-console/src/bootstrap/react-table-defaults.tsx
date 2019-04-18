@@ -38,7 +38,8 @@ class NoData extends React.Component {
 
 Object.assign(ReactTableDefaults, {
   defaultFilterMethod: (filter: Filter, row: any, column: any) => {
-    return customTableFilter(filter, row);
+    const id = filter.pivotId || filter.id;
+    return customTableFilter(filter, true, row[id]);
   },
   LoadingComponent: Loader,
   loadingText: '',

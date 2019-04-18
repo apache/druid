@@ -123,7 +123,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
         if (f.value === 'all') return null;
         return `${JSON.stringify(f.id)} = ${f.value === 'true' ? 1 : 0}`;
       } else {
-        return customTableFilter(f);
+        return customTableFilter(f, false);
       }
     }).filter(Boolean);
 
