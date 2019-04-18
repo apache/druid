@@ -52,6 +52,16 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
   byte[] computeCacheKey(QueryType query);
 
   /**
+   * Computes the result level cache key for the given query.
+   * Some implementations may include query parameters that might not be used in {@code computeCacheKey} for same query
+   *
+   * @param query the query to be cached
+   *
+   * @return the result level cache key
+   */
+  byte[] computeResultLevelCacheKey(QueryType query);
+
+  /**
    * Returns the class type of what is used in the cache
    *
    * @return Returns the class type of what is used in the cache

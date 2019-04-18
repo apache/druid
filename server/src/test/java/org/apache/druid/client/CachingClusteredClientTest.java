@@ -3130,7 +3130,56 @@ public class CachingClusteredClientTest
     Map<String, Object> responseContext = new HashMap<>();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assert.assertEquals("Z/eS4rQz5v477iq7Aashr6JPZa0=", responseContext.get("ETag"));
+    Assert.assertEquals("MDs2yIUvYLVzaG6zmwTH1plqaYE=", responseContext.get("ETag"));
+  }
+
+  @Test
+  public void testEtagforDifferentQueryInterval()
+  {
+    final Interval interval = Intervals.of("2016-01-01/2016-01-02");
+    final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
+    final Interval queryInterval2 = Intervals.of("2016-01-01T18:00:00/2016-01-02T18:00:00");
+    final DataSegment dataSegment = new DataSegment(
+        "dataSource",
+        interval,
+        "ver",
+        ImmutableMap.of(
+            "type", "hdfs",
+            "path", "/tmp"
+        ),
+        ImmutableList.of("product"),
+        ImmutableList.of("visited_sum"),
+        NoneShardSpec.instance(),
+        9,
+        12334
+    );
+    final ServerSelector selector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
+
+    final TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+                                    .dataSource(DATA_SOURCE)
+                                    .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval)))
+                                    .context(ImmutableMap.of("If-None-Match", "aVJV29CJY93rszVW/QBy0arWZo0="))
+                                    .build();
+
+    final TimeBoundaryQuery query2 = Druids.newTimeBoundaryQueryBuilder()
+                                     .dataSource(DATA_SOURCE)
+                                     .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(queryInterval2)))
+                                     .context(ImmutableMap.of("If-None-Match", "aVJV29CJY93rszVW/QBy0arWZo0="))
+                                     .build();
+
+
+    final Map<String, Object> responseContext = new HashMap<>();
+
+    getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
+    final Object etag1 = responseContext.get("ETag");
+    getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
+    final Object etag2 = responseContext.get("ETag");
+    Assert.assertNotEquals(etag1, etag2);
   }
 
   @SuppressWarnings("unchecked")
