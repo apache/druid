@@ -514,7 +514,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   {
     final RemoteTaskRunnerWorkItem completeTask, runningTask, pendingTask;
     if ((pendingTask = pendingTasks.get(task.getId())) != null) {
-      log.info("Assigned a task[%s] that is already pending, not doing anything", task.getId());
+      log.info("Assigned a task[%s] that is already pending!", task.getId());
+      runPendingTasks();
       return pendingTask.getResult();
     } else if ((runningTask = runningTasks.get(task.getId())) != null) {
       ZkWorker zkWorker = findWorkerRunningTask(task.getId());
@@ -633,7 +634,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   /**
    * Adds a task to the pending queue
    */
-  private RemoteTaskRunnerWorkItem addPendingTask(final Task task)
+  @VisibleForTesting
+  RemoteTaskRunnerWorkItem addPendingTask(final Task task)
   {
     log.info("Added pending task %s", task.getId());
     final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
