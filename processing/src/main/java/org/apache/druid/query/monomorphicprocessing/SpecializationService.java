@@ -21,7 +21,7 @@ package org.apache.druid.query.monomorphicprocessing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import org.apache.druid.java.util.common.Unsafe;
+import org.apache.druid.java.util.common.UnsafeUtil;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
@@ -158,7 +158,7 @@ public final class SpecializationService
   private static MethodHandle defineClassJava8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
     MethodHandle defineClass = lookup.findVirtual(
-        Unsafe.theUnsafeClass(),
+        UnsafeUtil.theUnsafeClass(),
         "defineClass",
         MethodType.methodType(
             Class.class,
@@ -169,7 +169,7 @@ public final class SpecializationService
             ClassLoader.class,
             ProtectionDomain.class
         )
-    ).bindTo(Unsafe.theUnsafe());
+    ).bindTo(UnsafeUtil.theUnsafe());
 
     MethodHandle getProtectionDomain = lookup.unreflect(Class.class.getMethod("getProtectionDomain"));
     MethodHandle getClassLoader = lookup.unreflect(Class.class.getMethod("getClassLoader"));
