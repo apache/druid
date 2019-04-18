@@ -27,7 +27,7 @@ public class Unsafe
   private static final Class<?> UNSAFE_CLASS;
   private static final Exception UNSAFE_NOT_SUPPORTED_EXCEPTION;
   private static final String MESSAGE = "sun.misc.Unsafe is not supported on this platform, because internal " +
-                                        "Java APIs are not compatible with this Druid version" ;
+                                        "Java APIs are not compatible with this Druid version";
 
   static {
     Object theUnsafe = null;
