@@ -64,9 +64,25 @@ interface QueryAndSkip {
   skip: number;
 }
 
+interface SegmentQueryResultRow {
+  datasource: string;
+  start: string;
+  end: string;
+  segment_id: string;
+  version: string;
+  size: 0;
+  partition_num: number;
+  payload: any;
+  num_rows: number;
+  num_replicas: number;
+  is_available: number;
+  is_published: number;
+  is_realtime: number;
+}
+
 export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsViewState> {
-  private segmentsSqlQueryManager: QueryManager<QueryAndSkip, any[]>;
-  private segmentsJsonQueryManager: QueryManager<any, any[]>;
+  private segmentsSqlQueryManager: QueryManager<QueryAndSkip, SegmentQueryResultRow[]>;
+  private segmentsJsonQueryManager: QueryManager<any, SegmentQueryResultRow[]>;
   private tableColumnSelectionHandler: TableColumnSelectionHandler;
 
   constructor(props: SegmentsViewProps, context: any) {
@@ -107,7 +123,7 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
     this.segmentsJsonQueryManager = new QueryManager({
       processQuery: async (query: any) => {
         const datasourceList = (await axios.get('/druid/coordinator/v1/metadata/datasources')).data;
-        const nestedResults: any[][] = await Promise.all(datasourceList.map(async (d: string) => {
+        const nestedResults: SegmentQueryResultRow[][] = await Promise.all(datasourceList.map(async (d: string) => {
           const segments = (await axios.get(`/druid/coordinator/v1/datasources/${d}?full`)).data.segments;
           return segments.map((segment: any) => {
             return {
@@ -116,13 +132,18 @@ export class SegmentsView extends React.Component<SegmentsViewProps, SegmentsVie
               start: segment.interval.split('/')[0],
               end: segment.interval.split('/')[1],
               version: segment.version,
-              partition_num: segment.shardSpec.partitionNum,
+              partition_num: segment.shardSpec.partitionNum ? 0 : segment.shardSpec.partitionNum,
               size: segment.size,
-              payload: segment
+              payload: segment,
+              num_rows: -1,
+              num_replicas: -1,
+              is_available: -1,
+              is_published: -1,
+              is_realtime: -1
             };
           });
         }));
-        const results = [].concat.apply([], nestedResults).sort((d1: any, d2: any) => {
+        const results: SegmentQueryResultRow[] = [].concat.apply([], nestedResults).sort((d1: any, d2: any) => {
           return d2.start.localeCompare(d1.start);
         });
         return results;

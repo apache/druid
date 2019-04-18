@@ -58,6 +58,14 @@ interface Datasource {
   [key: string]: any;
 }
 
+interface DatasourceQueryResultRow {
+  datasource: string;
+  num_available_segments: number;
+  num_rows: number;
+  num_segments: number;
+  size: number;
+}
+
 export interface DatasourcesViewState {
   datasourcesLoading: boolean;
   datasources: Datasource[] | null;
@@ -122,7 +130,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
 
     this.datasourceQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        let datasources: any[];
+        let datasources: DatasourceQueryResultRow[];
         if (!noSqlMode) {
           datasources = await queryDruidSql({ query });
         } else {
@@ -134,7 +142,8 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
               datasource: d.name,
               num_available_segments: d.properties.segments.count,
               size: d.properties.segments.size,
-              num_segments: d.properties.segments.count + loadstatus[d.name]
+              num_segments: d.properties.segments.count + loadstatus[d.name],
+              num_rows: -1
             };
           });
         }
@@ -153,7 +162,7 @@ export class DatasourcesView extends React.Component<DatasourcesViewProps, Datas
         const tiersResp = await axios.get('/druid/coordinator/v1/tiers');
         const tiers = tiersResp.data;
 
-        const allDatasources = datasources.concat(disabled.map(d => ({ datasource: d, disabled: true })));
+        const allDatasources = (datasources as any).concat(disabled.map(d => ({ datasource: d, disabled: true })));
         allDatasources.forEach((ds: any) => {
           ds.rules = rules[ds.datasource] || [];
           ds.compaction = compaction[ds.datasource];

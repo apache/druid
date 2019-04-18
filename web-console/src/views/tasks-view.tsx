@@ -73,6 +73,23 @@ export interface TasksViewState {
   alertErrorMsg: string | null;
 }
 
+interface TaskQueryResultRow {
+  created_time: string;
+  datasource: string;
+  duration: number;
+  error_msg: string | null;
+  location: string | null;
+  rank: number;
+  status: string;
+  task_id: string;
+  type: string;
+}
+
+interface SupervisorQueryResultRow {
+  id: string;
+  spec: any;
+}
+
 function statusToColor(status: string): string {
   switch (status) {
     case 'RUNNING': return '#2167d5';
@@ -85,11 +102,11 @@ function statusToColor(status: string): string {
 }
 
 export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
-  private supervisorQueryManager: QueryManager<string, any[]>;
-  private taskQueryManager: QueryManager<string, any[]>;
+  private supervisorQueryManager: QueryManager<string, SupervisorQueryResultRow[]>;
+  private taskQueryManager: QueryManager<string, TaskQueryResultRow[]>;
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
-  private statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
+  static statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -126,6 +143,22 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
     );
   }
 
+  static parseTasks = (data: any[]): TaskQueryResultRow[] => {
+    return data.map((d: any) => {
+      return {
+        created_time: d.createdTime,
+        datasource: d.dataSource,
+        duration: d.duration ? d.duration : 0,
+        error_msg: d.errorMsg,
+        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+        rank: (TasksView.statusRanking as any)[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
+        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
+        task_id: d.id,
+        type: d.typTasksView
+      };
+    });
+  }
+
   componentDidMount(): void {
     const { noSqlMode } = this.props;
     this.supervisorQueryManager = new QueryManager({
@@ -153,11 +186,11 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
           const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
           const waitingTasksResp = await axios.get('/druid/indexer/v1/waitingTasks');
           const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
-          const completeTasksResult = this.parseTasks(completeTasksResp.data);
-          const runningTasksResult = this.parseTasks(runningTasksResp.data);
-          const waitingTasksResult = this.parseTasks(waitingTasksResp.data);
-          const pendingTasksResult = this.parseTasks(pendingTasksResp.data);
-          const result = [].concat.apply([], [completeTasksResult, runningTasksResult, waitingTasksResult, pendingTasksResult]);
+          const completeTasksResult = TasksView.parseTasks(completeTasksResp.data);
+          const runningTasksResult = TasksView.parseTasks(runningTasksResp.data);
+          const waitingTasksResult = TasksView.parseTasks(waitingTasksResp.data);
+          const pendingTasksResult = TasksView.parseTasks(pendingTasksResp.data);
+          const result: TaskQueryResultRow[] = [].concat.apply([], [completeTasksResult, runningTasksResult, waitingTasksResult, pendingTasksResult]);
           return result;
         }
       },
@@ -192,22 +225,6 @@ ORDER BY "rank" DESC, "created_time" DESC`);
   componentWillUnmount(): void {
     this.supervisorQueryManager.terminate();
     this.taskQueryManager.terminate();
-  }
-
-  private parseTasks = (data: any[]): any[] => {
-    return data.map((d: any) => {
-      return {
-        created_time: d.createdTime,
-        datasource: d.dataSource,
-        duration: d.duration ? d.duration : 0,
-        error_msg: d.errorMsg,
-        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
-        rank: (this.statusRanking as any)[d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode],
-        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
-        task_id: d.id,
-        type: d.type
-      };
-    });
   }
 
   private submitSupervisor = async (spec: JSON) => {
@@ -553,7 +570,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
             },
             sortMethod: (status1: string, status2: string) => {
-              const statusRanking: any = this.statusRanking;
+              const statusRanking: any = TasksView.statusRanking;
               return statusRanking[status1] - statusRanking[status2];
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')

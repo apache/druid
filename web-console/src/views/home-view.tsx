@@ -237,15 +237,20 @@ GROUP BY 1`);
 
     this.dataServerQueryManager = new QueryManager({
       processQuery: async (query) => {
-        if (!noSqlMode) {
-          const dataServerCounts = await queryDruidSql({ query });
-          return getHeadProp(dataServerCounts, 'count') || 0;
-        } else {
+        const getDataServerNum = async () => {
           const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
           const allServers = allServerResp.data;
           return allServers.reduce((acc: number, s: any) => {
             return acc + Number(s.type === 'historical');
           }, 0);
+        };
+        if (!noSqlMode) {
+          const dataServerCounts = await queryDruidSql({ query });
+          const serverNum = getHeadProp(dataServerCounts, 'count') || 0;
+          if (serverNum === 0) return await getDataServerNum();
+          return serverNum;
+        } else {
+          return await getDataServerNum();
         }
       },
       onStateChange: ({ result, loading, error }) => {

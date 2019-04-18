@@ -71,9 +71,32 @@ export interface ServersViewState {
   middleManagerFilter: Filter[];
 }
 
+interface ServerQueryResultRow {
+  curr_size: number;
+  host: string;
+  max_size: number;
+  plaintext_port: number;
+  server: string;
+  tier: string;
+  tls_port: number;
+  segmentsToDrop?: number;
+  segmentsToDropSize?: number;
+  segmentsToLoad?: number;
+  segmentsToLoadSize?: number;
+}
+
+interface MiddleManagerQueryResultRow {
+  availabilityGroups: string[];
+  blacklistedUntil: string | null;
+  currCapacityUsed: number;
+  lastCompletedTaskTime: string;
+  runningTasks: string[];
+  worker: any;
+}
+
 export class ServersView extends React.Component<ServersViewProps, ServersViewState> {
-  private serverQueryManager: QueryManager<string, any[]>;
-  private middleManagerQueryManager: QueryManager<string, any[]>;
+  private serverQueryManager: QueryManager<string, ServerQueryResultRow[]>;
+  private middleManagerQueryManager: QueryManager<string, MiddleManagerQueryResultRow[]>;
   private serverTableColumnSelectionHandler: TableColumnSelectionHandler;
   private middleManagerTableColumnSelectionHandler: TableColumnSelectionHandler;
 
@@ -101,29 +124,37 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
     );
   }
 
+  static getServers = async (): Promise<ServerQueryResultRow[]> => {
+    const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
+    const allServers = allServerResp.data;
+    return allServers.reduce((result: ServerQueryResultRow[], s: any) => {
+      if (s.type === 'historical') {
+        result.push({
+          host: s.host.split(':')[0],
+          plaintext_port: parseInt(s.host.split(':')[1], 10),
+          server: s.host,
+          curr_size: s.currSize,
+          max_size: s.maxSize,
+          tier: s.tier,
+          tls_port: -1
+        });
+      }
+      return result;
+    }, []);
+  }
+
   componentDidMount(): void {
     const { noSqlMode } = this.props;
     this.serverQueryManager = new QueryManager({
       processQuery: async (query: string) => {
-        let servers: any[];
+        let servers: ServerQueryResultRow[];
         if (!noSqlMode) {
           servers = await queryDruidSql({ query });
+          if (servers.length === 0) {
+            servers = await ServersView.getServers();
+          }
         } else {
-          const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
-          const allServers = allServerResp.data;
-          servers = allServers.map((s: any) => {
-            if (s.type === 'historical') {
-              return {
-                host: s.host.split(':')[0],
-                plaintext_port: parseInt(s.host.split(':')[1], 10),
-                server: s.host,
-                curr_size: s.currSize,
-                max_size: s.maxSize,
-                tier: s.tier
-              };
-            }
-            return null;
-          }).filter((s: any) => s != null);
+          servers = await ServersView.getServers();
         }
         const loadQueueResponse = await axios.get('/druid/coordinator/v1/loadqueue?simple');
         const loadQueues = loadQueueResponse.data;
@@ -300,7 +331,7 @@ WHERE "server_type" = 'historical'`);
             if (row.plaintext_port !== -1) {
               ports.push(`${row.plaintext_port} (plain)`);
             }
-            if (row.tls_port !== undefined && row.tls_port !== -1) {
+            if (row.tls_port !== -1) {
               ports.push(`${row.tls_port} (TLS)`);
             }
             return ports.join(', ') || 'No port';

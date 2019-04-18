@@ -25,7 +25,7 @@ import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar } from './components/header-bar';
 import { AppToaster } from './singletons/toaster';
-import { DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE } from './variables';
+import {DRUID_DOCS_API, DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE} from './variables';
 import { DatasourcesView } from './views/datasource-view';
 import { HomeView } from './views/home-view';
 import { LookupsView } from './views/lookups-view';
@@ -63,28 +63,34 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
       } catch (e) {
         return true; // total failure
       }
-
       // Status works but SQL 405s => the SQL endpoint is disabled
-      AppToaster.show({
-        icon: IconNames.ERROR,
-        intent: Intent.DANGER,
-        timeout: 120000,
-        /* tslint:disable:jsx-alignment */
-        message: <>
-          It appears that the SQL endpoint is disabled. Either <a
-          href={DRUID_DOCS_SQL}>enable the SQL endpoint</a> or use the old <a
-          href={LEGACY_COORDINATOR_CONSOLE}>coordinator</a> and <a
-          href={LEGACY_OVERLORD_CONSOLE}>overlord</a> consoles that do not rely on the SQL endpoint.
-        </>
-        /* tslint:enable:jsx-alignment */
-      });
       return false;
     }
-    return true;
+    return false;
   }
 
-  static async shownNotifications() {
-    await ConsoleApplication.ensureSql();
+  static shownNotifications() {
+    AppToaster.show({
+      icon: IconNames.ERROR,
+      intent: Intent.DANGER,
+      timeout: 120000,
+      /* tslint:disable:jsx-alignment */
+      message: <>
+        It appears that the SQL endpoint is disabled. No SQL endpoint is
+        used and all requests rely on <a href={DRUID_DOCS_API}>native Druid query API</a>,
+        but you may still <a href={DRUID_DOCS_SQL}>enable the SQL endpoint</a>
+      </>
+      /* tslint:enable:jsx-alignment */
+    });
+  }
+
+  private async setSqlMode() {
+    if (!(await ConsoleApplication.ensureSql())) {
+      ConsoleApplication.shownNotifications();
+      this.setState({
+        noSqlMode: true
+      });
+    }
   }
 
   private taskId: string | null;
@@ -109,18 +115,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   componentDidMount(): void {
-    ConsoleApplication.shownNotifications();
     this.setSqlMode();
-  }
-
-  private setSqlMode = async () => {
-    try {
-      await axios.post('/druid/v2/sql', {query: 'SELECT 1337'});
-    } catch (e) {
-      this.setState({
-        noSqlMode: true
-      });
-    }
   }
 
   private resetInitialsDelay() {
