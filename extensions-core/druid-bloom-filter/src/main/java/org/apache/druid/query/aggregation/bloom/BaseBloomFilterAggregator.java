@@ -50,8 +50,8 @@ import java.nio.ByteBuffer;
 public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableColumnValueSelector>
     implements BufferAggregator, Aggregator
 {
-
-  protected final ByteBuffer collector;
+  @Nullable
+  private final ByteBuffer collector;
   protected final int maxNumEntries;
   protected final TSelector selector;
 
@@ -88,9 +88,12 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
   public void aggregate(ByteBuffer buf, int position)
   {
     final int oldPosition = buf.position();
-    buf.position(position);
-    bufferAdd(buf);
-    buf.position(oldPosition);
+    try {
+      buf.position(position);
+      bufferAdd(buf);
+    } finally {
+      buf.position(oldPosition);
+    }
   }
 
   @Override
@@ -98,7 +101,6 @@ public abstract class BaseBloomFilterAggregator<TSelector extends BaseNullableCo
   {
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
-    // | k (byte) | numLongs (int) | bitset (long[numLongs]) |
     int sizeBytes = BloomKFilter.computeSizeBytes(maxNumEntries);
     mutationBuffer.limit(position + sizeBytes);
 

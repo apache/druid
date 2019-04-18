@@ -200,7 +200,7 @@ public class BloomFilterAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner makeAggregateCombiner()
   {
-    return new BloomFilterAggregateCombiner(maxNumEntries);
+    throw new UnsupportedOperationException("Bloom filter aggregators are query-time only");
   }
 
   @Override
