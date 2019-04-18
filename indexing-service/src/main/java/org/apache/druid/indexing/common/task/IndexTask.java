@@ -976,6 +976,22 @@ public class IndexTask extends AbstractTask implements ChatHandler
             // (in append mode) or may be created on our own authority (in overwrite mode).
             sequenceName = getId();
           }
+          // Check if the upcoming row will result in the creation of a new segment
+          DateTime timestamp = inputRow.getTimestamp();
+          boolean rowInNewSegment = true;
+          Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
+          // TODO this can be improved from O(n) to O(log(n))
+          for (SegmentIdWithShardSpec segment : unpushedSegments) {
+            if (segment.getInterval().contains(timestamp.getMillis())) {
+              rowInNewSegment = false;
+            }
+          }
+
+          if (!isGuaranteedRollup && rowInNewSegment && unpushedSegments.size() >= tuningConfig.getMaxTotalSegments()) {
+            final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+            log.info("Pushed segments[%s]", pushed.getSegments());
+          }
+
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {

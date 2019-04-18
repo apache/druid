@@ -593,6 +593,76 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   }
 
   @Test(timeout = 60_000L)
+  public void testMaxTotalSegments() throws Exception
+  {
+    int numRows = 15;
+    int maxTotalSegments = 5;
+    int expectedNumSegments = 8;
+    expectPublishedSegments(expectedNumSegments);
+
+    final AppenderatorDriverRealtimeIndexTask task =
+        makeRealtimeTaskWithMaxTotalSegments(null, Integer.MAX_VALUE, maxTotalSegments);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task);
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    for (int i = 0; i < numRows / 3; i++) {
+      firehose.addRows(
+          ImmutableList.of(
+              ImmutableMap.of("t", now.plusDays(i).getMillis(), "dim1", "foo-" + i, "met1", "1"),
+              ImmutableMap.of("t", now.plusDays(i + 1).getMillis(), "dim1", "foo-" + i, "met1", "1"),
+              ImmutableMap.of("t", now.plusDays(i + 2).getMillis(), "dim1", "foo-" + i, "met1", "1")
+          )
+      );
+    }
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for publish.
+    Collection<DataSegment> publishedSegments = awaitSegments();
+
+    // Check metrics.
+    Assert.assertEquals(numRows, task.getRowIngestionMeters().getProcessed());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getThrownAway());
+    Assert.assertEquals(0, task.getRowIngestionMeters().getUnparseable());
+
+    // Do some queries.
+    Assert.assertEquals(numRows, sumMetric(task, null, "rows").longValue());
+    Assert.assertEquals(numRows, sumMetric(task, null, "met1").longValue());
+
+    awaitHandoffs();
+
+    Assert.assertEquals(expectedNumSegments, publishedSegments.size()); // how many segments do we need
+    for (DataSegment publishedSegment : publishedSegments) {
+      Pair<Executor, Runnable> executorRunnablePair = handOffCallbacks.get(
+          new SegmentDescriptor(
+              publishedSegment.getInterval(),
+              publishedSegment.getVersion(),
+              publishedSegment.getShardSpec().getPartitionNum()
+          )
+      );
+      Assert.assertNotNull(
+          publishedSegment + " missing from handoff callbacks: " + handOffCallbacks,
+          executorRunnablePair
+      );
+
+      // Simulate handoff.
+      executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
+    }
+    handOffCallbacks.clear();
+
+    // Wait for the task to finish.
+    final TaskStatus taskStatus = statusFuture.get();
+    Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+  }
+
+  @Test(timeout = 60_000L)
   public void testTransformSpec() throws Exception
   {
     expectPublishedSegments(2);
@@ -1317,7 +1387,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         0,
         1,
         maxRowsPerSegment,
-        maxTotalRows
+        maxTotalRows,
+        null
     );
   }
 
@@ -1354,11 +1425,32 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         maxParseExceptions,
         maxSavedParseExceptions,
         1000,
+        null,
         null
     );
   }
 
-  private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
+  private AppenderatorDriverRealtimeIndexTask makeRealtimeTaskWithMaxTotalSegments(
+      final String taskId,
+      final Integer maxRowsPerSegment,
+      final Integer maxTotalSegments
+  )
+  {
+    return makeRealtimeTask(
+        taskId,
+        TransformSpec.NONE,
+        true,
+        0,
+        true,
+        0,
+        1,
+        maxRowsPerSegment,
+        1500L,
+        maxTotalSegments
+    );
+  }
+
+    private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
       final String taskId,
       final TransformSpec transformSpec,
       final boolean reportParseExceptions,
@@ -1367,7 +1459,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       final Integer maxParseExceptions,
       final Integer maxSavedParseExceptions,
       final Integer maxRowsPerSegment,
-      final Long maxTotalRows
+      final Long maxTotalRows,
+      final Integer maxTotalSegments
   )
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -1407,7 +1500,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         null,
         maxRowsPerSegment,
         maxTotalRows,
-        null,
+        maxTotalSegments,
         null,
         null,
         null,

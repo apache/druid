@@ -129,13 +129,14 @@ public class AppenderatorImpl implements Appenderator
    */
   private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
+  private final Set<SegmentIdWithShardSpec> unpushedSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER
   );
   private final long maxBytesTuningConfig;
 
   private final QuerySegmentWalker texasRanger;
-  // This variable updated in add(), persist(), and drop()
+  // This variable updated in add(), persist(), and dr op()
   private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final AtomicInteger totalRows = new AtomicInteger();
   private final AtomicLong bytesCurrentlyInMemory = new AtomicLong();
@@ -337,6 +338,12 @@ public class AppenderatorImpl implements Appenderator
   }
 
   @Override
+  public Set<SegmentIdWithShardSpec> getUnpublishedSegments()
+  {
+    return unpushedSinks;
+  }
+
+  @Override
   public int getRowCount(final SegmentIdWithShardSpec identifier)
   {
     final Sink sink = sinks.get(identifier);
@@ -404,6 +411,7 @@ public class AppenderatorImpl implements Appenderator
       }
 
       sinks.put(identifier, retVal);
+      unpushedSinks.add(identifier);
       metrics.setSinkCount(sinks.size());
       sinkTimeline.add(retVal.getInterval(), retVal.getVersion(), identifier.getShardSpec().createChunk(retVal));
     }
@@ -611,6 +619,7 @@ public class AppenderatorImpl implements Appenderator
       theSinks.put(identifier, sink);
       if (sink.finishWriting()) {
         totalRows.addAndGet(-sink.getNumRows());
+        unpushedSinks.clear();
       }
     }
 
@@ -1062,6 +1071,7 @@ public class AppenderatorImpl implements Appenderator
         );
         rowsSoFar += currSink.getNumRows();
         sinks.put(identifier, currSink);
+        unpushedSinks.add(identifier);
         sinkTimeline.add(
             currSink.getInterval(),
             currSink.getVersion(),

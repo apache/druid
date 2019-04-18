@@ -62,8 +62,10 @@ import org.apache.druid.segment.realtime.appenderator.Appenderators;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -73,6 +75,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -341,6 +344,24 @@ public class ParallelIndexSubTask extends AbstractTask
           // Segments are created as needed, using a single sequence name. They may be allocated from the overlord
           // (in append mode) or may be created on our own authority (in overwrite mode).
           final String sequenceName = getId();
+
+          // Check if the upcoming row will result in the creation of a new segment
+          DateTime timestamp = inputRow.getTimestamp();
+          boolean rowInNewSegment = true;
+          Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
+          // TODO this can be improved from O(n) to O(log(n))
+          for (SegmentIdWithShardSpec segment : unpushedSegments) {
+            if (segment.getInterval().contains(timestamp.getMillis())) {
+              rowInNewSegment = false;
+            }
+          }
+
+          if (rowInNewSegment && unpushedSegments.size() >= tuningConfig.getMaxTotalSegments()) {
+            final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+            pushedSegments.addAll(pushed.getSegments());
+            log.info("Pushed segments[%s]", pushed.getSegments());
+          }
+
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
 
           if (addResult.isOk()) {

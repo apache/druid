@@ -71,6 +71,7 @@ import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
@@ -581,6 +582,23 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
                 for (InputRow row : rows) {
                   if (row != null && task.withinMinMaxRecordTime(row)) {
+                    // Check if the upcoming row will result in the creation of a new segment
+                    DateTime timestamp = row.getTimestamp();
+                    boolean rowInNewSegment = true;
+                    Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
+                    // TODO this can be improved from O(n) to O(log(n))
+                    for (SegmentIdWithShardSpec segment : unpushedSegments) {
+                      if (segment.getInterval().contains(timestamp.getMillis())) {
+                        rowInNewSegment = false;
+                      }
+                    }
+
+                    if (!sequenceToUse.isCheckpointed() &&
+                        rowInNewSegment &&
+                        unpushedSegments.size() >= tuningConfig.getMaxTotalSegments()) {
+                      sequenceToCheckpoint = sequenceToUse;
+                    }
+
                     final AppenderatorDriverAddResult addResult = driver.add(
                         row,
                         sequenceToUse.getSequenceName(),
@@ -667,8 +685,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           if (sequenceToCheckpoint != null && stillReading) {
             Preconditions.checkArgument(
                 getLastSequenceMetadata()
-                         .getSequenceName()
-                         .equals(sequenceToCheckpoint.getSequenceName()),
+                    .getSequenceName()
+                    .equals(sequenceToCheckpoint.getSequenceName()),
                 "Cannot checkpoint a sequence [%s] which is not the latest one, sequences %s",
                 sequenceToCheckpoint,
                 sequences
@@ -1119,7 +1137,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Actually do the add.
     sequences.add(sequenceMetadata);
   }
-  
+
   private SequenceMetadata<PartitionIdType, SequenceOffsetType> getLastSequenceMetadata()
   {
     Preconditions.checkState(!sequences.isEmpty(), "Empty sequences");
@@ -1537,7 +1555,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         }
 
         for (Map.Entry<PartitionIdType, SequenceOffsetType> entry : sequenceNumbers.entrySet()) {
-          if (createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(currOffsets.get(entry.getKey()))) < 0) {
+          if (createSequenceNumber(entry.getValue()).compareTo(createSequenceNumber(currOffsets.get(entry.getKey())))
+              < 0) {
             return Response.status(Response.Status.BAD_REQUEST)
                            .entity(
                                StringUtils.format(
@@ -1729,7 +1748,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   /**
    * This method does two things:
-   *
+   * <p>
    * 1) Verifies that the sequence numbers we read are at least as high as those read previously, and throws an
    * exception if not.
    * 2) Returns false if we should skip this record because it's either (a) the first record in a partition that we are

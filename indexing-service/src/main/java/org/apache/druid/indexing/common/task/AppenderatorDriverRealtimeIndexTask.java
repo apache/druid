@@ -73,6 +73,7 @@ import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -85,6 +86,7 @@ import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CircularBuffer;
+import org.joda.time.DateTime;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -99,6 +101,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -313,6 +316,23 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             log.debug("Discarded null row, considering thrownAway.");
             rowIngestionMeters.incrementThrownAway();
           } else {
+            // Check if the upcoming row will result in the creation of a new segment
+            DateTime timestamp = inputRow.getTimestamp();
+            boolean rowInNewSegment = true;
+            Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
+            // TODO this can be improved from O(n) to O(log(n))
+            for (SegmentIdWithShardSpec segment : unpushedSegments) {
+              if (segment.getInterval().contains(timestamp.getMillis())) {
+                rowInNewSegment = false;
+              }
+            }
+
+            if (rowInNewSegment && unpushedSegments.size() >= tuningConfig.getMaxTotalSegments()) {
+              publishSegments(driver, publisher, committerSupplier, sequenceName);
+              sequenceNumber++;
+              sequenceName = makeSequenceName(getId(), sequenceNumber);
+            }
+
             AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName, committerSupplier);
 
             if (addResult.isOk()) {

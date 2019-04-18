@@ -422,6 +422,12 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
     }
 
     @Override
+    public Set<SegmentIdWithShardSpec> getUnpublishedSegments()
+    {
+      return ImmutableSet.of();
+    }
+
+    @Override
     public int getRowCount(SegmentIdWithShardSpec identifier)
     {
       final List<InputRow> rows = this.rows.get(identifier);

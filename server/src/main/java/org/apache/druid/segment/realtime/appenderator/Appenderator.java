@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 /**
  * An Appenderator indexes data. It has some in-memory data and some persisted-on-disk data. It can serve queries on
@@ -110,9 +111,15 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
       throws IndexSizeExceededException, SegmentNotWritableException;
 
   /**
-   * Returns a list of all currently active segments.
+   * Returns a list of all currently active segments (not fully published).
    */
   List<SegmentIdWithShardSpec> getSegments();
+
+  /**
+   * Returns a list of all currently active segments (not being published at all).  This differs from the size of
+   * the list returned by getSegments() because getSegments() returns segments that are in the act of being published.
+   */
+  Set<SegmentIdWithShardSpec> getUnpublishedSegments();
 
   /**
    * Returns the number of rows in a particular pending segment.
