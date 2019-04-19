@@ -24,7 +24,7 @@ title: "Tutorial: Roll-up"
 
 # Tutorial: Roll-up
 
-Druid can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored segments.
+Apache Druid (incubating) can summarize raw data at ingestion time using a process we refer to as "roll-up". Roll-up is a first-level aggregation operation over a selected set of columns that reduces the size of stored segments.
 
 This tutorial will demonstrate the effects of roll-up on an example dataset.
 

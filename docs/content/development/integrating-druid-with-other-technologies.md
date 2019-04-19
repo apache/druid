@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Integrating Druid With Other Technologies"
+title: "Integrating Apache Druid (incubating) With Other Technologies"
 ---
 
 <!--

@@ -24,7 +24,7 @@ title: "Scan query"
 
 # Scan query
 
-Scan query returns raw Druid rows in streaming mode.
+Scan query returns raw Apache Druid (incubating) rows in streaming mode.
 
 ```json
  {

@@ -26,7 +26,7 @@ title: "Tutorial: Loading a file"
 
 ## Getting started
 
-This tutorial demonstrates how to perform a batch file load, using Druid's native batch ingestion.
+This tutorial demonstrates how to perform a batch file load, using Apache Druid (incubating)'s native batch ingestion.
 
 For this tutorial, we'll assume you've already downloaded Druid as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. You 

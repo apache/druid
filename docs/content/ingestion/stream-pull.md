@@ -29,7 +29,7 @@ NOTE: Realtime processes are deprecated. Please use the <a href="../development/
 # Stream Pull Ingestion
 
 If you have an external service that you want to pull data from, you have two options. The simplest
-option is to set up a "copying" service that reads from the data source and writes to Druid using
+option is to set up a "copying" service that reads from the data source and writes to Apache Druid (incubating) using
 the [stream push method](stream-push.html).
 
 Another option is *stream pull*. With this approach, a Druid Realtime Process ingests data from a

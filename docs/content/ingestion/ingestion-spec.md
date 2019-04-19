@@ -24,7 +24,7 @@ title: "Ingestion Spec"
 
 # Ingestion Spec
 
-A Druid ingestion spec consists of 3 components:
+An Apache Druid (incubating) ingestion spec consists of 3 components:
 
 ```json
 {

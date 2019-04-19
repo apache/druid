@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Parquet Extension"
+title: "Apache Parquet Extension"
 ---
 
 <!--
@@ -22,9 +22,9 @@ title: "Druid Parquet Extension"
   ~ under the License.
   -->
   
-# Druid Parquet Extension
+# Apache Parquet Extension
 
-This module extends [Druid Hadoop based indexing](../../ingestion/hadoop.html) to ingest data directly from offline 
+This Apache Druid (incubating) module extends [Druid Hadoop based indexing](../../ingestion/hadoop.html) to ingest data directly from offline 
 Apache Parquet files. 
 
 Note: `druid-parquet-extensions` depends on the `druid-avro-extensions` module, so be sure to

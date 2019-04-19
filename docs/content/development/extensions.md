@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid extensions"
+title: "Apache Druid (incubating) extensions"
 ---
 
 <!--

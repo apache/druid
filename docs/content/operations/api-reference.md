@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "API Reference"
+title: "Apache Druid (incubating) API Reference"
 ---
 
 <!--

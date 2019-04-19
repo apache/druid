@@ -24,7 +24,7 @@ title: "Batch Data Ingestion"
 
 # Batch Data Ingestion
 
-Druid can load data from static files through a variety of methods described here.
+Apache Druid (incubating) can load data from static files through a variety of methods described here.
 
 ## Native Batch Ingestion
 

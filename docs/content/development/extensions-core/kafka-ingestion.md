@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Kafka Indexing Service"
+title: "Apache Kafka Indexing Service"
 ---
 
 <!--
@@ -31,7 +31,7 @@ able to read non-recent events from Kafka and are not subject to the window peri
 ingestion mechanisms using Tranquility. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
-This service is provided in the `druid-kafka-indexing-service` core extension (see
+This service is provided in the `druid-kafka-indexing-service` core Apache Druid (incubating) extension (see
 [Including Extensions](../../operations/including-extensions.html)).
 
 <div class="note info">

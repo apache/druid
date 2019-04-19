@@ -24,7 +24,7 @@ title: "Query Caching"
 
 # Query Caching
 
-Druid supports query result caching through an LRU cache. Results are stored as a whole or either on a per segment basis along with the 
+Apache Druid (incubating) supports query result caching through an LRU cache. Results are stored as a whole or either on a per segment basis along with the 
 parameters of a given query. Segment level caching allows Druid to return final results based partially on segment results in the cache 
 and partially on segment results from scanning historical/real-time segments. Result level caching enables Druid to cache the entire 
 result set, so that query results can be completely retrieved from the cache for identical queries.
