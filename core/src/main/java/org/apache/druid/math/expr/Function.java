@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 /**
@@ -120,6 +122,23 @@ interface Function
     {
       return eval((long) x, (long) y);
     }
+  }
+
+  abstract class DoubleParamString extends DoubleParam
+  {
+    @Override
+    protected final ExprEval eval(ExprEval x, ExprEval y)
+    {
+      if (x.type() != ExprType.STRING || y.type() != ExprType.LONG) {
+        throw new IAE(
+            "Function[%s] needs a string as first argument and an integer as second argument",
+            name()
+        );
+      }
+      return eval(x.asString(), y.asInt());
+    }
+
+    protected abstract ExprEval eval(String x, int y);
   }
 
   class ParseLong implements Function
@@ -326,7 +345,6 @@ interface Function
     }
   }
 
-
   class Div extends DoubleParamMath
   {
     @Override
@@ -483,7 +501,7 @@ interface Function
     }
   }
 
-  class Round extends SingleParamMath
+  class Round implements Function
   {
     @Override
     public String name()
@@ -492,9 +510,42 @@ interface Function
     }
 
     @Override
-    protected ExprEval eval(double param)
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      return ExprEval.of(Math.round(param));
+      if (args.size() != 1 && args.size() != 2) {
+        throw new IAE("Function[%s] needs 1 or 2 arguments", name());
+      }
+
+      ExprEval value1 = args.get(0).eval(bindings);
+      if (value1.type() != ExprType.LONG && value1.type() != ExprType.DOUBLE) {
+        throw new IAE("The first argument to the function[%s] should be integer or double type but get the %s type", name(), value1.type());
+      }
+
+      if (args.size() == 1) {
+        return eval(value1);
+      } else {
+        ExprEval value2 = args.get(1).eval(bindings);
+        if (value2.type() != ExprType.LONG) {
+          throw new IAE("The second argument to the function[%s] should be integer type but get the %s type", name(), value2.type());
+        }
+        return eval(value1, value2.asInt());
+      }
+    }
+
+    private ExprEval eval(ExprEval param)
+    {
+      return eval(param, 0);
+    }
+
+    private ExprEval eval(ExprEval param, int scale)
+    {
+      if (param.type() == ExprType.LONG) {
+        return ExprEval.of(BigDecimal.valueOf(param.asLong()).setScale(scale, RoundingMode.HALF_UP).longValue());
+      } else if (param.type() == ExprType.DOUBLE) {
+        return ExprEval.of(BigDecimal.valueOf(param.asDouble()).setScale(scale, RoundingMode.HALF_UP).doubleValue());
+      } else {
+        return ExprEval.of(null);
+      }
     }
   }
 
@@ -1126,6 +1177,49 @@ interface Function
     }
   }
 
+  class RightFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "right";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      if (y < 0) {
+        throw new IAE(
+            "Function[%s] needs a postive integer as second argument",
+            name()
+        );
+      }
+      int len = x.length();
+      return ExprEval.of(y < len ? x.substring(len - y) : x);
+    }
+  }
+
+  class LeftFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "left";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      if (y < 0) {
+        throw new IAE(
+            "Function[%s] needs a postive integer as second argument",
+            name()
+        );
+      }
+      return ExprEval.of(y < x.length() ? x.substring(0, y) : x);
+    }
+  }
+
   class ReplaceFunc implements Function
   {
     @Override
@@ -1194,6 +1288,43 @@ interface Function
         return ExprEval.of(NullHandling.defaultStringValue());
       }
       return ExprEval.of(StringUtils.toUpperCase(arg));
+    }
+  }
+
+  class ReverseFunc extends SingleParam
+  {
+    @Override
+    public String name()
+    {
+      return "reverse";
+    }
+
+    @Override
+    protected ExprEval eval(ExprEval param)
+    {
+      if (param.type() != ExprType.STRING) {
+        throw new IAE(
+            "Function[%s] needs a string argument",
+            name()
+        );
+      }
+      final String arg = param.asString();
+      return ExprEval.of(arg == null ? NullHandling.defaultStringValue() : new StringBuilder(arg).reverse().toString());
+    }
+  }
+
+  class RepeatFunc extends DoubleParamString
+  {
+    @Override
+    public String name()
+    {
+      return "repeat";
+    }
+
+    @Override
+    protected ExprEval eval(String x, int y)
+    {
+      return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
     }
   }
 

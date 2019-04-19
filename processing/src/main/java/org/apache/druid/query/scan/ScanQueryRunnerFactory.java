@@ -40,11 +40,14 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -111,17 +114,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
           return returnedRows;
         }
       } else {
-        // Query segment spec must be an instance of MultipleSpecificSegmentSpec because segment descriptors need
-        // to be present for a 1:1 matching of intervals with query runners.  The other types of segment spec condense
-        // the intervals (i.e. merge neighbouring intervals), eliminating the 1:1 relationship between intervals
-        // and query runners.
-        if (!(query.getQuerySegmentSpec() instanceof MultipleSpecificSegmentSpec)) {
-          throw new UOE("Time-ordering on scan queries is only supported for queries with segment specs"
-                        + "of type MultipleSpecificSegmentSpec");
-        }
-        // Ascending time order for both descriptors and query runners by default
-        List<SegmentDescriptor> descriptorsOrdered =
-            ((MultipleSpecificSegmentSpec) query.getQuerySegmentSpec()).getDescriptors();
+        List<SegmentDescriptor> descriptorsOrdered = getSegmentDescriptorsFromSpecificQuerySpec(query.getQuerySegmentSpec());
         List<QueryRunner<ScanResultValue>> queryRunnersOrdered = Lists.newArrayList(queryRunners);
 
         if (query.getOrder().equals(ScanQuery.Order.DESCENDING)) {
@@ -284,6 +277,28 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       sortedElements.addFirst(q.poll());
     }
     return Sequences.simple(sortedElements);
+  }
+
+  @VisibleForTesting
+  List<SegmentDescriptor> getSegmentDescriptorsFromSpecificQuerySpec(QuerySegmentSpec spec)
+  {
+    // Query segment spec must be an instance of MultipleSpecificSegmentSpec or SpecificSegmentSpec because
+    // segment descriptors need to be present for a 1:1 matching of intervals with query runners.
+    // The other types of segment spec condense the intervals (i.e. merge neighbouring intervals), eliminating
+    // the 1:1 relationship between intervals and query runners.
+    List<SegmentDescriptor> descriptorsOrdered;
+
+    if (spec instanceof MultipleSpecificSegmentSpec) {
+      // Ascending time order for both descriptors and query runners by default
+      descriptorsOrdered = ((MultipleSpecificSegmentSpec) spec).getDescriptors();
+    } else if (spec instanceof SpecificSegmentSpec) {
+      descriptorsOrdered = Collections.singletonList(((SpecificSegmentSpec) spec).getDescriptor());
+    } else {
+      throw new UOE("Time-ordering on scan queries is only supported for queries with segment specs"
+                    + "of type MultipleSpecificSegmentSpec or SpecificSegmentSpec...a [%s] was received instead.",
+                    spec.getClass().getSimpleName());
+    }
+    return descriptorsOrdered;
   }
 
   @VisibleForTesting

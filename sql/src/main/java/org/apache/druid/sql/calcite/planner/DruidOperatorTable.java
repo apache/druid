@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversi
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LTrimOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.LeftOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.LikeOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.MillisToTimestampOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ParseLongOperatorConversion;
@@ -61,6 +62,10 @@ import org.apache.druid.sql.calcite.expression.builtin.PositionOperatorConversio
 import org.apache.druid.sql.calcite.expression.builtin.RTrimOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RegexpExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.RoundOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StrposOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SubstringOperatorConversion;
@@ -155,6 +160,7 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.LESS_THAN_OR_EQUAL, "<="))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.AND, "&&"))
           .add(new BinaryOperatorConversion(SqlStdOperatorTable.OR, "||"))
+          .add(new RoundOperatorConversion())
           // time operators
           .add(new CeilOperatorConversion())
           .add(new DateTruncOperatorConversion())
@@ -180,6 +186,10 @@ public class DruidOperatorTable implements SqlOperatorTable
           .add(new StringFormatOperatorConversion())
           .add(new StrposOperatorConversion())
           .add(new SubstringOperatorConversion())
+          .add(new RightOperatorConversion())
+          .add(new LeftOperatorConversion())
+          .add(new ReverseOperatorConversion())
+          .add(new RepeatOperatorConversion())
           .add(new AliasedOperatorConversion(new SubstringOperatorConversion(), "SUBSTR"))
           .add(new ConcatOperatorConversion())
           .add(new TextcatOperatorConversion())

@@ -25,6 +25,7 @@ import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
 import { TableColumnSelection } from '../components/table-column-selection';
+import { ViewControlBar } from '../components/view-control-bar';
 import { AsyncActionDialog } from '../dialogs/async-action-dialog';
 import { SpecDialog } from '../dialogs/spec-dialog';
 import { AppToaster } from '../singletons/toaster';
@@ -87,6 +88,7 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
   private taskQueryManager: QueryManager<string, any[]>;
   private supervisorTableColumnSelectionHandler: TableColumnSelectionHandler;
   private taskTableColumnSelectionHandler: TableColumnSelectionHandler;
+  private statusRanking = {RUNNING: 4, PENDING: 3, WAITING: 2, SUCCESS: 1, FAILED: 1};
 
   constructor(props: TasksViewProps, context: any) {
     super(props, context);
@@ -491,7 +493,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
             Header: 'Status',
             id: 'status',
             width: 110,
-            accessor: (row) => `${row.rank}_${row.created_time}_${row.status}`,
+            accessor: (row) => { return {status: row.status, created_time: row.created_time}; },
             Cell: row => {
               if (row.aggregated) return '';
               const { status, location } = row.original;
@@ -518,6 +520,10 @@ ORDER BY "rank" DESC, "created_time" DESC`);
               const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row._original[column.id]);
               const previewCount = countBy(previewValues);
               return <span>{Object.keys(previewCount).sort().map(v => `${v} (${previewCount[v]})`).join(', ')}</span>;
+            },
+            sortMethod: (d1, d2) => {
+              const statusRanking: any = this.statusRanking;
+              return statusRanking[d1.status] - statusRanking[d2.status] || d1.created_time.localeCompare(d2.created_time);
             },
             show: taskTableColumnSelectionHandler.showColumn('Status')
           },
@@ -565,8 +571,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
     const { supervisorTableColumnSelectionHandler, taskTableColumnSelectionHandler } = this;
 
     return <div className="tasks-view app-view">
-      <div className="control-bar">
-        <div className="control-label">Supervisors</div>
+      <ViewControlBar label="Supervisors">
         <Button
           icon={IconNames.REFRESH}
           text="Refresh"
@@ -582,13 +587,12 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           onChange={(column) => supervisorTableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={supervisorTableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderSupervisorTable()}
 
       <div className="control-separator"/>
 
-      <div className="control-bar">
-        <div className="control-label">Tasks</div>
+      <ViewControlBar label="Tasks">
         <Label>Group by</Label>
         <ButtonGroup>
           <Button active={groupTasksBy === null} onClick={() => this.setState({ groupTasksBy: null })}>None</Button>
@@ -616,7 +620,7 @@ ORDER BY "rank" DESC, "created_time" DESC`);
           onChange={(column) => taskTableColumnSelectionHandler.changeTableColumnSelection(column)}
           tableColumnsHidden={taskTableColumnSelectionHandler.hiddenColumns}
         />
-      </div>
+      </ViewControlBar>
       {this.renderTaskTable()}
       { supervisorSpecDialogOpen ? <SpecDialog
         onClose={() => this.setState({ supervisorSpecDialogOpen: false })}

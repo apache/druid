@@ -21,7 +21,12 @@ import { AxiosResponse } from 'axios';
 
 export function getDruidErrorMessage(e: any) {
   const data: any = ((e.response || {}).data || {});
-  return [data.error, data.errorMessage, data.errorClass].filter(Boolean).join(' / ') || e.message;
+  return [
+    data.error,
+    data.errorMessage,
+    data.errorClass,
+    data.host ? `on host ${data.host}` : null
+  ].filter(Boolean).join(' / ') || e.message;
 }
 
 export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {

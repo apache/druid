@@ -92,8 +92,7 @@ public interface SegmentsMetadata
    * ImmutableDruidDataSource} object). Not used "create" prefix to avoid giving a false impression that this method
    * might put something into the database to create a data source with the given name, if absent.
    */
-  @Nullable
-  ImmutableDruidDataSource prepareImmutableDataSourceWithUsedSegments(String dataSource);
+  @Nullable ImmutableDruidDataSource prepareImmutableDataSourceWithUsedSegments(String dataSource);
 
   /**
    * If there are used segments belonging to the given data source, this method returns a {@link DruidDataSource} object
@@ -103,8 +102,7 @@ public interface SegmentsMetadata
    * Note that the returned {@link DruidDataSource} object may be updated concurrently and already be empty by the time
    * it is returned.
    */
-  @Nullable
-  DruidDataSource getDataSourceWithUsedSegments(String dataSource);
+  @Nullable DruidDataSource getDataSourceWithUsedSegments(String dataSource);
 
   /**
    * Prepares a set of {@link ImmutableDruidDataSource} objects containing information about all used segments. {@link
@@ -114,7 +112,7 @@ public interface SegmentsMetadata
    * This method's name starts with "prepare" for the same reason as {@link
    * #prepareImmutableDataSourceWithUsedSegments}.
    */
-  Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments();
+  @Nullable Collection<ImmutableDruidDataSource> prepareImmutableDataSourcesWithAllUsedSegments();
 
   /**
    * Returns an iterable to go over all segments in all data sources. The order in which segments are iterated is
@@ -122,7 +120,7 @@ public interface SegmentsMetadata
    * (to some reasonable extent) to organize the code so that it iterates the returned iterable only once rather than
    * several times.
    */
-  Iterable<DataSegment> iterateAllUsedSegments();
+  @Nullable Iterable<DataSegment> iterateAllUsedSegments();
 
   /**
    * Retrieves all data source names for which there are segment in the database, regardless of whether those segments

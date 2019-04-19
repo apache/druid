@@ -25,6 +25,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.TreeSet;
 
 public class DruidCoordinatorUsedSegmentsLoader implements DruidCoordinatorHelper
@@ -39,9 +40,15 @@ public class DruidCoordinatorUsedSegmentsLoader implements DruidCoordinatorHelpe
   }
 
   @Override
-  public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+  public @Nullable DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
     log.info("Starting coordination. Getting used segments.");
+
+    final Iterable<DataSegment> usedSegments = coordinator.iterateAllUsedSegments();
+    if (usedSegments == null) {
+      log.info("Metadata store not polled yet, canceling this run.");
+      return null;
+    }
 
     // The following transform() call doesn't actually transform the iterable. It only checks the sizes of the segments
     // and emits alerts if segments with negative sizes are encountered. In other words, semantically it's similar to
@@ -54,7 +61,7 @@ public class DruidCoordinatorUsedSegmentsLoader implements DruidCoordinatorHelpe
     //
     //noinspection StaticPseudoFunctionalStyleMethod: https://youtrack.jetbrains.com/issue/IDEA-153047
     Iterable<DataSegment> usedSegmentsWithSizeChecking = Iterables.transform(
-        coordinator.iterateAllUsedSegments(),
+        usedSegments,
         segment -> {
           if (segment.getSize() < 0) {
             log.makeAlert("No size on a segment")
@@ -64,21 +71,21 @@ public class DruidCoordinatorUsedSegmentsLoader implements DruidCoordinatorHelpe
           return segment;
         }
     );
-    final TreeSet<DataSegment> usedSegments =
+    final TreeSet<DataSegment> usedSegmentSet =
         DruidCoordinatorRuntimeParams.createUsedSegmentsSet(usedSegmentsWithSizeChecking);
 
     // Log info about all used segments
     if (log.isDebugEnabled()) {
       log.debug("Used Segments");
-      for (DataSegment dataSegment : usedSegments) {
+      for (DataSegment dataSegment : usedSegmentSet) {
         log.debug("  %s", dataSegment);
       }
     }
 
-    log.info("Found [%,d] used segments.", usedSegments.size());
+    log.info("Found [%,d] used segments.", usedSegmentSet.size());
 
     return params.buildFromExisting()
-                 .setUsedSegments(usedSegments)
+                 .setUsedSegments(usedSegmentSet)
                  .build();
   }
 }

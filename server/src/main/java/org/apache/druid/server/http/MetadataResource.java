@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
@@ -52,7 +50,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 import java.util.Collection;
 import java.util.Collections;
@@ -70,7 +67,6 @@ public class MetadataResource
   private final SegmentsMetadata segmentsMetadata;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
-  private final ObjectMapper jsonMapper;
 
   @Inject
   public MetadataResource(
@@ -83,7 +79,6 @@ public class MetadataResource
     this.segmentsMetadata = segmentsMetadata;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
-    this.jsonMapper = jsonMapper;
   }
 
   @GET
@@ -95,13 +90,16 @@ public class MetadataResource
       @Context final HttpServletRequest req
   )
   {
-    final @Nullable String includeUnused = JettyUtils.getQueryParam(uriInfo, "includeUnused", "includeDisabled");
+    final boolean includeUnused = JettyUtils.getQueryParam(uriInfo, "includeUnused", "includeDisabled") != null;
     Collection<ImmutableDruidDataSource> druidDataSources = null;
     final Set<String> dataSourceNamesPreAuth;
-    if (includeUnused != null) {
+    if (includeUnused) {
       dataSourceNamesPreAuth = new TreeSet<>(segmentsMetadata.retrieveAllDataSourceNames());
     } else {
       druidDataSources = segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
+      if (druidDataSources == null) {
+        druidDataSources = Collections.emptyList();
+      }
       dataSourceNamesPreAuth = druidDataSources
           .stream()
           .map(ImmutableDruidDataSource::getName)
@@ -124,7 +122,7 @@ public class MetadataResource
 
     // Cannot do both includeUnused and full, let includeUnused take priority
     // Always use dataSourceNamesPostAuth to determine the set of returned dataSources
-    if (full != null && includeUnused == null) {
+    if (full != null && !includeUnused) {
       return Response.ok().entity(
           Collections2.filter(druidDataSources, dataSource -> dataSourceNamesPostAuth.contains(dataSource.getName()))
       ).build();
@@ -141,8 +139,11 @@ public class MetadataResource
       @QueryParam("datasources") final Set<String> dataSources
   )
   {
-    Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
+    @Nullable Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
         segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
+    if (dataSourcesWithUsedSegments == null) {
+      dataSourcesWithUsedSegments = Collections.emptyList();
+    }
     if (dataSources != null && !dataSources.isEmpty()) {
       dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
           .stream()
@@ -159,20 +160,8 @@ public class MetadataResource
     final Iterable<DataSegment> authorizedSegments =
         AuthorizationUtils.filterAuthorizedResources(req, usedSegments::iterator, raGenerator, authorizerMapper);
 
-    final StreamingOutput stream = outputStream -> {
-      final JsonFactory jsonFactory = jsonMapper.getFactory();
-      try (final JsonGenerator jsonGenerator = jsonFactory.createGenerator(outputStream)) {
-        jsonGenerator.writeStartArray();
-        for (DataSegment ds : authorizedSegments) {
-          jsonGenerator.writeObject(ds);
-          jsonGenerator.flush();
-        }
-        jsonGenerator.writeEndArray();
-      }
-    };
-
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(stream).build();
+    final Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    return builder.entity(authorizedSegments).build();
   }
 
   /**

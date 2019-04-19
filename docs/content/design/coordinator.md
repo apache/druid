@@ -67,13 +67,10 @@ Segments can be automatically loaded and dropped from the cluster based on a set
 
 Each run, the Druid Coordinator compares the set of used segments in the database with the segments served by some nodes
 in the cluster. Coordinator sends requests to Historical nodes to unload unused segments or segments the are removed
-from the database. Segments that are overshadowed (their versions are too old and their data has been replaced by newer
-segments) are also unloaded.
+from the database.
 
-Note that if all segments in database are deleted (or marked unused), then Coordinator will not send any unloading
-requests to Historicals. This is done to prevent a race condition in which the Coordinator would drop all segments if it
-started running cleanup before it finished polling the database for used segments for the first time and believed that
-there were no segments.
+Segments that are overshadowed (their versions are too old and their data has been replaced by newer segments) are
+marked as unused. During the next Coordinator's run, they will be unloaded from Historical nodes in the cluster.
 
 ### Segment Availability
 
