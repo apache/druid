@@ -137,6 +137,7 @@ public class MovingAverageQueryTest
     );
 
     System.setProperty("druid.generic.useDefaultValueForNull", "true");
+    System.setProperty("druid.processing.buffer.sizeBytes", "655360");
     Injector baseInjector = GuiceInjectors.makeStartupInjector();
     injector = Initialization.makeInjectorWithModules(baseInjector, modules);
 

@@ -34,8 +34,8 @@ import java.util.NoSuchElementException;
 /**
  * An iterator which takes list of rows ({@link Sequence<Row>}) and generates a new list of {@link RowBucket}s from it.
  *
- * It calls {@link BucketingAccumulator} for naive backeting to buckets of periods,
- * But does more suttle logic to cover edge cases, such as:
+ * It calls {@link BucketingAccumulator} for naive bucketing to buckets of periods,
+ * But does more subtle logic to cover edge cases, such as:
  * - Handling periods with no rows.
  * - Handling last record.
  *

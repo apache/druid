@@ -42,8 +42,10 @@ public abstract class BaseAverager<I, R extends Object> implements Averager<R>
   final I[] buckets;
   private int index;
 
-  /* startFrom is needed because `buckets` field is a fixed array, not a list.
-  It makes computeResults() start from the correct bucket in the array. */
+  /**
+   * {@link BaseAverager#startFrom} is needed because `buckets` field is a fixed array, not a list.
+   * It makes computeResults() start from the correct bucket in the array.
+   */
   int startFrom = 0;
 
   /**
