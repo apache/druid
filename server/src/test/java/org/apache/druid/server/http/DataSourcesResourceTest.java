@@ -921,6 +921,30 @@ public class DataSourcesResourceTest
   }
 
   @Test
+  public void testEnableDatasourceSegmentsInvalidPayloadEmptyArray()
+  {
+    MetadataSegmentManager metadataSegmentManager = EasyMock.createMock(MetadataSegmentManager.class);
+
+    DataSourcesResource DataSourcesResource = new DataSourcesResource(
+        inventoryView,
+        metadataSegmentManager,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Response response = DataSourcesResource.enableDatasourceSegments(
+        "datasource1",
+        new DataSourcesResource.MarkDatasourceSegmentsPayload(
+            null,
+            ImmutableSet.of()
+        )
+    );
+    Assert.assertEquals(400, response.getStatus());
+  }
+
+  @Test
   public void testEnableDatasourceSegmentsNoPayload()
   {
     MetadataSegmentManager metadataSegmentManager = EasyMock.createMock(MetadataSegmentManager.class);

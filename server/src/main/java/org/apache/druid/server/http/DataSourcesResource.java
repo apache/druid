@@ -718,7 +718,7 @@ public class DataSourcesResource
       return Response.status(Response.Status.BAD_REQUEST).entity(
           ImmutableMap.of(
               "error",
-              "Either interval or segments can be specified"
+              "Either a valid interval or segmentIds array must be specified"
           )
       ).build();
     }
@@ -763,7 +763,7 @@ public class DataSourcesResource
     @JsonCreator
     public MarkDatasourceSegmentsPayload(
         @JsonProperty("interval") Interval interval,
-        @JsonProperty("segments") Set<String> segmentIds
+        @JsonProperty("segmentIds") Set<String> segmentIds
     )
     {
       this.interval = interval;
@@ -782,7 +782,7 @@ public class DataSourcesResource
 
     public boolean isValid()
     {
-      return interval == null ^ segmentIds == null;
+      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
     }
   }
 }

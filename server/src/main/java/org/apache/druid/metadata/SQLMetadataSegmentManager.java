@@ -303,6 +303,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   )
   {
     if (segmentIds.isEmpty()) {
+      log.warn("No segments found to update!");
       return false;
     }
 

@@ -234,14 +234,15 @@ Enables a segment of a datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/markUsed`
 
-Enables segments of a datasource by interval or by an array of segment id's passed which are not overshadowed by others.
+Enables segments of a datasource by the interval or by an array of segment id's passed in the request payload. 
+It will enable only those segments which are not overshadowed by other sergments.
 
 JSON Payload:
 
 |Key|Description|Example|
 |----------|-------------|---------|
-|`interval`|The interval to enable segments for|"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"|
-|`segments`|Array of segments to enable|["segment1", "segment2"]|
+|`interval`|Interval of segments to enable|"2015-09-12T03:00:00.000Z/2015-09-12T05:00:00.000Z"|
+|`segmentIds`|Array of segment ids to enable|["segment_id_1", "segment_id_2"]|
 
 ##### DELETE<a name="coordinator-delete"></a>
 
