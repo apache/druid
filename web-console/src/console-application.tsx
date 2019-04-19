@@ -74,7 +74,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
   }
 
   static shownNotifications(capabilities: string) {
-    let message: JSX.Element;
+    let message: JSX.Element = <></>;
     /* tslint:disable:jsx-alignment */
     if (capabilities === 'working-without-sql') {
       message = <>
@@ -82,7 +82,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
         used and all requests rely on <a href={DRUID_DOCS_API}>native Druid query API</a>,
         but you may still <a href={DRUID_DOCS_SQL}>enable the SQL endpoint</a>
       </>;
-    } else {
+    } else if (capabilities === 'broken') {
       message = <>
         It appears that the Druid is not responding. Data cannot be retrieved right now
       </>;
@@ -136,6 +136,10 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   componentDidMount(): void {
     this.capabilitiesQueryManager.runQuery('dummy');
+  }
+
+  componentWillUnmount(): void {
+    this.capabilitiesQueryManager.terminate();
   }
 
   private resetInitialsDelay() {
