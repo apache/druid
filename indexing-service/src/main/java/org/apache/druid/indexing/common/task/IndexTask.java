@@ -436,8 +436,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final Integer maxRowsPerSegment = getValidMaxRowsPerSegment(tuningConfig);
       @Nullable
       final Long maxTotalRows = getValidMaxTotalRows(tuningConfig);
-      @Nullable
-      final Integer maxTotalSegments = getValidMaxTotalSegments(tuningConfig);
+      final Integer maxTotalSegments = tuningConfig.getMaxTotalSegments();
       final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir, maxRowsPerSegment);
       final DataSchema dataSchema;
       final Map<Interval, String> versions;
@@ -848,7 +847,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       final File firehoseTempDir,
       @Nullable final Integer maxRowsPerSegment,
       @Nullable final Long maxTotalRows,
-      @Nullable final Integer maxTotalSegments
+      final Integer maxTotalSegments
   ) throws IOException, InterruptedException
   {
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
@@ -991,7 +990,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
                            .collect(Collectors.toSet())
                            .contains(targetInterval)
               && !isGuaranteedRollup
-              && appenderator.getUnpublishedSegments().size() >= getValidMaxTotalSegments(tuningConfig)) {
+              && appenderator.getUnpublishedSegments().size() >= maxTotalSegments) {
             final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
             log.info("Pushed segments[%s]", pushed.getSegments());
           }
@@ -1093,13 +1092,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     } else {
       return null;
     }
-  }
-
-  public static Integer getValidMaxTotalSegments(IndexTuningConfig tuningConfig)
-  {
-    @Nullable
-    final Integer maxTotalSegments = tuningConfig.maxTotalSegments;
-    return maxTotalSegments == null ? IndexTuningConfig.DEFAULT_MAX_TOTAL_SEGMENTS : maxTotalSegments;
   }
 
   private void handleParseException(ParseException e)
@@ -1444,7 +1436,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.maxTotalRows = maxTotalRows;
-      this.maxTotalSegments = maxTotalSegments;
+      this.maxTotalSegments = maxTotalSegments == null ? IndexTuningConfig.DEFAULT_MAX_TOTAL_SEGMENTS : maxTotalSegments;
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
@@ -1583,7 +1575,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
     @JsonProperty
     @Override
-    @Nullable
     public Integer getMaxTotalSegments()
     {
       return maxTotalSegments;
