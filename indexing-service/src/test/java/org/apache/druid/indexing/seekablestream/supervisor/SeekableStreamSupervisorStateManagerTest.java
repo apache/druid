@@ -51,29 +51,29 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testHappyPath()
   {
-    stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
     Assert.assertEquals(
         SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM,
         stateManager.getSupervisorState()
     );
-    stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
     Assert.assertEquals(
         SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS,
         stateManager.getSupervisorState()
     );
-    stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.CREATING_TASKS, stateManager.getSupervisorState());
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
     stateManager.markRunFinishedAndEvaluateHealth();
 
-    stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.CONNECTING_TO_STREAM);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
-    stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.DISCOVERING_INITIAL_TASKS);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
-    stateManager.setStateIfNoSuccessfulRunYet(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.CREATING_TASKS);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
     stateManager.markRunFinishedAndEvaluateHealth();
     Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
@@ -82,7 +82,7 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTransientStreamFailure()
   {
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     stateManager.markRunFinishedAndEvaluateHealth(); // clean run without errors
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
@@ -98,7 +98,7 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testNonTransientStreamFailure()
   {
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
       stateManager.storeThrowableEvent(new NonTransientStreamException(new Exception("DOH!")));
@@ -113,7 +113,7 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testPossiblyTransientStreamFailure()
   {
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
       stateManager.storeThrowableEvent(new PossiblyTransientStreamException(new Exception("DOH!")));
@@ -128,7 +128,7 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testNonTransientUnhealthiness()
   {
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getUnhealthinessThreshold(); i++) {
       Assert.assertEquals(SeekableStreamSupervisorStateManager.State.RUNNING, stateManager.getSupervisorState());
       stateManager.storeThrowableEvent(new NullPointerException("oof"));
@@ -143,7 +143,7 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTransientUnhealthiness()
   {
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getUnhealthinessThreshold() - 1; i++) {
       stateManager.storeThrowableEvent(new NullPointerException("oof"));
       stateManager.markRunFinishedAndEvaluateHealth();
@@ -180,7 +180,7 @@ public class SeekableStreamSupervisorStateManagerTest
   public void testTransientTaskUnhealthiness()
   {
     // Only half are failing
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < config.getTaskUnhealthinessThreshold() + 3; i++) {
       Assert.assertNotEquals(
           stateManager.getSupervisorState(),
@@ -260,7 +260,7 @@ public class SeekableStreamSupervisorStateManagerTest
   @Test
   public void testTwoUnhealthyStates()
   {
-    stateManager.setState(SeekableStreamSupervisorStateManager.State.RUNNING);
+    stateManager.setStateAndCheckIfFirstRun(SeekableStreamSupervisorStateManager.State.RUNNING);
     for (int i = 0; i < Math.max(
         config.getTaskUnhealthinessThreshold(),
         config.getUnhealthinessThreshold()

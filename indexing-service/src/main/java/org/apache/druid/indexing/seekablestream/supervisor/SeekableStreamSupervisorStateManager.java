@@ -67,6 +67,19 @@ public class SeekableStreamSupervisorStateManager
       this.priority = priority;
     }
 
+    // We only want to set these if the supervisor hasn't had a successful iteration yet
+    public boolean isOnlySetWhenNoSuccessfulRunYet()
+    {
+      Set<State> firstRunStates = ImmutableSet.of(
+          WAITING_TO_RUN,
+          CONNECTING_TO_STREAM,
+          DISCOVERING_INITIAL_TASKS,
+          CREATING_TASKS,
+          RUNNING
+      );
+      return firstRunStates.contains(this);
+    }
+
     public boolean isHealthy()
     {
       Set<State> unhealthyStates = ImmutableSet.of(
@@ -115,21 +128,20 @@ public class SeekableStreamSupervisorStateManager
     this.stateHistory = new CircularBuffer<>(Math.max(healthinessThreshold, unhealthinessThreshold));
   }
 
-  public Optional<State> setStateIfNoSuccessfulRunYet(State newState)
+  public Optional<State> setStateAndCheckIfFirstRun(State newState)
   {
-    if (!atLeastOneSuccessfulRun) {
-      return Optional.of(setState(newState));
-    }
-    return Optional.absent();
-  }
-
-  public State setState(State newState)
-  {
-    if (newState.equals(State.SUSPENDED)) {
+    if (newState.isOnlySetWhenNoSuccessfulRunYet()) {
+      if (!atLeastOneSuccessfulRun) {
+        supervisorState = newState;
+        return Optional.of(newState);
+      } else {
+        return Optional.absent();
+      }
+    } else if (newState.equals(State.SUSPENDED)) {
       atLeastOneSuccessfulRun = false; // We want the startup states again after being suspended
     }
     this.supervisorState = newState;
-    return newState;
+    return Optional.of(newState);
   }
 
   public void storeThrowableEvent(Throwable t)
@@ -181,7 +193,7 @@ public class SeekableStreamSupervisorStateManager
       } else {
         currentRunState = State.UNHEALTHY_TASKS;
       }
-    } else {
+    } else if (supervisorState != State.UNHEALTHY_SUPERVISOR) {
       boolean tasksUnhealthy = completedTaskHistory.size() >= unhealthinessTaskThreshold;
       for (int i = 0; i < Math.min(unhealthinessTaskThreshold, completedTaskHistory.size()); i++) {
         // Last unhealthinessTaskThreshold tasks must be unhealthy for state to change to
@@ -211,7 +223,7 @@ public class SeekableStreamSupervisorStateManager
       }
     }
 
-    setState(currentRunState);
+    this.supervisorState = currentRunState;
 
     // Reset manager state for next run
     currentRunSuccessful = true;
