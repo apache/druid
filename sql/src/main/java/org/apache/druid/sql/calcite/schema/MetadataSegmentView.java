@@ -204,7 +204,7 @@ public class MetadataSegmentView
         sb.append("datasources=").append(ds).append("&");
       }
       sb.setLength(sb.length() - 1);
-      query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus?" + sb;
+      query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&" + sb;
     }
     Request request;
     try {
