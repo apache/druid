@@ -29,10 +29,17 @@ import {
   localStorageGet, LocalStorageKeys,
   localStorageSet, parseQueryPlan,
   queryDruidRune,
-  queryDruidSql, QueryManager, SemiJoinQueryExplanation
+  queryDruidSql, QueryManager,
+  SemiJoinQueryExplanation
 } from '../utils';
 
 import './sql-view.scss';
+
+interface QueryWithFlags {
+  queryString: string;
+  bypassCache?: boolean;
+  wrapQuery?: boolean;
+}
 
 export interface SqlViewProps extends React.Props<any> {
   initSql: string | null;
@@ -46,11 +53,17 @@ export interface SqlViewState {
   explainResult: BasicQueryExplanation | SemiJoinQueryExplanation | string | null;
   loadingExplain: boolean;
   explainError: Error | null;
+  queryElapsed: number | null;
+}
+
+interface SqlQueryResult {
+  queryResult: HeaderRows;
+  queryElapsed: number;
 }
 
 export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
-  private sqlQueryManager: QueryManager<string, HeaderRows>;
+  private sqlQueryManager: QueryManager<QueryWithFlags, SqlQueryResult>;
   private explainQueryManager: QueryManager<string, any>;
 
   constructor(props: SqlViewProps, context: any) {
@@ -62,34 +75,66 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
       explainDialogOpen: false,
       loadingExplain: false,
       explainResult: null,
-      explainError: null
+      explainError: null,
+      queryElapsed: null
     };
   }
 
   componentDidMount(): void {
     this.sqlQueryManager = new QueryManager({
-      processQuery: async (query: string) => {
-        if (query.trim().startsWith('{')) {
+      processQuery: async (queryWithFlags: QueryWithFlags) => {
+        const { queryString, bypassCache, wrapQuery } = queryWithFlags;
+        const startTime = new Date();
+
+        if (queryString.trim().startsWith('{')) {
           // Secret way to issue a native JSON "rune" query
-          const runeQuery = Hjson.parse(query);
-          return decodeRune(runeQuery, await queryDruidRune(runeQuery));
+          const runeQuery = Hjson.parse(queryString);
+
+          if (bypassCache) {
+            runeQuery.context = runeQuery.context || {};
+            runeQuery.context.useCache = false;
+            runeQuery.context.populateCache = false;
+          }
+
+          const result = await queryDruidRune(runeQuery);
+          return {
+            queryResult: decodeRune(runeQuery, result),
+            queryElapsed: new Date().valueOf() - startTime.valueOf()
+          };
 
         } else {
-          const result = await queryDruidSql({
-            query,
+          const actualQuery = wrapQuery ?
+            `SELECT * FROM (${queryString.trim().replace(/;+$/, '')}) LIMIT 5000` :
+            queryString;
+
+          const queryPayload: Record<string, any> = {
+            query: actualQuery,
             resultFormat: 'array',
             header: true
-          });
+          };
+
+          if (wrapQuery) {
+            queryPayload.context = {
+              useCache: false,
+              populateCache: false
+            };
+          }
+
+          const result = await queryDruidSql(queryPayload);
 
           return {
-            header: (result && result.length) ? result[0] : [],
-            rows: (result && result.length) ? result.slice(1) : []
+            queryResult: {
+              header: (result && result.length) ? result[0] : [],
+              rows: (result && result.length) ? result.slice(1) : []
+            },
+            queryElapsed: new Date().valueOf() - startTime.valueOf()
           };
         }
       },
       onStateChange: ({ result, loading, error }) => {
         this.setState({
-          result,
+          result: result ? result.queryResult : null,
+          queryElapsed: result ? result.queryElapsed : null,
           loading,
           error
         });
@@ -150,7 +195,19 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
       loading={loading}
       noDataText={!loading && result && !result.rows.length ? 'No results' : (error || '')}
       sortable={false}
-      columns={(result ? result.header : []).map((h: any, i) => ({ Header: h, accessor: String(i) }))}
+      columns={
+        (result ? result.header : []).map((h: any, i) => {
+          return {
+            Header: h,
+            accessor: String(i),
+            Cell: row => {
+              const value = row.value;
+              if (value === '' || value === null) return <span className="null-table-cell">null</span>;
+              return value;
+            }
+          };
+        })
+      }
       defaultPageSize={10}
       className="-striped -highlight"
     />;
@@ -158,15 +215,17 @@ export class SqlView extends React.Component<SqlViewProps, SqlViewState> {
 
   render() {
     const { initSql } = this.props;
+    const { queryElapsed } = this.state;
 
     return <div className="sql-view app-view">
       <SqlControl
         initSql={initSql || localStorageGet(LocalStorageKeys.QUERY_KEY)}
-        onRun={q => {
-          localStorageSet(LocalStorageKeys.QUERY_KEY, q);
-          this.sqlQueryManager.runQuery(q);
+        onRun={(queryString, bypassCache, wrapQuery) => {
+          localStorageSet(LocalStorageKeys.QUERY_KEY, queryString);
+          this.sqlQueryManager.runQuery({ queryString, bypassCache, wrapQuery });
         }}
-        onExplain={(q: string) => this.getExplain(q)}
+        onExplain={this.getExplain}
+        queryElapsed={queryElapsed}
       />
       {this.renderResultTable()}
       {this.renderExplainDialog()}

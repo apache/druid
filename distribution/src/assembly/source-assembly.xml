@@ -37,8 +37,8 @@
                 <!-- IDE -->
                 <exclude>%regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?\.idea(/.*)?]</exclude>
                 <exclude>%regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?[^/]*\.iml]</exclude>
-                <exclude>eclipse_formatting.xml</exclude>
-                <exclude>eclipse.importorder</exclude>
+                <exclude>dev/eclipse_formatting.xml</exclude>
+                <exclude>dev/eclipse.importorder</exclude>
     
                 <!-- release-plugin temp files -->
                 <exclude>%regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?pom\.xml\.releaseBackup]</exclude>

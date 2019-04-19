@@ -39,9 +39,9 @@ Druid.  For this tutorial, we will use Kafka 0.10.2.2. To download Kafka, issue 
 commands in your terminal:
 
 ```bash
-curl -O https://archive.apache.org/dist/kafka/0.10.2.2/kafka_2.12-0.10.2.2.tgz
-tar -xzf kafka_2.12-0.10.2.2.tgz
-cd kafka_2.12-0.10.2.2
+curl -O https://archive.apache.org/dist/kafka/2.1.0/kafka_2.12-2.1.0.tgz
+tar -xzf kafka_2.12-2.1.0.tgz
+cd kafka_2.12-2.1.0
 ```
 
 Start a Kafka broker by running the following command in a new terminal:
@@ -65,7 +65,7 @@ service, we will need to submit a supervisor spec to the Druid overlord by runni
 curl -XPOST -H'Content-Type: application/json' -d @quickstart/tutorial/wikipedia-kafka-supervisor.json http://localhost:8090/druid/indexer/v1/supervisor
 ```
 
-If the supervisor was successfully created, you will get a response containing the ID of the supervisor; in our case we should see `{"id":"wikipedia-kafka"}`.
+If the supervisor was successfully created, you will get a response containing the ID of the supervisor; in our case we should see `{"id":"wikipedia"}`.
 
 For more details about what's going on here, check out the
 [Druid Kafka indexing service documentation](../development/extensions-core/kafka-ingestion.html).

@@ -385,6 +385,10 @@ public class CachingClusteredClient implements QuerySegmentWalker
           break;
         }
         hasher.putString(p.getServer().getSegment().getId().toString(), StandardCharsets.UTF_8);
+        // it is important to add the "query interval" as part ETag calculation
+        // to have result level cache work correctly for queries with different
+        // intervals covering the same set of segments
+        hasher.putString(p.rhs.getInterval().toString(), StandardCharsets.UTF_8);
       }
 
       if (hasOnlyHistoricalSegments) {

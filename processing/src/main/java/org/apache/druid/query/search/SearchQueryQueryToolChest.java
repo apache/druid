@@ -202,6 +202,12 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
       }
 
       @Override
+      public byte[] computeResultLevelCacheKey(SearchQuery query)
+      {
+        return computeCacheKey(query);
+      }
+
+      @Override
       public TypeReference<Object> getCacheObjectClazz()
       {
         return OBJECT_TYPE_REFERENCE;
