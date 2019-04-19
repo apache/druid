@@ -19,8 +19,6 @@
 import { Card, H5, Icon } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
-import {sum} from 'd3-array';
 import * as React from 'react';
 
 import { getHeadProp, pluralIfNeeded, queryDruidSql, QueryManager } from '../utils';

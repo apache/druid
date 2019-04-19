@@ -20,14 +20,12 @@ import { Button, Intent } from '@blueprintjs/core';
 import { H5 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
 import * as React from 'react';
 import ReactTable from 'react-table';
 import { Filter } from 'react-table';
 
 import { TableColumnSelection } from '../components/table-column-selection';
 import { ViewControlBar } from '../components/view-control-bar';
-import { AppToaster } from '../singletons/toaster';
 import {
   addFilter, customTableFilter,
   formatBytes,

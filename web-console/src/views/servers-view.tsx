@@ -19,7 +19,6 @@
 import { Button, Switch } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
-import * as classNames from 'classnames';
 import { sum } from 'd3-array';
 import * as React from 'react';
 import ReactTable from 'react-table';
