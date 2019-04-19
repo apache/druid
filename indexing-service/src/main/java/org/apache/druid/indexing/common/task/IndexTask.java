@@ -1436,7 +1436,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
       // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
       this.maxTotalRows = maxTotalRows;
-      this.maxTotalSegments = maxTotalSegments == null ? IndexTuningConfig.DEFAULT_MAX_TOTAL_SEGMENTS : maxTotalSegments;
+      this.maxTotalSegments = maxTotalSegments == null ? DEFAULT_MAX_TOTAL_SEGMENTS : maxTotalSegments;
       this.numShards = numShards == null || numShards.equals(-1) ? null : numShards;
       this.partitionDimensions = partitionDimensions == null ? Collections.emptyList() : partitionDimensions;
       this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;

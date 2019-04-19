@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
@@ -36,6 +37,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
+  private static final int DEFAULT_MAX_TOTAL_SEGMENTS = 1000;
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;
@@ -90,7 +92,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
     this.maxRowsInMemory = maxRowsInMemory == null ? defaults.getMaxRowsInMemory() : maxRowsInMemory;
     this.maxRowsPerSegment = maxRowsPerSegment == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : maxRowsPerSegment;
     this.maxTotalRows = maxTotalRows;
-    this.maxTotalSegments = maxTotalSegments;
+    this.maxTotalSegments = maxTotalSegments == null ? DEFAULT_MAX_TOTAL_SEGMENTS : maxTotalSegments;
     // initializing this to 0, it will be lazily initialized to a value
     // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
     this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
