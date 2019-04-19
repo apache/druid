@@ -482,6 +482,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       }
 
       @Override
+      public byte[] computeResultLevelCacheKey(GroupByQuery query)
+      {
+        final CacheKeyBuilder builder = new CacheKeyBuilder(GROUPBY_QUERY)
+            .appendByte(CACHE_STRATEGY_VERSION)
+            .appendCacheable(query.getGranularity())
+            .appendCacheable(query.getDimFilter())
+            .appendCacheables(query.getAggregatorSpecs())
+            .appendCacheables(query.getDimensions())
+            .appendCacheable(query.getVirtualColumns())
+            .appendCacheable(query.getHavingSpec())
+            .appendCacheable(query.getLimitSpec())
+            .appendCacheables(query.getPostAggregatorSpecs());
+
+        if (query.getSubtotalsSpec() != null && !query.getSubtotalsSpec().isEmpty()) {
+          for (List<String> subTotalSpec : query.getSubtotalsSpec()) {
+            builder.appendStrings(subTotalSpec);
+          }
+        }
+        return builder.build();
+      }
+
+      @Override
       public TypeReference<Object> getCacheObjectClazz()
       {
         return OBJECT_TYPE_REFERENCE;
