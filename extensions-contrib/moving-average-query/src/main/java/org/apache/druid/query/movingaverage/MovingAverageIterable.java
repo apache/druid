@@ -62,7 +62,7 @@ public class MovingAverageIterable implements Iterable<Row>
   private final List<AveragerFactory<?, ?>> factories;
   private final Map<String, PostAggregator> postAggMap;
   private final Map<String, AggregatorFactory> aggMap;
-  private final Map<String, Object> fakeEvents;
+  private final Map<String, Object> emptyEvents;
 
   public MovingAverageIterable(
       Sequence<RowBucket> buckets,
@@ -78,22 +78,22 @@ public class MovingAverageIterable implements Iterable<Row>
 
     postAggMap = postAggList.stream().collect(Collectors.toMap(postAgg -> postAgg.getName(), postAgg -> postAgg));
     aggMap = aggList.stream().collect(Collectors.toMap(agg -> agg.getName(), agg -> agg));
-    fakeEvents = generateFakeEventsFromAggregators(aggMap, postAggMap);
+    emptyEvents = generateEmptyEventsFromAggregators(aggMap, postAggMap);
   }
 
-  // Build a list of dummy events from Aggregators/PostAggregators to be used by Iterator to build fake rows.
+  // Build a list of empty events from Aggregators/PostAggregators to be used by Iterator to build fake rows.
   // These fake rows will be used by computeMovingAverage() in skip=true mode.
-  // See fakeEventsCopy in internalNext() and computeMovingAverage() documentation.
-  private Map<String, Object> generateFakeEventsFromAggregators(Map<String, AggregatorFactory> aggMap,
-                                                                Map<String, PostAggregator> postAggMap)
+  // See emptyEventsCopy in internalNext() and computeMovingAverage() documentation.
+  private Map<String, Object> generateEmptyEventsFromAggregators(Map<String, AggregatorFactory> aggMap,
+                                                                 Map<String, PostAggregator> postAggMap)
   {
-    Map<String, Object> fakeEvents = new LinkedHashMap<>();
+    Map<String, Object> emptyEvents = new LinkedHashMap<>();
     aggMap.values().forEach(agg -> {
       Aggregator aggFactorized = agg.factorize(getEmptyColumnSelectorFactory());
-      fakeEvents.put(agg.getName(), aggFactorized.get());
+      emptyEvents.put(agg.getName(), aggFactorized.get());
     });
-    postAggMap.values().forEach(postAgg -> fakeEvents.put(postAgg.getName(), postAgg.compute(fakeEvents)));
-    return fakeEvents;
+    postAggMap.values().forEach(postAgg -> emptyEvents.put(postAgg.getName(), postAgg.compute(emptyEvents)));
+    return emptyEvents;
   }
 
   @Nonnull
@@ -129,7 +129,7 @@ public class MovingAverageIterable implements Iterable<Row>
   @Override
   public Iterator<Row> iterator()
   {
-    return new MovingAverageIterator(seq, dims, factories, fakeEvents, aggMap);
+    return new MovingAverageIterator(seq, dims, factories, emptyEvents, aggMap);
   }
 
   static class MovingAverageIterator implements Iterator<Row>
@@ -147,19 +147,19 @@ public class MovingAverageIterable implements Iterable<Row>
     private Set<Map<String, Object>> seenKeys = new HashSet<>();
     private Row saveNext;
     private Map<String, AggregatorFactory> aggMap;
-    private Map<String, Object> fakeEvents;
+    private Map<String, Object> emptyEvents;
 
     public MovingAverageIterator(
         Sequence<RowBucket> rows,
         List<DimensionSpec> dims,
         List<AveragerFactory<?, ?>> averagerFactories,
-        Map<String, Object> fakeEvents,
+        Map<String, Object> emptyEvents,
         Map<String, AggregatorFactory> aggMap
     )
     {
       this.dims = dims;
       this.averagerFactories = averagerFactories;
-      this.fakeEvents = fakeEvents;
+      this.emptyEvents = emptyEvents;
       this.aggMap = aggMap;
 
       yielder = Yielders.each(rows);
@@ -228,17 +228,15 @@ public class MovingAverageIterable implements Iterable<Row>
           }
         }
 
-        // return fake rows for unseen dimension combinations
+        // return empty rows for unseen dimension combinations
         if (averagersKeysIter != null) {
           while (averagersKeysIter.hasNext()) {
             Map<String, Object> dims = averagersKeysIter.next();
-            Map<String, Object> fakeEventsCopy = new HashMap<>(fakeEvents);
+            Map<String, Object> emptyEventsCopy = new HashMap<>(emptyEvents);
 
-            dims.forEach((dim, value) -> {
-              fakeEventsCopy.put(dim, value);
-            });
+            dims.forEach((dim, value) -> emptyEventsCopy.put(dim, value));
 
-            r = computeMovingAverage(dims, new MapBasedRow(cache.getDateTime(), fakeEventsCopy), true);
+            r = computeMovingAverage(dims, new MapBasedRow(cache.getDateTime(), emptyEventsCopy), true);
             if (r != null) {
               return r;
             }
@@ -267,7 +265,7 @@ public class MovingAverageIterable implements Iterable<Row>
      * decaying of the average values.
      *
      * <p>Usually, the contents of key will be contained by the row R being passed in, but in the case of a
-     * dummy row, its possible that the dimensions will be known but the row empty. Hence, the values are
+     * dummy row, it's possible that the dimensions will be known but the row empty. Hence, the values are
      * passed as two separate arguments.
      *
      * @param key  The dimension set that this row applies to.
