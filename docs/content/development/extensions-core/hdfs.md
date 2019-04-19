@@ -24,7 +24,7 @@ title: "HDFS"
 
 # HDFS
 
-Make sure to [include](../../operations/including-extensions.html) `druid-hdfs-storage` as an extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-hdfs-storage` as an extension.
 
 ## Deep Storage 
 

@@ -26,7 +26,7 @@ title: "Broker"
 
 ### Configuration
 
-For Broker Process Configuration, see [Broker Configuration](../configuration/index.html#broker).
+For Apache Druid (incubating) Broker Process Configuration, see [Broker Configuration](../configuration/index.html#broker).
 
 ### HTTP endpoints
 
@@ -45,7 +45,7 @@ org.apache.druid.cli.Main server broker
 
 ### Forwarding Queries
 
-Most druid queries contain an interval object that indicates a span of time for which data is requested. Likewise, Druid [Segments](../design/segments.html) are partitioned to contain data for some interval of time and segments are distributed across a cluster. Consider a simple datasource with 7 segments where each segment contains data for a given day of the week. Any query issued to the datasource for more than one day of data will hit more than one segment. These segments will likely be distributed across multiple processes, and hence, the query will likely hit multiple processes.
+Most Druid queries contain an interval object that indicates a span of time for which data is requested. Likewise, Druid [Segments](../design/segments.html) are partitioned to contain data for some interval of time and segments are distributed across a cluster. Consider a simple datasource with 7 segments where each segment contains data for a given day of the week. Any query issued to the datasource for more than one day of data will hit more than one segment. These segments will likely be distributed across multiple processes, and hence, the query will likely hit multiple processes.
 
 To determine which processes to forward queries to, the Broker process first builds a view of the world from information in Zookeeper. Zookeeper maintains information about [Historical](../design/historical.html) and streaming ingestion [Peon](../design/peons.html) processes and the segments they are serving. For every datasource in Zookeeper, the Broker process builds a timeline of segments and the processes that serve them. When queries are received for a specific datasource and interval, the Broker process performs a lookup into the timeline associated with the query datasource for the query interval and retrieves the processes that contain data for the query. The Broker process then forwards down the query to the selected processes.
 

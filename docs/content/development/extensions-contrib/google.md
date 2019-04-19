@@ -24,7 +24,7 @@ title: "Google Cloud Storage"
 
 # Google Cloud Storage
 
-To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-google-extensions` extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-google-extensions` extension.
 
 ## Deep Storage
 

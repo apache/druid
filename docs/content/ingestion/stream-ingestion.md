@@ -24,7 +24,7 @@ title: "Loading Streams"
 
 # Loading Streams
 
-Streams can be ingested in Druid using either [Tranquility](https://github.com/druid-io/tranquility) (a Druid-aware
+Streams can be ingested in Apache Druid (incubating) using either [Tranquility](https://github.com/druid-io/tranquility) (a Druid-aware
 client) or the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html).
 
 ## Tranquility (Stream Push)

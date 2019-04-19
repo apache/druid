@@ -24,7 +24,7 @@ title: "Realtime Process Configuration"
 
 # Realtime Process Configuration
 
-For general Realtime Process information, see [here](../design/realtime.html).
+For general Apache Druid (incubating) Realtime Process information, see [here](../design/realtime.html).
 
 Runtime Configuration
 ---------------------

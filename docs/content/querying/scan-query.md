@@ -24,7 +24,7 @@ title: "Scan query"
 
 # Scan query
 
-The Scan query returns raw Druid rows in streaming mode.  The biggest difference between the Select query and the Scan
+The Scan query returns raw Apache Druid (incubating) rows in streaming mode.  The biggest difference between the Select query and the Scan
 query is that the Scan query does not retain all the returned rows in memory before they are returned to the client.  
 The Select query _will_ retain the rows in memory, causing memory pressure if too many rows are returned.  
 The Scan query can return all the rows without issuing another pagination query.

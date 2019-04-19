@@ -24,10 +24,10 @@ title: "Moment Sketches for Approximate Quantiles module"
 
 # MomentSketch Quantiles Sketch module
 
-This module provides Druid aggregators for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library. 
+This module provides aggregators for approximate quantile queries using the [momentsketch](https://github.com/stanford-futuredata/momentsketch) library. 
 The momentsketch provides coarse quantile estimates with less space and aggregation time overheads than traditional sketches, approaching the performance of counts and sums by reconstructing distributions from computed statistics.
 
-To use this aggregator, make sure you [include](../../operations/including-extensions.html) the extension in your config file:
+To use this Apache Druid (incubating) extension, make sure you [include](../../operations/including-extensions.html) the extension in your config file:
 
 ```
 druid.extensions.loadList=["druid-momentsketch"]

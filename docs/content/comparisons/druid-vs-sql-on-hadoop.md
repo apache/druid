@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid vs SQL-on-Hadoop"
+title: "Apache Druid (incubating) vs SQL-on-Hadoop"
 ---
 
 <!--

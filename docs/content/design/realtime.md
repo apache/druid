@@ -28,7 +28,7 @@ title: "Real-time Process"
 NOTE: Realtime processes are deprecated. Please use the <a href="../development/extensions-core/kafka-ingestion.html">Kafka Indexing Service</a> for stream pull use cases instead. 
 </div>
 
-For Real-time Process Configuration, see [Realtime Configuration](../configuration/realtime.html).
+For Apache Druid (incubating) Real-time Process Configuration, see [Realtime Configuration](../configuration/realtime.html).
 
 For Real-time Ingestion, see [Realtime Ingestion](../ingestion/stream-ingestion.html).
 
