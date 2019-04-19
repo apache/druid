@@ -342,10 +342,10 @@ public class DruidCoordinator
     return CoordinatorCompactionConfig.current(configManager);
   }
 
-  public void tryMarkSegmentAsUnused(DataSegment segment)
+  public void markSegmentAsUnused(DataSegment segment)
   {
-    log.info("Removing Segment[%s]", segment.getId());
-    segmentsMetadata.tryMarkSegmentAsUnused(segment.getId());
+    log.info("Marking segment[%s] as unused", segment.getId());
+    segmentsMetadata.markSegmentAsUnused(segment.getId());
   }
 
   public String getCurrentLeader()

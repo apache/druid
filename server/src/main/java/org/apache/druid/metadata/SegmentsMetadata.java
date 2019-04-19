@@ -42,21 +42,44 @@ public interface SegmentsMetadata
 
   void stop();
 
-  boolean tryMarkAsUsedAllSegmentsInDataSource(String dataSource);
-
-  boolean tryMarkSegmentAsUsed(String segmentId);
-
-  boolean tryMarkAsUnusedAllSegmentsInDataSource(String dataSource);
+  /**
+   * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,
+   * the segments were marked as used). If the call results in a database error, an exception is relayed to the caller.
+   */
+  int markAsUsedAllSegmentsInDataSource(String dataSource);
 
   /**
-   * Prefer {@link #tryMarkSegmentAsUnused(SegmentId)} to this method when possible.
-   *
-   * This method is not removed because {@link org.apache.druid.server.http.DataSourcesResource#removeSegment}
-   * uses it and if it migrates to {@link #tryMarkSegmentAsUnused(SegmentId)} the performance will be worse.
+   * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
+   * segment was marked as used), false otherwise. If the call results in a database error, an exception is relayed to
+   * the caller.
    */
-  boolean tryMarkSegmentAsUnused(String dataSource, String segmentId);
+  boolean markSegmentAsUsed(String segmentId);
 
-  boolean tryMarkSegmentAsUnused(SegmentId segmentId);
+  /**
+   * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,
+   * the segments were marked as unused). If the call results in a database error, an exception is relayed to the
+   * caller.
+   */
+  int markAsUnusedAllSegmentsInDataSource(String dataSource);
+
+  /**
+   * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
+   * segment was marked as unused), false otherwise. If the call results in a database error, an exception is relayed to
+   * the caller.
+   *
+   * Prefer {@link #markSegmentAsUnused(SegmentId)} to this method when possible.
+   *
+   * This method is not removed because {@link org.apache.druid.server.http.DataSourcesResource#markSegmentAsUnused}
+   * uses it and if it migrates to {@link #markSegmentAsUnused(SegmentId)} the performance will be worse.
+   */
+  boolean markSegmentAsUnused(String dataSource, String segmentId);
+
+  /**
+   * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
+   * segment was marked as unused), false otherwise. If the call results in a database error, an exception is relayed to
+   * the caller.
+   */
+  boolean markSegmentAsUnused(SegmentId segmentId);
 
   boolean isStarted();
 

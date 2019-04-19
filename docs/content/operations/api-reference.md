@@ -226,17 +226,23 @@ Return the tiers that a datasource exists in.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Marks as used all segments belonging to a data source.
+Marks as used all segments belonging to a data source. Returns a JSON object of the form
+`{"numChangedSegments": <number>"}` with the number of segments in the database whose state has been changed (that is,
+the segments were marked as used) as the result of this API call. 
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as used a segment of a data source.
+Marks as used a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>"}` with
+the boolean indicating if the state of the segment has been changed (that is, the segment was marked as used) as the
+result of this API call. 
 
 ##### DELETE<a name="coordinator-delete"></a>
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}`
 
-Marks as unused all segments belonging to a data source.
+Marks as unused all segments belonging to a data source. Returns a JSON object of the form
+`{"numChangedSegments": <number>"}` with the number of segments in the database whose state has been changed (that is,
+the segments were marked as unused) as the result of this API call. 
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
 * `@Deprecated. /druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myInterval}`
@@ -245,7 +251,9 @@ Runs a [Kill task](../ingestion/tasks.html) for a given interval and datasource.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-Marks as unused a segment of a data source.
+Marks as unused a segment of a data source. Returns a JSON object of the form `{"segmentStateChanged": <boolean>"}` with
+the boolean indicating if the state of the segment has been changed (that is, the segment was marked as used) as the
+result of this API call. 
 
 #### Retention Rules
 

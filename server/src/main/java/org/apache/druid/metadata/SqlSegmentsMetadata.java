@@ -48,13 +48,11 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.BaseResultSetMapper;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
-import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
-import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
@@ -63,6 +61,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -213,7 +212,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   }
 
   @Override
-  public boolean tryMarkAsUsedAllSegmentsInDataSource(final String dataSource)
+  public int markAsUsedAllSegmentsInDataSource(final String dataSource)
   {
     try {
       final IDBI dbi = connector.getDBI();
@@ -245,9 +244,8 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
       );
 
       final List<DataSegment> segments = new ArrayList<>();
-      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders = segmentTimeline.lookup(
-          Intervals.ETERNITY
-      );
+      List<TimelineObjectHolder<String, DataSegment>> timelineObjectHolders =
+          segmentTimeline.lookup(Intervals.ETERNITY);
       for (TimelineObjectHolder<String, DataSegment> objectHolder : timelineObjectHolders) {
         for (PartitionChunk<DataSegment> partitionChunk : objectHolder.getObject()) {
           segments.add(partitionChunk.getObject());
@@ -255,97 +253,81 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
       }
 
       if (segments.isEmpty()) {
-        log.warn("No segments found in the database!");
-        return true;
+        log.info("No segments found in the database for data source [%s]", dataSource);
+        return 0;
       }
 
-      dbi.withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              Batch batch = handle.createBatch();
+      int numChangedSegments = dbi.withHandle(
+          (Handle handle) -> {
+            Batch batch = handle.createBatch();
 
-              for (DataSegment segment : segments) {
-                batch.add(
-                    StringUtils.format(
-                        "UPDATE %s SET used=true WHERE id = '%s'",
-                        getSegmentsTable(),
-                        segment.getId()
-                    )
-                );
-              }
-              batch.execute();
-
-              return null;
+            for (DataSegment segment : segments) {
+              batch.add(
+                  StringUtils.format(
+                      "UPDATE %s SET used=true WHERE id = '%s'",
+                      getSegmentsTable(),
+                      segment.getId()
+                  )
+              );
             }
+            int[] segmentChanges = batch.execute();
+            return Arrays.stream(segmentChanges).sum();
           }
       );
+      return numChangedSegments;
     }
-    catch (Exception e) {
-      log.error(e, "Exception marking all segments as used in the data source %s", dataSource);
-      return false;
+    catch (RuntimeException e) {
+      log.error(e, "Exception marking all segments as used in data source [%s]", dataSource);
+      throw e;
     }
-
-    return true;
   }
 
   @Override
-  public boolean tryMarkSegmentAsUsed(final String segmentId)
+  public boolean markSegmentAsUsed(final String segmentId)
   {
     try {
-      connector.getDBI().withHandle(
-          new HandleCallback<Void>()
-          {
-            @Override
-            public Void withHandle(Handle handle)
-            {
-              handle.createStatement(StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable()))
-                    .bind("id", segmentId)
-                    .execute();
-              return null;
-            }
-          }
+      int numUpdatedDatabaseEntries = connector.getDBI().withHandle(
+          (Handle handle) -> handle
+              .createStatement(StringUtils.format("UPDATE %s SET used=true WHERE id = :id", getSegmentsTable()))
+              .bind("id", segmentId)
+              .execute()
       );
+      return numUpdatedDatabaseEntries > 0;
     }
-    catch (Exception e) {
+    catch (RuntimeException e) {
       log.error(e, "Exception marking segment %s as used", segmentId);
-      return false;
+      throw e;
     }
-
-    return true;
   }
 
   @Override
-  public boolean tryMarkAsUnusedAllSegmentsInDataSource(final String dataSource)
+  public int markAsUnusedAllSegmentsInDataSource(final String dataSource)
   {
     try {
-      final int removed = connector.getDBI().withHandle(
-          handle -> handle.createStatement(
-              StringUtils.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
-          ).bind("dataSource", dataSource).execute()
+      final int numUpdatedDatabaseEntries = connector.getDBI().withHandle(
+          (Handle handle) -> handle
+              .createStatement(
+                  StringUtils.format("UPDATE %s SET used=false WHERE dataSource = :dataSource", getSegmentsTable())
+              )
+              .bind("dataSource", dataSource)
+              .execute()
       );
 
       dataSources.remove(dataSource);
 
-      if (removed == 0) {
-        return false;
-      }
+      return numUpdatedDatabaseEntries;
     }
-    catch (Exception e) {
-      log.error(e, "Error removing datasource %s", dataSource);
-      return false;
+    catch (RuntimeException e) {
+      log.error(e, "Exception marking all segments as unused in data source [%s]", dataSource);
+      throw e;
     }
-
-    return true;
   }
 
   @Override
-  public boolean tryMarkSegmentAsUnused(String dataSourceName, final String segmentId)
+  public boolean markSegmentAsUnused(String dataSourceName, final String segmentId)
   {
     try {
-      final boolean removed = removeSegmentFromTable(segmentId);
+      boolean segmentStateChanged = markSegmentAsUnusedInDatabase(segmentId);
 
       // Call iteratePossibleParsingsWithDataSource() outside of dataSources.computeIfPresent() because the former is a
       // potentially expensive operation, while lambda to be passed into computeIfPresent() should preferably run fast.
@@ -359,50 +341,47 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
               }
             }
             // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-            //noinspection ReturnOfNull
             return dataSource.isEmpty() ? null : dataSource;
           }
       );
-
-      return removed;
+      return segmentStateChanged;
     }
-    catch (Exception e) {
-      log.error(e, e.toString());
-      return false;
+    catch (RuntimeException e) {
+      log.error(e, "Exception marking segment [%s] as unused", segmentId);
+      throw e;
     }
   }
 
   @Override
-  public boolean tryMarkSegmentAsUnused(SegmentId segmentId)
+  public boolean markSegmentAsUnused(SegmentId segmentId)
   {
     try {
-      final boolean removed = removeSegmentFromTable(segmentId.toString());
+      final boolean segmentStateChanged = markSegmentAsUnusedInDatabase(segmentId.toString());
       dataSources.computeIfPresent(
           segmentId.getDataSource(),
           (dsName, dataSource) -> {
             dataSource.removeSegment(segmentId);
             // Returning null from the lambda here makes the ConcurrentHashMap to remove the current entry.
-            //noinspection ReturnOfNull
             return dataSource.isEmpty() ? null : dataSource;
           }
       );
-      return removed;
+      return segmentStateChanged;
     }
-    catch (Exception e) {
-      log.error(e, e.toString());
-      return false;
+    catch (RuntimeException e) {
+      log.error(e, "Exception marking segment [%s] as unused", segmentId);
+      throw e;
     }
   }
 
-  private boolean removeSegmentFromTable(String segmentId)
+  private boolean markSegmentAsUnusedInDatabase(String segmentId)
   {
-    final int removed = connector.getDBI().withHandle(
+    final int numUpdatedDatabaseEntries = connector.getDBI().withHandle(
         handle -> handle
             .createStatement(StringUtils.format("UPDATE %s SET used=false WHERE id = :segmentID", getSegmentsTable()))
             .bind("segmentID", segmentId)
             .execute()
     );
-    return removed > 0;
+    return numUpdatedDatabaseEntries > 0;
   }
 
   @Override
@@ -453,28 +432,18 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
   public Collection<String> retrieveAllDataSourceNames()
   {
     return connector.getDBI().withHandle(
-        handle -> handle.createQuery(
-            StringUtils.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable())
-        )
-                        .fold(
-                            new ArrayList<>(),
-                            new Folder3<List<String>, Map<String, Object>>()
-                            {
-                              @Override
-                              public List<String> fold(
-                                  List<String> druidDataSources,
-                                  Map<String, Object> stringObjectMap,
-                                  FoldController foldController,
-                                  StatementContext statementContext
-                              )
-                              {
-                                druidDataSources.add(
-                                    MapUtils.getString(stringObjectMap, "datasource")
-                                );
-                                return druidDataSources;
-                              }
-                            }
-                        )
+        handle -> handle
+            .createQuery(StringUtils.format("SELECT DISTINCT(datasource) FROM %s", getSegmentsTable()))
+            .fold(
+                new ArrayList<>(),
+                (List<String> druidDataSources,
+                 Map<String, Object> stringObjectMap,
+                 FoldController foldController,
+                 StatementContext statementContext) -> {
+                  druidDataSources.add(MapUtils.getString(stringObjectMap, "datasource"));
+                  return druidDataSources;
+                }
+            )
     );
   }
 
@@ -535,7 +504,7 @@ public class SqlSegmentsMetadata implements SegmentsMetadata
     );
 
     if (segments == null || segments.isEmpty()) {
-      log.warn("No segments found in the database!");
+      log.info("No segments found in the database!");
       return;
     }
 

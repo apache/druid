@@ -47,7 +47,7 @@ public class SqlSegmentsMetadataTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private SqlSegmentsMetadata manager;
+  private SqlSegmentsMetadata sqlSegmentsMetadata;
   private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
@@ -87,7 +87,7 @@ public class SqlSegmentsMetadataTest
   public void setUp() throws Exception
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    manager = new SqlSegmentsMetadata(
+    sqlSegmentsMetadata = new SqlSegmentsMetadata(
         jsonMapper,
         Suppliers.ofInstance(new SegmentsMetadataConfig()),
         derbyConnectorRule.metadataTablesConfigSupplier(),
@@ -109,29 +109,29 @@ public class SqlSegmentsMetadataTest
   @After
   public void teardown()
   {
-    if (manager.isStarted()) {
-      manager.stop();
+    if (sqlSegmentsMetadata.isStarted()) {
+      sqlSegmentsMetadata.stop();
     }
   }
 
   @Test
   public void testPoll()
   {
-    manager.start();
-    manager.poll();
-    Assert.assertTrue(manager.isStarted());
+    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
-        manager.retrieveAllDataSourceNames()
+        sqlSegmentsMetadata.retrieveAllDataSourceNames()
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(manager.prepareImmutableDataSourceWithUsedSegments("wikipedia").getSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia").getSegments())
     );
   }
 
   @Test
-  public void testPollWithCurroptedSegment()
+  public void testPollWithCorruptedSegment()
   {
     //create a corrupted segment entry in segments table, which tests
     //that overall loading of segments from database continues to work
@@ -149,40 +149,41 @@ public class SqlSegmentsMetadataTest
     );
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    manager.start();
-    manager.poll();
-    Assert.assertTrue(manager.isStarted());
+    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
 
     Assert.assertEquals(
-        "wikipedia", Iterables.getOnlyElement(manager.prepareImmutableDataSourcesWithAllUsedSegments()).getName()
+        "wikipedia", Iterables.getOnlyElement(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments()).getName()
     );
   }
 
   @Test
   public void testGetUnusedSegmentsForInterval()
   {
-    manager.start();
-    manager.poll();
-    Assert.assertTrue(manager.isStarted());
-    Assert.assertTrue(manager.tryMarkAsUnusedAllSegmentsInDataSource("wikipedia"));
+    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
+    int numChangedSegments = sqlSegmentsMetadata.markAsUnusedAllSegmentsInDataSource("wikipedia");
+    Assert.assertEquals(2, numChangedSegments);
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 1)
+        sqlSegmentsMetadata.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 1)
     );
 
     Assert.assertEquals(
         ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
-        manager.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5)
+        sqlSegmentsMetadata.getUnusedSegmentIntervals("wikipedia", DateTimes.of("3000"), 5)
     );
   }
 
   @Test
-  public void testRemoveDataSource() throws IOException
+  public void testMarkAsUnusedAllSegmentsInDataSource() throws IOException
   {
-    manager.start();
-    manager.poll();
-    Assert.assertTrue(manager.isStarted());
+    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
 
     final String newDataSource = "wikipedia2";
     final DataSegment newSegment = new DataSegment(
@@ -203,16 +204,17 @@ public class SqlSegmentsMetadataTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(manager.prepareImmutableDataSourceWithUsedSegments(newDataSource));
-    Assert.assertTrue(manager.tryMarkAsUnusedAllSegmentsInDataSource(newDataSource));
+    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    int numChangedSegments = sqlSegmentsMetadata.markAsUnusedAllSegmentsInDataSource(newDataSource);
+    Assert.assertEquals(1, numChangedSegments);
   }
 
   @Test
-  public void testRemoveDataSegment() throws IOException
+  public void testMarkSegmentAsUnused() throws IOException
   {
-    manager.start();
-    manager.poll();
-    Assert.assertTrue(manager.isStarted());
+    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.poll();
+    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
 
     final String newDataSource = "wikipedia2";
     final DataSegment newSegment = new DataSegment(
@@ -233,17 +235,17 @@ public class SqlSegmentsMetadataTest
 
     publisher.publishSegment(newSegment);
 
-    Assert.assertNull(manager.prepareImmutableDataSourceWithUsedSegments(newDataSource));
-    Assert.assertTrue(manager.tryMarkSegmentAsUnused(newSegment.getId()));
+    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments(newDataSource));
+    Assert.assertTrue(sqlSegmentsMetadata.markSegmentAsUnused(newSegment.getId()));
   }
 
   @Test
   public void testStopAndStart()
   {
     // Simulate successive losing and getting the coordinator leadership
-    manager.start();
-    manager.stop();
-    manager.start();
-    manager.stop();
+    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.stop();
+    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.stop();
   }
 }

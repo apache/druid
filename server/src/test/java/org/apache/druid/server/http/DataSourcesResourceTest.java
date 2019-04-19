@@ -574,7 +574,7 @@ public class DataSourcesResourceTest
         indexingServiceClient,
         null
     );
-    Response response = DataSourcesResource.tryMarkAsUnusedAllSegmentsOrKillSegmentsInInterval("datasource", "true", "???");
+    Response response = DataSourcesResource.markAsUnusedAllSegmentsOrKillSegmentsInInterval("datasource", "true", "???");
     Assert.assertEquals(400, response.getStatus());
     Assert.assertNotNull(response.getEntity());
     Assert.assertTrue(response.getEntity().toString().contains("java.lang.IllegalArgumentException"));

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
@@ -173,11 +174,8 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    if (!segmentsMetadata.tryMarkAsUsedAllSegmentsInDataSource(dataSourceName)) {
-      return Response.serverError().build();
-    }
-
-    return Response.ok().build();
+    int numChangedSegments = segmentsMetadata.markAsUsedAllSegmentsInDataSource(dataSourceName);
+    return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
   }
 
   /**
@@ -192,7 +190,7 @@ public class DataSourcesResource
   @Path("/{dataSourceName}")
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response tryMarkAsUnusedAllSegmentsOrKillSegmentsInInterval(
+  public Response markAsUnusedAllSegmentsOrKillSegmentsInInterval(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("kill") final String kill,
       @QueryParam("interval") final String interval
@@ -204,39 +202,11 @@ public class DataSourcesResource
 
     boolean killSegments = kill != null && Boolean.valueOf(kill);
     if (killSegments) {
-      try {
-        indexingServiceClient.killUnusedSegments(dataSourceName, Intervals.of(interval));
-      }
-      catch (IllegalArgumentException e) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(
-                           ImmutableMap.of(
-                               "error",
-                               "Exception occurred. Probably the interval is invalid",
-                               "message",
-                               e.toString()
-                           )
-                       )
-                       .build();
-      }
-      catch (Exception e) {
-        return Response.serverError().entity(
-            ImmutableMap.of(
-                "error",
-                "Exception occurred. Are you sure you have an indexing service?",
-                "message",
-                e.toString()
-            )
-        )
-                       .build();
-      }
+      return killSegmentsInInterval(dataSourceName, interval);
     } else {
-      if (!segmentsMetadata.tryMarkAsUnusedAllSegmentsInDataSource(dataSourceName)) {
-        return Response.serverError().build();
-      }
+      int numChangedSegments = segmentsMetadata.markAsUnusedAllSegmentsInDataSource(dataSourceName);
+      return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
     }
-
-    return Response.ok().build();
   }
 
   @DELETE
@@ -251,21 +221,25 @@ public class DataSourcesResource
     if (indexingServiceClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
+    if (StringUtils.contains(interval, '_')) {
+      log.warn("Use interval with '/', not '_': [%s] given", interval);
+    }
     final Interval theInterval = Intervals.of(interval.replace('_', '/'));
     try {
       indexingServiceClient.killUnusedSegments(dataSourceName, theInterval);
+      return Response.ok().build();
     }
     catch (Exception e) {
-      return Response.serverError()
-                     .entity(ImmutableMap.of(
-                         "error",
-                         "Exception occurred. Are you sure you have an indexing service?",
-                         "message",
-                         e.toString()
-                     ))
-                     .build();
+      return Response
+          .serverError()
+          .entity(
+              ImmutableMap.of(
+                  "error", "Exception occurred. Are you sure you have an indexing service?",
+                  "message", e.toString()
+              )
+          )
+          .build();
     }
-    return Response.ok().build();
   }
 
   @GET
@@ -287,8 +261,9 @@ public class DataSourcesResource
       Set<Interval> intervals = new TreeSet<>(comparator);
       dataSource.getSegments().forEach(segment -> intervals.add(segment.getInterval()));
       return Response.ok(intervals).build();
+    } else {
+      return getServedSegmentsInInterval(dataSourceName, full != null, interval -> true);
     }
-    return getServedSegmentsInInterval(dataSourceName, full != null, interval -> true);
   }
 
   @GET
@@ -421,15 +396,13 @@ public class DataSourcesResource
   @DELETE
   @Path("/{dataSourceName}/segments/{segmentId}")
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response removeSegment(
+  public Response markSegmentAsUnused(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
   )
   {
-    if (segmentsMetadata.tryMarkSegmentAsUnused(dataSourceName, segmentId)) {
-      return Response.ok().build();
-    }
-    return Response.noContent().build();
+    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUnused(dataSourceName, segmentId);
+    return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 
   @POST
@@ -441,11 +414,8 @@ public class DataSourcesResource
       @PathParam("segmentId") String segmentId
   )
   {
-    if (!segmentsMetadata.tryMarkSegmentAsUsed(segmentId)) {
-      return Response.serverError().build();
-    }
-
-    return Response.ok().build();
+    boolean segmentStateChanged = segmentsMetadata.markSegmentAsUsed(segmentId);
+    return Response.ok().entity(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
   }
 
   @GET

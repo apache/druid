@@ -562,7 +562,7 @@ public class DruidCoordinatorRuleRunnerTest
     mockEmptyPeon();
 
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    coordinator.tryMarkSegmentAsUnused(EasyMock.anyObject());
+    coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(coordinator);
 
@@ -1118,7 +1118,7 @@ public class DruidCoordinatorRuleRunnerTest
                                     .build()
         )
         .atLeastOnce();
-    coordinator.tryMarkSegmentAsUnused(EasyMock.anyObject());
+    coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject());
@@ -1400,7 +1400,7 @@ public class DruidCoordinatorRuleRunnerTest
   private void mockCoordinator()
   {
     EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(createCoordinatorDynamicConfig()).anyTimes();
-    coordinator.tryMarkSegmentAsUnused(EasyMock.anyObject());
+    coordinator.markSegmentAsUnused(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
   }
