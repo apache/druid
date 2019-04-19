@@ -73,8 +73,7 @@ interface NeedleAndMode {
   mode: 'exact' | 'prefix';
 }
 
-function getNeedleAndMode(filter: Filter): NeedleAndMode {
-  const input = filter.value.toLowerCase();
+function getNeedleAndMode(input: string): NeedleAndMode {
   if (input.startsWith(`"`) && input.endsWith(`"`)) {
     return {
       needle: input.slice(1, -1),
@@ -92,22 +91,22 @@ export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
     return true;
   }
   const haystack = String(value.toLowerCase());
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
     return needle === haystack;
   }
-  return haystack.includes(needle);
+  return haystack.startsWith(needle);
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): string {
-  const columnName = JSON.stringify(filter.id).toLowerCase();
-  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter);
+  const columnName = JSON.stringify(filter.id);
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
   const needle = needleAndMode.needle;
   if (needleAndMode.mode === 'exact') {
-    return `${columnName} = '${needle}'`;
+    return `${columnName} = '${needle.toUpperCase()}' OR ${columnName} = '${needle.toLowerCase()}'`;
   }
-  return `${columnName} LIKE '%${needle}%'`;
+  return `${columnName} LIKE '${needle.toUpperCase()}%' OR ${columnName} LIKE '${needle.toLowerCase()}%'`;
 }
 
 // ----------------------------
