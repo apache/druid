@@ -349,7 +349,7 @@ public class ParallelIndexSubTask extends AbstractTask
           DateTime timestamp = inputRow.getTimestamp();
           boolean rowInNewSegment = true;
           Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
-          // TODO this can be improved from O(n) to O(log(n))
+
           for (SegmentIdWithShardSpec segment : unpushedSegments) {
             if (segment.getInterval().contains(timestamp.getMillis())) {
               rowInNewSegment = false;

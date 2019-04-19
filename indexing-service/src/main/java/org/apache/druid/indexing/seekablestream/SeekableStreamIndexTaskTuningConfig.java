@@ -36,7 +36,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements TuningConfi
   private static final int DEFAULT_MAX_ROWS_PER_SEGMENT = 5_000_000;
   private static final boolean DEFAULT_RESET_OFFSET_AUTOMATICALLY = false;
   private static final boolean DEFAULT_SKIP_SEQUENCE_NUMBER_AVAILABILITY_CHECK = false;
-  private static final int DEFAULT_MAX_TOTAL_SEGMENTS = 1000;
 
   private final int maxRowsInMemory;
   private final long maxBytesInMemory;

@@ -432,9 +432,12 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
       // Initialize maxRowsPerSegment and maxTotalRows lazily
       final IndexTuningConfig tuningConfig = ingestionSchema.tuningConfig;
-      @Nullable final Integer maxRowsPerSegment = getValidMaxRowsPerSegment(tuningConfig);
-      @Nullable final Long maxTotalRows = getValidMaxTotalRows(tuningConfig);
-      @Nullable final Integer maxTotalSegments = getValidMaxTotalSegments(tuningConfig);
+      @Nullable
+      final Integer maxRowsPerSegment = getValidMaxRowsPerSegment(tuningConfig);
+      @Nullable
+      final Long maxTotalRows = getValidMaxTotalRows(tuningConfig);
+      @Nullable
+      final Integer maxTotalSegments = getValidMaxTotalSegments(tuningConfig);
       final ShardSpecs shardSpecs = determineShardSpecs(toolbox, firehoseFactory, firehoseTempDir, maxRowsPerSegment);
       final DataSchema dataSchema;
       final Map<Interval, String> versions;
@@ -564,7 +567,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
    * shardSpecs by itself.  Intervals must be determined if they are not specified in {@link GranularitySpec}.
    * ShardSpecs must be determined if the perfect rollup must be guaranteed even though the number of shards is not
    * specified in {@link IndexTuningConfig}.
-   * <P/>
+   * <p/>
    * If both intervals and shardSpecs don't have to be determined, this method simply returns {@link ShardSpecs} for the
    * given intervals.  Here, if {@link IndexTuningConfig#numShards} is not specified, {@link NumberedShardSpec} is used.
    * <p/>
@@ -831,7 +834,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
    * If the number of rows added to {@link BaseAppenderatorDriver} so far exceeds {@link IndexTuningConfig#maxTotalRows}
    * </li>
    * </ul>
-   *
+   * <p>
    * At the end of this method, all the remaining segments are published.
    *
    * @return true if generated segments are successfully published, otherwise false
@@ -976,18 +979,19 @@ public class IndexTask extends AbstractTask implements ChatHandler
             // (in append mode) or may be created on our own authority (in overwrite mode).
             sequenceName = getId();
           }
-          // Check if the upcoming row will result in the creation of a new segment
-          DateTime timestamp = inputRow.getTimestamp();
-          boolean rowInNewSegment = true;
-          Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
-          // TODO this can be improved from O(n) to O(log(n))
-          for (SegmentIdWithShardSpec segment : unpushedSegments) {
-            if (segment.getInterval().contains(timestamp.getMillis())) {
-              rowInNewSegment = false;
-            }
-          }
-
-          if (!isGuaranteedRollup && rowInNewSegment && unpushedSegments.size() >= tuningConfig.getMaxTotalSegments()) {
+          // Check if the upcoming row will result in the creation of a new segment.  If so and the number of segments
+          // is greater than max total segments, push the segments.
+          Interval targetInterval = ingestionSchema.getDataSchema()
+                                                   .getGranularitySpec()
+                                                   .getSegmentGranularity()
+                                                   .bucket(inputRow.getTimestamp());
+          if (!appenderator.getUnpublishedSegments()
+                           .stream()
+                           .map(SegmentIdWithShardSpec::getInterval)
+                           .collect(Collectors.toSet())
+                           .contains(targetInterval)
+              && !isGuaranteedRollup
+              && appenderator.getUnpublishedSegments().size() >= getValidMaxTotalSegments(tuningConfig)) {
             final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
             log.info("Pushed segments[%s]", pushed.getSegments());
           }
@@ -1060,8 +1064,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
    */
   public static Integer getValidMaxRowsPerSegment(IndexTuningConfig tuningConfig)
   {
-    @Nullable final Integer numShards = tuningConfig.numShards;
-    @Nullable final Integer maxRowsPerSegment = tuningConfig.maxRowsPerSegment;
+    @Nullable
+    final Integer numShards = tuningConfig.numShards;
+    @Nullable
+    final Integer maxRowsPerSegment = tuningConfig.maxRowsPerSegment;
     if (numShards == null || numShards == -1) {
       return maxRowsPerSegment == null || maxRowsPerSegment.equals(-1)
              ? IndexTuningConfig.DEFAULT_MAX_ROWS_PER_SEGMENT
@@ -1078,8 +1084,10 @@ public class IndexTask extends AbstractTask implements ChatHandler
    */
   public static Long getValidMaxTotalRows(IndexTuningConfig tuningConfig)
   {
-    @Nullable final Integer numShards = tuningConfig.numShards;
-    @Nullable final Long maxTotalRows = tuningConfig.maxTotalRows;
+    @Nullable
+    final Integer numShards = tuningConfig.numShards;
+    @Nullable
+    final Long maxTotalRows = tuningConfig.maxTotalRows;
     if (numShards == null || numShards == -1) {
       return maxTotalRows == null ? IndexTuningConfig.DEFAULT_MAX_TOTAL_ROWS : maxTotalRows;
     } else {
@@ -1089,7 +1097,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
 
   public static Integer getValidMaxTotalSegments(IndexTuningConfig tuningConfig)
   {
-    @Nullable final Integer maxTotalSegments = tuningConfig.maxTotalSegments;
+    @Nullable
+    final Integer maxTotalSegments = tuningConfig.maxTotalSegments;
     return maxTotalSegments == null ? IndexTuningConfig.DEFAULT_MAX_TOTAL_SEGMENTS : maxTotalSegments;
   }
 
@@ -1428,8 +1437,8 @@ public class IndexTask extends AbstractTask implements ChatHandler
       );
 
       this.maxRowsPerSegment = (maxRowsPerSegment != null && maxRowsPerSegment == -1)
-                                 ? null
-                                 : maxRowsPerSegment;
+                               ? null
+                               : maxRowsPerSegment;
       this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see server.src.main.java.org.apache.druid.segment.indexing.TuningConfigs#getMaxBytesInMemoryOrDefault(long)
