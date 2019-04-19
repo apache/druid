@@ -78,9 +78,10 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     /* tslint:disable:jsx-alignment */
     if (capabilities === 'working-without-sql') {
       message = <>
-        It appears that the SQL endpoint is disabled. No SQL endpoint is
-        used and all requests rely on <a href={DRUID_DOCS_API}>native Druid query API</a>,
-        but you may still <a href={DRUID_DOCS_SQL}>enable the SQL endpoint</a>
+        It appears that the SQL endpoint is disabled. The console will fall back
+        to <a href={DRUID_DOCS_API} target="_blank">native Druid APIs</a> and will be
+        limited in functionality. Look at <a href={DRUID_DOCS_SQL} target="_blank">the SQL docs</a> to
+        enable the SQL endpoint.
       </>;
     } else if (capabilities === 'broken') {
       message = <>
