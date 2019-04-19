@@ -24,7 +24,9 @@ import * as React from 'react';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { HeaderActiveTab, HeaderBar } from './components/header-bar';
+import {Loader} from './components/loader';
 import { AppToaster } from './singletons/toaster';
+import {QueryManager} from './utils';
 import {DRUID_DOCS_API, DRUID_DOCS_SQL, LEGACY_COORDINATOR_CONSOLE, LEGACY_OVERLORD_CONSOLE} from './variables';
 import { DatasourcesView } from './views/datasource-view';
 import { HomeView } from './views/home-view';
@@ -46,51 +48,52 @@ export interface ConsoleApplicationProps extends React.Props<any> {
 export interface ConsoleApplicationState {
   aboutDialogOpen: boolean;
   noSqlMode: boolean;
+  capabilitiesLoading: boolean;
 }
 
 export class ConsoleApplication extends React.Component<ConsoleApplicationProps, ConsoleApplicationState> {
   static MESSAGE_KEY = 'druid-console-message';
   static MESSAGE_DISMISSED = 'dismissed';
+  private capabilitiesQueryManager: QueryManager<string, string>;
 
-  static async ensureSql() {
+  static async discoverCapabilities(): Promise<'working-with-sql' | 'working-without-sql' | 'broken'> {
     try {
       await axios.post('/druid/v2/sql', { query: 'SELECT 1337' });
     } catch (e) {
       const { response } = e;
-      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') return true; // other failure
+      if (response.status !== 405 || response.statusText !== 'Method Not Allowed') return 'working-with-sql'; // other failure
       try {
         await axios.get('/status');
       } catch (e) {
-        return true; // total failure
+        return 'broken'; // total failure
       }
       // Status works but SQL 405s => the SQL endpoint is disabled
-      return false;
+      return 'working-without-sql';
     }
-    return true;
+    return 'working-with-sql';
   }
 
-  static shownNotifications() {
+  static shownNotifications(capabilities: string) {
+    let message: JSX.Element;
+    /* tslint:disable:jsx-alignment */
+    if (capabilities === 'working-without-sql') {
+      message = <>
+        It appears that the SQL endpoint is disabled. No SQL endpoint is
+        used and all requests rely on <a href={DRUID_DOCS_API}>native Druid query API</a>,
+        but you may still <a href={DRUID_DOCS_SQL}>enable the SQL endpoint</a>
+      </>;
+    } else {
+      message = <>
+        It appears that the Druid is not responding. Data cannot be retrieved right now
+      </>;
+    }
+    /* tslint:enable:jsx-alignment */
     AppToaster.show({
       icon: IconNames.ERROR,
       intent: Intent.DANGER,
       timeout: 120000,
-      /* tslint:disable:jsx-alignment */
-      message: <>
-        It appears that the SQL endpoint is disabled. No SQL endpoint is
-        used and all requests rely on <a href={DRUID_DOCS_API}>native Druid query API</a>,
-        but you may still <a href={DRUID_DOCS_SQL}>enable the SQL endpoint</a>
-      </>
-      /* tslint:enable:jsx-alignment */
+      message: message
     });
-  }
-
-  private async setSqlMode() {
-    if (!(await ConsoleApplication.ensureSql())) {
-      ConsoleApplication.shownNotifications();
-      this.setState({
-        noSqlMode: true
-      });
-    }
   }
 
   private taskId: string | null;
@@ -103,7 +106,8 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     super(props, context);
     this.state = {
       aboutDialogOpen: false,
-      noSqlMode: false
+      noSqlMode: false,
+      capabilitiesLoading: true
     };
 
     if (props.baseURL) {
@@ -112,10 +116,26 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
     if (props.customHeaderName && props.customHeaderValue) {
       axios.defaults.headers.common[props.customHeaderName] = props.customHeaderValue;
     }
+
+    this.capabilitiesQueryManager = new QueryManager({
+      processQuery: async (query: string) => {
+        const capabilities = await ConsoleApplication.discoverCapabilities();
+        if (capabilities !== 'working-with-sql') {
+          ConsoleApplication.shownNotifications(capabilities);
+        }
+        return capabilities;
+      },
+      onStateChange: ({ result, loading, error }) => {
+        this.setState({
+          noSqlMode: result === 'working-with-sql' ? false : true,
+          capabilitiesLoading: loading
+        });
+      }
+    });
   }
 
   componentDidMount(): void {
-    this.setSqlMode();
+    this.capabilitiesQueryManager.runQuery('dummy');
   }
 
   private resetInitialsDelay() {
@@ -155,7 +175,7 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
 
   render() {
     const { hideLegacy } = this.props;
-    const { noSqlMode } = this.state;
+    const { noSqlMode, capabilitiesLoading } = this.state;
 
     const wrapInViewContainer = (active: HeaderActiveTab, el: JSX.Element, scrollable = false) => {
       return <>
@@ -163,6 +183,15 @@ export class ConsoleApplication extends React.Component<ConsoleApplicationProps,
         <div className={classNames('view-container', { scrollable })}>{el}</div>
       </>;
     };
+
+    if (capabilitiesLoading) {
+      return <div className={'loading-capabilities'}>
+        <Loader
+          loadingText={''}
+          loading={capabilitiesLoading}
+        />
+      </div>;
+    }
 
     return <HashRouter hashType="noslash">
       <div className="console-application">

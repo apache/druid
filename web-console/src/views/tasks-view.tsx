@@ -182,16 +182,12 @@ export class TasksView extends React.Component<TasksViewProps, TasksViewState> {
         if (!noSqlMode) {
           return await queryDruidSql({ query });
         } else {
-          const completeTasksResp = await axios.get('/druid/indexer/v1/completeTasks');
-          const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
-          const waitingTasksResp = await axios.get('/druid/indexer/v1/waitingTasks');
-          const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
-          const completeTasksResult = TasksView.parseTasks(completeTasksResp.data);
-          const runningTasksResult = TasksView.parseTasks(runningTasksResp.data);
-          const waitingTasksResult = TasksView.parseTasks(waitingTasksResp.data);
-          const pendingTasksResult = TasksView.parseTasks(pendingTasksResp.data);
-          const result: TaskQueryResultRow[] = [].concat.apply([], [completeTasksResult, runningTasksResult, waitingTasksResult, pendingTasksResult]);
-          return result;
+          const taskEndpoints: string[] = ['completeTasks', 'runningTasks', 'waitingTasks', 'pendingTasks'];
+          const result: TaskQueryResultRow[][] = await Promise.all(taskEndpoints.map(async (endpoint: string) => {
+            const resp = await axios.get(`/druid/indexer/v1/${endpoint}`);
+            return TasksView.parseTasks(resp.data);
+          }));
+          return [].concat.apply([], result);
         }
       },
       onStateChange: ({ result, loading, error }) => {

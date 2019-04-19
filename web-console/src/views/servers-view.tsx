@@ -127,20 +127,17 @@ export class ServersView extends React.Component<ServersViewProps, ServersViewSt
   static getServers = async (): Promise<ServerQueryResultRow[]> => {
     const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
     const allServers = allServerResp.data;
-    return allServers.reduce((result: ServerQueryResultRow[], s: any) => {
-      if (s.type === 'historical') {
-        result.push({
-          host: s.host.split(':')[0],
-          plaintext_port: parseInt(s.host.split(':')[1], 10),
-          server: s.host,
-          curr_size: s.currSize,
-          max_size: s.maxSize,
-          tier: s.tier,
-          tls_port: -1
-        });
-      }
-      return result;
-    }, []);
+    return allServers.filter((s: any) => s.type === 'historical').map((s: any) => {
+      return {
+        host: s.host.split(':')[0],
+        plaintext_port: parseInt(s.host.split(':')[1], 10),
+        server: s.host,
+        curr_size: s.currSize,
+        max_size: s.maxSize,
+        tier: s.tier,
+        tls_port: -1
+      };
+    });
   }
 
   componentDidMount(): void {

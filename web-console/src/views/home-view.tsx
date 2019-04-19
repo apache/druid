@@ -20,6 +20,7 @@ import { Card, H5, Icon } from '@blueprintjs/core';
 import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
+import {sum} from 'd3-array';
 import * as React from 'react';
 
 import { getHeadProp, pluralIfNeeded, queryDruidSql, QueryManager } from '../utils';
@@ -187,13 +188,13 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
       }
     });
 
-    this.segmentQueryManager.runQuery(`SELECT COUNT (*) as "count" FROM sys.segments`);
+    this.segmentQueryManager.runQuery(`SELECT COUNT(*) as "count" FROM sys.segments`);
 
     // -------------------------
 
     this.taskQueryManager = new QueryManager({
       processQuery: async (query) => {
-        let taskCountsFromQuery: any[] = [];
+        let taskCountsFromQuery: {status: string, count: number}[] = [];
         if (!noSqlMode) {
           taskCountsFromQuery = await queryDruidSql({ query });
         } else {
@@ -201,11 +202,13 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
           const runningTasksResp = await axios.get('/druid/indexer/v1/runningTasks');
           const waitingTasksResp = await axios.get('/druid/indexer/v1/waitingTasks');
           const pendingTasksResp = await axios.get('/druid/indexer/v1/pendingTasks');
-          taskCountsFromQuery.push({status: 'SUCCESS', count: completeTasksResp.data.filter((d: any) => d.status === 'SUCCESS').length});
-          taskCountsFromQuery.push({status: 'FAILED', count: completeTasksResp.data.filter((d: any) => d.status === 'FAILED').length});
-          taskCountsFromQuery.push({status: 'RUNNING', count: runningTasksResp.data.length});
-          taskCountsFromQuery.push({status: 'WAITING', count: waitingTasksResp.data.length});
-          taskCountsFromQuery.push({status: 'PENDING', count: pendingTasksResp.data.length});
+          taskCountsFromQuery.push(
+            {status: 'SUCCESS', count: completeTasksResp.data.filter((d: any) => d.status === 'SUCCESS').length},
+            {status: 'FAILED', count: completeTasksResp.data.filter((d: any) => d.status === 'FAILED').length},
+            {status: 'RUNNING', count: runningTasksResp.data.length},
+            {status: 'WAITING', count: waitingTasksResp.data.length},
+            {status: 'PENDING', count: pendingTasksResp.data.length}
+          );
         }
         const taskCounts = taskCountsFromQuery.reduce((acc: any, curr: any) => {
           const status = curr.status.toLowerCase();
@@ -240,9 +243,7 @@ GROUP BY 1`);
         const getDataServerNum = async () => {
           const allServerResp = await axios.get('/druid/coordinator/v1/servers?simple');
           const allServers = allServerResp.data;
-          return allServers.reduce((acc: number, s: any) => {
-            return acc + Number(s.type === 'historical');
-          }, 0);
+          return allServers.filter((s: any) => s.type === 'historical').length;
         };
         if (!noSqlMode) {
           const dataServerCounts = await queryDruidSql({ query });

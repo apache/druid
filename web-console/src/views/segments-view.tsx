@@ -53,10 +53,10 @@ export interface SegmentsViewProps extends React.Props<any> {
 
 export interface SegmentsViewState {
   segmentsLoading: boolean;
-  segments: any[] | null;
+  segments: SegmentQueryResultRow[] | null;
   segmentsError: string | null;
   segmentFilter: Filter[];
-  allSegments?: any[] | null;
+  allSegments?: SegmentQueryResultRow[] | null;
 }
 
 interface QueryAndSkip {
