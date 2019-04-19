@@ -1450,7 +1450,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest
     );
   }
 
-    private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
+  private AppenderatorDriverRealtimeIndexTask makeRealtimeTask(
       final String taskId,
       final TransformSpec transformSpec,
       final boolean reportParseExceptions,

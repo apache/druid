@@ -118,6 +118,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class IndexTaskTest
 {
@@ -757,6 +758,77 @@ public class IndexTaskTest
   }
 
   @Test
+  public void testWithSmallMaxTotalSegments() throws Exception
+  {
+    File tmpDir = temporaryFolder.newFolder();
+    File tmpFile = File.createTempFile("druid", "index", tmpDir);
+
+    try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
+      writer.write("2014-01-01T00:00:10Z,a,1\n");
+      writer.write("2014-01-01T01:00:20Z,b,2\n");
+      writer.write("2014-01-01T02:00:30Z,a,1\n"); // Push segments (00, 01)
+      writer.write("2014-01-01T01:00:20Z,a,1\n");
+      writer.write("2014-01-01T02:00:30Z,b,2\n");
+      writer.write("2014-01-01T00:00:10Z,b,2\n"); // Push segments (01, 02)
+      writer.write("2014-01-01T00:00:10Z,c,3\n");
+      writer.write("2014-01-01T01:00:20Z,c,3\n");
+      writer.write("2014-01-01T02:00:30Z,c,3\n"); // Push segments (00, 01)
+    }                                                  // Push segments (02)
+
+    IndexTask indexTask = new IndexTask(
+        null,
+        null,
+        createIngestionSpec(
+            tmpDir,
+            null,
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                null
+            ),
+            createTuningConfig(
+                2,
+                2,
+                null,
+                Long.MAX_VALUE,
+                2,
+                null,
+                null,
+                false,
+                true
+            ),
+            false
+        ),
+        null,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        null,
+        rowIngestionMetersFactory
+    );
+
+    final List<DataSegment> segments = runTask(indexTask).rhs;
+    final List<Interval> segIntervals = segments.stream().map(x -> x.getInterval()).collect(Collectors.toList());
+    Assert.assertEquals(7, segments.size());
+    List<Interval> expectedIntervals = ImmutableList.of(
+        Intervals.of("2014-01-01T00/PT1H"),
+        Intervals.of("2014-01-01T00/PT1H"),
+        Intervals.of("2014-01-01T01/PT1H"),
+        Intervals.of("2014-01-01T01/PT1H"),
+        Intervals.of("2014-01-01T01/PT1H"),
+        Intervals.of("2014-01-01T02/PT1H"),
+        Intervals.of("2014-01-01T02/PT1H")
+    );
+    for (int i = 0; i < 7; i++) {
+      final DataSegment segment = segments.get(i);
+      //final int expectedPartitionNum = i % 2;
+
+      Assert.assertEquals("test", segment.getDataSource());
+      Assert.assertEquals(expectedIntervals.get(i), segment.getInterval());
+      Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+      //Assert.assertEquals(expectedPartitionNum, segment.getShardSpec().getPartitionNum());
+    }
+  }
+
+  @Test
   public void testPerfectRollup() throws Exception
   {
     File tmpDir = temporaryFolder.newFolder();
@@ -1334,7 +1406,6 @@ public class IndexTaskTest
 
     Assert.assertEquals(expectedUnparseables, reportData.getUnparseableEvents());
   }
-
 
   @Test
   public void testCsvWithHeaderOfEmptyColumns() throws Exception
