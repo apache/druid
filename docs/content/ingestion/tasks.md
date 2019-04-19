@@ -24,7 +24,7 @@ title: "Tasks Overview"
 
 # Tasks Overview
 
-Tasks are run on MiddleManagers and always operate on a single data source.
+Apache Druid (incubating) tasks are run on MiddleManagers and always operate on a single data source.
 
 Tasks are submitted using POST requests to the Overlord. Please see [Overlord Task API](../operations/api-reference.html#overlord-tasks) for API details.
 

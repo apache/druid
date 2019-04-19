@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid vs Kudu"
+title: "Apache Druid (incubating) vs Kudu"
 ---
 
 <!--

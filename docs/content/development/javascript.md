@@ -24,7 +24,7 @@ title: "JavaScript Programming Guide"
 
 # JavaScript Programming Guide
 
-This page discusses how to use JavaScript to extend Druid.
+This page discusses how to use JavaScript to extend Apache Druid (incubating).
 
 ## Examples
 

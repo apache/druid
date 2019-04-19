@@ -24,7 +24,7 @@ title: "Stream Push"
 
 # Stream Push
 
-Druid can connect to any streaming data source through
+Apache Druid (incubating) can connect to any streaming data source through
 [Tranquility](https://github.com/druid-io/tranquility/blob/master/README.md), a package for pushing
 streams to Druid in real-time. Druid does not come bundled with Tranquility, and you will have to download the distribution.
 

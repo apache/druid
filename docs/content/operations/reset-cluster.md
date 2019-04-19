@@ -24,7 +24,7 @@ title: "ResetCluster tool"
 
 # ResetCluster tool
 
-ResetCluster tool can be used to completely wipe out Druid cluster state stored on Metadata and Deep storage. This is
+ResetCluster tool can be used to completely wipe out Apache Druid (incubating) cluster state stored on Metadata and Deep storage. This is
 intended to be used in dev/test environments where you typically want to reset the cluster before running
 the test suite.
 ResetCluster automatically figures out necessary information from Druid cluster configuration. So the java classpath

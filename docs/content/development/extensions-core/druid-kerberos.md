@@ -24,7 +24,7 @@ title: "Kerberos"
 
 # Kerberos
 
-Druid Extension to enable Authentication for Druid Processes using Kerberos.
+Apache Druid (incubating) Extension to enable Authentication for Druid Processes using Kerberos.
 This extension adds an Authenticator which is used to protect HTTP Endpoints using the simple and protected GSSAPI negotiation mechanism [SPNEGO](https://en.wikipedia.org/wiki/SPNEGO).
 Make sure to [include](../../operations/including-extensions.html) `druid-kerberos` as an extension.
 

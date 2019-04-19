@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)"
+title: "Apache Druid (incubating) vs. Key/Value Stores (HBase/Cassandra/OpenTSDB)"
 ---
 
 <!--

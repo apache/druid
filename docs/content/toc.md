@@ -32,8 +32,8 @@ layout: toc
     * [Ingestion overview](/docs/VERSION/ingestion/index.html)
   * [Quickstart](/docs/VERSION/tutorials/index.html)
     * [Tutorial: Loading a file](/docs/VERSION/tutorials/tutorial-batch.html)
-    * [Tutorial: Loading stream data from Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
-    * [Tutorial: Loading a file using Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
+    * [Tutorial: Loading stream data from Apache Kafka](/docs/VERSION/tutorials/tutorial-kafka.html)
+    * [Tutorial: Loading a file using Apache Hadoop](/docs/VERSION/tutorials/tutorial-batch-hadoop.html)
     * [Tutorial: Loading stream data using HTTP push](/docs/VERSION/tutorials/tutorial-tranquility.html)
     * [Tutorial: Querying data](/docs/VERSION/tutorials/tutorial-query.html)
   * Further tutorials

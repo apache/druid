@@ -24,7 +24,7 @@ title: "Hadoop-based Batch Ingestion VS Native Batch Ingestion"
 
 # Comparison of Batch Ingestion Methods
 
-Druid basically supports three types of batch ingestion: Hadoop-based
+Apache Druid (incubating) basically supports three types of batch ingestion: Apache Hadoop-based
 batch ingestion, native parallel batch ingestion, and native local batch
 ingestion. The below table shows what features are supported by each
 ingestion method.

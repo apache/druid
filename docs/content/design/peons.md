@@ -26,7 +26,7 @@ title: "Peons"
 
 ### Configuration
 
-For Peon Configuration, see [Peon Query Configuration](../configuration/index.html#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.html#additional-peon-configuration).
+For Apache Druid (incubating) Peon Configuration, see [Peon Query Configuration](../configuration/index.html#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.html#additional-peon-configuration).
 
 ### HTTP Endpoints
 
