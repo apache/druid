@@ -675,33 +675,23 @@ public class DruidCoordinator
         BalancerStrategy balancerStrategy = factory.createBalancerStrategy(balancerExec);
 
         // Do coordinator stuff.
-        final Collection<ImmutableDruidDataSource> dataSources = metadataSegmentManager.getDataSources();
+        final Collection<ImmutableDruidDataSource> dataSources =
+            segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments();
         if (dataSources == null) {
           log.info("Metadata store not polled yet, skipping this run.");
           return;
         }
 
         DruidCoordinatorRuntimeParams params =
-<<<<<<< HEAD
             DruidCoordinatorRuntimeParams
                 .newBuilder()
                 .withStartTimeNanos(startTimeNanos)
-                .withDataSourcesWithUsedSegments(segmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments())
+                .withDataSourcesWithUsedSegments(dataSources)
                 .withDynamicConfigs(getDynamicConfigs())
                 .withCompactionConfig(getCompactionConfig())
                 .withEmitter(emitter)
                 .withBalancerStrategy(balancerStrategy)
                 .build();
-=======
-            DruidCoordinatorRuntimeParams.newBuilder()
-                                         .withStartTime(startTime)
-                                         .withDataSources(dataSources)
-                                         .withDynamicConfigs(getDynamicConfigs())
-                                         .withCompactionConfig(getCompactionConfig())
-                                         .withEmitter(emitter)
-                                         .withBalancerStrategy(balancerStrategy)
-                                         .build();
->>>>>>> upstream/master
         for (DruidCoordinatorHelper helper : helpers) {
           // Don't read state and run state in the same helper otherwise racy conditions may exist
           if (coordLeaderSelector.isLeader() && startingLeaderCounter == coordLeaderSelector.localTerm()) {

@@ -127,7 +127,11 @@ public class SqlSegmentsMetadataTest
     );
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
-        manager.getDataSources().stream().map(d -> d.getName()).collect(Collectors.toList())
+        sqlSegmentsMetadata
+            .prepareImmutableDataSourcesWithAllUsedSegments()
+            .stream()
+            .map(d -> d.getName())
+            .collect(Collectors.toList())
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
@@ -135,38 +139,38 @@ public class SqlSegmentsMetadataTest
     );
     Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
-        ImmutableSet.copyOf(manager.iterateAllSegments())
+        ImmutableSet.copyOf(sqlSegmentsMetadata.iterateAllUsedSegments())
     );
   }
 
   @Test
   public void testNoPoll()
   {
-    manager.start();
-    Assert.assertTrue(manager.isStarted());
+    sqlSegmentsMetadata.start();
+    Assert.assertTrue(sqlSegmentsMetadata.isStarted());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
-        manager.getAllDataSourceNames()
+        sqlSegmentsMetadata.retrieveAllDataSourceNames()
     );
-    Assert.assertNull(manager.getDataSources());
-    Assert.assertNull(manager.getDataSource("wikipedia"));
-    Assert.assertNull(manager.iterateAllSegments());
+    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments());
+    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia"));
+    Assert.assertNull(sqlSegmentsMetadata.iterateAllUsedSegments());
   }
 
   @Test
   public void testPollThenStop()
   {
-    manager.start();
-    manager.poll();
-    manager.stop();
-    Assert.assertFalse(manager.isStarted());
+    sqlSegmentsMetadata.start();
+    sqlSegmentsMetadata.poll();
+    sqlSegmentsMetadata.stop();
+    Assert.assertFalse(sqlSegmentsMetadata.isStarted());
     Assert.assertEquals(
         ImmutableList.of("wikipedia"),
-        manager.getAllDataSourceNames()
+        sqlSegmentsMetadata.retrieveAllDataSourceNames()
     );
-    Assert.assertNull(manager.getDataSources());
-    Assert.assertNull(manager.getDataSource("wikipedia"));
-    Assert.assertNull(manager.iterateAllSegments());
+    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourcesWithAllUsedSegments());
+    Assert.assertNull(sqlSegmentsMetadata.prepareImmutableDataSourceWithUsedSegments("wikipedia"));
+    Assert.assertNull(sqlSegmentsMetadata.iterateAllUsedSegments());
   }
 
   @Test
