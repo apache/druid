@@ -127,10 +127,10 @@ public class ByteBufferUtils
 
   private static MethodHandle unmapJava9(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
-    MethodHandle unmapper = lookup.findVirtual(UnsafeUtil.theUnsafeClass(), "invokeCleaner",
+    MethodHandle unmapper = lookup.findVirtual(UnsafeUtils.theUnsafeClass(), "invokeCleaner",
                                                MethodType.methodType(void.class, ByteBuffer.class)
     );
-    return unmapper.bindTo(UnsafeUtil.theUnsafe());
+    return unmapper.bindTo(UnsafeUtils.theUnsafe());
   }
 
   /**

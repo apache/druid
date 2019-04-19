@@ -21,7 +21,7 @@ package org.apache.druid.java.util.common;
 
 import java.lang.reflect.Field;
 
-public class UnsafeUtil
+public class UnsafeUtils
 {
   private static final Object UNSAFE;
   private static final Class<?> UNSAFE_CLASS;

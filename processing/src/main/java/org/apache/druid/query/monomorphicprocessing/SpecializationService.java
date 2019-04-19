@@ -21,10 +21,9 @@ package org.apache.druid.query.monomorphicprocessing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import org.apache.druid.java.util.common.UnsafeUtil;
+import org.apache.druid.java.util.common.DefineClassUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.utils.JvmUtils;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.ClassWriter;
@@ -34,10 +33,6 @@ import org.objectweb.asm.commons.SimpleRemapper;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.security.ProtectionDomain;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -68,160 +63,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public final class SpecializationService
 {
   private static final Logger LOG = new Logger(SpecializationService.class);
-
-  private static final MethodHandle DEFINE_CLASS;
-  private static final RuntimeException DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION;
-
-  static {
-    MethodHandle defineClass = null;
-    RuntimeException exception = null;
-    try {
-      defineClass = lookupDefineClassMethodHandle();
-    }
-    catch (RuntimeException e) {
-      exception = e;
-    }
-    if (defineClass != null) {
-      DEFINE_CLASS = defineClass;
-      DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION = null;
-    } else {
-      DEFINE_CLASS = null;
-      DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION = exception;
-    }
-  }
-
-  private static MethodHandle lookupDefineClassMethodHandle()
-  {
-    try {
-      MethodHandles.Lookup lookup = MethodHandles.lookup();
-      if (JvmUtils.isIsJava9Compatible()) {
-        return defineClassJava9(lookup);
-      } else {
-        return defineClassJava8(lookup);
-      }
-    }
-    catch (ReflectiveOperationException | RuntimeException e) {
-      throw new UnsupportedOperationException(
-          "defineClass is not supported on this platform, "
-          + "because internal Java APIs are not compatible with this Druid version",
-          e
-      );
-    }
-  }
-
-  /**
-   * "Compile" a MethodHandle that is equivalent to the following closure:
-   *
-   *  Class<?> defineClass(Class targetClass, String className, byte[] byteCode) {
-   *    MethodHandles.Lookup targetClassLookup = MethodHandles.privateLookupIn(targetClass, lookup);
-   *    return targetClassLookup.defineClass(byteCode);
-   *  }
-   */
-  private static MethodHandle defineClassJava9(MethodHandles.Lookup lookup) throws ReflectiveOperationException
-  {
-
-    // this is getting meta
-    MethodHandle defineClass = lookup.unreflect(MethodHandles.Lookup.class.getMethod("defineClass", byte[].class));
-    MethodHandle privateLookupIn = lookup.findStatic(
-        MethodHandles.class,
-        "privateLookupIn",
-        MethodType.methodType(MethodHandles.Lookup.class, Class.class, MethodHandles.Lookup.class)
-    );
-
-    // bind privateLookupIn lookup argument to this method's lookup
-    // privateLookupIn = (Class targetClass) -> privateLookupIn(MethodHandles.privateLookupIn(targetClass, lookup))
-    privateLookupIn = MethodHandles.insertArguments(privateLookupIn, 1, lookup);
-
-    // defineClass = (Class targetClass, byte[] byteCode) -> privateLookupIn(targetClass).defineClass(byteCode)
-    defineClass = MethodHandles.filterArguments(defineClass, 0, privateLookupIn);
-
-    // add a dummy String argument to match the corresponding JDK8 version
-    // defineClass = (Class targetClass, byte[] byteCode, String className) -> defineClass(targetClass, byteCode)
-    defineClass = MethodHandles.dropArguments(defineClass, 2, String.class);
-    return defineClass;
-  }
-
-  /**
-   * "Compile" a MethodHandle that is equilavent to:
-   *
-   *  Class<?> defineClass(Class targetClass, byte[] byteCode, String className) {
-   *    return Unsafe.defineClass(
-   *        className,
-   *        byteCode,
-   *        0,
-   *        byteCode.length,
-   *        targetClass.getClassLoader(),
-   *        targetClass.getProtectionDomain()
-   *    );
-   *  }
-   */
-  private static MethodHandle defineClassJava8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
-  {
-    MethodHandle defineClass = lookup.findVirtual(
-        UnsafeUtil.theUnsafeClass(),
-        "defineClass",
-        MethodType.methodType(
-            Class.class,
-            String.class,
-            byte[].class,
-            int.class,
-            int.class,
-            ClassLoader.class,
-            ProtectionDomain.class
-        )
-    ).bindTo(UnsafeUtil.theUnsafe());
-
-    MethodHandle getProtectionDomain = lookup.unreflect(Class.class.getMethod("getProtectionDomain"));
-    MethodHandle getClassLoader = lookup.unreflect(Class.class.getMethod("getClassLoader"));
-
-    // apply getProtectionDomain and getClassLoader to the targetClass, modifying the methodHandle as follows:
-    // defineClass = (String className, byte[] byteCode, int offset, int length, Class class1, Class class2) ->
-    //   defineClass(className, byteCode, offset, length, class1.getClassLoader(), class2.getProtectionDomain())
-    defineClass = MethodHandles.filterArguments(defineClass, 5, getProtectionDomain);
-    defineClass = MethodHandles.filterArguments(defineClass, 4, getClassLoader);
-
-    // duplicate the last argument to apply the methods above to the same class, modifying the methodHandle as follows:
-    // defineClass = (String className, byte[] byteCode, int offset, int length, Class targetClass) ->
-    //   defineClass(className, byteCode, offset, length, targetClass, targetClass)
-    defineClass = MethodHandles.permuteArguments(
-        defineClass,
-        MethodType.methodType(Class.class, String.class, byte[].class, int.class, int.class, Class.class),
-        0, 1, 2, 3, 4, 4
-    );
-
-    // set offset argument to 0, modifying the methodHandle as follows:
-    // defineClass = (String className, byte[] byteCode, int length, Class targetClass) ->
-    //   defineClass(className, byteCode, 0, length, targetClass)
-    defineClass = MethodHandles.insertArguments(defineClass, 2, (int) 0);
-
-    // JDK8 does not implement MethodHandles.arrayLength so we have to roll our own
-    MethodHandle arrayLength = lookup.findStatic(
-        lookup.lookupClass(),
-        "getArrayLength",
-        MethodType.methodType(int.class, byte[].class)
-    );
-
-    // apply arrayLength to the length argument, modifying the methodHandle as follows:
-    // defineClass = (String className, byte[] byteCode1, byte[] byteCode2, Class targetClass) ->
-    //   defineClass(className, byteCode1, byteCode2.length, targetClass)
-    defineClass = MethodHandles.filterArguments(defineClass, 2, arrayLength);
-
-    // duplicate the byteCode argument and reorder to match JDK9 signature, modifying the methodHandle as follows:
-    // defineClass = (Class targetClass, byte[] byteCode, String className) ->
-    //   defineClass(className, byteCode, byteCode, targetClass)
-    defineClass = MethodHandles.permuteArguments(
-        defineClass,
-        MethodType.methodType(Class.class, Class.class, byte[].class, String.class),
-        2, 1, 1, 0
-    );
-
-    return defineClass;
-  }
-
-  static int getArrayLength(byte[] bytes)
-  {
-    return bytes.length;
-  }
 
   /**
    * If true, specialization is not actually done, an instance of prototypeClass is used as a "specialized" instance.
@@ -317,6 +158,7 @@ public final class SpecializationService
       return specializationStates.computeIfAbsent(specializationId, id -> new WindowedLoopIterationCounter<>(this, id));
     }
 
+    @SuppressWarnings("unchecked")
     T specialize(ImmutableMap<Class<?>, Class<?>> classRemapping)
     {
       String specializedClassName = specializedClassNamePrefix + specializedClassCounter.get();
@@ -327,7 +169,11 @@ public final class SpecializationService
         ClassReader prototypeClassReader = new ClassReader(getPrototypeClassBytecode());
         prototypeClassReader.accept(classTransformer, 0);
         byte[] specializedClassBytecode = specializedClassWriter.toByteArray();
-        Class<T> specializedClass = defineClass(specializedClassName, specializedClassBytecode);
+        Class<T> specializedClass = (Class<T>) DefineClassUtils.defineClass(
+            prototypeClass,
+            specializedClassBytecode,
+            specializedClassName
+        );
         specializedClassCounter.incrementAndGet();
         return specializedClass.newInstance();
       }
@@ -349,25 +195,6 @@ public final class SpecializationService
         remapping.put(classBytecodeName(sourceClass.getName()), classBytecodeName(remappingClass.getName()));
       }
       return remapping;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Class<T> defineClass(String specializedClassName, byte[] specializedClassBytecode)
-    {
-      if (DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION != null) {
-        throw new UnsupportedOperationException(DEFINE_CLASS_NOT_SUPPORTED_EXCEPTION);
-      }
-
-      try {
-        return (Class<T>) DEFINE_CLASS.invokeExact(
-            prototypeClass,
-            specializedClassBytecode,
-            specializedClassName
-            );
-      }
-      catch (Throwable t) {
-        throw new UnsupportedOperationException("Unable to define specialized class: " + specializedClassName, t);
-      }
     }
 
     /**
