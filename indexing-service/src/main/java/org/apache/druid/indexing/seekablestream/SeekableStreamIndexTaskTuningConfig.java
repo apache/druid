@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
