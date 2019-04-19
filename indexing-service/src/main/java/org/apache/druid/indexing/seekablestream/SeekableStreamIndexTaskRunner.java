@@ -82,6 +82,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -582,20 +583,19 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
                 for (InputRow row : rows) {
                   if (row != null && task.withinMinMaxRecordTime(row)) {
-                    // Check if the upcoming row will result in the creation of a new segment
-                    DateTime timestamp = row.getTimestamp();
-                    boolean rowInNewSegment = true;
-                    Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
-
-                    for (SegmentIdWithShardSpec segment : unpushedSegments) {
-                      if (segment.getInterval().contains(timestamp.getMillis())) {
-                        rowInNewSegment = false;
-                      }
-                    }
-
-                    if (!sequenceToUse.isCheckpointed() &&
-                        rowInNewSegment &&
-                        unpushedSegments.size() >= tuningConfig.getMaxTotalSegments()) {
+                    // Check if the upcoming row will result in the creation of a new segment.  If so and the new
+                    // number of segments is greater than max total segments, push the segments.
+                    Interval targetInterval = task.getDataSchema()
+                                                  .getGranularitySpec()
+                                                  .getSegmentGranularity()
+                                                  .bucket(row.getTimestamp());
+                    if (!appenderator.getUnpublishedSegments()
+                                     .stream()
+                                     .map(SegmentIdWithShardSpec::getInterval)
+                                     .collect(Collectors.toSet())
+                                     .contains(targetInterval)
+                        && appenderator.getUnpublishedSegments().size() >= tuningConfig.getMaxTotalSegments()
+                        && !sequenceToUse.isCheckpointed()) {
                       sequenceToCheckpoint = sequenceToUse;
                     }
 

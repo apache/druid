@@ -979,7 +979,7 @@ public class IndexTask extends AbstractTask implements ChatHandler
             // (in append mode) or may be created on our own authority (in overwrite mode).
             sequenceName = getId();
           }
-          // Check if the upcoming row will result in the creation of a new segment.  If so and the number of segments
+          // Check if the upcoming row will result in the creation of a new segment.  If so and the new number of segments
           // is greater than max total segments, push the segments.
           Interval targetInterval = ingestionSchema.getDataSchema()
                                                    .getGranularitySpec()

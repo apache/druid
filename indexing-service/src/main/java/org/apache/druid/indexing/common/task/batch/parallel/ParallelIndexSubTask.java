@@ -79,6 +79,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * A worker task of {@link ParallelIndexSupervisorTask}. Similar to {@link IndexTask}, but this task
@@ -300,9 +301,9 @@ public class ParallelIndexSubTask extends AbstractTask
 
     // Initialize maxRowsPerSegment and maxTotalRows lazily
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
-    @Nullable final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
-    @Nullable final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
-    @Nullable final Integer maxTotalSegments = IndexTask.getValidMaxTotalSegments(tuningConfig);
+    final Integer maxRowsPerSegment = IndexTask.getValidMaxRowsPerSegment(tuningConfig);
+    final Long maxTotalRows = IndexTask.getValidMaxTotalRows(tuningConfig);
+    final Integer maxTotalSegments = IndexTask.getValidMaxTotalSegments(tuningConfig);
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean explicitIntervals = granularitySpec.bucketIntervals().isPresent();
     final SegmentAllocator segmentAllocator = createSegmentAllocator(toolbox, taskClient, ingestionSchema);
@@ -345,18 +346,18 @@ public class ParallelIndexSubTask extends AbstractTask
           // (in append mode) or may be created on our own authority (in overwrite mode).
           final String sequenceName = getId();
 
-          // Check if the upcoming row will result in the creation of a new segment
-          DateTime timestamp = inputRow.getTimestamp();
-          boolean rowInNewSegment = true;
-          Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
-
-          for (SegmentIdWithShardSpec segment : unpushedSegments) {
-            if (segment.getInterval().contains(timestamp.getMillis())) {
-              rowInNewSegment = false;
-            }
-          }
-
-          if (rowInNewSegment && unpushedSegments.size() >= tuningConfig.getMaxTotalSegments()) {
+          // Check if the upcoming row will result in the creation of a new segment.  If so and the new number of segments
+          // is greater than max total segments, push the segments.
+          Interval targetInterval = ingestionSchema.getDataSchema()
+                                                   .getGranularitySpec()
+                                                   .getSegmentGranularity()
+                                                   .bucket(inputRow.getTimestamp());
+          if (!appenderator.getUnpublishedSegments()
+                           .stream()
+                           .map(SegmentIdWithShardSpec::getInterval)
+                           .collect(Collectors.toSet())
+                           .contains(targetInterval)
+              && appenderator.getUnpublishedSegments().size() >= maxTotalSegments) {
             final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
             pushedSegments.addAll(pushed.getSegments());
             log.info("Pushed segments[%s]", pushed.getSegments());

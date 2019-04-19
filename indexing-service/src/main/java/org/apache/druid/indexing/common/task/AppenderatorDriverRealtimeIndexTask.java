@@ -87,6 +87,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CircularBuffer;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
@@ -109,6 +110,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements ChatHandler
 {
@@ -316,18 +318,18 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
             log.debug("Discarded null row, considering thrownAway.");
             rowIngestionMeters.incrementThrownAway();
           } else {
-            // Check if the upcoming row will result in the creation of a new segment
-            DateTime timestamp = inputRow.getTimestamp();
-            boolean rowInNewSegment = true;
-            Set<SegmentIdWithShardSpec> unpushedSegments = appenderator.getUnpublishedSegments();
-
-            for (SegmentIdWithShardSpec segment : unpushedSegments) {
-              if (segment.getInterval().contains(timestamp.getMillis())) {
-                rowInNewSegment = false;
-              }
-            }
-
-            if (rowInNewSegment && unpushedSegments.size() >= tuningConfig.getMaxTotalSegments()) {
+            // Check if the upcoming row will result in the creation of a new segment.  If so and the new number of segments
+            // is greater than max total segments, push the segments.
+            Interval targetInterval = spec.getDataSchema()
+                                          .getGranularitySpec()
+                                          .getSegmentGranularity()
+                                          .bucket(inputRow.getTimestamp());
+            if (!appenderator.getUnpublishedSegments()
+                             .stream()
+                             .map(SegmentIdWithShardSpec::getInterval)
+                             .collect(Collectors.toSet())
+                             .contains(targetInterval)
+                && appenderator.getUnpublishedSegments().size() >= tuningConfig.getMaxTotalSegments()) {
               publishSegments(driver, publisher, committerSupplier, sequenceName);
               sequenceNumber++;
               sequenceName = makeSequenceName(getId(), sequenceNumber);
