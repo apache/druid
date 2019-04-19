@@ -31,6 +31,9 @@ cache:
 
 matrix:
   include:
+      # Java 11 build
+    - jdk: openjdk11
+
       # license checks
     - env:
        - NAME="license checks"
