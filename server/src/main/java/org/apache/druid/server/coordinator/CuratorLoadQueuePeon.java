@@ -151,9 +151,9 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   @Override
   public void loadSegment(final DataSegment segment, final LoadPeonCallback callback)
   {
-
-    final SegmentHolder existingHolder = segmentsToLoad.get(segment);
-    if (existingHolder != null) {
+    SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
+    final SegmentHolder existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
+     if (existingHolder != null) {
       if ((callback != null)) {
         existingHolder.addCallback(callback);
       }
@@ -161,8 +161,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     }
     log.debug("Asking server peon[%s] to load segment[%s]", basePath, segment.getId());
     queuedSize.addAndGet(segment.getSize());
-    SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
-    segmentsToLoad.put(segment, segmentHolder);
     processingExecutor.submit(new SegmentChangeProcessor(segmentHolder));
   }
 
@@ -172,7 +170,8 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       final LoadPeonCallback callback
   )
   {
-    final SegmentHolder existingHolder = segmentsToDrop.get(segment);
+    SegmentHolder segmentHolder = new SegmentHolder(segment, DROP, Collections.singletonList(callback));
+    final SegmentHolder existingHolder = segmentsToDrop.put(segment, segmentHolder);
     if (existingHolder != null) {
       if (callback != null) {
         existingHolder.addCallback(callback);
@@ -180,8 +179,6 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
       return;
     }
     log.debug("Asking server peon[%s] to drop segment[%s]", basePath, segment.getId());
-    SegmentHolder segmentHolder = new SegmentHolder(segment, DROP, Collections.singletonList(callback));
-    segmentsToDrop.put(segment, segmentHolder);
     processingExecutor.submit(new SegmentChangeProcessor(segmentHolder));
   }
 
