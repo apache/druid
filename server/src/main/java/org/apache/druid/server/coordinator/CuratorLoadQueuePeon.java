@@ -153,7 +153,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   {
     SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
     final SegmentHolder existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
-     if (existingHolder != null) {
+    if (existingHolder != null) {
       if ((callback != null)) {
         existingHolder.addCallback(callback);
       }
