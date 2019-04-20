@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Tutorial: Load batch data using Hadoop"
+title: "Tutorial: Load batch data using Apache Hadoop"
 ---
 
 <!--
@@ -24,7 +24,7 @@ title: "Tutorial: Load batch data using Hadoop"
 
 # Tutorial: Load batch data using Hadoop
 
-This tutorial shows you how to load data files into Druid using a remote Hadoop cluster.
+This tutorial shows you how to load data files into Apache Druid (incubating) using a remote Hadoop cluster.
 
 For this tutorial, we'll assume that you've already completed the previous [batch ingestion tutorial](tutorial-batch.html) using Druid's native batch ingestion system.
 

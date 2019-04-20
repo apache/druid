@@ -24,7 +24,7 @@ title: "Querying"
 
 # Querying
 
-Queries are made using an HTTP REST style request to queryable processes ([Broker](../design/broker.html),
+Apache Druid (incubating) queries are made using an HTTP REST style request to queryable processes ([Broker](../design/broker.html),
 [Historical](../design/historical.html). [Peons](../design/peons.html)) that are running stream ingestion tasks can also accept queries. The
 query is expressed in JSON and each of these process types expose the same
 REST query interface. For normal Druid operations, queries should be issued to the Broker processes. Queries can be posted

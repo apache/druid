@@ -24,7 +24,7 @@ title: "Indexing Service"
 
 # Indexing Service
 
-The indexing service is a highly-available, distributed service that runs indexing related tasks. 
+The Apache Druid (incubating) indexing service is a highly-available, distributed service that runs indexing related tasks. 
 
 Indexing [tasks](../ingestion/tasks.html) create (and sometimes destroy) Druid [segments](../design/segments.html). The indexing service has a master/slave like architecture.
 

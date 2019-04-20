@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Kafka Lookups"
+title: "Apache Kafka Lookups"
 ---
 
 <!--
@@ -28,7 +28,7 @@ title: "Kafka Lookups"
 Lookups are an <a href="../experimental.html">experimental</a> feature.
 </div>
 
-Make sure to [include](../../operations/including-extensions.html) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` as an extension.
+To use this Apache Druid (incubating) extension, make sure to [include](../../operations/including-extensions.html) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` as an extension.
 
 If you need updates to populate as promptly as possible, it is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8) as a LookupExtractorFactory.
 

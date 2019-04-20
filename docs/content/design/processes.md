@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Processes and Servers"
+title: "Apache Druid (incubating) Processes and Servers"
 ---
 
 <!--

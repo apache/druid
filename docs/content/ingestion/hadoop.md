@@ -24,7 +24,7 @@ title: "Hadoop-based Batch Ingestion"
 
 # Hadoop-based Batch Ingestion
 
-Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running
+Apache Hadoop-based batch ingestion in Apache Druid (incubating) is supported via a Hadoop-ingestion task. These tasks can be posted to a running
 instance of a Druid [Overlord](../design/overlord.html).
 
 Please check [Hadoop-based Batch Ingestion VS Native Batch Ingestion](./hadoop-vs-native-batch.html) for differences between native batch ingestion and Hadoop-based ingestion.

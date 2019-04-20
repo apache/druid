@@ -24,7 +24,7 @@ title: "Rolling Updates"
 
 # Rolling Updates
 
-For rolling Druid cluster updates with no downtime, we recommend updating Druid processes in the
+For rolling Apache Druid (incubating) cluster updates with no downtime, we recommend updating Druid processes in the
 following order:
 
 1. Historical

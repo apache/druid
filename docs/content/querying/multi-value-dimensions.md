@@ -24,7 +24,7 @@ title: "Multi-value dimensions"
 
 # Multi-value dimensions
 
-Druid supports "multi-value" string dimensions. These are generated when an input field contains an array of values
+Apache Druid (incubating) supports "multi-value" string dimensions. These are generated when an input field contains an array of values
 instead of a single value (e.e. JSON arrays, or a TSV field containing one or more `listDelimiter` characters).
 
 This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they

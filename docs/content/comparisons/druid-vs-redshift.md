@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid vs Redshift"
+title: "Apache Druid (incubating) vs Redshift"
 ---
 
 <!--

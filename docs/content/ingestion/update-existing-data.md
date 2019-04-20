@@ -24,7 +24,7 @@ title: "Updating Existing Data"
 
 # Updating Existing Data
 
-Once you ingest some data in a dataSource for an interval and create Druid segments, you might want to make changes to 
+Once you ingest some data in a dataSource for an interval and create Apache Druid (incubating) segments, you might want to make changes to 
 the ingested data. There are several ways this can be done.
 
 ##### Updating Dimension Values

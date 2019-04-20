@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Firehoses"
+title: "Apache Druid (incubating) Firehoses"
 ---
 
 <!--

@@ -29,7 +29,7 @@ Built-in SQL is an <a href="../development/experimental.html">experimental</a> f
 subject to change.
 </div>
 
-Druid SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
+Apache Druid (incubating) SQL is a built-in SQL layer and an alternative to Druid's native JSON-based query language, and is powered by a
 parser and planner based on [Apache Calcite](https://calcite.apache.org/). Druid SQL translates SQL into native Druid
 queries on the query Broker (the first process you query), which are then passed down to data processes as native Druid
 queries. Other than the (slight) overhead of translating SQL on the Broker, there isn't an additional performance
