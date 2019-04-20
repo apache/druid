@@ -69,6 +69,7 @@ import org.apache.druid.segment.indexing.IngestionSpec;
 import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -980,19 +981,34 @@ public class IndexTask extends AbstractTask implements ChatHandler
           }
           // Check if the upcoming row will result in the creation of a new segment.  If so and the new number of segments
           // is greater than max total segments, push the segments.
-          Interval targetInterval = ingestionSchema.getDataSchema()
-                                                   .getGranularitySpec()
-                                                   .getSegmentGranularity()
-                                                   .bucket(inputRow.getTimestamp());
-          if (!appenderator.getUnpublishedSegments()
-                           .stream()
-                           .map(SegmentIdWithShardSpec::getInterval)
-                           .collect(Collectors.toSet())
-                           .contains(targetInterval)
-              && !isGuaranteedRollup
-              && appenderator.getUnpublishedSegments().size() >= maxTotalSegments) {
-            final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
-            log.info("Pushed segments[%s]", pushed.getSegments());
+          if (ingestionSchema.getDataSchema().getGranularitySpec() instanceof UniformGranularitySpec) {
+            Interval targetInterval = ingestionSchema.getDataSchema()
+                                                     .getGranularitySpec()
+                                                     .getSegmentGranularity()
+                                                     .bucket(inputRow.getTimestamp());
+            if (!appenderator.getUnpublishedSegments()
+                             .stream()
+                             .map(SegmentIdWithShardSpec::getInterval)
+                             .collect(Collectors.toSet())
+                             .contains(targetInterval)
+                && !isGuaranteedRollup
+                && appenderator.getUnpublishedSegments().size() >= maxTotalSegments) {
+              final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+              log.info("Pushed segments[%s]", pushed.getSegments());
+            }
+          } else {
+            boolean rowInNewSegment = true;
+            for (SegmentIdWithShardSpec segment : appenderator.getUnpublishedSegments()) {
+              if (segment.getInterval().contains(inputRow.getTimestamp().getMillis())) {
+                rowInNewSegment = false;
+              }
+            }
+            if (!isGuaranteedRollup &&
+                rowInNewSegment &&
+                appenderator.getUnpublishedSegments().size() >= tuningConfig.getMaxTotalSegments()) {
+              final SegmentsAndMetadata pushed = driver.pushAllAndClear(pushTimeout);
+              log.info("Pushed segments[%s]", pushed.getSegments());
+            }
           }
 
           final AppenderatorDriverAddResult addResult = driver.add(inputRow, sequenceName);
@@ -1298,7 +1314,6 @@ public class IndexTask extends AbstractTask implements ChatHandler
     private final long maxBytesInMemory;
     @Nullable
     private final Long maxTotalRows;
-    @Nullable
     private final Integer maxTotalSegments;
     @Nullable
     private final Integer numShards;
