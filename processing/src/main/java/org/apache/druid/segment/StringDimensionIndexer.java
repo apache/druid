@@ -444,44 +444,51 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
       public IndexedInts getRow()
       {
 
-        int[] indices;
-        if (dimIndex < currEntry.get().getDimsLength()) {
-          indices = (int[]) currEntry.get().getDim(dimIndex);
+        IncrementalIndexRow key = currEntry.get();
+
+        if (key.avoidDoubleCopyStringDim()) {
+          // incase of oak the key is serialized so its a wast to copy array twice.
+          indexedInts.setValues(key, dimIndex);
         } else {
-          indices = null;
-        }
-
-        int[] row = null;
-        int rowSize = 0;
-
-        // usually due to currEntry's rowIndex is smaller than the row's rowIndex in which this dim first appears
-        if (indices == null || indices.length == 0) {
-          if (hasMultipleValues) {
-            row = IntArrays.EMPTY_ARRAY;
-            rowSize = 0;
+          int[] indices;
+          if (dimIndex < key.getDimsLength()) {
+            indices = (int[]) currEntry.get().getDim(dimIndex);
           } else {
-            final int nullId = getEncodedValue(null, false);
-            if (nullId > -1) {
-              if (nullIdIntArray == null) {
-                nullIdIntArray = new int[]{nullId};
-              }
-              row = nullIdIntArray;
-              rowSize = 1;
-            } else {
-              // doesn't contain nullId, then empty array is used
-              // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
+            indices = null;
+          }
+
+          int[] row = null;
+          int rowSize = 0;
+
+          // usually due to currEntry's rowIndex is smaller than the row's rowIndex in which this dim first appears
+          if (indices == null || indices.length == 0) {
+            if (hasMultipleValues) {
               row = IntArrays.EMPTY_ARRAY;
               rowSize = 0;
+            } else {
+              final int nullId = getEncodedValue(null, false);
+              if (nullId > -1) {
+                if (nullIdIntArray == null) {
+                  nullIdIntArray = new int[]{nullId};
+                }
+                row = nullIdIntArray;
+                rowSize = 1;
+              } else {
+                // doesn't contain nullId, then empty array is used
+                // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
+                row = IntArrays.EMPTY_ARRAY;
+                rowSize = 0;
+              }
             }
           }
-        }
 
-        if (row == null && indices != null && indices.length > 0) {
-          row = indices;
-          rowSize = indices.length;
-        }
+          if (row == null && indices != null && indices.length > 0) {
+            row = indices;
+            rowSize = indices.length;
+          }
 
-        indexedInts.setValues(row, rowSize);
+          indexedInts.setValues(row, rowSize);
+        }
         return indexedInts;
       }
 

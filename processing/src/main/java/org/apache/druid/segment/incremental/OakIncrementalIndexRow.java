@@ -23,6 +23,7 @@ import com.oath.oak.OakRBuffer;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 
 public class OakIncrementalIndexRow extends IncrementalIndexRow
@@ -111,6 +112,42 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     return sizeInBytes;
   }
 
+  @Override
+  public boolean avoidDoubleCopyStringDim()
+  {
+    return true;
+  }
+
+  @Override
+  public int stringDimSize(int dimIndex)
+  {
+    if (getDimsLength() == 0 || getDimsLength() <= dimIndex) {
+      return 0;
+    }
+    int dimIndexInBuffer = OakUtils.getDimIndexInBuffer(dimIndex);
+    int arraySize = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_LENGTH_OFFSET);
+    return arraySize;
+  }
+
+  @Override
+  public int copyStringDim(int dimIndex, int[] expansion)
+  {
+    if (getDimsLength() == 0 || getDimsLength() <= dimIndex) {
+      return 0;
+    }
+    int dimIndexInBuffer = OakUtils.getDimIndexInBuffer(dimIndex);
+
+    int arrayIndex = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_INDEX_OFFSET);
+    int arraySize = dimensions.getInt(dimIndexInBuffer + OakUtils.ARRAY_LENGTH_OFFSET);
+    if (expansion.length < arraySize) {
+      expansion = new int[arraySize];
+    }
+    for (int i = 0; i < arraySize; i++) {
+      expansion[i] = dimensions.getInt(arrayIndex);
+      arrayIndex += Integer.BYTES;
+    }
+    return arraySize;
+  }
 
   /* ---------------- OakRBuffer utils -------------- */
 

@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.DimensionIndexer;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Array;
@@ -214,5 +215,25 @@ public class IncrementalIndexRow
     } else {
       return false;
     }
+  }
+
+  public boolean avoidDoubleCopyStringDim()
+  {
+    return false;
+  }
+
+  public int stringDimSize(int dimIndex)
+  {
+    if (dims == null || dimIndex >= dims.length || dims[dimIndex] == null) {
+      return 0;
+    }
+
+    return ((int[]) dims[dimIndex]).length;
+  }
+
+  public int copyStringDim(int dimIndex, int[] expansion)
+  {
+    // No reason to get here
+    throw new NotImplementedException();
   }
 }
