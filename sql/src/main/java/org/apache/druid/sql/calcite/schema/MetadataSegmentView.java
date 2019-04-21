@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -32,7 +33,6 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -45,7 +45,6 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentWithOvershadowedStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -75,9 +74,10 @@ public class MetadataSegmentView
   private final boolean isCacheEnabled;
   /**
    * Use {@link ConcurrentSkipListMap} so that the order of segments is deterministic and sys.segments queries return the segments in sorted order based on segmentId
+   * {@link CachedSegmentOvershadowedStatus} contains the overshadow status and the timestamp for the DataSegment
    */
   @Nullable
-  private final ConcurrentSkipListMap<SegmentWithOvershadowedStatus, DateTime> publishedSegments;
+  private final ConcurrentSkipListMap<DataSegment, CachedSegmentOvershadowedStatus> publishedSegments;
   private final ScheduledExecutorService scheduledExec;
   private final long pollPeriodInMS;
   private final LifecycleLock lifecycleLock = new LifecycleLock();
@@ -144,16 +144,12 @@ public class MetadataSegmentView
         segmentWatcherConfig.getWatchedDataSources()
     );
 
-    final DateTime timestamp = DateTimes.nowUtc();
+    final long timestamp = System.currentTimeMillis();
     while (metadataSegments.hasNext()) {
       final SegmentWithOvershadowedStatus segment = metadataSegments.next();
       final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-      final SegmentWithOvershadowedStatus segmentWithOvershadowedStatus = new SegmentWithOvershadowedStatus(
-          interned,
-          segment.isOvershadowed()
-      );
       // timestamp is used to filter deleted segments
-      publishedSegments.put(segmentWithOvershadowedStatus, timestamp);
+      publishedSegments.put(interned, new CachedSegmentOvershadowedStatus(segment.isOvershadowed(), timestamp));
     }
 
     // filter the segments from cache whose timestamp is not equal to latest timestamp stored,
@@ -165,7 +161,7 @@ public class MetadataSegmentView
     // we are incrementally removing deleted segments from the map
     // This means publishedSegments will be eventually consistent with
     // the segments in coordinator
-    publishedSegments.entrySet().removeIf(e -> e.getValue() != timestamp);
+    publishedSegments.entrySet().removeIf(e -> e.getValue().getTimestamp() != timestamp);
     cachePopulated.set(true);
   }
 
@@ -176,7 +172,13 @@ public class MetadataSegmentView
           lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS) && cachePopulated.get(),
           "hold on, still syncing published segments"
       );
-      return publishedSegments.keySet().iterator();
+      return Iterators.transform(
+          publishedSegments.entrySet().iterator(),
+          input -> new SegmentWithOvershadowedStatus(
+              input.getKey(),
+              input.getValue().isOvershadowed()
+          )
+      );
     } else {
       return getMetadataSegments(
           coordinatorDruidLeaderClient,
@@ -258,6 +260,28 @@ public class MetadataSegmentView
           scheduledExec.schedule(new PollTask(), delayMS, TimeUnit.MILLISECONDS);
         }
       }
+    }
+  }
+  
+  private static class CachedSegmentOvershadowedStatus
+  {
+    final boolean overshadowed;
+    final long timestamp;
+
+    public CachedSegmentOvershadowedStatus(boolean overshadowed, long timestamp)
+    {
+      this.overshadowed = overshadowed;
+      this.timestamp = timestamp;
+    }
+
+    public boolean isOvershadowed()
+    {
+      return overshadowed;
+    }
+
+    public long getTimestamp()
+    {
+      return timestamp;
     }
   }
 
