@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "My Data isn't being loaded"
+title: "Apache Druid (incubating) FAQ"
 ---
 
 <!--

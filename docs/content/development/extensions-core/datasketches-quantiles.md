@@ -24,7 +24,7 @@ title: "DataSketches Quantiles Sketch module"
 
 # DataSketches Quantiles Sketch module
 
-This module provides Druid aggregators based on numeric quantiles DoublesSketch from [datasketches](http://datasketches.github.io/) library. Quantiles sketch is a mergeable streaming algorithm to estimate the distribution of values, and approximately answer queries about the rank of a value, probability mass function of the distribution (PMF) or histogram, cummulative distribution function (CDF), and quantiles (median, min, max, 95th percentile and such). See [Quantiles Sketch Overview](https://datasketches.github.io/docs/Quantiles/QuantilesOverview.html).
+This module provides Apache Druid (incubating) aggregators based on numeric quantiles DoublesSketch from [datasketches](http://datasketches.github.io/) library. Quantiles sketch is a mergeable streaming algorithm to estimate the distribution of values, and approximately answer queries about the rank of a value, probability mass function of the distribution (PMF) or histogram, cummulative distribution function (CDF), and quantiles (median, min, max, 95th percentile and such). See [Quantiles Sketch Overview](https://datasketches.github.io/docs/Quantiles/QuantilesOverview.html).
 
 There are three major modes of operation:
 

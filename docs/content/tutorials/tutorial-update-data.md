@@ -26,7 +26,7 @@ title: "Tutorial: Updating existing data"
 
 This tutorial demonstrates how to update existing data, showing both overwrites and appends.
 
-For this tutorial, we'll assume you've already downloaded Druid as described in 
+For this tutorial, we'll assume you've already downloaded Apache Druid (incubating) as described in 
 the [single-machine quickstart](index.html) and have it running on your local machine. 
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.html), [Tutorial: Querying data](../tutorials/tutorial-query.html), and [Tutorial: Rollup](../tutorials/tutorial-rollup.html).

@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Management UIs"
+title: "Apache Druid (incubating) Management UIs"
 ---
 
 <!--

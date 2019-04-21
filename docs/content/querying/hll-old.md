@@ -26,7 +26,7 @@ title: "Cardinality/HyperUnique aggregators"
 
 ## Cardinality aggregator
 
-Computes the cardinality of a set of Druid dimensions, using HyperLogLog to estimate the cardinality. Please note that this 
+Computes the cardinality of a set of Apache Druid (incubating) dimensions, using HyperLogLog to estimate the cardinality. Please note that this 
 aggregator will be much slower than indexing a column with the hyperUnique aggregator. This aggregator also runs over a dimension column, which 
 means the string dimension cannot be removed from the dataset to improve rollup. In general, we strongly recommend using the hyperUnique aggregator 
 instead of the cardinality aggregator if you do not care about the individual values of a dimension.

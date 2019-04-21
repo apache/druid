@@ -26,7 +26,7 @@ title: "Tutorial: Load streaming data with HTTP push"
 
 ## Getting started
 
-This tutorial shows you how to load streaming data into Druid using HTTP push via Tranquility Server.
+This tutorial shows you how to load streaming data into Apache Druid (incubating) using HTTP push via Tranquility Server.
 
 [Tranquility Server](https://github.com/druid-io/tranquility/blob/master/docs/server.md) allows a stream of data to be pushed into Druid using HTTP POSTs.
 

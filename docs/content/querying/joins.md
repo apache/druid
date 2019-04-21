@@ -24,7 +24,7 @@ title: "Joins"
 
 # Joins
 
-Druid has limited support for joins through [query-time lookups](../querying/lookups.html). The common use case of 
+Apache Druid (incubating) has limited support for joins through [query-time lookups](../querying/lookups.html). The common use case of 
 query-time lookups is to replace one dimension value (e.g. a String ID) with another value (e.g. a human-readable String value). This is similar to a star-schema join.
 
 Druid does not yet have full support for joins. Although Druid’s storage format would allow for the implementation 

@@ -24,7 +24,7 @@ title: "groupBy Queries"
 
 # groupBy Queries
 
-These types of queries take a groupBy query object and return an array of JSON objects where each object represents a
+These types of Apache Druid (incubating) queries take a groupBy query object and return an array of JSON objects where each object represents a
 grouping asked for by the query.
 
 <div class="note info">

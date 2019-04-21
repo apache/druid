@@ -24,7 +24,7 @@ title: "Configuration Reference"
 
 # Configuration Reference
 
-This page documents all of the configuration properties for each Druid service type.
+This page documents all of the configuration properties for each Apache Druid (incubating) service type.
 
 ## Table of Contents
   * [Recommended Configuration File Organization](#recommended-configuration-file-organization)
