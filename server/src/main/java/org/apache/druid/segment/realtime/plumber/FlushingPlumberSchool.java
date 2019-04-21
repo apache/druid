@@ -64,18 +64,18 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
 
   @JsonCreator
   public FlushingPlumberSchool(
-          @JsonProperty("flushDuration") Duration flushDuration,
-          @JacksonInject ServiceEmitter emitter,
-          @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
-          @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
-          @JacksonInject @Processing ExecutorService queryExecutorService,
-          @JacksonInject IndexMergerV9 indexMergerV9,
-          @JacksonInject IndexIO indexIO,
-          @JacksonInject Cache cache,
-          @JacksonInject CacheConfig cacheConfig,
-          @JacksonInject CachePopulatorStats cachePopulatorStats,
-          @JacksonInject ObjectMapper objectMapper,
-          @JacksonInject @Named("useOak") boolean useOak)
+      @JsonProperty("flushDuration") Duration flushDuration,
+      @JacksonInject ServiceEmitter emitter,
+      @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
+      @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
+      @JacksonInject @Processing ExecutorService queryExecutorService,
+      @JacksonInject IndexMergerV9 indexMergerV9,
+      @JacksonInject IndexIO indexIO,
+      @JacksonInject Cache cache,
+      @JacksonInject CacheConfig cacheConfig,
+      @JacksonInject CachePopulatorStats cachePopulatorStats,
+      @JacksonInject ObjectMapper objectMapper,
+      @JacksonInject @Named("useOak") boolean useOak)
   {
     super(
         emitter,
