@@ -348,10 +348,8 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @POST
   @Path("/segment/allocate")
   @Produces(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-  public Response allocateSegment(
-      DateTime timestamp,
-      @Context final HttpServletRequest req
-  )
+  @Consumes(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
+  public Response allocateSegment(DateTime timestamp, @Context final HttpServletRequest req)
   {
     ChatHandlers.authorizationCheck(
         req,
