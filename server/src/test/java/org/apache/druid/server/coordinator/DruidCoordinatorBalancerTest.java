@@ -516,7 +516,7 @@ public class DruidCoordinatorBalancerTest
       List<Boolean> decommissioning
   )
   {
-    return DruidCoordinatorRuntimeParams
+    return CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(
             new DruidCluster(
@@ -537,13 +537,8 @@ public class DruidCoordinatorBalancerTest
                 .collect(Collectors.toMap(i -> String.valueOf(i + 1), peons::get))
         )
         .withUsedSegmentsInTest(segments)
-        .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(
-                MAX_SEGMENTS_TO_MOVE
-            ).build()
-        )
-        .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"));
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE).build())
+        .withBalancerStrategy(balancerStrategy);
   }
 
   private static void mockDruidServer(

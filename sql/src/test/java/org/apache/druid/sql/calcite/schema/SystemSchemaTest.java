@@ -96,11 +96,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
@@ -408,11 +407,8 @@ public class SystemSchemaTest extends CalciteTestBase
         .withConstructor(druidSchema, metadataView, mapper, authMapper)
         .createMock();
     EasyMock.replay(segmentsTable);
-    final Set<DataSegment> publishedSegments = Stream.of(publishedSegment1,
-                                                         publishedSegment2,
-                                                         publishedSegment3,
-                                                         segment1,
-                                                         segment2).collect(Collectors.toSet());
+    final Set<DataSegment> publishedSegments =
+        new HashSet<>(Arrays.asList(publishedSegment1, publishedSegment2, publishedSegment3, segment1, segment2));
     EasyMock.expect(metadataView.getPublishedSegments()).andReturn(publishedSegments.iterator()).once();
 
     EasyMock.replay(client, request, responseHolder, responseHandler, metadataView);

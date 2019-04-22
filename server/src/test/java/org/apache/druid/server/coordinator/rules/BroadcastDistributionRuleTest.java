@@ -25,6 +25,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -33,6 +34,7 @@ import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -40,9 +42,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -248,17 +247,19 @@ public class BroadcastDistributionRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 holdersOfLargeSegments.get(0),
                 holderOfSmallSegment,
                 holdersOfLargeSegments2.get(0)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
+            ),
             DruidServer.DEFAULT_TIER,
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 holdersOfLargeSegments.get(1),
                 holdersOfLargeSegments.get(2),
                 holdersOfLargeSegments2.get(1)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            )
         )
     );
 
@@ -266,11 +267,12 @@ public class BroadcastDistributionRuleTest
         null,
         ImmutableMap.of(
             "tier1",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 activeServer,
                 decommissioningServer1,
                 decommissioningServer2
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            )
         )
     );
   }
@@ -278,22 +280,20 @@ public class BroadcastDistributionRuleTest
   @Test
   public void testBroadcastToSingleDataSource()
   {
-    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
+    final ForeverBroadcastDistributionRule rule =
+        new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(
-                                         smallSegment,
-                                         largeSegments.get(0),
-                                         largeSegments.get(1),
-                                         largeSegments.get(2),
-                                         largeSegments2.get(0),
-                                         largeSegments2.get(1)
-                                     ).build(),
+        makeCoordinartorRuntimeParams(
+            druidCluster,
+            smallSegment,
+            largeSegments.get(0),
+            largeSegments.get(1),
+            largeSegments.get(2),
+            largeSegments2.get(0),
+            largeSegments2.get(1)
+        ),
         smallSegment
     );
 
@@ -313,6 +313,19 @@ public class BroadcastDistributionRuleTest
     assertFalse(holderOfSmallSegment.getPeon().getSegmentsToLoad().contains(smallSegment));
   }
 
+  private static DruidCoordinatorRuntimeParams makeCoordinartorRuntimeParams(
+      DruidCluster druidCluster,
+      DataSegment... usedSegments
+  )
+  {
+    return CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withUsedSegmentsInTest(usedSegments)
+        .build();
+  }
+
   /**
    * Servers:
    * name             | segments
@@ -329,19 +342,17 @@ public class BroadcastDistributionRuleTest
   @Test
   public void testBroadcastDecommissioning()
   {
-    final ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
+    final ForeverBroadcastDistributionRule rule =
+        new ForeverBroadcastDistributionRule(ImmutableList.of("large_source"));
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(secondCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(secondCluster))
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(
-                                         smallSegment,
-                                         largeSegments.get(0),
-                                         largeSegments.get(1)
-                                     ).build(),
+        makeCoordinartorRuntimeParams(
+            secondCluster,
+            smallSegment,
+            largeSegments.get(0),
+            largeSegments.get(1)
+        ),
         smallSegment
     );
 
@@ -362,18 +373,15 @@ public class BroadcastDistributionRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(
-                                         smallSegment,
-                                         largeSegments.get(0),
-                                         largeSegments.get(1),
-                                         largeSegments.get(2),
-                                         largeSegments2.get(0),
-                                         largeSegments2.get(1)
-                                     ).build(),
+        makeCoordinartorRuntimeParams(
+            druidCluster,
+            smallSegment,
+            largeSegments.get(0),
+            largeSegments.get(1),
+            largeSegments.get(2),
+            largeSegments2.get(0),
+            largeSegments2.get(1)
+        ),
         smallSegment
     );
 
@@ -400,23 +408,20 @@ public class BroadcastDistributionRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(
-                                         smallSegment,
-                                         largeSegments.get(0),
-                                         largeSegments.get(1),
-                                         largeSegments.get(2),
-                                         largeSegments2.get(0),
-                                         largeSegments2.get(1)
-                                     ).build(),
+        makeCoordinartorRuntimeParams(
+            druidCluster,
+            smallSegment,
+            largeSegments.get(0),
+            largeSegments.get(1),
+            largeSegments.get(2),
+            largeSegments2.get(0),
+            largeSegments2.get(1)
+        ),
         smallSegment
     );
 
     assertEquals(6L, stats.getGlobalStat(LoadRule.ASSIGNED_COUNT));
-    assertEquals(false, stats.hasPerTierStats());
+    assertFalse(stats.hasPerTierStats());
 
     assertTrue(
         druidCluster.getAllServers().stream()

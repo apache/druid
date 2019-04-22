@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -199,16 +200,9 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withUsedSegmentsInTest(usedSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -221,6 +215,20 @@ public class DruidCoordinatorRuleRunnerTest
 
     exec.shutdown();
     EasyMock.verify(mockPeon);
+  }
+
+  private DruidCoordinatorRuntimeParams.Builder makeCoordinatorRuntimeParams(
+      DruidCluster druidCluster,
+      BalancerStrategy balancerStrategy
+  )
+  {
+    return CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withUsedSegmentsInTest(usedSegments)
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withBalancerStrategy(balancerStrategy);
   }
 
   /**
@@ -256,7 +264,8 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 new ServerHolder(
                     new DruidServer(
                         "serverHot",
@@ -281,9 +290,10 @@ public class DruidCoordinatorRuleRunnerTest
                     ).toImmutableDruidServer(),
                     mockPeon
                 )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
+            ),
             "cold",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 new ServerHolder(
                     new DruidServer(
                         "serverCold",
@@ -296,7 +306,7 @@ public class DruidCoordinatorRuleRunnerTest
                     ).toImmutableDruidServer(),
                     mockPeon
                 )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            )
         )
     );
 
@@ -305,15 +315,7 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withUsedSegmentsInTest(usedSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -404,15 +406,14 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withUsedSegmentsInTest(usedSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(segmentReplicantLookup)
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .build();
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withUsedSegmentsInTest(usedSegments)
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategy(balancerStrategy)
+        .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -478,16 +479,9 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withEmitter(emitter)
-            .withDruidCluster(druidCluster)
-            .withUsedSegmentsInTest(usedSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy)
+        .withEmitter(emitter)
+        .build();
 
     ruleRunner.run(params);
 
@@ -540,14 +534,14 @@ public class DruidCoordinatorRuleRunnerTest
         )
     );
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withEmitter(emitter)
-            .withDruidCluster(druidCluster)
-            .withUsedSegmentsInTest(usedSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .build();
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withUsedSegmentsInTest(usedSegments)
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withEmitter(emitter)
+        .build();
 
     ruleRunner.run(params);
 
@@ -610,14 +604,14 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -676,16 +670,11 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "normal",
-            Stream.of(
-                new ServerHolder(
-                    server1.toImmutableDruidServer(),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    server2.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
+                new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
+                new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
+            )
         )
     );
 
@@ -696,14 +685,14 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisLagSinceCoordinatorStartBeforeCanMarkAsUnusedOvershadowedSegments(0L).build())
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -787,14 +776,14 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -866,14 +855,14 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -949,11 +938,12 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "normal",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 new ServerHolder(server1.toImmutableDruidServer(), mockPeon, false),
                 new ServerHolder(server2.toImmutableDruidServer(), anotherMockPeon, false),
                 new ServerHolder(server3.toImmutableDruidServer(), anotherMockPeon, false)
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            )
         )
     );
 
@@ -964,14 +954,14 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -987,8 +977,6 @@ public class DruidCoordinatorRuleRunnerTest
   /**
    * Nodes:
    * hot - 2 replicants
-   *
-   * @throws Exception
    */
   @Test
   public void testReplicantThrottle()
@@ -1014,7 +1002,8 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "hot",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 new ServerHolder(
                     new DruidServer(
                         "serverHot",
@@ -1039,7 +1028,7 @@ public class DruidCoordinatorRuleRunnerTest
                     ).toImmutableDruidServer(),
                     mockPeon
                 )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            )
         )
     );
 
@@ -1048,15 +1037,7 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withUsedSegmentsInTest(usedSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();
@@ -1078,13 +1059,13 @@ public class DruidCoordinatorRuleRunnerTest
     );
 
     afterParams = ruleRunner.run(
-        new DruidCoordinatorRuntimeParams.Builder()
+        CoordinatorRuntimeParamsTestHelpers
+            .newBuilder()
             .withDruidCluster(druidCluster)
             .withEmitter(emitter)
-            .withUsedSegmentsInTest(Collections.singletonList(overFlowSegment))
+            .withUsedSegmentsInTest(overFlowSegment)
             .withDatabaseRuleManager(databaseRuleManager)
             .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build()
     );
@@ -1102,8 +1083,6 @@ public class DruidCoordinatorRuleRunnerTest
    * Nodes:
    * hot - nothing loaded
    * _default_tier - 1 segment loaded
-   *
-   * @throws Exception
    */
   @Test
   public void testReplicantThrottleAcrossTiers()
@@ -1181,15 +1160,7 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withUsedSegmentsInTest(usedSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, balancerStrategy).build();
 
     DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(new ReplicationThrottler(7, 1), coordinator);
     DruidCoordinatorRuntimeParams afterParams = runner.run(params);
@@ -1267,16 +1238,11 @@ public class DruidCoordinatorRuleRunnerTest
         null,
         ImmutableMap.of(
             "normal",
-            Stream.of(
-                new ServerHolder(
-                    server1.toImmutableDruidServer(),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    server2.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
+                new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
+                new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
+            )
         )
     );
 
@@ -1287,14 +1253,14 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params = new DruidCoordinatorRuntimeParams.Builder()
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
         .withDruidCluster(druidCluster)
         .withDynamicConfigs(COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS)
         .withUsedSegmentsInTest(longerUsedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
         .withBalancerStrategy(balancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
         .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -1370,16 +1336,15 @@ public class DruidCoordinatorRuleRunnerTest
     BalancerStrategy balancerStrategy =
         new CostBalancerStrategyFactory().createBalancerStrategy(exec);
 
-    DruidCoordinatorRuntimeParams params =
-        new DruidCoordinatorRuntimeParams.Builder()
-            .withDruidCluster(druidCluster)
-            .withUsedSegmentsInTest(usedSegments)
-            .withDatabaseRuleManager(databaseRuleManager)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-            .withBalancerStrategy(balancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
-            .build();
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withUsedSegmentsInTest(usedSegments)
+        .withDatabaseRuleManager(databaseRuleManager)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+        .withBalancerStrategy(balancerStrategy)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
+        .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
     CoordinatorStats stats = afterParams.getCoordinatorStats();

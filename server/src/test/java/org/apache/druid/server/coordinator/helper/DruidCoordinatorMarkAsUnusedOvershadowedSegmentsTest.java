@@ -26,6 +26,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -117,7 +118,7 @@ public class DruidCoordinatorMarkAsUnusedOvershadowedSegmentsTest
             ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
         ));
 
-    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withUsedSegmentsInTest(usedSegments)
         .withCoordinatorStats(new CoordinatorStats())

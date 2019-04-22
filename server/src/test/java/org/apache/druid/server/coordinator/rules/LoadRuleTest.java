@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.BalancerStrategy;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.CoordinatorRuntimeParamsTestHelpers;
 import org.apache.druid.server.coordinator.CoordinatorStats;
 import org.apache.druid.server.coordinator.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -47,6 +48,7 @@ import org.apache.druid.server.coordinator.SegmentReplicantLookup;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -176,13 +178,7 @@ public class LoadRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        makeCoordinatorRuntimeParams(druidCluster, segment),
         segment
     );
 
@@ -190,6 +186,21 @@ public class LoadRuleTest
     Assert.assertEquals(1L, stats.getTieredStat(LoadRule.ASSIGNED_COUNT, DruidServer.DEFAULT_TIER));
 
     EasyMock.verify(throttler, mockPeon, mockBalancerStrategy);
+  }
+
+  private DruidCoordinatorRuntimeParams makeCoordinatorRuntimeParams(
+      DruidCluster druidCluster,
+      DataSegment... usedSegments
+  )
+  {
+    return CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withReplicationManager(throttler)
+        .withBalancerStrategy(mockBalancerStrategy)
+        .withUsedSegmentsInTest(usedSegments)
+        .build();
   }
 
   @Test
@@ -217,7 +228,8 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 new ServerHolder(
                     new DruidServer(
                         "serverHot",
@@ -229,7 +241,8 @@ public class LoadRuleTest
                         1
                     ).toImmutableDruidServer(),
                     mockPeon
-                ), new ServerHolder(
+                ),
+                new ServerHolder(
                     new DruidServer(
                         "serverHot2",
                         "hostHot2",
@@ -241,19 +254,13 @@ public class LoadRuleTest
                     ).toImmutableDruidServer(),
                     mockPeon
                 )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            )
         )
     );
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        makeCoordinatorRuntimeParams(druidCluster, segment),
         segment
     );
 
@@ -268,7 +275,8 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 new ServerHolder(
                     new DruidServer(
                         "serverHot",
@@ -280,7 +288,8 @@ public class LoadRuleTest
                         1
                     ).toImmutableDruidServer(),
                     loadingPeon
-                ), new ServerHolder(
+                ),
+                new ServerHolder(
                     new DruidServer(
                         "serverHot2",
                         "hostHot2",
@@ -292,18 +301,12 @@ public class LoadRuleTest
                     ).toImmutableDruidServer(),
                     mockPeon
                 )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            )
         )
     );
     CoordinatorStats statsAfterLoadPrimary = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(afterLoad)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(afterLoad))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        makeCoordinatorRuntimeParams(afterLoad, segment),
         segment
     );
 
@@ -339,7 +342,8 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "tier1",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 new ServerHolder(
                     new DruidServer(
                         "server1",
@@ -352,9 +356,10 @@ public class LoadRuleTest
                     ).toImmutableDruidServer(),
                     mockPeon1
                 )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
+            ),
             "tier2",
-            Stream.of(
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
                 new ServerHolder(
                     new DruidServer(
                         "server2",
@@ -379,7 +384,7 @@ public class LoadRuleTest
                     ).toImmutableDruidServer(),
                     mockPeon2
                 )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            )
         )
     );
 
@@ -387,13 +392,7 @@ public class LoadRuleTest
 
     final CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        makeCoordinatorRuntimeParams(druidCluster, segment),
         segment
     );
 
@@ -454,35 +453,22 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            Stream.of(
-                new ServerHolder(
-                    server1.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder()))),
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
+                new ServerHolder(server1.toImmutableDruidServer(), mockPeon)
+            ),
             DruidServer.DEFAULT_TIER,
-            Stream.of(
-                new ServerHolder(
-                    server2.toImmutableDruidServer(),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    server3.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
+                new ServerHolder(server2.toImmutableDruidServer(), mockPeon),
+                new ServerHolder(server3.toImmutableDruidServer(), mockPeon)
+            )
         )
     );
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        makeCoordinatorRuntimeParams(druidCluster, segment),
         segment
     );
 
@@ -535,13 +521,14 @@ public class LoadRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        CoordinatorRuntimeParamsTestHelpers
+            .newBuilder()
+            .withDruidCluster(druidCluster)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withReplicationManager(throttler)
+            .withBalancerStrategy(mockBalancerStrategy)
+            .withUsedSegmentsInTest(segment)
+            .build(),
         segment
     );
 
@@ -593,28 +580,17 @@ public class LoadRuleTest
         null,
         ImmutableMap.of(
             "hot",
-            Stream.of(
-                new ServerHolder(
-                    server1.toImmutableDruidServer(),
-                    mockPeon
-                ),
-                new ServerHolder(
-                    server2.toImmutableDruidServer(),
-                    mockPeon
-                )
-            ).collect(Collectors.toCollection(() -> new TreeSet<>(Collections.reverseOrder())))
+            CollectionUtils.newTreeSet(
+                Collections.reverseOrder(),
+                new ServerHolder(server1.toImmutableDruidServer(), mockPeon),
+                new ServerHolder(server2.toImmutableDruidServer(), mockPeon)
+            )
         )
     );
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        makeCoordinatorRuntimeParams(druidCluster, segment),
         segment
     );
 
@@ -663,17 +639,15 @@ public class LoadRuleTest
     DataSegment dataSegment2 = createDataSegment("ds2");
     DataSegment dataSegment3 = createDataSegment("ds3");
 
-    DruidCoordinatorRuntimeParams params =
-        DruidCoordinatorRuntimeParams
-            .newBuilder()
-            .withDruidCluster(druidCluster)
-            .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-            .withReplicationManager(throttler)
-            .withBalancerStrategy(mockBalancerStrategy)
-            .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-            .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
-            .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
-            .build();
+    DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
+        .newBuilder()
+        .withDruidCluster(druidCluster)
+        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
+        .withReplicationManager(throttler)
+        .withBalancerStrategy(mockBalancerStrategy)
+        .withUsedSegmentsInTest(dataSegment1, dataSegment2, dataSegment3)
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsInNodeLoadingQueue(2).build())
+        .build();
 
     CoordinatorStats stats1 = rule.run(null, params, dataSegment1);
     CoordinatorStats stats2 = rule.run(null, params, dataSegment2);
@@ -722,13 +696,7 @@ public class LoadRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        makeCoordinatorRuntimeParams(druidCluster, segment),
         segment
     );
 
@@ -779,13 +747,7 @@ public class LoadRuleTest
 
     CoordinatorStats stats = rule.run(
         null,
-        DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
-                                     .withBalancerStrategy(mockBalancerStrategy)
-                                     .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-                                     .withUsedSegmentsInTest(segment).build(),
+        makeCoordinatorRuntimeParams(druidCluster, segment),
         segment
     );
 
@@ -831,15 +793,7 @@ public class LoadRuleTest
         )
     );
 
-    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder()
-        .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-        .withReplicationManager(throttler)
-        .withBalancerStrategy(mockBalancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-        .withUsedSegmentsInTest(segment1, segment2)
-        .build();
+    DruidCoordinatorRuntimeParams params = makeCoordinatorRuntimeParams(druidCluster, segment1, segment2);
     CoordinatorStats stats = rule.run(
         null,
         params,
@@ -897,18 +851,9 @@ public class LoadRuleTest
         )
     );
 
-    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder()
-        .withDruidCluster(druidCluster)
-        .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-        .withReplicationManager(throttler)
-        .withBalancerStrategy(mockBalancerStrategy)
-        .withBalancerReferenceTimestamp(DateTimes.of("2013-01-01"))
-        .withUsedSegmentsInTest(segment1)
-        .build();
     CoordinatorStats stats = rule.run(
         null,
-        params,
+        makeCoordinatorRuntimeParams(druidCluster, segment1),
         segment1
     );
     Assert.assertEquals(1L, stats.getTieredStat("droppedCount", "tier1"));
