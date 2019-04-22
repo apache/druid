@@ -264,7 +264,7 @@ public class CoordinatorDynamicConfigTest
   {
     Assert.assertEquals(
         expectedMillisLagBeforeCanMaskAsUnusedOvershadowedSegments,
-        config.getMillisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments()
+        config.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
     );
     Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
     Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());

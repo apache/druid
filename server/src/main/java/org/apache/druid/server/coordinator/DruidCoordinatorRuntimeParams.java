@@ -183,7 +183,7 @@ public class DruidCoordinatorRuntimeParams
   {
     long nanosElapsedSinceCoordinatorStart = System.nanoTime() - getStartTimeNanos();
     long lagNanos = TimeUnit.MILLISECONDS.toNanos(
-        coordinatorDynamicConfig.getMillisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments()
+        coordinatorDynamicConfig.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
     );
     return nanosElapsedSinceCoordinatorStart > lagNanos;
   }

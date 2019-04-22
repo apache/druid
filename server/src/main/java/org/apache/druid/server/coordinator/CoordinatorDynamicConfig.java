@@ -49,7 +49,7 @@ public class CoordinatorDynamicConfig
 {
   public static final String CONFIG_KEY = "coordinator.config";
 
-  private final long millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments;
+  private final long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
   private final long mergeBytesLimit;
   private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
@@ -90,7 +90,7 @@ public class CoordinatorDynamicConfig
       // Keeping the legacy 'millisToWaitBeforeDeleting' property name for backward compatibility. When the project is
       // updated to Jackson 2.9 it could be changed, see https://github.com/apache/incubator-druid/issues/7152
       @JsonProperty("millisToWaitBeforeDeleting")
-          long millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments,
+          long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
       @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
       @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
@@ -116,8 +116,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("decommissioningMaxPercentOfMaxSegmentsToMove") int decommissioningMaxPercentOfMaxSegmentsToMove
   )
   {
-    this.millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments =
-        millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments;
+    this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
+        leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     this.mergeBytesLimit = mergeBytesLimit;
     this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
@@ -179,9 +179,9 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty("millisToWaitBeforeDeleting")
-  public long getMillisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments()
+  public long getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
   {
-    return millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments;
+    return leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
   }
 
   @JsonProperty
@@ -288,8 +288,8 @@ public class CoordinatorDynamicConfig
   public String toString()
   {
     return "CoordinatorDynamicConfig{" +
-           "millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments="
-           + millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments +
+           "leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments="
+           + leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments +
            ", mergeBytesLimit=" + mergeBytesLimit +
            ", mergeSegmentsLimit=" + mergeSegmentsLimit +
            ", maxSegmentsToMove=" + maxSegmentsToMove +
@@ -318,8 +318,8 @@ public class CoordinatorDynamicConfig
 
     CoordinatorDynamicConfig that = (CoordinatorDynamicConfig) o;
 
-    if (millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments !=
-        that.millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments) {
+    if (leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments !=
+        that.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments) {
       return false;
     }
     if (mergeBytesLimit != that.mergeBytesLimit) {
@@ -365,7 +365,7 @@ public class CoordinatorDynamicConfig
   public int hashCode()
   {
     return Objects.hash(
-        millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments,
+        leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
         mergeBytesLimit,
         mergeSegmentsLimit,
         maxSegmentsToMove,
@@ -389,9 +389,8 @@ public class CoordinatorDynamicConfig
 
   public static class Builder
   {
-    private static final
-        long DEFAULT_MILLIS_LAG_SINCE_COORDINATOR_BECOMES_LEADER_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS
-        = TimeUnit.MINUTES.toMillis(15);
+    private static final long DEFAULT_LEADING_TIME_MILLIS_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS =
+        TimeUnit.MINUTES.toMillis(15);
     private static final long DEFAULT_MERGE_BYTES_LIMIT = 524_288_000L;
     private static final int DEFAULT_MERGE_SEGMENTS_LIMIT = 100;
     private static final int DEFAULT_MAX_SEGMENTS_TO_MOVE = 5;
@@ -403,7 +402,7 @@ public class CoordinatorDynamicConfig
     private static final int DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE = 0;
     private static final int DEFAULT_DECOMMISSIONING_MAX_SEGMENTS_TO_MOVE_PERCENT = 70;
 
-    private Long millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments;
+    private Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
     private Long mergeBytesLimit;
     private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
@@ -425,7 +424,7 @@ public class CoordinatorDynamicConfig
     @JsonCreator
     public Builder(
         @JsonProperty("millisToWaitBeforeDeleting")
-        @Nullable Long millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments,
+        @Nullable Long leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
         @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
         @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
@@ -442,8 +441,8 @@ public class CoordinatorDynamicConfig
         @Nullable Integer decommissioningMaxPercentOfMaxSegmentsToMove
     )
     {
-      this.millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments =
-          millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments;
+      this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments =
+          leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments;
       this.mergeBytesLimit = mergeBytesLimit;
       this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
@@ -459,9 +458,9 @@ public class CoordinatorDynamicConfig
       this.decommissioningMaxPercentOfMaxSegmentsToMove = decommissioningMaxPercentOfMaxSegmentsToMove;
     }
 
-    public Builder withMillisLagSinceCoordinatorStartBeforeCanMarkAsUnusedOvershadowedSegments(long millisLag)
+    public Builder withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(long leadingTimeMillis)
     {
-      this.millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments = millisLag;
+      this.leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments = leadingTimeMillis;
       return this;
     }
 
@@ -540,9 +539,9 @@ public class CoordinatorDynamicConfig
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
-          millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments == null
-          ? DEFAULT_MILLIS_LAG_SINCE_COORDINATOR_BECOMES_LEADER_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS
-          : millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments,
+          leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments == null
+          ? DEFAULT_LEADING_TIME_MILLIS_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS
+          : leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
           mergeBytesLimit == null ? DEFAULT_MERGE_BYTES_LIMIT : mergeBytesLimit,
           mergeSegmentsLimit == null ? DEFAULT_MERGE_SEGMENTS_LIMIT : mergeSegmentsLimit,
           maxSegmentsToMove == null ? DEFAULT_MAX_SEGMENTS_TO_MOVE : maxSegmentsToMove,
@@ -568,9 +567,9 @@ public class CoordinatorDynamicConfig
     public CoordinatorDynamicConfig build(CoordinatorDynamicConfig defaults)
     {
       return new CoordinatorDynamicConfig(
-          millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments == null
-          ? defaults.getMillisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments()
-          : millisLagSinceCoordinatorBecomesLeaderBeforeCanMarkAsUnusedOvershadowedSegments,
+          leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments == null
+          ? defaults.getLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments()
+          : leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
           mergeBytesLimit == null ? defaults.getMergeBytesLimit() : mergeBytesLimit,
           mergeSegmentsLimit == null ? defaults.getMergeSegmentsLimit() : mergeSegmentsLimit,
           maxSegmentsToMove == null ? defaults.getMaxSegmentsToMove() : maxSegmentsToMove,

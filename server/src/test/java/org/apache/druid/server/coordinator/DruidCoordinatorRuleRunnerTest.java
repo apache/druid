@@ -64,7 +64,7 @@ public class DruidCoordinatorRuleRunnerTest
 {
   public static final CoordinatorDynamicConfig COORDINATOR_CONFIG_WITH_ZERO_LAG_BEFORE_CAN_MARK_AS_UNUSED_OVERSHADOWED_SEGMENTS = CoordinatorDynamicConfig
       .builder()
-      .withMillisLagSinceCoordinatorStartBeforeCanMarkAsUnusedOvershadowedSegments(0L)
+      .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L)
       .build();
   private DruidCoordinator coordinator;
   private LoadQueuePeon mockPeon;
@@ -688,7 +688,7 @@ public class DruidCoordinatorRuleRunnerTest
     DruidCoordinatorRuntimeParams params = CoordinatorRuntimeParamsTestHelpers
         .newBuilder()
         .withDruidCluster(druidCluster)
-        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMillisLagSinceCoordinatorStartBeforeCanMarkAsUnusedOvershadowedSegments(0L).build())
+        .withDynamicConfigs(CoordinatorDynamicConfig.builder().withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0L).build())
         .withUsedSegmentsInTest(usedSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
@@ -1382,7 +1382,7 @@ public class DruidCoordinatorRuleRunnerTest
   private CoordinatorDynamicConfig createCoordinatorDynamicConfig()
   {
     return CoordinatorDynamicConfig.builder()
-                                   .withMillisLagSinceCoordinatorStartBeforeCanMarkAsUnusedOvershadowedSegments(0)
+                                   .withLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments(0)
                                    .withMergeBytesLimit(0)
                                    .withMergeSegmentsLimit(0)
                                    .withMaxSegmentsToMove(0)
