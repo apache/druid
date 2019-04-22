@@ -39,6 +39,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
 
 
 public class SQLMetadataSegmentManagerTest
@@ -124,9 +125,47 @@ public class SQLMetadataSegmentManagerTest
         manager.getAllDataSourceNames()
     );
     Assert.assertEquals(
+        ImmutableList.of("wikipedia"),
+        manager.getDataSources().stream().map(d -> d.getName()).collect(Collectors.toList())
+    );
+    Assert.assertEquals(
         ImmutableSet.of(segment1, segment2),
         ImmutableSet.copyOf(manager.getDataSource("wikipedia").getSegments())
     );
+    Assert.assertEquals(
+        ImmutableSet.of(segment1, segment2),
+        ImmutableSet.copyOf(manager.iterateAllSegments())
+    );
+  }
+
+  @Test
+  public void testNoPoll()
+  {
+    manager.start();
+    Assert.assertTrue(manager.isStarted());
+    Assert.assertEquals(
+        ImmutableList.of("wikipedia"),
+        manager.getAllDataSourceNames()
+    );
+    Assert.assertNull(manager.getDataSources());
+    Assert.assertNull(manager.getDataSource("wikipedia"));
+    Assert.assertNull(manager.iterateAllSegments());
+  }
+
+  @Test
+  public void testPollThenStop()
+  {
+    manager.start();
+    manager.poll();
+    manager.stop();
+    Assert.assertFalse(manager.isStarted());
+    Assert.assertEquals(
+        ImmutableList.of("wikipedia"),
+        manager.getAllDataSourceNames()
+    );
+    Assert.assertNull(manager.getDataSources());
+    Assert.assertNull(manager.getDataSource("wikipedia"));
+    Assert.assertNull(manager.iterateAllSegments());
   }
 
   @Test

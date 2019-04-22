@@ -24,7 +24,7 @@ title: "Geographic Queries"
 
 # Geographic Queries
 
-Druid supports filtering specially spatially indexed columns based on an origin and a bound.
+Apache Druid (incubating) supports filtering specially spatially indexed columns based on an origin and a bound.
 
 # Spatial Indexing
 In any of the data specs, there is the option of providing spatial dimensions. For example, for a JSON data spec, spatial dimensions can be specified as follows:

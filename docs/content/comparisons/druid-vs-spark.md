@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid vs Spark"
+title: "Apache Druid (incubating) vs Spark"
 ---
 
 <!--

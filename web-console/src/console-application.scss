@@ -45,20 +45,4 @@
     height: 22px;
     border-top: 2px solid #6d8ea9;
   }
-
-  .control-bar {
-    height: 35px;
-    white-space: nowrap;
-
-    & > * {
-      display: inline-block;
-      margin-right: 15px;
-      vertical-align: bottom;
-    }
-
-    .control-label {
-      font-size: 35px;
-      line-height: 35px;
-    }
-  }
 }

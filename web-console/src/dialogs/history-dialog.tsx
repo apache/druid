@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-import { Card, Dialog } from "@blueprintjs/core";
-import * as React from "react";
+import { Card, Dialog } from '@blueprintjs/core';
+import * as React from 'react';
 
 import { JSONCollapse } from '../components/json-collapse';
 
-import "./history-dialog.scss";
+import './history-dialog.scss';
 
 interface HistoryDialogProps extends React.Props<any> {
   historyRecords: any;
@@ -43,28 +43,28 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
     const {children, historyRecords} = this.props;
     let content;
     if (historyRecords.length === 0) {
-      content = <div className={"no-record"}>No history records available</div>;
+      content = <div className="no-record">No history records available</div>;
     } else {
        content = <>
           <h3>History</h3>
-          <div className={"history-record-entries"}>
+          <div className="history-record-entries">
             {
               historyRecords.map((record: any) => {
                 const auditInfo = record.auditInfo;
                 const auditTime = record.auditTime;
-                const formattedTime = auditTime.replace("T", " ").substring(0, auditTime.length - 5);
+                const formattedTime = auditTime.replace('T', ' ').substring(0, auditTime.length - 5);
 
-                return <div key={record.auditTime} className={"history-record-entry"}>
+                return <div key={record.auditTime} className="history-record-entry">
                   <Card>
-                    <div className={"history-record-title"}>
+                    <div className="history-record-title">
                       <h5>Change</h5>
                       <p>{formattedTime}</p>
                     </div>
                     <hr/>
-                    <p>{auditInfo.comment === "" ? "(No comment)" : auditInfo.comment}</p>
+                    <p>{auditInfo.comment === '' ? '(No comment)' : auditInfo.comment}</p>
                     <JSONCollapse
                       stringValue={record.payload}
-                      buttonText={"Payload"}
+                      buttonText="Payload"
                     />
                   </Card>
                 </div>;
@@ -73,7 +73,7 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
           </div>
          </>;
     }
-    return <div className={"history-record-container"}>
+    return <div className="history-record-container">
       {content}
       {children}
     </div>;
@@ -81,9 +81,9 @@ export class HistoryDialog extends React.Component<HistoryDialogProps, HistoryDi
 
   render(): React.ReactNode {
     return <Dialog
+      className="history-dialog"
       isOpen
       {...this.props}
-      className={"history-dialog"}
     >
       {this.renderRecords()}
     </Dialog>;

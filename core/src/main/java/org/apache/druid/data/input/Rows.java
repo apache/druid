@@ -66,6 +66,9 @@ public final class Rows
     } else if (inputValue instanceof List) {
       // guava's toString function fails on null objects, so please do not use it
       return ((List<?>) inputValue).stream().map(String::valueOf).collect(Collectors.toList());
+    } else if (inputValue instanceof byte[]) {
+      // convert byte[] to base64 encoded string
+      return Collections.singletonList(StringUtils.encodeBase64String((byte[]) inputValue));
     } else {
       return Collections.singletonList(String.valueOf(inputValue));
     }

@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid vs Elasticsearch"
+title: "Apache Druid (incubating) vs Elasticsearch"
 ---
 
 <!--

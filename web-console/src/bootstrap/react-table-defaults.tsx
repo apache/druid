@@ -16,18 +16,15 @@
  * limitations under the License.
  */
 
-import { Button } from "@blueprintjs/core";
 import * as React from 'react';
-import { Filter, ReactTableDefaults } from "react-table";
+import { Filter, ReactTableDefaults } from 'react-table';
 
 import { Loader } from '../components/loader';
-import { countBy, makeTextFilter } from '../utils';
+import { booleanCustomTableFilter, countBy, makeTextFilter } from '../utils';
 
-class FullButton extends React.Component {
-  render() {
-    return <Button fill {...this.props}/>;
-  }
-}
+import { ReactTableCustomPagination } from './react-table-custom-pagination';
+
+/* tslint:disable:max-classes-per-file */
 
 class NoData extends React.Component {
   render() {
@@ -37,17 +34,18 @@ class NoData extends React.Component {
   }
 }
 
+/* tslint:enable:max-classes-per-file */
+
 Object.assign(ReactTableDefaults, {
   defaultFilterMethod: (filter: Filter, row: any, column: any) => {
     const id = filter.pivotId || filter.id;
-    return row[id] !== undefined ? String(row[id]).includes(filter.value) : true;
+    return booleanCustomTableFilter(filter, row[id]);
   },
   LoadingComponent: Loader,
   loadingText: '',
   NoDataComponent: NoData,
   FilterComponent: makeTextFilter(),
-  PreviousComponent: FullButton,
-  NextComponent: FullButton,
+  PaginationComponent: ReactTableCustomPagination,
   AggregatedComponent: (opt: any) => {
     const { subRows, column } = opt;
     const previewValues = subRows.filter((d: any) => typeof d[column.id] !== 'undefined').map((row: any) => row[column.id]);

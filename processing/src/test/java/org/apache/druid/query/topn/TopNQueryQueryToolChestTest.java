@@ -36,6 +36,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -128,6 +129,92 @@ public class TopNQueryQueryToolChestTest
     ).getCacheStrategy(query2);
 
     Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assert.assertFalse(Arrays.equals(strategy1.computeResultLevelCacheKey(query1),
+                                     strategy2.computeResultLevelCacheKey(query2)));
+  }
+
+  @Test
+  public void testComputeResultLevelCacheKeyWithDifferentPostAgg() throws IOException
+  {
+    final TopNQuery query1 = new TopNQuery(
+        new TableDataSource("dummy"),
+        VirtualColumns.EMPTY,
+        new DefaultDimensionSpec("test", "test"),
+        new LegacyTopNMetricSpec("metric1"),
+        3,
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01T18:00:00/2015-01-02T18:00:00"))),
+        null,
+        Granularities.ALL,
+        ImmutableList.of(
+            new LongSumAggregatorFactory("metric1", "metric1"),
+            new LongSumAggregatorFactory("metric2", "metric2")
+        ),
+        ImmutableList.of(
+            new ArithmeticPostAggregator(
+                "post1",
+                "/",
+                ImmutableList.of(
+                    new FieldAccessPostAggregator(
+                        "metric1",
+                        "metric1"
+                    ),
+                    new FieldAccessPostAggregator(
+                        "metric2",
+                        "metric2"
+                    )
+                )
+            )
+        ),
+        null
+    );
+
+    final TopNQuery query2 = new TopNQuery(
+        new TableDataSource("dummy"),
+        VirtualColumns.EMPTY,
+        new DefaultDimensionSpec("test", "test"),
+        new LegacyTopNMetricSpec("metric1"),
+        3,
+        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01T18:00:00/2015-01-02T18:00:00"))),
+        null,
+        Granularities.ALL,
+        ImmutableList.of(
+            new LongSumAggregatorFactory("metric1", "metric1"),
+            new LongSumAggregatorFactory("metric2", "metric2")
+        ),
+        ImmutableList.of(
+            new ArithmeticPostAggregator(
+                "post2",
+                "+",
+                ImmutableList.of(
+                    new FieldAccessPostAggregator(
+                        "metric1",
+                        "metric1"
+                    ),
+                    new FieldAccessPostAggregator(
+                        "metric2",
+                        "metric2"
+                    )
+                )
+            )
+        ),
+        null
+    );
+
+    final CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy1 = new TopNQueryQueryToolChest(
+        null,
+        null
+    ).getCacheStrategy(query1);
+
+    final CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> strategy2 = new TopNQueryQueryToolChest(
+        null,
+        null
+    ).getCacheStrategy(query2);
+
+    //segment level cache key excludes postaggregates in topn
+    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy1.computeResultLevelCacheKey(query1)));
+    Assert.assertFalse(Arrays.equals(strategy1.computeResultLevelCacheKey(query1),
+                                     strategy2.computeResultLevelCacheKey(query2)));
   }
 
   @Test

@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Versioning Druid"
+title: "Versioning Apache Druid (incubating)"
 ---
 
 <!--

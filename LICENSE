@@ -266,6 +266,9 @@ SOURCE/JAVA-CORE
      copyright Netflix, Inc. (https://github.com/Netflix/spectator)
       * extensions-core/histogram/src/main/java/org/apache/druid/query/aggregation/histogram/FixedBucketsHistogram.java
 
+    This product contains ByteBuffer unmapping code adapted from Apache Kafka
+      * core/src/main/java/org/apache/druid/java/util/common/ByteBufferUtils.java
+
 
 MIT License
 ================================

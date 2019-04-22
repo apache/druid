@@ -85,7 +85,6 @@ import java.util.List;
 
 public class CalciteQueryTest extends BaseCalciteQueryTest
 {
-
   @Test
   public void testSelectConstantExpression() throws Exception
   {
@@ -236,6 +235,43 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testSelectPadFamily() throws Exception
+  {
+    testQuery(
+        "SELECT\n"
+        + "LPAD('foo', 5, 'x'),\n"
+        + "LPAD('foo', 2, 'x'),\n"
+        + "LPAD('foo', 5),\n"
+        + "RPAD('foo', 5, 'x'),\n"
+        + "RPAD('foo', 2, 'x'),\n"
+        + "RPAD('foo', 5),\n"
+        + "COUNT(*)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .postAggregators(
+                      expressionPostAgg("p0", "'xxfoo'"),
+                      expressionPostAgg("p1", "'fo'"),
+                      expressionPostAgg("p2", "'  foo'"),
+                      expressionPostAgg("p3", "'fooxx'"),
+                      expressionPostAgg("p4", "'fo'"),
+                      expressionPostAgg("p5", "'foo  '")
+                  )
+                  .context(TIMESERIES_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"xxfoo", "fo", "  foo", "fooxx", "fo", "foo  ", 6L}
+        )
+    );
+  }
+
 
   @Test
   public void testExplainSelectConstantExpression() throws Exception
@@ -572,6 +608,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{NULL_VALUE}
+        )
+    );
+  }
+
+  @Test
+  public void testSelectWithExpressionFilter() throws Exception
+  {
+    testQuery(
+        "SELECT dim1 FROM druid.foo WHERE m1 + 1 = 7",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "(\"m1\" + 1)", ValueType.FLOAT)
+                )
+                .filters(selector("v0", "7", null))
+                .columns("dim1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"abc"}
         )
     );
   }

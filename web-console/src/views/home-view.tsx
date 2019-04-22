@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import { Card, H5, Icon } from "@blueprintjs/core";
-import { IconName, IconNames } from "@blueprintjs/icons";
+import { Card, H5, Icon } from '@blueprintjs/core';
+import { IconName, IconNames } from '@blueprintjs/icons';
 import axios from 'axios';
 import * as classNames from 'classnames';
 import * as React from 'react';
@@ -175,13 +175,13 @@ export class HomeView extends React.Component<HomeViewProps, HomeViewState> {
           pendingTaskCount: 0
         };
         for (const dataStatus of taskCountsFromSql) {
-          if (dataStatus.status === "SUCCESS") {
+          if (dataStatus.status === 'SUCCESS') {
             taskCounts.successTaskCount = dataStatus.count;
-          } else if (dataStatus.status === "FAILED") {
+          } else if (dataStatus.status === 'FAILED') {
             taskCounts.failedTaskCount = dataStatus.count;
-          } else if (dataStatus.status === "RUNNING") {
+          } else if (dataStatus.status === 'RUNNING') {
             taskCounts.runningTaskCount = dataStatus.count;
-          } else if (dataStatus.status === "WAITING") {
+          } else if (dataStatus.status === 'WAITING') {
             taskCounts.waitingTaskCount = dataStatus.count;
           } else {
             taskCounts.pendingTaskCount = dataStatus.count;
@@ -230,7 +230,7 @@ GROUP BY 1`);
 
     this.middleManagerQueryManager = new QueryManager({
       processQuery: async (query) => {
-        const middleManagerResp = await axios.get("/druid/indexer/v1/workers");
+        const middleManagerResp = await axios.get('/druid/indexer/v1/workers');
         const middleManagerCount: number = middleManagerResp.data.length;
         return middleManagerCount;
       },
@@ -269,36 +269,36 @@ GROUP BY 1`);
 
     return <div className="home-view app-view">
       {this.renderCard({
-        href: "/status",
+        href: '/status',
         icon: IconNames.GRAPH,
-        title: "Status",
+        title: 'Status',
         loading: state.statusLoading,
         content: state.status ? `Apache Druid is running version ${state.status.version}` : '',
         error: state.statusError
       })}
 
       {this.renderCard({
-        href: "#datasources",
+        href: '#datasources',
         icon: IconNames.MULTI_SELECT,
-        title: "Datasources",
+        title: 'Datasources',
         loading: state.datasourceCountLoading,
         content: pluralIfNeeded(state.datasourceCount, 'datasource'),
         error: state.datasourceCountError
       })}
 
       {this.renderCard({
-        href: "#segments",
+        href: '#segments',
         icon: IconNames.STACKED_CHART,
-        title: "Segments",
+        title: 'Segments',
         loading: state.segmentCountLoading,
         content: pluralIfNeeded(state.segmentCount, 'segment'),
         error: state.datasourceCountError
       })}
 
       {this.renderCard({
-        href: "#tasks",
+        href: '#tasks',
         icon: IconNames.GANTT_CHART,
-        title: "Tasks",
+        title: 'Tasks',
         loading: state.taskCountLoading,
         content: <>
           {Boolean(state.runningTaskCount) && <p>{pluralIfNeeded(state.runningTaskCount, 'running task')}</p>}
@@ -314,9 +314,9 @@ GROUP BY 1`);
       })}
 
       {this.renderCard({
-        href: "#servers",
+        href: '#servers',
         icon: IconNames.DATABASE,
-        title: "Data servers",
+        title: 'Data servers',
         loading: state.dataServerCountLoading || state.middleManagerCountLoading,
         content: <>
           <p>{pluralIfNeeded(state.dataServerCount, 'historical')}</p>

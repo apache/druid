@@ -18,11 +18,12 @@
 
 import { Button, HTMLSelect, InputGroup, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import * as numeral from "numeral";
+import * as numeral from 'numeral';
 import * as React from 'react';
 import { Filter, FilterRender } from 'react-table';
 
 export function addFilter(filters: Filter[], id: string, value: string): Filter[] {
+  value = `"${value}"`;
   const currentFilter = filters.find(f => f.id === id);
   if (currentFilter) {
     filters = filters.filter(f => f.id !== id);
@@ -55,7 +56,7 @@ export function makeBooleanFilter(): FilterRender {
       key={key}
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
-      value={filterValue || "all"}
+      value={filterValue || 'all'}
       fill
     >
       <option value="all">Show all</option>
@@ -63,6 +64,49 @@ export function makeBooleanFilter(): FilterRender {
       <option value="false">false</option>
     </HTMLSelect>;
   };
+}
+
+// ----------------------------
+
+interface NeedleAndMode {
+  needle: string;
+  mode: 'exact' | 'prefix';
+}
+
+function getNeedleAndMode(input: string): NeedleAndMode {
+  if (input.startsWith(`"`) && input.endsWith(`"`)) {
+    return {
+      needle: input.slice(1, -1),
+      mode: 'exact'
+    };
+  }
+  return {
+    needle: input.startsWith(`"`) ? input.substring(1) : input,
+    mode: 'prefix'
+  };
+}
+
+export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
+  if (value === undefined) {
+    return true;
+  }
+  const haystack = String(value.toLowerCase());
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value.toLowerCase());
+  const needle = needleAndMode.needle;
+  if (needleAndMode.mode === 'exact') {
+    return needle === haystack;
+  }
+  return haystack.startsWith(needle);
+}
+
+export function sqlQueryCustomTableFilter(filter: Filter): string {
+  const columnName = JSON.stringify(filter.id);
+  const needleAndMode: NeedleAndMode = getNeedleAndMode(filter.value);
+  const needle = needleAndMode.needle;
+  if (needleAndMode.mode === 'exact') {
+    return `${columnName} = '${needle.toUpperCase()}' OR ${columnName} = '${needle.toLowerCase()}'`;
+  }
+  return `${columnName} LIKE '${needle.toUpperCase()}%' OR ${columnName} LIKE '${needle.toLowerCase()}%'`;
 }
 
 // ----------------------------
@@ -141,13 +185,13 @@ export function stringifyJSON(item: any): string {
   if (item != null) {
     return JSON.stringify(item, null, 2);
   } else {
-    return "";
+    return '';
   }
 }
 
 // parse string to JSON object; if string is empty, return null
 export function parseStringToJSON(s: string): JSON | null {
-  if (s === "") {
+  if (s === '') {
     return null;
   } else {
     return JSON.parse(s);

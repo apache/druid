@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Druid Firehoses"
+title: "Apache Druid (incubating) Firehoses"
 ---
 
 <!--
@@ -71,6 +71,39 @@ A sample http firehose spec is shown below:
 {
     "type"    : "http",
     "uris"  : ["http://example.com/uri1", "http://example2.com/uri2"]
+}
+```
+
+The below configurations can be optionally used if the URIs specified in the spec require a Basic Authentication Header.
+Omitting these fields from your spec will result in HTTP requests with no Basic Authentication Header.
+
+|property|description|default|
+|--------|-----------|-------|
+|httpAuthenticationUsername|Username to use for authentication with specified URIs|None|
+|httpAuthenticationPassword|PasswordProvider to use with specified URIs|None|
+
+Example with authentication fields using the DefaultPassword provider (this requires the password to be in the ingestion spec):
+
+```json
+{
+    "type": "http",
+    "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
+    "httpAuthenticationUsername": "username",
+    "httpAuthenticationPassword": "password123"
+}
+```
+
+You can also use the other existing Druid PasswordProviders. Here is an example using the EnvironmentVariablePasswordProvider:
+
+```json
+{
+    "type": "http",
+    "uris": ["http://example.com/uri1", "http://example2.com/uri2"],
+    "httpAuthenticationUsername": "username",
+    "httpAuthenticationPassword": {
+        "type": "environment",
+        "variable": "HTTP_FIREHOSE_PW"
+    }
 }
 ```
 

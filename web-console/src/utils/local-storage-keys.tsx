@@ -17,13 +17,13 @@
  */
 
 export const LocalStorageKeys = {
-  DATASOURCE_TABLE_COLUMN_SELECTION: "datasource-table-column-selection" as "datasource-table-column-selection",
-  SEGMENT_TABLE_COLUMN_SELECTION: "segment-table-column-selection" as "segment-table-column-selection",
-  SUPERVISOR_TABLE_COLUMN_SELECTION: "supervisor-table-column-selection" as "supervisor-table-column-selection",
-  TASK_TABLE_COLUMN_SELECTION: "task-table-column-selection" as "task-table-column-selection",
-  SERVER_TABLE_COLUMN_SELECTION: "historical-table-column-selection" as "historical-table-column-selection",
-  MIDDLEMANAGER_TABLE_COLUMN_SELECTION: "middleManager-table-column-selection" as "middleManager-table-column-selection",
-  LOOKUP_TABLE_COLUMN_SELECTION: "lookup-table-column-selection" as "lookup-table-column-selection",
+  DATASOURCE_TABLE_COLUMN_SELECTION: 'datasource-table-column-selection' as 'datasource-table-column-selection',
+  SEGMENT_TABLE_COLUMN_SELECTION: 'segment-table-column-selection' as 'segment-table-column-selection',
+  SUPERVISOR_TABLE_COLUMN_SELECTION: 'supervisor-table-column-selection' as 'supervisor-table-column-selection',
+  TASK_TABLE_COLUMN_SELECTION: 'task-table-column-selection' as 'task-table-column-selection',
+  SERVER_TABLE_COLUMN_SELECTION: 'historical-table-column-selection' as 'historical-table-column-selection',
+  MIDDLEMANAGER_TABLE_COLUMN_SELECTION: 'middleManager-table-column-selection' as 'middleManager-table-column-selection',
+  LOOKUP_TABLE_COLUMN_SELECTION: 'lookup-table-column-selection' as 'lookup-table-column-selection',
   QUERY_KEY: 'druid-console-query' as 'druid-console-query'
 
 };
