@@ -101,9 +101,7 @@ public class OakKeySerializer implements OakSerializer<IncrementalIndexRow>
             int[] arr = (int[]) incrementalIndexRow.getDim(i);
             byteBuffer.putInt(dimsIndex + arrayIndexOffset, dimsArrayOffset);
             byteBuffer.putInt(dimsIndex + arrayLengthOffset, arr.length);
-            for (int arrIndex = 0; arrIndex < arr.length; arrIndex++) {
-              byteBuffer.putInt(dimsArraysIndex + arrIndex * Integer.BYTES, arr[arrIndex]);
-            }
+            OakUtils.unsafeArrayToBufferCopy(byteBuffer, dimsArraysIndex, arr, arr.length);
             dimsArraysIndex += (arr.length * Integer.BYTES);
             dimsArrayOffset += (arr.length * Integer.BYTES);
             break;

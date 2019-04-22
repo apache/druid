@@ -23,7 +23,6 @@ import com.oath.oak.OakRBuffer;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex.DimensionDesc;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 
 public class OakIncrementalIndexRow extends IncrementalIndexRow
@@ -142,10 +141,9 @@ public class OakIncrementalIndexRow extends IncrementalIndexRow
     if (expansion.length < arraySize) {
       expansion = new int[arraySize];
     }
-    for (int i = 0; i < arraySize; i++) {
-      expansion[i] = dimensions.getInt(arrayIndex);
-      arrayIndex += Integer.BYTES;
-    }
+
+    dimensions.unsafeBufferToIntArrayCopy(arrayIndex, expansion, arraySize);
+
     return arraySize;
   }
 
