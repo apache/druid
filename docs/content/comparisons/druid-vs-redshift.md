@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) vs Redshift"
   ~ under the License.
   -->
 
-# Druid vs Redshift
+# Apache Druid (incubating) vs Redshift
 
 ### How does Druid compare to Redshift?
 

@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) extensions"
   ~ under the License.
   -->
 
-# Druid extensions
+# Apache Druid (incubating) extensions
 
 Druid implements an extension system that allows for adding functionality at runtime. Extensions
 are commonly used to add support for deep storages (like HDFS and S3), metadata stores (like MySQL

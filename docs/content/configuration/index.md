@@ -1,6 +1,6 @@
 ---
 layout: doc_page
-title: "Configuration Reference"
+title: "Apache Druid (incubating) Configuration Reference"
 ---
 
 <!--
@@ -22,9 +22,9 @@ title: "Configuration Reference"
   ~ under the License.
   -->
 
-# Configuration Reference
+# Apache Druid (incubating) Configuration Reference
 
-This page documents all of the configuration properties for each Apache Druid (incubating) service type.
+This page documents all of the configuration properties for each Druid service type.
 
 ## Table of Contents
   * [Recommended Configuration File Organization](#recommended-configuration-file-organization)
