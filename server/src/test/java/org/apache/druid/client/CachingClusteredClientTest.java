@@ -1763,11 +1763,15 @@ public class CachingClusteredClientTest
       int partitionNum
   )
   {
-    DataSegment segment = EasyMock.createNiceMock(DataSegment.class);
-    EasyMock.expect(segment.getId()).andReturn(SegmentId.dummy(DATA_SOURCE)).anyTimes();
-    EasyMock.expect(segment.getShardSpec()).andReturn(new SingleDimensionShardSpec(dimension, start, end, partitionNum))
-            .anyTimes();
-    EasyMock.replay(segment);
+    final DataSegment segment = new DataSegment(
+        SegmentId.dummy(DATA_SOURCE),
+        null,
+        null,
+        null,
+        new SingleDimensionShardSpec(dimension, start, end, partitionNum),
+        9,
+        0L
+    );
 
     ServerSelector selector = new ServerSelector(
         segment,
@@ -2204,21 +2208,6 @@ public class CachingClusteredClientTest
           serverExpectations.put(lastServer, new ServerExpectations(lastServer, makeMock(mocks, QueryRunner.class)));
         }
 
-        DataSegment mockSegment = makeMock(mocks, DataSegment.class);
-        ServerExpectation<Object> expectation = new ServerExpectation<>(
-            SegmentId.dummy(StringUtils.format("%s_%s", k, j)), // interval/chunk
-            queryIntervals.get(k),
-            mockSegment,
-            expectedResults.get(k).get(j)
-        );
-        serverExpectations.get(lastServer).addExpectation(expectation);
-        EasyMock.expect(mockSegment.getSize()).andReturn(0L).anyTimes();
-        EasyMock.replay(mockSegment);
-        ServerSelector selector = new ServerSelector(
-            expectation.getSegment(),
-            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
-        );
-        selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
         final ShardSpec shardSpec;
         if (numChunks == 1) {
           shardSpec = new SingleDimensionShardSpec("dimAll", null, null, 0);
@@ -2233,6 +2222,22 @@ public class CachingClusteredClientTest
           }
           shardSpec = new SingleDimensionShardSpec("dim" + k, start, end, j);
         }
+        DataSegment mockSegment = makeMock(mocks, DataSegment.class);
+        ServerExpectation<Object> expectation = new ServerExpectation<>(
+            SegmentId.dummy(StringUtils.format("%s_%s", k, j)), // interval/chunk
+            queryIntervals.get(k),
+            mockSegment,
+            shardSpec,
+            expectedResults.get(k).get(j)
+        );
+        serverExpectations.get(lastServer).addExpectation(expectation);
+        EasyMock.expect(mockSegment.getSize()).andReturn(0L).anyTimes();
+        EasyMock.replay(mockSegment);
+        ServerSelector selector = new ServerSelector(
+            expectation.getSegment(),
+            new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+        );
+        selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
         EasyMock.reset(mockSegment);
         EasyMock.expect(mockSegment.getShardSpec())
                 .andReturn(shardSpec)
@@ -2746,18 +2751,21 @@ public class CachingClusteredClientTest
     private final SegmentId segmentId;
     private final Interval interval;
     private final DataSegment segment;
+    private final ShardSpec shardSpec;
     private final Iterable<Result<T>> results;
 
     public ServerExpectation(
         SegmentId segmentId,
         Interval interval,
         DataSegment segment,
+        ShardSpec shardSpec,
         Iterable<Result<T>> results
     )
     {
       this.segmentId = segmentId;
       this.interval = interval;
       this.segment = segment;
+      this.shardSpec = shardSpec;
       this.results = results;
     }
 
@@ -2900,6 +2908,43 @@ public class CachingClusteredClientTest
       public String toString()
       {
         return baseSegment.toString();
+      }
+
+      @Override
+      public int getStartRootPartitionId()
+      {
+        return shardSpec.getStartRootPartitionId();
+      }
+
+      @Override
+      public int getEndRootPartitionId()
+      {
+        return shardSpec.getEndRootPartitionId();
+      }
+
+      @Override
+      public short getMinorVersion()
+      {
+        return shardSpec.getMinorVersion();
+      }
+
+      @Override
+      public short getAtomicUpdateGroupSize()
+      {
+        return shardSpec.getAtomicUpdateGroupSize();
+      }
+
+      @Override
+      public boolean isOvershadow(DataSegment other)
+      {
+        if (getDataSource().equals(other.getDataSource())
+            && getInterval().overlaps(other.getInterval())
+            && getVersion().equals(other.getVersion())) {
+          return getStartRootPartitionId() <= other.getStartRootPartitionId()
+                 && getEndRootPartitionId() >= other.getEndRootPartitionId()
+                 && getMinorVersion() > other.getMinorVersion();
+        }
+        return false;
       }
     }
   }

@@ -33,10 +33,9 @@ import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
 import org.apache.druid.indexing.common.TaskLock;
-import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
+import org.apache.druid.indexing.common.actions.SegmentListUsedAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -50,6 +49,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -59,6 +59,7 @@ import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -76,6 +77,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -190,6 +192,7 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @VisibleForTesting
   ParallelIndexTaskRunner createRunner(TaskToolbox toolbox)
   {
+    this.toolbox = toolbox;
     if (ingestionSchema.getTuningConfig().isForceGuaranteedRollup()) {
       throw new UnsupportedOperationException("Perfect roll-up is not supported yet");
     } else {
@@ -218,22 +221,34 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
                                                                    .getGranularitySpec()
                                                                    .bucketIntervals();
 
-    return !intervals.isPresent() || isReady(taskActionClient, intervals.get());
+    return !intervals.isPresent() || tryLockWithIntervals(taskActionClient, new ArrayList<>(intervals.get()));
   }
 
-  static boolean isReady(TaskActionClient actionClient, SortedSet<Interval> intervals) throws IOException
+  @Override
+  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+      throws IOException
   {
-    final List<TaskLock> locks = getTaskLocks(actionClient);
-    if (locks.isEmpty()) {
-      try {
-        Tasks.tryAcquireExclusiveLocks(actionClient, intervals);
-      }
-      catch (Exception e) {
-        log.error(e, "Failed to acquire locks for intervals[%s]", intervals);
-        return false;
-      }
-    }
-    return true;
+    return taskActionClient.submit(new SegmentListUsedAction(getDataSource(), null, intervals));
+  }
+
+  @Override
+  public boolean requireLockInputSegments()
+  {
+    return !ingestionSchema.getIOConfig().isAppendToExisting();
+  }
+
+  @Override
+  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  {
+    final Granularity segmentGranularity = ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
+    return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity(Interval interval)
+  {
+    return ingestionSchema.getDataSchema().getGranularitySpec().getSegmentGranularity();
   }
 
   @Override
@@ -247,8 +262,6 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    setToolbox(toolbox);
-
     log.info(
         "Found chat handler of class[%s]",
         Preconditions.checkNotNull(chatHandlerProvider, "chatHandlerProvider").getClass().getName()
@@ -387,79 +400,43 @@ public class ParallelIndexSupervisorTask extends AbstractTask implements ChatHan
   {
     final String dataSource = getDataSource();
     final GranularitySpec granularitySpec = getIngestionSchema().getDataSchema().getGranularitySpec();
-    final Optional<SortedSet<Interval>> bucketIntervals = granularitySpec.bucketIntervals();
-
+    final SortedSet<Interval> bucketIntervals = Preconditions.checkNotNull(
+        granularitySpec.bucketIntervals().orNull(),
+        "bucketIntervals"
+    );
     // List locks whenever allocating a new segment because locks might be revoked and no longer valid.
-    final List<TaskLock> locks = toolbox
+    final Map<Interval, String> versions = toolbox
         .getTaskActionClient()
-        .submit(new LockListAction());
-    final TaskLock revokedLock = locks.stream().filter(TaskLock::isRevoked).findAny().orElse(null);
-    if (revokedLock != null) {
-      throw new ISE("Lock revoked: [%s]", revokedLock);
-    }
-    final Map<Interval, String> versions = locks
+        .submit(new LockListAction())
         .stream()
         .collect(Collectors.toMap(TaskLock::getInterval, TaskLock::getVersion));
 
-    Interval interval;
-    String version;
-    boolean justLockedInterval = false;
-    if (bucketIntervals.isPresent()) {
-      // If the granularity spec has explicit intervals, we just need to find the interval (of the segment
-      // granularity); we already tried to lock it at task startup.
-      final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
-      if (!maybeInterval.isPresent()) {
-        throw new IAE("Could not find interval for timestamp [%s]", timestamp);
-      }
+    final Optional<Interval> maybeInterval = granularitySpec.bucketInterval(timestamp);
+    if (!maybeInterval.isPresent()) {
+      throw new IAE("Could not find interval for timestamp [%s]", timestamp);
+    }
 
-      interval = maybeInterval.get();
-      if (!bucketIntervals.get().contains(interval)) {
-        throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
-      }
-
-      version = findVersion(versions, interval);
-      if (version == null) {
-        throw new ISE("Cannot find a version for interval[%s]", interval);
-      }
-    } else {
-      // We don't have explicit intervals. We can use the segment granularity to figure out what
-      // interval we need, but we might not have already locked it.
-      interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
-      version = findVersion(versions, interval);
-      if (version == null) {
-        // We don't have a lock for this interval, so we should lock it now.
-        final TaskLock lock = Preconditions.checkNotNull(
-            toolbox.getTaskActionClient().submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)),
-            "Cannot acquire a lock for interval[%s]", interval
-        );
-        version = lock.getVersion();
-        justLockedInterval = true;
-      }
+    final Interval interval = maybeInterval.get();
+    if (!bucketIntervals.contains(interval)) {
+      throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
     }
 
     final int partitionNum = Counters.getAndIncrementInt(partitionNumCountersPerInterval, interval);
-    if (justLockedInterval && partitionNum != 0) {
-      throw new ISE(
-          "Expected partitionNum to be 0 for interval [%s] right after locking, but got [%s]",
-          interval, partitionNum
-      );
-    }
     return new SegmentIdWithShardSpec(
         dataSource,
         interval,
-        version,
+        findVersion(versions, interval),
         new NumberedShardSpec(partitionNum, 0)
     );
   }
 
-  @Nullable
   private static String findVersion(Map<Interval, String> versions, Interval interval)
   {
     return versions.entrySet().stream()
                    .filter(entry -> entry.getKey().contains(interval))
                    .map(Entry::getValue)
                    .findFirst()
-                   .orElse(null);
+                   .orElseThrow(() -> new ISE("Cannot find a version for interval[%s]", interval));
   }
 
   /**

@@ -38,12 +38,13 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockAcquireAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -73,8 +74,11 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -238,9 +242,10 @@ public class RealtimeIndexTask extends AbstractTask
       public void announceSegment(final DataSegment segment) throws IOException
       {
         // Side effect: Calling announceSegment causes a lock to be acquired
+        // TODO: get lock before allocating segment
         Preconditions.checkNotNull(
             toolbox.getTaskActionClient().submit(
-                new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+                new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
             ),
             "Cannot acquire a lock for interval[%s]",
             segment.getInterval()
@@ -263,10 +268,11 @@ public class RealtimeIndexTask extends AbstractTask
       public void announceSegments(Iterable<DataSegment> segments) throws IOException
       {
         // Side effect: Calling announceSegments causes locks to be acquired
+        // TODO: get lock before allocating segment
         for (DataSegment segment : segments) {
           Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(
-                  new LockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
+                  new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, segment.getInterval(), lockTimeoutMs)
               ),
               "Cannot acquire a lock for interval[%s]",
               segment.getInterval()
@@ -302,7 +308,8 @@ public class RealtimeIndexTask extends AbstractTask
       {
         try {
           // Side effect: Calling getVersion causes a lock to be acquired
-          final LockAcquireAction action = new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
+          // TODO: get lock to get the version?
+          final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs);
           final TaskLock lock = Preconditions.checkNotNull(
               toolbox.getTaskActionClient().submit(action),
               "Cannot acquire a lock for interval[%s]",
@@ -484,6 +491,31 @@ public class RealtimeIndexTask extends AbstractTask
 
     log.info("Job done!");
     return TaskStatus.success(getId());
+  }
+
+  @Override
+  public boolean requireLockInputSegments()
+  {
+    return false;
+  }
+
+  @Override
+  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  {
+    return false;
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity(Interval interval)
+  {
+    return null;
   }
 
   @Override

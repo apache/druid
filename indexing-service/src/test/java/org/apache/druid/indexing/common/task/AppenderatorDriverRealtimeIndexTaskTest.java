@@ -1370,7 +1370,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
       final Long maxTotalRows
   )
   {
-    ObjectMapper objectMapper = new DefaultObjectMapper();
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         TestHelper.makeJsonMapper().convertValue(
@@ -1465,8 +1464,6 @@ public class AppenderatorDriverRealtimeIndexTaskTest
   private void makeToolboxFactory(final File directory)
   {
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    taskLockbox = new TaskLockbox(taskStorage);
-
     publishedSegments = new CopyOnWriteArrayList<>();
 
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -1514,6 +1511,8 @@ public class AppenderatorDriverRealtimeIndexTaskTest
         return result;
       }
     };
+
+    taskLockbox = new TaskLockbox(taskStorage, mdc);
     final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, true, null, null);
 
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(

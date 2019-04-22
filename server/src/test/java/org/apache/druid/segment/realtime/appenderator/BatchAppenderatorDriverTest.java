@@ -103,7 +103,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   @Test
   public void testSimple() throws Exception
   {
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (InputRow row : ROWS) {
       Assert.assertTrue(driver.add(row, "dummy").isOk());
@@ -137,7 +137,7 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   @Test
   public void testIncrementalPush() throws Exception
   {
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     int i = 0;
     for (InputRow row : ROWS) {
@@ -174,11 +174,11 @@ public class BatchAppenderatorDriverTest extends EasyMockSupport
   @Test
   public void testRestart()
   {
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
     driver.close();
     appenderatorTester.getAppenderator().close();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
   }
 
   private void checkSegmentStates(int expectedNumSegmentsInState, SegmentState expectedState)

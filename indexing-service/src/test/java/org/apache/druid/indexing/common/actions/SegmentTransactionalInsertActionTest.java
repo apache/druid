@@ -25,8 +25,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -86,12 +88,18 @@ public class SegmentTransactionalInsertActionTest
       1024
   );
 
+  private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval, long timeoutMs)
+      throws InterruptedException
+  {
+    return actionTestKit.getTaskLockbox().lock(task, new TimeChunkLockRequest(lockType, task, interval, null), timeoutMs);
+  }
+
   @Test
   public void testTransactional() throws Exception
   {
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     SegmentPublishResult result1 = new SegmentTransactionalInsertAction(
         ImmutableSet.of(SEGMENT1),
@@ -132,7 +140,7 @@ public class SegmentTransactionalInsertActionTest
   {
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     SegmentPublishResult result = new SegmentTransactionalInsertAction(
         ImmutableSet.of(SEGMENT1),
@@ -152,7 +160,7 @@ public class SegmentTransactionalInsertActionTest
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     final SegmentTransactionalInsertAction action = new SegmentTransactionalInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.containsString("are not covered by locks"));

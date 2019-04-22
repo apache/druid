@@ -22,8 +22,10 @@ package org.apache.druid.indexing.overlord;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.ShardSpecFactory;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -103,8 +105,9 @@ public interface IndexerMetadataStorageCoordinator
   SegmentIdWithShardSpec allocatePendingSegment(
       String dataSource,
       String sequenceName,
-      String previousSegmentId,
+      @Nullable String previousSegmentId,
       Interval interval,
+      ShardSpecFactory shardSpecFactory,
       String maxVersion,
       boolean skipSegmentLineageCheck
   );

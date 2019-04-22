@@ -58,4 +58,11 @@ public class NoneShardSpecTest
     final ShardSpec noneShardSpec = mapper.readValue(jsonStr, ShardSpec.class);
     noneShardSpec.equals(NoneShardSpec.instance());
   }
+
+  @Test
+  public void testCompatible()
+  {
+    final NoneShardSpec s1 = NoneShardSpec.instance();
+    Assert.assertTrue(s1.isCompatible(NoneShardSpecFactory.instance().getShardSpecClass()));
+  }
 }

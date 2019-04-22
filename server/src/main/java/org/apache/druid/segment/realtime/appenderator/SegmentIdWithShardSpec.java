@@ -59,6 +59,16 @@ public final class SegmentIdWithShardSpec implements Comparable<SegmentIdWithSha
     return id;
   }
 
+  public SegmentIdWithShardSpec withShardSpec(ShardSpec shardSpec)
+  {
+    return new SegmentIdWithShardSpec(
+        id.getDataSource(),
+        id.getInterval(),
+        id.getVersion(),
+        shardSpec
+    );
+  }
+
   @JsonProperty
   public String getDataSource()
   {
@@ -81,6 +91,11 @@ public final class SegmentIdWithShardSpec implements Comparable<SegmentIdWithSha
   public ShardSpec getShardSpec()
   {
     return shardSpec;
+  }
+
+  public String getIdentifierAsString()
+  {
+    return asString;
   }
 
   @Override

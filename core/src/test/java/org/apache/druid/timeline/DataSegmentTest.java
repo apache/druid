@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
@@ -92,6 +93,12 @@ public class DataSegmentTest
       {
         return true;
       }
+
+      @Override
+      public boolean isCompatible(Class<? extends ShardSpec> other)
+      {
+        return false;
+      }
     };
   }
 
@@ -117,7 +124,7 @@ public class DataSegmentTest
         loadSpec,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
-        NoneShardSpec.instance(),
+        new NumberedShardSpec(3, 0),
         TEST_VERSION,
         1
     );
@@ -134,7 +141,7 @@ public class DataSegmentTest
     Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
     Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
     Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assert.assertEquals(ImmutableMap.of("type", "numbered", "partitionNum", 3, "partitions", 0), objectMap.get("shardSpec"));
     Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
     Assert.assertEquals(1, objectMap.get("size"));
 

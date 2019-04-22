@@ -25,7 +25,7 @@ import org.joda.time.Interval;
 import java.util.List;
 
 
-public interface TimelineLookup<VersionType, ObjectType>
+public interface TimelineLookup<VersionType, ObjectType extends Overshadowable<ObjectType>>
 {
 
   /**

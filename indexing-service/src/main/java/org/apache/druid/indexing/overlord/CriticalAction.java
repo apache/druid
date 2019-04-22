@@ -29,7 +29,7 @@ import org.joda.time.Interval;
  * middle of the action.
  *
  * Implementations must not change the lock state by calling {@link TaskLockbox#lock(TaskLockType, Task, Interval)},
- * {@link TaskLockbox#lock(TaskLockType, Task, Interval, long)}, {@link TaskLockbox#tryLock(TaskLockType, Task, Interval)},
+ * {@link TaskLockbox#lock(TaskLockType, Task, Interval, long)}, {@link TaskLockbox#tryTimeChunkLock(TaskLockType, Task, Interval)},
  * or {@link TaskLockbox#unlock(Task, Interval)}.
  *
  * Also, implementations should be finished as soon as possible because all methods in {@link TaskLockbox} are blocked

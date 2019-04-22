@@ -44,10 +44,12 @@ import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentLockAquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -60,6 +62,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ListenableFutures;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -84,8 +87,12 @@ import org.apache.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import org.apache.druid.segment.realtime.plumber.Committers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpecFactory;
 import org.apache.druid.utils.CircularBuffer;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -94,6 +101,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -274,7 +282,24 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
       toolbox.getDataSegmentServerAnnouncer().announce();
       toolbox.getDruidNodeAnnouncer().announce(discoveryDruidNode);
 
-      driver.startJob();
+      driver.startJob(
+          segmentId -> {
+            try {
+              return toolbox.getTaskActionClient().submit(
+                  new SegmentLockAquireAction(
+                      TaskLockType.EXCLUSIVE,
+                      segmentId.getInterval(),
+                      segmentId.getVersion(),
+                      segmentId.getShardSpec().getPartitionNum(),
+                      1000L
+                  )
+              ).isOk();
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+      );
 
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
@@ -393,6 +418,31 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
     log.info("Job done!");
     toolbox.getTaskReportFileWriter().write(getTaskCompletionReports());
     return TaskStatus.success(getId());
+  }
+
+  @Override
+  public boolean requireLockInputSegments()
+  {
+    return false;
+  }
+
+  @Override
+  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  {
+    return false;
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity(Interval interval)
+  {
+    return null;
   }
 
   @Override
@@ -726,7 +776,8 @@ public class AppenderatorDriverRealtimeIndexTask extends AbstractTask implements
                 schema.getGranularitySpec().getSegmentGranularity(),
                 sequenceName,
                 previousSegmentId,
-                skipSegmentLineageCheck
+                skipSegmentLineageCheck,
+                NumberedShardSpecFactory.instance()
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),

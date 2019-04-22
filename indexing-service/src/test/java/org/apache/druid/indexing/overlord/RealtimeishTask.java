@@ -25,18 +25,21 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockAcquireAction;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.SegmentInsertAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -61,6 +64,31 @@ public class RealtimeishTask extends AbstractTask
   }
 
   @Override
+  public boolean requireLockInputSegments()
+  {
+    return false;
+  }
+
+  @Override
+  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  {
+    return false;
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity(Interval interval)
+  {
+    return null;
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
     final Interval interval1 = Intervals.of("2010-01-01T00/PT1H");
@@ -70,7 +98,7 @@ public class RealtimeishTask extends AbstractTask
 
     // Acquire lock for first interval
     final TaskLock lock1 = toolbox.getTaskActionClient().submit(
-        new LockAcquireAction(TaskLockType.EXCLUSIVE, interval1, 5000)
+        new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval1, 5000)
     );
     Assert.assertNotNull(lock1);
     final List<TaskLock> locks1 = toolbox.getTaskActionClient().submit(new LockListAction());
@@ -81,7 +109,7 @@ public class RealtimeishTask extends AbstractTask
 
     // Acquire lock for second interval
     final TaskLock lock2 = toolbox.getTaskActionClient().submit(
-        new LockAcquireAction(TaskLockType.EXCLUSIVE, interval2, 5000)
+        new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval2, 5000)
     );
     Assert.assertNotNull(lock2);
     final List<TaskLock> locks2 = toolbox.getTaskActionClient().submit(new LockListAction());

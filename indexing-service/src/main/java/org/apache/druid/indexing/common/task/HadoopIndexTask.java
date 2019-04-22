@@ -45,15 +45,16 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockAcquireAction;
-import org.apache.druid.indexing.common.actions.LockTryAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
+import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
@@ -64,6 +65,7 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.util.ToolRunner;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -198,10 +200,36 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
               intervals.get()
           )
       );
-      return taskActionClient.submit(new LockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
+      return taskActionClient.submit(new TimeChunkLockTryAcquireAction(TaskLockType.EXCLUSIVE, interval)) != null;
     } else {
       return true;
     }
+  }
+
+  @Override
+  public boolean requireLockInputSegments()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  {
+    final Granularity segmentGranularity = spec.getDataSchema().getGranularitySpec().getSegmentGranularity();
+    return intervalOfExistingSegments.stream().anyMatch(interval -> !segmentGranularity.match(interval));
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity(Interval interval)
+  {
+    return spec.getDataSchema().getGranularitySpec().getSegmentGranularity();
   }
 
   @JsonProperty("spec")
@@ -345,7 +373,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       // Note: if lockTimeoutMs is larger than ServerConfig.maxIdleTime, the below line can incur http timeout error.
       final TaskLock lock = Preconditions.checkNotNull(
           toolbox.getTaskActionClient().submit(
-              new LockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs)
+              new TimeChunkLockAcquireAction(TaskLockType.EXCLUSIVE, interval, lockTimeoutMs)
           ),
           "Cannot acquire a lock for interval[%s]", interval
       );

@@ -28,11 +28,12 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.LockResult;
+import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-public class LockAcquireAction implements TaskAction<TaskLock>
+public class TimeChunkLockAcquireAction implements TaskAction<TaskLock>
 {
   private final TaskLockType type;
 
@@ -43,7 +44,7 @@ public class LockAcquireAction implements TaskAction<TaskLock>
   private final long timeoutMs;
 
   @JsonCreator
-  public LockAcquireAction(
+  public TimeChunkLockAcquireAction(
       @JsonProperty("lockType") @Nullable TaskLockType type, // nullable for backward compatibility
       @JsonProperty("interval") Interval interval,
       @JsonProperty("timeoutMs") long timeoutMs
@@ -84,9 +85,11 @@ public class LockAcquireAction implements TaskAction<TaskLock>
   public TaskLock perform(Task task, TaskActionToolbox toolbox)
   {
     try {
-      final LockResult result = timeoutMs == 0 ?
-                                toolbox.getTaskLockbox().lock(type, task, interval) :
-                                toolbox.getTaskLockbox().lock(type, task, interval, timeoutMs);
+      final LockResult result = timeoutMs == 0
+                                ? toolbox.getTaskLockbox()
+                                         .lock(task, new TimeChunkLockRequest(type, task, interval, null))
+                                : toolbox.getTaskLockbox()
+                                         .lock(task, new TimeChunkLockRequest(type, task, interval, null), timeoutMs);
       return result.isOk() ? result.getTaskLock() : null;
     }
     catch (InterruptedException e) {
@@ -103,7 +106,7 @@ public class LockAcquireAction implements TaskAction<TaskLock>
   @Override
   public String toString()
   {
-    return "LockAcquireAction{" +
+    return "TimeChunkLockAcquireAction{" +
            "lockType=" + type +
            ", interval=" + interval +
            ", timeoutMs=" + timeoutMs +

@@ -68,6 +68,12 @@ public final class LinearShardSpec implements ShardSpec
   }
 
   @Override
+  public boolean isCompatible(Class<? extends ShardSpec> other)
+  {
+    return other == LinearShardSpec.class;
+  }
+
+  @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
     return new LinearPartitionChunk<>(partitionNum, obj);

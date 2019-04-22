@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -74,7 +75,7 @@ public class RemoteTaskActionClientTest
 
     // return status code 200 and a list with size equals 1
     Map<String, Object> responseBody = new HashMap<String, Object>();
-    final List<TaskLock> expectedLocks = Collections.singletonList(new TaskLock(
+    final List<TaskLock> expectedLocks = Collections.singletonList(new TimeChunkLock(
         TaskLockType.SHARED,
         "groupId",
         "dataSource",

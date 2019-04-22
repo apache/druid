@@ -22,19 +22,28 @@ package org.apache.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SegmentListUnusedAction;
 import org.apache.druid.indexing.common.actions.SegmentNukeAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskActionPreconditions;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -65,36 +74,54 @@ public class KillTask extends AbstractFixedIntervalTask
   }
 
   @Override
+  public boolean requireLockInputSegments()
+  {
+    return true;
+  }
+
+  @Override
+  public List<DataSegment> findInputSegments(TaskActionClient taskActionClient, List<Interval> intervals)
+      throws IOException
+  {
+    final List<DataSegment> allSegments = new ArrayList<>();
+    for (Interval interval : intervals) {
+      allSegments.addAll(taskActionClient.submit(new SegmentListUnusedAction(getDataSource(), interval)));
+    }
+    return allSegments;
+  }
+
+  @Override
+  public boolean changeSegmentGranularity(List<Interval> intervalOfExistingSegments)
+  {
+    return false;
+  }
+
+  @Nullable
+  @Override
+  public Granularity getSegmentGranularity(Interval interval)
+  {
+    return null;
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    // Confirm we have a lock (will throw if there isn't exactly one element)
-    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox.getTaskActionClient()));
-
-    if (!myLock.getDataSource().equals(getDataSource())) {
-      throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
-    }
-
-    if (!myLock.getInterval().equals(getInterval())) {
-      throw new ISE("WTF?! Lock interval[%s] != task interval[%s]", myLock.getInterval(), getInterval());
-    }
-
+    final NavigableMap<DateTime, List<TaskLock>> taskLockMap = getTaskLockMap(toolbox.getTaskActionClient());
     // List unused segments
     final List<DataSegment> unusedSegments = toolbox
         .getTaskActionClient()
-        .submit(new SegmentListUnusedAction(myLock.getDataSource(), myLock.getInterval()));
+        .submit(new SegmentListUnusedAction(getDataSource(), getInterval()));
 
-    // Verify none of these segments have versions > lock version
-    for (final DataSegment unusedSegment : unusedSegments) {
-      if (unusedSegment.getVersion().compareTo(myLock.getVersion()) > 0) {
-        throw new ISE(
-            "WTF?! Unused segment[%s] has version[%s] > task version[%s]",
-            unusedSegment.getId(),
-            unusedSegment.getVersion(),
-            myLock.getVersion()
-        );
-      }
+ //    log.info("segments to kill: %s", unusedSegments);
+ //    log.info("taskLockMap: %s", taskLockMap);
 
-      log.info("OK to kill segment: %s", unusedSegment.getId());
+    if (!TaskActionPreconditions.isLockCoversSegments(taskLockMap, unusedSegments)) {
+      throw new ISE(
+          "Locks[%s] for task[%s] can't cover segments[%s]",
+          taskLockMap.values().stream().flatMap(List::stream).collect(Collectors.toList()),
+          getId(),
+          unusedSegments
+      );
     }
 
     // Kill segments
@@ -104,5 +131,14 @@ public class KillTask extends AbstractFixedIntervalTask
     }
 
     return TaskStatus.success(getId());
+  }
+
+  private NavigableMap<DateTime, List<TaskLock>> getTaskLockMap(TaskActionClient client) throws IOException
+  {
+    final NavigableMap<DateTime, List<TaskLock>> taskLockMap = new TreeMap<>();
+    getTaskLocks(client).forEach(
+        taskLock -> taskLockMap.computeIfAbsent(taskLock.getInterval().getStart(), k -> new ArrayList<>()).add(taskLock)
+    );
+    return taskLockMap;
   }
 }

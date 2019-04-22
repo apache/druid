@@ -32,7 +32,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class LockAcquireActionTest
+public class TimeChunkLockAcquireActionTest
 {
   @Rule
   public TaskActionTestKit actionTestKit = new TaskActionTestKit();
@@ -42,14 +42,14 @@ public class LockAcquireActionTest
   @Test
   public void testSerdeWithAllFields() throws IOException
   {
-    final LockAcquireAction expected = new LockAcquireAction(
+    final TimeChunkLockAcquireAction expected = new TimeChunkLockAcquireAction(
         TaskLockType.SHARED,
         Intervals.of("2017-01-01/2017-01-02"),
         1000
     );
 
     final byte[] bytes = mapper.writeValueAsBytes(expected);
-    final LockAcquireAction actual = mapper.readValue(bytes, LockAcquireAction.class);
+    final TimeChunkLockAcquireAction actual = mapper.readValue(bytes, TimeChunkLockAcquireAction.class);
     Assert.assertEquals(expected.getType(), actual.getType());
     Assert.assertEquals(expected.getInterval(), actual.getInterval());
     Assert.assertEquals(expected.getTimeoutMs(), actual.getTimeoutMs());
@@ -60,8 +60,8 @@ public class LockAcquireActionTest
   {
     final String json = "{ \"type\": \"lockAcquire\", \"interval\" : \"2017-01-01/2017-01-02\" }";
 
-    final LockAcquireAction actual = mapper.readValue(json, LockAcquireAction.class);
-    final LockAcquireAction expected = new LockAcquireAction(
+    final TimeChunkLockAcquireAction actual = mapper.readValue(json, TimeChunkLockAcquireAction.class);
+    final TimeChunkLockAcquireAction expected = new TimeChunkLockAcquireAction(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-01-01/2017-01-02"),
         0
@@ -75,7 +75,7 @@ public class LockAcquireActionTest
   public void testWithLockType()
   {
     final Task task = NoopTask.create();
-    final LockAcquireAction action = new LockAcquireAction(
+    final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(
         TaskLockType.EXCLUSIVE,
         Intervals.of("2017-01-01/2017-01-02"),
         1000
@@ -90,7 +90,7 @@ public class LockAcquireActionTest
   public void testWithoutLockType()
   {
     final Task task = NoopTask.create();
-    final LockAcquireAction action = new LockAcquireAction(
+    final TimeChunkLockAcquireAction action = new TimeChunkLockAcquireAction(
         null,
         Intervals.of("2017-01-01/2017-01-02"),
         1000

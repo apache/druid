@@ -93,7 +93,7 @@ public class SingleElementPartitionChunk<T> implements PartitionChunk<T>
   @Override
   public int hashCode()
   {
-    return element != null ? element.hashCode() : 0;
+    return 0;
   }
 
   @Override

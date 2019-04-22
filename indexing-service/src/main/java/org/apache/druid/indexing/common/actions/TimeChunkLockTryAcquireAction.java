@@ -27,11 +27,12 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.LockResult;
+import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-public class LockTryAcquireAction implements TaskAction<TaskLock>
+public class TimeChunkLockTryAcquireAction implements TaskAction<TaskLock>
 {
   @JsonIgnore
   private final TaskLockType type;
@@ -40,7 +41,7 @@ public class LockTryAcquireAction implements TaskAction<TaskLock>
   private final Interval interval;
 
   @JsonCreator
-  public LockTryAcquireAction(
+  public TimeChunkLockTryAcquireAction(
       @JsonProperty("lockType") @Nullable TaskLockType type, // nullable for backward compatibility
       @JsonProperty("interval") Interval interval
   )
@@ -72,7 +73,10 @@ public class LockTryAcquireAction implements TaskAction<TaskLock>
   @Override
   public TaskLock perform(Task task, TaskActionToolbox toolbox)
   {
-    final LockResult result = toolbox.getTaskLockbox().tryLock(type, task, interval);
+    final LockResult result = toolbox.getTaskLockbox().tryLock(
+        task,
+        new TimeChunkLockRequest(type, task, interval, null)
+    );
     return result.isOk() ? result.getTaskLock() : null;
   }
 
@@ -85,8 +89,8 @@ public class LockTryAcquireAction implements TaskAction<TaskLock>
   @Override
   public String toString()
   {
-    return "LockTryAcquireAction{" +
-           "lockType=" + type +
+    return "TimeChunkLockTryAcquireAction{" +
+           ", type=" + type +
            ", interval=" + interval +
            '}';
   }

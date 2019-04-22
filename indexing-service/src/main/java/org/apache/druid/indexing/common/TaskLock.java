@@ -19,10 +19,11 @@
 
 package org.apache.druid.indexing.common;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
-import com.google.common.base.Preconditions;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import org.apache.druid.indexing.overlord.LockRequest;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -30,156 +31,37 @@ import javax.annotation.Nullable;
 /**
  * Represents a lock held by some task. Immutable.
  */
-public class TaskLock
+@JsonTypeInfo(use = Id.NAME, property = "type", defaultImpl = TimeChunkLock.class)
+@JsonSubTypes(value = {
+    @Type(name = TimeChunkLock.TYPE, value = TimeChunkLock.class),
+    @Type(name = SegmentLock.TYPE, value = SegmentLock.class)
+})
+public interface TaskLock
 {
-  private final TaskLockType type;
-  private final String groupId;
-  private final String dataSource;
-  private final Interval interval;
-  private final String version;
-  private final Integer priority;
-  private final boolean revoked;
+  String getType();
 
-  public static TaskLock withPriority(TaskLock lock, int priority)
-  {
-    return new TaskLock(
-        lock.type,
-        lock.getGroupId(),
-        lock.getDataSource(),
-        lock.getInterval(),
-        lock.getVersion(),
-        priority,
-        lock.isRevoked()
-    );
-  }
+  TaskLock revokedCopy();
 
-  @JsonCreator
-  public TaskLock(
-      @JsonProperty("type") @Nullable TaskLockType type,            // nullable for backward compatibility
-      @JsonProperty("groupId") String groupId,
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("version") String version,
-      @JsonProperty("priority") @Nullable Integer priority,
-      @JsonProperty("revoked") boolean revoked
-  )
-  {
-    this.type = type == null ? TaskLockType.EXCLUSIVE : type;
-    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.interval = Preconditions.checkNotNull(interval, "interval");
-    this.version = Preconditions.checkNotNull(version, "version");
-    this.priority = priority;
-    this.revoked = revoked;
-  }
+  TaskLock withPriority(int priority);
 
-  public TaskLock(
-      TaskLockType type,
-      String groupId,
-      String dataSource,
-      Interval interval,
-      String version,
-      int priority
-  )
-  {
-    this(type, groupId, dataSource, interval, version, priority, false);
-  }
+  LockGranularity getGranularity();
 
-  public TaskLock revokedCopy()
-  {
-    return new TaskLock(
-        type,
-        groupId,
-        dataSource,
-        interval,
-        version,
-        priority,
-        true
-    );
-  }
+  TaskLockType getLockType();
 
-  @JsonProperty
-  public TaskLockType getType()
-  {
-    return type;
-  }
+  String getGroupId();
 
-  @JsonProperty
-  public String getGroupId()
-  {
-    return groupId;
-  }
+  String getDataSource();
 
-  @JsonProperty
-  public String getDataSource()
-  {
-    return dataSource;
-  }
+  Interval getInterval();
 
-  @JsonProperty
-  public Interval getInterval()
-  {
-    return interval;
-  }
+  String getVersion();
 
-  @JsonProperty
-  public String getVersion()
-  {
-    return version;
-  }
-
-  @JsonProperty
   @Nullable
-  public Integer getPriority()
-  {
-    return priority;
-  }
+  Integer getPriority();
 
-  public int getNonNullPriority()
-  {
-    return Preconditions.checkNotNull(priority, "priority");
-  }
+  int getNonNullPriority();
 
-  @JsonProperty
-  public boolean isRevoked()
-  {
-    return revoked;
-  }
+  boolean isRevoked();
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (!(o instanceof TaskLock)) {
-      return false;
-    } else {
-      final TaskLock that = (TaskLock) o;
-      return this.type.equals(that.type) &&
-             this.groupId.equals(that.groupId) &&
-             this.dataSource.equals(that.dataSource) &&
-             this.interval.equals(that.interval) &&
-             this.version.equals(that.version) &&
-             Objects.equal(this.priority, that.priority) &&
-             this.revoked == that.revoked;
-    }
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hashCode(type, groupId, dataSource, interval, version, priority, revoked);
-  }
-
-  @Override
-  public String toString()
-  {
-    return Objects.toStringHelper(this)
-                  .add("type", type)
-                  .add("groupId", groupId)
-                  .add("dataSource", dataSource)
-                  .add("interval", interval)
-                  .add("version", version)
-                  .add("priority", priority)
-                  .add("revoked", revoked)
-                  .toString();
-  }
+  boolean conflict(LockRequest request);
 }

@@ -116,4 +116,15 @@ public class StringPartitionChunk<T> implements PartitionChunk<T>
     result = 31 * result + (object != null ? object.hashCode() : 0);
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return "StringPartitionChunk{" +
+           "start='" + start + '\'' +
+           ", end='" + end + '\'' +
+           ", chunkNumber=" + chunkNumber +
+           ", object=" + object +
+           '}';
+  }
 }

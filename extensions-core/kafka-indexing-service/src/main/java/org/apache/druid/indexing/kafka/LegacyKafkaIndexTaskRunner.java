@@ -38,10 +38,12 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
+import org.apache.druid.indexing.common.actions.SegmentLockAquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
@@ -299,7 +301,24 @@ public class LegacyKafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<In
       final String topic = ioConfig.getStartSequenceNumbers().getStream();
 
       // Start up, set up initial offsets.
-      final Object restoredMetadata = driver.startJob();
+      final Object restoredMetadata = driver.startJob(
+          segmentId -> {
+            try {
+              return toolbox.getTaskActionClient().submit(
+                  new SegmentLockAquireAction(
+                      TaskLockType.EXCLUSIVE,
+                      segmentId.getInterval(),
+                      segmentId.getVersion(),
+                      segmentId.getShardSpec().getPartitionNum(),
+                      1000L
+                  )
+              ).isOk();
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+      );
       if (restoredMetadata == null) {
         nextOffsets.putAll(ioConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap());
       } else {

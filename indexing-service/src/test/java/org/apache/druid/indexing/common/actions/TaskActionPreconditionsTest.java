@@ -27,7 +27,10 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
+import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
+import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
@@ -52,7 +55,10 @@ public class TaskActionPreconditionsTest
   @Before
   public void setup()
   {
-    lockbox = new TaskLockbox(new HeapMemoryTaskStorage(new TaskStorageConfig(null)));
+    lockbox = new TaskLockbox(
+        new HeapMemoryTaskStorage(new TaskStorageConfig(null)),
+        new TestIndexerMetadataStorageCoordinator()
+    );
     task = NoopTask.create();
     lockbox.add(task);
 
@@ -78,6 +84,11 @@ public class TaskActionPreconditionsTest
     );
   }
 
+  private LockResult tryTimeChunkLock(TaskLockType lockType, Task task, Interval interval)
+  {
+    return lockbox.tryLock(task, new TimeChunkLockRequest(lockType, task, interval, null));
+  }
+
   @Test
   public void testCheckLockCoversSegments()
   {
@@ -91,7 +102,7 @@ public class TaskActionPreconditionsTest
         Collectors.toMap(
             Function.identity(),
             interval -> {
-              final TaskLock lock = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
+              final TaskLock lock = tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
               Assert.assertNotNull(lock);
               return lock;
             }
@@ -113,7 +124,7 @@ public class TaskActionPreconditionsTest
         Collectors.toMap(
             Function.identity(),
             interval -> {
-              final TaskLock lock = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
+              final TaskLock lock = tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
               Assert.assertNotNull(lock);
               return lock;
             }
@@ -137,7 +148,7 @@ public class TaskActionPreconditionsTest
         Collectors.toMap(
             Function.identity(),
             interval -> {
-              final TaskLock lock = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
+              final TaskLock lock = tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
               Assert.assertNotNull(lock);
               return lock;
             }

@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
@@ -31,9 +33,14 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Insert segments into metadata storage. The segment versions must all be less than or equal to a lock held by
@@ -45,14 +52,11 @@ import java.util.stream.Collectors;
  */
 public class SegmentTransactionalInsertAction implements TaskAction<SegmentPublishResult>
 {
-
   private final Set<DataSegment> segments;
   private final DataSourceMetadata startMetadata;
   private final DataSourceMetadata endMetadata;
 
-  public SegmentTransactionalInsertAction(
-      Set<DataSegment> segments
-  )
+  public SegmentTransactionalInsertAction(Set<DataSegment> segments)
   {
     this(segments, null, null);
   }
@@ -102,13 +106,20 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    // TODO: move this to lock checking in critical section
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
+
+    final Map<Interval, List<Integer>> intervalToPartitionIds = new HashMap<>();
+    for (DataSegment segment : segments) {
+      intervalToPartitionIds.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>())
+                            .add(segment.getShardSpec().getPartitionNum());
+    }
 
     final SegmentPublishResult retVal;
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          intervalToPartitionIds,
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
@@ -128,6 +139,15 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+
+    final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
+    if (locks.get(0).getGranularity() == LockGranularity.SEGMENT) {
+      for (Entry<Interval, List<Integer>> entry : intervalToPartitionIds.entrySet()) {
+        final Interval interval = entry.getKey();
+        final List<Integer> partitionIds = entry.getValue();
+        partitionIds.forEach(partitionId -> toolbox.getTaskLockbox().unlock(task, interval, partitionId));
+      }
     }
 
     // Emit metrics

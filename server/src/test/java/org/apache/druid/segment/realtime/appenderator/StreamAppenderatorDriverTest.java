@@ -133,7 +133,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
@@ -169,7 +169,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     final int numSegments = 3;
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < numSegments * MAX_ROWS_PER_SEGMENT; i++) {
       committerSupplier.setMetadata(i + 1);
@@ -212,7 +212,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
     segmentHandoffNotifierFactory.disableHandoff();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
@@ -237,7 +237,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     // Add the first row and publish immediately
     {
@@ -305,7 +305,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
 
-    Assert.assertNull(driver.startJob());
+    Assert.assertNull(driver.startJob(null));
 
     committerSupplier.setMetadata(1);
     Assert.assertTrue(driver.add(ROWS.get(0), "sequence_0", committerSupplier, false, true).isOk());

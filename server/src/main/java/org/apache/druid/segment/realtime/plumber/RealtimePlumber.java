@@ -737,7 +737,7 @@ public class RealtimePlumber implements Plumber
     sinkTimeline.add(
         sink.getInterval(),
         sink.getVersion(),
-        new SingleElementPartitionChunk<Sink>(sink)
+        new SingleElementPartitionChunk<>(sink)
     );
     try {
       segmentAnnouncer.announceSegment(sink.getSegment());

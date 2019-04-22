@@ -26,6 +26,8 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
+import org.apache.druid.indexing.overlord.LockResult;
+import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -88,16 +90,22 @@ public class SegmentInsertActionTest
       1024
   );
 
+  private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval, long timeoutMs)
+      throws InterruptedException
+  {
+    return actionTestKit.getTaskLockbox().lock(task, new TimeChunkLockRequest(lockType, task, interval, null), timeoutMs);
+  }
+
   @Test
   public void testSimple() throws Exception
   {
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
     actionTestKit.getTaskLockbox().doInCriticalSection(
         task,
-        Collections.singletonList(INTERVAL),
+        Collections.singletonMap(INTERVAL, Collections.emptyList()),
         CriticalAction.builder()
                       .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
                       .onInvalidLocks(
@@ -124,13 +132,13 @@ public class SegmentInsertActionTest
     final Task task = new NoopTask(null, null, 0, 0, null, null, null);
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
+    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.containsString("are not covered by locks"));
     final Set<DataSegment> segments = actionTestKit.getTaskLockbox().doInCriticalSection(
         task,
-        Collections.singletonList(INTERVAL),
+        Collections.singletonMap(INTERVAL, Collections.emptyList()),
         CriticalAction.<Set<DataSegment>>builder()
             .onValidLocks(() -> action.perform(task, actionTestKit.getTaskActionToolbox()))
             .onInvalidLocks(

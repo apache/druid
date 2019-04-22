@@ -34,9 +34,11 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class SegmentMetadataUpdateAction implements TaskAction<Void>
 {
@@ -68,12 +70,16 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
   {
     TaskActionPreconditions.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
-    final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
+    final Map<Interval, List<Integer>> intervalToPartitionIds = new HashMap<>();
+    for (DataSegment segment : segments) {
+      intervalToPartitionIds.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>())
+                            .add(segment.getShardSpec().getPartitionNum());
+    }
 
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          intervals,
+          intervalToPartitionIds,
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {

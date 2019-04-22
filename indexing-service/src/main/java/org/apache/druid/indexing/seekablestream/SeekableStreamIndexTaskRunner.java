@@ -46,11 +46,13 @@ import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.common.actions.ResetDataSourceMetadataAction;
+import org.apache.druid.indexing.common.actions.SegmentLockAquireAction;
 import org.apache.druid.indexing.common.stats.RowIngestionMeters;
 import org.apache.druid.indexing.common.stats.RowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -383,7 +385,24 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       driver = task.newDriver(appenderator, toolbox, fireDepartmentMetrics);
 
       // Start up, set up initial sequences.
-      final Object restoredMetadata = driver.startJob();
+      final Object restoredMetadata = driver.startJob(
+          segmentId -> {
+            try {
+              return toolbox.getTaskActionClient().submit(
+                  new SegmentLockAquireAction(
+                      TaskLockType.EXCLUSIVE,
+                      segmentId.getInterval(),
+                      segmentId.getVersion(),
+                      segmentId.getShardSpec().getPartitionNum(),
+                      1000L
+                  )
+              ).isOk();
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          }
+      );
       if (restoredMetadata == null) {
         // no persist has happened so far
         // so either this is a brand new task or replacement of a failed task

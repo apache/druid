@@ -108,7 +108,8 @@ public class YeOldePlumberSchool implements PlumberSchool
         config.getMaxRowsInMemory(),
         TuningConfigs.getMaxBytesInMemoryOrDefault(config.getMaxBytesInMemory()),
         config.isReportParseExceptions(),
-        config.getDedupColumn()
+        config.getDedupColumn(),
+        null
     );
 
     // Temporary directory to hold spilled segments.

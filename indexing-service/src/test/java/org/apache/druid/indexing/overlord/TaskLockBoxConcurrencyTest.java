@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -31,6 +32,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -72,7 +74,10 @@ public class TaskLockBoxConcurrencyTest
         )
     );
 
-    lockbox = new TaskLockbox(taskStorage);
+    lockbox = new TaskLockbox(
+        taskStorage,
+        new IndexerSQLMetadataStorageCoordinator(objectMapper, derby.metadataTablesConfigSupplier().get(), derbyConnector)
+    );
     service = Executors.newFixedThreadPool(2);
   }
 
@@ -80,6 +85,17 @@ public class TaskLockBoxConcurrencyTest
   public void teardown()
   {
     service.shutdownNow();
+  }
+
+  private LockResult tryTimeChunkLock(TaskLockType lockType, Task task, Interval interval)
+  {
+    return lockbox.tryLock(task, new TimeChunkLockRequest(lockType, task, interval, null));
+  }
+
+  private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval)
+      throws InterruptedException
+  {
+    return lockbox.lock(task, new TimeChunkLockRequest(lockType, task, interval, null));
   }
 
   @Test(timeout = 60_000L)
@@ -99,13 +115,13 @@ public class TaskLockBoxConcurrencyTest
 
     // lowPriorityTask acquires a lock first and increases the int of intSupplier in the critical section
     final Future<Integer> lowPriorityFuture = service.submit(() -> {
-      final LockResult result = lockbox.tryLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
+      final LockResult result = tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
       Assert.assertTrue(result.isOk());
       Assert.assertFalse(result.isRevoked());
 
       return lockbox.doInCriticalSection(
           lowPriorityTask,
-          Collections.singletonList(interval),
+          Collections.singletonMap(interval, Collections.emptyList()),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {
@@ -129,13 +145,13 @@ public class TaskLockBoxConcurrencyTest
     // section
     final Future<Integer> highPriorityFuture = service.submit(() -> {
       latch.await();
-      final LockResult result = lockbox.lock(TaskLockType.EXCLUSIVE, highPriorityTask, interval);
+      final LockResult result = acquireTimeChunkLock(TaskLockType.EXCLUSIVE, highPriorityTask, interval);
       Assert.assertTrue(result.isOk());
       Assert.assertFalse(result.isRevoked());
 
       return lockbox.doInCriticalSection(
           highPriorityTask,
-          Collections.singletonList(interval),
+          Collections.singletonMap(interval, Collections.emptyList()),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {
@@ -158,7 +174,7 @@ public class TaskLockBoxConcurrencyTest
     Assert.assertEquals(2, highPriorityFuture.get().intValue());
 
     // the lock for lowPriorityTask must be revoked by the highPriorityTask after its work is done in critical section
-    final LockResult result = lockbox.tryLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
+    final LockResult result = tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
     Assert.assertFalse(result.isOk());
     Assert.assertTrue(result.isRevoked());
   }
@@ -176,7 +192,7 @@ public class TaskLockBoxConcurrencyTest
     taskStorage.insert(task, TaskStatus.running(task.getId()));
 
     for (Interval interval : intervals) {
-      final LockResult result = lockbox.tryLock(TaskLockType.EXCLUSIVE, task, interval);
+      final LockResult result = tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval);
       Assert.assertTrue(result.isOk());
     }
 
@@ -185,7 +201,7 @@ public class TaskLockBoxConcurrencyTest
 
     final Future<Integer> future1 = service.submit(() -> lockbox.doInCriticalSection(
         task,
-        ImmutableList.of(intervals.get(0), intervals.get(1)),
+        ImmutableMap.of(intervals.get(0), Collections.emptyList(), intervals.get(1), Collections.emptyList()),
         CriticalAction.<Integer>builder()
             .onValidLocks(
                 () -> {
@@ -208,7 +224,7 @@ public class TaskLockBoxConcurrencyTest
       latch.await();
       return lockbox.doInCriticalSection(
           task,
-          ImmutableList.of(intervals.get(1), intervals.get(2)),
+          ImmutableMap.of(intervals.get(1), Collections.emptyList(), intervals.get(2), Collections.emptyList()),
           CriticalAction.<Integer>builder()
               .onValidLocks(
                   () -> {

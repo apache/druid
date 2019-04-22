@@ -48,12 +48,15 @@ import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+// TODO: change segmentGranularity
 public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSupervisorTaskTest
 {
   private File inputDir;
@@ -152,19 +155,33 @@ public class ParallelIndexSupervisorTaskTest extends AbstractParallelIndexSuperv
     runTestWithoutIntervalTask();
 
     // Read the segments for one day.
-    final Interval interval = Intervals.of("2017-12-24/P1D");
-    final List<DataSegment> oldSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
-    Assert.assertEquals(1, oldSegments.size());
+    final Interval interval = Intervals.of("2017-12-24/P5D");
+    final List<DataSegment> allOldSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    final Map<Interval, List<DataSegment>> oldIntervalToSegments = new HashMap<>();
+    allOldSegments.forEach(
+        segment -> oldIntervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
+    );
 
     // Reingest the same data. Each segment should get replaced by a segment with a newer version.
     runTestWithoutIntervalTask();
 
     // Verify that the segment has been replaced.
-    final List<DataSegment> newSegments =
-        getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
-    Assert.assertEquals(1, newSegments.size());
-    Assert.assertTrue(oldSegments.get(0).getVersion().compareTo(newSegments.get(0).getVersion()) < 0);
+    final List<DataSegment> allNewSegments = getStorageCoordinator().getUsedSegmentsForInterval("dataSource", interval);
+    final Map<Interval, List<DataSegment>> newIntervalToSegments = new HashMap<>();
+    allNewSegments.forEach(
+        segment -> newIntervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
+    );
+    Assert.assertEquals(allOldSegments.size(), allNewSegments.size());
+    for (Entry<Interval, List<DataSegment>> entry : oldIntervalToSegments.entrySet()) {
+      final List<DataSegment> oldSegments = entry.getValue();
+      final List<DataSegment> newSegments = newIntervalToSegments.get(entry.getKey());
+      Assert.assertEquals(oldSegments.size(), newSegments.size());
+      newSegments.forEach(
+          newSegment -> Assert.assertTrue(
+              oldSegments.stream().allMatch(oldSegment -> oldSegment.getMinorVersion() < newSegment.getMinorVersion())
+          )
+      );
+    }
   }
 
   @Test()

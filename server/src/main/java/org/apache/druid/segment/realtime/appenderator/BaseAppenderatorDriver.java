@@ -270,7 +270,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
    * @return currently persisted commit metadata
    */
   @Nullable
-  public abstract Object startJob();
+  public abstract Object startJob(SegmentLocker segmentLocker);
 
   /**
    * Find a segment in the {@link SegmentState#APPENDING} state for the given timestamp and sequenceName.

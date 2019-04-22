@@ -22,5 +22,5 @@ package org.apache.druid.indexing.common;
 public enum TaskLockType
 {
   SHARED,
-  EXCLUSIVE
+  EXCLUSIVE // taskLocks of this type can be shared by tasks of the same groupId.
 }

@@ -20,13 +20,17 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map.Entry;
@@ -64,31 +68,53 @@ public class TaskActionPreconditions
     // NOTE: it and before we perform the segment insert, but, that should be OK since the worst that happens is we
     // NOTE: insert some segments from the task but not others.
 
-    final NavigableMap<DateTime, TaskLock> taskLockMap = getTaskLockMap(taskLockbox, task);
+    final NavigableMap<DateTime, List<TaskLock>> taskLockMap = getTaskLockMap(taskLockbox, task);
     if (taskLockMap.isEmpty()) {
       return false;
     }
 
+    return isLockCoversSegments(taskLockMap, segments);
+  }
+
+  public static boolean isLockCoversSegments(
+      NavigableMap<DateTime, List<TaskLock>> taskLockMap,
+      Collection<DataSegment> segments
+  )
+  {
     return segments.stream().allMatch(
         segment -> {
-          final Entry<DateTime, TaskLock> entry = taskLockMap.floorEntry(segment.getInterval().getStart());
+          final Entry<DateTime, List<TaskLock>> entry = taskLockMap.floorEntry(segment.getInterval().getStart());
           if (entry == null) {
             return false;
           }
 
-          final TaskLock taskLock = entry.getValue();
-          return taskLock.getInterval().contains(segment.getInterval()) &&
-                 taskLock.getDataSource().equals(segment.getDataSource()) &&
-                 taskLock.getVersion().compareTo(segment.getVersion()) >= 0;
+          final List<TaskLock> locks = entry.getValue();
+
+          return locks.stream().anyMatch(
+              lock -> {
+                if (lock.getGranularity() == LockGranularity.TIME_CHUNK) {
+                  final TimeChunkLock timeChunkLock = (TimeChunkLock) lock;
+                  return timeChunkLock.getInterval().contains(segment.getInterval())
+                         && timeChunkLock.getDataSource().equals(segment.getDataSource())
+                         && timeChunkLock.getVersion().compareTo(segment.getVersion()) >= 0;
+                } else {
+                  final SegmentLock segmentLock = (SegmentLock) lock;
+                  return segmentLock.getInterval().contains(segment.getInterval())
+                         && segmentLock.getDataSource().equals(segment.getDataSource())
+                         && segmentLock.getVersion().compareTo(segment.getVersion()) >= 0
+                         && segmentLock.getPartitionId() == segment.getShardSpec().getPartitionNum();
+                }
+              }
+          );
         }
     );
   }
 
-  private static NavigableMap<DateTime, TaskLock> getTaskLockMap(TaskLockbox taskLockbox, Task task)
+  private static NavigableMap<DateTime, List<TaskLock>> getTaskLockMap(TaskLockbox taskLockbox, Task task)
   {
     final List<TaskLock> taskLocks = taskLockbox.findLocksForTask(task);
-    final NavigableMap<DateTime, TaskLock> taskLockMap = new TreeMap<>();
-    taskLocks.forEach(taskLock -> taskLockMap.put(taskLock.getInterval().getStart(), taskLock));
+    final NavigableMap<DateTime, List<TaskLock>> taskLockMap = new TreeMap<>();
+    taskLocks.forEach(taskLock -> taskLockMap.computeIfAbsent(taskLock.getInterval().getStart(), k -> new ArrayList<>()).add(taskLock));
     return taskLockMap;
   }
 }
