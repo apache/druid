@@ -54,6 +54,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Use {@link HttpLoadQueuePeon} instead.
+ * <p>
+ * Objects of this class can be accessed by multiple threads. State wise, this class
+ * is thread safe and callers of the public methods can expect thread safe behavior.
+ * Though, like a typical object being accessed by multiple threads,
+ * callers shouldn't expect strict consistency in results between two calls
+ * of the same or different methods.
  */
 @Deprecated
 public class CuratorLoadQueuePeon extends LoadQueuePeon
@@ -71,18 +77,37 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
    * the zk nodes created for segment processing are removed
    */
   private final ScheduledExecutorService monitorNodeRemovedExecutor;
+
+  /**
+   * Threadpool with daemon threads that execute callback actions associated
+   * with loading or dropping segments.
+   */
   private final ExecutorService callBackExecutor;
   private final DruidCoordinatorConfig config;
 
   private final AtomicLong queuedSize = new AtomicLong(0);
   private final AtomicInteger failedAssignCount = new AtomicInteger(0);
 
+  /**
+   * Needs to be thread safe since it can be concurrently accessed via
+   * loadSegment(), actionCompleted(), getSegmentsToLoad() and stop()
+   */
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
+
+  /**
+   * Needs to be thread safe since it can be concurrently accessed via
+   * dropSegment(), actionCompleted(), getSegmentsToDrop() and stop()
+   */
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
+
+  /**
+   * Needs to be thread safe since it can be concurrently accessed via
+   * markSegmentToDrop(), unmarkSegmentToDrop() and getSegmentsMarkedToDrop()
+   */
   private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop = new ConcurrentSkipListSet<>(
       DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST
   );
@@ -152,6 +177,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   public void loadSegment(final DataSegment segment, final LoadPeonCallback callback)
   {
     SegmentHolder segmentHolder = new SegmentHolder(segment, LOAD, Collections.singletonList(callback));
+
     final SegmentHolder existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
       if ((callback != null)) {
@@ -171,7 +197,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
   )
   {
     SegmentHolder segmentHolder = new SegmentHolder(segment, DROP, Collections.singletonList(callback));
-    final SegmentHolder existingHolder = segmentsToDrop.put(segment, segmentHolder);
+    final SegmentHolder existingHolder = segmentsToDrop.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
       if (callback != null) {
         existingHolder.addCallback(callback);
@@ -409,7 +435,7 @@ public class CuratorLoadQueuePeon extends LoadQueuePeon
     List<LoadPeonCallback> snapshotCallbacks()
     {
       synchronized (callbacks) {
-        // Return a copy so that callers get a consistent view
+        // Return an immutable copy so that callers don't have to worry about concurrent modification
         return ImmutableList.copyOf(callbacks);
       }
     }
