@@ -1367,4 +1367,61 @@ interface Function
       return ExprEval.of(expr.value() != null, ExprType.LONG);
     }
   }
+
+  class LpadFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "lpad";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
+      
+      String base = args.get(0).eval(bindings).asString();
+      int len = args.get(1).eval(bindings).asInt();
+      String pad = args.get(2).eval(bindings).asString();
+
+      if (base == null || pad == null) {
+        return ExprEval.of(null);
+      } else {
+        return ExprEval.of(len == 0 ? NullHandling.defaultStringValue() : StringUtils.lpad(base, len, pad));
+      }
+
+    }
+  }
+
+  class RpadFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "rpad";
+    }
+
+    @Override
+    public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
+    {
+      if (args.size() != 3) {
+        throw new IAE("Function[%s] needs 3 arguments", name());
+      }
+
+      String base = args.get(0).eval(bindings).asString();
+      int len = args.get(1).eval(bindings).asInt();
+      String pad = args.get(2).eval(bindings).asString();
+
+      if (base == null || pad == null) {
+        return ExprEval.of(null);
+      } else {
+        return ExprEval.of(len == 0 ? NullHandling.defaultStringValue() : StringUtils.rpad(base, len, pad));
+      }
+
+    }
+  }
+
 }
