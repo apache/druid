@@ -530,8 +530,7 @@ try (Connection connection = DriverManager.getConnection(url, connectionProperti
 ```
 
 Table metadata is available over JDBC using `connection.getMetaData()` or by querying the
-["INFORMATION_SCHEMA" tables](#retrieving-metadata). Parameterized queries (using `?` or other placeholders) don't work properly,
-so avoid those.
+["INFORMATION_SCHEMA" tables](#retrieving-metadata).
 
 #### Connection stickiness
 
