@@ -20,7 +20,6 @@
 package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -760,7 +759,7 @@ public class DataSourcesResource
       return Response.noContent().build();
     }
 
-    return Response.ok().entity(new MarkDatasourceSegmentsEntity(modified)).build();
+    return Response.ok().build();
   }
 
   @VisibleForTesting
@@ -792,22 +791,6 @@ public class DataSourcesResource
     public boolean isValid()
     {
       return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
-    }
-  }
-
-  private static class MarkDatasourceSegmentsEntity
-  {
-    private final int segmentsUpdated;
-
-    public MarkDatasourceSegmentsEntity(int segmentsUpdated)
-    {
-      this.segmentsUpdated = segmentsUpdated;
-    }
-
-    @JsonGetter
-    public int getSegmentsUpdated()
-    {
-      return segmentsUpdated;
     }
   }
 }
