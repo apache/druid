@@ -799,12 +799,14 @@ public class DataSourcesResource
   {
     private final int segmentsUpdated;
 
-    public MarkDatasourceSegmentsEntity(int segmentsUpdated) {
+    public MarkDatasourceSegmentsEntity(int segmentsUpdated)
+    {
       this.segmentsUpdated = segmentsUpdated;
     }
 
     @JsonGetter
-    public int getSegmentsUpdated() {
+    public int getSegmentsUpdated()
+    {
       return segmentsUpdated;
     }
   }

@@ -249,7 +249,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     );
   }
 
-  private VersionedIntervalTimeline<String, DataSegment> getVersionedIntervalTimeline(final String dataSource, final Collection<String> segmentIds) {
+  private VersionedIntervalTimeline<String, DataSegment> getVersionedIntervalTimeline(final String dataSource, final Collection<String> segmentIds)
+  {
     return connector.inReadOnlyTransaction(
         (handle, status) -> VersionedIntervalTimeline.forSegments(segmentIds.stream().map(segmentId -> {
           try {
