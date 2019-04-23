@@ -67,7 +67,6 @@ export class TableActionDialog extends React.Component<TableActionDialogProps, T
         jsonValue: JSON.stringify(data, undefined, 2)
       });
     } catch (e) {
-      console.log(e.response);
       AppToaster.show({
         message: e.response.data,
         intent: Intent.WARNING
