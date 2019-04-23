@@ -22,7 +22,7 @@ title: "Versioning Apache Druid (incubating)"
   ~ under the License.
   -->
 
-# Versioning Druid
+# Versioning Apache Druid (incubating)
 
 This page discusses how we do versioning and provides information on our stable releases.
 

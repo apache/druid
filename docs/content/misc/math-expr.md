@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) Expressions"
   ~ under the License.
   -->
 
-# Druid Expressions
+# Apache Druid (incubating) Expressions
 
 <div class="note info">
 This feature is still experimental. It has not been optimized for performance yet, and its implementation is known to have significant inefficiencies.

@@ -22,7 +22,7 @@ title: "Developing on Apache Druid (incubating)"
   ~ under the License.
   -->
 
-# Developing on Druid
+# Developing on Apache Druid (incubating)
 
 Druid's codebase consists of several major components. For developers interested in learning the code, this document provides 
 a high level overview of the main components that make up Druid and the relevant classes to start from to learn the code.

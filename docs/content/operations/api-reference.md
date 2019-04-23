@@ -22,7 +22,7 @@ title: "Apache Druid (incubating) API Reference"
   ~ under the License.
   -->
 
-# API Reference
+# Apache Druid (incubating) API Reference
 
 This page documents all of the API endpoints for each Druid service type.
 
