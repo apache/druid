@@ -23,6 +23,7 @@
     height: 70vh;
     display: flex;
     flex-direction: row;
+    padding-bottom: 0;
   }
 
   .side-bar {
@@ -57,6 +58,7 @@
     width: 82%;
     height: 100%;
     padding-left: 1vw;
+    padding-bottom: 20px;
 
     .top-actions {
 
