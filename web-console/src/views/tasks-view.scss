@@ -24,5 +24,10 @@
   .view-control-bar,
   .ReactTable {
     margin-bottom: $standard-padding;
+
+    .action-icon {
+      cursor: pointer;
+      color: #47AFF0;
+    }
   }
 }
