@@ -26,6 +26,14 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.security.ProtectionDomain;
 
+/**
+ * This utility class provides a thin runtime abstraction to pick between
+ * - sun.misc.Unsafe.defineClass in Java 8,
+ * - and MethodHandles.Lookup.defineClass in Java 9 and above,
+ * while still providing compile-time support for both Java 8 and Java 9+.
+ *
+ * See also {@link ByteBufferUtils}
+ */
 public class DefineClassUtils
 {
   private static final MethodHandle DEFINE_CLASS;
