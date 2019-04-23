@@ -20,7 +20,6 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.CoordinatorServerView;
@@ -814,7 +813,7 @@ public class DataSourcesResourceTest
 
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
-    EasyMock.expect(segmentManager.disableSegments("datasource1", segmentIds)).andReturn(true).once();
+    EasyMock.expect(segmentManager.disableSegments("datasource1", segmentIds)).andReturn(1L).once();
     EasyMock.replay(segmentManager, inventoryView, server);
 
     final DataSourcesResource.MarkDatasourceSegmentsPayload payload = new DataSourcesResource.MarkDatasourceSegmentsPayload(
@@ -847,7 +846,7 @@ public class DataSourcesResourceTest
 
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
-    EasyMock.expect(segmentManager.disableSegments("datasource1", segmentIds)).andReturn(false).once();
+    EasyMock.expect(segmentManager.disableSegments("datasource1", segmentIds)).andReturn(0L).once();
     EasyMock.replay(segmentManager, inventoryView, server);
 
     final DataSourcesResource.MarkDatasourceSegmentsPayload payload = new DataSourcesResource.MarkDatasourceSegmentsPayload(
@@ -913,7 +912,7 @@ public class DataSourcesResourceTest
 
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
-    EasyMock.expect(segmentManager.disableSegments("datasource1", theInterval)).andReturn(true).once();
+    EasyMock.expect(segmentManager.disableSegments("datasource1", theInterval)).andReturn(1).once();
     EasyMock.replay(segmentManager, inventoryView, server);
 
     final DataSourcesResource.MarkDatasourceSegmentsPayload payload = new DataSourcesResource.MarkDatasourceSegmentsPayload(
@@ -945,7 +944,7 @@ public class DataSourcesResourceTest
 
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).once();
     EasyMock.expect(server.getDataSource("datasource1")).andReturn(dataSource1).once();
-    EasyMock.expect(segmentManager.disableSegments("datasource1", theInterval)).andReturn(false).once();
+    EasyMock.expect(segmentManager.disableSegments("datasource1", theInterval)).andReturn(0).once();
     EasyMock.replay(segmentManager, inventoryView, server);
 
     final DataSourcesResource.MarkDatasourceSegmentsPayload payload = new DataSourcesResource.MarkDatasourceSegmentsPayload(
@@ -1018,11 +1017,14 @@ public class DataSourcesResourceTest
     Response response = DataSourcesResource.markDatasourceUnused("datasource1", payload);
     Assert.assertEquals(400, response.getStatus());
     Assert.assertNotNull(response.getEntity());
-    Assert.assertEquals(ImmutableMap.of("error", "Request payload is null"), response.getEntity());
+    Assert.assertEquals(
+        "Invalid request payload, either interval or segmentIds array must be specified",
+        response.getEntity()
+    );
   }
 
   @Test
-  public void testMarkDatasourceUnusedNullInvalidPayload()
+  public void testMarkDatasourceUnusedInvalidPayload()
   {
     final MetadataSegmentManager segmentManager = EasyMock.createMock(MetadataSegmentManager.class);
     DataSourcesResource DataSourcesResource = new DataSourcesResource(
@@ -1045,7 +1047,7 @@ public class DataSourcesResourceTest
   }
 
   @Test
-  public void testMarkDatasourceUnusedNullInvalidPayloadBothArguments()
+  public void testMarkDatasourceUnusedInvalidPayloadBothArguments()
   {
     final MetadataSegmentManager segmentManager = EasyMock.createMock(MetadataSegmentManager.class);
     DataSourcesResource DataSourcesResource = new DataSourcesResource(

@@ -61,6 +61,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -408,11 +409,12 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   }
 
   @Override
-  public boolean disableSegments(String dataSource, Collection<String> segmentIds)
+  public long disableSegments(String dataSource, Collection<String> segmentIds)
   {
     if (segmentIds.isEmpty()) {
-      return false;
+      return 0;
     }
+    final long[] result = new long[1];
     try {
       connector.getDBI().withHandle(handle -> {
         Batch batch = handle.createBatch();
@@ -424,35 +426,35 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                     segmentId
                 )
             ));
-        return batch.execute();
+        final int[] resultArr = batch.execute();
+        result[0] = Arrays.stream(resultArr).filter(x -> x > 0).count();
+        return result[0];
       });
     }
     catch (Exception e) {
-      log.error(e, e.toString());
-      return false;
+      throw new RuntimeException(e);
     }
-    return true;
+    return result[0];
   }
 
   @Override
-  public boolean disableSegments(String datasource, Interval interval)
+  public int disableSegments(String dataSource, Interval interval)
   {
     try {
-      final int removed = connector.getDBI().withHandle(
+      return connector.getDBI().withHandle(
           handle -> handle
               .createStatement(StringUtils.format(
-                  "UPDATE %s SET used=false WHERE start = :start and end = :end",
+                  "UPDATE %s SET used=false WHERE datasource = :datasource and created_date between :start_date and :end_date",
                   getSegmentsTable()
               ))
-              .bind("start", interval.getStart().toString())
-              .bind("end", interval.getEnd().toString())
+              .bind("datasource", dataSource)
+              .bind("start_data", interval.getStart().toString())
+              .bind("end_data", interval.getEnd().toString())
               .execute()
       );
-      return removed > 0;
     }
     catch (Exception e) {
-      log.error(e, e.toString());
-      return false;
+      throw new RuntimeException(e);
     }
   }
 

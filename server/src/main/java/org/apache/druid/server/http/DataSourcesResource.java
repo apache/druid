@@ -21,6 +21,7 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -66,7 +67,6 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -691,7 +691,7 @@ public class DataSourcesResource
     }
   }
 
-  @PUT
+  @POST
   @Path("/{dataSourceName}/markUnused")
   @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
@@ -701,34 +701,26 @@ public class DataSourcesResource
       final MarkDatasourceSegmentsPayload payload
   )
   {
-    if (payload == null) {
+    if (payload == null || !payload.isValid()) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", "Request payload is null"))
-                     .build();
-    }
-    final Interval interval = payload.getInterval();
-    final Set<String> segmentIds = payload.getSegmentIds();
-    if (!payload.isValid()) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ServletResourceUtils.jsonize(
-                         "Request payload contains invalid interval[%s] or segmentIds[%s], atmost one valid value must be provided",
-                         interval,
-                         segmentIds
-                     ))
+                     .entity("Invalid request payload, either interval or segmentIds array must be specified")
                      .build();
     }
 
     final ImmutableDruidDataSource dataSource = getDataSource(dataSourceName);
     if (dataSource == null) {
+      log.warn("datasource not found [%s]", dataSourceName);
       return Response.noContent().build();
     }
 
-    boolean markedUnused = false;
+    long markedSegmentCount = 0;
     try {
+      final Interval interval = payload.getInterval();
+      final Set<String> segmentIds = payload.getSegmentIds();
       if (interval != null) {
-        markedUnused = databaseSegmentManager.disableSegments(dataSourceName, interval);
+        markedSegmentCount = databaseSegmentManager.disableSegments(dataSourceName, interval);
       } else if (segmentIds != null) {
-        markedUnused = databaseSegmentManager.disableSegments(dataSourceName, segmentIds);
+        markedSegmentCount = databaseSegmentManager.disableSegments(dataSourceName, segmentIds);
       }
     }
     catch (Exception e) {
@@ -742,7 +734,7 @@ public class DataSourcesResource
       ).build();
 
     }
-    if (!markedUnused) {
+    if (markedSegmentCount == 0) {
       return Response.noContent().build();
     }
     return Response.ok().build();
@@ -779,11 +771,13 @@ public class DataSourcesResource
       this.segmentIds = segmentIds;
     }
 
+    @JsonProperty
     public Interval getInterval()
     {
       return interval;
     }
 
+    @JsonProperty
     public Set<String> getSegmentIds()
     {
       return segmentIds;
@@ -791,7 +785,7 @@ public class DataSourcesResource
 
     public boolean isValid()
     {
-      return interval == null ^ segmentIds == null;
+      return (interval == null ^ segmentIds == null) && (segmentIds == null || !segmentIds.isEmpty());
     }
   }
 }
